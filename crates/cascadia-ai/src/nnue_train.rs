@@ -395,30 +395,80 @@ fn rotate_features(features: &[u16], rotation_table: &[Option<usize>; 441], dir_
     Some(rotated)
 }
 
-/// Augment samples with 120° and 240° hex rotations. Returns original + rotated samples.
+/// Build a cell index translation table for shifting by (dq, dr).
+fn build_translation_table(dq: i8, dr: i8) -> [Option<usize>; 441] {
+    let mut table = [None; 441];
+    for idx in 0..441 {
+        let q = (idx / GRID_DIM) as i8 - GRID_CENTER;
+        let r = (idx % GRID_DIM) as i8 - GRID_CENTER;
+        let q2 = q + dq;
+        let r2 = r + dr;
+        let col = q2 as i16 + GRID_CENTER as i16;
+        let row = r2 as i16 + GRID_CENTER as i16;
+        if col >= 0 && col < GRID_DIM as i16 && row >= 0 && row < GRID_DIM as i16 {
+            table[idx] = Some(col as usize * GRID_DIM + row as usize);
+        }
+    }
+    table
+}
+
+/// Translate a sparse feature vector (shift all cell indices, no direction change).
+fn translate_features(features: &[u16], table: &[Option<usize>; 441]) -> Option<Vec<u16>> {
+    // Translation is rotation with dir_shift=0 (no direction change)
+    rotate_features(features, table, 0)
+}
+
+/// Augment samples with rotations (3×) and translations (up to 25×).
+/// Combined: up to 75× data augmentation.
 fn augment_with_rotations(samples: &[Sample]) -> Vec<Sample> {
     let table_120 = build_rotation_table(1);
     let table_240 = build_rotation_table(2);
 
-    let mut augmented = Vec::with_capacity(samples.len() * 3);
+    // Translation offsets: ±2 in q and r = 5×5 = 25 offsets (including (0,0) = identity)
+    let mut translation_tables: Vec<(i8, i8, [Option<usize>; 441])> = Vec::new();
+    for dq in -2i8..=2 {
+        for dr in -2i8..=2 {
+            if dq == 0 && dr == 0 { continue; } // skip identity
+            translation_tables.push((dq, dr, build_translation_table(dq, dr)));
+        }
+    }
+
+    // Total: 1 original + 2 rotations + 24 translations + 48 (translations × 2 rotations)
+    let max_factor = 1 + 2 + 24 + 48; // 75
+    let mut augmented = Vec::with_capacity(samples.len() * max_factor);
     let mut skipped = 0usize;
 
     for sample in samples {
+        // Original
         augmented.push(sample.clone());
+
+        // 2 rotations of original
         if let Some(rot) = rotate_features(&sample.features, &table_120, 1) {
             augmented.push(Sample { features: rot, target: sample.target });
-        } else {
-            skipped += 1;
-        }
+        } else { skipped += 1; }
         if let Some(rot) = rotate_features(&sample.features, &table_240, 2) {
             augmented.push(Sample { features: rot, target: sample.target });
-        } else {
-            skipped += 1;
+        } else { skipped += 1; }
+
+        // 24 translations
+        for &(dq, dr, ref table) in &translation_tables {
+            if let Some(trans) = translate_features(&sample.features, table) {
+                // 2 rotations of each translation
+                if let Some(rot) = rotate_features(&trans, &table_120, 1) {
+                    augmented.push(Sample { features: rot, target: sample.target });
+                } else { skipped += 1; }
+                if let Some(rot) = rotate_features(&trans, &table_240, 2) {
+                    augmented.push(Sample { features: rot, target: sample.target });
+                } else { skipped += 1; }
+
+                // The translation itself (after rotations so we still have `trans`)
+                augmented.push(Sample { features: trans, target: sample.target });
+            } else { skipped += 1; }
         }
     }
 
     if skipped > 0 {
-        eprintln!("  [rotation augmentation: skipped {} out-of-bounds rotations]", skipped);
+        eprintln!("  [augmentation: skipped {} out-of-bounds transforms]", skipped);
     }
     augmented
 }
