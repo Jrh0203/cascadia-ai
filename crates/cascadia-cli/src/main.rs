@@ -478,13 +478,22 @@ fn main() {
                 .expect("Failed to load NNUE weights")
         );
 
-        println!("Collecting MCE samples: {} games, rollouts={}, weights={}, out={}",
-                 num_games, rollouts, weights_path, out_path);
+        let use_random_seed = args.iter().any(|a| a == "--random-seed");
+        // Entropy source for random seeds
+        let mut entropy_rng = if use_random_seed {
+            StdRng::from_entropy()
+        } else {
+            StdRng::seed_from_u64(0xC0DE_C0DE)
+        };
+
+        println!("Collecting MCE samples: {} games, rollouts={}, weights={}, out={}, seed={}",
+                 num_games, rollouts, weights_path, out_path,
+                 if use_random_seed { "random" } else { "deterministic" });
         let start = Instant::now();
         let mut total_samples = 0usize;
         let mut total_final_score = 0u64;
         for game_i in 0..num_games {
-            let mut rng = StdRng::seed_from_u64(game_i as u64 ^ 0xC0DE_C0DE);
+            let mut rng = StdRng::seed_from_u64(entropy_rng.gen());
             let cards = ScoringCards::all_a();
             let mut game = GameState::new(4, cards, &mut rng);
             let mut search_rng = StdRng::seed_from_u64(rng.gen());
@@ -492,16 +501,32 @@ fn main() {
 
             while !game.is_game_over() {
                 if game.current_player != 0 {
-                    match greedy_move(&game) {
+                    let opp_mv = cascadia_ai::nnue_train::pick_best_move_nnue(&game, &net)
+                        .or_else(|| greedy_move(&game));
+                    match opp_mv {
                         Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
                         None => break,
                     }
                     continue;
                 }
-                // AI turn: collect samples + play MCE move
-                let samples = cascadia_ai::mce::collect_mce_samples(&game, &net, rollouts, &mut search_rng);
-                game_samples.extend(samples);
-                let mv = cascadia_ai::mce::best_move_mce(&game, &net, rollouts, &mut search_rng);
+                // AI turn: collect samples + play MCE move in one pass
+                let tops = cascadia_ai::mce::top_moves_mce(&game, &net, rollouts, &mut search_rng, 15);
+                for (mv, avg) in &tops {
+                    let mut g = game.clone();
+                    if cascadia_ai::search::execute_scored_move(&mut g, mv) {
+                        let current = cascadia_core::scoring::ScoreBreakdown::compute(
+                            &mut g.boards[game.current_player], &g.scoring_cards,
+                        ).total as f32;
+                        let target = (*avg as f32 - current).max(0.0);
+                        let bag_info = cascadia_ai::nnue::BagInfo::from_game(&g);
+                        let features = cascadia_ai::nnue::extract_features_with_bag(
+                            &g.boards[game.current_player], Some(&bag_info));
+                        game_samples.push((features, target));
+                    }
+                }
+                let mv = tops.into_iter().next().map(|(mv, avg)| {
+                    cascadia_ai::eval::ScoredMove { score: avg.round() as u16, ..mv }
+                });
                 match mv {
                     Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
                     None => break,
