@@ -1,0 +1,11 @@
+[package]
+name = "cascadia-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cascadia-core = { path = "../cascadia-core" }
+cascadia-ai = { path = "../cascadia-ai" }
+crossterm = { workspace = true }
+clap = { workspace = true }
+rand = { workspace = true }

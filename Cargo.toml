@@ -1,0 +1,15 @@
+[workspace]
+members = ["crates/cascadia-core", "crates/cascadia-ai", "crates/cascadia-cli", "crates/cascadia-web"]
+resolver = "2"
+
+[workspace.dependencies]
+arrayvec = "0.7"
+rand = "0.8"
+crossterm = "0.28"
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+target-cpu = "native"

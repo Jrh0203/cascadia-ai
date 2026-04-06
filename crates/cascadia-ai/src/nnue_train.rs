@@ -1,0 +1,1081 @@
+//! NNUE training: generate self-play data, train network with mini-batch SGD.
+
+use std::sync::Arc;
+use std::thread;
+
+use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
+use rand::{Rng, SeedableRng};
+
+use cascadia_core::board::Board;
+use cascadia_core::game::GameState;
+use cascadia_core::hex::HexCoord;
+use cascadia_core::scoring::ScoreBreakdown;
+use cascadia_core::types::ScoringCards;
+
+use crate::nnue::{extract_features, NNUENetwork};
+use crate::search::{execute_scored_move, greedy_move};
+
+/// A training sample: board features + target score.
+#[derive(Clone)]
+pub struct Sample {
+    pub features: Vec<u16>,
+    pub target: f32,
+}
+
+/// Generate training data from self-play games.
+/// `num_players`: 1 for pre-training (AI gets all turns), 4 for realistic play.
+fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> Vec<Sample> {
+    let num_threads = thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+    let games_per_thread = (num_games + num_threads - 1) / num_threads;
+
+    let handles: Vec<_> = (0..num_threads)
+        .map(|t| {
+            let n = if t < num_threads - 1 {
+                games_per_thread.min(num_games.saturating_sub(t * games_per_thread))
+            } else {
+                num_games.saturating_sub(t * games_per_thread)
+            };
+            let thread_seed = seed.wrapping_add(t as u64 * 1000000);
+            let net_clone = net.cloned();
+            let epsilon = epsilon;
+            let num_players = num_players;
+            thread::spawn(move || {
+                let mut rng = StdRng::seed_from_u64(thread_seed);
+                let mut samples = Vec::with_capacity(n * 20);
+
+                for _ in 0..n {
+                    let game_seed = rng.gen::<u64>();
+                    generate_game_samples(&mut samples, game_seed, net_clone.as_ref(), epsilon, num_players);
+                }
+
+                samples
+            })
+        })
+        .collect();
+
+    let mut all_samples = Vec::with_capacity(num_games * 20);
+    for handle in handles {
+        all_samples.extend(handle.join().unwrap());
+    }
+    all_samples
+}
+
+/// Play one game, record all AI afterstates, label with final score.
+fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let cards = ScoringCards::all_a();
+    let mut game = GameState::new(num_players, cards, &mut rng);
+
+    // Collect afterstate features + scores during the game
+    let mut afterstates: Vec<(Vec<u16>, u16)> = Vec::with_capacity(20);
+
+    while !game.is_game_over() {
+        if game.current_player != 0 {
+            // Opponents play greedy (must match benchmark for consistency)
+            match greedy_move(&game) {
+                Some(mv) => {
+                    if !execute_scored_move(&mut game, &mv) { break; }
+                }
+                None => break,
+            }
+            continue;
+        }
+
+        // Pre-move: simple greedy mulligan logic for training data generation
+        greedy_pre_move(&mut game, &mut rng);
+
+        // Epsilon-greedy: with probability epsilon, pick a random valid move
+        let mv = if epsilon > 0.0 && rng.gen::<f32>() < epsilon {
+            pick_random_move(&game, &mut rng)
+        } else {
+            match net {
+                Some(n) => pick_best_move_nnue(&game, n),
+                None => greedy_move(&game),
+            }
+        };
+        match mv {
+            Some(mv) => {
+                if !execute_scored_move(&mut game, &mv) { break; }
+            }
+            None => break,
+        }
+
+        // Record afterstate features + current score
+        let current_score = ScoreBreakdown::compute(
+            &mut game.boards[0], &game.scoring_cards,
+        ).total;
+        let bag_info = crate::nnue::BagInfo::from_game(&game);
+        afterstates.push((crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)), current_score));
+    }
+
+    // Final score
+    let final_score = ScoreBreakdown::compute(
+        &mut game.boards[0], &game.scoring_cards,
+    ).total;
+
+    // Delta labels: remaining points to gain
+    for (features, current_score) in &afterstates {
+        let remaining = final_score.saturating_sub(*current_score) as f32;
+        samples.push(Sample { features: features.clone(), target: remaining });
+    }
+
+    // Cache high-scoring games (use global mutex for thread-safe writes)
+    if final_score >= 90 {
+        use std::sync::{Mutex, OnceLock};
+        static CACHE_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
+        let mutex = CACHE_MUTEX.get_or_init(|| Mutex::new(()));
+        let _guard = mutex.lock().unwrap();
+
+        let cache_path = std::path::Path::new("training_cache_90plus.bin");
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true).append(true).open(cache_path)
+        {
+            use std::io::Write;
+            // Build the full record in memory first, then write atomically
+            let mut buf: Vec<u8> = Vec::with_capacity(1024);
+            buf.extend_from_slice(&(afterstates.len() as u16).to_le_bytes());
+            buf.extend_from_slice(&final_score.to_le_bytes());
+            for (features, current_score) in &afterstates {
+                buf.extend_from_slice(&(features.len() as u16).to_le_bytes());
+                for &f in features {
+                    buf.extend_from_slice(&f.to_le_bytes());
+                }
+                buf.extend_from_slice(&current_score.to_le_bytes());
+            }
+            let _ = file.write_all(&buf);
+        }
+    }
+}
+
+/// Load samples from the high-score game cache.
+/// Each game in the cache scored 90+ during training. Labels use the delta
+/// scheme: target = final_score - current_score (remaining points to gain).
+pub fn load_cache_samples(cache_path: &std::path::Path) -> std::io::Result<Vec<Sample>> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(cache_path)?;
+    let mut samples = Vec::new();
+    let mut buf2 = [0u8; 2];
+
+    // Read all bytes first — easier to handle truncated files
+    let mut all_bytes = Vec::new();
+    file.read_to_end(&mut all_bytes)?;
+    let mut pos = 0usize;
+
+    let mut read_u16 = |bytes: &[u8], pos: &mut usize| -> Option<u16> {
+        if *pos + 2 > bytes.len() { return None; }
+        let v = u16::from_le_bytes([bytes[*pos], bytes[*pos + 1]]);
+        *pos += 2;
+        Some(v)
+    };
+
+    let mut games_loaded = 0;
+    let mut games_skipped = 0;
+
+    while pos < all_bytes.len() {
+        let game_start = pos;
+        // Read num_positions
+        let n = match read_u16(&all_bytes, &mut pos) {
+            Some(v) => v as usize,
+            None => break,
+        };
+        let final_score = match read_u16(&all_bytes, &mut pos) {
+            Some(v) => v,
+            None => break,
+        };
+
+        // Validate: num_positions should be reasonable (0..25)
+        if n > 25 {
+            // Looks corrupted at this offset
+            pos = game_start + 2;
+            games_skipped += 1;
+            if games_skipped > 100 { break; }
+            continue;
+        }
+
+        let mut game_samples: Vec<Sample> = Vec::with_capacity(n);
+        let mut game_ok = true;
+
+        for _ in 0..n {
+            let nf = match read_u16(&all_bytes, &mut pos) {
+                Some(v) => v as usize,
+                None => { game_ok = false; break; }
+            };
+            if nf > 300 { game_ok = false; break; }
+
+            let mut features = Vec::with_capacity(nf);
+            for _ in 0..nf {
+                match read_u16(&all_bytes, &mut pos) {
+                    Some(v) => features.push(v),
+                    None => { game_ok = false; break; }
+                }
+            }
+            if !game_ok { break; }
+
+            let current_score = match read_u16(&all_bytes, &mut pos) {
+                Some(v) => v,
+                None => { game_ok = false; break; }
+            };
+            let target = final_score.saturating_sub(current_score) as f32;
+            game_samples.push(Sample { features, target });
+        }
+
+        if game_ok {
+            samples.extend(game_samples);
+            games_loaded += 1;
+        } else {
+            // Try to resync: advance 2 bytes and retry
+            pos = game_start + 2;
+            games_skipped += 1;
+            if games_skipped > 100 { break; } // too corrupted
+        }
+    }
+
+    eprintln!("  [loaded {} games, skipped {} corrupted]", games_loaded, games_skipped);
+    let _ = buf2; // silence unused
+    Ok(samples)
+}
+
+// ── MCE Policy Samples: flat file format ──
+// Magic: 4 bytes b"MCEP"
+// For each sample:
+//   u16 nf, nf × u16 features, f32 target
+const MCE_POLICY_MAGIC: &[u8; 4] = b"MCEP";
+
+/// Append MCE-labeled samples to a file. Creates the file with a magic header if new.
+pub fn append_mce_samples(
+    path: &std::path::Path,
+    samples: &[(Vec<u16>, f32)],
+) -> std::io::Result<()> {
+    use std::io::Write;
+    let is_new = !path.exists();
+    let mut file = std::fs::OpenOptions::new()
+        .create(true).append(true).open(path)?;
+    let mut buf: Vec<u8> = Vec::with_capacity(samples.len() * 64);
+    if is_new {
+        buf.extend_from_slice(MCE_POLICY_MAGIC);
+    }
+    for (features, target) in samples {
+        buf.extend_from_slice(&(features.len() as u16).to_le_bytes());
+        for &f in features {
+            buf.extend_from_slice(&f.to_le_bytes());
+        }
+        buf.extend_from_slice(&target.to_le_bytes());
+    }
+    file.write_all(&buf)?;
+    Ok(())
+}
+
+/// Load all MCE policy samples from a file.
+pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)?;
+    let mut pos = 0usize;
+    if bytes.len() < 4 || &bytes[..4] != MCE_POLICY_MAGIC {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "bad magic"));
+    }
+    pos += 4;
+    let mut samples = Vec::new();
+    while pos + 2 <= bytes.len() {
+        let nf = u16::from_le_bytes([bytes[pos], bytes[pos+1]]) as usize;
+        pos += 2;
+        if nf > 1024 || pos + nf * 2 + 4 > bytes.len() { break; }
+        let mut features = Vec::with_capacity(nf);
+        for _ in 0..nf {
+            features.push(u16::from_le_bytes([bytes[pos], bytes[pos+1]]));
+            pos += 2;
+        }
+        let target = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
+        pos += 4;
+        samples.push(Sample { features, target });
+    }
+    Ok(samples)
+}
+
+// ── Hex rotation augmentation ──
+// 120° CW in axial coords: (q, r) → (-q-r, q)
+// 240° CW in axial coords: (q, r) → (r, -q-r)
+// Pairwise line directions cycle: 0→1→2→0 under 120° CW.
+
+const GRID_DIM: usize = 21;
+const GRID_CENTER: i8 = 10;
+
+/// Build a cell index rotation table. Returns None entries for cells that rotate out of bounds.
+fn build_rotation_table(rot: usize) -> [Option<usize>; 441] {
+    let mut table = [None; 441];
+    for idx in 0..441 {
+        let q = (idx / GRID_DIM) as i8 - GRID_CENTER;
+        let r = (idx % GRID_DIM) as i8 - GRID_CENTER;
+        let (q2, r2) = match rot {
+            1 => (-q - r, q),       // 120° CW
+            2 => (r, -q - r),       // 240° CW
+            _ => (q, r),
+        };
+        let col = q2 as i16 + GRID_CENTER as i16;
+        let row = r2 as i16 + GRID_CENTER as i16;
+        if col >= 0 && col < GRID_DIM as i16 && row >= 0 && row < GRID_DIM as i16 {
+            table[idx] = Some(col as usize * GRID_DIM + row as usize);
+        }
+    }
+    table
+}
+
+/// Rotate a sparse feature vector. Returns None if any active cell rotates out of bounds.
+fn rotate_features(features: &[u16], rotation_table: &[Option<usize>; 441], dir_shift: usize) -> Option<Vec<u16>> {
+    const FEATURES_PER_CELL: usize = 11;
+    const CELL_FEATURES: usize = 441 * FEATURES_PER_CELL; // 4851
+    const PHASE_FEATURES: usize = 110;
+    const PAIR_BASE: usize = CELL_FEATURES + PHASE_FEATURES; // 4961
+    const PAIR_STATES: usize = 49;
+    const PAIR_FEATURES: usize = 3 * PAIR_STATES; // 147
+    const PATTERN_BASE: usize = PAIR_BASE + PAIR_FEATURES; // 5108
+
+    let mut rotated = Vec::with_capacity(features.len());
+    for &f in features {
+        let fi = f as usize;
+        if fi < CELL_FEATURES {
+            // Per-cell feature: remap cell index
+            let cell_idx = fi / FEATURES_PER_CELL;
+            let offset = fi % FEATURES_PER_CELL;
+            let new_cell = rotation_table[cell_idx]?;
+            rotated.push((new_cell * FEATURES_PER_CELL + offset) as u16);
+        } else if fi < PAIR_BASE {
+            // Phase features: unchanged
+            rotated.push(f);
+        } else if fi < PATTERN_BASE {
+            // Pairwise adjacency: rotate direction
+            let rel = fi - PAIR_BASE;
+            let dir = rel / PAIR_STATES;
+            let pair_state = rel % PAIR_STATES;
+            let new_dir = (dir + dir_shift) % 3;
+            rotated.push((PAIR_BASE + new_dir * PAIR_STATES + pair_state) as u16);
+        } else {
+            // Pattern features: unchanged
+            rotated.push(f);
+        }
+    }
+    Some(rotated)
+}
+
+/// Augment samples with 120° and 240° hex rotations. Returns original + rotated samples.
+fn augment_with_rotations(samples: &[Sample]) -> Vec<Sample> {
+    let table_120 = build_rotation_table(1);
+    let table_240 = build_rotation_table(2);
+
+    let mut augmented = Vec::with_capacity(samples.len() * 3);
+    let mut skipped = 0usize;
+
+    for sample in samples {
+        augmented.push(sample.clone());
+        if let Some(rot) = rotate_features(&sample.features, &table_120, 1) {
+            augmented.push(Sample { features: rot, target: sample.target });
+        } else {
+            skipped += 1;
+        }
+        if let Some(rot) = rotate_features(&sample.features, &table_240, 2) {
+            augmented.push(Sample { features: rot, target: sample.target });
+        } else {
+            skipped += 1;
+        }
+    }
+
+    if skipped > 0 {
+        eprintln!("  [rotation augmentation: skipped {} out-of-bounds rotations]", skipped);
+    }
+    augmented
+}
+
+/// Train NNUE from MCE policy samples (imitation of MCE via regression on rollout averages).
+pub fn train_from_mce_samples(
+    net: &mut NNUENetwork,
+    samples_path: &std::path::Path,
+    epochs: usize,
+    lr: f32,
+) -> std::io::Result<TrainStats> {
+    let mut stats = TrainStats::default();
+    eprint!("  Loading MCE samples from {:?}...", samples_path);
+    let start = std::time::Instant::now();
+    let raw_samples = load_mce_samples(samples_path)?;
+    eprintln!(" {} samples in {:.1?}", raw_samples.len(), start.elapsed());
+    if raw_samples.is_empty() {
+        return Ok(stats);
+    }
+
+    // Augment with 120° and 240° hex rotations (3× data)
+    eprint!("  Augmenting with hex rotations...");
+    let aug_start = std::time::Instant::now();
+    let mut samples = augment_with_rotations(&raw_samples);
+    eprintln!(" {} → {} samples in {:.1?}", raw_samples.len(), samples.len(), aug_start.elapsed());
+    stats.num_samples = samples.len();
+
+    let mut rng = StdRng::seed_from_u64(42);
+    let batch_size = 256;
+
+    for epoch in 0..epochs {
+        samples.shuffle(&mut rng);
+        let mut loss = 0.0f64;
+        let mut count = 0usize;
+        for batch_start in (0..samples.len()).step_by(batch_size) {
+            let batch_end = (batch_start + batch_size).min(samples.len());
+            let batch_lr = lr / (batch_end - batch_start) as f32;
+            for sample in &samples[batch_start..batch_end] {
+                let l = net.train_sample(&sample.features, sample.target, batch_lr);
+                loss += l as f64;
+                count += 1;
+            }
+        }
+        let rmse = (loss / count as f64).sqrt();
+        eprint!("\r  Epoch {}/{}: RMSE={:.2}    ", epoch + 1, epochs, rmse);
+        stats.final_rmse = rmse;
+    }
+    eprintln!();
+    Ok(stats)
+}
+
+/// Train NNUE from the high-score cache file (expert imitation learning).
+/// This trains on ~1000+ games that scored 90+, labeled with delta targets.
+pub fn train_from_cache(
+    net: &mut NNUENetwork,
+    cache_path: &std::path::Path,
+    epochs: usize,
+    lr: f32,
+) -> std::io::Result<TrainStats> {
+    let mut stats = TrainStats::default();
+    eprint!("  Loading cache from {:?}...", cache_path);
+    let start = std::time::Instant::now();
+    let mut samples = load_cache_samples(cache_path)?;
+    eprintln!(" {} samples in {:.1?}", samples.len(), start.elapsed());
+    stats.num_samples = samples.len();
+
+    let mut rng = StdRng::seed_from_u64(42);
+    let batch_size = 256;
+
+    for epoch in 0..epochs {
+        samples.shuffle(&mut rng);
+        let mut loss = 0.0f64;
+        let mut count = 0usize;
+        for batch_start in (0..samples.len()).step_by(batch_size) {
+            let batch_end = (batch_start + batch_size).min(samples.len());
+            let batch_lr = lr / (batch_end - batch_start) as f32;
+            for sample in &samples[batch_start..batch_end] {
+                let l = net.train_sample(&sample.features, sample.target, batch_lr);
+                loss += l as f64;
+                count += 1;
+            }
+        }
+        let rmse = (loss / count as f64).sqrt();
+        eprint!("\r  Epoch {}/{}: RMSE={:.2}    ", epoch + 1, epochs, rmse);
+        stats.final_rmse = rmse;
+    }
+    eprintln!();
+
+    Ok(stats)
+}
+
+/// Train the NNUE network with optional self-play iterations.
+/// iterations=1: train on greedy data only (default).
+/// iterations>1: first iteration uses greedy, subsequent use NNUE-guided self-play.
+pub fn train_nnue(
+    net: &mut NNUENetwork,
+    num_games: usize,
+    epochs: usize,
+    lr: f32,
+    seed: u64,
+) -> TrainStats {
+    let iterations: usize = std::env::args()
+        .position(|a| a == "--iterations")
+        .and_then(|i| std::env::args().nth(i + 1))
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1);
+
+    let epsilon: f32 = std::env::args()
+        .position(|a| a == "--epsilon")
+        .and_then(|i| std::env::args().nth(i + 1))
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+
+    let pretrain: bool = std::env::args().any(|a| a == "--pretrain");
+
+    let mut stats = TrainStats::default();
+    let mut rng = StdRng::seed_from_u64(seed + 999);
+
+    // Phase 0: 1-player pre-training (if --pretrain)
+    // Teaches the network what high-scoring boards look like
+    if pretrain {
+        let pretrain_iters = 3;
+        for iter in 0..pretrain_iters {
+            let use_net = if iter == 0 { None } else { Some(&*net) };
+            let iter_epsilon = if iter == 0 { 0.0 } else { epsilon.max(0.05) };
+            let label = if use_net.is_some() { "1p self-play" } else { "1p greedy" };
+
+            eprint!("  Pre-train {}/{} ({}): generating {} games...",
+                iter + 1, pretrain_iters, label, num_games);
+            let start = std::time::Instant::now();
+            let mut samples = generate_samples(num_games, seed + iter as u64 * 99999, use_net, iter_epsilon, 1);
+            let gen_time = start.elapsed();
+            eprintln!(" {} samples in {:.1?}", samples.len(), gen_time);
+
+            let batch_size = 256;
+            for epoch in 0..epochs {
+                samples.shuffle(&mut rng);
+                let mut epoch_loss = 0.0f64;
+                let mut epoch_count = 0usize;
+                for batch_start in (0..samples.len()).step_by(batch_size) {
+                    let batch_end = (batch_start + batch_size).min(samples.len());
+                    let batch_lr = lr / (batch_end - batch_start) as f32;
+                    for sample in &samples[batch_start..batch_end] {
+                        let loss = net.train_sample(&sample.features, sample.target, batch_lr);
+                        epoch_loss += loss as f64;
+                        epoch_count += 1;
+                    }
+                }
+                let rmse = (epoch_loss / epoch_count as f64).sqrt();
+                eprint!("\r  Pre {}, Epoch {}/{}: RMSE={:.2}    ", iter + 1, epoch + 1, epochs, rmse);
+                stats.final_rmse = rmse;
+            }
+            eprintln!();
+        }
+        eprintln!("  Pre-training complete. Fine-tuning on 4p...");
+    }
+
+    // Main training: 4-player iterations
+    for iter in 0..iterations {
+        let use_net = if iter == 0 && !pretrain { None } else { Some(&*net) };
+        let iter_epsilon = if iter == 0 && !pretrain { 0.0 } else { epsilon };
+        let iter_label = if use_net.is_some() {
+            if iter_epsilon > 0.0 { "4p self-play+explore" } else { "4p self-play" }
+        } else { "4p greedy" };
+
+        eprint!("  Iteration {}/{} ({}): generating {} games...",
+            iter + 1, iterations, iter_label, num_games);
+        let start = std::time::Instant::now();
+        let mut samples = generate_samples(num_games, seed + iter as u64 * 12345, use_net, iter_epsilon, 4);
+        let gen_time = start.elapsed();
+        eprintln!(" {} samples in {:.1?}", samples.len(), gen_time);
+
+        stats.num_samples = samples.len();
+        let batch_size = 256;
+
+        for epoch in 0..epochs {
+            samples.shuffle(&mut rng);
+
+            let mut epoch_loss = 0.0f64;
+            let mut epoch_count = 0usize;
+
+            for batch_start in (0..samples.len()).step_by(batch_size) {
+                let batch_end = (batch_start + batch_size).min(samples.len());
+                let batch_lr = lr / (batch_end - batch_start) as f32;
+
+                for sample in &samples[batch_start..batch_end] {
+                    let loss = net.train_sample(&sample.features, sample.target, batch_lr);
+                    epoch_loss += loss as f64;
+                    epoch_count += 1;
+                }
+            }
+
+            let avg_loss = epoch_loss / epoch_count as f64;
+            let rmse = avg_loss.sqrt();
+            eprint!("\r  Iter {}, Epoch {}/{}: RMSE={:.2}    ", iter + 1, epoch + 1, epochs, rmse);
+            stats.final_rmse = rmse;
+        }
+        // Save weights after each iteration
+        let weights_path = std::env::args()
+            .position(|a| a == "--weights")
+            .and_then(|i| std::env::args().nth(i + 1))
+            .unwrap_or_else(|| "nnue_weights.bin".to_string());
+        let _ = net.save(std::path::Path::new(&weights_path));
+        eprintln!("  [saved to {}]", weights_path);
+    }
+
+    stats
+}
+
+/// Compute the marginal value of each AI-placed tile in the final board.
+/// For each tile: how much would the score drop if this tile weren't there?
+/// Wildlife: analytically compute per-token contribution to pattern scores.
+/// Habitat: each tile contributes 1 per terrain (simplified, no group splitting).
+/// Returns marginals in placement order (index 0 = first tile placed).
+fn compute_tile_marginals(board: &Board, cards: &ScoringCards) -> Vec<f32> {
+    let adj = &*cascadia_core::hex::ADJACENCY;
+    let mut marginals = Vec::with_capacity(board.placed_tiles.len());
+
+    // Pre-compute pattern info for wildlife marginals
+    let bear_pairs = count_bear_pairs_list(board, adj);
+    let bear_pair_count = bear_pairs.len();
+    let elk_lines = compute_elk_line_lengths(board);
+    let salmon_runs = compute_salmon_run_lengths(board, adj);
+    let hawk_isolated = count_isolated_hawks(board, adj);
+
+    // Skip first 3 tiles (starter tiles, not AI-placed)
+    let ai_start = 3.min(board.placed_tiles.len());
+
+    for i in 0..board.placed_tiles.len() {
+        if i < ai_start {
+            // Starter tiles — not counted
+            continue;
+        }
+        let idx = board.placed_tiles[i] as usize;
+        let cell = board.grid.get(idx);
+        let mut marginal = 0.0f32;
+
+        // Habitat marginal: 1 per terrain on this tile
+        if cell.primary_terrain().is_some() { marginal += 1.0; }
+        if cell.secondary_terrain().is_some() { marginal += 1.0; }
+
+        // Wildlife marginal
+        if let Some(w) = cell.placed_wildlife() {
+            let variant = cards.variant_for(w);
+            marginal += wildlife_marginal(board, idx, w, variant, adj,
+                bear_pair_count, &elk_lines, &salmon_runs, hawk_isolated);
+
+            // Nature token from keystone
+            if cell.is_keystone() { marginal += 1.0; }
+        }
+
+        marginals.push(marginal);
+    }
+
+    marginals
+}
+
+/// Compute marginal value of a specific wildlife token at `pos`.
+fn wildlife_marginal(
+    board: &Board, pos: usize, w: cascadia_core::types::Wildlife,
+    _variant: cascadia_core::types::ScoringCardVariant,
+    adj: &cascadia_core::hex::AdjacencyTable,
+    bear_pair_count: usize,
+    elk_lines: &[(usize, usize)], // (position, line_length)
+    salmon_runs: &[(usize, usize)], // (position, run_length)
+    hawk_isolated: usize,
+) -> f32 {
+    use cascadia_core::types::Wildlife;
+
+    match w {
+        Wildlife::Bear => {
+            // Check if this bear is part of a valid pair
+            let bear_neighbors: usize = adj.neighbors_of(pos)
+                .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Bear))
+                .count();
+            if bear_neighbors == 1 {
+                // Part of a pair — marginal = half the pair's marginal value
+                // Going from N pairs to N-1: score table [0,4,11,19,27]
+                let pair_scores = [0.0, 4.0, 11.0, 19.0, 27.0];
+                let n = bear_pair_count.min(4);
+                let with = pair_scores[n];
+                let without = if n > 0 { pair_scores[n - 1] } else { 0.0 };
+                (with - without) / 2.0 // split credit between both bears
+            } else {
+                0.0 // isolated or in cluster — no scoring contribution
+            }
+        }
+        Wildlife::Elk => {
+            // Find the line this elk belongs to
+            if let Some(&(_, line_len)) = elk_lines.iter().find(|&&(p, _)| p == pos) {
+                let line_scores = [0.0, 2.0, 5.0, 9.0, 13.0];
+                let len = line_len.min(4);
+                let with = line_scores[len];
+                let without = if len > 0 { line_scores[len - 1] } else { 0.0 };
+                with - without // marginal of this elk extending the line by 1
+            } else {
+                2.0 // single elk = 2 points
+            }
+        }
+        Wildlife::Salmon => {
+            // Find the run this salmon belongs to
+            if let Some(&(_, run_len)) = salmon_runs.iter().find(|&&(p, _)| p == pos) {
+                let run_scores = [0.0, 2.0, 4.0, 7.0, 11.0, 15.0, 20.0, 26.0];
+                let len = run_len.min(7);
+                let with = run_scores[len];
+                let without = if len > 0 { run_scores[len - 1] } else { 0.0 };
+                with - without
+            } else {
+                2.0
+            }
+        }
+        Wildlife::Hawk => {
+            let has_hawk_neighbor = adj.neighbors_of(pos)
+                .any(|n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Hawk));
+            if !has_hawk_neighbor {
+                // Isolated — marginal of Nth isolated hawk
+                let hawk_scores = [0.0, 2.0, 5.0, 8.0, 11.0, 14.0, 18.0, 22.0, 28.0];
+                let n = hawk_isolated.min(8);
+                let with = hawk_scores[n];
+                let without = if n > 0 { hawk_scores[n - 1] } else { 0.0 };
+                with - without
+            } else {
+                0.0
+            }
+        }
+        Wildlife::Fox => {
+            // Individual fox score = unique adjacent wildlife types
+            let mut mask = 0u8;
+            for nidx in adj.neighbors_of(pos) {
+                if let Some(w) = board.grid.get(nidx).placed_wildlife() {
+                    mask |= 1 << (w as u8);
+                }
+            }
+            mask.count_ones() as f32
+        }
+    }
+}
+
+// Helper: list all positions that are part of bear pairs
+fn count_bear_pairs_list(board: &Board, adj: &cascadia_core::hex::AdjacencyTable) -> Vec<(usize, usize)> {
+    use cascadia_core::types::Wildlife;
+    let positions = &board.wildlife_positions[Wildlife::Bear as usize];
+    let mut visited = [false; 441];
+    let mut pairs = Vec::new();
+    for &pos in positions.iter() {
+        let idx = pos as usize;
+        if visited[idx] { continue; }
+        let mut component = arrayvec::ArrayVec::<u16, 24>::new();
+        let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+        queue.push(pos);
+        visited[idx] = true;
+        while let Some(current) = queue.pop() {
+            component.push(current);
+            for nidx in adj.neighbors_of(current as usize) {
+                if !visited[nidx] && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear) {
+                    visited[nidx] = true;
+                    queue.push(nidx as u16);
+                }
+            }
+        }
+        if component.len() == 2 {
+            pairs.push((component[0] as usize, component[1] as usize));
+        }
+    }
+    pairs
+}
+
+// Helper: for each elk, find the line it belongs to and the line length
+fn compute_elk_line_lengths(board: &Board) -> Vec<(usize, usize)> {
+    use cascadia_core::types::Wildlife;
+    let positions = &board.wildlife_positions[Wildlife::Elk as usize];
+    let mut results = Vec::new();
+    let mut is_elk = [false; 441];
+    for &pos in positions.iter() { is_elk[pos as usize] = true; }
+
+    // For each elk, find the longest line through it in any direction
+    for &pos in positions.iter() {
+        let coord = HexCoord::from_index(pos as usize);
+        let mut best_len = 1;
+        for &(dq, dr) in &HexCoord::LINE_DIRECTIONS {
+            let mut len = 1;
+            let mut c = HexCoord::new(coord.q + dq, coord.r + dr);
+            while let Some(idx) = c.to_index() {
+                if is_elk[idx] { len += 1; c = HexCoord::new(c.q + dq, c.r + dr); }
+                else { break; }
+            }
+            c = HexCoord::new(coord.q - dq, coord.r - dr);
+            while let Some(idx) = c.to_index() {
+                if is_elk[idx] { len += 1; c = HexCoord::new(c.q - dq, c.r - dr); }
+                else { break; }
+            }
+            best_len = best_len.max(len);
+        }
+        results.push((pos as usize, best_len));
+    }
+    results
+}
+
+// Helper: for each salmon, find the run it belongs to and run length
+fn compute_salmon_run_lengths(board: &Board, adj: &cascadia_core::hex::AdjacencyTable) -> Vec<(usize, usize)> {
+    use cascadia_core::types::Wildlife;
+    let positions = &board.wildlife_positions[Wildlife::Salmon as usize];
+    let mut visited = [false; 441];
+    let mut results = Vec::new();
+
+    for &pos in positions.iter() {
+        let idx = pos as usize;
+        if visited[idx] { continue; }
+        let mut component = arrayvec::ArrayVec::<u16, 24>::new();
+        let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+        queue.push(pos);
+        visited[idx] = true;
+        while let Some(current) = queue.pop() {
+            component.push(current);
+            for nidx in adj.neighbors_of(current as usize) {
+                if !visited[nidx] && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Salmon) {
+                    visited[nidx] = true;
+                    queue.push(nidx as u16);
+                }
+            }
+        }
+        let is_valid = component.iter().all(|&p| {
+            adj.neighbors_of(p as usize)
+                .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon))
+                .count() <= 2
+        });
+        let len = if is_valid { component.len() } else { 0 };
+        for &p in &component {
+            results.push((p as usize, len));
+        }
+    }
+    results
+}
+
+// Helper: count isolated hawks
+fn count_isolated_hawks(board: &Board, adj: &cascadia_core::hex::AdjacencyTable) -> usize {
+    use cascadia_core::types::Wildlife;
+    board.wildlife_positions[Wildlife::Hawk as usize].iter()
+        .filter(|&&pos| {
+            !adj.neighbors_of(pos as usize)
+                .any(|n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Hawk))
+        })
+        .count()
+}
+
+/// Simple pre-move optimization for training data generation.
+/// Checks whether replacing 3-of-a-kind or mulliganing improves the greedy score.
+fn greedy_pre_move(game: &mut GameState, _rng: &mut StdRng) {
+    const MAX_MULLIGANS: usize = 3;
+    let player = game.current_player;
+    let mut mulligans_used = 0;
+
+    loop {
+        let baseline = greedy_score(game);
+
+        // Option 1: free 3-of-a-kind replacement
+        if game.can_replace_overflow().is_some() {
+            let mut test = game.clone();
+            test.replace_overflow();
+            if greedy_score(&test) > baseline {
+                game.replace_overflow();
+                continue;
+            }
+        }
+
+        // Option 2: paid mulligan (only if significantly better, to offset token cost)
+        if mulligans_used < MAX_MULLIGANS && game.boards[player].nature_tokens > 0 {
+            let mut test = game.clone();
+            if test.mulligan_wildlife() {
+                // Use greedy eval on actual post-mulligan state (no sampling for speed)
+                let new_score = greedy_score(&test);
+                if new_score > baseline + 2 {
+                    game.mulligan_wildlife();
+                    mulligans_used += 1;
+                    continue;
+                }
+            }
+        }
+        break;
+    }
+}
+
+fn greedy_score(game: &GameState) -> u16 {
+    greedy_move(game).map(|m| m.score).unwrap_or(0)
+}
+
+/// Pick a random valid move (for epsilon-greedy exploration).
+fn pick_random_move(game: &GameState, rng: &mut StdRng) -> Option<crate::eval::ScoredMove> {
+    use cascadia_core::hex::HexCoord;
+    use crate::eval::ScoredMove;
+
+    let mp: Vec<_> = game.market.available()
+        .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+    if mp.is_empty() { return None; }
+
+    let board = &game.boards[game.current_player];
+    let frontier = board.frontier();
+    if frontier.is_empty() { return None; }
+
+    // Pick random market pair
+    let &(idx, tile, wildlife) = &mp[rng.gen_range(0..mp.len())];
+
+    // Pick random frontier cell
+    let fi = frontier[rng.gen_range(0..frontier.len())] as usize;
+    let coord = HexCoord::from_index(fi);
+
+    // Pick random rotation
+    let max_rot: u8 = if tile.terrain2.is_none() { 1 } else { 6 };
+    let rot = rng.gen_range(0..max_rot);
+
+    // Try to place tile; if invalid, fall back to greedy
+    let mut board_clone = board.clone();
+    if board_clone.place_tile(coord, tile, rot).is_none() {
+        return greedy_move(game);
+    }
+
+    // Pick random wildlife placement (or skip with 20% chance)
+    let valid_positions: Vec<u16> = board_clone.placed_tiles.iter()
+        .copied()
+        .filter(|&ti| board_clone.grid.get(ti as usize).can_place_wildlife(wildlife))
+        .collect();
+
+    let (wq, wr) = if !valid_positions.is_empty() && rng.gen::<f32>() > 0.2 {
+        let ti = valid_positions[rng.gen_range(0..valid_positions.len())];
+        let wc = HexCoord::from_index(ti as usize);
+        (Some(wc.q), Some(wc.r))
+    } else {
+        (None, None)
+    };
+
+    Some(ScoredMove {
+        market_index: idx,
+        tile_q: coord.q,
+        tile_r: coord.r,
+        rotation: rot,
+        wildlife_q: wq,
+        wildlife_r: wr,
+        score: 0,
+        eval: 0,
+        wildlife_market_index: None,
+    })
+}
+
+/// Pick best move: get greedy top-K candidates, re-rank by NNUE afterstate value.
+pub fn pick_best_move_nnue(
+    game: &GameState,
+    net: &NNUENetwork,
+) -> Option<crate::eval::ScoredMove> {
+    // Use filtered candidate set for speed (critical for MCE rollout performance)
+    use crate::eval::ScoredMove;
+
+    let mp: Vec<_> = game.market.available()
+        .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+    if mp.is_empty() { return None; }
+
+    let cards = game.scoring_cards;
+    let turns = game.turns_remaining;
+    let mut board = game.boards[game.current_player].clone();
+    let base_move = crate::eval::best_move_with_potential(&mut board, &mp, &cards, turns);
+
+    let mut candidates: Vec<ScoredMove> = crate::search::candidate_moves_pub(game);
+    if let Some(ref bm) = base_move {
+        if !candidates.iter().any(|c| c.tile_q == bm.tile_q && c.tile_r == bm.tile_r
+            && c.rotation == bm.rotation && c.wildlife_q == bm.wildlife_q && c.wildlife_r == bm.wildlife_r) {
+            candidates.push(*bm);
+        }
+    }
+    candidates.truncate(15);
+
+    if candidates.is_empty() {
+        return base_move;
+    }
+
+    // Re-rank by actual_score + NNUE(remaining_value) = estimated final score
+    let mut best: Option<(ScoredMove, f32)> = None;
+    for mv in &candidates {
+        let mut g = game.clone();
+        if !crate::search::execute_scored_move(&mut g, mv) {
+            continue;
+        }
+        let actual = cascadia_core::scoring::ScoreBreakdown::compute(
+            &mut g.boards[game.current_player], &g.scoring_cards,
+        ).total as f32;
+        let bag_info = crate::nnue::BagInfo::from_game(&g);
+        let remaining = net.evaluate_with_bag(&g.boards[game.current_player], &bag_info);
+        let estimated_final = actual + remaining;
+        if best.is_none() || estimated_final > best.as_ref().unwrap().1 {
+            best = Some((*mv, estimated_final));
+        }
+    }
+
+    best.map(|(mv, _)| mv)
+}
+
+/// Enumerate ALL legal moves and score each afterstate with NNUE.
+/// No pre-filtering — every (market, frontier, rotation, wildlife_placement) combo is evaluated.
+pub fn pick_best_move_nnue_full(
+    game: &GameState,
+    net: &NNUENetwork,
+) -> Option<crate::eval::ScoredMove> {
+    use crate::eval::ScoredMove;
+    use cascadia_core::scoring::ScoreBreakdown;
+
+    let player = game.current_player;
+    let board = &game.boards[player];
+    let cards = game.scoring_cards;
+    let frontier = board.frontier();
+    if frontier.is_empty() { return None; }
+
+    let market_pairs: Vec<_> = game.market.available()
+        .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+    if market_pairs.is_empty() { return None; }
+
+    let mut board_clone = board.clone();
+    let mut best: Option<(ScoredMove, f32)> = None;
+
+    for &(mi, tile, wildlife) in &market_pairs {
+        let max_rot: u8 = if tile.terrain2.is_none() { 1 } else { 6 };
+
+        for &fi in frontier.iter() {
+            let coord = HexCoord::from_index(fi as usize);
+            for rot in 0..max_rot {
+                let tile_action = match board_clone.place_tile(coord, tile, rot) {
+                    Some(a) => a,
+                    None => continue,
+                };
+
+                // Option 1: skip wildlife placement
+                let actual = ScoreBreakdown::compute(&mut board_clone, &cards).total as f32;
+                let remaining = net.evaluate(&board_clone);
+                let score_skip = actual + remaining;
+
+                let skip_mv = ScoredMove {
+                    market_index: mi,
+                    tile_q: coord.q,
+                    tile_r: coord.r,
+                    rotation: rot,
+                    wildlife_q: None,
+                    wildlife_r: None,
+                    score: actual as u16,
+                    eval: 0,
+                    wildlife_market_index: None,
+                };
+                if best.is_none() || score_skip > best.as_ref().unwrap().1 {
+                    best = Some((skip_mv, score_skip));
+                }
+
+                // Option 2: try every valid wildlife placement
+                let placed: arrayvec::ArrayVec<u16, 64> =
+                    board_clone.placed_tiles.iter().copied().collect();
+                for &ti in placed.iter() {
+                    if !board_clone.grid.get(ti as usize).can_place_wildlife(wildlife) {
+                        continue;
+                    }
+                    let wl_action = match board_clone.place_wildlife(ti as usize, wildlife) {
+                        Some(a) => a,
+                        None => continue,
+                    };
+
+                    let actual_w = ScoreBreakdown::compute(&mut board_clone, &cards).total as f32;
+                    let remaining_w = net.evaluate(&board_clone);
+                    let score_w = actual_w + remaining_w;
+
+                    board_clone.undo(wl_action);
+
+                    if score_w > best.as_ref().map(|b| b.1).unwrap_or(f32::NEG_INFINITY) {
+                        let wc = HexCoord::from_index(ti as usize);
+                        best = Some((ScoredMove {
+                            market_index: mi,
+                            tile_q: coord.q,
+                            tile_r: coord.r,
+                            rotation: rot,
+                            wildlife_q: Some(wc.q),
+                            wildlife_r: Some(wc.r),
+                            score: actual_w as u16,
+                            eval: 0,
+                            wildlife_market_index: None,
+                        }, score_w));
+                    }
+                }
+
+                board_clone.undo(tile_action);
+            }
+        }
+    }
+
+    best.map(|(mv, _)| mv)
+}
+
+#[derive(Default)]
+pub struct TrainStats {
+    pub num_samples: usize,
+    pub final_rmse: f64,
+}

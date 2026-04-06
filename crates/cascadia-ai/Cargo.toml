@@ -1,0 +1,9 @@
+[package]
+name = "cascadia-ai"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cascadia-core = { path = "../cascadia-core" }
+arrayvec = { workspace = true }
+rand = { workspace = true }

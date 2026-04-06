@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cascadia</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+  }
+  header h1 { font-size: 20px; color: #e0e0e0; font-weight: 600; }
+  .header-controls { display: flex; gap: 12px; align-items: center; }
+  button {
+    background: #0f3460;
+    color: #e0e0e0;
+    border: 1px solid #533483;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  button:hover { background: #533483; }
+  button.active { background: #533483; border-color: #e94560; }
+
+  .main-area {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Hex grid area */
+  .grid-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  #hex-canvas {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+  #hex-canvas:active { cursor: grabbing; }
+
+  /* Left panel — scoring reference */
+  .left-panel {
+    width: 260px;
+    background: #16213e;
+    border-right: 1px solid #0f3460;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  .scoring-card {
+    background: #1a1a2e;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .scoring-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .scoring-card .animal-name {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .scoring-card .variant-badge {
+    background: #533483;
+    color: #e0e0e0;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 1px 7px;
+    border-radius: 3px;
+  }
+  .scoring-card .desc {
+    color: #999;
+  }
+  .scoring-card .points {
+    color: #aaa;
+    font-size: 10px;
+    margin-top: 3px;
+  }
+  .scoring-card .points span {
+    color: #e94560;
+    font-weight: 600;
+  }
+
+  /* Side panel */
+  .side-panel {
+    width: 280px;
+    background: #16213e;
+    border-left: 1px solid #0f3460;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .panel-section h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+
+  /* Market */
+  .market-pair {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #1a1a2e;
+  }
+  .market-pair:hover { border-color: #533483; }
+  .market-pair.selected { border-color: #e94560; background: #1a1a3e; }
+  .market-tile {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    position: relative;
+  }
+  .market-tile.dual {
+    background: linear-gradient(135deg, var(--t1) 50%, var(--t2) 50%);
+  }
+  .market-wildlife {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .market-info {
+    font-size: 11px;
+    color: #aaa;
+    flex: 1;
+  }
+  .market-allowed {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+  }
+  .allowed-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    opacity: 0.7;
+  }
+
+  /* Scores */
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 2px 0;
+  }
+  .score-row .label { color: #888; }
+  .score-total {
+    font-size: 18px;
+    font-weight: bold;
+    color: #e94560;
+    border-top: 1px solid #0f3460;
+    padding-top: 4px;
+    margin-top: 4px;
+  }
+  .score-subtotal {
+    font-weight: bold;
+    color: #bcd;
+    border-top: 1px dashed rgba(255,255,255,0.1);
+    padding-top: 3px;
+    margin-top: 2px;
+    margin-bottom: 4px;
+  }
+  .score-subtotal .label { color: #bcd; }
+
+  /* Status bar */
+  .status-bar {
+    padding: 8px 24px;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+    font-size: 13px;
+    color: #888;
+  }
+  .status-bar .highlight { color: #e94560; }
+
+  /* Terrain colors */
+  :root {
+    --forest: #2d5a27;
+    --prairie: #c4a035;
+    --wetland: #2a7a7a;
+    --mountain: #6b6b6b;
+    --river: #2660a4;
+  }
+
+  /* Game over overlay */
+  .game-over-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  .game-over-overlay.visible { display: flex; }
+  .game-over-card {
+    background: #16213e;
+    border: 2px solid #e94560;
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    min-width: 300px;
+  }
+  .game-over-card h2 { font-size: 24px; color: #e94560; margin-bottom: 16px; }
+  .game-over-card .final-score { font-size: 48px; font-weight: bold; color: #e0e0e0; }
+  .game-over-card button { margin-top: 20px; }
+
+  /* Instructions */
+  .instructions {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.5;
+  }
+
+  .player-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .player-tab {
+    padding: 4px 12px;
+    font-size: 12px;
+    border-radius: 3px;
+    background: #1a1a2e;
+    border: 1px solid #0f3460;
+    cursor: pointer;
+  }
+  .player-tab.active {
+    background: #0f3460;
+    border-color: #533483;
+  }
+  .player-tab.current {
+    border-color: #e94560;
+  }
+  .view-btn {
+    font-size: 11px;
+    padding: 2px 8px;
+    margin: 0 1px;
+  }
+  .view-btn.active {
+    background: #e94560;
+    color: #fff;
+  }
+  .candidate-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    margin: 3px 0;
+    background: rgba(15, 52, 96, 0.4);
+    border-left: 3px solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: monospace;
+    transition: background 0.1s;
+  }
+  .candidate-item:hover { background: rgba(83, 52, 131, 0.5); }
+  .candidate-item.selected {
+    background: rgba(233, 204, 0, 0.15);
+    border-left-color: #ffcc00;
+  }
+  .candidate-rank {
+    font-weight: bold;
+    color: #999;
+    min-width: 22px;
+  }
+  .candidate-desc { flex: 1; padding: 0 6px; color: #d0d0d0; }
+  .candidate-score {
+    font-weight: bold;
+    color: #ffcc00;
+    min-width: 36px;
+    text-align: right;
+  }
+  .event-log-body-inline {
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-family: monospace;
+    background: rgba(15, 52, 96, 0.3);
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .event-item {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    line-height: 1.4;
+    color: #d0d0d0;
+  }
+  .event-item:last-child { border-bottom: none; }
+  #scoring-ref.collapsed { display: none; }
+  .suggest-glow {
+    animation: suggestPulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 0 3px #ffcc00, 0 0 20px #ffcc00 !important;
+    position: relative;
+    z-index: 10;
+  }
+  @keyframes suggestPulse {
+    0%, 100% { box-shadow: 0 0 0 3px #ffcc00, 0 0 15px rgba(255,204,0,0.6); }
+    50% { box-shadow: 0 0 0 4px #ffcc00, 0 0 25px rgba(255,204,0,0.9); }
+  }
+  .spinner-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+  .spinner-overlay.visible {
+    display: flex;
+  }
+  .spinner {
+    width: 60px;
+    height: 60px;
+    border: 6px solid #0f3460;
+    border-top-color: #e94560;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  .spinner-text {
+    color: #fff;
+    font-size: 18px;
+    margin-top: 20px;
+    font-family: sans-serif;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+<div id="spinner-overlay" class="spinner-overlay">
+  <div class="spinner"></div>
+  <div class="spinner-text">Computing best move...</div>
+</div>
+
+
+<header>
+  <h1>CASCADIA</h1>
+  <div class="header-controls">
+    <button id="suggest-move-btn" style="font-size:12px"
+            onclick="doSuggestMove()">💡 Suggest</button>
+    <button id="clear-suggest-btn" style="font-size:12px; display:none"
+            onclick="dismissSuggestion()">✕ Clear Suggestion</button>
+    <button id="best-move-btn" style="font-size:12px"
+            onclick="doBestMove()">🤖 Best Move</button>
+    <button id="auto-play-btn" style="font-size:12px"
+            onclick="toggleAutoPlay()">▶️ Auto Play</button>
+    <button id="undo-btn" style="font-size:12px"
+            onclick="doUndo()">↶ Undo</button>
+    <span id="view-player-buttons" style="display:none; margin-left:8px;">
+      <span style="font-size:12px; color:#888">View:</span>
+      <button class="view-btn" data-view="0" onclick="setViewPlayer(0)">P1</button>
+      <button class="view-btn" data-view="1" onclick="setViewPlayer(1)">P2</button>
+      <button class="view-btn" data-view="2" onclick="setViewPlayer(2)">P3</button>
+      <button class="view-btn" data-view="3" onclick="setViewPlayer(3)">P4</button>
+    </span>
+    <button id="show-results-btn" style="font-size:12px; display:none"
+            onclick="showGameOver()">📊 Show Results</button>
+    <span id="turn-info"></span>
+    <button onclick="restartGame()">Restart</button>
+    <button onclick="newGame(1)">Solo</button>
+    <button onclick="newGame(4, true)" title="Solo vs 3 greedy AIs">Solo (4p sim)</button>
+    <button onclick="newGame(2)">2P</button>
+    <button onclick="newGame(3)">3P</button>
+    <button onclick="newGame(4)">4P</button>
+  </div>
+</header>
+
+<div class="main-area">
+  <div class="left-panel">
+    <div id="candidates-section" class="panel-section" style="display:none">
+      <h2>💡 Top Suggestions</h2>
+      <div id="candidates-list"></div>
+    </div>
+    <div class="panel-section">
+      <h2>📜 Event Log (<span id="event-count">0</span>)</h2>
+    </div>
+    <div id="event-log-body" class="event-log-body-inline"></div>
+    <div class="panel-section" style="margin-top:10px">
+      <h2 style="cursor:pointer; user-select:none" onclick="toggleScoringCards()">
+        <span id="scoring-toggle">▼</span> Scoring Cards
+      </h2>
+    </div>
+    <div id="scoring-ref"></div>
+  </div>
+
+  <div class="grid-container">
+    <canvas id="hex-canvas"></canvas>
+  </div>
+
+  <div class="side-panel">
+    <div class="panel-section">
+      <h2>Market — Select a pair</h2>
+      <div id="market"></div>
+      <button id="overflow-btn" style="display:none; margin-top: 8px; width:100%; font-size:12px; background:#e94560"
+              onclick="doReplaceOverflow()">♻️ Free replace — 3 of a kind showing</button>
+      <button id="pinecone-btn" style="display:none; margin-top: 4px; width:100%; font-size:12px"
+              onclick="startPineconeMode()">🌲 Spend pinecone — pick any tile + animal</button>
+      <button id="mulligan-btn" style="display:none; margin-top: 4px; width:100%; font-size:12px"
+              onclick="doMulligan()">🌲 Spend nature token — mulligan wildlife</button>
+    </div>
+
+    <div class="panel-section">
+      <h2>Score</h2>
+      <div id="scores"></div>
+    </div>
+
+    <div class="panel-section">
+      <h2>How to play</h2>
+      <div class="instructions">
+        1. Click a market pair on the right<br>
+        2. Press <b>R</b> to rotate, then click a frontier hex<br>
+        3. Click a tile to place the wildlife token (or skip)<br>
+        <br>
+        Scroll to zoom, drag to pan.
+      </div>
+      <button id="skip-wildlife-btn" style="display:none; margin-top: 8px; width:100%"
+              onclick="skipWildlife()">Skip Wildlife</button>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar" id="status-bar">
+  Select a market pair to begin your turn.
+</div>
+
+<div class="game-over-overlay" id="game-over">
+  <div class="game-over-card">
+    <h2>Game Over</h2>
+    <div class="final-score" id="final-score"></div>
+    <div id="final-breakdown" style="margin-top:12px; text-align:left; font-size:14px;"></div>
+    <div style="display:flex; gap:8px; margin-top:20px; justify-content:center;">
+      <button onclick="newGame(1)">New Solo</button>
+      <button onclick="newGame(4)">New Solo (4p sim)</button>
+      <button onclick="hideGameOver()">Hide (view board)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TERRAIN_COLORS = {
+  forest:   '#1e4620',
+  prairie:  '#c4a035',
+  wetland:  '#5dad3c',
+  mountain: '#6b6b6b',
+  river:    '#2660a4',
+};
+
+const WILDLIFE_EMOJI = {
+  bear:   '🐻',
+  elk:    '🫎',
+  salmon: '🐟',
+  hawk:   '🦅',
+  fox:    '🦊',
+};
+
+const SCORING_DESCRIPTIONS = {
+  A: {
+    bear: {
+      rule: 'Score for pairs of bears (exactly 2 adjacent, isolated from other bears)',
+      points: '1p=4 · 2p=11 · 3p=19 · 4p=27',
+    },
+    elk: {
+      rule: 'Score for straight lines of adjacent elk',
+      points: '1=2 · 2=5 · 3=9 · 4+=13',
+    },
+    salmon: {
+      rule: 'Score for runs (chains, no branching, isolated)',
+      points: '1=2 · 2=4 · 3=7 · 4=11 · 5=15 · 6=20 · 7+=26',
+    },
+    hawk: {
+      rule: 'Score for isolated hawks (not adjacent to other hawks)',
+      points: '1=2 · 2=5 · 3=8 · 4=11 · 5=14 · 6=18 · 7=22 · 8+=28',
+    },
+    fox: {
+      rule: 'Each fox scores for the number of unique wildlife types adjacent to it',
+      points: '1 pt per unique adjacent type',
+    },
+  },
+};
+
+const TERRAIN_LABELS = {
+  forest:   'FO',
+  prairie:  'PR',
+  wetland:  'WE',
+  mountain: 'MT',
+  river:    'RI',
+};
+
+const TERRAIN_NAMES = ['forest', 'prairie', 'wetland', 'mountain', 'river'];
+
+// State
+let gameState = null;
+let selectedMarket = null;
+let placedTileCoord = null;  // {q, r} of where we just placed the tile
+let phase = 'select_market'; // select_market | place_tile | place_wildlife
+let draftedWildlife = null;
+let draftedTileAllowed = []; // allowed wildlife on the tile being placed
+let currentRotation = 0; // 0-5, rotation for tile being placed
+let hoveredHex = null; // {q, r} of hex under cursor
+let pineconeMode = false; // spending a pinecone to break pairs
+let pineconePhase = null; // 'select_tile' | 'select_wildlife'
+let pineconeTileIndex = null; // market index for the tile
+let pineconeWildlifeIndex = null; // market index for the wildlife
+
+// Canvas / camera
+const canvas = document.getElementById('hex-canvas');
+const ctx = canvas.getContext('2d');
+let camera = { x: 0, y: 0, zoom: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let dragCameraStart = { x: 0, y: 0 };
+
+const HEX_SIZE = 38;
+
+function hexToPixel(q, r) {
+  const x = HEX_SIZE * (3/2 * q);
+  const y = HEX_SIZE * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
+  return { x, y };
+}
+
+function pixelToHex(px, py) {
+  const q = (2/3 * px) / HEX_SIZE;
+  const r = (-1/3 * px + Math.sqrt(3)/3 * py) / HEX_SIZE;
+  // Round to nearest hex
+  const s = -q - r;
+  let rq = Math.round(q);
+  let rr = Math.round(r);
+  let rs = Math.round(s);
+  const dq = Math.abs(rq - q);
+  const dr = Math.abs(rr - r);
+  const ds = Math.abs(rs - s);
+  if (dq > dr && dq > ds) rq = -rr - rs;
+  else if (dr > ds) rr = -rq - rs;
+  return { q: rq, r: rr };
+}
+
+function drawHex(cx, cy, size, fill, stroke, lineWidth) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 180 * (60 * i);
+    const hx = cx + size * Math.cos(angle);
+    const hy = cy + size * Math.sin(angle);
+    if (i === 0) ctx.moveTo(hx, hy);
+    else ctx.lineTo(hx, hy);
+  }
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth || 1; ctx.stroke(); }
+}
+
+// Map from axial direction index to visual edge index.
+// Visual edge i is between vertex i and vertex (i+1)%6.
+// Direction d's pixel angle must match the edge's midpoint angle.
+const DIR_TO_EDGE = [0, 5, 4, 3, 2, 1];
+
+function drawDualHex(cx, cy, size, color1, color2, rotation) {
+  rotation = rotation || 0;
+  const verts = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 180 * (60 * i);
+    verts.push({ x: cx + size * Math.cos(angle), y: cy + size * Math.sin(angle) });
+  }
+
+  // Draw 6 triangles from center, each colored by its direction's terrain.
+  // Visual edge e (between vertex e and vertex e+1) corresponds to direction DIR_TO_EDGE inverse.
+  // Easier: for each direction d, find its visual edge e = DIR_TO_EDGE[d],
+  // then fill the triangle (center, vertex e, vertex (e+1)%6).
+  for (let d = 0; d < 6; d++) {
+    const offset = ((d - rotation) % 6 + 6) % 6;
+    const color = offset < 3 ? color1 : color2;
+    const e = DIR_TO_EDGE[d];
+    const v0 = verts[e];
+    const v1 = verts[(e + 1) % 6];
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(v0.x, v0.y);
+    ctx.lineTo(v1.x, v1.y);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  // Outline
+  drawHex(cx, cy, size, null, '#111', 2);
+}
+
+function render() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+  if (!gameState) return;
+
+  ctx.save();
+  ctx.translate(canvas.clientWidth / 2 + camera.x, canvas.clientHeight / 2 + camera.y);
+  ctx.scale(camera.zoom, camera.zoom);
+
+  // Draw cells
+  for (const cell of gameState.cells) {
+    const { x, y } = hexToPixel(cell.q, cell.r);
+
+    if (cell.present) {
+      // Placed tile
+      if (cell.terrain2) {
+        drawDualHex(x, y, HEX_SIZE - 1, TERRAIN_COLORS[cell.terrain1], TERRAIN_COLORS[cell.terrain2], cell.rotation);
+      } else {
+        drawHex(x, y, HEX_SIZE - 1, TERRAIN_COLORS[cell.terrain1], '#111', 2);
+      }
+
+      // Highlight if this is where we need to place wildlife
+      if (phase === 'place_wildlife' && !cell.wildlife) {
+        const canPlace = cell.allowed.includes(draftedWildlife);
+        if (canPlace) {
+          drawHex(x, y, HEX_SIZE - 3, 'rgba(233, 69, 96, 0.25)', '#e94560', 2);
+        }
+      }
+
+      // Suggested wildlife placement highlight (hex outline glow) — show regardless of phase
+      const isSuggestedWildlife = currentSuggestion && currentSuggestion.action === 'move'
+          && currentSuggestion.mv && currentSuggestion.mv.wildlife_q !== undefined
+          && cell.q === currentSuggestion.mv.wildlife_q && cell.r === currentSuggestion.mv.wildlife_r;
+      if (isSuggestedWildlife) {
+        const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
+        ctx.save();
+        ctx.shadowColor = '#ffcc00';
+        ctx.shadowBlur = 25 * pulse;
+        drawHex(x, y, HEX_SIZE - 1, null, '#ffcc00', 4);
+        ctx.restore();
+      }
+
+      // Wildlife emoji
+      if (cell.wildlife_emoji) {
+        // Placed wildlife — large, fully opaque, with solid backing circle
+        const r = HEX_SIZE * 0.38;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+        ctx.font = `${HEX_SIZE * 0.55}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(cell.wildlife_emoji, x, y + 2);
+      } else {
+        // Allowed wildlife — smaller, translucent, no backing
+        const aw = cell.allowed;
+        if (aw.length > 0) {
+          const sz = HEX_SIZE * 0.32;
+          ctx.font = `${sz}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          if (aw.length === 1) {
+            ctx.fillText(WILDLIFE_EMOJI[aw[0]], x, y);
+          } else if (aw.length === 2) {
+            const gap = sz * 0.55;
+            ctx.fillText(WILDLIFE_EMOJI[aw[0]], x - gap, y);
+            ctx.fillText(WILDLIFE_EMOJI[aw[1]], x + gap, y);
+          } else {
+            // 3: triangle — one on top, two on bottom
+            const vOff = sz * 0.4;
+            const hOff = sz * 0.55;
+            ctx.fillText(WILDLIFE_EMOJI[aw[0]], x, y - vOff);
+            ctx.fillText(WILDLIFE_EMOJI[aw[1]], x - hOff, y + vOff);
+            ctx.fillText(WILDLIFE_EMOJI[aw[2]], x + hOff, y + vOff);
+          }
+        }
+
+        // Keystone indicator
+        if (cell.keystone) {
+          ctx.font = `${HEX_SIZE * 0.25}px monospace`;
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#fff';
+          ctx.globalAlpha = 0.4;
+          ctx.fillText('★', x, y - HEX_SIZE * 0.42);
+          ctx.globalAlpha = 1;
+        }
+
+        // Ghost wildlife emoji preview with glowing circle (drawn LAST so it's on top)
+        if (isSuggestedWildlife) {
+          const suggestedPair = gameState.market.find(p => p.index === currentSuggestion.mv.market_index);
+          if (suggestedPair && suggestedPair.wildlife) {
+            const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
+            const r = HEX_SIZE * 0.38;
+            ctx.save();
+            ctx.shadowColor = '#ffcc00';
+            ctx.shadowBlur = 20 * pulse;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = '#000';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ffcc00';
+            ctx.stroke();
+            ctx.restore();
+            ctx.save();
+            ctx.globalAlpha = 0.95;
+            ctx.font = `${HEX_SIZE * 0.55}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(WILDLIFE_EMOJI[suggestedPair.wildlife], x, y + 2);
+            ctx.restore();
+          }
+        }
+      }
+    } else if (cell.is_frontier) {
+      // If this frontier cell is where we just "placed" a tile (pre-commit), show it
+      if (phase === 'place_wildlife' && placedTileCoord && cell.q === placedTileCoord.q && cell.r === placedTileCoord.r) {
+        const pair = gameState.market.find(p => p.index === selectedMarket);
+        if (pair) {
+          const t1 = TERRAIN_COLORS[pair.terrain1];
+          const t2 = pair.terrain2 ? TERRAIN_COLORS[pair.terrain2] : null;
+          if (t2) {
+            drawDualHex(x, y, HEX_SIZE - 1, t1, t2, currentRotation);
+          } else {
+            drawHex(x, y, HEX_SIZE - 1, t1, '#111', 2);
+          }
+          // Highlight if wildlife can be placed here
+          if (draftedTileAllowed.includes(draftedWildlife)) {
+            drawHex(x, y, HEX_SIZE - 3, 'rgba(233, 69, 96, 0.25)', '#e94560', 2);
+          }
+        }
+      } else {
+        // Regular frontier cell — available for placement
+        const isTarget = phase === 'place_tile' && selectedMarket !== null;
+        const isHovered = isTarget && hoveredHex && hoveredHex.q === cell.q && hoveredHex.r === cell.r;
+
+        if (isHovered) {
+          // Show ghost preview of the tile with current rotation
+          const pair = gameState.market.find(p => p.index === selectedMarket);
+          if (pair) {
+            ctx.globalAlpha = 0.5;
+            const t1 = TERRAIN_COLORS[pair.terrain1];
+            const t2 = pair.terrain2 ? TERRAIN_COLORS[pair.terrain2] : null;
+            if (t2) {
+              drawDualHex(x, y, HEX_SIZE - 1, t1, t2, currentRotation);
+            } else {
+              drawHex(x, y, HEX_SIZE - 1, t1, '#111', 2);
+            }
+            ctx.globalAlpha = 1;
+            drawHex(x, y, HEX_SIZE - 1, null, '#e94560', 2);
+          }
+        } else {
+          // Check if this frontier cell is the suggested placement
+          // Show this regardless of phase — the user sees "what to do" before clicking
+          const isSuggestedTile = currentSuggestion && currentSuggestion.action === 'move'
+            && currentSuggestion.mv
+            && cell.q === currentSuggestion.mv.q && cell.r === currentSuggestion.mv.r;
+          if (isSuggestedTile) {
+            // Draw a ghost of the suggested tile with the correct rotation
+            const suggestedPair = gameState.market.find(p => p.index === currentSuggestion.mv.market_index);
+            if (suggestedPair) {
+              ctx.globalAlpha = 0.7;
+              const t1 = TERRAIN_COLORS[suggestedPair.terrain1];
+              const t2 = suggestedPair.terrain2 ? TERRAIN_COLORS[suggestedPair.terrain2] : null;
+              const targetRot = currentSuggestion.mv.rotation || 0;
+              if (t2) {
+                drawDualHex(x, y, HEX_SIZE - 1, t1, t2, targetRot);
+              } else {
+                drawHex(x, y, HEX_SIZE - 1, t1, '#111', 2);
+              }
+              ctx.globalAlpha = 1;
+              // Pulsing yellow outline
+              const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
+              ctx.save();
+              ctx.shadowColor = '#ffcc00';
+              ctx.shadowBlur = 20 * pulse;
+              drawHex(x, y, HEX_SIZE - 1, null, '#ffcc00', 4);
+              ctx.restore();
+              // If the suggested wildlife placement is on this same tile, show ghost emoji
+              if (currentSuggestion.mv.wildlife_q !== undefined
+                  && currentSuggestion.mv.wildlife_q === cell.q
+                  && currentSuggestion.mv.wildlife_r === cell.r
+                  && suggestedPair.wildlife) {
+                const r = HEX_SIZE * 0.38;
+                ctx.save();
+                ctx.shadowColor = '#ffcc00';
+                ctx.shadowBlur = 20 * pulse;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = '#000';
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#ffcc00';
+                ctx.stroke();
+                ctx.restore();
+                ctx.save();
+                ctx.globalAlpha = 0.9;
+                ctx.font = `${HEX_SIZE * 0.55}px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(WILDLIFE_EMOJI[suggestedPair.wildlife], x, y + 2);
+                ctx.restore();
+              }
+            }
+          }
+          drawHex(x, y, HEX_SIZE - 2,
+            isTarget ? 'rgba(83, 52, 131, 0.3)' : 'rgba(255,255,255,0.05)',
+            isTarget ? '#533483' : 'rgba(255,255,255,0.15)',
+            isTarget ? 2 : 1
+          );
+          if (isTarget) {
+            ctx.font = `${HEX_SIZE * 0.35}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillText('+', x, y);
+          }
+        }
+      }
+    }
+  }
+
+  ctx.restore();
+}
+
+function getWildlifeColor(name) {
+  switch(name) {
+    case 'bear': return '#8B4513';
+    case 'elk': return '#DAA520';
+    case 'salmon': return '#FF6B6B';
+    case 'hawk': return '#4169E1';
+    case 'fox': return '#FF8C00';
+    default: return '#888';
+  }
+}
+
+function renderMarket() {
+  const el = document.getElementById('market');
+  if (!gameState) { el.innerHTML = ''; return; }
+
+  el.innerHTML = gameState.market.map(pair => {
+    const selected = selectedMarket === pair.index;
+    const t1 = TERRAIN_COLORS[pair.terrain1];
+    const t2 = pair.terrain2 ? TERRAIN_COLORS[pair.terrain2] : t1;
+    const isDual = !!pair.terrain2;
+
+    // Determine click handler and styling based on mode
+    let onclick, style;
+    if (pineconeMode && pineconePhase === 'select_tile') {
+      onclick = `pineconeSelectTile(${pair.index})`;
+      const isTileSelected = pineconeTileIndex === pair.index;
+      style = isTileSelected ? '' : 'cursor:pointer;';
+    } else if (pineconeMode && pineconePhase === 'select_wildlife') {
+      onclick = `pineconeSelectWildlife(${pair.index})`;
+      const isTileSelected = pineconeTileIndex === pair.index;
+      style = isTileSelected ? 'border-color:#e94560;' : 'cursor:pointer;';
+    } else {
+      onclick = `selectMarket(${pair.index})`;
+      style = phase !== 'select_market' && !selected ? 'opacity:0.4;pointer-events:none;' : '';
+    }
+
+    // Highlight tile vs wildlife in pinecone mode
+    let tileHighlight = '';
+    let wildlifeHighlight = '';
+    if (pineconeMode && pineconePhase === 'select_tile') {
+      tileHighlight = 'outline:2px solid #e94560; outline-offset:-2px; border-radius:4px;';
+    }
+    if (pineconeMode && pineconePhase === 'select_wildlife') {
+      wildlifeHighlight = 'outline:2px solid #e94560; outline-offset:-2px; border-radius:50%;';
+      tileHighlight = pineconeTileIndex === pair.index ? 'outline:2px solid #e94560; outline-offset:-2px; border-radius:4px;' : 'opacity:0.4;';
+    }
+
+    return `<div class="market-pair ${selected ? 'selected' : ''}"
+                 data-index="${pair.index}"
+                 onclick="${onclick}"
+                 style="${style}">
+      <div class="market-tile ${isDual ? 'dual' : ''}"
+           style="${isDual ? `--t1:${t1};--t2:${t2}` : `background:${t1}`};${tileHighlight}">
+        ${pair.keystone ? '<span style="font-size:12px">★</span>' : ''}
+      </div>
+      <div class="market-wildlife" style="${wildlifeHighlight}">${pair.wildlife_emoji}</div>
+      <div class="market-info">
+        ${pair.terrain1}${pair.terrain2 ? '/' + pair.terrain2 : ''}
+        <div class="market-allowed">
+          ${pair.allowed.map(a => `<span style="font-size:13px; opacity:0.7" title="${a}">${WILDLIFE_EMOJI[a]}</span>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderScores() {
+  const el = document.getElementById('scores');
+  if (!gameState || !gameState.scores.length) { el.innerHTML = ''; return; }
+
+  let html = '';
+  for (const score of gameState.scores) {
+    if (gameState.num_players > 1) {
+      html += `<div style="font-size:12px; color:#e94560; margin-bottom:4px;">Player ${score.player + 1}${score.player === gameState.current_player ? ' (current)' : ''}</div>`;
+    }
+
+    let habitatBase = 0;
+    let habitatBonus = 0;
+    for (let i = 0; i < 5; i++) {
+      const name = TERRAIN_NAMES[i];
+      habitatBase += score.habitat[i];
+      habitatBonus += score.habitat_bonus[i] || 0;
+      html += `<div class="score-row">
+        <span class="label" style="color:${TERRAIN_COLORS[name]}">${name}</span>
+        <span>${score.habitat[i]}</span>
+      </div>`;
+    }
+    html += `<div class="score-row score-subtotal">
+      <span class="label">habitat subtotal</span>
+      <span>${habitatBase}${habitatBonus ? ` <span style="color:#4ade80">+${habitatBonus}</span>` : ''}</span>
+    </div>`;
+
+    const wildlifeNames = ['bear', 'elk', 'salmon', 'hawk', 'fox'];
+    let wildlifeTotal = 0;
+    for (let i = 0; i < 5; i++) {
+      wildlifeTotal += score.wildlife[i];
+      html += `<div class="score-row">
+        <span class="label">${WILDLIFE_EMOJI[wildlifeNames[i]]} ${wildlifeNames[i]}</span>
+        <span>${score.wildlife[i]}</span>
+      </div>`;
+    }
+    html += `<div class="score-row score-subtotal">
+      <span class="label">wildlife subtotal</span>
+      <span>${wildlifeTotal}</span>
+    </div>`;
+
+    html += `<div class="score-row">
+      <span class="label">nature tokens</span>
+      <span>${score.nature_tokens}</span>
+    </div>`;
+
+    html += `<div class="score-row score-total">
+      <span>Total</span>
+      <span>${score.total}</span>
+    </div>`;
+
+    if (gameState.num_players > 1) html += '<div style="margin-bottom:12px"></div>';
+  }
+  el.innerHTML = html;
+}
+
+function updateStatus(msg) {
+  document.getElementById('status-bar').innerHTML = msg;
+}
+
+function updateTurnInfo() {
+  if (!gameState) return;
+  const el = document.getElementById('turn-info');
+  if (gameState.num_players > 1) {
+    el.innerHTML = `Player <span class="highlight">${gameState.current_player + 1}</span> &mdash; <span class="highlight">${gameState.turns_remaining}</span> turns left`;
+  } else {
+    el.innerHTML = `<span class="highlight">${gameState.turns_remaining}</span> turns left`;
+  }
+}
+
+// --- Interaction ---
+
+function selectMarket(index) {
+  if (phase !== 'select_market') return;
+  selectedMarket = index;
+  const pair = gameState.market.find(p => p.index === index);
+  draftedWildlife = pair.wildlife;
+  draftedTileAllowed = pair.allowed;
+  phase = 'place_tile';
+  renderMarket();
+  render();
+  const rotateHint = pair.terrain2 ? ' Press <b>R</b> to rotate.' : '';
+  updateStatus(`Placing <b>${pair.terrain1}${pair.terrain2 ? '/' + pair.terrain2 : ''}</b> tile. Click a frontier hex.${rotateHint}`);
+}
+
+async function clickHex(q, r) {
+  if (phase === 'place_tile') {
+    // Check it's a frontier cell
+    const cell = gameState.cells.find(c => c.q === q && c.r === r);
+    if (!cell || !cell.is_frontier) return;
+
+    placedTileCoord = { q, r };
+    // Place tile without wildlife first to see updated board
+    phase = 'place_wildlife';
+    document.getElementById('skip-wildlife-btn').style.display = 'block';
+
+    // Temporarily show what the tile will look like by fetching new state
+    // Actually we need to send the move. Let's first check if there are valid wildlife spots.
+    // We send the move now — first without wildlife, then we can undo or we send with wildlife.
+    // Simpler: just show the prompt and let user pick.
+
+    // Update status
+    updateStatus(`Tile placed at (${q},${r}). Click a tile to place ${WILDLIFE_EMOJI[draftedWildlife]} <b>${draftedWildlife}</b>, or skip.`);
+    render();
+
+  } else if (phase === 'place_wildlife') {
+    // Check if clicking on the tile we just placed
+    if (placedTileCoord && q === placedTileCoord.q && r === placedTileCoord.r) {
+      if (!draftedTileAllowed.includes(draftedWildlife)) return;
+      await sendMove(selectedMarket, placedTileCoord.q, placedTileCoord.r, q, r);
+      return;
+    }
+
+    // Check if this is an existing cell that can accept the wildlife
+    const cell = gameState.cells.find(c => c.q === q && c.r === r);
+    if (!cell || !cell.present || cell.wildlife) return;
+    if (!cell.allowed.includes(draftedWildlife)) return;
+
+    // Send full move
+    await sendMove(selectedMarket, placedTileCoord.q, placedTileCoord.r, q, r);
+  }
+}
+
+async function skipWildlife() {
+  if (phase !== 'place_wildlife') return;
+  await sendMove(selectedMarket, placedTileCoord.q, placedTileCoord.r, null, null);
+}
+
+async function sendMove(marketIndex, tq, tr, wq, wr) {
+  const body = {
+    market_index: marketIndex,
+    q: tq,
+    r: tr,
+    rotation: currentRotation,
+  };
+  if (pineconeMode && pineconeWildlifeIndex !== null) {
+    body.wildlife_market_index = pineconeWildlifeIndex;
+  }
+  if (wq !== null && wr !== null) {
+    body.wildlife_q = wq;
+    body.wildlife_r = wr;
+  }
+
+  try {
+    const res = await fetch('/api/move', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      updateStatus(`<span class="highlight">Error:</span> ${err}`);
+      return;
+    }
+
+    gameState = await res.json();
+    resetTurn();
+    renderAll();
+
+    if (gameState.game_over) {
+      showGameOver();
+    }
+  } catch (e) {
+    updateStatus(`<span class="highlight">Error:</span> ${e.message}`);
+  }
+}
+
+function resetTurn() {
+  selectedMarket = null;
+  placedTileCoord = null;
+  draftedWildlife = null;
+  draftedTileAllowed = [];
+  currentRotation = 0;
+  pineconeMode = false;
+  pineconePhase = null;
+  pineconeTileIndex = null;
+  pineconeWildlifeIndex = null;
+  phase = 'select_market';
+  document.getElementById('skip-wildlife-btn').style.display = 'none';
+  // Turn complete — clear any active suggestion
+  clearSuggestion();
+  updateClearSuggestBtn();
+}
+
+function renderScoringRef() {
+  const el = document.getElementById('scoring-ref');
+  // Current variant is always A for now
+  const variant = 'A';
+  const descs = SCORING_DESCRIPTIONS[variant];
+  if (!descs) { el.innerHTML = ''; return; }
+
+  const animals = ['bear', 'elk', 'salmon', 'hawk', 'fox'];
+  el.innerHTML = animals.map(a => {
+    const d = descs[a];
+    return `<div class="scoring-card">
+      <div class="card-header">
+        <span class="animal-name">${WILDLIFE_EMOJI[a]} ${a}</span>
+        <span class="variant-badge">${variant}</span>
+      </div>
+      <div class="desc">${d.rule}</div>
+      <div class="points">${d.points}</div>
+    </div>`;
+  }).join('');
+}
+
+async function renderAll() {
+  // Auto-sync view: if we're in multiplayer and viewing a different player than
+  // what's in gameState, refetch with the selected view
+  if (gameState && gameState.num_players > 1 && gameState.view_player !== viewPlayer) {
+    try {
+      const res = await fetch(`/api/state?view=${viewPlayer}`);
+      if (res.ok) gameState = await res.json();
+    } catch (e) {}
+  }
+  render();
+  renderMarket();
+  renderScores();
+  renderScoringRef();
+  updateTurnInfo();
+  updateViewButtons();
+  renderEventLog();
+  applySuggestionHighlights();
+
+  // Show/hide action buttons based on phase
+  const mulliganBtn = document.getElementById('mulligan-btn');
+  const pineconeBtn = document.getElementById('pinecone-btn');
+  const overflowBtn = document.getElementById('overflow-btn');
+  const bestMoveBtn = document.getElementById('best-move-btn');
+  const inMarket = gameState && phase === 'select_market' && !gameState.game_over && !pineconeMode;
+  mulliganBtn.style.display = inMarket && gameState.can_mulligan ? 'block' : 'none';
+  pineconeBtn.style.display = inMarket && gameState.can_mulligan ? 'block' : 'none';
+  overflowBtn.style.display = inMarket && gameState.has_overflow ? 'block' : 'none';
+  bestMoveBtn.style.display = inMarket ? 'inline-block' : 'none';
+
+  if (phase === 'select_market') {
+    updateStatus('Select a market pair to begin your turn.');
+  }
+}
+
+function showGameOver() {
+  const overlay = document.getElementById('game-over');
+  overlay.classList.add('visible');
+  document.getElementById('show-results-btn').style.display = 'none';
+  const score = gameState.scores[0];
+  document.getElementById('final-score').textContent = score.total + ' pts';
+
+  let breakdown = '';
+  for (let i = 0; i < 5; i++) {
+    breakdown += `<div class="score-row"><span style="color:${TERRAIN_COLORS[TERRAIN_NAMES[i]]}">${TERRAIN_NAMES[i]}</span><span>${score.habitat[i]}</span></div>`;
+  }
+  const wn = ['bear','elk','salmon','hawk','fox'];
+  for (let i = 0; i < 5; i++) {
+    breakdown += `<div class="score-row"><span>${WILDLIFE_EMOJI[wn[i]]} ${wn[i]}</span><span>${score.wildlife[i]}</span></div>`;
+  }
+  breakdown += `<div class="score-row"><span>nature tokens</span><span>${score.nature_tokens}</span></div>`;
+  document.getElementById('final-breakdown').innerHTML = breakdown;
+}
+
+function startPineconeMode() {
+  if (phase !== 'select_market' || !gameState || !gameState.can_mulligan) return;
+  pineconeMode = true;
+  pineconePhase = 'select_tile';
+  pineconeTileIndex = null;
+  pineconeWildlifeIndex = null;
+  renderMarket();
+  updateStatus('🌲 Pinecone mode: click a market pair to select its <b>tile</b>.');
+}
+
+function pineconeSelectTile(index) {
+  pineconeTileIndex = index;
+  const pair = gameState.market.find(p => p.index === index);
+  draftedTileAllowed = pair.allowed;
+  pineconePhase = 'select_wildlife';
+  renderMarket();
+  updateStatus(`🌲 Tile selected from slot ${index + 1}. Now click a market pair to select its <b>wildlife</b>.`);
+}
+
+function pineconeSelectWildlife(index) {
+  pineconeWildlifeIndex = index;
+  const pair = gameState.market.find(p => p.index === index);
+  draftedWildlife = pair.wildlife;
+  selectedMarket = pineconeTileIndex;
+  phase = 'place_tile';
+  renderMarket();
+  render();
+  const tilePair = gameState.market.find(p => p.index === pineconeTileIndex);
+  const rotateHint = tilePair.terrain2 ? ' Press <b>R</b> to rotate.' : '';
+  updateStatus(`🌲 Placing <b>${tilePair.terrain1}${tilePair.terrain2 ? '/' + tilePair.terrain2 : ''}</b> tile with ${WILDLIFE_EMOJI[draftedWildlife]} ${draftedWildlife}. Click a frontier hex.${rotateHint}`);
+}
+
+async function doBestMove() {
+  if (phase !== 'select_market' || !gameState || gameState.game_over) return;
+
+  // If there's already a pending 'move' suggestion, just execute it — no recompute.
+  if (currentSuggestion && currentSuggestion.action === 'move' && currentSuggestion.mv) {
+    await executeBestMove(currentSuggestion.mv);
+    return;
+  }
+
+  const spinner = document.getElementById('spinner-overlay');
+  spinner.classList.add('visible');
+  updateStatus('Computing best move...');
+  try {
+    const res = await fetch('/api/best-move');
+    if (!res.ok) {
+      const err = await res.text();
+      updateStatus(`<span class="highlight">Error:</span> ${err}`);
+      spinner.classList.remove('visible');
+      return;
+    }
+    const mv = await res.json();
+    await executeBestMove(mv);
+  } catch (e) {
+    updateStatus(`<span class="highlight">Error:</span> ${e.message}`);
+  } finally {
+    spinner.classList.remove('visible');
+  }
+}
+
+let autoPlayActive = false;
+function toggleAutoPlay() {
+  if (autoPlayActive) {
+    autoPlayActive = false;
+    const btn = document.getElementById('auto-play-btn');
+    if (btn) btn.textContent = '▶️ Auto Play';
+    updateStatus('Auto play stopped.');
+    return;
+  }
+  autoPlayActive = true;
+  const btn = document.getElementById('auto-play-btn');
+  if (btn) btn.textContent = '⏸ Stop Auto';
+  runAutoPlay();
+}
+
+async function runAutoPlay() {
+  while (autoPlayActive && gameState && !gameState.game_over && phase === 'select_market') {
+    clearSuggestion();
+    try {
+      await doBestMove();
+    } catch (e) {
+      updateStatus(`<span class="highlight">Auto play error:</span> ${e.message}`);
+      break;
+    }
+    // Yield to the browser so the UI can render between turns
+    await new Promise(r => setTimeout(r, 50));
+  }
+  autoPlayActive = false;
+  const btn = document.getElementById('auto-play-btn');
+  if (btn) btn.textContent = '▶️ Auto Play';
+}
+
+async function executeBestMove(mv) {
+  currentRotation = mv.rotation || 0;
+  const body = {
+    market_index: mv.market_index,
+    q: mv.q,
+    r: mv.r,
+    rotation: mv.rotation || 0,
+  };
+  if (mv.wildlife_q !== undefined && mv.wildlife_q !== null) {
+    body.wildlife_q = mv.wildlife_q;
+    body.wildlife_r = mv.wildlife_r;
+  }
+  if (mv.wildlife_market_index !== undefined && mv.wildlife_market_index !== null) {
+    body.wildlife_market_index = mv.wildlife_market_index;
+  }
+
+  const moveRes = await fetch('/api/move', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!moveRes.ok) {
+    const err = await moveRes.text();
+    updateStatus(`<span class="highlight">Error:</span> ${err}`);
+    return;
+  }
+
+  gameState = await moveRes.json();
+  resetTurn();
+  renderAll();
+  let msg = mv.score !== undefined ? `AI played: score=${mv.score}` : 'AI played suggested move';
+  if (mv.applied_mulligans && mv.applied_mulligans > 0) {
+    msg += ` (spent ${mv.applied_mulligans} 🌲 mulligan${mv.applied_mulligans > 1 ? 's' : ''})`;
+  }
+  if (mv.applied_replace_overflow) {
+    msg += ` (used free 3-of-a-kind replace)`;
+  }
+  updateStatus(msg);
+
+  if (gameState.game_over) {
+    showGameOver();
+  }
+}
+
+async function doMulligan() {
+  clearSuggestion();
+  if (phase !== 'select_market') return;
+  try {
+    const res = await fetch('/api/mulligan', { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.text();
+      updateStatus(`<span class="highlight">Error:</span> ${err}`);
+      return;
+    }
+    gameState = await res.json();
+    renderAll();
+    updateStatus('Wildlife tokens mulliganed! Select a market pair.');
+  } catch (e) {
+    updateStatus(`<span class="highlight">Error:</span> ${e.message}`);
+  }
+}
+
+async function doReplaceOverflow() {
+  clearSuggestion();
+  if (phase !== 'select_market') return;
+  try {
+    const res = await fetch('/api/replace-overflow', { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.text();
+      updateStatus(`<span class="highlight">Error:</span> ${err}`);
+      return;
+    }
+    gameState = await res.json();
+    renderAll();
+    updateStatus('Replaced 3-of-a-kind with new wildlife!');
+  } catch (e) {
+    updateStatus(`<span class="highlight">Error:</span> ${e.message}`);
+  }
+}
+
+async function restartGame() {
+  const n = gameState ? gameState.num_players : 1;
+  await newGame(n);
+}
+
+async function newGame(numPlayers, soloSim) {
+  document.getElementById('game-over').classList.remove('visible');
+  document.getElementById('show-results-btn').style.display = 'none';
+  window.soloSimMode = !!soloSim;
+  const res = await fetch('/api/new-game', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ num_players: numPlayers, solo_sim: !!soloSim }),
+  });
+  gameState = await res.json();
+  camera = { x: 0, y: 0, zoom: 1 };
+  resetTurn();
+  renderAll();
+}
+
+let viewPlayer = 0;
+let currentSuggestion = null; // {action: 'replace_overflow'|'mulligan'|'move', mv?: {...}}
+
+function clearSuggestion() {
+  currentSuggestion = null;
+  document.querySelectorAll('.suggest-glow').forEach(el => el.classList.remove('suggest-glow'));
+  updateClearSuggestBtn();
+  renderCandidatesList();
+}
+
+let selectedCandidateIdx = 0;
+function renderCandidatesList() {
+  const section = document.getElementById('candidates-section');
+  const list = document.getElementById('candidates-list');
+  if (!section || !list) return;
+  const cands = currentSuggestion && currentSuggestion.candidates;
+  if (!cands || cands.length === 0) {
+    section.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  section.style.display = '';
+  const topScore = cands[0].avg_score || cands[0].score || 0;
+  list.innerHTML = cands.map((c, i) => {
+    const pair = gameState.market.find(p => p.index === c.market_index);
+    const wl = pair ? WILDLIFE_EMOJI[pair.wildlife] || '' : '';
+    const terrain = pair ? (pair.terrain2 ? `${pair.terrain1.slice(0,3)}/${pair.terrain2.slice(0,3)}` : pair.terrain1.slice(0,4)) : '?';
+    const indep = c.wildlife_market_index !== undefined && c.wildlife_market_index !== null
+      && c.wildlife_market_index !== c.market_index;
+    const indepTag = indep ? '🌲' : '';
+    const avg = (c.avg_score !== undefined ? c.avg_score : c.score).toFixed(1);
+    const delta = i === 0 ? '' : ` <span style="color:#888">(-${(topScore - (c.avg_score || c.score)).toFixed(1)})</span>`;
+    const sel = i === selectedCandidateIdx ? 'selected' : '';
+    return `<div class="candidate-item ${sel}" onclick="selectCandidate(${i})">
+      <span class="candidate-rank">#${i + 1}</span>
+      <span class="candidate-desc">${indepTag}${wl} ${terrain} r${c.rotation || 0}${delta}</span>
+      <span class="candidate-score">${avg}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectCandidate(idx) {
+  if (!currentSuggestion || !currentSuggestion.candidates) return;
+  const cand = currentSuggestion.candidates[idx];
+  if (!cand) return;
+  selectedCandidateIdx = idx;
+  // Update the active suggestion's mv to point at this candidate
+  currentSuggestion.mv = cand;
+  applySuggestionHighlights();
+  renderCandidatesList();
+  render();
+  const pair = gameState.market.find(p => p.index === cand.market_index);
+  const wl = pair ? pair.wildlife : '';
+  updateStatus(`💡 Showing #${idx + 1}: ${wl} slot ${cand.market_index}, avg score ${(cand.avg_score || cand.score).toFixed(1)}`);
+}
+
+function dismissSuggestion() {
+  clearSuggestion();
+  render();
+  updateStatus('Suggestion cleared.');
+}
+
+function updateClearSuggestBtn() {
+  const btn = document.getElementById('clear-suggest-btn');
+  if (btn) btn.style.display = currentSuggestion ? '' : 'none';
+}
+
+function applySuggestionHighlights() {
+  // Remove old highlights
+  document.querySelectorAll('.suggest-glow').forEach(el => el.classList.remove('suggest-glow'));
+  if (!currentSuggestion) {
+    stopSuggestionAnimation();
+    return;
+  }
+
+  const s = currentSuggestion;
+  if (s.action === 'replace_overflow') {
+    const btn = document.getElementById('overflow-btn');
+    if (btn) btn.classList.add('suggest-glow');
+  } else if (s.action === 'mulligan') {
+    const btn = document.getElementById('mulligan-btn');
+    if (btn) btn.classList.add('suggest-glow');
+  } else if (s.action === 'move' && s.mv) {
+    // Highlight the recommended market pair
+    const marketEl = document.querySelector(`.market-pair[data-index="${s.mv.market_index}"]`);
+    if (marketEl) marketEl.classList.add('suggest-glow');
+    // Auto-set rotation to the suggested rotation once we enter place_tile phase
+    if (phase === 'place_tile' && selectedMarket === s.mv.market_index) {
+      currentRotation = s.mv.rotation || 0;
+    }
+    // Start animation loop for canvas highlights
+    startSuggestionAnimation();
+  }
+}
+
+let suggestionAnimId = null;
+function startSuggestionAnimation() {
+  if (suggestionAnimId) return;
+  const tick = () => {
+    if (!currentSuggestion || currentSuggestion.action !== 'move') {
+      suggestionAnimId = null;
+      return;
+    }
+    render();
+    suggestionAnimId = requestAnimationFrame(tick);
+  };
+  suggestionAnimId = requestAnimationFrame(tick);
+}
+function stopSuggestionAnimation() {
+  if (suggestionAnimId) {
+    cancelAnimationFrame(suggestionAnimId);
+    suggestionAnimId = null;
+  }
+}
+
+async function doSuggestMove() {
+  if (phase !== 'select_market' || !gameState || gameState.game_over) return;
+  const spinner = document.getElementById('spinner-overlay');
+  spinner.classList.add('visible');
+  updateStatus('Computing suggestion...');
+  try {
+    const res = await fetch('/api/suggest-move');
+    if (!res.ok) {
+      const err = await res.text();
+      updateStatus(`<span class="highlight">Error:</span> ${err}`);
+      return;
+    }
+    const suggestion = await res.json();
+    currentSuggestion = suggestion;
+    selectedCandidateIdx = 0;
+
+    let msg = '';
+    if (suggestion.action === 'replace_overflow') {
+      msg = '💡 Suggestion: use the free 3-of-a-kind replacement';
+    } else if (suggestion.action === 'mulligan') {
+      const gain = suggestion.expected_gain || 0;
+      msg = `💡 Suggestion: spend a pinecone to mulligan (+${gain.toFixed(1)} expected)`;
+    } else if (suggestion.action === 'move' && suggestion.mv) {
+      const mv = suggestion.mv;
+      const indep = mv.wildlife_market_index !== undefined && mv.wildlife_market_index !== null
+        && mv.wildlife_market_index !== mv.market_index;
+      if (indep) {
+        msg = `💡 Suggestion: 🌲 pinecone — draft tile from slot ${mv.market_index}, wildlife from slot ${mv.wildlife_market_index}`;
+      } else {
+        msg = `💡 Suggestion: draft slot ${mv.market_index} (expected final score: ${mv.score})`;
+      }
+    }
+    updateStatus(msg);
+    applySuggestionHighlights();
+    updateClearSuggestBtn();
+    renderCandidatesList();
+  } catch (e) {
+    updateStatus(`<span class="highlight">Error:</span> ${e.message}`);
+  } finally {
+    spinner.classList.remove('visible');
+  }
+}
+
+function toggleScoringCards() {
+  const el = document.getElementById('scoring-ref');
+  el.classList.toggle('collapsed');
+  const toggle = document.getElementById('scoring-toggle');
+  toggle.textContent = el.classList.contains('collapsed') ? '▶' : '▼';
+}
+
+function renderEventLog() {
+  if (!gameState || !gameState.events) return;
+  const events = gameState.events;
+  const countEl = document.getElementById('event-count');
+  if (countEl) countEl.textContent = events.length;
+  const body = document.getElementById('event-log-body');
+  if (!body) return;
+  // Show most recent first
+  const recent = events.slice().reverse().slice(0, 200);
+  body.innerHTML = recent.map((e, i) => {
+    const num = events.length - i;
+    return `<div class="event-item">${num}. ${escapeHtml(e)}</div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
+  }[c]));
+}
+
+// After any mutation returns a GameView, call this to adjust view if needed
+async function updateFromState(newState) {
+  gameState = newState;
+  if (gameState && gameState.num_players > 1 && gameState.view_player !== viewPlayer) {
+    // Refetch with our selected view
+    try {
+      const res = await fetch(`/api/state?view=${viewPlayer}`);
+      if (res.ok) gameState = await res.json();
+    } catch (e) {}
+  }
+}
+
+async function setViewPlayer(p) {
+  viewPlayer = p;
+  try {
+    const res = await fetch(`/api/state?view=${p}`);
+    if (!res.ok) return;
+    gameState = await res.json();
+    // Don't reset turn — preserve in-progress action state
+    renderAll();
+  } catch (e) {
+    updateStatus(`<span class="highlight">View error:</span> ${e.message}`);
+  }
+}
+
+function updateViewButtons() {
+  const container = document.getElementById('view-player-buttons');
+  if (!gameState || gameState.num_players <= 1) {
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'inline-block';
+  // Show/hide per-player buttons based on num_players
+  const btns = container.querySelectorAll('.view-btn');
+  btns.forEach((btn, i) => {
+    btn.style.display = i < gameState.num_players ? 'inline-block' : 'none';
+    btn.classList.toggle('active', i === gameState.view_player);
+    // Add "★" to the current (active) player
+    const label = `P${i+1}${i === gameState.current_player ? ' ★' : ''}`;
+    btn.textContent = label;
+  });
+}
+
+async function doUndo() {
+  try {
+    const res = await fetch('/api/undo', { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.text();
+      updateStatus(`<span class="highlight">Undo:</span> ${err}`);
+      return;
+    }
+    gameState = await res.json();
+    document.getElementById('game-over').classList.remove('visible');
+    document.getElementById('show-results-btn').style.display = 'none';
+    resetTurn();
+    renderAll();
+    updateStatus('Undone.');
+  } catch (e) {
+    updateStatus(`<span class="highlight">Error:</span> ${e.message}`);
+  }
+}
+
+function hideGameOver() {
+  document.getElementById('game-over').classList.remove('visible');
+  if (gameState && gameState.game_over) {
+    document.getElementById('show-results-btn').style.display = 'inline-block';
+  }
+}
+
+// --- Keyboard interaction ---
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'r' || e.key === 'R') {
+    if (phase === 'place_tile' || phase === 'place_wildlife') {
+      currentRotation = (currentRotation + 1) % 6;
+      render();
+    }
+  }
+});
+
+// --- Canvas interaction ---
+
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStart = { x: e.clientX, y: e.clientY };
+  dragCameraStart = { x: camera.x, y: camera.y };
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    camera.x = dragCameraStart.x + (e.clientX - dragStart.x);
+    camera.y = dragCameraStart.y + (e.clientY - dragStart.y);
+    render();
+    return;
+  }
+  // Track hovered hex for tile preview
+  if (phase === 'place_tile') {
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left - rect.width / 2 - camera.x) / camera.zoom;
+    const py = (e.clientY - rect.top - rect.height / 2 - camera.y) / camera.zoom;
+    const hex = pixelToHex(px, py);
+    if (!hoveredHex || hoveredHex.q !== hex.q || hoveredHex.r !== hex.r) {
+      hoveredHex = hex;
+      render();
+    }
+  }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  const dx = e.clientX - dragStart.x;
+  const dy = e.clientY - dragStart.y;
+  isDragging = false;
+
+  // Only treat as click if barely moved
+  if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left - rect.width / 2 - camera.x) / camera.zoom;
+    const py = (e.clientY - rect.top - rect.height / 2 - camera.y) / camera.zoom;
+    const hex = pixelToHex(px, py);
+    clickHex(hex.q, hex.r);
+  }
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  camera.zoom = Math.max(0.3, Math.min(3, camera.zoom * factor));
+  render();
+}, { passive: false });
+
+window.addEventListener('resize', render);
+
+// --- Init ---
+async function init() {
+  const res = await fetch('/api/state');
+  gameState = await res.json();
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>

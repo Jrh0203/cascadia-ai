@@ -1,0 +1,15 @@
+[package]
+name = "cascadia-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arrayvec = { workspace = true }
+rand = { workspace = true }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "scoring_bench"
+harness = false
