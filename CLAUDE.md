@@ -153,13 +153,42 @@ cargo run --release --bin cascadia-cli -- 2000
 cargo run --release --bin cascadia-cli -- 50 --mce --rollouts 50 --weights nnue_weights_mce88.bin
 
 # === Policy Distillation Pipeline ===
-# Step 1: Collect MCE-labeled training data (~130s/game at rollouts=50, ~290 samples/game)
-# Data accumulates in mce_policy_samples.bin — always append, never discard.
-cargo run --release --bin cascadia-cli -- 100 --collect-mce --weights nnue_weights_mce93.bin --rollouts 50 --out mce_policy_samples.bin
 
-# Step 2: Train policy-distilled NNUE from accumulated samples
-cargo run --release --bin cascadia-cli -- 0 --train-mce-policy --samples mce_policy_samples.bin --epochs 15 --lr 0.0001 --init-weights nnue_weights_mce93.bin --weights nnue_weights_policy.bin
+# Step 1: Collect MCE-labeled training data
+# Local (~68s/game with NNUE opponents, MCE(300)):
+cargo run --release --bin cascadia-cli -- 100 --collect-mce --weights nnue_weights_mce93.bin --rollouts 300 --random-seed --out mce_policy_samples.bin
+
+# Cloud (Modal — 10 workers, ~30s/game, 100 games in ~5 min for ~$0.50):
+modal run modal_collect.py collect --num-workers 10 --games-per-worker 10
+
+# Step 2: Train policy-distilled NNUE (75× augmentation: rotation + translation)
+# Checkpoints saved after every epoch. ~29K raw samples → ~2.1M augmented.
+cargo run --release --bin cascadia-cli -- 0 --train-mce-policy --samples mce_policy_samples.bin --epochs 30 --lr 0.00003 --init-weights nnue_weights_mce93.bin --weights nnue_weights_v2.bin
 
 # Step 3: Benchmark the policy net (same architecture, no rollouts needed)
-cargo run --release --bin cascadia-cli -- 500 --nnue --weights nnue_weights_policy.bin
+cargo run --release --bin cascadia-cli -- 500 --nnue --weights nnue_weights_v2.bin
+
+# === Distributed Benchmarking (Modal) ===
+# NNUE benchmark (fast — 500 games across 10 workers):
+modal run modal_collect.py benchmark --num-workers 10 --games-per-worker 50
+
+# MCE benchmark (stronger — 100 games across 10 workers):
+modal run modal_collect.py benchmark --num-workers 10 --games-per-worker 10 --strategy mce --rollouts 750
+
+# Custom weights:
+modal run modal_collect.py benchmark --num-workers 10 --games-per-worker 50 --weights nnue_weights_v2.bin
+```
+
+## Modal Setup
+
+```bash
+pip3 install modal
+python3 -m modal setup   # authenticate via browser
+# Then use: modal run modal_collect.py collect/benchmark ...
+```
+
+Modal compiles the Rust binary in a remote container (cached after first build).
+Each worker uses random seeds (--random-seed) so no coordination needed.
+Results download automatically when all workers finish.
+Cost: ~$0.50 per 100 games (8 vCPUs per worker).
 ```
