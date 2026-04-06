@@ -1083,14 +1083,14 @@ impl NNUENetwork {
             Ok(f32::from_le_bytes(buf))
         };
 
-        // Detect file size to handle legacy weights (without bag features)
+        // Detect feature count from file size for backward compatibility.
+        // rest_size = b1 + w2 + b2 + w3 + b3
         let file_size = file.metadata()?.len();
-        let header_size = 8u64; // magic + version
-        let legacy_w1_size = (NUM_FEATURES_LEGACY * HIDDEN1) as u64 * 4;
-        let new_w1_size = (NUM_FEATURES * HIDDEN1) as u64 * 4;
+        let header_size = 8u64;
         let rest_size = ((HIDDEN1 + HIDDEN1 * HIDDEN2 + HIDDEN2 + HIDDEN2 + 1) as u64) * 4;
-        let is_legacy = file_size < header_size + new_w1_size + rest_size;
-        let w1_features = if is_legacy { NUM_FEATURES_LEGACY } else { NUM_FEATURES };
+        let w1_bytes = file_size - header_size - rest_size;
+        let w1_features = (w1_bytes / (HIDDEN1 as u64 * 4)) as usize;
+        let w1_features = w1_features.min(NUM_FEATURES); // cap at current max
 
         let mut w1 = Vec::with_capacity(NUM_FEATURES * HIDDEN1);
         for _ in 0..w1_features * HIDDEN1 {

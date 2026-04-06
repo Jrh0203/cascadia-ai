@@ -326,35 +326,69 @@ fn build_rotation_table(rot: usize) -> [Option<usize>; 441] {
 
 /// Rotate a sparse feature vector. Returns None if any active cell rotates out of bounds.
 fn rotate_features(features: &[u16], rotation_table: &[Option<usize>; 441], dir_shift: usize) -> Option<Vec<u16>> {
-    const FEATURES_PER_CELL: usize = 11;
-    const CELL_FEATURES: usize = 441 * FEATURES_PER_CELL; // 4851
-    const PHASE_FEATURES: usize = 110;
-    const PAIR_BASE: usize = CELL_FEATURES + PHASE_FEATURES; // 4961
-    const PAIR_STATES: usize = 49;
-    const PAIR_FEATURES: usize = 3 * PAIR_STATES; // 147
-    const PATTERN_BASE: usize = PAIR_BASE + PAIR_FEATURES; // 5108
+    use crate::nnue;
+
+    // Feature block boundaries (must match nnue.rs layout)
+    const FPC: usize = 11; // FEATURES_PER_CELL
+    const CELL_END: usize = 441 * FPC; // 4851
+    const PHASE_END: usize = CELL_END + 110; // 4961
+    const WL_PAIR_STATES: usize = 49;
+    const WL_PAIR_END: usize = PHASE_END + 3 * WL_PAIR_STATES; // 5108
+    const PATTERN_END: usize = WL_PAIR_END + 89; // 5197
+    const BAG_END: usize = PATTERN_END + 55; // 5252
+    const OPP_HAB_END: usize = BAG_END + 55; // 5307
+    // Allowed wildlife: 441 cells × 5 flags
+    const ALLOWED_WL_PC: usize = 5;
+    const ALLOWED_END: usize = OPP_HAB_END + 441 * ALLOWED_WL_PC; // 7512
+    const EXT_WL_END: usize = ALLOWED_END + 50; // 7562
+    // Terrain pairwise: 3 dirs × 36 states
+    const TERRAIN_PAIR_STATES: usize = 36;
+    const TERRAIN_PAIR_END: usize = EXT_WL_END + 3 * TERRAIN_PAIR_STATES; // 7670
 
     let mut rotated = Vec::with_capacity(features.len());
     for &f in features {
         let fi = f as usize;
-        if fi < CELL_FEATURES {
+        if fi < CELL_END {
             // Per-cell feature: remap cell index
-            let cell_idx = fi / FEATURES_PER_CELL;
-            let offset = fi % FEATURES_PER_CELL;
+            let cell_idx = fi / FPC;
+            let offset = fi % FPC;
             let new_cell = rotation_table[cell_idx]?;
-            rotated.push((new_cell * FEATURES_PER_CELL + offset) as u16);
-        } else if fi < PAIR_BASE {
+            rotated.push((new_cell * FPC + offset) as u16);
+        } else if fi < PHASE_END {
             // Phase features: unchanged
             rotated.push(f);
-        } else if fi < PATTERN_BASE {
-            // Pairwise adjacency: rotate direction
-            let rel = fi - PAIR_BASE;
-            let dir = rel / PAIR_STATES;
-            let pair_state = rel % PAIR_STATES;
+        } else if fi < WL_PAIR_END {
+            // Wildlife pairwise adjacency: rotate direction
+            let rel = fi - PHASE_END;
+            let dir = rel / WL_PAIR_STATES;
+            let pair_state = rel % WL_PAIR_STATES;
             let new_dir = (dir + dir_shift) % 3;
-            rotated.push((PAIR_BASE + new_dir * PAIR_STATES + pair_state) as u16);
+            rotated.push((PHASE_END + new_dir * WL_PAIR_STATES + pair_state) as u16);
+        } else if fi < PATTERN_END {
+            // Pattern features: unchanged (global aggregates)
+            rotated.push(f);
+        } else if fi < OPP_HAB_END {
+            // Bag + opponent habitat: unchanged
+            rotated.push(f);
+        } else if fi < ALLOWED_END {
+            // Allowed wildlife per cell: remap cell index
+            let rel = fi - OPP_HAB_END;
+            let cell_idx = rel / ALLOWED_WL_PC;
+            let offset = rel % ALLOWED_WL_PC;
+            let new_cell = rotation_table[cell_idx]?;
+            rotated.push((OPP_HAB_END + new_cell * ALLOWED_WL_PC + offset) as u16);
+        } else if fi < EXT_WL_END {
+            // Extended wildlife count: unchanged
+            rotated.push(f);
+        } else if fi < TERRAIN_PAIR_END {
+            // Terrain pairwise: rotate direction
+            let rel = fi - EXT_WL_END;
+            let dir = rel / TERRAIN_PAIR_STATES;
+            let pair_state = rel % TERRAIN_PAIR_STATES;
+            let new_dir = (dir + dir_shift) % 3;
+            rotated.push((EXT_WL_END + new_dir * TERRAIN_PAIR_STATES + pair_state) as u16);
         } else {
-            // Pattern features: unchanged
+            // Unknown/future features: pass through unchanged
             rotated.push(f);
         }
     }
