@@ -70,17 +70,37 @@ const BAG_FEATURES: usize = 5 * BAG_BINS; // 55
 const OPP_HAB_BINS: usize = 11;
 const OPP_HAB_FEATURES: usize = 5 * OPP_HAB_BINS; // 55
 
+// Terrain pairwise adjacency: 3 directions × 6×6 terrain pair states = 108 features
+// States: 0=empty, 1-5=terrain types (Forest, Prairie, Wetland, Mountain, River)
+// Captures habitat connectivity patterns (matching terrains = growing habitat groups)
+const TERRAIN_PAIR_STATES: usize = 6 * 6; // 36 (my_terrain × neighbor_terrain)
+const TERRAIN_PAIR_FEATURES: usize = PAIR_DIRS * TERRAIN_PAIR_STATES; // 108
+
 /// Feature count of the original architecture (for backward-compatible weight loading)
 /// Old: 441×11 + 110 + 147 + 89 = 5197 (no bag/opponent/allowed features)
 pub const NUM_FEATURES_LEGACY: usize = 5197;
 pub const NUM_FEATURES: usize = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES
-    + BAG_FEATURES + OPP_HAB_FEATURES + ALLOWED_WL_FEATURES + WL_COUNT_EXT_FEATURES;
+    + BAG_FEATURES + OPP_HAB_FEATURES + ALLOWED_WL_FEATURES + WL_COUNT_EXT_FEATURES
+    + TERRAIN_PAIR_FEATURES;
 pub const HIDDEN1: usize = 512;
 pub const HIDDEN2: usize = 64;
 
 // ─────────────────────────────────────────────────────────────────────
 // Feature extraction
 // ─────────────────────────────────────────────────────────────────────
+
+/// Encode terrain on a specific edge of a cell: 0=empty, 1-5=terrain type
+/// For dual-terrain tiles, the terrain depends on rotation and edge direction.
+#[inline(always)]
+fn terrain_code_on_edge(board: &Board, idx: usize, direction: usize) -> u8 {
+    let cell = board.grid.get(idx);
+    if !cell.is_present() { return 0; }
+    let rotation = board.rotations[idx];
+    match cascadia_core::board::terrain_on_edge(cell, rotation, direction) {
+        Some(t) => (t as u8) + 1,
+        None => 0,
+    }
+}
 
 /// Encode wildlife state for a cell: 0=empty, 1-5=wildlife, 6=tile_no_wildlife
 #[inline(always)]
@@ -475,6 +495,30 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
     for wtype in 0..5 {
         let count = board.wildlife_positions[wtype].len().min(9);
         features.push((ext_wl_base + wtype * WL_COUNT_EXT_BINS + count) as u16);
+    }
+
+    // ── Terrain pairwise adjacency ──
+    // For each placed tile, encode terrain-terrain pairs with neighbors in 3 line directions.
+    // Uses edge-aware terrain (accounts for dual-terrain rotation).
+    let terrain_pair_base = ext_wl_base + WL_COUNT_EXT_FEATURES;
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let coord = HexCoord::from_index(idx);
+
+        for (dir, &(dq, dr)) in HexCoord::LINE_DIRECTIONS.iter().enumerate() {
+            let neighbor = HexCoord::new(coord.q + dq, coord.r + dr);
+            if let Some(nidx) = neighbor.to_index() {
+                if !board.grid.get(nidx).is_present() { continue; }
+                // Get terrain on the shared edge: my terrain facing direction `dir`,
+                // neighbor's terrain facing direction `(dir+3)%6`
+                let my_terrain = terrain_code_on_edge(board, idx, dir);
+                let n_terrain = terrain_code_on_edge(board, nidx, (dir + 3) % 6);
+                if my_terrain > 0 && n_terrain > 0 {
+                    let pair_idx = dir * TERRAIN_PAIR_STATES + my_terrain as usize * 6 + n_terrain as usize;
+                    features.push((terrain_pair_base + pair_idx) as u16);
+                }
+            }
+        }
     }
 
     features
