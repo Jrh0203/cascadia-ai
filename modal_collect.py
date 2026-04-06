@@ -196,3 +196,77 @@ def benchmark(
     for i, output in enumerate(all_output):
         print(f"\n--- Worker {i+1} ---")
         print(output)
+
+
+@app.local_entrypoint()
+def compare(
+    strategies: str = "mce:300,mce:1500",
+    workers_per_strategy: int = 3,
+    games_per_worker: int = 10,
+    weights: str = "nnue_weights_mce93.bin",
+):
+    """Compare multiple strategies head-to-head.
+
+    All workers launch simultaneously across all strategies.
+    Uses the same game seeds for fair comparison.
+
+    Usage:
+        modal run modal_collect.py compare --strategies "mce:300,mce:1500" --workers-per-strategy 3 --games-per-worker 10
+        modal run modal_collect.py compare --strategies "nnue,mce:750" --workers-per-strategy 5 --games-per-worker 50
+        modal run modal_collect.py compare --strategies "greedy,nnue,mce:300,mce:750"
+
+    Format: strategy_name or strategy_name:rollouts (e.g., mce:300, nnue, greedy)
+    """
+    # Parse strategies
+    strat_configs = []
+    for s in strategies.split(","):
+        s = s.strip()
+        if ":" in s:
+            name, rollouts = s.split(":", 1)
+            strat_configs.append((name, int(rollouts)))
+        else:
+            strat_configs.append((s, 750))  # default rollouts
+
+    total_workers = len(strat_configs) * workers_per_strategy
+    total_games = total_workers * games_per_worker
+
+    print(f"Comparing {len(strat_configs)} strategies, {workers_per_strategy} workers each, {games_per_worker} games/worker")
+    print(f"Total: {total_workers} workers, {total_games} games")
+    for name, rollouts in strat_configs:
+        label = f"{name}({rollouts})" if name == "mce" else name
+        print(f"  - {label}: {workers_per_strategy} workers × {games_per_worker} games = {workers_per_strategy * games_per_worker} games")
+
+    # Launch ALL workers across all strategies simultaneously
+    futures = []  # (strategy_label, future)
+    for strat_name, rollouts in strat_configs:
+        label = f"{strat_name}({rollouts})" if strat_name == "mce" else strat_name
+        for i in range(workers_per_strategy):
+            f = benchmark_games.spawn(
+                games_per_worker,
+                seed_offset=i * games_per_worker,  # same seeds across strategies for fair comparison
+                strategy=strat_name,
+                rollouts=rollouts,
+                weights=weights,
+            )
+            futures.append((label, f))
+
+    # Collect results grouped by strategy
+    results_by_strategy = {}
+    for label, future in futures:
+        output = future.get()
+        if label not in results_by_strategy:
+            results_by_strategy[label] = []
+        results_by_strategy[label].append(output)
+        done = sum(len(v) for v in results_by_strategy.values())
+        print(f"  {done}/{total_workers} workers done ({label})")
+
+    # Print results per strategy
+    print("\n" + "=" * 60)
+    for label in dict.fromkeys(l for l, _ in futures):  # preserve order
+        outputs = results_by_strategy[label]
+        print(f"\n{'=' * 60}")
+        print(f"  Strategy: {label} ({len(outputs)} workers × {games_per_worker} games = {len(outputs) * games_per_worker} total)")
+        print(f"{'=' * 60}")
+        for i, output in enumerate(outputs):
+            print(f"\n--- Worker {i+1} ---")
+            print(output)
