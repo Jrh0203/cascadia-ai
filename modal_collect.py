@@ -260,13 +260,78 @@ def compare(
         done = sum(len(v) for v in results_by_strategy.values())
         print(f"  {done}/{total_workers} workers done ({label})")
 
-    # Print results per strategy
-    print("\n" + "=" * 60)
-    for label in dict.fromkeys(l for l, _ in futures):  # preserve order
+    # Parse scores from worker outputs and aggregate
+    def parse_scores(output_text):
+        """Extract base and bonus scores from CLI benchmark output."""
+        import re
+        base_scores = []
+        bonus_scores = []
+        # Look for score distribution lines like "  90- 94:     8 ████"
+        # Or parse the Min/Max line for the range
+        # Simplest: look for individual game scores in the output
+        # Actually the CLI prints aggregate stats, not individual scores.
+        # Parse the summary stats instead.
+        stats = {}
+        for line in output_text.split("\n"):
+            line = line.strip()
+            if line.startswith("Mean:"):
+                val = re.search(r"[\d.]+", line)
+                if val and "base" not in stats:
+                    stats["base_mean"] = float(val.group())
+            elif line.startswith("Median:"):
+                val = re.search(r"\d+", line)
+                if val and "base_median" not in stats:
+                    stats["base_median"] = int(val.group())
+            elif line.startswith("P10:"):
+                val = re.search(r"\d+", line)
+                if val and "base_p10" not in stats:
+                    stats["base_p10"] = int(val.group())
+            elif line.startswith("P90:"):
+                val = re.search(r"\d+", line)
+                if val and "base_p90" not in stats:
+                    stats["base_p90"] = int(val.group())
+            elif line.startswith("Min/Max:"):
+                m = re.search(r"(\d+)/(\d+)", line)
+                if m:
+                    stats["base_min"] = int(m.group(1))
+                    stats["base_max"] = int(m.group(2))
+            elif "avg bonus" in line:
+                m = re.search(r"([\d.]+) \(\+([\d.]+)", line)
+                if m:
+                    stats["bonus_mean"] = float(m.group(1))
+                    stats["avg_bonus"] = float(m.group(2))
+        return stats
+
+    # Aggregate across workers per strategy (weighted average of means)
+    print("\n" + "=" * 70)
+    print(f"{'STRATEGY COMPARISON':^70}")
+    print("=" * 70)
+    print(f"{'Strategy':<20} {'Games':>6} {'Base Mean':>10} {'+ Bonus':>10} {'P10':>6} {'P90':>6} {'Min':>6} {'Max':>6}")
+    print("-" * 70)
+
+    strategy_order = list(dict.fromkeys(l for l, _ in futures))
+    for label in strategy_order:
         outputs = results_by_strategy[label]
-        print(f"\n{'=' * 60}")
-        print(f"  Strategy: {label} ({len(outputs)} workers × {games_per_worker} games = {len(outputs) * games_per_worker} total)")
-        print(f"{'=' * 60}")
-        for i, output in enumerate(outputs):
-            print(f"\n--- Worker {i+1} ---")
-            print(output)
+        all_stats = [parse_scores(o) for o in outputs]
+        n_workers = len(all_stats)
+        n_games = n_workers * games_per_worker
+
+        # Aggregate: average the means, min of mins, max of maxes, etc.
+        valid = [s for s in all_stats if "base_mean" in s]
+        if not valid:
+            print(f"{label:<20} {'(no data)':>6}")
+            continue
+
+        avg_base = sum(s["base_mean"] for s in valid) / len(valid)
+        avg_bonus = sum(s.get("bonus_mean", s["base_mean"]) for s in valid) / len(valid)
+        avg_bonus_delta = sum(s.get("avg_bonus", 0) for s in valid) / len(valid)
+        min_p10 = min(s.get("base_p10", 0) for s in valid)
+        max_p90 = max(s.get("base_p90", 0) for s in valid)
+        min_score = min(s.get("base_min", 0) for s in valid)
+        max_score = max(s.get("base_max", 0) for s in valid)
+
+        bonus_str = f"{avg_bonus:.1f} (+{avg_bonus_delta:.1f})" if avg_bonus_delta > 0 else "n/a"
+        print(f"{label:<20} {n_games:>6} {avg_base:>10.1f} {bonus_str:>10} {min_p10:>6} {max_p90:>6} {min_score:>6} {max_score:>6}")
+
+    print("=" * 70)
+    print(f"(P10/P90 show worst-worker P10 and best-worker P90 across workers)")
