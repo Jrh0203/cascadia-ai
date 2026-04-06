@@ -4,14 +4,15 @@
 //!
 //! Feature layout:
 //!   [0 .. 4851)       Per-cell: 441 cells × 11 features (wildlife/terrain)
-//!   [4851 .. 4872)    Game phase: turn number one-hot (21 features, 0-20)
-//!   [4872 .. 4881)    Nature tokens one-hot (9 features, 0-8)
-//!   [4881 .. 4911)    Wildlife count per type, one-hot (6 × 5 types, counts 0-5)
-//!   [4911 .. 4961)    Largest habitat group per terrain, one-hot (10 × 5 terrains, 0-9)
-//!   [4961 .. 5108)    Pairwise adjacency: 3 directions × 49 wildlife pair states
-//!   [5108 .. 5197)    Wildlife pattern features (bear pairs, elk lines, etc.)
-//!   [5197 .. 5252)    Bag remaining: 5 types × 11 bins (0-10+ available to draw)
-//!   [5252 .. 5307)    Opponent habitat: 5 terrains × 11 bins (max opponent habitat 0-10+)
+//!   [4851 .. 4872)    Turn number one-hot (21, 0-20)
+//!   [4872 .. 4881)    Nature tokens one-hot (9, 0-8)
+//!   [4881 .. 4931)    Wildlife count per type (10 bins × 5 types, counts 0-9)
+//!   [4931 .. 4981)    Largest habitat per terrain (10 bins × 5 terrains, 0-9)
+//!   [4981 .. 5128)    Pairwise adjacency: 3 directions × 49 wildlife pair states
+//!   [5128 .. 5217)    Wildlife pattern features (bear pairs, elk lines, etc.)
+//!   [5217 .. 5272)    Bag remaining: 5 types × 11 bins (0-10+)
+//!   [5272 .. 5327)    Opponent habitat: 5 terrains × 11 bins (max opponent 0-10+)
+//!   [5327 .. 7532)    Allowed wildlife per cell: 441 cells × 5 flags
 
 use cascadia_core::board::Board;
 use cascadia_core::hex::{HexCoord, ADJACENCY, GRID_SIZE};
@@ -21,14 +22,27 @@ use cascadia_core::types::Wildlife;
 // Constants
 // ─────────────────────────────────────────────────────────────────────
 
+// Per-cell: 11 core features each (backward-compatible indices)
+// 0-4: wildlife type placed (Bear, Elk, Salmon, Hawk, Fox)
+// 5: tile present, no wildlife
+// 6-10: terrain type (Forest, Prairie, Wetland, Mountain, River)
 const FEATURES_PER_CELL: usize = 11;
 const CELL_FEATURES: usize = GRID_SIZE * FEATURES_PER_CELL; // 4851
 
 const TURN_FEATURES: usize = 21;     // turns 0-20
 const TOKEN_FEATURES: usize = 9;     // tokens 0-8
-const WL_COUNT_FEATURES: usize = 30; // 6 bins × 5 types (counts 0-5)
+const WL_COUNT_FEATURES: usize = 30; // 6 bins × 5 types (counts 0-5) — legacy size, backward compat
+
+// Extended wildlife count: 10 bins × 5 types (0-9), appended after all legacy features
+const WL_COUNT_EXT_BINS: usize = 10;
+const WL_COUNT_EXT_FEATURES: usize = WL_COUNT_EXT_BINS * 5; // 50
+
+// Allowed wildlife per cell: 441 cells × 5 wildlife flags = 2205 features
+// Appended AFTER bag+opponent features to preserve backward compatibility
+const ALLOWED_WL_PER_CELL: usize = 5;
+const ALLOWED_WL_FEATURES: usize = GRID_SIZE * ALLOWED_WL_PER_CELL; // 2205
 const HAB_SIZE_FEATURES: usize = 50; // 10 bins × 5 terrains (sizes 0-9)
-const PHASE_FEATURES: usize = TURN_FEATURES + TOKEN_FEATURES + WL_COUNT_FEATURES + HAB_SIZE_FEATURES; // 110
+const PHASE_FEATURES: usize = TURN_FEATURES + TOKEN_FEATURES + WL_COUNT_FEATURES + HAB_SIZE_FEATURES; // 110 (legacy)
 
 const PAIR_DIRS: usize = 3;
 const PAIR_STATES: usize = 7 * 7;    // 49 (my_wildlife × neighbor_wildlife)
@@ -56,9 +70,11 @@ const BAG_FEATURES: usize = 5 * BAG_BINS; // 55
 const OPP_HAB_BINS: usize = 11;
 const OPP_HAB_FEATURES: usize = 5 * OPP_HAB_BINS; // 55
 
-/// Feature count without bag/opponent features (for backward-compatible weight loading)
-pub const NUM_FEATURES_LEGACY: usize = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES;
-pub const NUM_FEATURES: usize = NUM_FEATURES_LEGACY + BAG_FEATURES + OPP_HAB_FEATURES;
+/// Feature count of the original architecture (for backward-compatible weight loading)
+/// Old: 441×11 + 110 + 147 + 89 = 5197 (no bag/opponent/allowed features)
+pub const NUM_FEATURES_LEGACY: usize = 5197;
+pub const NUM_FEATURES: usize = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES
+    + BAG_FEATURES + OPP_HAB_FEATURES + ALLOWED_WL_FEATURES + WL_COUNT_EXT_FEATURES;
 pub const HIDDEN1: usize = 512;
 pub const HIDDEN2: usize = 64;
 
@@ -109,7 +125,8 @@ impl Accumulator {
 }
 
 /// Compute per-cell feature indices for a given cell index on a board.
-/// Returns up to 2 features: one for wildlife/no-wildlife, one for terrain.
+/// Returns core features (wildlife/no-wildlife + terrain). Does NOT include
+/// allowed-wildlife features (those are in a separate block at the end).
 #[inline]
 pub fn cell_features(board: &Board, idx: usize) -> arrayvec::ArrayVec<u16, 2> {
     let mut features = arrayvec::ArrayVec::new();
@@ -353,7 +370,7 @@ pub fn extract_features(board: &Board) -> Vec<u16> {
 
 /// Extract active feature indices from a board state, optionally with bag composition.
 pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u16> {
-    let mut features = Vec::with_capacity(120);
+    let mut features = Vec::with_capacity(160);
 
     // ── Per-cell features ──
     for &tile_idx in board.placed_tiles.iter() {
@@ -364,7 +381,7 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
         if let Some(w) = cell.placed_wildlife() {
             features.push((base + w as usize) as u16);
         } else {
-            features.push((base + 5) as u16);
+            features.push((base + 5) as u16); // tile_no_wildlife
         }
 
         if let Some(t) = cell.primary_terrain() {
@@ -383,7 +400,7 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
     let tokens = (board.nature_tokens as usize).min(8);
     features.push((phase_base + TURN_FEATURES + tokens) as u16);
 
-    // Wildlife count per type (clamped 0-5)
+    // Wildlife count per type — legacy bins (clamped 0-5)
     let wl_base = phase_base + TURN_FEATURES + TOKEN_FEATURES;
     for wtype in 0..5 {
         let count = board.wildlife_positions[wtype].len().min(5);
@@ -435,6 +452,29 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
             let size = (bag.max_opponent_habitat[terrain] as usize).min(OPP_HAB_BINS - 1);
             features.push((opp_base + terrain * OPP_HAB_BINS + size) as u16);
         }
+    }
+
+    // ── Allowed wildlife per cell ──
+    let allowed_base = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES + BAG_FEATURES + OPP_HAB_FEATURES;
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let cell = board.grid.get(idx);
+        // Only emit for open slots (tile present, no wildlife)
+        if cell.is_present() && !cell.has_wildlife() {
+            let mask = cell.allowed_wildlife();
+            for w in Wildlife::ALL {
+                if mask.contains(w) {
+                    features.push((allowed_base + idx * ALLOWED_WL_PER_CELL + w as usize) as u16);
+                }
+            }
+        }
+    }
+
+    // ── Extended wildlife count (10 bins, 0-9) ──
+    let ext_wl_base = allowed_base + ALLOWED_WL_FEATURES;
+    for wtype in 0..5 {
+        let count = board.wildlife_positions[wtype].len().min(9);
+        features.push((ext_wl_base + wtype * WL_COUNT_EXT_BINS + count) as u16);
     }
 
     features
