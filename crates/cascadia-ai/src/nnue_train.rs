@@ -13,7 +13,7 @@ use cascadia_core::hex::HexCoord;
 use cascadia_core::scoring::ScoreBreakdown;
 use cascadia_core::types::ScoringCards;
 
-use crate::nnue::{extract_features, NNUENetwork};
+use crate::nnue::{extract_features, extract_phase_pattern_features, NNUENetwork};
 use crate::search::{execute_scored_move, greedy_move};
 
 /// A training sample: board features + target score.

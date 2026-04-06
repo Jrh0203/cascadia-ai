@@ -143,6 +143,160 @@ pub fn cell_features_before_wildlife(board: &Board, idx: usize, wildlife: Wildli
     features
 }
 
+/// Compute the feature diff caused by placing a tile (and optionally wildlife) at idx.
+/// Must be called AFTER the placement (board reflects the new state).
+/// Returns (removed_features, added_features).
+pub fn compute_placement_diff(
+    board: &Board,
+    idx: usize,
+    wildlife_idx: Option<usize>,
+    wildlife: Option<Wildlife>,
+) -> (arrayvec::ArrayVec<u16, 64>, arrayvec::ArrayVec<u16, 64>) {
+    let mut removed = arrayvec::ArrayVec::new();
+    let mut added = arrayvec::ArrayVec::new();
+    let adj = &*ADJACENCY;
+
+    // 1. Per-cell features for the placed tile cell
+    // Before: cell was empty (no features). After: has terrain + tile_no_wildlife (or wildlife if placed here)
+    let cell = board.grid.get(idx);
+    let base = idx * FEATURES_PER_CELL;
+    if let Some(w) = cell.placed_wildlife() {
+        added.push((base + w as usize) as u16);
+    } else {
+        added.push((base + 5) as u16); // tile_no_wildlife
+    }
+    if let Some(t) = cell.primary_terrain() {
+        added.push((base + 6 + t as usize) as u16);
+    }
+
+    // 2. Per-cell features for the wildlife cell (if different from tile cell)
+    if let (Some(widx), Some(wl)) = (wildlife_idx, wildlife) {
+        if widx != idx {
+            let wbase = widx * FEATURES_PER_CELL;
+            // Before: had tile_no_wildlife. After: has wildlife type
+            removed.push((wbase + 5) as u16); // remove tile_no_wildlife
+            added.push((wbase + wl as usize) as u16); // add wildlife
+        }
+    }
+
+    // 3. Pairwise adjacency features: the placed cell and all its neighbors
+    // Every (tile_cell, neighbor) pair in all 3 line directions changes
+    let pair_base = CELL_FEATURES + PHASE_FEATURES;
+    let my_wl = wildlife_code(board, idx);
+
+    for (dir, &(dq, dr)) in HexCoord::LINE_DIRECTIONS.iter().enumerate() {
+        let coord = HexCoord::from_index(idx);
+        let neighbor = HexCoord::new(coord.q + dq, coord.r + dr);
+        if let Some(nidx) = neighbor.to_index() {
+            let n_wl = wildlife_code(board, nidx);
+            if n_wl > 0 {
+                // Before: pair was (0, n_wl) since our cell was empty
+                let old_pair = dir * PAIR_STATES + 0 * 7 + n_wl as usize;
+                removed.push((pair_base + old_pair) as u16);
+            }
+            if my_wl > 0 || n_wl > 0 {
+                // After: pair is (my_wl, n_wl)
+                let new_pair = dir * PAIR_STATES + my_wl as usize * 7 + n_wl as usize;
+                added.push((pair_base + new_pair) as u16);
+            }
+        }
+
+        // Also check reverse direction (neighbor → us) for neighbors that have tiles
+        let rev_neighbor = HexCoord::new(coord.q - dq, coord.r - dr);
+        if let Some(rnidx) = rev_neighbor.to_index() {
+            let rn_wl = wildlife_code(board, rnidx);
+            if rn_wl > 0 {
+                // Before: pair was (rn_wl, 0) since our cell was empty
+                let old_pair = dir * PAIR_STATES + rn_wl as usize * 7 + 0;
+                removed.push((pair_base + old_pair) as u16);
+                // After: pair is (rn_wl, my_wl)
+                let new_pair = dir * PAIR_STATES + rn_wl as usize * 7 + my_wl as usize;
+                added.push((pair_base + new_pair) as u16);
+            }
+        }
+    }
+
+    // 4. Wildlife placement on a different cell also changes pairwise features for that cell
+    if let (Some(widx), Some(_wl)) = (wildlife_idx, wildlife) {
+        if widx != idx {
+            let wcoord = HexCoord::from_index(widx);
+            let new_wl = wildlife_code(board, widx); // now has wildlife
+            // old_wl was 6 (tile_no_wildlife)
+            let old_wl: u8 = 6;
+            for (dir, &(dq, dr)) in HexCoord::LINE_DIRECTIONS.iter().enumerate() {
+                let neighbor = HexCoord::new(wcoord.q + dq, wcoord.r + dr);
+                if let Some(nidx) = neighbor.to_index() {
+                    let n_wl = wildlife_code(board, nidx);
+                    if n_wl > 0 || old_wl > 0 {
+                        removed.push((pair_base + dir * PAIR_STATES + old_wl as usize * 7 + n_wl as usize) as u16);
+                    }
+                    if n_wl > 0 || new_wl > 0 {
+                        added.push((pair_base + dir * PAIR_STATES + new_wl as usize * 7 + n_wl as usize) as u16);
+                    }
+                }
+                let rev = HexCoord::new(wcoord.q - dq, wcoord.r - dr);
+                if let Some(rnidx) = rev.to_index() {
+                    let rn_wl = wildlife_code(board, rnidx);
+                    if rn_wl > 0 {
+                        removed.push((pair_base + dir * PAIR_STATES + rn_wl as usize * 7 + old_wl as usize) as u16);
+                        added.push((pair_base + dir * PAIR_STATES + rn_wl as usize * 7 + new_wl as usize) as u16);
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. Phase + pattern features: these are global aggregates, too complex for incremental.
+    // We skip them — caller should handle via full recompute of phase/pattern block.
+
+    (removed, added)
+}
+
+/// Extract only phase + pattern features (no per-cell, no pairwise).
+/// Used by incremental accumulator to recompute global features cheaply.
+pub fn extract_phase_pattern_features(board: &Board, _cards: &cascadia_core::types::ScoringCards) -> Vec<u16> {
+    let mut features = Vec::with_capacity(30);
+
+    // Phase features (same as in extract_features)
+    let phase_base = CELL_FEATURES;
+    let turn = (board.tile_count as usize).saturating_sub(3).min(20);
+    features.push((phase_base + turn) as u16);
+    let tokens = (board.nature_tokens as usize).min(8);
+    features.push((phase_base + TURN_FEATURES + tokens) as u16);
+    let wl_base = phase_base + TURN_FEATURES + TOKEN_FEATURES;
+    for wtype in 0..5 {
+        let count = board.wildlife_positions[wtype].len().min(5);
+        features.push((wl_base + wtype * 6 + count) as u16);
+    }
+    let hab_base = wl_base + WL_COUNT_FEATURES;
+    for terrain in 0..5 {
+        let size = (board.largest_group[terrain] as usize).min(9);
+        features.push((hab_base + terrain * 10 + size) as u16);
+    }
+
+    // Pattern features
+    let pat_base = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES;
+    extract_pattern_features(board, &mut features, pat_base);
+
+    features
+}
+
+/// Extract only bag + opponent habitat features.
+pub fn extract_bag_features(board: &Board, bag: &BagInfo) -> Vec<u16> {
+    let mut features = Vec::with_capacity(10);
+    let bag_base = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES;
+    for wtype in 0..5 {
+        let count = (bag.remaining[wtype] as usize).min(BAG_BINS - 1);
+        features.push((bag_base + wtype * BAG_BINS + count) as u16);
+    }
+    let opp_base = bag_base + BAG_FEATURES;
+    for terrain in 0..5 {
+        let size = (bag.max_opponent_habitat[terrain] as usize).min(OPP_HAB_BINS - 1);
+        features.push((opp_base + terrain * OPP_HAB_BINS + size) as u16);
+    }
+    features
+}
+
 /// Game-level information visible to the AI beyond the player's own board:
 /// bag composition and opponent habitat sizes.
 #[derive(Clone, Default)]
