@@ -577,9 +577,11 @@ fn main() {
         };
 
         println!("Training from MCE samples: samples={}, epochs={}, lr={}", samples_path, epochs, lr);
+        println!("  Checkpoint: saving after every epoch to {}", weights_out);
         let start = Instant::now();
-        let stats = cascadia_ai::nnue_train::train_from_mce_samples(
+        let stats = cascadia_ai::nnue_train::train_from_mce_samples_with_checkpoint(
             &mut net, std::path::Path::new(samples_path), epochs, lr,
+            Some(std::path::Path::new(weights_out)),
         ).expect("Training failed");
         println!("Training complete in {:.1?}", start.elapsed());
         println!("  Samples:    {}", stats.num_samples);

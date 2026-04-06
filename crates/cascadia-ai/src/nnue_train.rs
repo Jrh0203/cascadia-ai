@@ -474,11 +474,22 @@ fn augment_with_rotations(samples: &[Sample]) -> Vec<Sample> {
 }
 
 /// Train NNUE from MCE policy samples (imitation of MCE via regression on rollout averages).
+/// If checkpoint_path is provided, saves weights after every epoch.
 pub fn train_from_mce_samples(
     net: &mut NNUENetwork,
     samples_path: &std::path::Path,
     epochs: usize,
     lr: f32,
+) -> std::io::Result<TrainStats> {
+    train_from_mce_samples_with_checkpoint(net, samples_path, epochs, lr, None)
+}
+
+pub fn train_from_mce_samples_with_checkpoint(
+    net: &mut NNUENetwork,
+    samples_path: &std::path::Path,
+    epochs: usize,
+    lr: f32,
+    checkpoint_path: Option<&std::path::Path>,
 ) -> std::io::Result<TrainStats> {
     let mut stats = TrainStats::default();
     eprint!("  Loading MCE samples from {:?}...", samples_path);
@@ -515,6 +526,11 @@ pub fn train_from_mce_samples(
         let rmse = (loss / count as f64).sqrt();
         eprint!("\r  Epoch {}/{}: RMSE={:.2}    ", epoch + 1, epochs, rmse);
         stats.final_rmse = rmse;
+
+        // Save checkpoint after every epoch
+        if let Some(path) = checkpoint_path {
+            let _ = net.save(path);
+        }
     }
     eprintln!();
     Ok(stats)
