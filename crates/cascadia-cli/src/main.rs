@@ -303,8 +303,12 @@ fn run_benchmark(strategy: &Strategy, num_games: usize) -> BenchResult {
     let samples_path = std::path::Path::new("mce_policy_samples.bin");
     let mut total_samples = 0usize;
 
+    // Support seed offset for distributed benchmarking (env var CASCADIA_SEED_OFFSET)
+    let seed_offset: u64 = std::env::var("CASCADIA_SEED_OFFSET")
+        .ok().and_then(|s| s.parse().ok()).unwrap_or(0);
+
     for i in 0..num_games {
-        let mut rng = StdRng::seed_from_u64(i as u64);
+        let mut rng = StdRng::seed_from_u64(i as u64 + seed_offset);
         let (base, with_bonus) = if is_mce {
             let mut game_samples = Vec::new();
             let result = simulate_game_inner(&mut rng, strategy, Some(&mut game_samples));
