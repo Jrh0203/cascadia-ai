@@ -77,6 +77,72 @@ fn wildlife_code(board: &Board, idx: usize) -> u8 {
     }
 }
 
+/// Pre-computed first-layer activation values. Maintained incrementally
+/// as tiles/wildlife are placed/undone to avoid recomputing from scratch.
+#[derive(Clone)]
+pub struct Accumulator {
+    pub values: [f32; HIDDEN1],
+}
+
+impl Accumulator {
+    /// Build a fresh accumulator from a board + NNUE weights.
+    /// Includes per-cell + phase + pairwise + pattern features (not bag/opponent).
+    pub fn from_board(board: &Board, net: &NNUENetwork) -> Self {
+        let features = extract_features(board);
+        let mut values = [0.0f32; HIDDEN1];
+        values.copy_from_slice(&net.b1);
+        for &fi in &features {
+            let base = fi as usize * HIDDEN1;
+            let col = &net.w1[base..base + HIDDEN1];
+            for j in 0..HIDDEN1 {
+                values[j] += col[j];
+            }
+        }
+        Accumulator { values }
+    }
+
+    /// Rebuild the accumulator from scratch. Used to reset after
+    /// accumulation drift or after complex board changes.
+    pub fn rebuild(&mut self, board: &Board, net: &NNUENetwork) {
+        *self = Self::from_board(board, net);
+    }
+}
+
+/// Compute per-cell feature indices for a given cell index on a board.
+/// Returns up to 2 features: one for wildlife/no-wildlife, one for terrain.
+#[inline]
+pub fn cell_features(board: &Board, idx: usize) -> arrayvec::ArrayVec<u16, 2> {
+    let mut features = arrayvec::ArrayVec::new();
+    let cell = board.grid.get(idx);
+    if !cell.is_present() { return features; }
+    let base = idx * FEATURES_PER_CELL;
+    if let Some(w) = cell.placed_wildlife() {
+        features.push((base + w as usize) as u16);
+    } else {
+        features.push((base + 5) as u16); // tile_no_wildlife
+    }
+    if let Some(t) = cell.primary_terrain() {
+        features.push((base + 6 + t as usize) as u16);
+    }
+    features
+}
+
+/// Compute what a cell's features were BEFORE wildlife was placed on it.
+/// (It had "tile_no_wildlife" + terrain, instead of the wildlife type + terrain.)
+#[inline]
+pub fn cell_features_before_wildlife(board: &Board, idx: usize, wildlife: Wildlife) -> arrayvec::ArrayVec<u16, 2> {
+    let mut features = arrayvec::ArrayVec::new();
+    let cell = board.grid.get(idx);
+    if !cell.is_present() { return features; }
+    let base = idx * FEATURES_PER_CELL;
+    // Before wildlife was placed, this cell had "tile_no_wildlife"
+    features.push((base + 5) as u16);
+    if let Some(t) = cell.primary_terrain() {
+        features.push((base + 6 + t as usize) as u16);
+    }
+    features
+}
+
 /// Game-level information visible to the AI beyond the player's own board:
 /// bag composition and opponent habitat sizes.
 #[derive(Clone, Default)]
@@ -573,6 +639,58 @@ impl NNUENetwork {
     pub fn evaluate_with_bag(&self, board: &Board, bag: &BagInfo) -> f32 {
         let features = extract_features_with_bag(board, Some(bag));
         self.forward(&features)
+    }
+
+    /// Fast forward pass using a pre-computed accumulator for layer 1.
+    /// Skips the sparse feature accumulation entirely — just applies ReLU + layers 2-3.
+    pub fn forward_from_accumulator(&self, acc: &Accumulator, extra_features: &[u16]) -> f32 {
+        let mut h1 = [0.0f32; HIDDEN1];
+        h1.copy_from_slice(&acc.values);
+        // Add any extra features (bag, opponent habitat) not tracked in accumulator
+        for &fi in extra_features {
+            let base = fi as usize * HIDDEN1;
+            let col = &self.w1[base..base + HIDDEN1];
+            for j in 0..HIDDEN1 {
+                h1[j] += col[j];
+            }
+        }
+        // ReLU
+        for v in h1.iter_mut() { *v = v.max(0.0); }
+        // Layer 2
+        let mut h2 = [0.0f32; HIDDEN2];
+        h2.copy_from_slice(&self.b2);
+        for i in 0..HIDDEN1 {
+            if h1[i] > 0.0 {
+                let base = i * HIDDEN2;
+                let row = &self.w2[base..base + HIDDEN2];
+                for j in 0..HIDDEN2 { h2[j] += h1[i] * row[j]; }
+            }
+        }
+        for v in h2.iter_mut() { *v = v.max(0.0); }
+        // Output
+        let mut out = self.b3;
+        for j in 0..HIDDEN2 { out += h2[j] * self.w3[j]; }
+        out
+    }
+
+    /// Add a feature to the first-layer accumulator.
+    #[inline]
+    pub fn accumulator_add(&self, acc: &mut Accumulator, feature: u16) {
+        let base = feature as usize * HIDDEN1;
+        let col = &self.w1[base..base + HIDDEN1];
+        for j in 0..HIDDEN1 {
+            acc.values[j] += col[j];
+        }
+    }
+
+    /// Remove a feature from the first-layer accumulator.
+    #[inline]
+    pub fn accumulator_sub(&self, acc: &mut Accumulator, feature: u16) {
+        let base = feature as usize * HIDDEN1;
+        let col = &self.w1[base..base + HIDDEN1];
+        for j in 0..HIDDEN1 {
+            acc.values[j] -= col[j];
+        }
     }
 
     /// Train on a single sample. Returns the loss (MSE).

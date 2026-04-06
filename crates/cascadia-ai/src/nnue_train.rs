@@ -998,10 +998,6 @@ pub fn pick_best_move_nnue(
         if mv.wildlife_market_index.is_some() {
             eval_board.nature_tokens = eval_board.nature_tokens.saturating_sub(1);
         }
-        // Keystone bonus
-        if board.grid.get(coord.to_index().unwrap()).is_keystone() {
-            // Already handled by place_tile
-        }
 
         let actual = cascadia_core::scoring::ScoreBreakdown::compute(
             &mut eval_board, &cards,
