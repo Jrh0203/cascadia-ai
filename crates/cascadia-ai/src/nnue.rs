@@ -434,14 +434,14 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
 // NNUE Network
 // ─────────────────────────────────────────────────────────────────────
 
-/// The NNUE network weights.
+/// The NNUE network weights. Flat contiguous layout for cache-friendly access.
 #[derive(Clone)]
 pub struct NNUENetwork {
-    /// First layer weights: NUM_FEATURES × HIDDEN1 (column-major: w1[feature][neuron])
-    pub w1: Vec<Vec<f32>>, // [NUM_FEATURES][HIDDEN1]
+    /// First layer weights: flat [NUM_FEATURES * HIDDEN1], row-major: w1[feature * HIDDEN1 + neuron]
+    pub w1: Vec<f32>,      // [NUM_FEATURES * HIDDEN1]
     pub b1: Vec<f32>,      // [HIDDEN1]
-    /// Second layer weights: HIDDEN1 × HIDDEN2
-    pub w2: Vec<Vec<f32>>, // [HIDDEN1][HIDDEN2]
+    /// Second layer weights: flat [HIDDEN1 * HIDDEN2], row-major: w2[i * HIDDEN2 + j]
+    pub w2: Vec<f32>,      // [HIDDEN1 * HIDDEN2]
     pub b2: Vec<f32>,      // [HIDDEN2]
     /// Output layer weights: HIDDEN2 → 1
     pub w3: Vec<f32>,      // [HIDDEN2]
@@ -472,13 +472,13 @@ impl NNUENetwork {
         let scale2 = (2.0 / HIDDEN1 as f32).sqrt();
         let scale3 = (2.0 / HIDDEN2 as f32).sqrt();
 
-        let w1: Vec<Vec<f32>> = (0..NUM_FEATURES)
-            .map(|_| (0..HIDDEN1).map(|_| rand_f32() * scale1).collect())
+        let w1: Vec<f32> = (0..NUM_FEATURES * HIDDEN1)
+            .map(|_| rand_f32() * scale1)
             .collect();
         let b1 = vec![0.0; HIDDEN1];
 
-        let w2: Vec<Vec<f32>> = (0..HIDDEN1)
-            .map(|_| (0..HIDDEN2).map(|_| rand_f32() * scale2).collect())
+        let w2: Vec<f32> = (0..HIDDEN1 * HIDDEN2)
+            .map(|_| rand_f32() * scale2)
             .collect();
         let b2 = vec![0.0; HIDDEN2];
 
@@ -491,24 +491,20 @@ impl NNUENetwork {
     /// Average weights from multiple trained copies (for parallel training).
     pub fn average_from(&mut self, others: &[NNUENetwork]) {
         let n = others.len() as f32;
-        // W1
-        for fi in 0..NUM_FEATURES {
-            for j in 0..HIDDEN1 {
-                let sum: f32 = others.iter().map(|o| o.w1[fi][j]).sum();
-                self.w1[fi][j] = sum / n;
-            }
+        // W1 (flat)
+        for idx in 0..NUM_FEATURES * HIDDEN1 {
+            let sum: f32 = others.iter().map(|o| o.w1[idx]).sum();
+            self.w1[idx] = sum / n;
         }
         // b1
         for j in 0..HIDDEN1 {
             let sum: f32 = others.iter().map(|o| o.b1[j]).sum();
             self.b1[j] = sum / n;
         }
-        // W2
-        for i in 0..HIDDEN1 {
-            for j in 0..HIDDEN2 {
-                let sum: f32 = others.iter().map(|o| o.w2[i][j]).sum();
-                self.w2[i][j] = sum / n;
-            }
+        // W2 (flat)
+        for idx in 0..HIDDEN1 * HIDDEN2 {
+            let sum: f32 = others.iter().map(|o| o.w2[idx]).sum();
+            self.w2[idx] = sum / n;
         }
         // b2
         for j in 0..HIDDEN2 {
@@ -524,11 +520,14 @@ impl NNUENetwork {
     }
 
     /// Full forward pass from sparse features. Returns predicted value.
+    /// Uses stack-allocated buffers and flat contiguous weight access.
     pub fn forward(&self, features: &[u16]) -> f32 {
-        // Layer 1: accumulate active feature columns + bias
-        let mut h1 = self.b1.clone();
+        // Layer 1: accumulate active feature columns + bias (stack-allocated)
+        let mut h1 = [0.0f32; HIDDEN1];
+        h1.copy_from_slice(&self.b1);
         for &fi in features {
-            let col = &self.w1[fi as usize];
+            let base = fi as usize * HIDDEN1;
+            let col = &self.w1[base..base + HIDDEN1];
             for j in 0..HIDDEN1 {
                 h1[j] += col[j];
             }
@@ -538,11 +537,13 @@ impl NNUENetwork {
             *v = v.max(0.0);
         }
 
-        // Layer 2
-        let mut h2 = self.b2.clone();
+        // Layer 2 (stack-allocated)
+        let mut h2 = [0.0f32; HIDDEN2];
+        h2.copy_from_slice(&self.b2);
         for i in 0..HIDDEN1 {
             if h1[i] > 0.0 {
-                let row = &self.w2[i];
+                let base = i * HIDDEN2;
+                let row = &self.w2[base..base + HIDDEN2];
                 for j in 0..HIDDEN2 {
                     h2[j] += h1[i] * row[j];
                 }
@@ -577,29 +578,35 @@ impl NNUENetwork {
     /// Train on a single sample. Returns the loss (MSE).
     /// Uses backpropagation with SGD.
     pub fn train_sample(&mut self, features: &[u16], target: f32, lr: f32) -> f32 {
-        // ─── Forward pass (save intermediates) ───
-        let mut h1 = self.b1.clone();
+        // ─── Forward pass (save intermediates, stack-allocated) ───
+        let mut h1 = [0.0f32; HIDDEN1];
+        h1.copy_from_slice(&self.b1);
         for &fi in features {
-            let col = &self.w1[fi as usize];
+            let base = fi as usize * HIDDEN1;
+            let col = &self.w1[base..base + HIDDEN1];
             for j in 0..HIDDEN1 {
                 h1[j] += col[j];
             }
         }
-        let h1_pre = h1.clone(); // pre-ReLU for gradient
+        let mut h1_pre = [0.0f32; HIDDEN1];
+        h1_pre.copy_from_slice(&h1);
         for v in h1.iter_mut() {
             *v = v.max(0.0);
         }
 
-        let mut h2 = self.b2.clone();
+        let mut h2 = [0.0f32; HIDDEN2];
+        h2.copy_from_slice(&self.b2);
         for i in 0..HIDDEN1 {
             if h1[i] > 0.0 {
-                let row = &self.w2[i];
+                let base = i * HIDDEN2;
+                let row = &self.w2[base..base + HIDDEN2];
                 for j in 0..HIDDEN2 {
                     h2[j] += h1[i] * row[j];
                 }
             }
         }
-        let h2_pre = h2.clone();
+        let mut h2_pre = [0.0f32; HIDDEN2];
+        h2_pre.copy_from_slice(&h2);
         for v in h2.iter_mut() {
             *v = v.max(0.0);
         }
@@ -623,7 +630,7 @@ impl NNUENetwork {
         self.b3 -= d_out;
 
         // d_h2 = d_out * w3 * relu'(h2_pre)
-        let mut d_h2 = vec![0.0f32; HIDDEN2];
+        let mut d_h2 = [0.0f32; HIDDEN2];
         for j in 0..HIDDEN2 {
             if h2_pre[j] > 0.0 {
                 d_h2[j] = d_out * self.w3[j];
@@ -633,8 +640,9 @@ impl NNUENetwork {
         // Layer 2 gradients
         for i in 0..HIDDEN1 {
             if h1[i] > 0.0 {
+                let base = i * HIDDEN2;
                 for j in 0..HIDDEN2 {
-                    self.w2[i][j] -= d_h2[j] * h1[i];
+                    self.w2[base + j] -= d_h2[j] * h1[i];
                 }
             }
         }
@@ -643,20 +651,21 @@ impl NNUENetwork {
         }
 
         // d_h1 = W2^T @ d_h2 * relu'(h1_pre)
-        let mut d_h1 = vec![0.0f32; HIDDEN1];
+        let mut d_h1 = [0.0f32; HIDDEN1];
         for i in 0..HIDDEN1 {
             if h1_pre[i] > 0.0 {
+                let base = i * HIDDEN2;
                 for j in 0..HIDDEN2 {
-                    d_h1[i] += self.w2[i][j] * d_h2[j];
+                    d_h1[i] += self.w2[base + j] * d_h2[j];
                 }
             }
         }
 
         // Layer 1 gradients (only active features)
         for &fi in features {
-            let col = &mut self.w1[fi as usize];
+            let base = fi as usize * HIDDEN1;
             for j in 0..HIDDEN1 {
-                col[j] -= d_h1[j];
+                self.w1[base + j] -= d_h1[j];
             }
         }
         for j in 0..HIDDEN1 {
@@ -674,29 +683,25 @@ impl NNUENetwork {
         file.write_all(b"NNUE")?;
         file.write_all(&1u32.to_le_bytes())?;
 
-        // W1: NUM_FEATURES × HIDDEN1
-        for fi in 0..NUM_FEATURES {
-            for j in 0..HIDDEN1 {
-                file.write_all(&self.w1[fi][j].to_le_bytes())?;
-            }
+        // W1: flat [NUM_FEATURES * HIDDEN1]
+        for &v in &self.w1 {
+            file.write_all(&v.to_le_bytes())?;
         }
-        for j in 0..HIDDEN1 {
-            file.write_all(&self.b1[j].to_le_bytes())?;
+        for &v in &self.b1 {
+            file.write_all(&v.to_le_bytes())?;
         }
 
-        // W2: HIDDEN1 × HIDDEN2
-        for i in 0..HIDDEN1 {
-            for j in 0..HIDDEN2 {
-                file.write_all(&self.w2[i][j].to_le_bytes())?;
-            }
+        // W2: flat [HIDDEN1 * HIDDEN2]
+        for &v in &self.w2 {
+            file.write_all(&v.to_le_bytes())?;
         }
-        for j in 0..HIDDEN2 {
-            file.write_all(&self.b2[j].to_le_bytes())?;
+        for &v in &self.b2 {
+            file.write_all(&v.to_le_bytes())?;
         }
 
         // W3 + b3
-        for j in 0..HIDDEN2 {
-            file.write_all(&self.w3[j].to_le_bytes())?;
+        for &v in &self.w3 {
+            file.write_all(&v.to_le_bytes())?;
         }
         file.write_all(&self.b3.to_le_bytes())?;
 
@@ -731,30 +736,20 @@ impl NNUENetwork {
         let is_legacy = file_size < header_size + new_w1_size + rest_size;
         let w1_features = if is_legacy { NUM_FEATURES_LEGACY } else { NUM_FEATURES };
 
-        let mut w1 = Vec::with_capacity(NUM_FEATURES);
-        for _ in 0..w1_features {
-            let mut col = Vec::with_capacity(HIDDEN1);
-            for _ in 0..HIDDEN1 {
-                col.push(read_f32(&mut file)?);
-            }
-            w1.push(col);
+        let mut w1 = Vec::with_capacity(NUM_FEATURES * HIDDEN1);
+        for _ in 0..w1_features * HIDDEN1 {
+            w1.push(read_f32(&mut file)?);
         }
         // Pad new features with zeros if loading legacy weights
-        for _ in w1_features..NUM_FEATURES {
-            w1.push(vec![0.0; HIDDEN1]);
-        }
+        w1.resize(NUM_FEATURES * HIDDEN1, 0.0);
         let mut b1 = Vec::with_capacity(HIDDEN1);
         for _ in 0..HIDDEN1 {
             b1.push(read_f32(&mut file)?);
         }
 
-        let mut w2 = Vec::with_capacity(HIDDEN1);
-        for _ in 0..HIDDEN1 {
-            let mut row = Vec::with_capacity(HIDDEN2);
-            for _ in 0..HIDDEN2 {
-                row.push(read_f32(&mut file)?);
-            }
-            w2.push(row);
+        let mut w2 = Vec::with_capacity(HIDDEN1 * HIDDEN2);
+        for _ in 0..HIDDEN1 * HIDDEN2 {
+            w2.push(read_f32(&mut file)?);
         }
         let mut b2 = Vec::with_capacity(HIDDEN2);
         for _ in 0..HIDDEN2 {

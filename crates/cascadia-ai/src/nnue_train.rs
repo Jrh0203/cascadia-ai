@@ -933,8 +933,8 @@ pub fn pick_best_move_nnue(
     game: &GameState,
     net: &NNUENetwork,
 ) -> Option<crate::eval::ScoredMove> {
-    // Use filtered candidate set for speed (critical for MCE rollout performance)
     use crate::eval::ScoredMove;
+    use cascadia_core::hex::HexCoord;
 
     let mp: Vec<_> = game.market.available()
         .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
@@ -942,7 +942,8 @@ pub fn pick_best_move_nnue(
 
     let cards = game.scoring_cards;
     let turns = game.turns_remaining;
-    let mut board = game.boards[game.current_player].clone();
+    let player = game.current_player;
+    let mut board = game.boards[player].clone();
     let base_move = crate::eval::best_move_with_potential(&mut board, &mp, &cards, turns);
 
     let mut candidates: Vec<ScoredMove> = crate::search::candidate_moves_pub(game);
@@ -958,19 +959,56 @@ pub fn pick_best_move_nnue(
         return base_move;
     }
 
-    // Re-rank by actual_score + NNUE(remaining_value) = estimated final score
+    // Compute BagInfo once (reused across all candidates)
+    let bag_info = crate::nnue::BagInfo::from_game_for_player(game, player);
+
+    // Re-rank by actual_score + NNUE(remaining_value) = estimated final score.
+    // Clone only the current player's board (not full GameState) for each candidate.
     let mut best: Option<(ScoredMove, f32)> = None;
     for mv in &candidates {
-        let mut g = game.clone();
-        if !crate::search::execute_scored_move(&mut g, mv) {
+        let coord = HexCoord::new(mv.tile_q, mv.tile_r);
+        let tile = match mp.iter().find(|&&(i, _, _)| i == mv.market_index) {
+            Some(&(_, tile, _)) => tile,
+            None => continue,
+        };
+        let wildlife = match mp.iter().find(|&&(i, _, _)| {
+            i == mv.wildlife_market_index.unwrap_or(mv.market_index)
+        }) {
+            Some(&(_, _, wl)) => wl,
+            None => continue,
+        };
+
+        // Clone just the board (~15KB vs ~60KB+ for full GameState)
+        let mut eval_board = board.clone();
+
+        // Place tile
+        if eval_board.place_tile(coord, tile, mv.rotation).is_none() {
             continue;
         }
+
+        // Place wildlife
+        if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
+            let wcoord = HexCoord::new(wq, wr);
+            if let Some(idx) = wcoord.to_index() {
+                eval_board.place_wildlife(idx, wildlife);
+            }
+        }
+
+        // Nature token adjustment for independent draft
+        if mv.wildlife_market_index.is_some() {
+            eval_board.nature_tokens = eval_board.nature_tokens.saturating_sub(1);
+        }
+        // Keystone bonus
+        if board.grid.get(coord.to_index().unwrap()).is_keystone() {
+            // Already handled by place_tile
+        }
+
         let actual = cascadia_core::scoring::ScoreBreakdown::compute(
-            &mut g.boards[game.current_player], &g.scoring_cards,
+            &mut eval_board, &cards,
         ).total as f32;
-        let bag_info = crate::nnue::BagInfo::from_game(&g);
-        let remaining = net.evaluate_with_bag(&g.boards[game.current_player], &bag_info);
+        let remaining = net.evaluate_with_bag(&eval_board, &bag_info);
         let estimated_final = actual + remaining;
+
         if best.is_none() || estimated_final > best.as_ref().unwrap().1 {
             best = Some((*mv, estimated_final));
         }
