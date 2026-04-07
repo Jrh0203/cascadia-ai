@@ -1456,11 +1456,23 @@ function renderCandidatesList() {
       <span class="candidate-score" style="color:${labelColor}">${label}</span>
     </div>`;
   } else if (pa && pa.type === 'mulligan') {
-    const gain = pa.expected_gain ? `<span style="color:#4ade80">+${pa.expected_gain.toFixed(1)}</span>` : '';
-    preHtml = `<div class="candidate-item" style="border-left-color:#e94560; background:rgba(233,69,96,0.15)" onclick="doMulligan()">
+    const diff = (pa.score_after !== undefined && pa.score_before !== undefined)
+      ? Math.round((pa.score_after - pa.score_before) * 10) / 10 : null;
+    const recommended = pa.recommended !== false;
+    const fmtDiff = diff !== null ? (diff > 0 ? `+${diff.toFixed(1)}` : diff < 0 ? diff.toFixed(1) : '±0') : '';
+    const deltaStr = diff !== null
+      ? (diff > 0 ? `<span style="color:#4ade80">${fmtDiff}</span>`
+        : diff < 0 ? `<span style="color:#e94560">${fmtDiff}</span>`
+        : `<span style="color:#888">${fmtDiff}</span>`)
+      : '';
+    const label = recommended ? 'DO FIRST' : 'SKIP';
+    const labelColor = recommended ? '#e94560' : '#888';
+    const bg = recommended ? 'rgba(233,69,96,0.15)' : 'rgba(255,255,255,0.05)';
+    const border = recommended ? '#e94560' : '#555';
+    preHtml = `<div class="candidate-item" style="border-left-color:${border}; background:${bg}" onclick="doMulligan()">
       <span class="candidate-rank">🌲</span>
-      <span class="candidate-desc">Mulligan ${gain}</span>
-      <span class="candidate-score" style="color:#e94560">DO FIRST</span>
+      <span class="candidate-desc">Mulligan ${deltaStr}</span>
+      <span class="candidate-score" style="color:${labelColor}">${label}</span>
     </div>`;
   }
 

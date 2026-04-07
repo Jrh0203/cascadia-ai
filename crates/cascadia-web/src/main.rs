@@ -496,13 +496,15 @@ fn evaluate_pre_moves(
         }
         if samples > 0 {
             let expected = total / samples as f32;
-            if expected > baseline + 1.5 {
-                return Some(serde_json::json!({
-                    "type": "mulligan",
-                    "expected_gain": ((expected - baseline) * 10.0).round() / 10.0,
-                    "recommended": true,
-                }));
-            }
+            let gain = expected - baseline;
+            let recommended = gain > 1.5;
+            return Some(serde_json::json!({
+                "type": "mulligan",
+                "score_before": (baseline * 10.0).round() / 10.0,
+                "score_after": (expected * 10.0).round() / 10.0,
+                "expected_gain": (gain * 10.0).round() / 10.0,
+                "recommended": recommended,
+            }));
         }
     }
 
