@@ -41,6 +41,7 @@ struct GameView {
     can_mulligan: bool,
     has_overflow: bool,
     events: Vec<String>,
+    bag_remaining: [u8; 5], // [Bear, Elk, Salmon, Hawk, Fox] remaining in bag
 }
 
 #[derive(Serialize)]
@@ -229,6 +230,10 @@ fn build_game_view_for_with(game: &mut GameState, view_player: usize, events: Ve
         can_mulligan: current_tokens > 0,
         has_overflow,
         events,
+        bag_remaining: {
+            let bag_info = cascadia_ai::nnue::BagInfo::from_game(game);
+            bag_info.remaining
+        },
     }
 }
 

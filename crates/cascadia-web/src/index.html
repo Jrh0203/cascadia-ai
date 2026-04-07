@@ -427,8 +427,15 @@
     <div id="scoring-ref"></div>
   </div>
 
-  <div class="grid-container">
+  <div class="grid-container" style="position:relative">
     <canvas id="hex-canvas"></canvas>
+    <div id="bag-remaining" style="
+      position:absolute; top:8px; right:8px;
+      background:rgba(22,33,62,0.9); border:1px solid #0f3460;
+      border-radius:6px; padding:6px 10px;
+      font-size:11px; font-family:monospace; color:#d0d0d0;
+      pointer-events:none; z-index:10;
+    "></div>
   </div>
 
   <div class="side-panel">
@@ -941,9 +948,10 @@ function renderScores() {
       const name = TERRAIN_NAMES[i];
       habitatBase += score.habitat[i];
       habitatBonus += score.habitat_bonus[i] || 0;
+      const bonus = score.habitat_bonus[i] || 0;
       html += `<div class="score-row">
         <span class="label" style="color:${TERRAIN_COLORS[name]}">${name}</span>
-        <span>${score.habitat[i]}</span>
+        <span>${score.habitat[i]}${bonus ? ` <span style="color:#4ade80">+${bonus}</span>` : ''}</span>
       </div>`;
     }
     html += `<div class="score-row score-subtotal">
@@ -976,6 +984,20 @@ function renderScores() {
     </div>`;
 
     if (gameState.num_players > 1) html += '<div style="margin-bottom:12px"></div>';
+  }
+  el.innerHTML = html;
+}
+
+function renderBagRemaining() {
+  const el = document.getElementById('bag-remaining');
+  if (!el || !gameState || !gameState.bag_remaining) { if (el) el.innerHTML = ''; return; }
+  const bag = gameState.bag_remaining;
+  const wildlifeNames = ['bear', 'elk', 'salmon', 'hawk', 'fox'];
+  const total = bag.reduce((a, b) => a + b, 0);
+  let html = `<div style="font-weight:bold; margin-bottom:4px; color:#888">Bag (${total})</div>`;
+  for (let i = 0; i < 5; i++) {
+    const opacity = bag[i] === 0 ? '0.3' : '1';
+    html += `<div style="opacity:${opacity}">${WILDLIFE_EMOJI[wildlifeNames[i]]} ${bag[i]}</div>`;
   }
   el.innerHTML = html;
 }
@@ -1144,6 +1166,7 @@ async function renderAll() {
   renderMarket();
   renderScores();
   renderScoringRef();
+  renderBagRemaining();
   updateTurnInfo();
   updateViewButtons();
   renderEventLog();
