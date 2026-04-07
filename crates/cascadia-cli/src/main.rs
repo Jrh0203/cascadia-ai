@@ -466,8 +466,61 @@ fn main() {
     let run_cache_train = args.iter().any(|a| a == "--cache-train");
     let run_collect_mce = args.iter().any(|a| a == "--collect-mce");
     let run_train_mce_policy = args.iter().any(|a| a == "--train-mce-policy");
+    let run_export_pytorch = args.iter().any(|a| a == "--export-pytorch");
 
-    if run_collect_mce {
+    if run_export_pytorch {
+        // Load MCE samples, augment with rotations+translations, export as raw binary
+        // for PyTorch training. Format: header (u32 num_samples, u32 num_features),
+        // then for each sample: bit-packed features (ceil(num_features/8) bytes) + f32 target.
+        let samples_path = args.iter().position(|a| a == "--samples")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("mce_policy_samples.bin");
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("training_data.bin");
+
+        println!("Exporting augmented training data for PyTorch...");
+        let start = Instant::now();
+
+        eprint!("  Loading samples...");
+        let raw = cascadia_ai::nnue_train::load_mce_samples(
+            std::path::Path::new(samples_path)).expect("Failed to load samples");
+        eprintln!(" {} raw samples", raw.len());
+
+        eprint!("  Augmenting...");
+        // Use the same augmentation as Rust training
+        let samples = cascadia_ai::nnue_train::augment_samples_pub(&raw);
+        eprintln!(" {} augmented samples", samples.len());
+
+        let num_features = cascadia_ai::nnue::NUM_FEATURES as u32;
+        let packed_width = ((num_features + 7) / 8) as usize;
+
+        eprint!("  Writing bit-packed to {}...", out_path);
+        use std::io::Write;
+        let mut file = std::fs::File::create(out_path).expect("Failed to create output");
+        // Header
+        file.write_all(&(samples.len() as u32).to_le_bytes()).unwrap();
+        file.write_all(&num_features.to_le_bytes()).unwrap();
+        // Samples: packed features + target
+        let mut packed = vec![0u8; packed_width];
+        for sample in &samples {
+            packed.fill(0);
+            for &fi in &sample.features {
+                let fi = fi as usize;
+                if fi < num_features as usize {
+                    packed[fi >> 3] |= 1 << (fi & 7);
+                }
+            }
+            file.write_all(&packed).unwrap();
+            file.write_all(&sample.target.to_le_bytes()).unwrap();
+        }
+        eprintln!(" done");
+        println!("Exported {} samples ({} features, {:.1} MB) in {:.1?}",
+            samples.len(), num_features,
+            (samples.len() * (packed_width + 4)) as f64 / 1e6,
+            start.elapsed());
+        return;
+    } else if run_collect_mce {
         let weights_path = args.iter().position(|a| a == "--weights")
             .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
             .unwrap_or("nnue_weights.bin");

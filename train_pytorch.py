@@ -60,12 +60,119 @@ def load_mce_samples(path):
 
 # ─── Sparse NNUE Dataset ───
 
-class NNUEDataset(Dataset):
+# ─── Online Augmentation (rotation + translation) ───
+
+GRID_DIM = 21
+GRID_CENTER = 10
+
+# Feature block boundaries (must match nnue.rs)
+FPC = 11  # FEATURES_PER_CELL
+CELL_END = 441 * FPC  # 4851
+PHASE_END = CELL_END + 110  # 4961
+WL_PAIR_STATES = 49
+WL_PAIR_END = PHASE_END + 3 * WL_PAIR_STATES  # 5108
+PATTERN_END = WL_PAIR_END + 89  # 5197
+BAG_END = PATTERN_END + 55  # 5252
+OPP_HAB_END = BAG_END + 55  # 5307
+ALLOWED_WL_PC = 5
+ALLOWED_END = OPP_HAB_END + 441 * ALLOWED_WL_PC  # 7512
+EXT_WL_END = ALLOWED_END + 50  # 7562
+TERRAIN_PAIR_STATES = 36
+TERRAIN_PAIR_END = EXT_WL_END + 3 * TERRAIN_PAIR_STATES  # 7670
+
+
+def build_cell_remap(dq, dr, rot):
+    """Build cell index remapping table for translation (dq,dr) + rotation (0,1,2).
+    Returns array of 441 entries: new_idx or -1 if out of bounds."""
+    table = np.full(441, -1, dtype=np.int32)
+    for idx in range(441):
+        q = (idx // GRID_DIM) - GRID_CENTER
+        r = (idx % GRID_DIM) - GRID_CENTER
+        # Translate
+        q2, r2 = q + dq, r + dr
+        # Rotate
+        if rot == 1:
+            q2, r2 = -q2 - r2, q2
+        elif rot == 2:
+            q2, r2 = r2, -q2 - r2
+        col = q2 + GRID_CENTER
+        row = r2 + GRID_CENTER
+        if 0 <= col < GRID_DIM and 0 <= row < GRID_DIM:
+            table[idx] = col * GRID_DIM + row
+        else:
+            table[idx] = -1
+    return table
+
+
+def build_all_transforms():
+    """Pre-compute all 75 transform tables (3 rotations × 25 translations)."""
+    transforms = []
+    for rot in range(3):
+        for dq in range(-2, 3):
+            for dr in range(-2, 3):
+                if rot == 0 and dq == 0 and dr == 0:
+                    continue  # skip identity
+                table = build_cell_remap(dq, dr, rot)
+                transforms.append((table, rot))
+    # Add identity as first entry (no transform)
+    identity = build_cell_remap(0, 0, 0)
+    transforms.insert(0, (identity, 0))
+    return transforms
+
+
+# Pre-compute all transforms at module load
+ALL_TRANSFORMS = build_all_transforms()
+
+
+def apply_transform(features, cell_table, dir_shift):
+    """Apply a rotation+translation transform to a sparse feature list.
+    Returns transformed features or None if any cell goes out of bounds."""
+    result = []
+    for fi in features:
+        if fi < CELL_END:
+            cell_idx = fi // FPC
+            offset = fi % FPC
+            new_cell = cell_table[cell_idx]
+            if new_cell < 0:
+                return None
+            result.append(new_cell * FPC + offset)
+        elif fi < PHASE_END:
+            result.append(fi)
+        elif fi < WL_PAIR_END:
+            rel = fi - PHASE_END
+            d = rel // WL_PAIR_STATES
+            ps = rel % WL_PAIR_STATES
+            result.append(PHASE_END + ((d + dir_shift) % 3) * WL_PAIR_STATES + ps)
+        elif fi < PATTERN_END:
+            result.append(fi)
+        elif fi < OPP_HAB_END:
+            result.append(fi)
+        elif fi < ALLOWED_END:
+            rel = fi - OPP_HAB_END
+            cell_idx = rel // ALLOWED_WL_PC
+            offset = rel % ALLOWED_WL_PC
+            new_cell = cell_table[cell_idx]
+            if new_cell < 0:
+                return None
+            result.append(OPP_HAB_END + new_cell * ALLOWED_WL_PC + offset)
+        elif fi < EXT_WL_END:
+            result.append(fi)
+        elif fi < TERRAIN_PAIR_END:
+            rel = fi - EXT_WL_END
+            d = rel // TERRAIN_PAIR_STATES
+            ps = rel % TERRAIN_PAIR_STATES
+            result.append(EXT_WL_END + ((d + dir_shift) % 3) * TERRAIN_PAIR_STATES + ps)
+        else:
+            result.append(fi)
+    return result
+
+
+class NNUEDatasetMCEP(Dataset):
+    """Load from MCEP binary format (sparse features). For small datasets."""
     def __init__(self, features_list, targets, num_features):
         self.num_features = num_features
         self.packed_width = (num_features + 7) // 8
         self.targets = torch.tensor(targets, dtype=torch.float32)
-        # Bit-pack: 324K × 959 bytes = ~300MB instead of 10GB
         print(f"  Bit-packing {len(features_list)} samples ({num_features} features)...")
         t0 = time.time()
         packed_np = np.zeros((len(features_list), self.packed_width), dtype=np.uint8)
@@ -75,19 +182,51 @@ class NNUEDataset(Dataset):
                     packed_np[i, fi >> 3] |= (1 << (fi & 7))
         self.packed = torch.from_numpy(packed_np)
         print(f"  Done in {time.time()-t0:.1f}s ({self.packed.nbytes / 1e6:.0f} MB)")
-
-        # Pre-compute unpack table for fast batch unpacking
         self._unpack_bits = torch.arange(8, dtype=torch.uint8)
 
     def __len__(self):
         return len(self.targets)
 
     def __getitem__(self, idx):
-        # Unpack bits to float32 on the fly (only 7670 floats per sample)
         packed = self.packed[idx]
         bits = packed.unsqueeze(-1).bitwise_right_shift(self._unpack_bits).bitwise_and(1)
         dense = bits.reshape(-1)[:self.num_features].float()
         return dense, self.targets[idx]
+
+
+class NNUEDatasetExported(Dataset):
+    """Memory-mapped dataset from --export-pytorch binary format.
+    File format: u32 num_samples, u32 num_features, then per sample:
+    packed_bytes (ceil(num_features/8)) + f32 target."""
+    def __init__(self, path):
+        import mmap
+        self.file = open(path, 'rb')
+        self.mm = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
+        self.num_samples = struct.unpack_from('<I', self.mm, 0)[0]
+        self.num_features = struct.unpack_from('<I', self.mm, 4)[0]
+        self.packed_width = (self.num_features + 7) // 8
+        self.record_size = self.packed_width + 4  # packed features + f32 target
+        self.data_offset = 8  # after header
+        self._unpack_bits = torch.arange(8, dtype=torch.uint8)
+        print(f"  Memory-mapped {self.num_samples} samples ({self.num_features} features, "
+              f"{self.num_samples * self.record_size / 1e9:.1f} GB on disk)")
+
+    def __len__(self):
+        return self.num_samples
+
+    def __getitem__(self, idx):
+        offset = self.data_offset + idx * self.record_size
+        packed_bytes = self.mm[offset:offset + self.packed_width]
+        target_bytes = self.mm[offset + self.packed_width:offset + self.record_size]
+        packed = torch.frombuffer(bytearray(packed_bytes), dtype=torch.uint8)
+        target = struct.unpack('<f', target_bytes)[0]
+        bits = packed.unsqueeze(-1).bitwise_right_shift(self._unpack_bits).bitwise_and(1)
+        dense = bits.reshape(-1)[:self.num_features].float()
+        return dense, torch.tensor(target, dtype=torch.float32)
+
+    def __del__(self):
+        self.mm.close()
+        self.file.close()
 
 
 def collate_sparse(batch):
@@ -221,17 +360,24 @@ def train(args):
         device = torch.device("cpu")
         print("Using CPU")
 
-    # Load data
-    features_list, targets = load_mce_samples(args.samples)
+    # Load data — use exported file if it exists, otherwise raw MCEP
     num_features = args.num_features
+    exported_path = args.samples.replace('.bin', '') + '_exported.bin'
+    if args.exported:
+        exported_path = args.exported
 
-    # Clamp features to valid range
-    for f in features_list:
-        for i in range(len(f)):
-            if f[i] >= num_features:
-                f[i] = num_features - 1
+    if os.path.exists(exported_path) and not args.samples.endswith('_exported.bin'):
+        print(f"Using pre-exported augmented data: {exported_path}")
+        dataset = NNUEDatasetExported(exported_path)
+        num_features = dataset.num_features
+    else:
+        features_list, targets = load_mce_samples(args.samples)
+        for f in features_list:
+            for i in range(len(f)):
+                if f[i] >= num_features:
+                    f[i] = num_features - 1
+        dataset = NNUEDatasetMCEP(features_list, targets, num_features)
 
-    dataset = NNUEDataset(features_list, targets, num_features)
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     # Model
@@ -319,6 +465,7 @@ if __name__ == '__main__':
     parser.add_argument('--hidden2', type=int, default=64)
     parser.add_argument('--num-features', type=int, default=7670)
     parser.add_argument('--init-weights', default=None, help='Initial weights (Rust NNUE format)')
+    parser.add_argument('--exported', default=None, help='Pre-exported augmented data (from --export-pytorch)')
     parser.add_argument('--out', default='nnue_weights_pytorch.bin', help='Output weights file')
     args = parser.parse_args()
     train(args)

@@ -420,6 +420,11 @@ fn translate_features(features: &[u16], table: &[Option<usize>; 441]) -> Option<
 
 /// Augment samples with rotations (3×) and translations (up to 25×).
 /// Combined: up to 75× data augmentation.
+/// Public wrapper for augmentation (used by --export-pytorch)
+pub fn augment_samples_pub(samples: &[Sample]) -> Vec<Sample> {
+    augment_with_rotations(samples)
+}
+
 fn augment_with_rotations(samples: &[Sample]) -> Vec<Sample> {
     let table_120 = build_rotation_table(1);
     let table_240 = build_rotation_table(2);
