@@ -169,30 +169,107 @@ def apply_transform(features, cell_table, dir_shift):
 
 
 class NNUEDatasetMCEP(Dataset):
-    """Load from MCEP binary format (sparse features). For small datasets."""
-    def __init__(self, features_list, targets, num_features):
+    """Load from MCEP binary format with online augmentation.
+    Each epoch, every sample gets a random rotation+translation applied."""
+    def __init__(self, features_list, targets, num_features, augment=True):
         self.num_features = num_features
-        self.packed_width = (num_features + 7) // 8
         self.targets = torch.tensor(targets, dtype=torch.float32)
-        print(f"  Bit-packing {len(features_list)} samples ({num_features} features)...")
-        t0 = time.time()
-        packed_np = np.zeros((len(features_list), self.packed_width), dtype=np.uint8)
-        for i, f in enumerate(features_list):
-            for fi in f:
-                if fi < num_features:
-                    packed_np[i, fi >> 3] |= (1 << (fi & 7))
-        self.packed = torch.from_numpy(packed_np)
-        print(f"  Done in {time.time()-t0:.1f}s ({self.packed.nbytes / 1e6:.0f} MB)")
-        self._unpack_bits = torch.arange(8, dtype=torch.uint8)
+        self.augment = augment
+        # Store sparse features as-is for augmentation
+        self.features_list = features_list
+
+        # Pre-compute feature index remapping tables for all transforms
+        # Each transform maps old_feature_idx -> new_feature_idx (or -1 for invalid)
+        if augment:
+            print(f"  Building {len(ALL_TRANSFORMS)} augmentation remap tables...")
+            t0 = time.time()
+            self.remap_tables = []
+            for cell_table, rot in ALL_TRANSFORMS:
+                remap = np.full(num_features, -1, dtype=np.int32)
+                for old_fi in range(num_features):
+                    result = _remap_single_feature(old_fi, cell_table, rot, num_features)
+                    if result >= 0:
+                        remap[old_fi] = result
+                self.remap_tables.append(remap)
+            print(f"  Done in {time.time()-t0:.1f}s ({len(self.remap_tables)} transforms)")
+
+        print(f"  {len(features_list)} samples, augment={'75x' if augment else 'off'}")
 
     def __len__(self):
         return len(self.targets)
 
     def __getitem__(self, idx):
-        packed = self.packed[idx]
-        bits = packed.unsqueeze(-1).bitwise_right_shift(self._unpack_bits).bitwise_and(1)
-        dense = bits.reshape(-1)[:self.num_features].float()
+        feats = self.features_list[idx]
+        dense = torch.zeros(self.num_features, dtype=torch.float32)
+
+        if self.augment:
+            # Pick random transform
+            t_idx = torch.randint(len(self.remap_tables), (1,)).item()
+            if t_idx == 0:
+                # Identity
+                for fi in feats:
+                    if fi < self.num_features:
+                        dense[fi] = 1.0
+            else:
+                remap = self.remap_tables[t_idx]
+                valid = True
+                for fi in feats:
+                    if fi < self.num_features:
+                        new_fi = remap[fi]
+                        if new_fi < 0:
+                            valid = False
+                            break
+                        dense[new_fi] = 1.0
+                if not valid:
+                    # Fallback to identity
+                    dense.zero_()
+                    for fi in feats:
+                        if fi < self.num_features:
+                            dense[fi] = 1.0
+        else:
+            for fi in feats:
+                if fi < self.num_features:
+                    dense[fi] = 1.0
+
         return dense, self.targets[idx]
+
+
+def _remap_single_feature(fi, cell_table, rot, num_features):
+    """Remap a single feature index through a transform. Returns new index or -1."""
+    dir_shift = rot
+    if fi < CELL_END:
+        cell_idx = fi // FPC
+        offset = fi % FPC
+        new_cell = cell_table[cell_idx]
+        if new_cell < 0: return -1
+        return new_cell * FPC + offset
+    elif fi < PHASE_END:
+        return fi
+    elif fi < WL_PAIR_END:
+        rel = fi - PHASE_END
+        d = rel // WL_PAIR_STATES
+        ps = rel % WL_PAIR_STATES
+        return PHASE_END + ((d + dir_shift) % 3) * WL_PAIR_STATES + ps
+    elif fi < PATTERN_END:
+        return fi
+    elif fi < OPP_HAB_END:
+        return fi
+    elif fi < ALLOWED_END:
+        rel = fi - OPP_HAB_END
+        cell_idx = rel // ALLOWED_WL_PC
+        offset = rel % ALLOWED_WL_PC
+        new_cell = cell_table[cell_idx]
+        if new_cell < 0: return -1
+        return OPP_HAB_END + new_cell * ALLOWED_WL_PC + offset
+    elif fi < EXT_WL_END:
+        return fi
+    elif fi < TERRAIN_PAIR_END:
+        rel = fi - EXT_WL_END
+        d = rel // TERRAIN_PAIR_STATES
+        ps = rel % TERRAIN_PAIR_STATES
+        return EXT_WL_END + ((d + dir_shift) % 3) * TERRAIN_PAIR_STATES + ps
+    else:
+        return fi
 
 
 class NNUEDatasetExported(Dataset):
@@ -377,7 +454,7 @@ def train(args):
             for i in range(len(f)):
                 if f[i] >= num_features:
                     f[i] = num_features - 1
-        dataset = NNUEDatasetMCEP(features_list, targets, num_features)
+        dataset = NNUEDatasetMCEP(features_list, targets, num_features, augment=not args.no_augment)
 
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
@@ -467,6 +544,7 @@ if __name__ == '__main__':
     parser.add_argument('--num-features', type=int, default=7670)
     parser.add_argument('--init-weights', default=None, help='Initial weights (Rust NNUE format)')
     parser.add_argument('--exported', default=None, help='Pre-exported augmented data (from --export-pytorch)')
+    parser.add_argument('--no-augment', action='store_true', help='Disable online augmentation')
     parser.add_argument('--out', default='nnue_weights_pytorch.bin', help='Output weights file')
     args = parser.parse_args()
     train(args)
