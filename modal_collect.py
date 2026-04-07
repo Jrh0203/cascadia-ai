@@ -144,7 +144,9 @@ def collect(
         for _ in range(num_workers)
     ]
 
-    output_path = "mce_policy_samples.bin"
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = f"mce_samples_{timestamp}.bin"
     total_bytes = 0
     with open(output_path, "wb") as out:
         for i, future in enumerate(futures):
@@ -156,8 +158,11 @@ def collect(
             total_bytes += len(data)
             print(f"  Worker {i+1}/{num_workers} done: {len(data)} bytes")
 
-    print(f"\nMerged {total_bytes} bytes from {num_workers} workers -> {output_path}")
+    print(f"\nWrote {output_path} ({total_bytes} bytes from {num_workers} workers)")
     print(f"Total games: {num_workers * games_per_worker}")
+    print(f"\nTo merge with existing data:")
+    print(f"  python3 -c \"old=open('mce_policy_samples.bin','rb').read(); f=open('{output_path}','ab'); f.write(old[4:])\"")
+    print(f"  mv {output_path} mce_policy_samples.bin")
 
 
 @app.local_entrypoint()
