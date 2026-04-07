@@ -25,7 +25,7 @@ import time
 CASCADIA_CLI = "./target/release/cascadia-cli"
 
 
-def run_self_play(num_games, weights_path, out_path, epsilon=0.1):
+def run_self_play(num_games, weights_path, out_path, epsilon=0.1, top_pct=100.0):
     """Generate self-play data using Rust (fast, parallel)."""
     cmd = [
         CASCADIA_CLI, str(num_games),
@@ -35,6 +35,8 @@ def run_self_play(num_games, weights_path, out_path, epsilon=0.1):
     ]
     if weights_path:
         cmd.extend(["--weights", weights_path])
+    if top_pct < 100.0:
+        cmd.extend(["--top-pct", str(top_pct)])
 
     print(f"  Generating {num_games} self-play games (epsilon={epsilon})...")
     t0 = time.time()
@@ -112,6 +114,8 @@ def main():
     parser.add_argument('--epochs-per-iter', type=int, default=15)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epsilon', type=float, default=0.1)
+    parser.add_argument('--top-pct', type=float, default=10.0,
+                        help='Keep only top N%% of self-play games by score (default: 10)')
     parser.add_argument('--hidden1', type=int, default=512)
     parser.add_argument('--hidden2', type=int, default=64)
     parser.add_argument('--mce-samples', default='mce_policy_samples.bin',
@@ -147,6 +151,7 @@ def main():
             current_weights,
             self_play_path,
             epsilon=args.epsilon,
+            top_pct=args.top_pct,
         )
 
         # 2. Merge self-play + MCE expert data (fresh each iteration, no accumulation)

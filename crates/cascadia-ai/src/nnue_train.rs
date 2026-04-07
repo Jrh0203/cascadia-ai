@@ -23,7 +23,91 @@ pub struct Sample {
     pub target: f32,
 }
 
-/// Generate training data from self-play games.
+/// A completed game's training data: samples + final score.
+pub struct GameResult {
+    pub samples: Vec<Sample>,
+    pub final_score: u16,
+}
+
+/// Generate self-play games, returning per-game results (for top-% filtering).
+pub fn generate_games(num_games: usize, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> Vec<GameResult> {
+    let num_threads = thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+    let games_per_thread = (num_games + num_threads - 1) / num_threads;
+
+    let handles: Vec<_> = (0..num_threads)
+        .map(|t| {
+            let n = if t < num_threads - 1 {
+                games_per_thread.min(num_games.saturating_sub(t * games_per_thread))
+            } else {
+                num_games.saturating_sub(t * games_per_thread)
+            };
+            let thread_seed = seed.wrapping_add(t as u64 * 1000000);
+            let net_clone = net.cloned();
+            thread::spawn(move || {
+                let mut rng = StdRng::seed_from_u64(thread_seed);
+                let mut results = Vec::with_capacity(n);
+                for _ in 0..n {
+                    let game_seed = rng.gen::<u64>();
+                    results.push(generate_single_game(game_seed, net_clone.as_ref(), epsilon, num_players));
+                }
+                results
+            })
+        })
+        .collect();
+
+    let mut all_results = Vec::with_capacity(num_games);
+    for handle in handles {
+        all_results.extend(handle.join().unwrap());
+    }
+    all_results
+}
+
+/// Generate one game, return its samples and final score.
+fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> GameResult {
+    let mut samples = Vec::new();
+    let mut rng = StdRng::seed_from_u64(seed);
+    let cards = ScoringCards::all_a();
+    let mut game = GameState::new(num_players, cards, &mut rng);
+    let mut afterstates: Vec<(Vec<u16>, u16)> = Vec::with_capacity(20);
+
+    while !game.is_game_over() {
+        if game.current_player != 0 {
+            match greedy_move(&game) {
+                Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
+                None => break,
+            }
+            continue;
+        }
+        greedy_pre_move(&mut game, &mut rng);
+        let mv = if epsilon > 0.0 && rng.gen::<f32>() < epsilon {
+            pick_random_move(&game, &mut rng)
+        } else {
+            match net {
+                Some(n) => pick_best_move_nnue(&game, n),
+                None => greedy_move(&game),
+            }
+        };
+        match mv {
+            Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
+            None => break,
+        }
+        let current_score = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards).total;
+        let bag_info = crate::nnue::BagInfo::from_game(&game);
+        afterstates.push((crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)), current_score));
+    }
+
+    let final_score = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards).total;
+    for (features, current_score) in afterstates {
+        let remaining = final_score.saturating_sub(current_score) as f32;
+        samples.push(Sample { features, target: remaining });
+    }
+
+    GameResult { samples, final_score }
+}
+
+/// Generate training data from self-play games (flat, all games included).
 /// `num_players`: 1 for pre-training (AI gets all turns), 4 for realistic play.
 pub fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> Vec<Sample> {
     let num_threads = thread::available_parallelism()

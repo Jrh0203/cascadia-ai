@@ -479,18 +479,38 @@ fn main() {
         let epsilon: f32 = args.iter().position(|a| a == "--epsilon")
             .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.1);
 
+        let top_pct: f32 = args.iter().position(|a| a == "--top-pct")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(100.0);
+
         let net = weights_path.and_then(|p| {
             cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(p)).ok()
         });
         let strategy = if net.is_some() { "NNUE" } else { "greedy" };
-        println!("Generating {} self-play games ({}, epsilon={}, out={})",
-            num_games, strategy, epsilon, out_path);
+        let filter_str = if top_pct < 100.0 { format!(", top {}%", top_pct) } else { String::new() };
+        println!("Generating {} self-play games ({}, epsilon={}{}, out={})",
+            num_games, strategy, epsilon, filter_str, out_path);
 
         let start = Instant::now();
         let seed = rand::random::<u64>();
-        let samples = cascadia_ai::nnue_train::generate_samples(
-            num_games, seed, net.as_ref(), epsilon, 4,
-        );
+
+        let samples = if top_pct < 100.0 {
+            // Generate per-game results, sort by score, keep top %
+            let mut games = cascadia_ai::nnue_train::generate_games(
+                num_games, seed, net.as_ref(), epsilon, 4,
+            );
+            games.sort_by(|a, b| b.final_score.cmp(&a.final_score));
+            let keep = ((games.len() as f32 * top_pct / 100.0).ceil() as usize).max(1);
+            let cutoff = games[keep - 1].final_score;
+            println!("  Top {}%: keeping {} games (score >= {})", top_pct, keep, cutoff);
+            let avg_score: f64 = games[..keep].iter().map(|g| g.final_score as f64).sum::<f64>() / keep as f64;
+            println!("  Avg score of kept games: {:.1}", avg_score);
+            games.truncate(keep);
+            games.into_iter().flat_map(|g| g.samples).collect::<Vec<_>>()
+        } else {
+            cascadia_ai::nnue_train::generate_samples(
+                num_games, seed, net.as_ref(), epsilon, 4,
+            )
+        };
 
         // Write as MCEP format
         let mcep_samples: Vec<(Vec<u16>, f32)> = samples.iter()
