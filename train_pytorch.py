@@ -105,6 +105,15 @@ def build_cell_remap(dq, dr, rot):
     return table
 
 
+# Pairwise pair swap table: PAIR_SWAP[dir_shift][dir] = should_swap
+# Under rotation, some line directions become reversed, flipping the pair order.
+PAIR_SWAP = [
+    [False, False, False],  # dir_shift=0: identity
+    [True,  True,  False],  # dir_shift=1 (120° CW): dirs 0,1 swap
+    [False, True,  True],   # dir_shift=2 (240° CW): dirs 1,2 swap
+]
+
+
 def build_all_transforms():
     """Pre-compute all 75 transform tables (3 rotations × 25 translations)."""
     transforms = []
@@ -143,6 +152,9 @@ def apply_transform(features, cell_table, dir_shift):
             rel = fi - PHASE_END
             d = rel // WL_PAIR_STATES
             ps = rel % WL_PAIR_STATES
+            if PAIR_SWAP[dir_shift][d]:
+                my, n = ps // 7, ps % 7
+                ps = n * 7 + my
             result.append(PHASE_END + ((d + dir_shift) % 3) * WL_PAIR_STATES + ps)
         elif fi < PATTERN_END:
             result.append(fi)
@@ -162,6 +174,9 @@ def apply_transform(features, cell_table, dir_shift):
             rel = fi - EXT_WL_END
             d = rel // TERRAIN_PAIR_STATES
             ps = rel % TERRAIN_PAIR_STATES
+            if PAIR_SWAP[dir_shift][d]:
+                my, n = ps // 6, ps % 6
+                ps = n * 6 + my
             result.append(EXT_WL_END + ((d + dir_shift) % 3) * TERRAIN_PAIR_STATES + ps)
         else:
             result.append(fi)
@@ -175,11 +190,10 @@ class NNUEDatasetMCEP(Dataset):
         self.num_features = num_features
         self.targets = torch.tensor(targets, dtype=torch.float32)
         self.augment = augment
-        # Store sparse features as-is for augmentation
-        self.features_list = features_list
+        # Store sparse features as numpy arrays for vectorized augmentation
+        self.features_np = [np.array(f, dtype=np.int32) for f in features_list]
 
         # Pre-compute feature index remapping tables for all transforms
-        # Each transform maps old_feature_idx -> new_feature_idx (or -1 for invalid)
         if augment:
             print(f"  Building {len(ALL_TRANSFORMS)} augmentation remap tables...")
             t0 = time.time()
@@ -193,43 +207,31 @@ class NNUEDatasetMCEP(Dataset):
                 self.remap_tables.append(remap)
             print(f"  Done in {time.time()-t0:.1f}s ({len(self.remap_tables)} transforms)")
 
+
         print(f"  {len(features_list)} samples, augment={'75x' if augment else 'off'}")
 
     def __len__(self):
         return len(self.targets)
 
     def __getitem__(self, idx):
-        feats = self.features_list[idx]
         dense = torch.zeros(self.num_features, dtype=torch.float32)
+        feats = self.features_np[idx]
+        feats = feats[feats < self.num_features]  # clamp
 
         if self.augment:
-            # Pick random transform
             t_idx = torch.randint(len(self.remap_tables), (1,)).item()
             if t_idx == 0:
-                # Identity
-                for fi in feats:
-                    if fi < self.num_features:
-                        dense[fi] = 1.0
+                dense[feats] = 1.0
             else:
-                remap = self.remap_tables[t_idx]
-                valid = True
-                for fi in feats:
-                    if fi < self.num_features:
-                        new_fi = remap[fi]
-                        if new_fi < 0:
-                            valid = False
-                            break
-                        dense[new_fi] = 1.0
-                if not valid:
-                    # Fallback to identity
-                    dense.zero_()
-                    for fi in feats:
-                        if fi < self.num_features:
-                            dense[fi] = 1.0
+                # Vectorized remap: one numpy fancy-index operation
+                new_feats = self.remap_tables[t_idx][feats]
+                if np.any(new_feats < 0):
+                    # Invalid transform for this sample — fallback to identity
+                    dense[feats] = 1.0
+                else:
+                    dense[new_feats] = 1.0
         else:
-            for fi in feats:
-                if fi < self.num_features:
-                    dense[fi] = 1.0
+            dense[feats] = 1.0
 
         return dense, self.targets[idx]
 
@@ -249,6 +251,9 @@ def _remap_single_feature(fi, cell_table, rot, num_features):
         rel = fi - PHASE_END
         d = rel // WL_PAIR_STATES
         ps = rel % WL_PAIR_STATES
+        if PAIR_SWAP[dir_shift][d]:
+            my, n = ps // 7, ps % 7
+            ps = n * 7 + my
         return PHASE_END + ((d + dir_shift) % 3) * WL_PAIR_STATES + ps
     elif fi < PATTERN_END:
         return fi
@@ -267,6 +272,9 @@ def _remap_single_feature(fi, cell_table, rot, num_features):
         rel = fi - EXT_WL_END
         d = rel // TERRAIN_PAIR_STATES
         ps = rel % TERRAIN_PAIR_STATES
+        if PAIR_SWAP[dir_shift][d]:
+            my, n = ps // 6, ps % 6
+            ps = n * 6 + my
         return EXT_WL_END + ((d + dir_shift) % 3) * TERRAIN_PAIR_STATES + ps
     else:
         return fi

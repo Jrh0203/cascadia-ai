@@ -324,6 +324,32 @@ fn build_rotation_table(rot: usize) -> [Option<usize>; 441] {
     table
 }
 
+/// Whether a pairwise pair should swap (my, neighbor) order when rotating.
+/// Under 120° CW: E→SW(reverse), NE→SE(reverse), NW→E(forward).
+/// Under 240° CW: E→NW(forward), NE→W(reverse), NW→SW(reverse).
+/// Swap when the rotated direction is a REVERSE direction (raw dir >= 3).
+const PAIR_SWAP: [[bool; 3]; 3] = [
+    [false, false, false], // dir_shift=0: identity, no swap
+    [true,  true,  false], // dir_shift=1 (120° CW): dirs 0,1 swap; dir 2 doesn't
+    [false, true,  true],  // dir_shift=2 (240° CW): dirs 1,2 swap; dir 0 doesn't
+];
+
+/// Swap a wildlife pairwise pair_state: (my*7 + n) → (n*7 + my)
+#[inline]
+fn swap_wl_pair(pair_state: usize) -> usize {
+    let my = pair_state / 7;
+    let n = pair_state % 7;
+    n * 7 + my
+}
+
+/// Swap a terrain pairwise pair_state: (my*6 + n) → (n*6 + my)
+#[inline]
+fn swap_terrain_pair(pair_state: usize) -> usize {
+    let my = pair_state / 6;
+    let n = pair_state % 6;
+    n * 6 + my
+}
+
 /// Rotate a sparse feature vector. Returns None if any active cell rotates out of bounds.
 fn rotate_features(features: &[u16], rotation_table: &[Option<usize>; 441], dir_shift: usize) -> Option<Vec<u16>> {
     use crate::nnue;
@@ -349,46 +375,43 @@ fn rotate_features(features: &[u16], rotation_table: &[Option<usize>; 441], dir_
     for &f in features {
         let fi = f as usize;
         if fi < CELL_END {
-            // Per-cell feature: remap cell index
             let cell_idx = fi / FPC;
             let offset = fi % FPC;
             let new_cell = rotation_table[cell_idx]?;
             rotated.push((new_cell * FPC + offset) as u16);
         } else if fi < PHASE_END {
-            // Phase features: unchanged
             rotated.push(f);
         } else if fi < WL_PAIR_END {
-            // Wildlife pairwise adjacency: rotate direction
             let rel = fi - PHASE_END;
             let dir = rel / WL_PAIR_STATES;
-            let pair_state = rel % WL_PAIR_STATES;
+            let mut pair_state = rel % WL_PAIR_STATES;
             let new_dir = (dir + dir_shift) % 3;
+            if PAIR_SWAP[dir_shift][dir] {
+                pair_state = swap_wl_pair(pair_state);
+            }
             rotated.push((PHASE_END + new_dir * WL_PAIR_STATES + pair_state) as u16);
         } else if fi < PATTERN_END {
-            // Pattern features: unchanged (global aggregates)
             rotated.push(f);
         } else if fi < OPP_HAB_END {
-            // Bag + opponent habitat: unchanged
             rotated.push(f);
         } else if fi < ALLOWED_END {
-            // Allowed wildlife per cell: remap cell index
             let rel = fi - OPP_HAB_END;
             let cell_idx = rel / ALLOWED_WL_PC;
             let offset = rel % ALLOWED_WL_PC;
             let new_cell = rotation_table[cell_idx]?;
             rotated.push((OPP_HAB_END + new_cell * ALLOWED_WL_PC + offset) as u16);
         } else if fi < EXT_WL_END {
-            // Extended wildlife count: unchanged
             rotated.push(f);
         } else if fi < TERRAIN_PAIR_END {
-            // Terrain pairwise: rotate direction
             let rel = fi - EXT_WL_END;
             let dir = rel / TERRAIN_PAIR_STATES;
-            let pair_state = rel % TERRAIN_PAIR_STATES;
+            let mut pair_state = rel % TERRAIN_PAIR_STATES;
             let new_dir = (dir + dir_shift) % 3;
+            if PAIR_SWAP[dir_shift][dir] {
+                pair_state = swap_terrain_pair(pair_state);
+            }
             rotated.push((EXT_WL_END + new_dir * TERRAIN_PAIR_STATES + pair_state) as u16);
         } else {
-            // Unknown/future features: pass through unchanged
             rotated.push(f);
         }
     }
@@ -1302,4 +1325,162 @@ pub fn pick_best_move_nnue_full(
 pub struct TrainStats {
     pub num_samples: usize,
     pub final_rmse: f64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_swap_wl_pair() {
+        // bear(1) looking at salmon(3) → pair_state = 1*7+3 = 10
+        // swapped: salmon(3) looking at bear(1) → 3*7+1 = 22
+        assert_eq!(swap_wl_pair(10), 22);
+        assert_eq!(swap_wl_pair(22), 10);
+        // identity: bear(1) looking at bear(1) → 1*7+1 = 8
+        assert_eq!(swap_wl_pair(8), 8);
+        // empty(0) looking at hawk(4) → 0*7+4 = 4, swapped → 4*7+0 = 28
+        assert_eq!(swap_wl_pair(4), 28);
+        assert_eq!(swap_wl_pair(28), 4);
+    }
+
+    #[test]
+    fn test_swap_terrain_pair() {
+        // forest(1) next to river(5) → 1*6+5 = 11
+        // swapped: river(5) next to forest(1) → 5*6+1 = 31
+        assert_eq!(swap_terrain_pair(11), 31);
+        assert_eq!(swap_terrain_pair(31), 11);
+        // same terrain: mountain(4) next to mountain(4) → 4*6+4 = 28
+        assert_eq!(swap_terrain_pair(28), 28);
+    }
+
+    #[test]
+    fn test_pair_swap_table_consistency() {
+        // dir_shift=0 should never swap (identity)
+        for dir in 0..3 {
+            assert!(!PAIR_SWAP[0][dir]);
+        }
+        // Rotation 1 (120° CW): dirs 0,1 swap, dir 2 doesn't
+        assert!(PAIR_SWAP[1][0]);
+        assert!(PAIR_SWAP[1][1]);
+        assert!(!PAIR_SWAP[1][2]);
+        // Rotation 2 (240° CW): dirs 1,2 swap, dir 0 doesn't
+        assert!(!PAIR_SWAP[2][0]);
+        assert!(PAIR_SWAP[2][1]);
+        assert!(PAIR_SWAP[2][2]);
+    }
+
+    #[test]
+    fn test_rotate_pairwise_feature_swap() {
+        // Create a feature: bear(1) looking at salmon(3) in direction E (dir 0)
+        // pair_state = 1*7+3 = 10, feature = PHASE_END + 0*49 + 10 = 4961 + 10 = 4971
+        let feature = 4971u16;
+
+        let table_120 = build_rotation_table(1);
+
+        // Rotate 120° CW: dir 0 → dir 1, and pair should SWAP
+        // Swapped pair_state = 3*7+1 = 22
+        // Expected: PHASE_END + 1*49 + 22 = 4961 + 49 + 22 = 5032
+        let rotated = rotate_features(&[feature], &table_120, 1).unwrap();
+        assert_eq!(rotated[0], 5032);
+
+        // Without swap it would be 4961 + 49 + 10 = 5020 (wrong)
+        assert_ne!(rotated[0], 5020);
+    }
+
+    #[test]
+    fn test_rotate_pairwise_no_swap_when_forward() {
+        // Direction 2 (NW) with rotation 1 → dir 0. NW→E is forward, NO swap.
+        // bear(1) looking at elk(2) in dir NW: pair_state = 1*7+2 = 9
+        // feature = PHASE_END + 2*49 + 9 = 4961 + 98 + 9 = 5068
+        let feature = 5068u16;
+
+        let table_120 = build_rotation_table(1);
+        let rotated = rotate_features(&[feature], &table_120, 1).unwrap();
+
+        // dir 2 → dir 0, pair_state stays 9 (no swap)
+        // Expected: PHASE_END + 0*49 + 9 = 4961 + 9 = 4970
+        assert_eq!(rotated[0], 4970);
+    }
+
+    #[test]
+    fn test_rotation_120_then_240_is_identity_for_pairwise() {
+        // Rotating 120° then 240° should give back the original feature
+        let table_120 = build_rotation_table(1);
+        let table_240 = build_rotation_table(2);
+
+        // Test several pairwise features
+        for dir in 0..3 {
+            for my in 0..7 {
+                for n in 0..7 {
+                    if my == 0 && n == 0 { continue; }
+                    let pair_state = my * 7 + n;
+                    let fi = (4961 + dir * 49 + pair_state) as u16;
+                    let rot1 = rotate_features(&[fi], &table_120, 1).unwrap();
+                    let rot2 = rotate_features(&rot1, &table_240, 2).unwrap();
+                    assert_eq!(rot2[0], fi,
+                        "120+240 not identity for dir={}, my={}, n={}: {} → {} → {}",
+                        dir, my, n, fi, rot1[0], rot2[0]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_rotation_120_three_times_is_identity() {
+        let table_120 = build_rotation_table(1);
+
+        // Per-cell feature at center (should always be in bounds)
+        let center = 10 * 21 + 10; // cell (0,0) = index 220
+        let fi = (center * 11 + 3) as u16; // salmon at center
+        let rot1 = rotate_features(&[fi], &table_120, 1).unwrap();
+        let rot2 = rotate_features(&rot1, &table_120, 1).unwrap();
+        let rot3 = rotate_features(&rot2, &table_120, 1).unwrap();
+        assert_eq!(rot3[0], fi, "3x 120° rotation should be identity for cell features");
+
+        // Pairwise feature
+        for dir in 0..3 {
+            for ps in 0..49 {
+                let fi = (4961 + dir * 49 + ps) as u16;
+                let r1 = rotate_features(&[fi], &table_120, 1).unwrap();
+                let r2 = rotate_features(&r1, &table_120, 1).unwrap();
+                let r3 = rotate_features(&r2, &table_120, 1).unwrap();
+                assert_eq!(r3[0], fi,
+                    "3x 120° not identity for pairwise dir={}, ps={}", dir, ps);
+            }
+        }
+    }
+
+    #[test]
+    fn test_feature_block_boundaries() {
+        // Verify the constants match between here and nnue.rs
+        assert_eq!(crate::nnue::NUM_FEATURES, 7670);
+        assert_eq!(crate::nnue::CELL_FEATURES, 4851);
+        assert_eq!(crate::nnue::PHASE_FEATURES, 110);
+        assert_eq!(crate::nnue::PAIR_FEATURES, 147);
+        assert_eq!(crate::nnue::PATTERN_FEATURES, 89);
+        assert_eq!(crate::nnue::BAG_FEATURES, 55);
+        assert_eq!(crate::nnue::OPP_HAB_FEATURES, 55);
+        assert_eq!(crate::nnue::ALLOWED_WL_FEATURES, 2205);
+        assert_eq!(crate::nnue::WL_COUNT_EXT_FEATURES, 50);
+        assert_eq!(crate::nnue::TERRAIN_PAIR_FEATURES, 108);
+    }
+
+    #[test]
+    fn test_translation_preserves_pairwise_order() {
+        // Translation (dir_shift=0) should NEVER swap pairwise pairs
+        let table = build_translation_table(1, 0);
+
+        for dir in 0..3 {
+            let pair_state = 1 * 7 + 3; // bear-salmon
+            let fi = (4961 + dir * 49 + pair_state) as u16;
+            // translate_features uses rotate_features with dir_shift=0
+            if let Some(trans) = rotate_features(&[fi], &table, 0) {
+                let rel = trans[0] as usize - 4961;
+                let new_ps = rel % 49;
+                assert_eq!(new_ps, pair_state,
+                    "Translation should not swap pairwise pair for dir {}", dir);
+            }
+        }
+    }
 }

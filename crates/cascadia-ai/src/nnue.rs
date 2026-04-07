@@ -6,13 +6,15 @@
 //!   [0 .. 4851)       Per-cell: 441 cells × 11 features (wildlife/terrain)
 //!   [4851 .. 4872)    Turn number one-hot (21, 0-20)
 //!   [4872 .. 4881)    Nature tokens one-hot (9, 0-8)
-//!   [4881 .. 4931)    Wildlife count per type (10 bins × 5 types, counts 0-9)
-//!   [4931 .. 4981)    Largest habitat per terrain (10 bins × 5 terrains, 0-9)
-//!   [4981 .. 5128)    Pairwise adjacency: 3 directions × 49 wildlife pair states
-//!   [5128 .. 5217)    Wildlife pattern features (bear pairs, elk lines, etc.)
-//!   [5217 .. 5272)    Bag remaining: 5 types × 11 bins (0-10+)
-//!   [5272 .. 5327)    Opponent habitat: 5 terrains × 11 bins (max opponent 0-10+)
-//!   [5327 .. 7532)    Allowed wildlife per cell: 441 cells × 5 flags
+//!   [4881 .. 4911)    Wildlife count per type, legacy (6 bins × 5 types, counts 0-5)
+//!   [4911 .. 4961)    Largest habitat per terrain (10 bins × 5 terrains, 0-9)
+//!   [4961 .. 5108)    Pairwise adjacency: 3 dirs × 49 wildlife pair states
+//!   [5108 .. 5197)    Wildlife pattern features (bear pairs, elk lines, etc.)
+//!   [5197 .. 5252)    Bag remaining: 5 types × 11 bins (0-10+)
+//!   [5252 .. 5307)    Opponent habitat: 5 terrains × 11 bins (max opponent 0-10+)
+//!   [5307 .. 7512)    Allowed wildlife per cell: 441 cells × 5 flags
+//!   [7512 .. 7562)    Extended wildlife count: 10 bins × 5 types (0-9)
+//!   [7562 .. 7670)    Terrain pairwise: 3 dirs × 36 terrain pair states
 
 use cascadia_core::board::Board;
 use cascadia_core::hex::{HexCoord, ADJACENCY, GRID_SIZE};
@@ -26,8 +28,8 @@ use cascadia_core::types::Wildlife;
 // 0-4: wildlife type placed (Bear, Elk, Salmon, Hawk, Fox)
 // 5: tile present, no wildlife
 // 6-10: terrain type (Forest, Prairie, Wetland, Mountain, River)
-const FEATURES_PER_CELL: usize = 11;
-const CELL_FEATURES: usize = GRID_SIZE * FEATURES_PER_CELL; // 4851
+pub const FEATURES_PER_CELL: usize = 11;
+pub const CELL_FEATURES: usize = GRID_SIZE * FEATURES_PER_CELL; // 4851
 
 const TURN_FEATURES: usize = 21;     // turns 0-20
 const TOKEN_FEATURES: usize = 9;     // tokens 0-8
@@ -35,46 +37,34 @@ const WL_COUNT_FEATURES: usize = 30; // 6 bins × 5 types (counts 0-5) — legac
 
 // Extended wildlife count: 10 bins × 5 types (0-9), appended after all legacy features
 const WL_COUNT_EXT_BINS: usize = 10;
-const WL_COUNT_EXT_FEATURES: usize = WL_COUNT_EXT_BINS * 5; // 50
+pub const WL_COUNT_EXT_FEATURES: usize = WL_COUNT_EXT_BINS * 5; // 50
 
-// Allowed wildlife per cell: 441 cells × 5 wildlife flags = 2205 features
-// Appended AFTER bag+opponent features to preserve backward compatibility
-const ALLOWED_WL_PER_CELL: usize = 5;
-const ALLOWED_WL_FEATURES: usize = GRID_SIZE * ALLOWED_WL_PER_CELL; // 2205
+pub const ALLOWED_WL_PER_CELL: usize = 5;
+pub const ALLOWED_WL_FEATURES: usize = GRID_SIZE * ALLOWED_WL_PER_CELL; // 2205
 const HAB_SIZE_FEATURES: usize = 50; // 10 bins × 5 terrains (sizes 0-9)
-const PHASE_FEATURES: usize = TURN_FEATURES + TOKEN_FEATURES + WL_COUNT_FEATURES + HAB_SIZE_FEATURES; // 110 (legacy)
+pub const PHASE_FEATURES: usize = TURN_FEATURES + TOKEN_FEATURES + WL_COUNT_FEATURES + HAB_SIZE_FEATURES; // 110
 
 const PAIR_DIRS: usize = 3;
-const PAIR_STATES: usize = 7 * 7;    // 49 (my_wildlife × neighbor_wildlife)
-const PAIR_FEATURES: usize = PAIR_DIRS * PAIR_STATES; // 147
+const PAIR_STATES: usize = 7 * 7;    // 49
+pub const PAIR_FEATURES: usize = PAIR_DIRS * PAIR_STATES; // 147
 
-// Wildlife pattern features (directly expose scoring-relevant info)
-const BEAR_PAIR_FEATURES: usize = 5;     // bear pair count one-hot (0-4)
-const ELK_LINE_FEATURES: usize = 20;     // elk lines: 5 length bins × 4 max lines
-const SALMON_RUN_FEATURES: usize = 24;   // salmon runs: 8 length bins × 3 max runs
-const HAWK_ISO_FEATURES: usize = 9;      // isolated hawk count one-hot (0-8)
-const FOX_DIV_FEATURES: usize = 6;       // avg fox diversity one-hot (0-5)
-const EMPTY_SLOTS_FEATURES: usize = 25;  // empty wildlife slots per type: 5 bins × 5 types
-const PATTERN_FEATURES: usize = BEAR_PAIR_FEATURES + ELK_LINE_FEATURES
+const BEAR_PAIR_FEATURES: usize = 5;
+const ELK_LINE_FEATURES: usize = 20;
+const SALMON_RUN_FEATURES: usize = 24;
+const HAWK_ISO_FEATURES: usize = 9;
+const FOX_DIV_FEATURES: usize = 6;
+const EMPTY_SLOTS_FEATURES: usize = 25;
+pub const PATTERN_FEATURES: usize = BEAR_PAIR_FEATURES + ELK_LINE_FEATURES
     + SALMON_RUN_FEATURES + HAWK_ISO_FEATURES + FOX_DIV_FEATURES + EMPTY_SLOTS_FEATURES; // 89
 
-// Bag remaining features: how many of each wildlife type are available to draw
-// 5 types × 11 bins (0,1,2,...,9,10+) = 55 features
-// "Available" = bag + deferred returns (tokens that will come back at end of turn)
 const BAG_BINS: usize = 11;
-const BAG_FEATURES: usize = 5 * BAG_BINS; // 55
+pub const BAG_FEATURES: usize = 5 * BAG_BINS; // 55
 
-// Opponent habitat features: max opponent habitat size per terrain
-// 5 terrains × 11 bins (0-10+) = 55 features
-// Tells the NNUE what it needs to beat for habitat majority bonuses
 const OPP_HAB_BINS: usize = 11;
-const OPP_HAB_FEATURES: usize = 5 * OPP_HAB_BINS; // 55
+pub const OPP_HAB_FEATURES: usize = 5 * OPP_HAB_BINS; // 55
 
-// Terrain pairwise adjacency: 3 directions × 6×6 terrain pair states = 108 features
-// States: 0=empty, 1-5=terrain types (Forest, Prairie, Wetland, Mountain, River)
-// Captures habitat connectivity patterns (matching terrains = growing habitat groups)
-const TERRAIN_PAIR_STATES: usize = 6 * 6; // 36 (my_terrain × neighbor_terrain)
-const TERRAIN_PAIR_FEATURES: usize = PAIR_DIRS * TERRAIN_PAIR_STATES; // 108
+const TERRAIN_PAIR_STATES: usize = 6 * 6; // 36
+pub const TERRAIN_PAIR_FEATURES: usize = PAIR_DIRS * TERRAIN_PAIR_STATES; // 108
 
 /// Feature count of the original architecture (for backward-compatible weight loading)
 /// Old: 441×11 + 110 + 147 + 89 = 5197 (no bag/opponent/allowed features)
