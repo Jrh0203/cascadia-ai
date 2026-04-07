@@ -264,49 +264,57 @@ def compare(
     def parse_scores(output_text):
         """Extract base and bonus scores from CLI benchmark output."""
         import re
-        base_scores = []
-        bonus_scores = []
-        # Look for score distribution lines like "  90- 94:     8 ████"
-        # Or parse the Min/Max line for the range
-        # Simplest: look for individual game scores in the output
-        # Actually the CLI prints aggregate stats, not individual scores.
-        # Parse the summary stats instead.
         stats = {}
+        section = None  # track which section we're in
         for line in output_text.split("\n"):
-            line = line.strip()
-            if line.startswith("Mean:"):
-                val = re.search(r"[\d.]+", line)
-                if val and "base" not in stats:
-                    stats["base_mean"] = float(val.group())
-            elif line.startswith("Median:"):
-                val = re.search(r"\d+", line)
-                if val and "base_median" not in stats:
-                    stats["base_median"] = int(val.group())
-            elif line.startswith("P10:"):
-                val = re.search(r"\d+", line)
-                if val and "base_p10" not in stats:
-                    stats["base_p10"] = int(val.group())
-            elif line.startswith("P90:"):
-                val = re.search(r"\d+", line)
-                if val and "base_p90" not in stats:
-                    stats["base_p90"] = int(val.group())
-            elif line.startswith("Min/Max:"):
-                m = re.search(r"(\d+)/(\d+)", line)
-                if m:
-                    stats["base_min"] = int(m.group(1))
-                    stats["base_max"] = int(m.group(2))
-            elif "avg bonus" in line:
-                m = re.search(r"([\d.]+) \(\+([\d.]+)", line)
-                if m:
-                    stats["bonus_mean"] = float(m.group(1))
-                    stats["avg_bonus"] = float(m.group(2))
+            stripped = line.strip()
+            if "Base Score" in line:
+                section = "base"
+            elif "With Habitat Bonus" in line:
+                section = "bonus"
+            elif section == "base":
+                if stripped.startswith("Mean:"):
+                    val = re.search(r"[\d.]+", stripped)
+                    if val:
+                        stats["base_mean"] = float(val.group())
+                elif stripped.startswith("Median:"):
+                    val = re.search(r"\d+", stripped)
+                    if val:
+                        stats["base_median"] = int(val.group())
+                elif stripped.startswith("P10:"):
+                    val = re.search(r"\d+", stripped)
+                    if val:
+                        stats["base_p10"] = int(val.group())
+                elif stripped.startswith("P90:"):
+                    val = re.search(r"\d+", stripped)
+                    if val:
+                        stats["base_p90"] = int(val.group())
+                elif stripped.startswith("Min/Max:"):
+                    m = re.search(r"(\d+)/(\d+)", stripped)
+                    if m:
+                        stats["base_min"] = int(m.group(1))
+                        stats["base_max"] = int(m.group(2))
+            elif section == "bonus":
+                if stripped.startswith("Mean:"):
+                    m = re.search(r"([\d.]+) \(\+([\d.]+)", stripped)
+                    if m:
+                        stats["bonus_mean"] = float(m.group(1))
+                        stats["avg_bonus"] = float(m.group(2))
+                elif stripped.startswith("P10:"):
+                    val = re.search(r"\d+", stripped)
+                    if val:
+                        stats["bonus_p10"] = int(val.group())
+                elif stripped.startswith("P90:"):
+                    val = re.search(r"\d+", stripped)
+                    if val:
+                        stats["bonus_p90"] = int(val.group())
         return stats
 
     # Aggregate across workers per strategy (weighted average of means)
     print("\n" + "=" * 70)
     print(f"{'STRATEGY COMPARISON':^70}")
     print("=" * 70)
-    print(f"{'Strategy':<20} {'Games':>6} {'Base Mean':>10} {'+ Bonus':>10} {'P10':>6} {'P90':>6} {'Min':>6} {'Max':>6}")
+    print(f"{'Strategy':<18} {'Games':>5} {'Base':>6} {'w/Bonus':>8} {'(+Hab)':>7} {'P10':>5} {'P90':>5} {'Min':>5} {'Max':>5}")
     print("-" * 70)
 
     strategy_order = list(dict.fromkeys(l for l, _ in futures))
@@ -316,10 +324,9 @@ def compare(
         n_workers = len(all_stats)
         n_games = n_workers * games_per_worker
 
-        # Aggregate: average the means, min of mins, max of maxes, etc.
         valid = [s for s in all_stats if "base_mean" in s]
         if not valid:
-            print(f"{label:<20} {'(no data)':>6}")
+            print(f"{label:<18} {'(no data)':>5}")
             continue
 
         avg_base = sum(s["base_mean"] for s in valid) / len(valid)
@@ -330,8 +337,8 @@ def compare(
         min_score = min(s.get("base_min", 0) for s in valid)
         max_score = max(s.get("base_max", 0) for s in valid)
 
-        bonus_str = f"{avg_bonus:.1f} (+{avg_bonus_delta:.1f})" if avg_bonus_delta > 0 else "n/a"
-        print(f"{label:<20} {n_games:>6} {avg_base:>10.1f} {bonus_str:>10} {min_p10:>6} {max_p90:>6} {min_score:>6} {max_score:>6}")
+        bonus_str = f"{avg_bonus:.1f}" if avg_bonus_delta > 0 else "-"
+        delta_str = f"+{avg_bonus_delta:.1f}" if avg_bonus_delta > 0 else "-"
+        print(f"{label:<18} {n_games:>5} {avg_base:>6.1f} {bonus_str:>8} {delta_str:>7} {min_p10:>5} {max_p90:>5} {min_score:>5} {max_score:>5}")
 
     print("=" * 70)
-    print(f"(P10/P90 show worst-worker P10 and best-worker P90 across workers)")
