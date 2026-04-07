@@ -335,27 +335,27 @@ async fn make_move(
     // Log the player's move
     {
         let mut events = state.events.lock().unwrap();
+        // Use [T:terrain1] or [T:terrain1/terrain2] tags for frontend to render as colored boxes
         let tile_desc = drafted_tile_info.as_ref().map(|(t1, t2, wl)| {
-            let terrain = match t2 {
-                Some(t2) => format!("{}/{}", t1, t2),
-                None => t1.clone(),
+            let terrain_tag = match t2 {
+                Some(t2) => format!("[T:{}/{}]", t1, t2),
+                None => format!("[T:{}]", t1),
             };
-            (terrain, wl.clone())
+            (terrain_tag, wl.clone())
         });
         let action = match (independent_wildlife, tile_desc) {
             (Some(wl), Some((terrain, _))) => {
-                format!("🌲 pinecone draft: {} tile + {} (from slot {})",
-                    terrain, wl, req.wildlife_market_index.unwrap())
+                format!("🌲 {} + {}", terrain, wl)
             }
             (None, Some((terrain, wl))) => {
-                format!("drafted {} tile + {} (slot {})", terrain, wl, req.market_index)
+                format!("{} + {}", terrain, wl)
             }
             _ => format!("drafted slot {}", req.market_index),
         };
         let wl_placed = req.wildlife_q.is_some();
-        events.push(format!("P1 {} at ({},{}) rot {}{}",
-            action, req.q, req.r, req.rotation,
-            if wl_placed { " + placed wildlife" } else { " (wildlife discarded)" }));
+        events.push(format!("P1 {} at ({},{}){}",
+            action, req.q, req.r,
+            if wl_placed { "" } else { " (skipped wildlife)" }));
     }
 
     // Solo 4p sim: auto-advance opponents with greedy play until back to player 0
@@ -384,10 +384,11 @@ async fn make_move(
                         let t1 = terrain_name(pair.tile.terrain1).to_string();
                         let t2 = pair.tile.terrain2.map(|t| terrain_name(t).to_string());
                         let wl = wildlife_name(pair.wildlife).to_string();
-                        match t2 {
-                            Some(t2) => format!("{}/{} + {}", t1, t2, wl),
-                            None => format!("{} + {}", t1, wl),
-                        }
+                        let terrain_tag = match t2 {
+                            Some(t2) => format!("[T:{}/{}]", t1, t2),
+                            None => format!("[T:{}]", t1),
+                        };
+                        (terrain_tag, wl)
                     });
                     let indep_wl = mv.wildlife_market_index.and_then(|wmi| {
                         if wmi != market_idx {
@@ -396,8 +397,8 @@ async fn make_move(
                     });
                     if !cascadia_ai::search::execute_scored_move(&mut game, &mv) { break; }
                     let desc = match (tile_info, indep_wl) {
-                        (Some(t), Some(wl)) => format!("🌲 pinecone: {} tile + {}", t, wl),
-                        (Some(t), None) => format!("drafted {} (slot {})", t, market_idx),
+                        (Some((terrain, _)), Some(wl)) => format!("🌲 {} + {}", terrain, wl),
+                        (Some((terrain, wl)), None) => format!("{} + {}", terrain, wl),
                         _ => format!("drafted slot {}", market_idx),
                     };
                     state.events.lock().unwrap().push(

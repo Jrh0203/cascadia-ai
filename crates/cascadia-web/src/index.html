@@ -1608,8 +1608,31 @@ function renderEventLog() {
   const recent = events.slice().reverse().slice(0, 200);
   body.innerHTML = recent.map((e, i) => {
     const num = events.length - i;
-    return `<div class="event-item">${num}. ${escapeHtml(e)}</div>`;
+    return `<div class="event-item">${num}. ${formatEvent(e)}</div>`;
   }).join('');
+}
+
+function formatEvent(s) {
+  // Replace [T:terrain1/terrain2] or [T:terrain1] with colored box
+  return escapeHtml(s).replace(/\[T:([a-zA-Z]+)(?:\/([a-zA-Z]+))?\]/g, (_, t1, t2) => {
+    const c1 = TERRAIN_COLORS[t1.toLowerCase()] || '#888';
+    if (t2) {
+      const c2 = TERRAIN_COLORS[t2.toLowerCase()] || '#888';
+      return `<span style="
+        display:inline-block; width:14px; height:14px; vertical-align:middle;
+        border:1px solid rgba(255,255,255,0.3); border-radius:2px;
+        background: linear-gradient(135deg, ${c1} 50%, ${c2} 50%);
+        margin:0 2px;
+      "></span>`;
+    } else {
+      return `<span style="
+        display:inline-block; width:14px; height:14px; vertical-align:middle;
+        border:1px solid rgba(255,255,255,0.3); border-radius:2px;
+        background:${c1};
+        margin:0 2px;
+      "></span>`;
+    }
+  });
 }
 
 function escapeHtml(s) {
