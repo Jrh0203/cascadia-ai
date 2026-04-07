@@ -446,9 +446,11 @@ async fn suggest_move(
         return Err((StatusCode::BAD_REQUEST, "Game is over".to_string()));
     }
 
-    // Step 1: free 3-of-a-kind replacement always recommended (no downside)
+    // Detect pre-move actions (reported alongside move candidates)
+    let mut pre_action: Option<serde_json::Value> = None;
+
     if game.can_replace_overflow().is_some() {
-        return Ok(Json(serde_json::json!({ "action": "replace_overflow" })));
+        pre_action = Some(serde_json::json!({ "type": "replace_overflow" }));
     }
 
     let net_opt = state.nnue.clone();
@@ -456,36 +458,38 @@ async fn suggest_move(
     let mut search_rng = StdRng::seed_from_u64(rng.gen());
     drop(rng);
 
-    // Step 2: check if mulligan is worth it (only with NNUE)
-    if let Some(ref net) = net_opt {
-        let player = game.current_player;
-        if game.boards[player].nature_tokens > 0 {
-            let baseline = cascadia_ai::mce::best_move_mce(&game, net, 750, &mut search_rng)
-                .map(|m| m.score as f32).unwrap_or(0.0);
-            let mut total = 0.0f32;
-            let mut samples = 0;
-            for _ in 0..3 {
-                let mut t = game.clone();
-                t.shuffle_bags(&mut search_rng);
-                if t.mulligan_wildlife() {
-                    total += cascadia_ai::mce::best_move_mce(&t, net, 750, &mut search_rng)
-                        .map(|m| m.score as f32).unwrap_or(0.0);
-                    samples += 1;
+    // Check if mulligan is worth it (only with NNUE)
+    if pre_action.is_none() {
+        if let Some(ref net) = net_opt {
+            let player = game.current_player;
+            if game.boards[player].nature_tokens > 0 {
+                let baseline = cascadia_ai::mce::best_move_mce(&game, net, 750, &mut search_rng)
+                    .map(|m| m.score as f32).unwrap_or(0.0);
+                let mut total = 0.0f32;
+                let mut samples = 0;
+                for _ in 0..3 {
+                    let mut t = game.clone();
+                    t.shuffle_bags(&mut search_rng);
+                    if t.mulligan_wildlife() {
+                        total += cascadia_ai::mce::best_move_mce(&t, net, 750, &mut search_rng)
+                            .map(|m| m.score as f32).unwrap_or(0.0);
+                        samples += 1;
+                    }
                 }
-            }
-            if samples > 0 {
-                let expected = total / samples as f32;
-                if expected > baseline + 1.5 {
-                    return Ok(Json(serde_json::json!({
-                        "action": "mulligan",
-                        "expected_gain": expected - baseline,
-                    })));
+                if samples > 0 {
+                    let expected = total / samples as f32;
+                    if expected > baseline + 1.5 {
+                        pre_action = Some(serde_json::json!({
+                            "type": "mulligan",
+                            "expected_gain": expected - baseline,
+                        }));
+                    }
                 }
             }
         }
     }
 
-    // Step 3: suggest the best move (plus top-10 alternatives with MCE scores)
+    // Always compute move candidates (top-10 with MCE scores)
     let scored_candidates: Vec<(cascadia_ai::eval::ScoredMove, f64)> = if let Some(ref net) = net_opt {
         cascadia_ai::mce::top_moves_mce(&game, net, 750, &mut search_rng, 10)
     } else {
@@ -521,11 +525,24 @@ async fn suggest_move(
         let cand_list: Vec<serde_json::Value> = scored_candidates.iter()
             .map(|(m, avg)| mv_to_json(m, *avg))
             .collect();
-        Ok(Json(serde_json::json!({
-            "action": "move",
+        let mut result = serde_json::json!({
+            "action": if pre_action.is_some() {
+                match pre_action.as_ref().unwrap()["type"].as_str().unwrap_or("") {
+                    "replace_overflow" => "replace_overflow",
+                    "mulligan" => "mulligan",
+                    _ => "move",
+                }
+            } else { "move" },
             "mv": mv_obj,
             "candidates": cand_list,
-        })))
+        });
+        if let Some(ref pa) = pre_action {
+            result["pre_action"] = pa.clone();
+            if let Some(gain) = pa.get("expected_gain") {
+                result["expected_gain"] = gain.clone();
+            }
+        }
+        Ok(Json(result))
     } else {
         Err((StatusCode::BAD_REQUEST, "No moves available".to_string()))
     }

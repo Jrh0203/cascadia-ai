@@ -1422,8 +1422,31 @@ function renderCandidatesList() {
     return;
   }
   section.style.display = '';
+
+  // Show pre-action (replace overflow / mulligan) as first item if present
+  let preHtml = '';
+  const pa = currentSuggestion.pre_action || (
+    currentSuggestion.action === 'replace_overflow' ? { type: 'replace_overflow' } :
+    currentSuggestion.action === 'mulligan' ? { type: 'mulligan', expected_gain: currentSuggestion.expected_gain } :
+    null
+  );
+  if (pa && pa.type === 'replace_overflow') {
+    preHtml = `<div class="candidate-item" style="border-left-color:#e94560; background:rgba(233,69,96,0.15)" onclick="doReplaceOverflow()">
+      <span class="candidate-rank">♻️</span>
+      <span class="candidate-desc">Free 3-of-a-kind replace</span>
+      <span class="candidate-score" style="color:#e94560">DO FIRST</span>
+    </div>`;
+  } else if (pa && pa.type === 'mulligan') {
+    const gain = pa.expected_gain ? `+${pa.expected_gain.toFixed(1)}` : '';
+    preHtml = `<div class="candidate-item" style="border-left-color:#e94560; background:rgba(233,69,96,0.15)" onclick="doMulligan()">
+      <span class="candidate-rank">🌲</span>
+      <span class="candidate-desc">Mulligan ${gain}</span>
+      <span class="candidate-score" style="color:#e94560">DO FIRST</span>
+    </div>`;
+  }
+
   const topScore = cands[0].avg_score || cands[0].score || 0;
-  list.innerHTML = cands.map((c, i) => {
+  list.innerHTML = preHtml + cands.map((c, i) => {
     const pair = gameState.market.find(p => p.index === c.market_index);
     const wl = pair ? WILDLIFE_EMOJI[pair.wildlife] || '' : '';
     const terrain = pair ? (pair.terrain2 ? `${pair.terrain1.slice(0,3)}/${pair.terrain2.slice(0,3)}` : pair.terrain1.slice(0,4)) : '?';
@@ -1476,21 +1499,21 @@ function applySuggestionHighlights() {
   }
 
   const s = currentSuggestion;
+  // Pre-action highlights
   if (s.action === 'replace_overflow') {
     const btn = document.getElementById('overflow-btn');
     if (btn) btn.classList.add('suggest-glow');
   } else if (s.action === 'mulligan') {
     const btn = document.getElementById('mulligan-btn');
     if (btn) btn.classList.add('suggest-glow');
-  } else if (s.action === 'move' && s.mv) {
-    // Highlight the recommended market pair
+  }
+  // Move highlights (always present — even with pre-action)
+  if (s.mv) {
     const marketEl = document.querySelector(`.market-pair[data-index="${s.mv.market_index}"]`);
     if (marketEl) marketEl.classList.add('suggest-glow');
-    // Auto-set rotation to the suggested rotation once we enter place_tile phase
     if (phase === 'place_tile' && selectedMarket === s.mv.market_index) {
       currentRotation = s.mv.rotation || 0;
     }
-    // Start animation loop for canvas highlights
     startSuggestionAnimation();
   }
 }
@@ -1532,19 +1555,23 @@ async function doSuggestMove() {
     selectedCandidateIdx = 0;
 
     let msg = '';
+    // Pre-move action message
     if (suggestion.action === 'replace_overflow') {
-      msg = '💡 Suggestion: use the free 3-of-a-kind replacement';
+      msg = '💡 First: use the free 3-of-a-kind replacement, then:';
     } else if (suggestion.action === 'mulligan') {
       const gain = suggestion.expected_gain || 0;
-      msg = `💡 Suggestion: spend a pinecone to mulligan (+${gain.toFixed(1)} expected)`;
-    } else if (suggestion.action === 'move' && suggestion.mv) {
+      msg = `💡 First: spend a pinecone to mulligan (+${gain.toFixed(1)} expected), then:`;
+    }
+    // Move suggestion (always present now, even with pre-action)
+    if (suggestion.mv) {
       const mv = suggestion.mv;
       const indep = mv.wildlife_market_index !== undefined && mv.wildlife_market_index !== null
         && mv.wildlife_market_index !== mv.market_index;
       if (indep) {
-        msg = `💡 Suggestion: 🌲 pinecone — draft tile from slot ${mv.market_index}, wildlife from slot ${mv.wildlife_market_index}`;
+        msg += ` 🌲 pinecone — draft tile from slot ${mv.market_index}, wildlife from slot ${mv.wildlife_market_index}`;
       } else {
-        msg = `💡 Suggestion: draft slot ${mv.market_index} (expected final score: ${mv.score})`;
+        const prefix = msg ? '' : '💡 Suggestion: ';
+        msg += `${prefix}draft slot ${mv.market_index} (expected final score: ${mv.score})`;
       }
     }
     updateStatus(msg);
