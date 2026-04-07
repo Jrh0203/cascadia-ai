@@ -23,6 +23,198 @@ use crate::nnue_train::pick_best_move_nnue;
 use crate::search::{candidate_moves_pub, execute_scored_move, greedy_move};
 use crate::wildlife_candidates::wildlife_strategic_candidates;
 
+/// Result of the enumerated mulligan evaluation.
+#[derive(Debug, Clone)]
+pub struct MulliganAnalysis {
+    /// MCE score for each (tile_slot, animal_type) — 4 slots × 5 types
+    pub score_matrix: [[f64; 5]; 4],
+    /// Best score from the current market (no mulligan)
+    pub current_best: f64,
+    /// Expected best score after mulliganing (probability-weighted over all draws)
+    pub mulligan_ev: f64,
+    /// Expected best score after mulligan + pinecone (cross-slot pairing)
+    pub mulligan_pinecone_ev: f64,
+    /// Whether to mulligan (mulligan_ev - 1 > current_best)
+    pub should_mulligan: bool,
+    /// Whether to mulligan + pinecone (mulligan_pinecone_ev - 2 > both others)
+    pub should_mulligan_pinecone: bool,
+}
+
+/// Compute the 4×5 score matrix: MCE score for each (tile_slot, animal_type) pair.
+/// Then enumerate all possible post-mulligan draws to compute exact expected values.
+pub fn analyze_mulligan(
+    game: &GameState,
+    net: &NNUENetwork,
+    rollouts_per_pair: usize,
+    rng: &mut StdRng,
+) -> MulliganAnalysis {
+    let mut score_matrix = [[0.0f64; 5]; 4];
+
+    // Compute MCE score for each of 20 (slot, animal) pairs
+    for slot in 0..4 {
+        if game.market.pairs[slot].is_none() { continue; }
+        for animal_idx in 0..5 {
+            let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+            // Create modified game with only this slot, having the target animal
+            let mut modified = game.clone();
+            if let Some(ref mut pair) = modified.market.pairs[slot] {
+                pair.wildlife = animal;
+            }
+            // Clear other slots so MCE only evaluates this pairing
+            for i in 0..4 {
+                if i != slot { modified.market.pairs[i] = None; }
+            }
+            score_matrix[slot][animal_idx] = best_move_mce(&modified, net, rollouts_per_pair, rng)
+                .map(|m| m.score as f64)
+                .unwrap_or(0.0);
+        }
+    }
+
+    // Current market best: for each slot, look up score with its current animal
+    let mut current_best = 0.0f64;
+    for slot in 0..4 {
+        if let Some(ref pair) = game.market.pairs[slot] {
+            let score = score_matrix[slot][pair.wildlife as usize];
+            if score > current_best { current_best = score; }
+        }
+    }
+
+    // Bag composition for probability calculation
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+    let bag_counts: [u32; 5] = [
+        bag_info.remaining[0] as u32,
+        bag_info.remaining[1] as u32,
+        bag_info.remaining[2] as u32,
+        bag_info.remaining[3] as u32,
+        bag_info.remaining[4] as u32,
+    ];
+    let bag_total: u32 = bag_counts.iter().sum();
+
+    // Which slots are active (have tiles)?
+    let active_slots: Vec<usize> = (0..4)
+        .filter(|&i| game.market.pairs[i].is_some())
+        .collect();
+    let n_active = active_slots.len();
+
+    if bag_total < n_active as u32 || n_active == 0 {
+        return MulliganAnalysis {
+            score_matrix,
+            current_best,
+            mulligan_ev: 0.0,
+            mulligan_pinecone_ev: 0.0,
+            should_mulligan: false,
+            should_mulligan_pinecone: false,
+        };
+    }
+
+    // Enumerate all possible n_active-animal draws from the bag
+    // For 4 active slots: 5^4 = 625 type combinations
+    let mut mulligan_ev = 0.0f64;
+    let mut mulligan_pinecone_ev = 0.0f64;
+    let mut total_prob = 0.0f64;
+
+    enumerate_draws(
+        &active_slots,
+        &bag_counts,
+        bag_total,
+        &score_matrix,
+        &mut mulligan_ev,
+        &mut mulligan_pinecone_ev,
+        &mut total_prob,
+        &mut [0u8; 4], // draw buffer
+        0,
+        1.0, // running probability
+    );
+
+    // Normalize (total_prob should be ~1.0, but floating point)
+    if total_prob > 0.0 {
+        mulligan_ev /= total_prob;
+        mulligan_pinecone_ev /= total_prob;
+    }
+
+    let nature_tokens = game.boards[game.current_player].nature_tokens;
+    let should_mulligan = nature_tokens >= 1 && mulligan_ev - 1.0 > current_best;
+    let should_mulligan_pinecone = nature_tokens >= 2 && mulligan_pinecone_ev - 2.0 > current_best
+        && mulligan_pinecone_ev - 2.0 > mulligan_ev - 1.0;
+
+    MulliganAnalysis {
+        score_matrix,
+        current_best,
+        mulligan_ev,
+        mulligan_pinecone_ev,
+        should_mulligan,
+        should_mulligan_pinecone,
+    }
+}
+
+/// Recursively enumerate all possible draws from the bag.
+fn enumerate_draws(
+    active_slots: &[usize],
+    bag_counts: &[u32; 5],
+    bag_total: u32,
+    score_matrix: &[[f64; 5]; 4],
+    mulligan_ev: &mut f64,
+    mulligan_pinecone_ev: &mut f64,
+    total_prob: &mut f64,
+    draw: &mut [u8; 4],
+    depth: usize,
+    prob: f64,
+) {
+    if depth == active_slots.len() {
+        // All slots filled — compute best scores for this draw
+        let n = active_slots.len();
+
+        // Best paired score: max over slots of score[slot][drawn_animal]
+        let mut best_paired = 0.0f64;
+        for i in 0..n {
+            let slot = active_slots[i];
+            let animal = draw[i] as usize;
+            let score = score_matrix[slot][animal];
+            if score > best_paired { best_paired = score; }
+        }
+
+        // Best pinecone score: max over all (tile_slot, animal_from_any_slot)
+        let mut best_pinecone = best_paired; // pinecone is optional, compare with paired
+        for i in 0..n {
+            let tile_slot = active_slots[i];
+            for j in 0..n {
+                let animal = draw[j] as usize;
+                // Pinecone cost: -1 point (only if using cross-slot)
+                let score = if i == j {
+                    score_matrix[tile_slot][animal] // no pinecone needed
+                } else {
+                    score_matrix[tile_slot][animal] - 1.0 // pinecone cost
+                };
+                if score > best_pinecone { best_pinecone = score; }
+            }
+        }
+
+        *mulligan_ev += prob * best_paired;
+        *mulligan_pinecone_ev += prob * best_pinecone;
+        *total_prob += prob;
+        return;
+    }
+
+    // Try each wildlife type for this draw position
+    let mut remaining_counts = *bag_counts;
+    // Adjust for previous draws in this sequence
+    for i in 0..depth {
+        remaining_counts[draw[i] as usize] -= 1;
+    }
+    let remaining_total = bag_total - depth as u32;
+
+    for animal in 0..5u8 {
+        if remaining_counts[animal as usize] == 0 { continue; }
+        let p = remaining_counts[animal as usize] as f64 / remaining_total as f64;
+        draw[depth] = animal;
+        enumerate_draws(
+            active_slots, bag_counts, bag_total, score_matrix,
+            mulligan_ev, mulligan_pinecone_ev, total_prob,
+            draw, depth + 1, prob * p,
+        );
+    }
+}
+
 /// Collect MCE-labeled training samples for the current position.
 /// For each candidate that got rollouts, returns the afterstate's NNUE features
 /// paired with a delta-style label: (avg_rollout_final_score - afterstate_current_score).
@@ -682,4 +874,121 @@ fn compute_wildlife_demand(board: &Board) -> [f32; 5] {
     demand[Wildlife::Fox as usize] = 1.0;
 
     demand
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_enumerate_draws_probabilities_sum_to_one() {
+        // Bag with 3 of each type = 15 total, draw 4
+        let bag_counts = [3u32, 3, 3, 3, 3];
+        let bag_total = 15;
+        let active_slots = vec![0, 1, 2, 3];
+        let score_matrix = [[1.0; 5]; 4]; // all equal scores
+
+        let mut mulligan_ev = 0.0;
+        let mut pinecone_ev = 0.0;
+        let mut total_prob = 0.0;
+        let mut draw = [0u8; 4];
+
+        enumerate_draws(
+            &active_slots, &bag_counts, bag_total, &score_matrix,
+            &mut mulligan_ev, &mut pinecone_ev, &mut total_prob,
+            &mut draw, 0, 1.0,
+        );
+
+        assert!((total_prob - 1.0).abs() < 1e-10,
+            "Probabilities should sum to 1.0, got {}", total_prob);
+    }
+
+    #[test]
+    fn test_enumerate_draws_with_known_outcome() {
+        // Bag with ONLY bears (5 bears, 0 of everything else)
+        // Drawing 2 from 2 active slots → guaranteed (bear, bear)
+        let bag_counts = [5u32, 0, 0, 0, 0];
+        let bag_total = 5;
+        let active_slots = vec![0, 1];
+
+        // Score matrix: slot 0 with bear = 90, slot 1 with bear = 85
+        let mut score_matrix = [[0.0; 5]; 4];
+        score_matrix[0][0] = 90.0; // slot 0 + bear
+        score_matrix[1][0] = 85.0; // slot 1 + bear
+
+        let mut mulligan_ev = 0.0;
+        let mut pinecone_ev = 0.0;
+        let mut total_prob = 0.0;
+        let mut draw = [0u8; 4];
+
+        enumerate_draws(
+            &active_slots, &bag_counts, bag_total, &score_matrix,
+            &mut mulligan_ev, &mut pinecone_ev, &mut total_prob,
+            &mut draw, 0, 1.0,
+        );
+
+        let ev = mulligan_ev / total_prob;
+        assert!((ev - 90.0).abs() < 1e-10,
+            "With only bears, best paired should be 90.0, got {}", ev);
+    }
+
+    #[test]
+    fn test_enumerate_draws_pinecone_can_beat_paired() {
+        // Scenario: 2 active slots, bag has only bears and salmon
+        let bag_counts = [5u32, 0, 5, 0, 0]; // 5 bear, 5 salmon
+        let bag_total = 10;
+        let active_slots = vec![0, 1];
+
+        // Slot 0 is great with salmon (95), bad with bear (80)
+        // Slot 1 is bad with both (70)
+        let mut score_matrix = [[70.0; 5]; 4];
+        score_matrix[0][0] = 80.0; // slot 0 + bear
+        score_matrix[0][2] = 95.0; // slot 0 + salmon
+
+        let mut mulligan_ev = 0.0;
+        let mut pinecone_ev = 0.0;
+        let mut total_prob = 0.0;
+        let mut draw = [0u8; 4];
+
+        enumerate_draws(
+            &active_slots, &bag_counts, bag_total, &score_matrix,
+            &mut mulligan_ev, &mut pinecone_ev, &mut total_prob,
+            &mut draw, 0, 1.0,
+        );
+
+        let paired_ev = mulligan_ev / total_prob;
+        let pine_ev = pinecone_ev / total_prob;
+
+        // Pinecone EV should be higher because when draw is (bear, salmon),
+        // pinecone can pair slot 0 with salmon from slot 1's draw (95 - 1 = 94)
+        // vs paired which only gets slot 0 + bear = 80
+        assert!(pine_ev > paired_ev,
+            "Pinecone EV ({}) should beat paired EV ({})", pine_ev, paired_ev);
+    }
+
+    #[test]
+    fn test_enumerate_impossible_draws_skipped() {
+        // Bag with 0 of type 0, should never draw it
+        let bag_counts = [0u32, 5, 5, 5, 5];
+        let bag_total = 20;
+        let active_slots = vec![0];
+
+        let mut score_matrix = [[50.0; 5]; 4];
+        score_matrix[0][0] = 100.0; // slot 0 + bear (impossible to draw)
+
+        let mut mulligan_ev = 0.0;
+        let mut pinecone_ev = 0.0;
+        let mut total_prob = 0.0;
+        let mut draw = [0u8; 4];
+
+        enumerate_draws(
+            &active_slots, &bag_counts, bag_total, &score_matrix,
+            &mut mulligan_ev, &mut pinecone_ev, &mut total_prob,
+            &mut draw, 0, 1.0,
+        );
+
+        let ev = mulligan_ev / total_prob;
+        assert!((ev - 50.0).abs() < 1e-10,
+            "Bear is impossible to draw, EV should be 50.0, got {}", ev);
+    }
 }
