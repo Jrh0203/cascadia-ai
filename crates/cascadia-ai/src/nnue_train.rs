@@ -511,26 +511,89 @@ pub fn train_from_mce_samples_with_checkpoint(
     let mut rng = StdRng::seed_from_u64(42);
     let batch_size = 256;
 
+    let num_threads: usize = std::env::var("CASCADIA_TRAIN_THREADS")
+        .ok().and_then(|s| s.parse().ok())
+        .unwrap_or(1);
+
     for epoch in 0..epochs {
         samples.shuffle(&mut rng);
-        let mut loss = 0.0f64;
-        let mut count = 0usize;
-        for batch_start in (0..samples.len()).step_by(batch_size) {
-            let batch_end = (batch_start + batch_size).min(samples.len());
-            let batch_lr = lr / (batch_end - batch_start) as f32;
-            for sample in &samples[batch_start..batch_end] {
-                let l = if freeze_below > 0 {
-                    net.train_sample_frozen(&sample.features, sample.target, batch_lr, freeze_below)
-                } else {
-                    net.train_sample(&sample.features, sample.target, batch_lr)
-                };
-                loss += l as f64;
-                count += 1;
+
+        let (loss, count) = if num_threads > 1 {
+            // Parallel training: split samples across threads, each trains
+            // a local copy, then average weights back.
+            let chunk_size = (samples.len() + num_threads - 1) / num_threads;
+            let net_arc = std::sync::Arc::new(net.clone());
+            let samples_arc = std::sync::Arc::new(samples.clone());
+
+            let handles: Vec<_> = (0..num_threads).map(|t| {
+                let net_copy = (*net_arc).clone();
+                let samples_ref = std::sync::Arc::clone(&samples_arc);
+                let start = t * chunk_size;
+                let end = ((t + 1) * chunk_size).min(samples_ref.len());
+                let lr = lr;
+                let freeze_below = freeze_below;
+                let batch_size = batch_size;
+
+                thread::spawn(move || {
+                    let mut local_net = net_copy;
+                    let mut loss = 0.0f64;
+                    let mut count = 0usize;
+                    for batch_start in (start..end).step_by(batch_size) {
+                        let batch_end = (batch_start + batch_size).min(end);
+                        let batch_lr = lr / (batch_end - batch_start) as f32;
+                        for sample in &samples_ref[batch_start..batch_end] {
+                            let l = if freeze_below > 0 {
+                                local_net.train_sample_frozen(&sample.features, sample.target, batch_lr, freeze_below)
+                            } else {
+                                local_net.train_sample(&sample.features, sample.target, batch_lr)
+                            };
+                            loss += l as f64;
+                            count += 1;
+                        }
+                    }
+                    (local_net, loss, count)
+                })
+            }).collect();
+
+            let mut total_loss = 0.0f64;
+            let mut total_count = 0usize;
+            let mut trained_nets: Vec<NNUENetwork> = Vec::with_capacity(num_threads);
+            for handle in handles {
+                let (local_net, loss, count) = handle.join().unwrap();
+                total_loss += loss;
+                total_count += count;
+                trained_nets.push(local_net);
             }
-        }
+
+            // Average all thread-local networks back into master
+            net.average_from(&trained_nets);
+
+            (total_loss, total_count)
+        } else {
+            // Single-threaded (original path)
+            let mut loss = 0.0f64;
+            let mut count = 0usize;
+            for batch_start in (0..samples.len()).step_by(batch_size) {
+                let batch_end = (batch_start + batch_size).min(samples.len());
+                let batch_lr = lr / (batch_end - batch_start) as f32;
+                for sample in &samples[batch_start..batch_end] {
+                    let l = if freeze_below > 0 {
+                        net.train_sample_frozen(&sample.features, sample.target, batch_lr, freeze_below)
+                    } else {
+                        net.train_sample(&sample.features, sample.target, batch_lr)
+                    };
+                    loss += l as f64;
+                    count += 1;
+                }
+            }
+            (loss, count)
+        };
+
         let rmse = (loss / count as f64).sqrt();
-        eprint!("\r  Epoch {}/{}: RMSE={:.2}{}    ", epoch + 1, epochs, rmse,
-            if freeze_below > 0 { format!(" [frozen<{}]", freeze_below) } else { String::new() });
+        let thread_str = if num_threads > 1 { format!(" [{}T]", num_threads) } else { String::new() };
+        eprint!("\r  Epoch {}/{}: RMSE={:.2}{}{}    ", epoch + 1, epochs, rmse,
+            if freeze_below > 0 { format!(" [frozen<{}]", freeze_below) } else { String::new() },
+            thread_str);
         stats.final_rmse = rmse;
 
         // Save checkpoint after every epoch
