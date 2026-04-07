@@ -467,8 +467,43 @@ fn main() {
     let run_collect_mce = args.iter().any(|a| a == "--collect-mce");
     let run_train_mce_policy = args.iter().any(|a| a == "--train-mce-policy");
     let run_export_pytorch = args.iter().any(|a| a == "--export-pytorch");
+    let run_self_play = args.iter().any(|a| a == "--self-play");
 
-    if run_export_pytorch {
+    if run_self_play {
+        // Generate NNUE self-play games and write to MCEP format
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("self_play_samples.bin");
+        let epsilon: f32 = args.iter().position(|a| a == "--epsilon")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.1);
+
+        let net = weights_path.and_then(|p| {
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(p)).ok()
+        });
+        let strategy = if net.is_some() { "NNUE" } else { "greedy" };
+        println!("Generating {} self-play games ({}, epsilon={}, out={})",
+            num_games, strategy, epsilon, out_path);
+
+        let start = Instant::now();
+        let seed = rand::random::<u64>();
+        let samples = cascadia_ai::nnue_train::generate_samples(
+            num_games, seed, net.as_ref(), epsilon, 4,
+        );
+
+        // Write as MCEP format
+        let mcep_samples: Vec<(Vec<u16>, f32)> = samples.iter()
+            .map(|s| (s.features.clone(), s.target))
+            .collect();
+        cascadia_ai::nnue_train::append_mce_samples(
+            std::path::Path::new(out_path), &mcep_samples,
+        ).expect("Failed to write samples");
+
+        println!("Generated {} samples from {} games in {:.1?}",
+            samples.len(), num_games, start.elapsed());
+        return;
+    } else if run_export_pytorch {
         // Load MCE samples, augment with rotations+translations, export as raw binary
         // for PyTorch training. Format: header (u32 num_samples, u32 num_features),
         // then for each sample: bit-packed features (ceil(num_features/8) bytes) + f32 target.

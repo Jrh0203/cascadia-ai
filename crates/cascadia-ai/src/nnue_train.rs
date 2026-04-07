@@ -25,7 +25,7 @@ pub struct Sample {
 
 /// Generate training data from self-play games.
 /// `num_players`: 1 for pre-training (AI gets all turns), 4 for realistic play.
-fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> Vec<Sample> {
+pub fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> Vec<Sample> {
     let num_threads = thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
