@@ -63,15 +63,31 @@ def load_mce_samples(path):
 class NNUEDataset(Dataset):
     def __init__(self, features_list, targets, num_features):
         self.num_features = num_features
+        self.packed_width = (num_features + 7) // 8
         self.targets = torch.tensor(targets, dtype=torch.float32)
-        # Store as list of tensors (variable length sparse indices)
-        self.features = [torch.tensor(f, dtype=torch.long) for f in features_list]
+        # Bit-pack: 324K × 959 bytes = ~300MB instead of 10GB
+        print(f"  Bit-packing {len(features_list)} samples ({num_features} features)...")
+        t0 = time.time()
+        packed_np = np.zeros((len(features_list), self.packed_width), dtype=np.uint8)
+        for i, f in enumerate(features_list):
+            for fi in f:
+                if fi < num_features:
+                    packed_np[i, fi >> 3] |= (1 << (fi & 7))
+        self.packed = torch.from_numpy(packed_np)
+        print(f"  Done in {time.time()-t0:.1f}s ({self.packed.nbytes / 1e6:.0f} MB)")
+
+        # Pre-compute unpack table for fast batch unpacking
+        self._unpack_bits = torch.arange(8, dtype=torch.uint8)
 
     def __len__(self):
         return len(self.targets)
 
     def __getitem__(self, idx):
-        return self.features[idx], self.targets[idx]
+        # Unpack bits to float32 on the fly (only 7670 floats per sample)
+        packed = self.packed[idx]
+        bits = packed.unsqueeze(-1).bitwise_right_shift(self._unpack_bits).bitwise_and(1)
+        dense = bits.reshape(-1)[:self.num_features].float()
+        return dense, self.targets[idx]
 
 
 def collate_sparse(batch):
@@ -216,8 +232,7 @@ def train(args):
                 f[i] = num_features - 1
 
     dataset = NNUEDataset(features_list, targets, num_features)
-    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True,
-                        num_workers=0, collate_fn=lambda batch: collate_sparse_fixed(batch, num_features))
+    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     # Model
     model = NNUE(num_features, args.hidden1, args.hidden2).to(device)
