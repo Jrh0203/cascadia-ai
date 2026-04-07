@@ -987,10 +987,11 @@ function updateStatus(msg) {
 function updateTurnInfo() {
   if (!gameState) return;
   const el = document.getElementById('turn-info');
+  const turnsPerPlayer = Math.ceil(gameState.turns_remaining / gameState.num_players);
   if (gameState.num_players > 1) {
-    el.innerHTML = `Player <span class="highlight">${gameState.current_player + 1}</span> &mdash; <span class="highlight">${gameState.turns_remaining}</span> turns left`;
+    el.innerHTML = `Player <span class="highlight">${gameState.current_player + 1}</span> &mdash; <span class="highlight">${turnsPerPlayer}</span> turns left`;
   } else {
-    el.innerHTML = `<span class="highlight">${gameState.turns_remaining}</span> turns left`;
+    el.innerHTML = `<span class="highlight">${turnsPerPlayer}</span> turns left`;
   }
 }
 
