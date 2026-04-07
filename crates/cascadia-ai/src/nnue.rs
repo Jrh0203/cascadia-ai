@@ -82,8 +82,8 @@ pub const NUM_FEATURES_LEGACY: usize = 5197;
 pub const NUM_FEATURES: usize = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES
     + BAG_FEATURES + OPP_HAB_FEATURES + ALLOWED_WL_FEATURES + WL_COUNT_EXT_FEATURES
     + TERRAIN_PAIR_FEATURES;
-pub const HIDDEN1: usize = 512;
-pub const HIDDEN2: usize = 64;
+pub const HIDDEN1: usize = if cfg!(feature = "large-net") { 1024 } else { 512 };
+pub const HIDDEN2: usize = if cfg!(feature = "large-net") { 128 } else { 64 };
 
 // ─────────────────────────────────────────────────────────────────────
 // Feature extraction

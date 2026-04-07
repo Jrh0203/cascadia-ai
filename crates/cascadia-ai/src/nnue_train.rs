@@ -515,7 +515,23 @@ pub fn train_from_mce_samples_with_checkpoint(
         .ok().and_then(|s| s.parse().ok())
         .unwrap_or(1);
 
+    // Learning rate schedule: warmup for first 3 epochs, then cosine decay
+    let warmup_epochs = 3.min(epochs);
+    let lr_schedule = |epoch: usize| -> f32 {
+        if epoch < warmup_epochs {
+            // Linear warmup: 0.1*lr → lr
+            let t = (epoch + 1) as f32 / warmup_epochs as f32;
+            lr * (0.1 + 0.9 * t)
+        } else {
+            // Cosine decay: lr → 0.01*lr
+            let t = (epoch - warmup_epochs) as f32 / (epochs - warmup_epochs).max(1) as f32;
+            let cosine = 0.5 * (1.0 + (std::f32::consts::PI * t).cos());
+            lr * (0.01 + 0.99 * cosine)
+        }
+    };
+
     for epoch in 0..epochs {
+        let epoch_lr = lr_schedule(epoch);
         samples.shuffle(&mut rng);
 
         let (loss, count) = if num_threads > 1 {
@@ -530,7 +546,7 @@ pub fn train_from_mce_samples_with_checkpoint(
                 let samples_ref = std::sync::Arc::clone(&samples_arc);
                 let start = t * chunk_size;
                 let end = ((t + 1) * chunk_size).min(samples_ref.len());
-                let lr = lr;
+                let lr = epoch_lr;
                 let freeze_below = freeze_below;
                 let batch_size = batch_size;
 
@@ -575,7 +591,7 @@ pub fn train_from_mce_samples_with_checkpoint(
             let mut count = 0usize;
             for batch_start in (0..samples.len()).step_by(batch_size) {
                 let batch_end = (batch_start + batch_size).min(samples.len());
-                let batch_lr = lr / (batch_end - batch_start) as f32;
+                let batch_lr = epoch_lr / (batch_end - batch_start) as f32;
                 for sample in &samples[batch_start..batch_end] {
                     let l = if freeze_below > 0 {
                         net.train_sample_frozen(&sample.features, sample.target, batch_lr, freeze_below)
@@ -591,7 +607,7 @@ pub fn train_from_mce_samples_with_checkpoint(
 
         let rmse = (loss / count as f64).sqrt();
         let thread_str = if num_threads > 1 { format!(" [{}T]", num_threads) } else { String::new() };
-        eprint!("\r  Epoch {}/{}: RMSE={:.2}{}{}    ", epoch + 1, epochs, rmse,
+        eprint!("\r  Epoch {}/{}: RMSE={:.2} lr={:.6}{}{}    ", epoch + 1, epochs, rmse, epoch_lr,
             if freeze_below > 0 { format!(" [frozen<{}]", freeze_below) } else { String::new() },
             thread_str);
         stats.final_rmse = rmse;

@@ -3,6 +3,9 @@ name = "cascadia-ai"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+large-net = []
+
 [dependencies]
 cascadia-core = { path = "../cascadia-core" }
 arrayvec = { workspace = true }
