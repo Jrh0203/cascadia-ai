@@ -455,7 +455,7 @@ async fn suggest_move(
     let mut search_rng = StdRng::seed_from_u64(rng.gen());
     drop(rng);
 
-    // Evaluate free 3-of-a-kind replace: only recommend if it improves the best move
+    // Evaluate free 3-of-a-kind replace: always show when available, mark as recommended or not
     if game.can_replace_overflow().is_some() {
         if let Some(ref net) = net_opt {
             let baseline = cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
@@ -464,16 +464,14 @@ async fn suggest_move(
             test.replace_overflow();
             let after = cascadia_ai::nnue_train::pick_best_move_nnue(&test, net)
                 .map(|m| m.score).unwrap_or(0);
-            if after > baseline {
-                pre_action = Some(serde_json::json!({
-                    "type": "replace_overflow",
-                    "score_before": baseline,
-                    "score_after": after,
-                }));
-            }
+            pre_action = Some(serde_json::json!({
+                "type": "replace_overflow",
+                "score_before": baseline,
+                "score_after": after,
+                "recommended": after > baseline,
+            }));
         } else {
-            // No NNUE — recommend it anyway (can't evaluate)
-            pre_action = Some(serde_json::json!({ "type": "replace_overflow" }));
+            pre_action = Some(serde_json::json!({ "type": "replace_overflow", "recommended": true }));
         }
     }
 
@@ -545,7 +543,7 @@ async fn suggest_move(
             .map(|(m, avg)| mv_to_json(m, *avg))
             .collect();
         let mut result = serde_json::json!({
-            "action": if pre_action.is_some() {
+            "action": if pre_action.as_ref().map(|pa| pa["recommended"].as_bool().unwrap_or(true)).unwrap_or(false) {
                 match pre_action.as_ref().unwrap()["type"].as_str().unwrap_or("") {
                     "replace_overflow" => "replace_overflow",
                     "mulligan" => "mulligan",
