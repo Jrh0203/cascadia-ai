@@ -456,18 +456,47 @@ async fn suggest_move(
     drop(rng);
 
     // Evaluate free 3-of-a-kind replace: always show when available, mark as recommended or not
+    // Uses actual_score + NNUE(remaining_value) for a precise float estimate.
     if game.can_replace_overflow().is_some() {
         if let Some(ref net) = net_opt {
-            let baseline = cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
-                .map(|m| m.score).unwrap_or(0);
+            let eval_best = |g: &cascadia_core::game::GameState| -> f32 {
+                let player = g.current_player;
+                let mp: Vec<_> = g.market.available()
+                    .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+                let cards = g.scoring_cards;
+                let turns = g.turns_remaining;
+                let mut board = g.boards[player].clone();
+                let candidates = cascadia_ai::eval::best_move_with_potential(&mut board, &mp, &cards, turns);
+                // Pick best by actual + NNUE remaining
+                let bag_info = cascadia_ai::nnue::BagInfo::from_game(g);
+                let mut best = 0.0f32;
+                let mut cands = cascadia_ai::search::candidate_moves_pub(g);
+                if let Some(bm) = candidates { cands.push(bm); }
+                cands.truncate(15);
+                for mv in &cands {
+                    let mut eval_board = g.boards[player].clone();
+                    let coord = HexCoord::new(mv.tile_q, mv.tile_r);
+                    let tile = mp.iter().find(|&&(i,_,_)| i == mv.market_index).map(|&(_,t,_)| t);
+                    if let Some(tile) = tile {
+                        if eval_board.place_tile(coord, tile, mv.rotation).is_some() {
+                            let actual = cascadia_core::scoring::ScoreBreakdown::compute(
+                                &mut eval_board, &cards).total as f32;
+                            let remaining = net.evaluate_with_bag(&eval_board, &bag_info);
+                            let est = actual + remaining;
+                            if est > best { best = est; }
+                        }
+                    }
+                }
+                best
+            };
+            let baseline = eval_best(&game);
             let mut test = game.clone();
             test.replace_overflow();
-            let after = cascadia_ai::nnue_train::pick_best_move_nnue(&test, net)
-                .map(|m| m.score).unwrap_or(0);
+            let after = eval_best(&test);
             pre_action = Some(serde_json::json!({
                 "type": "replace_overflow",
-                "score_before": baseline,
-                "score_after": after,
+                "score_before": (baseline * 10.0).round() / 10.0,
+                "score_after": (after * 10.0).round() / 10.0,
                 "recommended": after > baseline,
             }));
         } else {

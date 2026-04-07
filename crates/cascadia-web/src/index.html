@@ -1437,12 +1437,13 @@ function renderCandidatesList() {
   );
   if (pa && pa.type === 'replace_overflow') {
     const diff = (pa.score_after !== undefined && pa.score_before !== undefined)
-      ? pa.score_after - pa.score_before : null;
+      ? Math.round((pa.score_after - pa.score_before) * 10) / 10 : null;
     const recommended = pa.recommended !== false;
+    const fmtDiff = diff !== null ? (diff > 0 ? `+${diff.toFixed(1)}` : diff < 0 ? diff.toFixed(1) : '±0') : '';
     const deltaStr = diff !== null
-      ? (diff > 0 ? `<span style="color:#4ade80">+${diff}</span>`
-        : diff < 0 ? `<span style="color:#e94560">${diff}</span>`
-        : `<span style="color:#888">±0</span>`)
+      ? (diff > 0 ? `<span style="color:#4ade80">${fmtDiff}</span>`
+        : diff < 0 ? `<span style="color:#e94560">${fmtDiff}</span>`
+        : `<span style="color:#888">${fmtDiff}</span>`)
       : '';
     const label = recommended ? 'DO FIRST' : 'SKIP';
     const labelColor = recommended ? '#e94560' : '#888';
