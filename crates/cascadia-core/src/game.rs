@@ -90,6 +90,8 @@ pub struct GameState {
     pub current_player: usize,
     pub turns_remaining: u8,
     pub num_players: usize,
+    /// Whether the free 3-of-a-kind replacement has been used this turn.
+    pub overflow_used_this_turn: bool,
 }
 
 impl GameState {
@@ -127,6 +129,7 @@ impl GameState {
             current_player: 0,
             turns_remaining,
             num_players,
+            overflow_used_this_turn: false,
         }
     }
 
@@ -165,6 +168,7 @@ impl GameState {
         // Advance to next player
         self.current_player = (self.current_player + 1) % self.num_players;
         self.turns_remaining -= 1;
+        self.overflow_used_this_turn = false;
 
         true
     }
@@ -210,6 +214,7 @@ impl GameState {
         self.market.refill(&mut self.tile_bag, &mut self.wildlife_bag);
         self.current_player = (self.current_player + 1) % self.num_players;
         self.turns_remaining -= 1;
+        self.overflow_used_this_turn = false;
 
         true
     }
@@ -227,14 +232,21 @@ impl GameState {
         true
     }
 
-    /// Check if the market has 3+ of the same wildlife (free replacement available).
+    /// Check if the market has 3+ of the same wildlife AND the free replace hasn't been used this turn.
     pub fn can_replace_overflow(&self) -> Option<crate::types::Wildlife> {
+        if self.overflow_used_this_turn { return None; }
         self.market.has_3_of_kind()
     }
 
     /// Take the free 3-of-a-kind replacement (once per turn, before the move).
     pub fn replace_overflow(&mut self) -> bool {
-        self.market.replace_3_of_kind(&mut self.wildlife_bag)
+        if self.overflow_used_this_turn { return false; }
+        if self.market.replace_3_of_kind(&mut self.wildlife_bag) {
+            self.overflow_used_this_turn = true;
+            true
+        } else {
+            false
+        }
     }
 
     pub fn is_game_over(&self) -> bool {
