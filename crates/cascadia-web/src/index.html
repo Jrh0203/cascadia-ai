@@ -730,8 +730,8 @@ function render() {
 
         // Ghost wildlife emoji preview with glowing circle (drawn LAST so it's on top)
         if (isSuggestedWildlife) {
-          const suggestedPair = gameState.market.find(p => p.index === currentSuggestion.mv.market_index);
-          if (suggestedPair && suggestedPair.wildlife) {
+          const sugWl = getSuggestedWildlife(currentSuggestion.mv);
+          if (sugWl) {
             const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
             const r = HEX_SIZE * 0.38;
             ctx.save();
@@ -750,7 +750,7 @@ function render() {
             ctx.font = `${HEX_SIZE * 0.55}px serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(WILDLIFE_EMOJI[suggestedPair.wildlife], x, y + 2);
+            ctx.fillText(WILDLIFE_EMOJI[sugWl], x, y + 2);
             ctx.restore();
           }
         }
@@ -820,10 +820,11 @@ function render() {
               drawHex(x, y, HEX_SIZE - 1, null, '#ffcc00', 4);
               ctx.restore();
               // If the suggested wildlife placement is on this same tile, show ghost emoji
+              const sugWlOnTile = getSuggestedWildlife(currentSuggestion.mv);
               if (currentSuggestion.mv.wildlife_q !== undefined
                   && currentSuggestion.mv.wildlife_q === cell.q
                   && currentSuggestion.mv.wildlife_r === cell.r
-                  && suggestedPair.wildlife) {
+                  && sugWlOnTile) {
                 const r = HEX_SIZE * 0.38;
                 ctx.save();
                 ctx.shadowColor = '#ffcc00';
@@ -841,7 +842,7 @@ function render() {
                 ctx.font = `${HEX_SIZE * 0.55}px serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(WILDLIFE_EMOJI[suggestedPair.wildlife], x, y + 2);
+                ctx.fillText(WILDLIFE_EMOJI[sugWlOnTile], x, y + 2);
                 ctx.restore();
               }
             }
@@ -1527,8 +1528,22 @@ function applySuggestionHighlights() {
   }
   // Move highlights (always present — even with pre-action)
   if (s.mv) {
-    const marketEl = document.querySelector(`.market-pair[data-index="${s.mv.market_index}"]`);
-    if (marketEl) marketEl.classList.add('suggest-glow');
+    const isIndep = s.mv.wildlife_market_index !== undefined
+      && s.mv.wildlife_market_index !== null
+      && s.mv.wildlife_market_index !== s.mv.market_index;
+
+    if (isIndep) {
+      // Pinecone: glow the tile portion of one pair and wildlife portion of another
+      const tileEl = document.querySelector(`.market-pair[data-index="${s.mv.market_index}"] .market-tile`);
+      if (tileEl) tileEl.classList.add('suggest-glow');
+      const wlEl = document.querySelector(`.market-pair[data-index="${s.mv.wildlife_market_index}"] .market-wildlife`);
+      if (wlEl) wlEl.classList.add('suggest-glow');
+    } else {
+      // Normal: glow the whole market pair
+      const marketEl = document.querySelector(`.market-pair[data-index="${s.mv.market_index}"]`);
+      if (marketEl) marketEl.classList.add('suggest-glow');
+    }
+
     if (phase === 'place_tile' && selectedMarket === s.mv.market_index) {
       currentRotation = s.mv.rotation || 0;
     }
@@ -1623,6 +1638,15 @@ function renderEventLog() {
     const num = events.length - i;
     return `<div class="event-item">${num}. ${formatEvent(e)}</div>`;
   }).join('');
+}
+
+// Get the wildlife name for a suggestion move, handling pinecone (independent draft)
+function getSuggestedWildlife(mv) {
+  if (!mv) return null;
+  const wmi = (mv.wildlife_market_index !== undefined && mv.wildlife_market_index !== null)
+    ? mv.wildlife_market_index : mv.market_index;
+  const pair = gameState.market.find(p => p.index === wmi);
+  return pair ? pair.wildlife : null;
 }
 
 function terrainIcon(t1, t2) {
