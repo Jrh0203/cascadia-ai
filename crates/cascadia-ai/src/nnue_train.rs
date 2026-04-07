@@ -1059,7 +1059,7 @@ pub fn pick_best_move_nnue(
             candidates.push(*bm);
         }
     }
-    candidates.truncate(30);
+    candidates.truncate(15);
 
     if candidates.is_empty() {
         return base_move;

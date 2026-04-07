@@ -234,8 +234,8 @@ fn run_mce_candidates(
     sources = sorted_sources;
 
     // Keep more candidates now that we have diverse sources
-    candidates.truncate(30);
-    sources.truncate(30);
+    candidates.truncate(15);
+    sources.truncate(15);
 
     if candidates.is_empty() {
         return greedy_best.into_iter().map(|m| (m, m.score as f64)).collect();
