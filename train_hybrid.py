@@ -149,8 +149,10 @@ def main():
             epsilon=args.epsilon,
         )
 
-        # 2. Merge self-play + MCE expert data
+        # 2. Merge self-play + MCE expert data (fresh each iteration, no accumulation)
         merged_path = f"training_merged_iter{iteration}.bin"
+        if os.path.exists(merged_path):
+            os.remove(merged_path)
         files_to_merge = [self_play_path]
         if os.path.exists(args.mce_samples):
             files_to_merge.append(args.mce_samples)
