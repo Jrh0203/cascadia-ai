@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import os
 import struct
 import time
 import numpy as np
