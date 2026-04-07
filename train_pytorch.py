@@ -193,6 +193,22 @@ class NNUEDatasetMCEP(Dataset):
         # Store sparse features as numpy arrays for vectorized augmentation
         self.features_np = [np.array(f, dtype=np.int32) for f in features_list]
 
+        # Pre-compute bit-packed numpy array for fast batch-level unpacking
+        self.packed_np = None
+        self._unpack_bits = torch.arange(8, dtype=torch.uint8)
+        self.packed_width = (num_features + 7) // 8
+        if not augment:
+            print(f"  Bit-packing {len(features_list)} samples for fast loading...")
+            t0 = time.time()
+            self.packed_np = np.zeros((len(features_list), self.packed_width), dtype=np.uint8)
+            for i, f in enumerate(self.features_np):
+                for fi in f:
+                    if fi < num_features:
+                        self.packed_np[i, fi >> 3] |= (1 << (fi & 7))
+            # Pre-compute targets as numpy too
+            self.targets_np = np.array(targets, dtype=np.float32)
+            print(f"  Done in {time.time()-t0:.1f}s ({self.packed_np.nbytes / 1e9:.1f} GB)")
+
         # Pre-compute feature index remapping tables for all transforms
         if augment:
             print(f"  Building {len(ALL_TRANSFORMS)} augmentation remap tables...")
@@ -214,19 +230,21 @@ class NNUEDatasetMCEP(Dataset):
         return len(self.targets)
 
     def __getitem__(self, idx):
+        if not self.augment and self.packed_np is not None:
+            # Return raw index — batch unpacking happens in collate_packed
+            return idx, 0  # dummy second value
+
         dense = torch.zeros(self.num_features, dtype=torch.float32)
         feats = self.features_np[idx]
-        feats = feats[feats < self.num_features]  # clamp
+        feats = feats[feats < self.num_features]
 
         if self.augment:
             t_idx = torch.randint(len(self.remap_tables), (1,)).item()
             if t_idx == 0:
                 dense[feats] = 1.0
             else:
-                # Vectorized remap: one numpy fancy-index operation
                 new_feats = self.remap_tables[t_idx][feats]
                 if np.any(new_feats < 0):
-                    # Invalid transform for this sample — fallback to identity
                     dense[feats] = 1.0
                 else:
                     dense[new_feats] = 1.0
@@ -234,6 +252,17 @@ class NNUEDatasetMCEP(Dataset):
             dense[feats] = 1.0
 
         return dense, self.targets[idx]
+
+    def collate_packed(self, batch):
+        """Batch-level bit unpacking — one tensor operation for the whole batch."""
+        indices = torch.tensor([b[0] for b in batch], dtype=torch.long)
+        # Grab packed rows as one numpy slice → torch tensor
+        packed_batch = torch.from_numpy(self.packed_np[indices.numpy()])
+        targets = torch.from_numpy(self.targets_np[indices.numpy()])
+        # Unpack all bits at once: [batch, packed_width] → [batch, packed_width, 8] → [batch, packed_width*8]
+        bits = packed_batch.unsqueeze(-1).bitwise_right_shift(self._unpack_bits).bitwise_and(1)
+        dense = bits.reshape(len(batch), -1)[:, :self.num_features].float()
+        return dense, targets
 
 
 def _remap_single_feature(fi, cell_table, rot, num_features):
@@ -464,7 +493,8 @@ def train(args):
                     f[i] = num_features - 1
         dataset = NNUEDatasetMCEP(features_list, targets, num_features, augment=not args.no_augment)
 
-    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    collate_fn = dataset.collate_packed if (hasattr(dataset, 'packed_np') and dataset.packed_np is not None) else None
+    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
 
     # Model
     model = NNUE(num_features, args.hidden1, args.hidden2).to(device)
