@@ -365,8 +365,13 @@ async fn make_move(
                     format!("P{} used free replacement (3× {:?})", p + 1, overflow_wl)
                 );
             }
-            // Use the full best-move pipeline minus MCE rollouts for opponents.
-            match cascadia_ai::mce::best_move_no_rollouts(&game) {
+            // Use NNUE-guided move selection for opponents (if weights loaded)
+            let opp_mv = if let Some(ref net) = state.nnue {
+                cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
+            } else {
+                cascadia_ai::mce::best_move_no_rollouts(&game)
+            };
+            match opp_mv {
                 Some(mv) => {
                     let market_idx = mv.market_index;
                     // Capture market info BEFORE executing
@@ -716,7 +721,8 @@ async fn index() -> Html<&'static str> {
 #[tokio::main]
 async fn main() {
     let mut rng = StdRng::from_entropy();
-    let game = GameState::new(1, ScoringCards::all_a(), &mut rng);
+    // Default to Solo 4p sim
+    let game = GameState::new(4, ScoringCards::all_a(), &mut rng);
 
     // Try to load the best NNUE weights for MCE-powered suggestions
     let nnue = {
@@ -737,7 +743,7 @@ async fn main() {
         game: Mutex::new(game),
         rng: Mutex::new(rng),
         nnue,
-        solo_sim: Mutex::new(false),
+        solo_sim: Mutex::new(true), // default to solo 4p sim
         history: Mutex::new(Vec::new()),
         events: Mutex::new(Vec::new()),
     });
