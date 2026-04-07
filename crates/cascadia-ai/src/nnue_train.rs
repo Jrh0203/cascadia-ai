@@ -481,7 +481,7 @@ pub fn train_from_mce_samples(
     epochs: usize,
     lr: f32,
 ) -> std::io::Result<TrainStats> {
-    train_from_mce_samples_with_checkpoint(net, samples_path, epochs, lr, None)
+    train_from_mce_samples_with_checkpoint(net, samples_path, epochs, lr, None, 0)
 }
 
 pub fn train_from_mce_samples_with_checkpoint(
@@ -490,6 +490,7 @@ pub fn train_from_mce_samples_with_checkpoint(
     epochs: usize,
     lr: f32,
     checkpoint_path: Option<&std::path::Path>,
+    freeze_below: usize, // 0 = train all, >0 = only train features >= this index
 ) -> std::io::Result<TrainStats> {
     let mut stats = TrainStats::default();
     eprint!("  Loading MCE samples from {:?}...", samples_path);
@@ -518,13 +519,18 @@ pub fn train_from_mce_samples_with_checkpoint(
             let batch_end = (batch_start + batch_size).min(samples.len());
             let batch_lr = lr / (batch_end - batch_start) as f32;
             for sample in &samples[batch_start..batch_end] {
-                let l = net.train_sample(&sample.features, sample.target, batch_lr);
+                let l = if freeze_below > 0 {
+                    net.train_sample_frozen(&sample.features, sample.target, batch_lr, freeze_below)
+                } else {
+                    net.train_sample(&sample.features, sample.target, batch_lr)
+                };
                 loss += l as f64;
                 count += 1;
             }
         }
         let rmse = (loss / count as f64).sqrt();
-        eprint!("\r  Epoch {}/{}: RMSE={:.2}    ", epoch + 1, epochs, rmse);
+        eprint!("\r  Epoch {}/{}: RMSE={:.2}{}    ", epoch + 1, epochs, rmse,
+            if freeze_below > 0 { format!(" [frozen<{}]", freeze_below) } else { String::new() });
         stats.final_rmse = rmse;
 
         // Save checkpoint after every epoch
@@ -1053,7 +1059,7 @@ pub fn pick_best_move_nnue(
             candidates.push(*bm);
         }
     }
-    candidates.truncate(15);
+    candidates.truncate(30);
 
     if candidates.is_empty() {
         return base_move;

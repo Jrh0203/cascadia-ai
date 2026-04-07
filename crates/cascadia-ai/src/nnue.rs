@@ -1031,6 +1031,70 @@ impl NNUENetwork {
         loss
     }
 
+    /// Train on a single sample, but only update weights for features >= freeze_below.
+    /// Layers 2, 3, and biases are also frozen. This lets new features learn
+    /// while preserving existing representations.
+    pub fn train_sample_frozen(&mut self, features: &[u16], target: f32, lr: f32, freeze_below: usize) -> f32 {
+        // Forward pass (same as train_sample)
+        let mut h1 = [0.0f32; HIDDEN1];
+        h1.copy_from_slice(&self.b1);
+        for &fi in features {
+            let base = fi as usize * HIDDEN1;
+            let col = &self.w1[base..base + HIDDEN1];
+            for j in 0..HIDDEN1 { h1[j] += col[j]; }
+        }
+        let mut h1_pre = [0.0f32; HIDDEN1];
+        h1_pre.copy_from_slice(&h1);
+        for v in h1.iter_mut() { *v = v.max(0.0); }
+
+        let mut h2 = [0.0f32; HIDDEN2];
+        h2.copy_from_slice(&self.b2);
+        for i in 0..HIDDEN1 {
+            if h1[i] > 0.0 {
+                let base = i * HIDDEN2;
+                let row = &self.w2[base..base + HIDDEN2];
+                for j in 0..HIDDEN2 { h2[j] += h1[i] * row[j]; }
+            }
+        }
+        let h2_pre = h2;
+        for v in h2.iter_mut() { *v = v.max(0.0); }
+
+        let mut out = self.b3;
+        for j in 0..HIDDEN2 { out += h2[j] * self.w3[j]; }
+
+        let error = out - target;
+        let loss = error * error;
+        let d_out = 2.0 * error * lr;
+
+        // Layers 2, 3, biases: FROZEN (no updates)
+
+        // Backprop through frozen layers to get d_h1
+        let mut d_h2 = [0.0f32; HIDDEN2];
+        for j in 0..HIDDEN2 {
+            if h2_pre[j] > 0.0 { d_h2[j] = d_out * self.w3[j]; }
+        }
+        let mut d_h1 = [0.0f32; HIDDEN1];
+        for i in 0..HIDDEN1 {
+            if h1_pre[i] > 0.0 {
+                let base = i * HIDDEN2;
+                for j in 0..HIDDEN2 { d_h1[i] += self.w2[base + j] * d_h2[j]; }
+            }
+        }
+
+        // Layer 1: only update NEW features (>= freeze_below)
+        for &fi in features {
+            if (fi as usize) >= freeze_below {
+                let base = fi as usize * HIDDEN1;
+                for j in 0..HIDDEN1 {
+                    self.w1[base + j] -= d_h1[j];
+                }
+            }
+        }
+        // Biases frozen too
+
+        loss
+    }
+
     /// Save weights to a binary file.
     pub fn save(&self, path: &std::path::Path) -> std::io::Result<()> {
         use std::io::Write;

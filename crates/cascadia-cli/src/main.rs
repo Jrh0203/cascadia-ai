@@ -576,12 +576,19 @@ fn main() {
             cascadia_ai::nnue::NNUENetwork::new()
         };
 
+        let freeze_legacy = args.iter().any(|a| a == "--freeze-legacy");
+        let freeze_below = if freeze_legacy { cascadia_ai::nnue::NUM_FEATURES_LEGACY } else { 0 };
+
         println!("Training from MCE samples: samples={}, epochs={}, lr={}", samples_path, epochs, lr);
+        if freeze_legacy {
+            println!("  FROZEN: only training features >= {} (new features only)", freeze_below);
+        }
         println!("  Checkpoint: saving after every epoch to {}", weights_out);
         let start = Instant::now();
         let stats = cascadia_ai::nnue_train::train_from_mce_samples_with_checkpoint(
             &mut net, std::path::Path::new(samples_path), epochs, lr,
             Some(std::path::Path::new(weights_out)),
+            freeze_below,
         ).expect("Training failed");
         println!("Training complete in {:.1?}", start.elapsed());
         println!("  Samples:    {}", stats.num_samples);
