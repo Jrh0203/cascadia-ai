@@ -433,22 +433,45 @@ async fn mulligan(
     Ok(Json(build_game_view_with_events(&mut game, events)))
 }
 
-/// Evaluate pre-move actions (overflow replace, mulligan) on a game clone.
+/// Evaluate pre-move actions (overflow replace, mulligan) using NNUE (fast).
+/// MCE is too expensive to run 3-5 times per suggestion. NNUE gives a quick
+/// estimate sufficient for pre-move decisions.
 /// Returns pre_action metadata and whether each was recommended.
-/// Does NOT mutate the game — works on clones.
 fn evaluate_pre_moves(
     game: &cascadia_core::game::GameState,
     net: &cascadia_ai::nnue::NNUENetwork,
     search_rng: &mut StdRng,
 ) -> Option<serde_json::Value> {
+    // Quick NNUE-based evaluation: best estimated final score for a game state
+    let quick_eval = |g: &cascadia_core::game::GameState| -> f32 {
+        cascadia_ai::nnue_train::pick_best_move_nnue(g, net)
+            .map(|mv| {
+                let player = g.current_player;
+                let mut board = g.boards[player].clone();
+                let mp: Vec<_> = g.market.available()
+                    .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+                let tile = mp.iter().find(|&&(i,_,_)| i == mv.market_index).map(|&(_,t,_)| t);
+                if let Some(tile) = tile {
+                    let coord = cascadia_core::hex::HexCoord::new(mv.tile_q, mv.tile_r);
+                    if board.place_tile(coord, tile, mv.rotation).is_some() {
+                        let actual = cascadia_core::scoring::ScoreBreakdown::compute(
+                            &mut board, &g.scoring_cards).total as f32;
+                        let bag_info = cascadia_ai::nnue::BagInfo::from_game(g);
+                        let remaining = net.evaluate_with_bag(&board, &bag_info);
+                        return actual + remaining;
+                    }
+                }
+                mv.score as f32
+            })
+            .unwrap_or(0.0)
+    };
+
     // Evaluate free 3-of-a-kind replace
     if game.can_replace_overflow().is_some() {
-        let baseline = cascadia_ai::mce::best_move_mce(game, net, 750, search_rng)
-            .map(|m| m.score as f32).unwrap_or(0.0);
+        let baseline = quick_eval(game);
         let mut test = game.clone();
         test.replace_overflow();
-        let after = cascadia_ai::mce::best_move_mce(&test, net, 750, search_rng)
-            .map(|m| m.score as f32).unwrap_or(0.0);
+        let after = quick_eval(&test);
         return Some(serde_json::json!({
             "type": "replace_overflow",
             "score_before": (baseline * 10.0).round() / 10.0,
@@ -457,19 +480,17 @@ fn evaluate_pre_moves(
         }));
     }
 
-    // Evaluate mulligan
+    // Evaluate mulligan (sample 3 possible post-mulligan markets)
     let player = game.current_player;
     if game.boards[player].nature_tokens > 0 {
-        let baseline = cascadia_ai::mce::best_move_mce(game, net, 750, search_rng)
-            .map(|m| m.score as f32).unwrap_or(0.0);
+        let baseline = quick_eval(game);
         let mut total = 0.0f32;
         let mut samples = 0;
         for _ in 0..3 {
             let mut t = game.clone();
             t.shuffle_bags(search_rng);
             if t.mulligan_wildlife() {
-                total += cascadia_ai::mce::best_move_mce(&t, net, 750, search_rng)
-                    .map(|m| m.score as f32).unwrap_or(0.0);
+                total += quick_eval(&t);
                 samples += 1;
             }
         }
