@@ -81,7 +81,7 @@ fn greedy_eval(game: &GameState, cards: &ScoringCards) -> f32 {
 }
 
 /// Pre-move optimization: decide whether to replace 3-of-a-kind or mulligan.
-/// Uses GREEDY evaluation for speed (not the full strategy).
+/// Uses greedy evaluation (fast, proven at 90.3 baseline).
 /// Set CASCADIA_SLOW_PREMOVE env var to use full strategy (MCE) for pre-move eval.
 fn pre_move_optimize(
     game: &mut GameState,
@@ -125,7 +125,6 @@ fn pre_move_optimize(
             }
             if samples > 0 {
                 let expected_new = total_new_eval / samples as f32;
-                // Token cost: losing 1 point of end-game value, so need > 1.5 gain
                 if expected_new > baseline + 1.5 {
                     if game.mulligan_wildlife() {
                         mulligans_used += 1;

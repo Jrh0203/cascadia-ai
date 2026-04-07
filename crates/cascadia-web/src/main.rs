@@ -628,32 +628,42 @@ async fn best_move_endpoint(
             if hist.len() > 50 { hist.remove(0); }
             drop(hist);
 
+            // Pre-move using greedy eval (fast, same as CLI benchmarks)
             const MULLIGAN_SAMPLES: usize = 3;
             const MAX_MULLIGANS: usize = 5;
             let player = game.current_player;
+            let cards = game.scoring_cards;
+
+            let greedy_eval = |g: &cascadia_core::game::GameState| -> f32 {
+                let mp: Vec<_> = g.market.available()
+                    .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+                let turns = g.turns_remaining;
+                let mut board = g.boards[g.current_player].clone();
+                cascadia_ai::eval::best_move_with_potential(&mut board, &mp, &cards, turns)
+                    .map(|m| m.score as f32)
+                    .unwrap_or(0.0)
+            };
 
             let mut mulligans_used = 0;
             loop {
-                let baseline = cascadia_ai::mce::best_move_mce(&game, net, 750, &mut search_rng)
-                    .map(|m| m.score as f32).unwrap_or(0.0);
+                let baseline = greedy_eval(&game);
 
-                // Take the free 3-of-a-kind replacement only if MCE says it improves
+                // Free 3-of-a-kind replacement — only if it improves
                 if let Some(overflow_wl) = game.can_replace_overflow() {
-                    let baseline_score = cascadia_ai::mce::best_move_mce(&game, net, 750, &mut search_rng)
-                        .map(|m| m.score as f32).unwrap_or(0.0);
                     let mut test = game.clone();
                     test.replace_overflow();
-                    let after_score = cascadia_ai::mce::best_move_mce(&test, net, 750, &mut search_rng)
-                        .map(|m| m.score as f32).unwrap_or(0.0);
-                    if after_score > baseline_score {
+                    let after = greedy_eval(&test);
+                    if after > baseline + 0.5 {
                         game.replace_overflow();
                         applied_replace_overflow = true;
                         state.events.lock().unwrap().push(
-                            format!("P1 🤖 used free 3-of-a-kind replacement (3× {:?}, +{:.1})", overflow_wl, after_score - baseline_score)
+                            format!("P1 🤖 used free 3-of-a-kind replacement (3× {:?}, +{:.1})", overflow_wl, after - baseline)
                         );
                         continue;
                     }
                 }
+
+                // Paid mulligan
                 if mulligans_used < MAX_MULLIGANS && game.boards[player].nature_tokens > 0 {
                     let mut total = 0.0f32;
                     let mut samples = 0;
@@ -661,8 +671,7 @@ async fn best_move_endpoint(
                         let mut t = game.clone();
                         t.shuffle_bags(&mut search_rng);
                         if t.mulligan_wildlife() {
-                            total += cascadia_ai::mce::best_move_mce(&t, net, 750, &mut search_rng)
-                                .map(|m| m.score as f32).unwrap_or(0.0);
+                            total += greedy_eval(&t);
                             samples += 1;
                         }
                     }
