@@ -939,7 +939,12 @@ function renderScores() {
   let html = '';
   for (const score of gameState.scores) {
     if (gameState.num_players > 1) {
-      html += `<div style="font-size:12px; color:#e94560; margin-bottom:4px;">Player ${score.player + 1}${score.player === gameState.current_player ? ' (current)' : ''}</div>`;
+      const isCurrent = score.player === gameState.current_player;
+      html += `<div style="
+        font-size:13px; font-weight:bold; color:${isCurrent ? '#e94560' : '#888'};
+        padding:6px 0 4px; margin-top:${score.player === 0 ? '0' : '8px'};
+        border-top:${score.player === 0 ? 'none' : '2px solid #0f3460'};
+      ">Player ${score.player + 1}${isCurrent ? ' (current)' : ''}</div>`;
     }
 
     let habitatBase = 0;
@@ -983,7 +988,7 @@ function renderScores() {
       <span>${score.total}</span>
     </div>`;
 
-    if (gameState.num_players > 1) html += '<div style="margin-bottom:12px"></div>';
+    // divider handled by the player header border-top
   }
   el.innerHTML = html;
 }
