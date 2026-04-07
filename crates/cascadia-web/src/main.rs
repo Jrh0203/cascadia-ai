@@ -450,14 +450,32 @@ async fn suggest_move(
     // Detect pre-move actions (reported alongside move candidates)
     let mut pre_action: Option<serde_json::Value> = None;
 
-    if game.can_replace_overflow().is_some() {
-        pre_action = Some(serde_json::json!({ "type": "replace_overflow" }));
-    }
-
     let net_opt = state.nnue.clone();
     let mut rng = state.rng.lock().unwrap();
     let mut search_rng = StdRng::seed_from_u64(rng.gen());
     drop(rng);
+
+    // Evaluate free 3-of-a-kind replace: only recommend if it improves the best move
+    if game.can_replace_overflow().is_some() {
+        if let Some(ref net) = net_opt {
+            let baseline = cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
+                .map(|m| m.score).unwrap_or(0);
+            let mut test = game.clone();
+            test.replace_overflow();
+            let after = cascadia_ai::nnue_train::pick_best_move_nnue(&test, net)
+                .map(|m| m.score).unwrap_or(0);
+            if after > baseline {
+                pre_action = Some(serde_json::json!({
+                    "type": "replace_overflow",
+                    "score_before": baseline,
+                    "score_after": after,
+                }));
+            }
+        } else {
+            // No NNUE — recommend it anyway (can't evaluate)
+            pre_action = Some(serde_json::json!({ "type": "replace_overflow" }));
+        }
+    }
 
     // Check if mulligan is worth it (only with NNUE)
     if pre_action.is_none() {
@@ -587,14 +605,22 @@ async fn best_move_endpoint(
                 let baseline = cascadia_ai::mce::best_move_mce(&game, net, 750, &mut search_rng)
                     .map(|m| m.score as f32).unwrap_or(0.0);
 
-                // Always take the free 3-of-a-kind replacement (no downside — it's free)
+                // Take the free 3-of-a-kind replacement only if it improves the best move
                 if let Some(overflow_wl) = game.can_replace_overflow() {
-                    game.replace_overflow();
-                    applied_replace_overflow = true;
-                    state.events.lock().unwrap().push(
-                        format!("P1 🤖 used free 3-of-a-kind replacement (3× {:?})", overflow_wl)
-                    );
-                    continue;
+                    let baseline = cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
+                        .map(|m| m.score).unwrap_or(0);
+                    let mut test = game.clone();
+                    test.replace_overflow();
+                    let after = cascadia_ai::nnue_train::pick_best_move_nnue(&test, net)
+                        .map(|m| m.score).unwrap_or(0);
+                    if after > baseline {
+                        game.replace_overflow();
+                        applied_replace_overflow = true;
+                        state.events.lock().unwrap().push(
+                            format!("P1 🤖 used free 3-of-a-kind replacement (3× {:?})", overflow_wl)
+                        );
+                        continue;
+                    }
                 }
                 if mulligans_used < MAX_MULLIGANS && game.boards[player].nature_tokens > 0 {
                     let mut total = 0.0f32;
