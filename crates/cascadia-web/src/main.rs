@@ -480,13 +480,13 @@ fn evaluate_pre_moves(
         }));
     }
 
-    // Evaluate mulligan (sample 3 possible post-mulligan markets)
+    // Evaluate mulligan (sample 100 possible post-mulligan markets for stable estimate)
     let player = game.current_player;
     if game.boards[player].nature_tokens > 0 {
         let baseline = quick_eval(game);
         let mut total = 0.0f32;
         let mut samples = 0;
-        for _ in 0..3 {
+        for _ in 0..100 {
             let mut t = game.clone();
             t.shuffle_bags(search_rng);
             if t.mulligan_wildlife() {
