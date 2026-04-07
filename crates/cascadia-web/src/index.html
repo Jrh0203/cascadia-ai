@@ -1454,7 +1454,7 @@ function renderCandidatesList() {
   list.innerHTML = preHtml + cands.map((c, i) => {
     const pair = gameState.market.find(p => p.index === c.market_index);
     const wl = pair ? WILDLIFE_EMOJI[pair.wildlife] || '' : '';
-    const terrain = pair ? (pair.terrain2 ? `${pair.terrain1.slice(0,3)}/${pair.terrain2.slice(0,3)}` : pair.terrain1.slice(0,4)) : '?';
+    const terrainBox = pair ? terrainIcon(pair.terrain1, pair.terrain2) : '';
     const indep = c.wildlife_market_index !== undefined && c.wildlife_market_index !== null
       && c.wildlife_market_index !== c.market_index;
     const indepTag = indep ? '🌲' : '';
@@ -1463,7 +1463,7 @@ function renderCandidatesList() {
     const sel = i === selectedCandidateIdx ? 'selected' : '';
     return `<div class="candidate-item ${sel}" onclick="selectCandidate(${i})">
       <span class="candidate-rank">#${i + 1}</span>
-      <span class="candidate-desc">${indepTag}${wl} ${terrain} r${c.rotation || 0}${delta}</span>
+      <span class="candidate-desc">${indepTag}${terrainBox} ${wl}${delta}</span>
       <span class="candidate-score">${avg}</span>
     </div>`;
   }).join('');
@@ -1612,26 +1612,28 @@ function renderEventLog() {
   }).join('');
 }
 
+function terrainIcon(t1, t2) {
+  const c1 = TERRAIN_COLORS[t1] || TERRAIN_COLORS[t1.toLowerCase()] || '#888';
+  if (t2) {
+    const c2 = TERRAIN_COLORS[t2] || TERRAIN_COLORS[t2.toLowerCase()] || '#888';
+    return `<span style="
+      display:inline-block; width:14px; height:14px; vertical-align:middle;
+      border-radius:2px;
+      background:linear-gradient(135deg, ${c1} 50%, ${c2} 50%);
+      margin:0 2px;
+    "></span>`;
+  }
+  return `<span style="
+    display:inline-block; width:14px; height:14px; vertical-align:middle;
+    border-radius:2px;
+    background:${c1};
+    margin:0 2px;
+  "></span>`;
+}
+
 function formatEvent(s) {
-  // Replace [T:terrain1/terrain2] or [T:terrain1] with colored box
   return escapeHtml(s).replace(/\[T:([a-zA-Z]+)(?:\/([a-zA-Z]+))?\]/g, (_, t1, t2) => {
-    const c1 = TERRAIN_COLORS[t1.toLowerCase()] || '#888';
-    if (t2) {
-      const c2 = TERRAIN_COLORS[t2.toLowerCase()] || '#888';
-      return `<span style="
-        display:inline-block; width:14px; height:14px; vertical-align:middle;
-        border:1px solid rgba(255,255,255,0.3); border-radius:2px;
-        background: linear-gradient(135deg, ${c1} 50%, ${c2} 50%);
-        margin:0 2px;
-      "></span>`;
-    } else {
-      return `<span style="
-        display:inline-block; width:14px; height:14px; vertical-align:middle;
-        border:1px solid rgba(255,255,255,0.3); border-radius:2px;
-        background:${c1};
-        margin:0 2px;
-      "></span>`;
-    }
+    return terrainIcon(t1, t2);
   });
 }
 
