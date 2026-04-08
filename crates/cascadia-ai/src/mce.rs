@@ -40,6 +40,106 @@ pub struct MulliganAnalysis {
     pub should_mulligan_pinecone: bool,
 }
 
+/// Fast variant: compute score matrix using NNUE (not MCE) for instant evaluation.
+/// ~20ms for all 20 pairs vs minutes for MCE variant.
+pub fn analyze_mulligan_fast(
+    game: &GameState,
+    net: &NNUENetwork,
+) -> MulliganAnalysis {
+    let player = game.current_player;
+    let cards = game.scoring_cards;
+    let turns = game.turns_remaining;
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+    let mut score_matrix = [[0.0f64; 5]; 4];
+
+    // For each (slot, animal), find best placement and score with NNUE
+    for slot in 0..4 {
+        let pair = match &game.market.pairs[slot] {
+            Some(p) => p,
+            None => continue,
+        };
+        let tile = pair.tile;
+
+        for animal_idx in 0..5 {
+            let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+            let fake_market = vec![(slot, tile, animal)];
+            let mut board = game.boards[player].clone();
+            let best = best_move_with_potential(&mut board, &fake_market, &cards, turns);
+
+            if let Some(mv) = best {
+                // Evaluate the afterstate with NNUE
+                let mut eval_board = game.boards[player].clone();
+                let coord = cascadia_core::hex::HexCoord::new(mv.tile_q, mv.tile_r);
+                if eval_board.place_tile(coord, tile, mv.rotation).is_some() {
+                    if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
+                        let wcoord = cascadia_core::hex::HexCoord::new(wq, wr);
+                        if let Some(widx) = wcoord.to_index() {
+                            eval_board.place_wildlife(widx, animal);
+                        }
+                    }
+                    let actual = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut eval_board, &cards).total as f64;
+                    let remaining = net.evaluate_with_bag(&eval_board, &bag_info) as f64;
+                    score_matrix[slot][animal_idx] = actual + remaining;
+                }
+            }
+        }
+    }
+
+    // Current market best
+    let mut current_best = 0.0f64;
+    for slot in 0..4 {
+        if let Some(ref pair) = game.market.pairs[slot] {
+            let score = score_matrix[slot][pair.wildlife as usize];
+            if score > current_best { current_best = score; }
+        }
+    }
+
+    // Bag composition + enumeration (same as full version)
+    let bag_counts: [u32; 5] = [
+        bag_info.remaining[0] as u32, bag_info.remaining[1] as u32,
+        bag_info.remaining[2] as u32, bag_info.remaining[3] as u32,
+        bag_info.remaining[4] as u32,
+    ];
+    let bag_total: u32 = bag_counts.iter().sum();
+    let active_slots: Vec<usize> = (0..4)
+        .filter(|&i| game.market.pairs[i].is_some())
+        .collect();
+    let n_active = active_slots.len();
+
+    if bag_total < n_active as u32 || n_active == 0 {
+        return MulliganAnalysis {
+            score_matrix, current_best,
+            mulligan_ev: 0.0, mulligan_pinecone_ev: 0.0,
+            should_mulligan: false, should_mulligan_pinecone: false,
+        };
+    }
+
+    let mut mulligan_ev = 0.0f64;
+    let mut mulligan_pinecone_ev = 0.0f64;
+    let mut total_prob = 0.0f64;
+    enumerate_draws(
+        &active_slots, &bag_counts, bag_total, &score_matrix,
+        &mut mulligan_ev, &mut mulligan_pinecone_ev, &mut total_prob,
+        &mut [0u8; 4], 0, 1.0,
+    );
+    if total_prob > 0.0 {
+        mulligan_ev /= total_prob;
+        mulligan_pinecone_ev /= total_prob;
+    }
+
+    let nature_tokens = game.boards[game.current_player].nature_tokens;
+    let should_mulligan = nature_tokens >= 1 && mulligan_ev - 1.0 > current_best;
+    let should_mulligan_pinecone = nature_tokens >= 2 && mulligan_pinecone_ev - 2.0 > current_best
+        && mulligan_pinecone_ev - 2.0 > mulligan_ev - 1.0;
+
+    MulliganAnalysis {
+        score_matrix, current_best,
+        mulligan_ev, mulligan_pinecone_ev,
+        should_mulligan, should_mulligan_pinecone,
+    }
+}
+
 /// Compute the 4×5 score matrix: MCE score for each (tile_slot, animal_type) pair.
 /// Then enumerate all possible post-mulligan draws to compute exact expected values.
 pub fn analyze_mulligan(

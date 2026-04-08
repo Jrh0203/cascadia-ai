@@ -433,64 +433,38 @@ async fn mulligan(
     Ok(Json(build_game_view_with_events(&mut game, events)))
 }
 
-/// Evaluate pre-move actions (overflow replace, mulligan) using greedy eval.
-/// Same logic as CLI benchmarks — fast and proven.
+/// Evaluate pre-move actions using enumerated mulligan analysis (exact EV).
 fn evaluate_pre_moves(
     game: &cascadia_core::game::GameState,
-    _net: &cascadia_ai::nnue::NNUENetwork,
-    search_rng: &mut StdRng,
+    net: &cascadia_ai::nnue::NNUENetwork,
+    _search_rng: &mut StdRng,
 ) -> Option<serde_json::Value> {
-    let cards = game.scoring_cards;
-    let greedy_eval = |g: &cascadia_core::game::GameState| -> f32 {
-        let mp: Vec<_> = g.market.available()
-            .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
-        let turns = g.turns_remaining;
-        let mut board = g.boards[g.current_player].clone();
-        cascadia_ai::eval::best_move_with_potential(&mut board, &mp, &cards, turns)
-            .map(|m| m.score as f32)
-            .unwrap_or(0.0)
-    };
+    let analysis = cascadia_ai::mce::analyze_mulligan_fast(game, net);
 
-    // Evaluate free 3-of-a-kind replace
+    // Check free 3-of-a-kind replace
     if game.can_replace_overflow().is_some() {
-        let baseline = greedy_eval(game);
         let mut test = game.clone();
         test.replace_overflow();
-        let after = greedy_eval(&test);
+        let post = cascadia_ai::mce::analyze_mulligan_fast(&test, net);
         return Some(serde_json::json!({
             "type": "replace_overflow",
-            "score_before": (baseline * 10.0).round() / 10.0,
-            "score_after": (after * 10.0).round() / 10.0,
-            "recommended": after > baseline + 0.5,
+            "score_before": (analysis.current_best * 10.0).round() / 10.0,
+            "score_after": (post.current_best * 10.0).round() / 10.0,
+            "recommended": post.current_best > analysis.current_best,
         }));
     }
 
-    // Evaluate mulligan
+    // Check mulligan (exact enumeration)
     let player = game.current_player;
     if game.boards[player].nature_tokens > 0 {
-        let baseline = greedy_eval(game);
-        let mut total = 0.0f32;
-        let mut samples = 0;
-        for _ in 0..3 {
-            let mut t = game.clone();
-            t.shuffle_bags(search_rng);
-            if t.mulligan_wildlife() {
-                total += greedy_eval(&t);
-                samples += 1;
-            }
-        }
-        if samples > 0 {
-            let expected = total / samples as f32;
-            let gain = expected - baseline;
-            let recommended = gain > 1.5;
-            return Some(serde_json::json!({
-                "type": "mulligan",
-                "score_before": (baseline * 10.0).round() / 10.0,
-                "score_after": (expected * 10.0).round() / 10.0,
-                "expected_gain": (gain * 10.0).round() / 10.0,
-                "recommended": recommended,
-            }));
-        }
+        let gain = analysis.mulligan_ev - analysis.current_best;
+        return Some(serde_json::json!({
+            "type": "mulligan",
+            "score_before": (analysis.current_best * 10.0).round() / 10.0,
+            "score_after": (analysis.mulligan_ev * 10.0).round() / 10.0,
+            "expected_gain": (gain * 10.0).round() / 10.0,
+            "recommended": analysis.should_mulligan,
+        }));
     }
 
     None

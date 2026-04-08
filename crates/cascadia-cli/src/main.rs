@@ -81,27 +81,62 @@ fn greedy_eval(game: &GameState, cards: &ScoringCards) -> f32 {
 }
 
 /// Pre-move optimization: decide whether to replace 3-of-a-kind or mulligan.
-/// Uses greedy evaluation (fast, proven at 90.3 baseline).
-/// Set CASCADIA_SLOW_PREMOVE env var to use full strategy (MCE) for pre-move eval.
+/// Uses enumerated mulligan analysis with NNUE when available (exact EV over
+/// all 625 possible draws), falls back to greedy sampling otherwise.
 fn pre_move_optimize(
     game: &mut GameState,
     strategy: &Strategy,
     cards: &ScoringCards,
     search_rng: &mut StdRng,
 ) {
-    let slow_mode = std::env::var("CASCADIA_SLOW_PREMOVE").is_ok();
-    if slow_mode {
-        pre_move_optimize_slow(game, strategy, cards, search_rng);
-        return;
-    }
-    const MULLIGAN_SAMPLES: usize = 3;
-    const MAX_MULLIGANS: usize = 5;
+    // Extract NNUE net if available
+    let net = match strategy {
+        Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. } => Some(net.clone()),
+        _ => None,
+    };
 
+    const MAX_MULLIGANS: usize = 5;
     let mut mulligans_used = 0;
+
     loop {
+        // Use enumerated analysis when NNUE is available
+        if let Some(ref net) = net {
+            let analysis = cascadia_ai::mce::analyze_mulligan_fast(game, net);
+
+            // Option 1: Replace 3-of-a-kind (free) — only if it improves
+            if game.can_replace_overflow().is_some() {
+                // Check if replacing improves: compare current_best with post-replace best
+                let mut test = game.clone();
+                test.replace_overflow();
+                let post_analysis = cascadia_ai::mce::analyze_mulligan_fast(&test, net);
+                if post_analysis.current_best > analysis.current_best {
+                    game.replace_overflow();
+                    continue;
+                }
+            }
+
+            // Option 2: Enumerated mulligan (exact EV)
+            if mulligans_used < MAX_MULLIGANS && analysis.should_mulligan {
+                if game.mulligan_wildlife() {
+                    mulligans_used += 1;
+                    continue;
+                }
+            }
+
+            // Option 3: Mulligan + pinecone (exact EV, costs 2 tokens)
+            if mulligans_used < MAX_MULLIGANS && analysis.should_mulligan_pinecone {
+                if game.mulligan_wildlife() {
+                    mulligans_used += 1;
+                    continue;
+                }
+            }
+
+            break;
+        }
+
+        // Fallback: greedy evaluation (no NNUE)
         let baseline = greedy_eval(game, cards);
 
-        // Option 1: Replace 3-of-a-kind (free)
         if game.can_replace_overflow().is_some() {
             let mut test = game.clone();
             test.replace_overflow();
@@ -111,25 +146,21 @@ fn pre_move_optimize(
             }
         }
 
-        // Option 2: Paid mulligan (costs 1 nature token)
         if mulligans_used < MAX_MULLIGANS && game.boards[game.current_player].nature_tokens > 0 {
-            let mut total_new_eval = 0.0f32;
+            let mut total = 0.0f32;
             let mut samples = 0;
-            for _ in 0..MULLIGAN_SAMPLES {
+            for _ in 0..3 {
                 let mut test = game.clone();
                 test.shuffle_bags(search_rng);
                 if test.mulligan_wildlife() {
-                    total_new_eval += greedy_eval(&test, cards);
+                    total += greedy_eval(&test, cards);
                     samples += 1;
                 }
             }
-            if samples > 0 {
-                let expected_new = total_new_eval / samples as f32;
-                if expected_new > baseline + 1.5 {
-                    if game.mulligan_wildlife() {
-                        mulligans_used += 1;
-                        continue;
-                    }
+            if samples > 0 && total / samples as f32 > baseline + 1.5 {
+                if game.mulligan_wildlife() {
+                    mulligans_used += 1;
+                    continue;
                 }
             }
         }
