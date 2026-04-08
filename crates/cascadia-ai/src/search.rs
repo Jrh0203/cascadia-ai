@@ -449,6 +449,158 @@ pub fn candidate_moves_nnue(game: &GameState, net: &crate::nnue::NNUENetwork) ->
     moves
 }
 
+/// Decomposed candidate generation: evaluate tile and wildlife placements INDEPENDENTLY
+/// then combine additively. O(tiles + animals) instead of O(tiles × animals).
+pub fn candidate_moves_decomposed(game: &GameState, net: &crate::nnue::NNUENetwork) -> Vec<ScoredMove> {
+    let player = game.current_player;
+    let board = &game.boards[player];
+    let cards = &game.scoring_cards;
+    let frontier = board.frontier();
+    if frontier.is_empty() { return Vec::new(); }
+
+    let market_pairs: Vec<_> = game.market.available()
+        .map(|(i, pair)| (i, pair.tile, pair.wildlife)).collect();
+    if market_pairs.is_empty() { return Vec::new(); }
+
+    let has_tokens = board.nature_tokens > 0;
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+
+    let base_actual = cascadia_core::scoring::ScoreBreakdown::compute(
+        &mut board.clone(), cards).total as f32;
+    let base_remaining = net.evaluate_with_bag(board, &bag_info);
+    let base_total = base_actual + base_remaining;
+
+    struct Combo { tile_idx: usize, tile: cascadia_core::types::TileData,
+        wildlife: cascadia_core::types::Wildlife, wl_market_idx: Option<usize> }
+
+    let mut combos = Vec::new();
+    for &(idx, tile, wl) in &market_pairs {
+        combos.push(Combo { tile_idx: idx, tile, wildlife: wl, wl_market_idx: None });
+    }
+    if has_tokens {
+        for &(ti, tile, _) in &market_pairs {
+            for &(wi, _, wl) in &market_pairs {
+                if ti != wi {
+                    combos.push(Combo { tile_idx: ti, tile, wildlife: wl, wl_market_idx: Some(wi) });
+                }
+            }
+        }
+    }
+
+    let mut all_moves = Vec::new();
+
+    for combo in &combos {
+        let max_rot: u8 = if combo.tile.terrain2.is_none() { 1 } else { 6 };
+
+        // Phase 1: Score tile placements independently (~60 evals)
+        let mut tile_scores: Vec<(i8, i8, u8, f32)> = Vec::new(); // (q, r, rot, delta)
+        {
+            let mut b = board.clone();
+            for &fi in frontier.iter() {
+                let coord = HexCoord::from_index(fi as usize);
+                for rot in 0..max_rot {
+                    let action = match b.place_tile(coord, combo.tile, rot) {
+                        Some(a) => a, None => continue,
+                    };
+                    let actual = cascadia_core::scoring::ScoreBreakdown::compute(&mut b, cards).total as f32;
+                    let remaining = net.evaluate_with_bag(&b, &bag_info);
+                    tile_scores.push((coord.q, coord.r, rot, (actual + remaining) - base_total));
+                    b.undo(action);
+                }
+            }
+        }
+        tile_scores.sort_by(|a, b| b.3.partial_cmp(&a.3).unwrap_or(std::cmp::Ordering::Equal));
+        tile_scores.truncate(8);
+
+        // Phase 2: Score wildlife placements independently on EXISTING board (~15 evals)
+        let mut wl_scores: Vec<(usize, i8, i8, f32)> = Vec::new(); // (idx, q, r, delta)
+        {
+            let mut b = board.clone();
+            for &ti in b.placed_tiles.clone().iter() {
+                let idx = ti as usize;
+                if !b.grid.get(idx).can_place_wildlife(combo.wildlife) { continue; }
+                let wa = match b.place_wildlife(idx, combo.wildlife) {
+                    Some(a) => a, None => continue,
+                };
+                let actual = cascadia_core::scoring::ScoreBreakdown::compute(&mut b, cards).total as f32;
+                let remaining = net.evaluate_with_bag(&b, &bag_info);
+                let coord = HexCoord::from_index(idx);
+                wl_scores.push((idx, coord.q, coord.r, (actual + remaining) - base_total));
+                b.undo(wa);
+            }
+        }
+        wl_scores.sort_by(|a, b| b.3.partial_cmp(&a.3).unwrap_or(std::cmp::Ordering::Equal));
+        wl_scores.truncate(5);
+
+        // Phase 3: Combine top tiles × top wildlife (additive approximation)
+        let mut best_eval = f32::NEG_INFINITY;
+        let mut best_move: Option<ScoredMove> = None;
+
+        for &(tq, tr, rot, t_delta) in &tile_scores {
+            // Tile only (skip wildlife)
+            if t_delta > best_eval {
+                best_eval = t_delta;
+                best_move = Some(ScoredMove {
+                    market_index: combo.tile_idx, tile_q: tq, tile_r: tr, rotation: rot,
+                    wildlife_q: None, wildlife_r: None,
+                    score: 0, eval: (t_delta * 1000.0) as i32,
+                    wildlife_market_index: combo.wl_market_idx,
+                });
+            }
+            // Tile + wildlife on existing slot (additive)
+            for &(_widx, wq, wr, w_delta) in &wl_scores {
+                let combined = t_delta + w_delta;
+                if combined > best_eval {
+                    best_eval = combined;
+                    best_move = Some(ScoredMove {
+                        market_index: combo.tile_idx, tile_q: tq, tile_r: tr, rotation: rot,
+                        wildlife_q: Some(wq), wildlife_r: Some(wr),
+                        score: 0, eval: (combined * 1000.0) as i32,
+                        wildlife_market_index: combo.wl_market_idx,
+                    });
+                }
+            }
+        }
+
+        // Phase 4: Interaction term — wildlife on the NEWLY placed tile (~8 evals)
+        {
+            let mut b = board.clone();
+            for &(tq, tr, rot, _t_delta) in &tile_scores {
+                let tile_action = match b.place_tile(HexCoord::new(tq, tr), combo.tile, rot) {
+                    Some(a) => a, None => continue,
+                };
+                let tile_idx = HexCoord::new(tq, tr).to_index().unwrap();
+                if b.grid.get(tile_idx).can_place_wildlife(combo.wildlife) {
+                    if let Some(wa) = b.place_wildlife(tile_idx, combo.wildlife) {
+                        let actual = cascadia_core::scoring::ScoreBreakdown::compute(&mut b, cards).total as f32;
+                        let remaining = net.evaluate_with_bag(&b, &bag_info);
+                        let combined = (actual + remaining) - base_total;
+                        if combined > best_eval {
+                            best_eval = combined;
+                            let wc = HexCoord::from_index(tile_idx);
+                            best_move = Some(ScoredMove {
+                                market_index: combo.tile_idx, tile_q: tq, tile_r: tr, rotation: rot,
+                                wildlife_q: Some(wc.q), wildlife_r: Some(wc.r),
+                                score: 0, eval: (combined * 1000.0) as i32,
+                                wildlife_market_index: combo.wl_market_idx,
+                            });
+                        }
+                        b.undo(wa);
+                    }
+                }
+                b.undo(tile_action);
+            }
+        }
+
+        if let Some(mv) = best_move {
+            all_moves.push(mv);
+        }
+    }
+
+    all_moves.sort_by(|a, b| b.eval.cmp(&a.eval));
+    all_moves
+}
+
 /// Execute a ScoredMove on a GameState. Returns false if it fails.
 pub fn execute_scored_move(game: &mut GameState, mv: &ScoredMove) -> bool {
     let tile_coord = HexCoord::new(mv.tile_q, mv.tile_r);
