@@ -36,6 +36,7 @@ image = (
         "cd /app && cargo build --release --bin cascadia-cli",
     )
     .add_local_file("nnue_weights_mce93.bin", remote_path="/app/nnue_weights_mce93.bin")
+    .add_local_file("nnue_weights_hybrid_iter4.bin", remote_path="/app/nnue_weights_hybrid_iter4.bin")
 )
 
 

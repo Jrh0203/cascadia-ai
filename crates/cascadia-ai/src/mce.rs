@@ -467,7 +467,7 @@ fn run_mce_candidates(
     let mut board = game.boards[player].clone();
     let greedy_best = best_move_with_potential(&mut board, &mp, &cards, turns);
 
-    let mut candidates = candidate_moves_pub(game);
+    let mut candidates = crate::search::candidate_moves_nnue(game, net);
     let num_candidate_moves = candidates.len();
 
     let mut greedy_added = false;

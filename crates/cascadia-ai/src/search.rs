@@ -317,6 +317,138 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
     moves
 }
 
+/// Generate candidate moves using NNUE afterstate evaluation.
+/// For each market combo, evaluates all placements with actual_score + NNUE(remaining)
+/// instead of greedy habitat + wildlife delta.
+pub fn candidate_moves_nnue(game: &GameState, net: &crate::nnue::NNUENetwork) -> Vec<ScoredMove> {
+    let player = game.current_player;
+    let board = &game.boards[player];
+    let cards = &game.scoring_cards;
+    let frontier = board.frontier();
+    if frontier.is_empty() { return Vec::new(); }
+
+    let market_pairs: Vec<_> = game.market.available()
+        .map(|(i, pair)| (i, pair.tile, pair.wildlife)).collect();
+    if market_pairs.is_empty() { return Vec::new(); }
+
+    let has_tokens = board.nature_tokens > 0;
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+
+    struct Combo {
+        tile_idx: usize,
+        tile: cascadia_core::types::TileData,
+        wildlife: cascadia_core::types::Wildlife,
+        wl_market_idx: Option<usize>,
+    }
+
+    let mut combos = Vec::new();
+    for &(idx, tile, wl) in &market_pairs {
+        combos.push(Combo { tile_idx: idx, tile, wildlife: wl, wl_market_idx: None });
+    }
+    if has_tokens {
+        for &(ti, tile, _) in &market_pairs {
+            for &(wi, _, wl) in &market_pairs {
+                if ti != wi {
+                    combos.push(Combo { tile_idx: ti, tile, wildlife: wl, wl_market_idx: Some(wi) });
+                }
+            }
+        }
+    }
+
+    let mut moves = Vec::new();
+    let mut board_clone = board.clone();
+
+    for combo in &combos {
+        let max_rot: u8 = if combo.tile.terrain2.is_none() { 1 } else { 6 };
+
+        let mut best_eval = f32::NEG_INFINITY;
+        let mut best_score: u16 = 0;
+        let mut best_tq: i8 = 0;
+        let mut best_tr: i8 = 0;
+        let mut best_rot: u8 = 0;
+        let mut best_wq: Option<i8> = None;
+        let mut best_wr: Option<i8> = None;
+        let mut found = false;
+
+        for &fi in frontier.iter() {
+            let coord = HexCoord::from_index(fi as usize);
+            for rot in 0..max_rot {
+                let tile_action = match board_clone.place_tile(coord, combo.tile, rot) {
+                    Some(a) => a,
+                    None => continue,
+                };
+
+                // Evaluate with no wildlife placement
+                let actual = cascadia_core::scoring::ScoreBreakdown::compute(
+                    &mut board_clone, cards).total;
+                let remaining = net.evaluate_with_bag(&board_clone, &bag_info);
+                let skip_eval = actual as f32 + remaining;
+
+                if !found || skip_eval > best_eval {
+                    best_eval = skip_eval;
+                    best_score = actual;
+                    best_tq = coord.q;
+                    best_tr = coord.r;
+                    best_rot = rot;
+                    best_wq = None;
+                    best_wr = None;
+                    found = true;
+                }
+
+                // Try each wildlife placement
+                let placed_snapshot: arrayvec::ArrayVec<u16, 64> =
+                    board_clone.placed_tiles.iter().copied().collect();
+                for &ti in placed_snapshot.iter() {
+                    if !board_clone.grid.get(ti as usize).can_place_wildlife(combo.wildlife) {
+                        continue;
+                    }
+                    let wa = match board_clone.place_wildlife(ti as usize, combo.wildlife) {
+                        Some(a) => a,
+                        None => continue,
+                    };
+
+                    let wl_actual = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut board_clone, cards).total;
+                    let wl_remaining = net.evaluate_with_bag(&board_clone, &bag_info);
+                    let wl_eval = wl_actual as f32 + wl_remaining;
+
+                    board_clone.undo(wa);
+
+                    if wl_eval > best_eval {
+                        best_eval = wl_eval;
+                        best_score = wl_actual;
+                        best_tq = coord.q;
+                        best_tr = coord.r;
+                        best_rot = rot;
+                        let wc = HexCoord::from_index(ti as usize);
+                        best_wq = Some(wc.q);
+                        best_wr = Some(wc.r);
+                    }
+                }
+
+                board_clone.undo(tile_action);
+            }
+        }
+
+        if !found { continue; }
+
+        moves.push(ScoredMove {
+            market_index: combo.tile_idx,
+            tile_q: best_tq,
+            tile_r: best_tr,
+            rotation: best_rot,
+            wildlife_q: best_wq,
+            wildlife_r: best_wr,
+            score: best_score,
+            eval: (best_eval * 1000.0) as i32,
+            wildlife_market_index: combo.wl_market_idx,
+        });
+    }
+
+    moves.sort_by(|a, b| b.eval.cmp(&a.eval));
+    moves
+}
+
 /// Execute a ScoredMove on a GameState. Returns false if it fails.
 pub fn execute_scored_move(game: &mut GameState, mv: &ScoredMove) -> bool {
     let tile_coord = HexCoord::new(mv.tile_q, mv.tile_r);
