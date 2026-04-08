@@ -68,7 +68,7 @@ fn pick_move(
             }
         }
         Strategy::ExactExpectimax { net } => {
-            cascadia_ai::mce::best_move_expectimax_1ply(game, net)
+            cascadia_ai::mce::best_move_expectimax_2ply(game, net)
         }
     }
 }
