@@ -814,6 +814,206 @@ fn evaluate_position_recursive(
     if total_prob > 0.0 { ev / total_prob } else { actual + nnue_remaining }
 }
 
+/// Wildlife-only deep expectimax: simulates placing animals over multiple turns
+/// WITHOUT simulating tile placement or opponents. Terrain is greedy (1-turn),
+/// wildlife is where deep lookahead pays off.
+///
+/// At each ply: pre-compute best placement per animal type on existing open slots,
+/// enumerate 625 draws, pick best type, place it, recurse.
+/// Ply 1-2: exact enumeration (625 branches each)
+/// Ply 3+: greedy single-path (expected best animal, no branching)
+pub fn best_move_wildlife_deep(
+    game: &GameState,
+    net: &NNUENetwork,
+    wildlife_depth: usize,
+) -> Option<ScoredMove> {
+    let player = game.current_player;
+    let cards = game.scoring_cards;
+
+    let candidates = crate::search::candidate_moves_decomposed(game, net);
+    if candidates.is_empty() { return None; }
+
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+
+    let mut best: Option<(ScoredMove, f64)> = None;
+
+    for mv in &candidates {
+        let mut g = game.clone();
+        if !crate::search::execute_scored_move(&mut g, mv) { continue; }
+
+        // Simulate opponents for this turn only
+        while !g.is_game_over() && g.current_player != player {
+            match crate::search::greedy_move(&g) {
+                Some(opp_mv) => {
+                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
+                }
+                None => break,
+            }
+        }
+
+        if g.is_game_over() {
+            let score = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64;
+            if best.is_none() || score > best.as_ref().unwrap().1 {
+                best = Some((*mv, score));
+            }
+            continue;
+        }
+
+        // Current actual score (habitat is already captured)
+        let actual = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64;
+        let nnue_remaining = net.evaluate_with_bag(&g.boards[player], &bag_info) as f64;
+
+        // Wildlife-only deep lookahead on the current board
+        let wildlife_bonus = wildlife_deep_eval(
+            &g.boards[player], &cards, &bag_info, wildlife_depth,
+        );
+
+        // Score = actual + NNUE remaining (captures terrain/long-term) + wildlife bonus
+        let score = actual + nnue_remaining + wildlife_bonus;
+
+        if best.is_none() || score > best.as_ref().unwrap().1 {
+            best = Some((*mv, score));
+        }
+    }
+
+    best.map(|(mv, score)| ScoredMove { score: score.round() as u16, ..mv })
+}
+
+/// Evaluate expected wildlife bonus from deep lookahead.
+/// Simulates placing animals on existing open slots over multiple turns.
+/// Returns the expected wildlife score GAIN from future animal placements.
+fn wildlife_deep_eval(
+    board: &cascadia_core::board::Board,
+    cards: &cascadia_core::types::ScoringCards,
+    bag_info: &crate::nnue::BagInfo,
+    depth: usize,
+) -> f64 {
+    if depth == 0 { return 0.0; }
+
+    // Pre-compute: for each animal type, best placement delta on current open slots
+    let mut type_delta = [0.0f64; 5];
+    let mut best_placement_idx = [usize::MAX; 5]; // grid index of best placement
+
+    for animal_idx in 0..5 {
+        let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+        let variant = cards.variant_for(animal);
+        let base = cascadia_core::scoring::wildlife::score_wildlife(board, animal, variant) as f64;
+
+        for &ti in board.placed_tiles.iter() {
+            let idx = ti as usize;
+            if !board.grid.get(idx).can_place_wildlife(animal) { continue; }
+            let mut b = board.clone();
+            if let Some(_wa) = b.place_wildlife(idx, animal) {
+                let with = cascadia_core::scoring::wildlife::score_wildlife(&b, animal, variant) as f64;
+                let delta = with - base;
+                let keystone = if board.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                if delta + keystone > type_delta[animal_idx] {
+                    type_delta[animal_idx] = delta + keystone;
+                    best_placement_idx[animal_idx] = idx;
+                }
+            }
+        }
+    }
+
+    let bag_counts: [u32; 5] = [
+        bag_info.remaining[0] as u32, bag_info.remaining[1] as u32,
+        bag_info.remaining[2] as u32, bag_info.remaining[3] as u32,
+        bag_info.remaining[4] as u32,
+    ];
+    let bag_total: u32 = bag_counts.iter().sum();
+    if bag_total < 4 { return 0.0; }
+
+    if depth <= 2 {
+        // Exact enumeration for shallow depths
+        let mut ev = 0.0f64;
+        let mut total_prob = 0.0f64;
+
+        for t0 in 0..5u8 {
+            let c0 = bag_counts[t0 as usize]; if c0 == 0 { continue; }
+            let p0 = c0 as f64 / bag_total as f64;
+            for t1 in 0..5u8 {
+                let c1 = bag_counts[t1 as usize] - if t1 == t0 { 1 } else { 0 };
+                if c1 == 0 { continue; }
+                let p1 = c1 as f64 / (bag_total - 1) as f64;
+                for t2 in 0..5u8 {
+                    let c2 = bag_counts[t2 as usize]
+                        - if t2 == t0 { 1 } else { 0 } - if t2 == t1 { 1 } else { 0 };
+                    if c2 == 0 { continue; }
+                    let p2 = c2 as f64 / (bag_total - 2) as f64;
+                    for t3 in 0..5u8 {
+                        let c3 = bag_counts[t3 as usize]
+                            - if t3 == t0 { 1 } else { 0 } - if t3 == t1 { 1 } else { 0 }
+                            - if t3 == t2 { 1 } else { 0 };
+                        if c3 == 0 { continue; }
+                        let p3 = c3 as f64 / (bag_total - 3) as f64;
+                        let prob = p0 * p1 * p2 * p3;
+
+                        // Best wildlife from this draw
+                        let best_type = [t0, t1, t2, t3].iter()
+                            .max_by(|&&a, &&b| type_delta[a as usize]
+                                .partial_cmp(&type_delta[b as usize])
+                                .unwrap_or(std::cmp::Ordering::Equal))
+                            .copied().unwrap() as usize;
+                        let immediate = type_delta[best_type];
+
+                        // Recurse: place this animal and look deeper
+                        let future = if depth > 1 && best_placement_idx[best_type] != usize::MAX {
+                            let mut next_board = board.clone();
+                            let animal = Wildlife::from_u8(best_type as u8).unwrap();
+                            if let Some(_wa) = next_board.place_wildlife(best_placement_idx[best_type], animal) {
+                                // Reduce bag counts for recursion
+                                let mut next_bag = bag_info.clone();
+                                next_bag.remaining[best_type] = next_bag.remaining[best_type].saturating_sub(1);
+                                wildlife_deep_eval(&next_board, cards, &next_bag, depth - 1)
+                            } else { 0.0 }
+                        } else { 0.0 };
+
+                        ev += prob * (immediate + future);
+                        total_prob += prob;
+                    }
+                }
+            }
+        }
+        if total_prob > 0.0 { ev / total_prob } else { 0.0 }
+    } else {
+        // Greedy single-path for deep plies (no branching)
+        // Find expected best type: highest type_delta × probability_of_appearing
+        let mut best_type = 0usize;
+        let mut best_expected = 0.0f64;
+        for t in 0..5 {
+            // Probability of seeing at least one of this type in 4 draws
+            let p_none = if bag_total >= 4 {
+                let ct = bag_counts[t] as f64;
+                let bt = bag_total as f64;
+                ((bt - ct) / bt) * ((bt - ct - 1.0).max(0.0) / (bt - 1.0))
+                    * ((bt - ct - 2.0).max(0.0) / (bt - 2.0))
+                    * ((bt - ct - 3.0).max(0.0) / (bt - 3.0))
+            } else { 1.0 };
+            let p_at_least_one = 1.0 - p_none;
+            let expected = type_delta[t] * p_at_least_one;
+            if expected > best_expected {
+                best_expected = expected;
+                best_type = t;
+            }
+        }
+
+        let immediate = best_expected;
+
+        // Place the expected best and recurse
+        let future = if best_placement_idx[best_type] != usize::MAX {
+            let mut next_board = board.clone();
+            let animal = Wildlife::from_u8(best_type as u8).unwrap();
+            if let Some(_wa) = next_board.place_wildlife(best_placement_idx[best_type], animal) {
+                let mut next_bag = bag_info.clone();
+                next_bag.remaining[best_type] = next_bag.remaining[best_type].saturating_sub(1);
+                wildlife_deep_eval(&next_board, cards, &next_bag, depth - 1)
+            } else { 0.0 }
+        } else { 0.0 };
+
+        immediate + future
+    }
+}
+
 /// Collect MCE-labeled training samples for the current position.
 /// For each candidate that got rollouts, returns the afterstate's NNUE features
 /// paired with a delta-style label: (avg_rollout_final_score - afterstate_current_score).
