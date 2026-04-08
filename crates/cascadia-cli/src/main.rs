@@ -22,6 +22,7 @@ enum Strategy {
     MCE { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize },
     Expectimax { net: Arc<cascadia_ai::nnue::NNUENetwork>, samples: usize, depth: usize, branching: usize },
     ExactExpectimax { net: Arc<cascadia_ai::nnue::NNUENetwork> },
+    Hybrid { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize, top_k: usize },
 }
 
 impl std::fmt::Display for Strategy {
@@ -36,6 +37,7 @@ impl std::fmt::Display for Strategy {
             Strategy::MCE { rollouts, .. } => write!(f, "mce(n={})", rollouts),
             Strategy::Expectimax { samples, depth, branching, .. } => write!(f, "expectimax(k={},d={},b={})", samples, depth, branching),
             Strategy::ExactExpectimax { .. } => write!(f, "exact-expectimax"),
+            Strategy::Hybrid { rollouts, top_k, .. } => write!(f, "hybrid(k={},n={})", top_k, rollouts),
         }
     }
 }
@@ -69,8 +71,11 @@ fn pick_move(
         }
         Strategy::ExactExpectimax { net } => {
             let depth: usize = std::env::var("EXPECTIMAX_DEPTH")
-                .ok().and_then(|s| s.parse().ok()).unwrap_or(6);
-            cascadia_ai::mce::best_move_wildlife_deep(game, net, depth)
+                .ok().and_then(|s| s.parse().ok()).unwrap_or(2);
+            cascadia_ai::mce::best_move_expectimax_nply(game, net, depth)
+        }
+        Strategy::Hybrid { net, rollouts, top_k } => {
+            cascadia_ai::mce::best_move_hybrid(game, net, *rollouts, *top_k, search_rng)
         }
     }
 }
@@ -98,7 +103,8 @@ fn pre_move_optimize(
 ) {
     // Extract NNUE net if available
     let net = match strategy {
-        Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. } => Some(net.clone()),
+        Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. }
+            | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net } => Some(net.clone()),
         _ => None,
     };
 
@@ -247,7 +253,8 @@ fn simulate_game_inner(
         // Player 0 is the AI; players 1-3 use NNUE if available, otherwise greedy
         if game.current_player != 0 {
             let opp_mv = match strategy {
-                Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. } => {
+                Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. }
+                    | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net } => {
                     cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
                         .or_else(|| greedy_move(&game))
                 }
@@ -903,6 +910,17 @@ fn main() {
             let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
                 .expect("Failed to load NNUE weights");
             Strategy::Expectimax { net: Arc::new(net), samples, depth, branching }
+        } else if args.iter().any(|a| a == "--hybrid") {
+            let weights_path = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("nnue_weights.bin");
+            let rollouts = args.iter().position(|a| a == "--rollouts")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
+            let top_k: usize = std::env::var("HYBRID_TOP_K")
+                .ok().and_then(|s| s.parse().ok()).unwrap_or(5);
+            let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights");
+            Strategy::Hybrid { net: Arc::new(net), rollouts, top_k }
         } else if args.iter().any(|a| a == "--exact") {
             let weights_path = args.iter().position(|a| a == "--weights")
                 .and_then(|i| args.get(i + 1).map(|s| s.as_str()))

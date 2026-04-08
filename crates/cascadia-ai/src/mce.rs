@@ -1014,6 +1014,175 @@ fn wildlife_deep_eval(
     }
 }
 
+/// Hybrid: exact expectimax filters to top-K, then MCE rollouts refine.
+/// Combines fast deterministic ranking with deep stochastic search.
+pub fn best_move_hybrid(
+    game: &GameState,
+    net: &NNUENetwork,
+    num_rollouts: usize,
+    top_k: usize,
+    rng: &mut StdRng,
+) -> Option<ScoredMove> {
+    let player = game.current_player;
+    let cards = game.scoring_cards;
+
+    // Step 1: Generate candidates with decomposed eval
+    let mut candidates = crate::search::candidate_moves_decomposed(game, net);
+
+    // Also add greedy + strategic candidates
+    let mp: Vec<_> = game.market.available()
+        .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+    let mut board = game.boards[player].clone();
+    let greedy_best = best_move_with_potential(&mut board, &mp, &cards, game.turns_remaining);
+    if let Some(ref bm) = greedy_best {
+        if !candidates.iter().any(|c| c.tile_q == bm.tile_q && c.tile_r == bm.tile_r
+            && c.rotation == bm.rotation && c.wildlife_q == bm.wildlife_q) {
+            candidates.push(*bm);
+        }
+    }
+    let strategic = wildlife_strategic_candidates(game);
+    for sc in &strategic {
+        if !candidates.iter().any(|c| c.tile_q == sc.tile_q && c.tile_r == sc.tile_r
+            && c.rotation == sc.rotation && c.wildlife_q == sc.wildlife_q) {
+            candidates.push(*sc);
+        }
+    }
+
+    if candidates.is_empty() {
+        return greedy_best;
+    }
+
+    // Step 2: Score ALL candidates with 2-ply exact expectimax (fast)
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+    for mv in candidates.iter_mut() {
+        let mut g = game.clone();
+        if !crate::search::execute_scored_move(&mut g, mv) { continue; }
+
+        // Simulate opponents
+        while !g.is_game_over() && g.current_player != player {
+            match crate::search::greedy_move(&g) {
+                Some(opp_mv) => { crate::search::execute_scored_move(&mut g, &opp_mv); }
+                None => break,
+            }
+        }
+
+        let score = if g.is_game_over() {
+            ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f32
+        } else {
+            let actual = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f32;
+            let remaining = net.evaluate_with_bag(&g.boards[player], &bag_info);
+            actual + remaining
+        };
+        mv.eval = (score * 1000.0) as i32;
+    }
+
+    // Step 3: Keep top-K by exact expectimax score
+    candidates.sort_by(|a, b| b.eval.cmp(&a.eval));
+    candidates.truncate(top_k);
+
+    // Step 4: Run MCE rollouts on the top-K only (same budget, more per candidate)
+    let game_arc = std::sync::Arc::new(game.clone());
+    let net_arc = std::sync::Arc::new(net.clone());
+    let candidates_arc = std::sync::Arc::new(candidates.clone());
+
+    // Sequential halving on the reduced candidate set
+    let n_cands = candidates.len();
+    let num_rounds = (n_cands as f64).log2().ceil().max(1.0) as usize;
+    let rollouts_per_round = (num_rollouts / num_rounds).max(1);
+
+    let mut totals = vec![0u64; n_cands];
+    let mut counts = vec![0u32; n_cands];
+    let mut alive: Vec<usize> = (0..n_cands).collect();
+
+    for round in 0..num_rounds {
+        if alive.is_empty() { break; }
+        let per_candidate = (rollouts_per_round / alive.len()).max(1);
+
+        let mut work_items: Vec<(usize, u64)> = Vec::new();
+        for &ci in &alive {
+            for _ in 0..per_candidate {
+                work_items.push((ci, rng.gen()));
+            }
+        }
+
+        let num_threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        let chunk_size = (work_items.len() + num_threads - 1) / num_threads;
+
+        let handles: Vec<_> = work_items.chunks(chunk_size).map(|chunk| {
+            let work = chunk.to_vec();
+            let game = std::sync::Arc::clone(&game_arc);
+            let net = std::sync::Arc::clone(&net_arc);
+            let cands = std::sync::Arc::clone(&candidates_arc);
+
+            std::thread::spawn(move || {
+                let mut results: Vec<(usize, u64)> = Vec::with_capacity(work.len());
+                for &(ci, seed) in &work {
+                    let mv = &cands[ci];
+                    let mut g = (*game).clone();
+                    let mut rollout_rng = StdRng::seed_from_u64(seed);
+                    g.shuffle_bags(&mut rollout_rng);
+                    if !crate::search::execute_scored_move(&mut g, mv) { continue; }
+
+                    let depth_limit = 6;
+                    let mut ai_turns = 0;
+                    while !g.is_game_over() {
+                        if g.current_player != player {
+                            match crate::search::greedy_move(&g) {
+                                Some(opp) => { if !crate::search::execute_scored_move(&mut g, &opp) { break; } }
+                                None => break,
+                            }
+                            continue;
+                        }
+                        ai_turns += 1;
+                        if ai_turns > depth_limit { break; }
+                        match crate::nnue_train::pick_best_move_nnue(&g, &net) {
+                            Some(ai_mv) => { if !crate::search::execute_scored_move(&mut g, &ai_mv) { break; } }
+                            None => break,
+                        }
+                    }
+
+                    let score = if g.is_game_over() {
+                        ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total
+                    } else {
+                        let actual = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total;
+                        let nval = net.evaluate(&g.boards[player]);
+                        let tier = tier_bonus(&g.boards[player]);
+                        (actual as f32 + nval.max(0.0) + tier) as u16
+                    };
+                    results.push((ci, score as u64));
+                }
+                results
+            })
+        }).collect();
+
+        for handle in handles {
+            for (ci, score) in handle.join().unwrap() {
+                totals[ci] += score;
+                counts[ci] += 1;
+            }
+        }
+
+        if round < num_rounds - 1 {
+            let mut alive_scores: Vec<(usize, f64)> = alive.iter()
+                .filter_map(|&ci| {
+                    if counts[ci] == 0 { return None; }
+                    Some((ci, totals[ci] as f64 / counts[ci] as f64))
+                }).collect();
+            alive_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            let keep = (alive_scores.len() + 1) / 2;
+            alive = alive_scores.into_iter().take(keep).map(|(ci, _)| ci).collect();
+        }
+    }
+
+    let mut scored: Vec<(ScoredMove, f64)> = candidates.iter().enumerate()
+        .filter_map(|(ci, mv)| {
+            if counts[ci] == 0 { return None; }
+            Some((*mv, totals[ci] as f64 / counts[ci] as f64))
+        }).collect();
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    scored.into_iter().next().map(|(mv, avg)| ScoredMove { score: avg.round() as u16, ..mv })
+}
+
 /// Collect MCE-labeled training samples for the current position.
 /// For each candidate that got rollouts, returns the afterstate's NNUE features
 /// paired with a delta-style label: (avg_rollout_final_score - afterstate_current_score).
