@@ -115,12 +115,14 @@ def main():
     parser.add_argument('--epochs-per-iter', type=int, default=15)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epsilon', type=float, default=0.1)
-    parser.add_argument('--top-pct', type=float, default=10.0,
-                        help='Keep only top N%% of self-play games by score (default: 10)')
+    parser.add_argument('--top-pct', type=float, default=100.0,
+                        help='Keep only top N%% of self-play games by score (default: 100, all games)')
     parser.add_argument('--hidden1', type=int, default=512)
     parser.add_argument('--hidden2', type=int, default=64)
     parser.add_argument('--mce-samples', default='mce_policy_samples.bin',
-                        help='MCE expert data to mix in')
+                        help='MCE expert data to mix in (use "none" to skip)')
+    parser.add_argument('--no-mce', action='store_true',
+                        help='Skip MCE data, train on self-play only')
     parser.add_argument('--init-weights', default=None)
     parser.add_argument('--out', default='nnue_weights_hybrid.bin')
     parser.add_argument('--benchmark-games', type=int, default=50)
@@ -162,7 +164,7 @@ def main():
         if os.path.exists(merged_path):
             os.remove(merged_path)
         files_to_merge = [self_play_path]
-        if os.path.exists(args.mce_samples):
+        if not args.no_mce and args.mce_samples != 'none' and os.path.exists(args.mce_samples):
             files_to_merge.append(args.mce_samples)
         merge_samples(files_to_merge, merged_path)
 
