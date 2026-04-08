@@ -1510,22 +1510,18 @@ fn run_mce_candidates(
                                 break;
                             }
 
+                            // Free overflow: always take it in rollouts (fast, no eval needed)
                             if g.can_replace_overflow().is_some() {
-                                let baseline_mv = pick_best_move_nnue(&g, &net);
-                                let baseline_score = baseline_mv.as_ref().map(|m| m.score).unwrap_or(0);
-                                let mut test = g.clone();
-                                test.replace_overflow();
-                                let new_mv = pick_best_move_nnue(&test, &net);
-                                let new_score = new_mv.as_ref().map(|m| m.score).unwrap_or(0);
-                                if new_score > baseline_score {
-                                    g.replace_overflow();
-                                }
+                                g.replace_overflow();
                             }
 
+                            // Rollout move policy: greedy is ~20× faster than NNUE candidates
+                            // MCE accuracy comes from root candidate selection + rollout count,
+                            // not from perfect rollout play.
                             let ai_mv = if use_expectimax_rollouts {
                                 best_move_expectimax_1ply(&g, &net)
                             } else {
-                                pick_best_move_nnue(&g, &net)
+                                greedy_move(&g)
                             };
                             match ai_mv {
                                 Some(ai_mv) => {
