@@ -65,7 +65,7 @@ def merge_samples(files, out_path):
 
 
 def run_pytorch_training(samples_path, epochs, lr, init_weights, out_weights,
-                         hidden1=512, hidden2=64, batch_size=4096):
+                         hidden1=512, hidden2=64, batch_size=4096, optimizer='sgd'):
     """Run PyTorch training."""
     cmd = [
         sys.executable, "-u", "train_pytorch.py",
@@ -75,6 +75,7 @@ def run_pytorch_training(samples_path, epochs, lr, init_weights, out_weights,
         "--batch-size", str(batch_size),
         "--hidden1", str(hidden1),
         "--hidden2", str(hidden2),
+        "--optimizer", optimizer,
         "--out", out_weights,
         "--no-augment",  # skip augmentation for speed with large self-play data
     ]

@@ -512,9 +512,15 @@ def train(args):
             print(f"Warning: could not load weights: {e}. Starting fresh.")
 
     # Optimizer + scheduler
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr * 0.01)
-    warmup_epochs = min(3, args.epochs)
+    if args.optimizer == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-6)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=args.lr * 0.01)
+        warmup_epochs = min(3, args.epochs)
+    else:
+        # SGD — matches original Rust training behavior exactly
+        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+        scheduler = None
+        warmup_epochs = 0
 
     criterion = nn.MSELoss()
 
@@ -545,7 +551,7 @@ def train(args):
             total_loss += loss.item() * batch_x.shape[0]
             num_samples += batch_x.shape[0]
 
-        if epoch >= warmup_epochs:
+        if scheduler and epoch >= warmup_epochs:
             scheduler.step()
 
         rmse = (total_loss / num_samples) ** 0.5
@@ -583,6 +589,8 @@ if __name__ == '__main__':
     parser.add_argument('--init-weights', default=None, help='Initial weights (Rust NNUE format)')
     parser.add_argument('--exported', default=None, help='Pre-exported augmented data (from --export-pytorch)')
     parser.add_argument('--no-augment', action='store_true', help='Disable online augmentation')
+    parser.add_argument('--optimizer', default='adam', choices=['adam', 'sgd'],
+                        help='Optimizer: adam (default) or sgd (matches original Rust training)')
     parser.add_argument('--out', default='nnue_weights_pytorch.bin', help='Output weights file')
     args = parser.parse_args()
     train(args)
