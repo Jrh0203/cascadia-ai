@@ -650,6 +650,170 @@ fn evaluate_position_with_enumeration(
     if total_prob > 0.0 { ev / total_prob } else { actual + nnue_remaining }
 }
 
+/// N-ply exact expectimax: generalized version that recurses to arbitrary depth.
+/// Each ply: execute best move → simulate opponents → enumerate wildlife draws → recurse.
+pub fn best_move_expectimax_nply(
+    game: &GameState,
+    net: &NNUENetwork,
+    depth: usize,
+) -> Option<ScoredMove> {
+    let player = game.current_player;
+    let candidates = crate::search::candidate_moves_decomposed(game, net);
+    if candidates.is_empty() { return None; }
+
+    let mut best: Option<(ScoredMove, f64)> = None;
+
+    for mv in &candidates {
+        let mut g = game.clone();
+        if !crate::search::execute_scored_move(&mut g, mv) { continue; }
+
+        // Simulate opponents
+        while !g.is_game_over() && g.current_player != player {
+            match crate::search::greedy_move(&g) {
+                Some(opp_mv) => {
+                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
+                }
+                None => break,
+            }
+        }
+
+        let score = if g.is_game_over() {
+            ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64
+        } else {
+            evaluate_position_recursive(&g, player, net, depth)
+        };
+
+        if best.is_none() || score > best.as_ref().unwrap().1 {
+            best = Some((*mv, score));
+        }
+    }
+
+    best.map(|(mv, score)| ScoredMove { score: score.round() as u16, ..mv })
+}
+
+/// Recursively evaluate a position with exact wildlife draw enumeration.
+/// At each level: compute wildlife value per type, enumerate 625 draws,
+/// for the best draw pick the best wildlife placement, then recurse.
+fn evaluate_position_recursive(
+    game: &GameState,
+    player: usize,
+    net: &NNUENetwork,
+    depth: usize,
+) -> f64 {
+    let cards = game.scoring_cards;
+    let board = &game.boards[player];
+
+    let actual = ScoreBreakdown::compute(&mut board.clone(), &cards).total as f64;
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+    let nnue_remaining = net.evaluate_with_bag(board, &bag_info) as f64;
+
+    if depth == 0 {
+        return actual + nnue_remaining;
+    }
+
+    // Pre-compute best wildlife placement per type + resulting board score
+    let mut type_scores = [0.0f64; 5]; // score of board AFTER placing best wildlife of this type
+    let mut type_deltas = [0.0f64; 5]; // just the wildlife delta
+
+    for animal_idx in 0..5 {
+        let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+        let variant = cards.variant_for(animal);
+        let base_wl = cascadia_core::scoring::wildlife::score_wildlife(board, animal, variant);
+
+        let mut best_delta = 0.0f64;
+        let mut best_board: Option<cascadia_core::board::Board> = None;
+
+        for &ti in board.placed_tiles.iter() {
+            let idx = ti as usize;
+            if !board.grid.get(idx).can_place_wildlife(animal) { continue; }
+            let mut b = board.clone();
+            if let Some(_wa) = b.place_wildlife(idx, animal) {
+                let with_wl = cascadia_core::scoring::wildlife::score_wildlife(&b, animal, variant);
+                let delta = (with_wl as f64) - (base_wl as f64);
+                let keystone = if board.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                if delta + keystone > best_delta {
+                    best_delta = delta + keystone;
+                    best_board = Some(b);
+                }
+            }
+        }
+        type_deltas[animal_idx] = best_delta;
+
+        if depth >= 2 {
+            if let Some(ref post_board) = best_board {
+                // For deeper search: evaluate the post-wildlife board
+                let post_actual = ScoreBreakdown::compute(&mut post_board.clone(), &cards).total as f64;
+                let post_remaining = net.evaluate_with_bag(post_board, &bag_info) as f64;
+                type_scores[animal_idx] = post_actual + post_remaining;
+            } else {
+                type_scores[animal_idx] = actual + nnue_remaining;
+            }
+        }
+    }
+
+    // Enumerate wildlife draws
+    let bag_counts: [u32; 5] = [
+        bag_info.remaining[0] as u32, bag_info.remaining[1] as u32,
+        bag_info.remaining[2] as u32, bag_info.remaining[3] as u32,
+        bag_info.remaining[4] as u32,
+    ];
+    let bag_total: u32 = bag_counts.iter().sum();
+
+    if bag_total < 4 {
+        return actual + nnue_remaining;
+    }
+
+    let mut ev = 0.0f64;
+    let mut total_prob = 0.0f64;
+
+    for t0 in 0..5u8 {
+        let c0 = bag_counts[t0 as usize];
+        if c0 == 0 { continue; }
+        let p0 = c0 as f64 / bag_total as f64;
+        for t1 in 0..5u8 {
+            let c1 = bag_counts[t1 as usize] - if t1 == t0 { 1 } else { 0 };
+            if c1 == 0 { continue; }
+            let p1 = c1 as f64 / (bag_total - 1) as f64;
+            for t2 in 0..5u8 {
+                let c2 = bag_counts[t2 as usize]
+                    - if t2 == t0 { 1 } else { 0 }
+                    - if t2 == t1 { 1 } else { 0 };
+                if c2 == 0 { continue; }
+                let p2 = c2 as f64 / (bag_total - 2) as f64;
+                for t3 in 0..5u8 {
+                    let c3 = bag_counts[t3 as usize]
+                        - if t3 == t0 { 1 } else { 0 }
+                        - if t3 == t1 { 1 } else { 0 }
+                        - if t3 == t2 { 1 } else { 0 };
+                    if c3 == 0 { continue; }
+                    let p3 = c3 as f64 / (bag_total - 3) as f64;
+                    let prob = p0 * p1 * p2 * p3;
+
+                    let types = [t0 as usize, t1 as usize, t2 as usize, t3 as usize];
+
+                    let draw_score = if depth <= 1 {
+                        // 1-ply: wildlife delta only + base
+                        let best_wl = types.iter().map(|&t| type_deltas[t]).fold(0.0f64, f64::max);
+                        actual + nnue_remaining + best_wl
+                    } else {
+                        // 2+ ply: use post-wildlife board score
+                        let mut best = actual + nnue_remaining;
+                        for &t in &types {
+                            if type_scores[t] > best { best = type_scores[t]; }
+                        }
+                        best
+                    };
+
+                    ev += prob * draw_score;
+                    total_prob += prob;
+                }
+            }
+        }
+    }
+
+    if total_prob > 0.0 { ev / total_prob } else { actual + nnue_remaining }
+}
+
 /// Collect MCE-labeled training samples for the current position.
 /// For each candidate that got rollouts, returns the afterstate's NNUE features
 /// paired with a delta-style label: (avg_rollout_final_score - afterstate_current_score).

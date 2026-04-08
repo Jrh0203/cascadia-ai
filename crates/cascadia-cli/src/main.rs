@@ -68,7 +68,9 @@ fn pick_move(
             }
         }
         Strategy::ExactExpectimax { net } => {
-            cascadia_ai::mce::best_move_expectimax_2ply(game, net)
+            let depth: usize = std::env::var("EXPECTIMAX_DEPTH")
+                .ok().and_then(|s| s.parse().ok()).unwrap_or(2);
+            cascadia_ai::mce::best_move_expectimax_nply(game, net, depth)
         }
     }
 }
