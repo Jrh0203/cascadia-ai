@@ -64,8 +64,9 @@ pub fn best_move_with_potential(
     // Potential weight scales with turns remaining: full weight early, zero on last turn.
     // In 4p, turns_remaining counts ALL players, so AI turns = turns_remaining / 4.
     let ai_turns_left = (turns_remaining as f32 / 4.0).max(0.0);
-    let potential_scale = (ai_turns_left / 10.0).min(1.0); // ramps from 0 to 1 over first 10 AI turns
-    let use_potential = potential_scale > 0.01;
+    // Hand-crafted potential disabled — NNUE afterstate scoring handles this better
+    let _potential_scale = (ai_turns_left / 10.0).min(1.0);
+    let use_potential = false;
     let frontier = board.frontier();
     if frontier.is_empty() || market.is_empty() {
         return None;
@@ -137,7 +138,7 @@ pub fn best_move_with_potential(
 
         // --- Find best wildlife placement for THIS tile position ---
         let skip_score = habitat_score + base_wildlife_total + effective_nature;
-        let skip_potential = if use_potential { (board_potential(board, cards) as f32 * potential_scale) as i32 } else { 0 };
+        let skip_potential = if use_potential { (board_potential(board, cards) as f32 * _potential_scale) as i32 } else { 0 };
         let skip_eval = (skip_score as i32) * EVAL_SCALE + skip_potential;
 
         let mut best_total = skip_score;
@@ -162,7 +163,7 @@ pub fn best_move_with_potential(
             };
 
             let with_score = wildlife::score_wildlife(board, drafted_wildlife, variant);
-            let potential = if use_potential { (board_potential(board, cards) as f32 * potential_scale) as i32 } else { 0 };
+            let potential = if use_potential { (board_potential(board, cards) as f32 * _potential_scale) as i32 } else { 0 };
 
             board.undo(wl_action);
 
