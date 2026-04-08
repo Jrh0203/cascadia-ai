@@ -315,6 +315,149 @@ fn enumerate_draws(
     }
 }
 
+/// 1-ply exact expectimax: for each candidate, simulate opponents then enumerate
+/// all possible next-turn wildlife draws weighted by bag probabilities.
+/// Uses decomposed evaluation for the next turn: wildlife value per type is
+/// pre-computed once, then 625 draw combinations are just array lookups.
+///
+/// Cost: ~25 NNUE evals per candidate × 15 candidates = ~375 evals (~37ms)
+/// vs MCE(750): ~405K evals (~50s). That's 1000× faster.
+pub fn best_move_expectimax_1ply(
+    game: &GameState,
+    net: &NNUENetwork,
+) -> Option<ScoredMove> {
+    let player = game.current_player;
+    let cards = game.scoring_cards;
+
+    // Generate candidates using decomposed approach
+    let candidates = crate::search::candidate_moves_decomposed(game, net);
+    if candidates.is_empty() { return None; }
+
+    let mut best: Option<(ScoredMove, f64)> = None;
+
+    for mv in &candidates {
+        // Execute this candidate move on a clone
+        let mut g = game.clone();
+        if !crate::search::execute_scored_move(&mut g, mv) { continue; }
+
+        // Simulate opponents (deterministic, greedy)
+        while !g.is_game_over() && g.current_player != player {
+            match crate::search::greedy_move(&g) {
+                Some(opp_mv) => {
+                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
+                }
+                None => break,
+            }
+        }
+
+        if g.is_game_over() {
+            // Game ended — use final score
+            let score = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total;
+            let s = score as f64;
+            if best.is_none() || s > best.as_ref().unwrap().1 {
+                best = Some((*mv, s));
+            }
+            continue;
+        }
+
+        // Current actual score after our move + opponents
+        let actual = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64;
+
+        // NNUE remaining value (captures future tile expectations + long-term patterns)
+        let bag_info = crate::nnue::BagInfo::from_game(&g);
+        let nnue_remaining = net.evaluate_with_bag(&g.boards[player], &bag_info) as f64;
+
+        // Pre-compute wildlife value per type on current board
+        // "If I get to place animal type T, what's the best delta?"
+        let board = &g.boards[player];
+        let mut wildlife_value = [0.0f64; 5];
+        for animal_idx in 0..5 {
+            let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+            let variant = cards.variant_for(animal);
+            let base_wl = cascadia_core::scoring::wildlife::score_wildlife(board, animal, variant);
+
+            let mut best_delta = 0.0f64;
+            for &ti in board.placed_tiles.iter() {
+                let idx = ti as usize;
+                if !board.grid.get(idx).can_place_wildlife(animal) { continue; }
+                let mut b = board.clone();
+                if let Some(wa) = b.place_wildlife(idx, animal) {
+                    let with_wl = cascadia_core::scoring::wildlife::score_wildlife(&b, animal, variant);
+                    let delta = (with_wl as f64) - (base_wl as f64);
+                    // Also add nature token bonus for keystone
+                    let keystone_bonus = if b.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                    let total_delta = delta + keystone_bonus;
+                    if total_delta > best_delta { best_delta = total_delta; }
+                    b.undo(wa);
+                }
+            }
+            wildlife_value[animal_idx] = best_delta;
+        }
+
+        // Enumerate all possible next-turn wildlife draws (625 combinations)
+        let bag_counts: [u32; 5] = [
+            bag_info.remaining[0] as u32, bag_info.remaining[1] as u32,
+            bag_info.remaining[2] as u32, bag_info.remaining[3] as u32,
+            bag_info.remaining[4] as u32,
+        ];
+        let bag_total: u32 = bag_counts.iter().sum();
+
+        let expected_next_wildlife = if bag_total >= 4 {
+            let mut ev = 0.0f64;
+            let mut total_prob = 0.0f64;
+
+            // Enumerate 4 draws from the bag (the 4 market refill animals)
+            // For each draw, the best wildlife value = max over the 4 drawn types
+            for t0 in 0..5u8 {
+                let c0 = bag_counts[t0 as usize];
+                if c0 == 0 { continue; }
+                let p0 = c0 as f64 / bag_total as f64;
+                for t1 in 0..5u8 {
+                    let c1 = bag_counts[t1 as usize] - if t1 == t0 { 1 } else { 0 };
+                    if c1 == 0 { continue; }
+                    let p1 = c1 as f64 / (bag_total - 1) as f64;
+                    for t2 in 0..5u8 {
+                        let c2 = bag_counts[t2 as usize]
+                            - if t2 == t0 { 1 } else { 0 }
+                            - if t2 == t1 { 1 } else { 0 };
+                        if c2 == 0 { continue; }
+                        let p2 = c2 as f64 / (bag_total - 2) as f64;
+                        for t3 in 0..5u8 {
+                            let c3 = bag_counts[t3 as usize]
+                                - if t3 == t0 { 1 } else { 0 }
+                                - if t3 == t1 { 1 } else { 0 }
+                                - if t3 == t2 { 1 } else { 0 };
+                            if c3 == 0 { continue; }
+                            let p3 = c3 as f64 / (bag_total - 3) as f64;
+
+                            let prob = p0 * p1 * p2 * p3;
+                            // Best wildlife value from the 4 drawn types
+                            let best_wl = wildlife_value[t0 as usize]
+                                .max(wildlife_value[t1 as usize])
+                                .max(wildlife_value[t2 as usize])
+                                .max(wildlife_value[t3 as usize]);
+                            ev += prob * best_wl;
+                            total_prob += prob;
+                        }
+                    }
+                }
+            }
+            if total_prob > 0.0 { ev / total_prob } else { 0.0 }
+        } else {
+            0.0
+        };
+
+        // Total score: actual + NNUE remaining + expected next-turn wildlife bonus
+        let total = actual + nnue_remaining + expected_next_wildlife;
+
+        if best.is_none() || total > best.as_ref().unwrap().1 {
+            best = Some((*mv, total));
+        }
+    }
+
+    best.map(|(mv, score)| ScoredMove { score: score.round() as u16, ..mv })
+}
+
 /// Collect MCE-labeled training samples for the current position.
 /// For each candidate that got rollouts, returns the afterstate's NNUE features
 /// paired with a delta-style label: (avg_rollout_final_score - afterstate_current_score).

@@ -21,6 +21,7 @@ enum Strategy {
     NNUE { net: Arc<cascadia_ai::nnue::NNUENetwork> },
     MCE { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize },
     Expectimax { net: Arc<cascadia_ai::nnue::NNUENetwork>, samples: usize, depth: usize, branching: usize },
+    ExactExpectimax { net: Arc<cascadia_ai::nnue::NNUENetwork> },
 }
 
 impl std::fmt::Display for Strategy {
@@ -34,6 +35,7 @@ impl std::fmt::Display for Strategy {
             Strategy::NNUE { .. } => write!(f, "nnue"),
             Strategy::MCE { rollouts, .. } => write!(f, "mce(n={})", rollouts),
             Strategy::Expectimax { samples, depth, branching, .. } => write!(f, "expectimax(k={},d={},b={})", samples, depth, branching),
+            Strategy::ExactExpectimax { .. } => write!(f, "exact-expectimax"),
         }
     }
 }
@@ -64,6 +66,9 @@ fn pick_move(
             } else {
                 cascadia_ai::expectimax::best_move_expectimax_deep(game, net, *samples, *depth, *branching, search_rng)
             }
+        }
+        Strategy::ExactExpectimax { net } => {
+            cascadia_ai::mce::best_move_expectimax_1ply(game, net)
         }
     }
 }
@@ -896,6 +901,13 @@ fn main() {
             let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
                 .expect("Failed to load NNUE weights");
             Strategy::Expectimax { net: Arc::new(net), samples, depth, branching }
+        } else if args.iter().any(|a| a == "--exact") {
+            let weights_path = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("nnue_weights.bin");
+            let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights for exact expectimax");
+            Strategy::ExactExpectimax { net: Arc::new(net) }
         } else if args.iter().any(|a| a == "--mce") {
             let weights_path = args.iter().position(|a| a == "--weights")
                 .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
