@@ -143,8 +143,10 @@ def main():
         print(f"  ITERATION {iteration}/{args.iterations}")
         print(f"{'='*60}")
 
-        # 1. Generate self-play data
+        # 1. Generate self-play data (fresh each iteration)
         self_play_path = f"self_play_iter{iteration}.bin"
+        if os.path.exists(self_play_path):
+            os.remove(self_play_path)
         strategy = "NNUE" if current_weights else "greedy"
         run_self_play(
             args.self_play_games,
