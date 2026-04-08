@@ -48,6 +48,8 @@ image = (
 )
 def collect_games(num_games: int, rollouts: int = 300) -> bytes:
     """Run MCE collection for num_games, return the samples file bytes."""
+    import time as _time
+    _start = _time.time()
     out_path = "/tmp/samples.bin"
     result = subprocess.run(
         [
@@ -65,6 +67,10 @@ def collect_games(num_games: int, rollouts: int = 300) -> bytes:
     )
     print(result.stderr)
     print(result.stdout)
+
+    _elapsed = _time.time() - _start
+    _cost = _elapsed * 0.000014 * 8  # ~$0.000014/sec/vCPU × 8 vCPUs
+    print(f"Worker cost: ${_cost:.3f} ({_elapsed:.0f}s)")
 
     if os.path.exists(out_path):
         with open(out_path, "rb") as f:
@@ -87,6 +93,8 @@ def benchmark_games(
     weights: str = "nnue_weights_mce93.bin",
 ) -> str:
     """Run benchmark for num_games starting at seed_offset. Returns stdout."""
+    import time as _time
+    _start = _time.time()
     weights_path = f"/app/{weights}"
 
     cmd = [
@@ -118,6 +126,9 @@ def benchmark_games(
         cwd="/app",
         env=env,
     )
+    _elapsed = _time.time() - _start
+    _cost = _elapsed * 0.000014 * 8
+    print(f"Worker cost: ${_cost:.3f} ({_elapsed:.0f}s)")
     print(result.stderr)
     return result.stdout
 
@@ -137,6 +148,8 @@ def collect(
     rollouts: int = 300,
 ):
     """Collect MCE training data across multiple workers."""
+    import time as _time
+    _total_start = _time.time()
     print(f"Collecting: {num_workers} workers, {games_per_worker} games each, rollouts={rollouts}")
     print(f"Total: {num_workers * games_per_worker} games")
 
@@ -159,8 +172,11 @@ def collect(
             total_bytes += len(data)
             print(f"  Worker {i+1}/{num_workers} done: {len(data)} bytes")
 
+    _total_elapsed = _time.time() - _total_start
+    _total_cost = _total_elapsed * num_workers * 0.000014 * 8
     print(f"\nWrote {output_path} ({total_bytes} bytes from {num_workers} workers)")
     print(f"Total games: {num_workers * games_per_worker}")
+    print(f"Estimated cost: ${_total_cost:.2f} ({_total_elapsed:.0f}s wall time × {num_workers} workers)")
     print(f"\nTo merge with existing data:")
     print(f"  python3 -c \"old=open('mce_policy_samples.bin','rb').read(); f=open('{output_path}','ab'); f.write(old[4:])\"")
     print(f"  mv {output_path} mce_policy_samples.bin")
