@@ -1243,6 +1243,7 @@ pub fn pick_best_move_nnue(
     let mut board = game.boards[player].clone();
     let base_move = crate::eval::best_move_with_potential(&mut board, &mp, &cards, turns);
 
+    // Use fast greedy candidates + NNUE re-ranking (faster than full NNUE candidates)
     let mut candidates: Vec<ScoredMove> = crate::search::candidate_moves_pub(game);
     if let Some(ref bm) = base_move {
         if !candidates.iter().any(|c| c.tile_q == bm.tile_q && c.tile_r == bm.tile_r
@@ -1256,11 +1257,8 @@ pub fn pick_best_move_nnue(
         return base_move;
     }
 
-    // Compute BagInfo once (reused across all candidates)
     let bag_info = crate::nnue::BagInfo::from_game_for_player(game, player);
 
-    // Re-rank by actual_score + NNUE(remaining_value) = estimated final score.
-    // Clone only the current player's board (not full GameState) for each candidate.
     let mut best: Option<(ScoredMove, f32)> = None;
     for mv in &candidates {
         let coord = HexCoord::new(mv.tile_q, mv.tile_r);
@@ -1275,23 +1273,16 @@ pub fn pick_best_move_nnue(
             None => continue,
         };
 
-        // Clone just the board (~15KB vs ~60KB+ for full GameState)
         let mut eval_board = board.clone();
-
-        // Place tile
         if eval_board.place_tile(coord, tile, mv.rotation).is_none() {
             continue;
         }
-
-        // Place wildlife
         if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
             let wcoord = HexCoord::new(wq, wr);
             if let Some(idx) = wcoord.to_index() {
                 eval_board.place_wildlife(idx, wildlife);
             }
         }
-
-        // Nature token adjustment for independent draft
         if mv.wildlife_market_index.is_some() {
             eval_board.nature_tokens = eval_board.nature_tokens.saturating_sub(1);
         }
