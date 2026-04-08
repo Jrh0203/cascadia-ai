@@ -517,7 +517,31 @@ fn run_mce_candidates(
         }
     }
 
-    // Sort candidates + sources together by eval
+    // Re-rank with NNUE afterstate evaluation for better initial ordering
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+    for mv in candidates.iter_mut() {
+        let coord = cascadia_core::hex::HexCoord::new(mv.tile_q, mv.tile_r);
+        let tile = mp.iter().find(|&&(i, _, _)| i == mv.market_index).map(|&(_, t, _)| t);
+        let wildlife = mp.iter().find(|&&(i, _, _)| {
+            i == mv.wildlife_market_index.unwrap_or(mv.market_index)
+        }).map(|&(_, _, w)| w);
+        if let Some(tile) = tile {
+            let mut eval_board = game.boards[player].clone();
+            if eval_board.place_tile(coord, tile, mv.rotation).is_some() {
+                if let (Some(wq), Some(wr), Some(wl)) = (mv.wildlife_q, mv.wildlife_r, wildlife) {
+                    let wcoord = cascadia_core::hex::HexCoord::new(wq, wr);
+                    if let Some(widx) = wcoord.to_index() {
+                        eval_board.place_wildlife(widx, wl);
+                    }
+                }
+                let actual = ScoreBreakdown::compute(&mut eval_board, &cards).total as f32;
+                let remaining = net.evaluate_with_bag(&eval_board, &bag_info);
+                mv.eval = ((actual + remaining) * 1000.0) as i32;
+            }
+        }
+    }
+
+    // Sort candidates + sources together by NNUE-based eval
     let mut indexed: Vec<(usize, i32)> = candidates.iter().enumerate().map(|(i, c)| (i, c.eval)).collect();
     indexed.sort_by(|a, b| b.1.cmp(&a.1));
     let sorted_candidates: Vec<ScoredMove> = indexed.iter().map(|&(i, _)| candidates[i]).collect();
