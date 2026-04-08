@@ -1476,6 +1476,7 @@ fn run_mce_candidates(
                 let net = Arc::clone(&net_arc);
                 let cands = Arc::clone(&candidates_arc);
                 let player = player;
+                let use_expectimax_rollouts = std::env::var("MCE_EXPECTIMAX_ROLLOUTS").is_ok();
 
                 thread::spawn(move || {
                     let mut results: Vec<(usize, u64)> = Vec::with_capacity(work.len());
@@ -1521,7 +1522,12 @@ fn run_mce_candidates(
                                 }
                             }
 
-                            match pick_best_move_nnue(&g, &net) {
+                            let ai_mv = if use_expectimax_rollouts {
+                                best_move_expectimax_1ply(&g, &net)
+                            } else {
+                                pick_best_move_nnue(&g, &net)
+                            };
+                            match ai_mv {
                                 Some(ai_mv) => {
                                     if !execute_scored_move(&mut g, &ai_mv) { break; }
                                 }
