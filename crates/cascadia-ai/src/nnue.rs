@@ -737,9 +737,12 @@ pub struct NNUENetwork {
     /// Second layer weights: flat [HIDDEN1 * HIDDEN2], row-major: w2[i * HIDDEN2 + j]
     pub w2: Vec<f32>,      // [HIDDEN1 * HIDDEN2]
     pub b2: Vec<f32>,      // [HIDDEN2]
-    /// Output layer weights: HIDDEN2 → 1
+    /// Output layer weights: HIDDEN2 → 1 (value head)
     pub w3: Vec<f32>,      // [HIDDEN2]
     pub b3: f32,
+    /// Policy head weights: HIDDEN2 → 1 (scores candidate afterstates for move ranking)
+    pub w3_policy: Vec<f32>,  // [HIDDEN2]
+    pub b3_policy: f32,
 }
 
 impl NNUENetwork {
@@ -779,7 +782,11 @@ impl NNUENetwork {
         let w3: Vec<f32> = (0..HIDDEN2).map(|_| rand_f32() * scale3).collect();
         let b3 = 0.0;
 
-        NNUENetwork { w1, b1, w2, b2, w3, b3 }
+        // Policy head initialized to zero (no effect until trained)
+        let w3_policy = vec![0.0; HIDDEN2];
+        let b3_policy = 0.0;
+
+        NNUENetwork { w1, b1, w2, b2, w3, b3, w3_policy, b3_policy }
     }
 
     /// Average weights from multiple trained copies (for parallel training).
@@ -811,6 +818,12 @@ impl NNUENetwork {
             self.w3[j] = sum / n;
         }
         self.b3 = others.iter().map(|o| o.b3).sum::<f32>() / n;
+        // Policy head
+        for j in 0..HIDDEN2 {
+            let sum: f32 = others.iter().map(|o| o.w3_policy[j]).sum();
+            self.w3_policy[j] = sum / n;
+        }
+        self.b3_policy = others.iter().map(|o| o.b3_policy).sum::<f32>() / n;
     }
 
     /// Full forward pass from sparse features. Returns predicted value.
@@ -848,13 +861,51 @@ impl NNUENetwork {
             *v = v.max(0.0);
         }
 
-        // Output
+        // Output (value head)
         let mut out = self.b3;
         for j in 0..HIDDEN2 {
             out += h2[j] * self.w3[j];
         }
 
         out
+    }
+
+    /// Forward pass returning both value and policy logit.
+    /// Policy logit is a raw scalar — softmax over candidates externally.
+    pub fn forward_dual(&self, features: &[u16]) -> (f32, f32) {
+        // Layer 1
+        let mut h1 = [0.0f32; HIDDEN1];
+        h1.copy_from_slice(&self.b1);
+        for &fi in features {
+            let base = fi as usize * HIDDEN1;
+            let col = &self.w1[base..base + HIDDEN1];
+            for j in 0..HIDDEN1 {
+                h1[j] += col[j];
+            }
+        }
+        for v in h1.iter_mut() { *v = v.max(0.0); }
+
+        // Layer 2
+        let mut h2 = [0.0f32; HIDDEN2];
+        h2.copy_from_slice(&self.b2);
+        for i in 0..HIDDEN1 {
+            if h1[i] > 0.0 {
+                let base = i * HIDDEN2;
+                let row = &self.w2[base..base + HIDDEN2];
+                for j in 0..HIDDEN2 { h2[j] += h1[i] * row[j]; }
+            }
+        }
+        for v in h2.iter_mut() { *v = v.max(0.0); }
+
+        // Value head
+        let mut value = self.b3;
+        for j in 0..HIDDEN2 { value += h2[j] * self.w3[j]; }
+
+        // Policy head
+        let mut policy = self.b3_policy;
+        for j in 0..HIDDEN2 { policy += h2[j] * self.w3_policy[j]; }
+
+        (value, policy)
     }
 
     /// Evaluate a board position directly (without bag info).
@@ -1109,11 +1160,17 @@ impl NNUENetwork {
             file.write_all(&v.to_le_bytes())?;
         }
 
-        // W3 + b3
+        // W3 + b3 (value head)
         for &v in &self.w3 {
             file.write_all(&v.to_le_bytes())?;
         }
         file.write_all(&self.b3.to_le_bytes())?;
+
+        // Policy head: w3_policy + b3_policy
+        for &v in &self.w3_policy {
+            file.write_all(&v.to_le_bytes())?;
+        }
+        file.write_all(&self.b3_policy.to_le_bytes())?;
 
         Ok(())
     }
@@ -1172,6 +1229,130 @@ impl NNUENetwork {
         }
         let b3 = read_f32(&mut file)?;
 
-        Ok(NNUENetwork { w1, b1, w2, b2, w3, b3 })
+        // Policy head (optional — backward compatible with old weight files)
+        let policy_bytes = (HIDDEN2 + 1) as u64 * 4; // w3_policy + b3_policy
+        let bytes_read = header_size + w1_features as u64 * HIDDEN1 as u64 * 4
+            + (HIDDEN1 + HIDDEN1 * HIDDEN2 + HIDDEN2 + HIDDEN2 + 1) as u64 * 4;
+        let (w3_policy, b3_policy) = if file_size >= bytes_read + policy_bytes {
+            let mut wp = Vec::with_capacity(HIDDEN2);
+            for _ in 0..HIDDEN2 {
+                wp.push(read_f32(&mut file)?);
+            }
+            let bp = read_f32(&mut file)?;
+            (wp, bp)
+        } else {
+            // Old file without policy head — initialize to zero
+            (vec![0.0; HIDDEN2], 0.0)
+        };
+
+        Ok(NNUENetwork { w1, b1, w2, b2, w3, b3, w3_policy, b3_policy })
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Standalone Policy Network (separate from value NNUE)
+// ─────────────────────────────────────────────────────────────────────
+
+/// Separate policy network for candidate ranking.
+/// Independent architecture from the value NNUE — can have different hidden sizes.
+pub struct PolicyNetwork {
+    pub num_features: usize,
+    pub hidden1: usize,
+    pub hidden2: usize,
+    pub w1: Vec<f32>,  // [num_features * hidden1]
+    pub b1: Vec<f32>,  // [hidden1]
+    pub w2: Vec<f32>,  // [hidden1 * hidden2]
+    pub b2: Vec<f32>,  // [hidden2]
+    pub w3: Vec<f32>,  // [hidden2]
+    pub b3: f32,
+}
+
+impl PolicyNetwork {
+    /// Forward pass — returns a single policy logit for this afterstate.
+    pub fn forward(&self, features: &[u16]) -> f32 {
+        let mut h1 = vec![0.0f32; self.hidden1];
+        h1.copy_from_slice(&self.b1);
+        for &fi in features {
+            let base = fi as usize * self.hidden1;
+            if base + self.hidden1 > self.w1.len() { continue; }
+            let col = &self.w1[base..base + self.hidden1];
+            for j in 0..self.hidden1 {
+                h1[j] += col[j];
+            }
+        }
+        for v in h1.iter_mut() { *v = v.max(0.0); }
+
+        let mut h2 = vec![0.0f32; self.hidden2];
+        h2.copy_from_slice(&self.b2);
+        for i in 0..self.hidden1 {
+            if h1[i] > 0.0 {
+                let base = i * self.hidden2;
+                let row = &self.w2[base..base + self.hidden2];
+                for j in 0..self.hidden2 { h2[j] += h1[i] * row[j]; }
+            }
+        }
+        for v in h2.iter_mut() { *v = v.max(0.0); }
+
+        let mut out = self.b3;
+        for j in 0..self.hidden2 { out += h2[j] * self.w3[j]; }
+        out
+    }
+
+    /// Score multiple candidates and return softmax probabilities.
+    pub fn rank_candidates(&self, candidate_features: &[Vec<u16>]) -> Vec<f32> {
+        let logits: Vec<f32> = candidate_features.iter()
+            .map(|f| self.forward(f))
+            .collect();
+        // Softmax
+        let max_l = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+        let exps: Vec<f32> = logits.iter().map(|&l| (l - max_l).exp()).collect();
+        let sum: f32 = exps.iter().sum();
+        exps.iter().map(|&e| e / sum).collect()
+    }
+
+    /// Load from PLCY binary format.
+    pub fn load(path: &std::path::Path) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut file = std::fs::File::open(path)?;
+        let mut buf4 = [0u8; 4];
+
+        file.read_exact(&mut buf4)?;
+        if &buf4 != b"PLCY" {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "bad magic"));
+        }
+        file.read_exact(&mut buf4)?; // version
+
+        let mut read_u32 = |f: &mut std::fs::File| -> std::io::Result<u32> {
+            let mut b = [0u8; 4];
+            f.read_exact(&mut b)?;
+            Ok(u32::from_le_bytes(b))
+        };
+        let mut read_f32 = |f: &mut std::fs::File| -> std::io::Result<f32> {
+            let mut b = [0u8; 4];
+            f.read_exact(&mut b)?;
+            Ok(f32::from_le_bytes(b))
+        };
+
+        let num_features = read_u32(&mut file)? as usize;
+        let hidden1 = read_u32(&mut file)? as usize;
+        let hidden2 = read_u32(&mut file)? as usize;
+
+        let mut w1 = vec![0.0f32; num_features * hidden1];
+        for v in w1.iter_mut() { *v = read_f32(&mut file)?; }
+        let mut b1 = vec![0.0f32; hidden1];
+        for v in b1.iter_mut() { *v = read_f32(&mut file)?; }
+
+        let mut w2 = vec![0.0f32; hidden1 * hidden2];
+        for v in w2.iter_mut() { *v = read_f32(&mut file)?; }
+        let mut b2 = vec![0.0f32; hidden2];
+        for v in b2.iter_mut() { *v = read_f32(&mut file)?; }
+
+        let mut w3 = vec![0.0f32; hidden2];
+        for v in w3.iter_mut() { *v = read_f32(&mut file)?; }
+        let b3 = read_f32(&mut file)?;
+
+        eprintln!("Loaded PolicyNetwork: {}→{}→{}→1", num_features, hidden1, hidden2);
+
+        Ok(PolicyNetwork { num_features, hidden1, hidden2, w1, b1, w2, b2, w3, b3 })
     }
 }

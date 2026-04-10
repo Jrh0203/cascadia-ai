@@ -69,6 +69,7 @@ def run_pytorch_training(samples_path, epochs, lr, init_weights, out_weights,
     """Run PyTorch training."""
     cmd = [
         sys.executable, "-u", "train_pytorch.py",
+        "value",  # subcommand
         "--samples", samples_path,
         "--epochs", str(epochs),
         "--lr", str(lr),

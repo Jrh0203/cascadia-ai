@@ -141,6 +141,216 @@ def main():
     print("  modal run modal_collect.py benchmark --num-workers 10 --games-per-worker 50")
 
 
+@app.function(
+    image=image,
+    cpu=8,
+    memory=4096,
+    timeout=7200,
+)
+def collect_mce_selfplay(
+    num_games: int,
+    seed_offset: int,
+    rollouts: int = 300,
+    weights: str = "nnue_weights_hybrid_iter4.bin",
+) -> tuple:
+    """Play full MCE games, return value samples + policy samples as bytes."""
+    import time as _time
+    _start = _time.time()
+    value_path = "/tmp/value_samples.bin"
+    policy_path = "/tmp/policy_samples.bin"
+    weights_path = f"/app/{weights}"
+
+    env = os.environ.copy()
+    env["CASCADIA_SEED_OFFSET"] = str(seed_offset)
+
+    result = subprocess.run(
+        [
+            "/app/target/release/cascadia-cli",
+            str(num_games),
+            "--mce-selfplay",
+            "--weights", weights_path,
+            "--rollouts", str(rollouts),
+            "--random-seed",
+            "--out", value_path,
+            "--policy-out", policy_path,
+        ],
+        capture_output=True,
+        text=True,
+        cwd="/app",
+        env=env,
+    )
+    print(result.stderr)
+    print(result.stdout)
+
+    _elapsed = _time.time() - _start
+    _cost = _elapsed * 0.000014 * 8
+    print(f"Worker cost: ${_cost:.3f} ({_elapsed:.0f}s)")
+
+    value_data = b""
+    policy_data = b""
+    if os.path.exists(value_path):
+        with open(value_path, "rb") as f:
+            value_data = f.read()
+    if os.path.exists(policy_path):
+        with open(policy_path, "rb") as f:
+            policy_data = f.read()
+
+    if not value_data:
+        raise RuntimeError(f"No value output. stderr: {result.stderr}")
+
+    return (value_data, policy_data)
+
+
+@app.function(
+    image=image,
+    cpu=8,
+    memory=4096,
+    timeout=7200,
+)
+def collect_exact_selfplay(
+    num_games: int,
+    seed_offset: int,
+    weights: str = "nnue_weights_hybrid_iter4.bin",
+) -> tuple:
+    """Play full expectimax games, return value + policy samples as bytes."""
+    import time as _time
+    _start = _time.time()
+    value_path = "/tmp/value_samples.bin"
+    policy_path = "/tmp/policy_samples.bin"
+    weights_path = f"/app/{weights}"
+
+    env = os.environ.copy()
+    env["CASCADIA_SEED_OFFSET"] = str(seed_offset)
+
+    result = subprocess.run(
+        [
+            "/app/target/release/cascadia-cli",
+            str(num_games),
+            "--exact-selfplay",
+            "--weights", weights_path,
+            "--random-seed",
+            "--out", value_path,
+            "--policy-out", policy_path,
+        ],
+        capture_output=True,
+        text=True,
+        cwd="/app",
+        env=env,
+    )
+    print(result.stderr)
+    print(result.stdout)
+
+    _elapsed = _time.time() - _start
+    _cost = _elapsed * 0.000014 * 8
+    print(f"Worker cost: ${_cost:.3f} ({_elapsed:.0f}s)")
+
+    value_data = b""
+    policy_data = b""
+    if os.path.exists(value_path):
+        with open(value_path, "rb") as f:
+            value_data = f.read()
+    if os.path.exists(policy_path):
+        with open(policy_path, "rb") as f:
+            policy_data = f.read()
+
+    if not value_data:
+        raise RuntimeError(f"No value output. stderr: {result.stderr}")
+
+    return (value_data, policy_data)
+
+
+@app.local_entrypoint()
+def exact_selfplay(
+    num_workers: int = 100,
+    games_per_worker: int = 1000,
+    weights: str = "nnue_weights_hybrid_iter4.bin",
+):
+    """Play expectimax games across workers, collect value + policy training data."""
+    total_games = num_workers * games_per_worker
+    print(f"Exact selfplay: {num_workers} workers, {games_per_worker} games each = {total_games} total")
+    print(f"Weights: {weights}")
+
+    futures = [
+        collect_exact_selfplay.spawn(
+            games_per_worker,
+            seed_offset=i * games_per_worker,
+            weights=weights,
+        )
+        for i in range(num_workers)
+    ]
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    value_path = f"exact_value_{timestamp}.bin"
+    policy_path = f"exact_policy_{timestamp}.bin"
+
+    total_value_bytes = 0
+    total_policy_bytes = 0
+    with open(value_path, "wb") as vf, open(policy_path, "wb") as pf:
+        for i, future in enumerate(futures):
+            value_data, policy_data = future.get()
+            if i == 0:
+                vf.write(value_data)
+                pf.write(policy_data)
+            else:
+                vf.write(value_data[4:])  # skip MCEP magic
+                pf.write(policy_data[4:])  # skip MCP2 magic
+            total_value_bytes += len(value_data)
+            total_policy_bytes += len(policy_data)
+            print(f"  Worker {i+1}/{num_workers} done: {len(value_data)} value, {len(policy_data)} policy")
+
+    print(f"\nValue samples: {value_path} ({total_value_bytes/1e6:.1f} MB)")
+    print(f"Policy samples: {policy_path} ({total_policy_bytes/1e6:.1f} MB)")
+    print(f"Total games: {total_games}")
+
+
+@app.local_entrypoint()
+def mce_selfplay(
+    num_workers: int = 15,
+    games_per_worker: int = 200,
+    rollouts: int = 300,
+    weights: str = "nnue_weights_hybrid_iter4.bin",
+):
+    """Play MCE games across workers, collect value + policy training data."""
+    total_games = num_workers * games_per_worker
+    print(f"MCE self-play: {num_workers} workers, {games_per_worker} games each = {total_games} total")
+    print(f"Rollouts: {rollouts}, weights: {weights}")
+
+    futures = [
+        collect_mce_selfplay.spawn(
+            games_per_worker,
+            seed_offset=i * games_per_worker,
+            rollouts=rollouts,
+            weights=weights,
+        )
+        for i in range(num_workers)
+    ]
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    value_path = f"mce_value_{timestamp}.bin"
+    policy_path = f"mce_policy_{timestamp}.bin"
+
+    total_value_bytes = 0
+    total_policy_bytes = 0
+    with open(value_path, "wb") as vf, open(policy_path, "wb") as pf:
+        for i, future in enumerate(futures):
+            value_data, policy_data = future.get()
+            if i == 0:
+                vf.write(value_data)
+                pf.write(policy_data)
+            else:
+                vf.write(value_data[4:])  # skip MCEP magic
+                pf.write(policy_data[4:])  # skip MCP2 magic
+            total_value_bytes += len(value_data)
+            total_policy_bytes += len(policy_data)
+            print(f"  Worker {i+1}/{num_workers} done: {len(value_data)} value bytes, {len(policy_data)} policy bytes")
+
+    print(f"\nValue samples: {value_path} ({total_value_bytes/1e6:.1f} MB)")
+    print(f"Policy samples: {policy_path} ({total_policy_bytes/1e6:.1f} MB)")
+    print(f"Total games: {total_games}")
+
+
 @app.local_entrypoint()
 def collect(
     num_workers: int = 1,

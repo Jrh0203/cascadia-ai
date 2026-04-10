@@ -506,6 +506,49 @@ pub fn best_move_expectimax_2ply(
     best.map(|(mv, score)| ScoredMove { score: score.round() as u16, ..mv })
 }
 
+/// Score ALL candidates using 1-ply expectimax. Returns (move, features, score) for each.
+/// Used for policy data collection — records what expectimax thinks about every candidate.
+pub fn score_all_candidates_expectimax(
+    game: &GameState,
+    net: &NNUENetwork,
+) -> Vec<(ScoredMove, Vec<u16>, f64)> {
+    let player = game.current_player;
+
+    let candidates = crate::search::candidate_moves_decomposed(game, net);
+    if candidates.is_empty() { return vec![]; }
+
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+    let mut results = Vec::with_capacity(candidates.len());
+
+    for mv in &candidates {
+        let mut g = game.clone();
+        if !crate::search::execute_scored_move(&mut g, mv) { continue; }
+
+        // Extract features of the afterstate
+        let features = crate::nnue::extract_features_with_bag(&g.boards[player], Some(&bag_info));
+
+        // Simulate opponents
+        while !g.is_game_over() && g.current_player != player {
+            match crate::search::greedy_move(&g) {
+                Some(opp_mv) => {
+                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
+                }
+                None => break,
+            }
+        }
+
+        let score = if g.is_game_over() {
+            ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64
+        } else {
+            evaluate_position_with_enumeration(&g, player, net, 1)
+        };
+
+        results.push((*mv, features, score));
+    }
+
+    results
+}
+
 /// Evaluate a position by enumerating future wildlife draws.
 /// depth=1: enumerate next market, take best move, use NNUE for remaining.
 /// depth=2: enumerate next market, take best move, then enumerate AGAIN for the turn after.
@@ -1123,7 +1166,7 @@ pub fn best_move_hybrid(
                     g.shuffle_bags(&mut rollout_rng);
                     if !crate::search::execute_scored_move(&mut g, mv) { continue; }
 
-                    let depth_limit = 6;
+                    let depth_limit: usize = std::env::var("MCE_DEPTH").ok().and_then(|s| s.parse().ok()).unwrap_or(6);
                     let mut ai_turns = 0;
                     while !g.is_game_over() {
                         if g.current_player != player {
@@ -1267,6 +1310,26 @@ pub fn top_moves_mce(
     scored.into_iter().take(top_n).collect()
 }
 
+/// Score all candidates with MCE, returning move + features + scores for policy training.
+/// Returns: Vec<(ScoredMove, features, mce_avg_score)> for each candidate, sorted best-first.
+pub fn mce_candidates_with_features(
+    game: &GameState,
+    net: &NNUENetwork,
+    num_rollouts: usize,
+    rng: &mut StdRng,
+) -> Vec<(ScoredMove, Vec<u16>, f32)> {
+    let player = game.current_player;
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+    let scored = run_mce_candidates(game, net, num_rollouts, rng);
+
+    scored.into_iter().map(|(mv, avg)| {
+        let mut g = game.clone();
+        crate::search::execute_scored_move(&mut g, &mv);
+        let features = crate::nnue::extract_features_with_bag(&g.boards[player], Some(&bag_info));
+        (mv, features, avg as f32)
+    }).collect()
+}
+
 /// Pick the best move using parallel Monte Carlo evaluation.
 /// `num_rollouts` is the total rollout budget (default 750), distributed
 /// via sequential halving across candidates.
@@ -1278,6 +1341,190 @@ pub fn best_move_mce(
 ) -> Option<ScoredMove> {
     let scored = run_mce_candidates(game, net, num_rollouts, rng);
     scored.into_iter().next().map(|(mv, avg)| ScoredMove { score: avg.round() as u16, ..mv })
+}
+
+/// MCE with policy-guided candidate pruning.
+/// Uses PolicyNetwork to rank candidates, keeps top_k for MCE evaluation.
+/// Uses the FULL original MCE pipeline (strategic candidates, demand scoring, NNUE re-ranking)
+/// with policy pruning injected after NNUE re-ranking.
+pub fn best_move_mce_with_policy(
+    game: &GameState,
+    net: &NNUENetwork,
+    policy_net: &crate::nnue::PolicyNetwork,
+    num_rollouts: usize,
+    top_k: usize,
+    rng: &mut StdRng,
+) -> Option<ScoredMove> {
+    let scored = run_mce_candidates_impl(game, net, Some(policy_net), top_k, num_rollouts, rng);
+    scored.into_iter().next().map(|(mv, avg)| ScoredMove { score: avg.round() as u16, ..mv })
+}
+
+/// Run MCE with policy-guided candidate filtering.
+fn run_mce_candidates_with_policy(
+    game: &GameState,
+    net: &NNUENetwork,
+    policy_net: &crate::nnue::PolicyNetwork,
+    num_rollouts: usize,
+    top_k: usize,
+    rng: &mut StdRng,
+) -> Vec<(ScoredMove, f64)> {
+    let player = game.current_player;
+    let mp: Vec<_> = game.market.available()
+        .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+    if mp.is_empty() { return Vec::new(); }
+
+    let cards = game.scoring_cards;
+    let turns = game.turns_remaining;
+    let mut board = game.boards[player].clone();
+    let greedy_best = best_move_with_potential(&mut board, &mp, &cards, turns);
+
+    let mut candidates = crate::search::candidate_moves_decomposed(game, net);
+
+    // Add greedy best if not already present
+    if let Some(ref bm) = greedy_best {
+        if !candidates.iter().any(|c| c.tile_q == bm.tile_q && c.tile_r == bm.tile_r
+            && c.rotation == bm.rotation && c.wildlife_q == bm.wildlife_q) {
+            candidates.push(*bm);
+        }
+    }
+
+    if candidates.is_empty() { return Vec::new(); }
+
+    // Score all candidates with PolicyNet
+    let bag_info = crate::nnue::BagInfo::from_game(game);
+    let mut scored_candidates: Vec<(usize, f32)> = candidates.iter().enumerate().map(|(i, mv)| {
+        let mut g = game.clone();
+        if !crate::search::execute_scored_move(&mut g, mv) {
+            return (i, f32::NEG_INFINITY);
+        }
+        let features = crate::nnue::extract_features_with_bag(&g.boards[player], Some(&bag_info));
+        let logit = policy_net.forward(&features);
+        (i, logit)
+    }).collect();
+
+    // Sort by policy score descending, keep top_k
+    scored_candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    scored_candidates.truncate(top_k);
+
+    // Filter candidates to top_k
+    let filtered: Vec<ScoredMove> = scored_candidates.iter()
+        .map(|&(idx, _)| candidates[idx])
+        .collect();
+
+    // Run standard MCE on the filtered set
+    run_mce_candidates_on(game, net, &filtered, num_rollouts, rng)
+}
+
+/// Run MCE rollouts (sequential halving) on a pre-selected set of candidates.
+fn run_mce_candidates_on(
+    game: &GameState,
+    net: &NNUENetwork,
+    candidates: &[ScoredMove],
+    num_rollouts: usize,
+    rng: &mut StdRng,
+) -> Vec<(ScoredMove, f64)> {
+    let player = game.current_player;
+    if candidates.is_empty() { return Vec::new(); }
+
+    let game_arc = std::sync::Arc::new(game.clone());
+    let net_arc = std::sync::Arc::new(net.clone());
+    let candidates_arc = std::sync::Arc::new(candidates.to_vec());
+
+    let n_cands = candidates.len();
+    let num_rounds = (n_cands as f64).log2().ceil().max(1.0) as usize;
+    let rollouts_per_round = (num_rollouts / num_rounds).max(1);
+
+    let mut totals = vec![0u64; n_cands];
+    let mut counts = vec![0u32; n_cands];
+    let mut alive: Vec<usize> = (0..n_cands).collect();
+
+    for round in 0..num_rounds {
+        if alive.is_empty() { break; }
+        let per_candidate = (rollouts_per_round / alive.len()).max(1);
+
+        let mut work_items: Vec<(usize, u64)> = Vec::new();
+        for &ci in &alive {
+            for _ in 0..per_candidate {
+                work_items.push((ci, rng.gen()));
+            }
+        }
+
+        let num_threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        let chunk_size = (work_items.len() + num_threads - 1) / num_threads;
+
+        let handles: Vec<_> = work_items.chunks(chunk_size).map(|chunk| {
+            let work = chunk.to_vec();
+            let game = std::sync::Arc::clone(&game_arc);
+            let net = std::sync::Arc::clone(&net_arc);
+            let cands = std::sync::Arc::clone(&candidates_arc);
+
+            std::thread::spawn(move || {
+                let mut results: Vec<(usize, u64)> = Vec::with_capacity(work.len());
+                for &(ci, seed) in &work {
+                    let mv = &cands[ci];
+                    let mut g = (*game).clone();
+                    let mut rollout_rng = StdRng::seed_from_u64(seed);
+                    g.shuffle_bags(&mut rollout_rng);
+                    if !crate::search::execute_scored_move(&mut g, mv) { continue; }
+
+                    let depth_limit: usize = std::env::var("MCE_DEPTH").ok().and_then(|s| s.parse().ok()).unwrap_or(6);
+                    let mut ai_turns = 0;
+                    while !g.is_game_over() {
+                        if g.current_player != player {
+                            match crate::search::greedy_move(&g) {
+                                Some(opp) => { if !crate::search::execute_scored_move(&mut g, &opp) { break; } }
+                                None => break,
+                            }
+                            continue;
+                        }
+                        ai_turns += 1;
+                        if ai_turns > depth_limit { break; }
+                        match crate::search::greedy_move(&g) {
+                            Some(ai_mv) => { if !crate::search::execute_scored_move(&mut g, &ai_mv) { break; } }
+                            None => break,
+                        }
+                    }
+
+                    let score = if g.is_game_over() {
+                        ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total
+                    } else {
+                        let actual = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total;
+                        let nval = net.evaluate(&g.boards[player]);
+                        let tier = tier_bonus(&g.boards[player]);
+                        (actual as f32 + nval.max(0.0) + tier) as u16
+                    };
+                    results.push((ci, score as u64));
+                }
+                results
+            })
+        }).collect();
+
+        for handle in handles {
+            for (ci, score) in handle.join().unwrap() {
+                totals[ci] += score;
+                counts[ci] += 1;
+            }
+        }
+
+        if round < num_rounds - 1 {
+            let mut alive_scores: Vec<(usize, f64)> = alive.iter()
+                .filter_map(|&ci| {
+                    if counts[ci] == 0 { return None; }
+                    Some((ci, totals[ci] as f64 / counts[ci] as f64))
+                }).collect();
+            alive_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            let keep = (alive_scores.len() + 1) / 2;
+            alive = alive_scores.into_iter().take(keep).map(|(ci, _)| ci).collect();
+        }
+    }
+
+    let mut scored: Vec<(ScoredMove, f64)> = candidates.iter().enumerate()
+        .filter_map(|(ci, mv)| {
+            if counts[ci] == 0 { return None; }
+            Some((*mv, totals[ci] as f64 / counts[ci] as f64))
+        }).collect();
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    scored
 }
 
 /// Candidate source tag for diagnostics.
@@ -1318,6 +1565,17 @@ fn record_diagnostic(diag: MceDiagnostics) {
 fn run_mce_candidates(
     game: &GameState,
     net: &NNUENetwork,
+    num_rollouts: usize,
+    rng: &mut StdRng,
+) -> Vec<(ScoredMove, f64)> {
+    run_mce_candidates_impl(game, net, None, 15, num_rollouts, rng)
+}
+
+fn run_mce_candidates_impl(
+    game: &GameState,
+    net: &NNUENetwork,
+    policy_net: Option<&crate::nnue::PolicyNetwork>,
+    top_k: usize,
     num_rollouts: usize,
     rng: &mut StdRng,
 ) -> Vec<(ScoredMove, f64)> {
@@ -1417,9 +1675,35 @@ fn run_mce_candidates(
     candidates = sorted_candidates;
     sources = sorted_sources;
 
-    // Keep more candidates now that we have diverse sources
-    candidates.truncate(15);
-    sources.truncate(15);
+    // Keep top candidates after NNUE re-ranking (configurable via MCE_CANDIDATES env var)
+    let max_candidates: usize = std::env::var("MCE_CANDIDATES").ok().and_then(|s| s.parse().ok()).unwrap_or(15);
+    candidates.truncate(max_candidates);
+    sources.truncate(max_candidates);
+
+    // Optional: policy-guided pruning to top_k (after NNUE re-ranking)
+    if let Some(pnet) = policy_net {
+        if candidates.len() > top_k {
+            let candidate_features: Vec<Vec<u16>> = candidates.iter().map(|mv| {
+                let mut g = game.clone();
+                if crate::search::execute_scored_move(&mut g, mv) {
+                    crate::nnue::extract_features_with_bag(&g.boards[player], Some(&bag_info))
+                } else {
+                    vec![]
+                }
+            }).collect();
+            let probs = pnet.rank_candidates(&candidate_features);
+            let mut indexed: Vec<(usize, f32)> = probs.iter().enumerate().map(|(i, &p)| (i, p)).collect();
+            indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+            indexed.truncate(top_k);
+            let kept: Vec<usize> = indexed.iter().map(|&(i, _)| i).collect();
+            candidates = kept.iter().map(|&i| candidates[i]).collect();
+            sources = kept.iter().map(|&i| sources[i]).collect();
+        }
+    } else {
+        // No policy: use top_k from NNUE ranking
+        candidates.truncate(top_k);
+        sources.truncate(top_k);
+    }
 
     if candidates.is_empty() {
         return greedy_best.into_iter().map(|m| (m, m.score as f64)).collect();
@@ -1491,7 +1775,7 @@ fn run_mce_candidates(
                             continue;
                         }
 
-                        let depth_limit = 6;
+                        let depth_limit: usize = std::env::var("MCE_DEPTH").ok().and_then(|s| s.parse().ok()).unwrap_or(6);
                         let mut ai_turns_played = 0;
 
                         while !g.is_game_over() {

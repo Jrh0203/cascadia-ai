@@ -23,6 +23,8 @@ enum Strategy {
     Expectimax { net: Arc<cascadia_ai::nnue::NNUENetwork>, samples: usize, depth: usize, branching: usize },
     ExactExpectimax { net: Arc<cascadia_ai::nnue::NNUENetwork> },
     Hybrid { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize, top_k: usize },
+    MCTS { net: Arc<cascadia_ai::nnue::NNUENetwork>, simulations: usize },
+    PolicyMCE { net: Arc<cascadia_ai::nnue::NNUENetwork>, policy: Arc<cascadia_ai::nnue::PolicyNetwork>, rollouts: usize, top_k: usize },
 }
 
 impl std::fmt::Display for Strategy {
@@ -38,6 +40,8 @@ impl std::fmt::Display for Strategy {
             Strategy::Expectimax { samples, depth, branching, .. } => write!(f, "expectimax(k={},d={},b={})", samples, depth, branching),
             Strategy::ExactExpectimax { .. } => write!(f, "exact-expectimax"),
             Strategy::Hybrid { rollouts, top_k, .. } => write!(f, "hybrid(k={},n={})", top_k, rollouts),
+            Strategy::MCTS { simulations, .. } => write!(f, "mcts(n={})", simulations),
+            Strategy::PolicyMCE { rollouts, top_k, .. } => write!(f, "policy-mce(k={},n={})", top_k, rollouts),
         }
     }
 }
@@ -77,6 +81,12 @@ fn pick_move(
         Strategy::Hybrid { net, rollouts, top_k } => {
             cascadia_ai::mce::best_move_hybrid(game, net, *rollouts, *top_k, search_rng)
         }
+        Strategy::MCTS { net, simulations } => {
+            cascadia_ai::mcts::best_move_mcts(game, net, *simulations)
+        }
+        Strategy::PolicyMCE { net, policy, rollouts, top_k } => {
+            cascadia_ai::mce::best_move_mce_with_policy(game, net, policy, *rollouts, *top_k, search_rng)
+        }
     }
 }
 
@@ -104,7 +114,9 @@ fn pre_move_optimize(
     // Extract NNUE net if available
     let net = match strategy {
         Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. }
-            | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net } => Some(net.clone()),
+            | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net }
+            | Strategy::MCTS { ref net, .. }
+            | Strategy::PolicyMCE { ref net, .. } => Some(net.clone()),
         _ => None,
     };
 
@@ -254,7 +266,9 @@ fn simulate_game_inner(
         if game.current_player != 0 {
             let opp_mv = match strategy {
                 Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. }
-                    | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net } => {
+                    | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net }
+                    | Strategy::MCTS { ref net, .. }
+                    | Strategy::PolicyMCE { ref net, .. } => {
                     cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
                         .or_else(|| greedy_move(&game))
                 }
@@ -501,8 +515,168 @@ fn print_comparison(results: &[BenchResult]) {
     println!("╚══════════════════════════╩════════╩════════╩════════╩════════╩════════╩═══════════╝");
 }
 
+fn run_gym_server(weights_path: &str) {
+    use std::io::{BufRead, Write};
+
+    let net = Arc::new(
+        cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+            .expect("Failed to load NNUE weights")
+    );
+
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+
+    let mut game: Option<GameState> = None;
+    let mut rng = StdRng::from_entropy();
+    let mut candidates: Vec<cascadia_ai::eval::ScoredMove> = Vec::new();
+    let mut candidate_features: Vec<Vec<u16>> = Vec::new();
+    let mut prev_score: u16 = 0;
+
+    for line in stdin.lock().lines() {
+        let line = line.unwrap();
+        let parts: Vec<&str> = line.trim().split_whitespace().collect();
+        if parts.is_empty() { continue; }
+
+        match parts[0] {
+            "reset" => {
+                let cards = ScoringCards::all_a();
+                let mut g = GameState::new(4, cards, &mut rng);
+                // Advance past opponents until player 0's turn
+                while !g.is_game_over() && g.current_player != 0 {
+                    let mv = cascadia_ai::nnue_train::pick_best_move_nnue(&g, &net)
+                        .or_else(|| greedy_move(&g));
+                    match mv {
+                        Some(mv) => { if !execute_scored_move(&mut g, &mv) { break; } }
+                        None => break,
+                    }
+                }
+                // Generate candidates
+                candidates = cascadia_ai::search::candidate_moves_pub(&g);
+                let bag_info = cascadia_ai::nnue::BagInfo::from_game(&g);
+                candidate_features = candidates.iter().map(|mv| {
+                    let mut gc = g.clone();
+                    if cascadia_ai::search::execute_scored_move(&mut gc, mv) {
+                        cascadia_ai::nnue::extract_features_with_bag(&gc.boards[0], Some(&bag_info))
+                    } else {
+                        vec![]
+                    }
+                }).collect();
+
+                let current_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                    &mut g.boards[0].clone(), &g.scoring_cards,
+                ).total;
+                let n_cands = candidates.len();
+                let done = g.is_game_over();
+                prev_score = current_score;
+
+                game = Some(g);
+                writeln!(out, "{{\"n_candidates\":{},\"current_score\":{},\"done\":{}}}", n_cands, current_score, done).unwrap();
+                out.flush().unwrap();
+            }
+            "obs" => {
+                // Return current board features + per-candidate ESTIMATED FINAL SCORES
+                // (actual_score_after_move + nnue_remaining_estimate)
+                if let Some(ref g) = game {
+                    let bag_info = cascadia_ai::nnue::BagInfo::from_game(g);
+                    let board_features = cascadia_ai::nnue::extract_features_with_bag(
+                        &g.boards[0], Some(&bag_info));
+
+                    // Compute estimated final score for each candidate
+                    let scores: Vec<f32> = candidates.iter().enumerate().map(|(i, mv)| {
+                        let mut gc = g.clone();
+                        if !cascadia_ai::search::execute_scored_move(&mut gc, mv) { return 0.0; }
+                        let actual = cascadia_core::scoring::ScoreBreakdown::compute(
+                            &mut gc.boards[0], &gc.scoring_cards,
+                        ).total as f32;
+                        let features = &candidate_features[i];
+                        let remaining = if features.is_empty() { 0.0 } else { net.forward(features) };
+                        actual + remaining
+                    }).collect();
+
+                    let json = format!("{{\"board_features\":{:?},\"candidate_scores\":{:?}}}",
+                        board_features, scores);
+                    writeln!(out, "{}", json).unwrap();
+                } else {
+                    writeln!(out, "{{\"board_features\":[],\"candidate_scores\":[]}}").unwrap();
+                }
+                out.flush().unwrap();
+            }
+            "step" => {
+                let action: usize = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+                if let Some(ref mut g) = game {
+                    let reward;
+                    let done;
+
+                    // Execute chosen candidate
+                    if action < candidates.len() {
+                        execute_scored_move(g, &candidates[action]);
+                    }
+
+                    // Advance opponents until player 0's turn again
+                    while !g.is_game_over() && g.current_player != 0 {
+                        let mv = cascadia_ai::nnue_train::pick_best_move_nnue(g, &net)
+                            .or_else(|| greedy_move(g));
+                        match mv {
+                            Some(mv) => { if !execute_scored_move(g, &mv) { break; } }
+                            None => break,
+                        }
+                    }
+
+                    done = g.is_game_over();
+
+                    // Compute current score and per-step delta reward
+                    let new_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut g.boards[0].clone(), &g.scoring_cards,
+                    ).total;
+                    reward = (new_score as i32 - prev_score as i32) as f32;
+                    prev_score = new_score;
+
+                    if done {
+                        candidates.clear();
+                        candidate_features.clear();
+                    } else {
+                        // Generate new candidates
+                        candidates = cascadia_ai::search::candidate_moves_pub(g);
+                        let bag_info = cascadia_ai::nnue::BagInfo::from_game(g);
+                        candidate_features = candidates.iter().map(|mv| {
+                            let mut gc = g.clone();
+                            if cascadia_ai::search::execute_scored_move(&mut gc, mv) {
+                                cascadia_ai::nnue::extract_features_with_bag(&gc.boards[0], Some(&bag_info))
+                            } else {
+                                vec![]
+                            }
+                        }).collect();
+                    }
+
+                    let current_score = new_score;
+
+                    let n_cands = candidates.len();
+                    writeln!(out, "{{\"reward\":{},\"done\":{},\"n_candidates\":{},\"current_score\":{}}}", reward, done, n_cands, current_score).unwrap();
+                    out.flush().unwrap();
+                }
+            }
+            "quit" => break,
+            _ => {
+                writeln!(out, "{{\"error\":\"unknown command: {}\"}}", parts[0]).unwrap();
+                out.flush().unwrap();
+            }
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+
+    // Gym server mode
+    if args.iter().any(|a| a == "--gym") {
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        run_gym_server(weights_path);
+        return;
+    }
+
     let num_games: usize = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(10_000);
 
     let run_all = args.iter().any(|a| a == "--all");
@@ -510,11 +684,263 @@ fn main() {
     let run_nnue_train = args.iter().any(|a| a == "--nnue-train");
     let run_cache_train = args.iter().any(|a| a == "--cache-train");
     let run_collect_mce = args.iter().any(|a| a == "--collect-mce");
+    let run_collect_policy = args.iter().any(|a| a == "--collect-policy");
+    let run_collect_mcts = args.iter().any(|a| a == "--collect-mcts");
+    let run_collect_mce_policy = args.iter().any(|a| a == "--collect-mce-policy");
     let run_train_mce_policy = args.iter().any(|a| a == "--train-mce-policy");
     let run_export_pytorch = args.iter().any(|a| a == "--export-pytorch");
     let run_self_play = args.iter().any(|a| a == "--self-play");
 
-    if run_self_play {
+    let run_mce_selfplay = args.iter().any(|a| a == "--mce-selfplay");
+    let run_exact_selfplay = args.iter().any(|a| a == "--exact-selfplay");
+
+    if run_exact_selfplay {
+        // Play full games with exact expectimax, record value + policy data
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("exact_value_samples.bin");
+        let policy_out = args.iter().position(|a| a == "--policy-out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("exact_policy_samples.bin");
+        let net = Arc::new(
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights")
+        );
+
+        let use_random_seed = args.iter().any(|a| a == "--random-seed");
+        let seed_offset: u64 = std::env::var("CASCADIA_SEED_OFFSET")
+            .ok().and_then(|s| s.parse().ok()).unwrap_or(0);
+        let mut entropy_rng = if use_random_seed {
+            StdRng::from_entropy()
+        } else {
+            StdRng::seed_from_u64(0xC0DE_C0DE + seed_offset)
+        };
+
+        println!("Exact expectimax self-play: {} games, weights={}", num_games, weights_path);
+        println!("  Value samples → {}", out_path);
+        println!("  Policy samples → {}", policy_out);
+        let start = Instant::now();
+        let mut all_value_samples: Vec<(Vec<u16>, f32)> = Vec::new();
+        let mut all_policy_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+        let mut total_final_score = 0u64;
+
+        for game_i in 0..num_games {
+            let mut rng = StdRng::seed_from_u64(entropy_rng.gen());
+            let cards = ScoringCards::all_a();
+            let mut game = GameState::new(4, cards, &mut rng);
+
+            let mut turn_value_records: Vec<(Vec<u16>, f32)> = Vec::new();
+            let mut turn_policy_records: Vec<(Vec<(Vec<u16>, f32)>, f32)> = Vec::new();
+
+            while !game.is_game_over() {
+                if game.current_player != 0 {
+                    let opp_mv = cascadia_ai::nnue_train::pick_best_move_nnue(&game, &net)
+                        .or_else(|| greedy_move(&game));
+                    match opp_mv {
+                        Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
+                        None => break,
+                    }
+                    continue;
+                }
+
+                let current = cascadia_core::scoring::ScoreBreakdown::compute(
+                    &mut game.boards[0].clone(), &game.scoring_cards,
+                ).total as f32;
+
+                // Get all scored candidates with expectimax (for policy data)
+                let results = cascadia_ai::mce::score_all_candidates_expectimax(&game, &net);
+                if results.is_empty() { break; }
+
+                // Policy data: all candidates with expectimax scores
+                let policy_candidates: Vec<(Vec<u16>, f32)> = results.iter()
+                    .map(|(_, features, score)| (features.clone(), *score as f32))
+                    .collect();
+                turn_policy_records.push((policy_candidates, current));
+
+                // Play best move (highest expectimax score)
+                let best_mv = results.iter()
+                    .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap())
+                    .map(|(mv, _, _)| *mv)
+                    .unwrap();
+                if !execute_scored_move(&mut game, &best_mv) { break; }
+
+                // Value data: afterstate of chosen move
+                let bag_info = cascadia_ai::nnue::BagInfo::from_game(&game);
+                let features = cascadia_ai::nnue::extract_features_with_bag(
+                    &game.boards[0], Some(&bag_info));
+                turn_value_records.push((features, current));
+            }
+
+            let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                &mut game.boards[0], &game.scoring_cards,
+            ).total as f32;
+            total_final_score += final_score as u64;
+
+            for (features, current) in turn_value_records {
+                let delta = (final_score - current).max(0.0);
+                all_value_samples.push((features, delta));
+            }
+
+            for (candidates, current) in turn_policy_records {
+                all_policy_groups.push(cascadia_ai::nnue_train::PolicyGroup {
+                    candidates,
+                    value_target: (final_score - current).max(0.0),
+                });
+            }
+
+            let avg_so_far = total_final_score as f64 / (game_i + 1) as f64;
+            eprint!("\r  Game {}/{} — final={:.0}, avg={:.1}, v={}, p={}    ",
+                    game_i + 1, num_games, final_score, avg_so_far,
+                    all_value_samples.len(), all_policy_groups.len());
+        }
+        eprintln!();
+
+        cascadia_ai::nnue_train::append_mce_samples(
+            std::path::Path::new(out_path), &all_value_samples,
+        ).expect("Failed to write value samples");
+
+        cascadia_ai::nnue_train::save_policy_data(
+            std::path::Path::new(policy_out), &all_policy_groups,
+        ).expect("Failed to write policy samples");
+
+        let elapsed = start.elapsed();
+        let avg_score = total_final_score as f64 / num_games as f64;
+        println!("Done in {:.1?}. {} games (avg {:.1})", elapsed, num_games, avg_score);
+        println!("  Value: {} samples → {}", all_value_samples.len(), out_path);
+        println!("  Policy: {} groups → {}", all_policy_groups.len(), policy_out);
+        return;
+    } else if run_mce_selfplay {
+        // Play full games with MCE for player 0, record afterstate delta labels
+        // (actual_final_score - current_score) for value network training
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("mce_value_samples.bin");
+        let rollouts: usize = args.iter().position(|a| a == "--rollouts")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(300);
+        let net = Arc::new(
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights")
+        );
+
+        let use_random_seed = args.iter().any(|a| a == "--random-seed");
+        let seed_offset: u64 = std::env::var("CASCADIA_SEED_OFFSET")
+            .ok().and_then(|s| s.parse().ok()).unwrap_or(0);
+        let mut entropy_rng = if use_random_seed {
+            StdRng::from_entropy()
+        } else {
+            StdRng::seed_from_u64(0xC0DE_C0DE + seed_offset)
+        };
+
+        let policy_out = args.iter().position(|a| a == "--policy-out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("mce_selfplay_policy.bin");
+
+        println!("MCE value self-play: {} games, rollouts={}, weights={}", num_games, rollouts, weights_path);
+        println!("  Value samples → {}", out_path);
+        println!("  Policy samples → {}", policy_out);
+        let start = Instant::now();
+        let mut all_value_samples: Vec<(Vec<u16>, f32)> = Vec::new();
+        let mut all_policy_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+        let mut total_final_score = 0u64;
+
+        for game_i in 0..num_games {
+            let mut rng = StdRng::seed_from_u64(entropy_rng.gen());
+            let cards = ScoringCards::all_a();
+            let mut game = GameState::new(4, cards, &mut rng);
+            let mut search_rng = StdRng::seed_from_u64(rng.gen());
+
+            // Per-turn records: (chosen_afterstate_features, current_score)
+            let mut turn_value_records: Vec<(Vec<u16>, f32)> = Vec::new();
+            // Per-turn policy records: (all_candidate_features_and_scores)
+            let mut turn_policy_records: Vec<(Vec<(Vec<u16>, f32)>, f32)> = Vec::new();
+
+            while !game.is_game_over() {
+                if game.current_player != 0 {
+                    let opp_mv = cascadia_ai::nnue_train::pick_best_move_nnue(&game, &net)
+                        .or_else(|| greedy_move(&game));
+                    match opp_mv {
+                        Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
+                        None => break,
+                    }
+                    continue;
+                }
+
+                let current = cascadia_core::scoring::ScoreBreakdown::compute(
+                    &mut game.boards[0].clone(), &game.scoring_cards,
+                ).total as f32;
+
+                // Get all scored candidates (for policy data) and play the best
+                let results = cascadia_ai::mce::mce_candidates_with_features(
+                    &game, &net, rollouts, &mut search_rng,
+                );
+                if results.is_empty() { break; }
+
+                // Policy data: all candidates with MCE scores
+                let policy_candidates: Vec<(Vec<u16>, f32)> = results.iter()
+                    .map(|(_, features, score)| (features.clone(), *score))
+                    .collect();
+                turn_policy_records.push((policy_candidates, current));
+
+                // Play best move (first in sorted results)
+                let best_mv = results[0].0;
+                if !execute_scored_move(&mut game, &best_mv) { break; }
+
+                // Value data: afterstate of chosen move
+                let bag_info = cascadia_ai::nnue::BagInfo::from_game(&game);
+                let features = cascadia_ai::nnue::extract_features_with_bag(
+                    &game.boards[0], Some(&bag_info));
+                turn_value_records.push((features, current));
+            }
+
+            let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                &mut game.boards[0], &game.scoring_cards,
+            ).total as f32;
+            total_final_score += final_score as u64;
+
+            // Value samples: delta labels
+            for (features, current) in turn_value_records {
+                let delta = (final_score - current).max(0.0);
+                all_value_samples.push((features, delta));
+            }
+
+            // Policy samples: grouped with value target
+            for (candidates, current) in turn_policy_records {
+                all_policy_groups.push(cascadia_ai::nnue_train::PolicyGroup {
+                    candidates,
+                    value_target: (final_score - current).max(0.0),
+                });
+            }
+
+            let avg_so_far = total_final_score as f64 / (game_i + 1) as f64;
+            eprint!("\r  Game {}/{} — final={:.0}, avg={:.1}, v_samples={}, p_groups={}    ",
+                    game_i + 1, num_games, final_score, avg_so_far,
+                    all_value_samples.len(), all_policy_groups.len());
+        }
+        eprintln!();
+
+        // Write value samples (MCEP format)
+        cascadia_ai::nnue_train::append_mce_samples(
+            std::path::Path::new(out_path), &all_value_samples,
+        ).expect("Failed to write value samples");
+
+        // Write policy samples (MCP2 format)
+        cascadia_ai::nnue_train::save_policy_data(
+            std::path::Path::new(policy_out), &all_policy_groups,
+        ).expect("Failed to write policy samples");
+
+        let elapsed = start.elapsed();
+        let avg_score = total_final_score as f64 / num_games as f64;
+        println!("Done in {:.1?}. {} games (avg {:.1})", elapsed, num_games, avg_score);
+        println!("  Value: {} samples → {}", all_value_samples.len(), out_path);
+        println!("  Policy: {} groups → {}", all_policy_groups.len(), policy_out);
+        return;
+    } else if run_self_play {
         // Generate NNUE self-play games and write to MCEP format
         let weights_path = args.iter().position(|a| a == "--weights")
             .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
@@ -704,6 +1130,392 @@ fn main() {
         }
         eprintln!();
         println!("Done in {:.1?}. {} samples written to {}", start.elapsed(), total_samples, out_path);
+        return;
+    } else if run_collect_policy {
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("policy_data.bin");
+        let net = Arc::new(
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights")
+        );
+
+        let use_random_seed = args.iter().any(|a| a == "--random-seed");
+        let mut entropy_rng = if use_random_seed {
+            StdRng::from_entropy()
+        } else {
+            StdRng::seed_from_u64(0xC0DE_C0DE)
+        };
+
+        println!("Collecting policy data: {} games, weights={}, out={}", num_games, weights_path, out_path);
+        let start = Instant::now();
+        let mut total_groups = 0usize;
+        let mut total_final_score = 0u64;
+
+        for game_i in 0..num_games {
+            let mut rng = StdRng::seed_from_u64(entropy_rng.gen());
+            let cards = ScoringCards::all_a();
+            let mut game = GameState::new(4, cards, &mut rng);
+            let mut game_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+            let mut move_scores: Vec<(usize, f64)> = Vec::new(); // (group_idx, current_score)
+
+            while !game.is_game_over() {
+                if game.current_player != 0 {
+                    let opp_mv = cascadia_ai::nnue_train::pick_best_move_nnue(&game, &net)
+                        .or_else(|| greedy_move(&game));
+                    match opp_mv {
+                        Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
+                        None => break,
+                    }
+                    continue;
+                }
+                // AI turn: score all candidates with expectimax, record for policy training
+                let scored = cascadia_ai::mce::score_all_candidates_expectimax(&game, &net);
+                if scored.is_empty() { break; }
+
+                let current_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                    &mut game.boards[0].clone(), &game.scoring_cards,
+                ).total as f64;
+
+                let group_idx = game_groups.len();
+                let candidates: Vec<(Vec<u16>, f32)> = scored.iter()
+                    .map(|(_, features, score)| (features.clone(), *score as f32))
+                    .collect();
+                game_groups.push(cascadia_ai::nnue_train::PolicyGroup {
+                    candidates,
+                    value_target: 0.0, // filled in after game ends
+                });
+                move_scores.push((group_idx, current_score));
+
+                // Play the best move
+                let best_mv = scored.iter()
+                    .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap())
+                    .map(|(mv, _, _)| *mv)
+                    .unwrap();
+                if !execute_scored_move(&mut game, &best_mv) { break; }
+            }
+
+            let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                &mut game.boards[0], &game.scoring_cards,
+            ).total as f64;
+            total_final_score += final_score as u64;
+
+            // Fill in value targets: final_score - current_score
+            for (group_idx, current_score) in &move_scores {
+                game_groups[*group_idx].value_target = (final_score - current_score) as f32;
+            }
+
+            total_groups += game_groups.len();
+            cascadia_ai::nnue_train::save_policy_data(
+                std::path::Path::new(&format!("{}.{}", out_path, game_i)),
+                &game_groups,
+            ).expect("Failed to save policy data");
+
+            // Append to main file
+            if game_i == 0 {
+                cascadia_ai::nnue_train::save_policy_data(
+                    std::path::Path::new(out_path),
+                    &game_groups,
+                ).expect("Failed to save policy data");
+            } else {
+                // Append without re-writing header
+                use std::io::Write;
+                let mut buf: Vec<u8> = Vec::new();
+                for group in &game_groups {
+                    buf.extend_from_slice(&(group.candidates.len() as u16).to_le_bytes());
+                    buf.extend_from_slice(&group.value_target.to_le_bytes());
+                    for (features, score) in &group.candidates {
+                        buf.extend_from_slice(&(features.len() as u16).to_le_bytes());
+                        for &f in features {
+                            buf.extend_from_slice(&f.to_le_bytes());
+                        }
+                        buf.extend_from_slice(&score.to_le_bytes());
+                    }
+                }
+                let mut file = std::fs::OpenOptions::new()
+                    .append(true).open(out_path)
+                    .expect("Failed to open policy data for append");
+                file.write_all(&buf).expect("Failed to append policy data");
+            }
+
+            // Clean up per-game temp file
+            let _ = std::fs::remove_file(format!("{}.{}", out_path, game_i));
+
+            let avg_so_far = total_final_score as f64 / (game_i + 1) as f64;
+            eprint!("\r  Game {}/{} — final={:.0}, avg={:.1}, groups={}    ",
+                    game_i + 1, num_games, final_score, avg_so_far, total_groups);
+        }
+        eprintln!();
+        println!("Done in {:.1?}. {} position groups written to {}", start.elapsed(), total_groups, out_path);
+        return;
+    } else if run_collect_mcts {
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("mcts_selfplay.bin");
+        let simulations: usize = args.iter().position(|a| a == "--simulations")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(100);
+        let temperature: f32 = args.iter().position(|a| a == "--temperature")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(1.0);
+        let net = Arc::new(
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights")
+        );
+
+        let use_random_seed = args.iter().any(|a| a == "--random-seed");
+        let mut entropy_rng = if use_random_seed {
+            StdRng::from_entropy()
+        } else {
+            StdRng::seed_from_u64(0xC0DE_C0DE)
+        };
+
+        let num_threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        println!("MCTS self-play: {} games, sims={}, temp={}, weights={}, out={}, threads={}",
+                 num_games, simulations, temperature, weights_path, out_path, num_threads);
+        let start = Instant::now();
+
+        // Pre-generate seeds for all games
+        let seeds: Vec<u64> = (0..num_games).map(|_| entropy_rng.gen()).collect();
+
+        // Parallel game execution
+        let games_done = std::sync::atomic::AtomicUsize::new(0);
+        let score_sum = std::sync::atomic::AtomicU64::new(0);
+        let games_done_ref = &games_done;
+        let score_sum_ref = &score_sum;
+
+        let chunk_size = (num_games + num_threads - 1) / num_threads;
+        let handles: Vec<_> = seeds.chunks(chunk_size).map(|chunk| {
+            let chunk_seeds = chunk.to_vec();
+            let net = Arc::clone(&net);
+            std::thread::spawn(move || {
+                let mut thread_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+                let mut thread_scores: Vec<u64> = Vec::new();
+
+                for &seed in &chunk_seeds {
+                    let mut rng = StdRng::seed_from_u64(seed);
+                    let cards = ScoringCards::all_a();
+                    let mut game = GameState::new(4, cards, &mut rng);
+                    let mut game_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+                    let mut move_scores: Vec<(usize, f64)> = Vec::new();
+                    let mut turn_count = 0usize;
+
+                    while !game.is_game_over() {
+                        if game.current_player != 0 {
+                            let opp_mv = cascadia_ai::nnue_train::pick_best_move_nnue(&game, &net)
+                                .or_else(|| greedy_move(&game));
+                            match opp_mv {
+                                Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
+                                None => break,
+                            }
+                            continue;
+                        }
+
+                        let temp = if turn_count < 8 { temperature } else { temperature * 0.1 };
+                        let result = cascadia_ai::mcts::mcts_search_with_features(
+                            &game, &net, simulations, temp,
+                        );
+
+                        match result {
+                            Some((best_mv, candidates)) => {
+                                let current_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                                    &mut game.boards[0].clone(), &game.scoring_cards,
+                                ).total as f64;
+
+                                let group_idx = game_groups.len();
+                                game_groups.push(cascadia_ai::nnue_train::PolicyGroup {
+                                    candidates,
+                                    value_target: 0.0,
+                                });
+                                move_scores.push((group_idx, current_score));
+
+                                if !execute_scored_move(&mut game, &best_mv) { break; }
+                            }
+                            None => break,
+                        }
+                        turn_count += 1;
+                    }
+
+                    let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut game.boards[0], &game.scoring_cards,
+                    ).total as f64;
+
+                    for (group_idx, current_score) in &move_scores {
+                        game_groups[*group_idx].value_target = (final_score - current_score) as f32;
+                    }
+
+                    thread_groups.extend(game_groups);
+                    thread_scores.push(final_score as u64);
+                }
+
+                (thread_groups, thread_scores)
+            })
+        }).collect();
+
+        // Collect results from all threads
+        let mut all_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+        let mut total_final_score = 0u64;
+        let mut total_games = 0usize;
+
+        for handle in handles {
+            let (groups, scores) = handle.join().unwrap();
+            all_groups.extend(groups);
+            for &s in &scores {
+                total_final_score += s;
+                total_games += 1;
+                let avg = total_final_score as f64 / total_games as f64;
+                eprint!("\r  {}/{} games done, avg={:.1}    ", total_games, num_games, avg);
+            }
+        }
+        eprintln!();
+
+        let total_groups = all_groups.len();
+
+        // Write all groups
+        cascadia_ai::nnue_train::save_policy_data(
+            std::path::Path::new(out_path), &all_groups,
+        ).expect("Failed to save self-play data");
+
+        let elapsed = start.elapsed();
+        let avg_score = total_final_score as f64 / num_games as f64;
+        println!("Done in {:.1?}. {} groups from {} games (avg {:.1}), written to {}",
+                 elapsed, total_groups, num_games, avg_score, out_path);
+        println!("  {:.1}s/game wall, {:.0} groups/game, {} threads",
+                 elapsed.as_secs_f64() / num_games as f64,
+                 total_groups as f64 / num_games as f64, num_threads);
+        return;
+    } else if run_collect_mce_policy {
+        // Collect MCE-scored candidates in MCP2 format for policy training.
+        // Each position: all candidates with MCE scores + value target.
+        // Parallelized across games.
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("mce_policy_grouped.bin");
+        let rollouts: usize = args.iter().position(|a| a == "--rollouts")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(300);
+        let net = Arc::new(
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights")
+        );
+
+        let use_random_seed = args.iter().any(|a| a == "--random-seed");
+        let mut entropy_rng = if use_random_seed {
+            StdRng::from_entropy()
+        } else {
+            StdRng::seed_from_u64(0xC0DE_C0DE)
+        };
+
+        let num_threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        println!("MCE policy collection: {} games, rollouts={}, weights={}, out={}, threads={}",
+                 num_games, rollouts, weights_path, out_path, num_threads);
+        let start = Instant::now();
+
+        let seeds: Vec<u64> = (0..num_games).map(|_| entropy_rng.gen()).collect();
+        let chunk_size = (num_games + num_threads - 1) / num_threads;
+
+        let handles: Vec<_> = seeds.chunks(chunk_size).map(|chunk| {
+            let chunk_seeds = chunk.to_vec();
+            let net = Arc::clone(&net);
+            std::thread::spawn(move || {
+                let mut thread_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+                let mut thread_scores: Vec<u64> = Vec::new();
+
+                for &seed in &chunk_seeds {
+                    let mut rng = StdRng::seed_from_u64(seed);
+                    let cards = ScoringCards::all_a();
+                    let mut game = GameState::new(4, cards, &mut rng);
+                    let mut search_rng = StdRng::seed_from_u64(rng.gen());
+                    let mut game_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+                    let mut move_scores: Vec<(usize, f64)> = Vec::new();
+
+                    while !game.is_game_over() {
+                        if game.current_player != 0 {
+                            let opp_mv = cascadia_ai::nnue_train::pick_best_move_nnue(&game, &net)
+                                .or_else(|| greedy_move(&game));
+                            match opp_mv {
+                                Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
+                                None => break,
+                            }
+                            continue;
+                        }
+
+                        // Score all candidates with MCE
+                        let results = cascadia_ai::mce::mce_candidates_with_features(
+                            &game, &net, rollouts, &mut search_rng,
+                        );
+                        if results.is_empty() { break; }
+
+                        let current_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                            &mut game.boards[0].clone(), &game.scoring_cards,
+                        ).total as f64;
+
+                        // Best move is first (results sorted by MCE score)
+                        let best_mv = results[0].0;
+
+                        let candidates: Vec<(Vec<u16>, f32)> = results.iter()
+                            .map(|(_, features, score)| (features.clone(), *score))
+                            .collect();
+
+                        let group_idx = game_groups.len();
+                        game_groups.push(cascadia_ai::nnue_train::PolicyGroup {
+                            candidates,
+                            value_target: 0.0,
+                        });
+                        move_scores.push((group_idx, current_score));
+
+                        if !execute_scored_move(&mut game, &best_mv) { break; }
+                    }
+
+                    let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut game.boards[0], &game.scoring_cards,
+                    ).total as f64;
+
+                    for (group_idx, current_score) in &move_scores {
+                        game_groups[*group_idx].value_target = (final_score - current_score) as f32;
+                    }
+
+                    thread_groups.extend(game_groups);
+                    thread_scores.push(final_score as u64);
+                }
+
+                (thread_groups, thread_scores)
+            })
+        }).collect();
+
+        let mut all_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
+        let mut total_final_score = 0u64;
+        let mut total_games = 0usize;
+
+        for handle in handles {
+            let (groups, scores) = handle.join().unwrap();
+            all_groups.extend(groups);
+            for &s in &scores {
+                total_final_score += s;
+                total_games += 1;
+                eprint!("\r  {}/{} games done, avg={:.1}    ",
+                        total_games, num_games, total_final_score as f64 / total_games as f64);
+            }
+        }
+        eprintln!();
+
+        let total_groups = all_groups.len();
+        cascadia_ai::nnue_train::save_policy_data(
+            std::path::Path::new(out_path), &all_groups,
+        ).expect("Failed to save policy data");
+
+        let elapsed = start.elapsed();
+        let avg_score = total_final_score as f64 / num_games as f64;
+        println!("Done in {:.1?}. {} groups from {} games (avg {:.1}), written to {}",
+                 elapsed, total_groups, num_games, avg_score, out_path);
+        println!("  {:.1}s/game wall, {} threads",
+                 elapsed.as_secs_f64() / num_games as f64, num_threads);
         return;
     } else if run_train_mce_policy {
         let epochs: usize = args.iter().position(|a| a == "--epochs")
@@ -921,6 +1733,15 @@ fn main() {
             let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
                 .expect("Failed to load NNUE weights");
             Strategy::Hybrid { net: Arc::new(net), rollouts, top_k }
+        } else if args.iter().any(|a| a == "--mcts-search") {
+            let weights_path = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("nnue_weights.bin");
+            let simulations: usize = args.iter().position(|a| a == "--simulations")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(200);
+            let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights for MCTS");
+            Strategy::MCTS { net: Arc::new(net), simulations }
         } else if args.iter().any(|a| a == "--exact") {
             let weights_path = args.iter().position(|a| a == "--weights")
                 .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
@@ -928,6 +1749,22 @@ fn main() {
             let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
                 .expect("Failed to load NNUE weights for exact expectimax");
             Strategy::ExactExpectimax { net: Arc::new(net) }
+        } else if args.iter().any(|a| a == "--policy-mce") {
+            let weights_path = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("nnue_weights.bin");
+            let policy_path = args.iter().position(|a| a == "--policy-weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("policy_net_v1.bin");
+            let rollouts = args.iter().position(|a| a == "--rollouts")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
+            let top_k: usize = args.iter().position(|a| a == "--top-k")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(5);
+            let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights");
+            let policy = cascadia_ai::nnue::PolicyNetwork::load(std::path::Path::new(policy_path))
+                .expect("Failed to load policy weights");
+            Strategy::PolicyMCE { net: Arc::new(net), policy: Arc::new(policy), rollouts, top_k }
         } else if args.iter().any(|a| a == "--mce") {
             let weights_path = args.iter().position(|a| a == "--weights")
                 .and_then(|i| args.get(i + 1).map(|s| s.as_str()))

@@ -380,6 +380,83 @@ pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> 
     Ok(samples)
 }
 
+// ── Policy Training Data (MCP2 format) ──
+// Magic: 4 bytes b"MCP2"
+// Per position group:
+//   u16 num_candidates
+//   f32 value_target (final_score - current_score)
+//   Per candidate:
+//     u16 num_features
+//     num_features × u16 feature indices
+//     f32 candidate_score (expectimax evaluation)
+const MCP2_MAGIC: &[u8; 4] = b"MCP2";
+
+/// A position group for policy training: K candidates with scores + value target.
+pub struct PolicyGroup {
+    pub candidates: Vec<(Vec<u16>, f32)>, // (features, expectimax_score)
+    pub value_target: f32,                 // final_score - current_score
+}
+
+/// Write policy training data to a file.
+pub fn save_policy_data(
+    path: &std::path::Path,
+    groups: &[PolicyGroup],
+) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut file = std::fs::File::create(path)?;
+    let mut buf: Vec<u8> = Vec::with_capacity(groups.len() * 512);
+    buf.extend_from_slice(MCP2_MAGIC);
+    for group in groups {
+        buf.extend_from_slice(&(group.candidates.len() as u16).to_le_bytes());
+        buf.extend_from_slice(&group.value_target.to_le_bytes());
+        for (features, score) in &group.candidates {
+            buf.extend_from_slice(&(features.len() as u16).to_le_bytes());
+            for &f in features {
+                buf.extend_from_slice(&f.to_le_bytes());
+            }
+            buf.extend_from_slice(&score.to_le_bytes());
+        }
+    }
+    file.write_all(&buf)?;
+    Ok(())
+}
+
+/// Load policy training data from a file.
+pub fn load_policy_data(path: &std::path::Path) -> std::io::Result<Vec<PolicyGroup>> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)?;
+    if bytes.len() < 4 || &bytes[..4] != MCP2_MAGIC {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "bad magic"));
+    }
+    let mut pos = 4usize;
+    let mut groups = Vec::new();
+    while pos + 6 <= bytes.len() {
+        let k = u16::from_le_bytes([bytes[pos], bytes[pos+1]]) as usize;
+        pos += 2;
+        let value_target = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
+        pos += 4;
+        let mut candidates = Vec::with_capacity(k);
+        for _ in 0..k {
+            if pos + 2 > bytes.len() { break; }
+            let nf = u16::from_le_bytes([bytes[pos], bytes[pos+1]]) as usize;
+            pos += 2;
+            if nf > 1024 || pos + nf * 2 + 4 > bytes.len() { break; }
+            let mut features = Vec::with_capacity(nf);
+            for _ in 0..nf {
+                features.push(u16::from_le_bytes([bytes[pos], bytes[pos+1]]));
+                pos += 2;
+            }
+            let score = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
+            pos += 4;
+            candidates.push((features, score));
+        }
+        groups.push(PolicyGroup { candidates, value_target });
+    }
+    Ok(groups)
+}
+
 // ── Hex rotation augmentation ──
 // 120° CW in axial coords: (q, r) → (-q-r, q)
 // 240° CW in axial coords: (q, r) → (r, -q-r)

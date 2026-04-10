@@ -1,2 +1,6 @@
 /target
 *.bin
+*.pt
+*.zip
+*.log
+exit_work/

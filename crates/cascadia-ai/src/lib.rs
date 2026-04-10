@@ -1,6 +1,7 @@
 pub mod eval;
 pub mod expectimax;
 pub mod mce;
+pub mod mcts;
 pub mod move_gen;
 pub mod nnue;
 pub mod nnue_train;
