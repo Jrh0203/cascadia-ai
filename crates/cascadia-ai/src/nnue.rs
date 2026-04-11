@@ -1212,12 +1212,24 @@ pub struct NNUENetwork {
     /// Second layer weights: flat [HIDDEN1 * HIDDEN2], row-major: w2[i * HIDDEN2 + j]
     pub w2: Vec<f32>,      // [HIDDEN1 * HIDDEN2]
     pub b2: Vec<f32>,      // [HIDDEN2]
-    /// Output layer weights: HIDDEN2 → 1 (value head)
+    /// Output layer weights: HIDDEN2 → 1 (legacy total value head)
     pub w3: Vec<f32>,      // [HIDDEN2]
     pub b3: f32,
     /// Policy head weights: HIDDEN2 → 1 (scores candidate afterstates for move ranking)
     pub w3_policy: Vec<f32>,  // [HIDDEN2]
     pub b3_policy: f32,
+    /// Split value heads (v5 architecture). When `has_split_value_heads` is true,
+    /// `forward()` returns `wildlife_pred + habitat_pred` (fixed 1:1 sum, no variable
+    /// blending). When false, falls back to the legacy w3/b3 total value head.
+    ///
+    /// `w3_wildlife`/`b3_wildlife` predicts the wildlife-only remaining score.
+    /// `w3_habitat`/`b3_habitat` predicts (habitat + nature_tokens + habitat_bonus)
+    /// remaining score.
+    pub has_split_value_heads: bool,
+    pub w3_wildlife: Vec<f32>,  // [HIDDEN2]
+    pub b3_wildlife: f32,
+    pub w3_habitat: Vec<f32>,   // [HIDDEN2]
+    pub b3_habitat: f32,
 }
 
 impl NNUENetwork {
@@ -1261,7 +1273,18 @@ impl NNUENetwork {
         let w3_policy = vec![0.0; HIDDEN2];
         let b3_policy = 0.0;
 
-        NNUENetwork { w1, b1, w2, b2, w3, b3, w3_policy, b3_policy }
+        // Split value heads off by default — legacy total value head is used.
+        let w3_wildlife = vec![0.0; HIDDEN2];
+        let b3_wildlife = 0.0;
+        let w3_habitat = vec![0.0; HIDDEN2];
+        let b3_habitat = 0.0;
+
+        NNUENetwork {
+            w1, b1, w2, b2, w3, b3,
+            w3_policy, b3_policy,
+            has_split_value_heads: false,
+            w3_wildlife, b3_wildlife, w3_habitat, b3_habitat,
+        }
     }
 
     /// Average weights from multiple trained copies (for parallel training).
@@ -1299,6 +1322,20 @@ impl NNUENetwork {
             self.w3_policy[j] = sum / n;
         }
         self.b3_policy = others.iter().map(|o| o.b3_policy).sum::<f32>() / n;
+
+        // Split value heads (only meaningful if all inputs have them set)
+        let all_split = others.iter().all(|o| o.has_split_value_heads);
+        self.has_split_value_heads = all_split;
+        if all_split {
+            for j in 0..HIDDEN2 {
+                let sw: f32 = others.iter().map(|o| o.w3_wildlife[j]).sum();
+                self.w3_wildlife[j] = sw / n;
+                let sh: f32 = others.iter().map(|o| o.w3_habitat[j]).sum();
+                self.w3_habitat[j] = sh / n;
+            }
+            self.b3_wildlife = others.iter().map(|o| o.b3_wildlife).sum::<f32>() / n;
+            self.b3_habitat = others.iter().map(|o| o.b3_habitat).sum::<f32>() / n;
+        }
     }
 
     /// Full forward pass from sparse features. Returns predicted value.
@@ -1336,7 +1373,18 @@ impl NNUENetwork {
             *v = v.max(0.0);
         }
 
-        // Output (value head)
+        // Output (value head): split heads if enabled, legacy total head otherwise.
+        if self.has_split_value_heads {
+            let mut wildlife = self.b3_wildlife;
+            let mut habitat = self.b3_habitat;
+            for j in 0..HIDDEN2 {
+                wildlife += h2[j] * self.w3_wildlife[j];
+                habitat += h2[j] * self.w3_habitat[j];
+            }
+            // 1:1 sum — wildlife + habitat components (no variable blending)
+            return wildlife + habitat;
+        }
+
         let mut out = self.b3;
         for j in 0..HIDDEN2 {
             out += h2[j] * self.w3[j];
@@ -1372,9 +1420,20 @@ impl NNUENetwork {
         }
         for v in h2.iter_mut() { *v = v.max(0.0); }
 
-        // Value head
-        let mut value = self.b3;
-        for j in 0..HIDDEN2 { value += h2[j] * self.w3[j]; }
+        // Value head: split heads if enabled, legacy total head otherwise
+        let value = if self.has_split_value_heads {
+            let mut wildlife = self.b3_wildlife;
+            let mut habitat = self.b3_habitat;
+            for j in 0..HIDDEN2 {
+                wildlife += h2[j] * self.w3_wildlife[j];
+                habitat += h2[j] * self.w3_habitat[j];
+            }
+            wildlife + habitat
+        } else {
+            let mut v = self.b3;
+            for j in 0..HIDDEN2 { v += h2[j] * self.w3[j]; }
+            v
+        };
 
         // Policy head
         let mut policy = self.b3_policy;
@@ -1421,7 +1480,16 @@ impl NNUENetwork {
             }
         }
         for v in h2.iter_mut() { *v = v.max(0.0); }
-        // Output
+        // Output: split heads if enabled, legacy total head otherwise.
+        if self.has_split_value_heads {
+            let mut wildlife = self.b3_wildlife;
+            let mut habitat = self.b3_habitat;
+            for j in 0..HIDDEN2 {
+                wildlife += h2[j] * self.w3_wildlife[j];
+                habitat += h2[j] * self.w3_habitat[j];
+            }
+            return wildlife + habitat;
+        }
         let mut out = self.b3;
         for j in 0..HIDDEN2 { out += h2[j] * self.w3[j]; }
         out
@@ -1616,8 +1684,11 @@ impl NNUENetwork {
         use std::io::Write;
         let mut file = std::fs::File::create(path)?;
 
+        // version=1: legacy single value head + policy head
+        // version=2: adds split value heads (wildlife + habitat) appended at end
+        let version: u32 = if self.has_split_value_heads { 2 } else { 1 };
         file.write_all(b"NNUE")?;
-        file.write_all(&1u32.to_le_bytes())?;
+        file.write_all(&version.to_le_bytes())?;
 
         // W1: flat [NUM_FEATURES * HIDDEN1]
         for &v in &self.w1 {
@@ -1635,7 +1706,7 @@ impl NNUENetwork {
             file.write_all(&v.to_le_bytes())?;
         }
 
-        // W3 + b3 (value head)
+        // W3 + b3 (legacy value head, kept for back-compat even with split heads)
         for &v in &self.w3 {
             file.write_all(&v.to_le_bytes())?;
         }
@@ -1647,10 +1718,23 @@ impl NNUENetwork {
         }
         file.write_all(&self.b3_policy.to_le_bytes())?;
 
+        // Split value heads (v2 only): w3_wildlife + b3_wildlife + w3_habitat + b3_habitat
+        if self.has_split_value_heads {
+            for &v in &self.w3_wildlife {
+                file.write_all(&v.to_le_bytes())?;
+            }
+            file.write_all(&self.b3_wildlife.to_le_bytes())?;
+            for &v in &self.w3_habitat {
+                file.write_all(&v.to_le_bytes())?;
+            }
+            file.write_all(&self.b3_habitat.to_le_bytes())?;
+        }
+
         Ok(())
     }
 
-    /// Load weights from a binary file.
+    /// Load weights from a binary file. Supports version 1 (single value head)
+    /// and version 2 (split value heads appended after policy head).
     pub fn load(path: &std::path::Path) -> std::io::Result<Self> {
         use std::io::Read;
         let mut file = std::fs::File::open(path)?;
@@ -1660,8 +1744,9 @@ impl NNUENetwork {
         if &magic != b"NNUE" {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "bad magic"));
         }
-        let mut ver = [0u8; 4];
-        file.read_exact(&mut ver)?;
+        let mut ver_buf = [0u8; 4];
+        file.read_exact(&mut ver_buf)?;
+        let version = u32::from_le_bytes(ver_buf);
 
         let mut buf = [0u8; 4];
         let mut read_f32 = |f: &mut std::fs::File| -> std::io::Result<f32> {
@@ -1669,20 +1754,43 @@ impl NNUENetwork {
             Ok(f32::from_le_bytes(buf))
         };
 
-        // Detect feature count from file size for backward compatibility.
-        // rest_size = b1 + w2 + b2 + w3 + b3
+        // Layout (from start): header(8) + w1 + b1 + w2 + b2 + w3 + b3 + w3_policy + b3_policy + [split heads]
+        // We don't know w1_features upfront (legacy files had smaller NUM_FEATURES). Compute it by
+        // subtracting everything else from the file size.
         let file_size = file.metadata()?.len();
         let header_size = 8u64;
-        let rest_size = ((HIDDEN1 + HIDDEN1 * HIDDEN2 + HIDDEN2 + HIDDEN2 + 1) as u64) * 4;
-        let w1_bytes = file_size - header_size - rest_size;
-        let w1_features = (w1_bytes / (HIDDEN1 as u64 * 4)) as usize;
-        let w1_features = w1_features.min(NUM_FEATURES); // cap at current max
+        let fixed_after_w1 = ((HIDDEN1 + HIDDEN1 * HIDDEN2 + HIDDEN2 + HIDDEN2 + 1) as u64) * 4;
+        let policy_head_size = (HIDDEN2 + 1) as u64 * 4;
+        let split_head_size = (2 * (HIDDEN2 + 1)) as u64 * 4; // w3_wildlife + b + w3_habitat + b
+        // The v1 file has no split heads appended, v2 does.
+        let trailing_size = policy_head_size + if version >= 2 { split_head_size } else { 0 };
+        // Compute w1 features from remaining bytes. If the file is v1 without a policy head
+        // (truly legacy), fall back by assuming zero trailing. That's best-effort.
+        let mut w1_bytes = file_size.saturating_sub(header_size + fixed_after_w1 + trailing_size);
+        let mut trailing_has_policy = true;
+        let mut trailing_has_split = version >= 2;
+        let mut computed_features = w1_bytes / (HIDDEN1 as u64 * 4);
+        if computed_features > NUM_FEATURES as u64 {
+            // Stored in a newer file with more features than we know — cap and warn.
+            computed_features = NUM_FEATURES as u64;
+        }
+        // If this arithmetic looks insane (e.g. v1 file without policy head), retry without policy.
+        if w1_bytes == 0 || (w1_bytes % (HIDDEN1 as u64 * 4)) != 0 {
+            let w1_bytes_no_trailing = file_size.saturating_sub(header_size + fixed_after_w1);
+            if w1_bytes_no_trailing > 0 && (w1_bytes_no_trailing % (HIDDEN1 as u64 * 4)) == 0 {
+                w1_bytes = w1_bytes_no_trailing;
+                trailing_has_policy = false;
+                trailing_has_split = false;
+                computed_features = (w1_bytes / (HIDDEN1 as u64 * 4)).min(NUM_FEATURES as u64);
+            }
+        }
+        let w1_features = computed_features as usize;
+        let w1_features = w1_features.min(NUM_FEATURES);
 
         let mut w1 = Vec::with_capacity(NUM_FEATURES * HIDDEN1);
         for _ in 0..w1_features * HIDDEN1 {
             w1.push(read_f32(&mut file)?);
         }
-        // Pad new features with zeros if loading legacy weights
         w1.resize(NUM_FEATURES * HIDDEN1, 0.0);
         let mut b1 = Vec::with_capacity(HIDDEN1);
         for _ in 0..HIDDEN1 {
@@ -1704,11 +1812,8 @@ impl NNUENetwork {
         }
         let b3 = read_f32(&mut file)?;
 
-        // Policy head (optional — backward compatible with old weight files)
-        let policy_bytes = (HIDDEN2 + 1) as u64 * 4; // w3_policy + b3_policy
-        let bytes_read = header_size + w1_features as u64 * HIDDEN1 as u64 * 4
-            + (HIDDEN1 + HIDDEN1 * HIDDEN2 + HIDDEN2 + HIDDEN2 + 1) as u64 * 4;
-        let (w3_policy, b3_policy) = if file_size >= bytes_read + policy_bytes {
+        // Policy head (optional — backward compatible with pre-policy-head files)
+        let (w3_policy, b3_policy) = if trailing_has_policy {
             let mut wp = Vec::with_capacity(HIDDEN2);
             for _ in 0..HIDDEN2 {
                 wp.push(read_f32(&mut file)?);
@@ -1716,11 +1821,32 @@ impl NNUENetwork {
             let bp = read_f32(&mut file)?;
             (wp, bp)
         } else {
-            // Old file without policy head — initialize to zero
             (vec![0.0; HIDDEN2], 0.0)
         };
 
-        Ok(NNUENetwork { w1, b1, w2, b2, w3, b3, w3_policy, b3_policy })
+        // Split value heads (v2 only)
+        let (has_split, w3_wildlife, b3_wildlife, w3_habitat, b3_habitat) = if trailing_has_split {
+            let mut ww = Vec::with_capacity(HIDDEN2);
+            for _ in 0..HIDDEN2 {
+                ww.push(read_f32(&mut file)?);
+            }
+            let bw = read_f32(&mut file)?;
+            let mut wh = Vec::with_capacity(HIDDEN2);
+            for _ in 0..HIDDEN2 {
+                wh.push(read_f32(&mut file)?);
+            }
+            let bh = read_f32(&mut file)?;
+            (true, ww, bw, wh, bh)
+        } else {
+            (false, vec![0.0; HIDDEN2], 0.0, vec![0.0; HIDDEN2], 0.0)
+        };
+
+        Ok(NNUENetwork {
+            w1, b1, w2, b2, w3, b3,
+            w3_policy, b3_policy,
+            has_split_value_heads: has_split,
+            w3_wildlife, b3_wildlife, w3_habitat, b3_habitat,
+        })
     }
 }
 

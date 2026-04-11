@@ -93,4 +93,22 @@ impl ScoreBreakdown {
         breakdown.total += breakdown.habitat_bonus.iter().map(|&b| b as u16).sum::<u16>();
         breakdown
     }
+
+    /// Sum of wildlife scores across all 5 species (bear/elk/salmon/hawk/fox).
+    /// This is the "wildlife_total" used as a split-value-head training target.
+    #[inline]
+    pub fn wildlife_total(&self) -> u16 {
+        self.wildlife.iter().sum()
+    }
+
+    /// Everything except wildlife: sum(habitat) + nature_tokens.
+    /// Note: does NOT include habitat_bonus (that's only populated by compute_with_bonuses
+    /// in 4-player context; single-player training uses Self::compute which leaves it at 0).
+    /// This is the "habitat+tokens" training target for the non-wildlife value head.
+    #[inline]
+    pub fn non_wildlife_total(&self) -> u16 {
+        let hab: u16 = self.habitat.iter().sum();
+        let bonus: u16 = self.habitat_bonus.iter().map(|&b| b as u16).sum();
+        hab + self.nature_tokens + bonus
+    }
 }

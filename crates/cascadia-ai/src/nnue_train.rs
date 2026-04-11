@@ -18,7 +18,13 @@ use crate::search::{execute_scored_move, greedy_move};
 
 /// A training sample: board features + target score(s).
 ///
-/// `target` is the main value target (final_score - current_score).
+/// `target` is the main value target (final_score - current_score), i.e. the TOTAL
+/// remaining points to gain from this afterstate to game end.
+///
+/// `target_wildlife` is the WILDLIFE-only remaining points (final_wildlife - current_wildlife).
+/// The habitat+tokens remaining is derived as `target - target_wildlife`. Stored as a
+/// separate field to avoid recomputation during multi-head training. v5 split-value-head
+/// architecture uses this for the wildlife value head target.
 ///
 /// `aux_bear` and `aux_salmon` are auxiliary regression targets used by
 /// multi-head training (v4 architecture). They are the FINAL bear pair count
@@ -31,10 +37,11 @@ pub struct Sample {
     pub target: f32,
     pub aux_bear: f32,
     pub aux_salmon: f32,
+    pub target_wildlife: f32,
 }
 
 /// Count isolated bear pairs (connected components of size exactly 2).
-fn count_bear_pairs(board: &cascadia_core::board::Board) -> usize {
+pub fn count_bear_pairs(board: &cascadia_core::board::Board) -> usize {
     use cascadia_core::types::Wildlife;
     use cascadia_core::hex::ADJACENCY;
     let adj = &*ADJACENCY;
@@ -64,7 +71,7 @@ fn count_bear_pairs(board: &cascadia_core::board::Board) -> usize {
 }
 
 /// Find the longest valid salmon chain (component where each cell has ≤2 salmon neighbors).
-fn longest_salmon_chain(board: &cascadia_core::board::Board) -> usize {
+pub fn longest_salmon_chain(board: &cascadia_core::board::Board) -> usize {
     use cascadia_core::types::Wildlife;
     use cascadia_core::hex::ADJACENCY;
     let adj = &*ADJACENCY;
@@ -147,7 +154,8 @@ fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_
     let mut rng = StdRng::seed_from_u64(seed);
     let cards = ScoringCards::all_a();
     let mut game = GameState::new(num_players, cards, &mut rng);
-    let mut afterstates: Vec<(Vec<u16>, u16)> = Vec::with_capacity(20);
+    // Each afterstate: (features, total_score, wildlife_only_score)
+    let mut afterstates: Vec<(Vec<u16>, u16, u16)> = Vec::with_capacity(20);
 
     while !game.is_game_over() {
         if game.current_player != 0 {
@@ -170,21 +178,29 @@ fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_
             Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
             None => break,
         }
-        let current_score = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards).total;
+        let bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
         let bag_info = crate::nnue::BagInfo::from_game(&game);
-        afterstates.push((crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)), current_score));
+        afterstates.push((
+            crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)),
+            bd.total,
+            bd.wildlife_total(),
+        ));
     }
 
-    let final_score = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards).total;
+    let final_bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
+    let final_score = final_bd.total;
+    let final_wildlife = final_bd.wildlife_total();
     let final_bear_pairs = count_bear_pairs(&game.boards[0]) as f32;
     let final_salmon_chain = longest_salmon_chain(&game.boards[0]) as f32;
-    for (features, current_score) in afterstates {
+    for (features, current_score, current_wildlife) in afterstates {
         let remaining = final_score.saturating_sub(current_score) as f32;
+        let remaining_wildlife = final_wildlife.saturating_sub(current_wildlife) as f32;
         samples.push(Sample {
             features,
             target: remaining,
             aux_bear: final_bear_pairs,
             aux_salmon: final_salmon_chain,
+            target_wildlife: remaining_wildlife,
         });
     }
 
@@ -245,7 +261,8 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
     let mut game = GameState::new(num_players, cards, &mut rng);
 
     // Collect afterstate features + scores during the game
-    let mut afterstates: Vec<(Vec<u16>, u16)> = Vec::with_capacity(20);
+    // (features, current_total, current_wildlife_only)
+    let mut afterstates: Vec<(Vec<u16>, u16, u16)> = Vec::with_capacity(20);
     // Saved state right before the AI's LAST move (for K=1 exact label)
     let mut state_before_last_ai_move: Option<GameState> = None;
 
@@ -286,18 +303,20 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
             None => break,
         }
 
-        // Record afterstate features + current score
-        let current_score = ScoreBreakdown::compute(
-            &mut game.boards[0], &game.scoring_cards,
-        ).total;
+        // Record afterstate features + current scores (total + wildlife-only)
+        let bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
         let bag_info = crate::nnue::BagInfo::from_game(&game);
-        afterstates.push((crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)), current_score));
+        afterstates.push((
+            crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)),
+            bd.total,
+            bd.wildlife_total(),
+        ));
     }
 
-    // Final score
-    let final_score = ScoreBreakdown::compute(
-        &mut game.boards[0], &game.scoring_cards,
-    ).total;
+    // Final scores (total + wildlife-only)
+    let final_bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
+    let final_score = final_bd.total;
+    let final_wildlife = final_bd.wildlife_total();
 
     // Auxiliary targets: count final bear pairs and longest salmon chain.
     // All afterstates from this game share the same aux targets — they predict
@@ -308,36 +327,41 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
     // K=1: compute the OPTIMAL final score by replaying the last move greedily
     // from the saved state. This may differ from the AI's actual final_score if
     // the AI played a random epsilon-exploration move on its last turn.
-    let optimal_final_score = if let Some(mut g) = state_before_last_ai_move.clone() {
+    // We compute total + wildlife separately so the split-head target stays consistent.
+    let (optimal_final_score, optimal_final_wildlife) = if let Some(mut g) = state_before_last_ai_move.clone() {
         if let Some(greedy_mv) = greedy_move(&g) {
             if execute_scored_move(&mut g, &greedy_mv) {
-                ScoreBreakdown::compute(&mut g.boards[0], &g.scoring_cards).total
+                let b = ScoreBreakdown::compute(&mut g.boards[0], &g.scoring_cards);
+                (b.total, b.wildlife_total())
             } else {
-                final_score
+                (final_score, final_wildlife)
             }
         } else {
-            final_score
+            (final_score, final_wildlife)
         }
     } else {
-        final_score
+        (final_score, final_wildlife)
     };
 
     // Delta labels: remaining points to gain.
     // For sample N-2 (state with 1 AI move remaining = afterstates[len-2]), use the
     // optimal final score. For all other samples, use the actual final score.
     let n = afterstates.len();
-    for (i, (features, current_score)) in afterstates.iter().enumerate() {
-        let label_final = if i == n.saturating_sub(2) {
-            optimal_final_score.max(final_score)  // never under-estimate
+    for (i, (features, current_score, current_wildlife)) in afterstates.iter().enumerate() {
+        let (label_final, label_final_wildlife) = if i == n.saturating_sub(2) {
+            // never under-estimate either
+            (optimal_final_score.max(final_score), optimal_final_wildlife.max(final_wildlife))
         } else {
-            final_score
+            (final_score, final_wildlife)
         };
         let remaining = label_final.saturating_sub(*current_score) as f32;
+        let remaining_wildlife = label_final_wildlife.saturating_sub(*current_wildlife) as f32;
         samples.push(Sample {
             features: features.clone(),
             target: remaining,
             aux_bear: final_bear_pairs,
             aux_salmon: final_salmon_chain,
+            target_wildlife: remaining_wildlife,
         });
     }
 
@@ -357,10 +381,10 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
             let mut buf: Vec<u8> = Vec::with_capacity(1024);
             buf.extend_from_slice(&(afterstates.len() as u16).to_le_bytes());
             buf.extend_from_slice(&final_score.to_le_bytes());
-            for (features, current_score) in &afterstates {
+            for (features, current_score, _current_wildlife) in &afterstates {
                 buf.extend_from_slice(&(features.len() as u16).to_le_bytes());
                 for &f in features {
-                    buf.extend_from_slice(&f.to_le_bytes());
+                    buf.extend_from_slice(&(f as u16).to_le_bytes());
                 }
                 buf.extend_from_slice(&current_score.to_le_bytes());
             }
@@ -438,7 +462,7 @@ pub fn load_cache_samples(cache_path: &std::path::Path) -> std::io::Result<Vec<S
                 None => { game_ok = false; break; }
             };
             let target = final_score.saturating_sub(current_score) as f32;
-            game_samples.push(Sample { features, target, aux_bear: 0.0, aux_salmon: 0.0 });
+            game_samples.push(Sample { features, target, aux_bear: 0.0, aux_salmon: 0.0, target_wildlife: 0.0 });
         }
 
         if game_ok {
@@ -458,13 +482,16 @@ pub fn load_cache_samples(cache_path: &std::path::Path) -> std::io::Result<Vec<S
 }
 
 // ── MCE Policy Samples: flat file format ──
-// Magic: 4 bytes b"MCEP" (v1) or b"MCV2" (v2 with aux targets)
+// Magic: 4 bytes b"MCEP" (v1), b"MCV2" (v2 with aux), b"MCV3" (v3 adds target_wildlife)
 // v1: u16 nf, nf × u16 features, f32 target
 // v2: u16 nf, nf × u16 features, f32 target, f32 aux_bear, f32 aux_salmon
+// v3: u16 nf, nf × u16 features, f32 target, f32 aux_bear, f32 aux_salmon, f32 target_wildlife
 const MCE_POLICY_MAGIC: &[u8; 4] = b"MCEP";
 const MCE_POLICY_MAGIC_V2: &[u8; 4] = b"MCV2";
+const MCE_POLICY_MAGIC_V3: &[u8; 4] = b"MCV3";
 
-/// Append MCE-labeled samples to a file. Creates the file with a magic header if new.
+/// Append MCE-labeled samples to a file in legacy MCEP (v1) format.
+/// Prefer `append_mce_samples_v3` for all new work — MCEP loses aux + wildlife targets.
 pub fn append_mce_samples(
     path: &std::path::Path,
     samples: &[(Vec<u16>, f32)],
@@ -488,7 +515,8 @@ pub fn append_mce_samples(
     Ok(())
 }
 
-/// Load all MCE policy samples from a file (auto-detects v1 MCEP or v2 MCV2).
+/// Load all MCE policy samples from a file (auto-detects v1 MCEP, v2 MCV2, or v3 MCV3).
+/// For v1/v2 samples loaded here, `target_wildlife` is set to 0.0 (not trainable for split heads).
 pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> {
     use std::io::Read;
     let mut file = std::fs::File::open(path)?;
@@ -498,13 +526,16 @@ pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> 
     if bytes.len() < 4 {
         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "file too short"));
     }
+    let is_v3 = &bytes[..4] == MCE_POLICY_MAGIC_V3;
     let is_v2 = &bytes[..4] == MCE_POLICY_MAGIC_V2;
     let is_v1 = &bytes[..4] == MCE_POLICY_MAGIC;
-    if !is_v1 && !is_v2 {
+    if !is_v1 && !is_v2 && !is_v3 {
         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "bad magic"));
     }
     pos += 4;
-    let extra_per_sample = if is_v2 { 8 } else { 0 };
+    // Per-sample extra bytes beyond `target`:
+    //   v1: 0, v2: 8 (aux_bear + aux_salmon), v3: 12 (v2 + target_wildlife)
+    let extra_per_sample: usize = if is_v3 { 12 } else if is_v2 { 8 } else { 0 };
     let mut samples = Vec::new();
     while pos + 2 <= bytes.len() {
         let nf = u16::from_le_bytes([bytes[pos], bytes[pos+1]]) as usize;
@@ -517,7 +548,7 @@ pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> 
         }
         let target = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
         pos += 4;
-        let (aux_bear, aux_salmon) = if is_v2 {
+        let (aux_bear, aux_salmon) = if is_v2 || is_v3 {
             let b = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
             pos += 4;
             let s = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
@@ -526,12 +557,20 @@ pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> 
         } else {
             (0.0, 0.0)
         };
-        samples.push(Sample { features, target, aux_bear, aux_salmon });
+        let target_wildlife = if is_v3 {
+            let w = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
+            pos += 4;
+            w
+        } else {
+            0.0
+        };
+        samples.push(Sample { features, target, aux_bear, aux_salmon, target_wildlife });
     }
     Ok(samples)
 }
 
-/// Append samples in v2 format (with aux targets). Creates the file with MCV2 magic if new.
+/// Append samples in v2 format (features + target + aux_bear + aux_salmon).
+/// Kept for backward compat; new work should prefer `append_mce_samples_v3`.
 pub fn append_mce_samples_v2(
     path: &std::path::Path,
     samples: &[Sample],
@@ -552,6 +591,35 @@ pub fn append_mce_samples_v2(
         buf.extend_from_slice(&sample.target.to_le_bytes());
         buf.extend_from_slice(&sample.aux_bear.to_le_bytes());
         buf.extend_from_slice(&sample.aux_salmon.to_le_bytes());
+    }
+    file.write_all(&buf)?;
+    Ok(())
+}
+
+/// Append samples in v3 format: v2 fields + target_wildlife.
+/// This is the default format for all new caches and training data — the v5 split value
+/// head architecture (wildlife + habitat+tokens) depends on target_wildlife being present.
+pub fn append_mce_samples_v3(
+    path: &std::path::Path,
+    samples: &[Sample],
+) -> std::io::Result<()> {
+    use std::io::Write;
+    let is_new = !path.exists();
+    let mut file = std::fs::OpenOptions::new()
+        .create(true).append(true).open(path)?;
+    let mut buf: Vec<u8> = Vec::with_capacity(samples.len() * 68);
+    if is_new {
+        buf.extend_from_slice(MCE_POLICY_MAGIC_V3);
+    }
+    for sample in samples {
+        buf.extend_from_slice(&(sample.features.len() as u16).to_le_bytes());
+        for &f in &sample.features {
+            buf.extend_from_slice(&f.to_le_bytes());
+        }
+        buf.extend_from_slice(&sample.target.to_le_bytes());
+        buf.extend_from_slice(&sample.aux_bear.to_le_bytes());
+        buf.extend_from_slice(&sample.aux_salmon.to_le_bytes());
+        buf.extend_from_slice(&sample.target_wildlife.to_le_bytes());
     }
     file.write_all(&buf)?;
     Ok(())
@@ -807,15 +875,16 @@ fn augment_with_rotations(samples: &[Sample]) -> Vec<Sample> {
     for sample in samples {
         let aux_b = sample.aux_bear;
         let aux_s = sample.aux_salmon;
+        let tw = sample.target_wildlife;
         // Original
         augmented.push(sample.clone());
 
         // 2 rotations of original
         if let Some(rot) = rotate_features(&sample.features, &table_120, 1) {
-            augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s });
+            augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
         } else { skipped += 1; }
         if let Some(rot) = rotate_features(&sample.features, &table_240, 2) {
-            augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s });
+            augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
         } else { skipped += 1; }
 
         // 24 translations
@@ -823,14 +892,14 @@ fn augment_with_rotations(samples: &[Sample]) -> Vec<Sample> {
             if let Some(trans) = translate_features(&sample.features, table) {
                 // 2 rotations of each translation
                 if let Some(rot) = rotate_features(&trans, &table_120, 1) {
-                    augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s });
+                    augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
                 } else { skipped += 1; }
                 if let Some(rot) = rotate_features(&trans, &table_240, 2) {
-                    augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s });
+                    augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
                 } else { skipped += 1; }
 
                 // The translation itself (after rotations so we still have `trans`)
-                augmented.push(Sample { features: trans, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s });
+                augmented.push(Sample { features: trans, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
             } else { skipped += 1; }
         }
     }

@@ -283,7 +283,7 @@ fn simulate_game(rng: &mut StdRng, strategy: &Strategy) -> (cascadia_core::scori
 fn simulate_game_inner(
     rng: &mut StdRng,
     strategy: &Strategy,
-    mut sample_sink: Option<&mut Vec<(Vec<u16>, f32)>>,
+    mut sample_sink: Option<&mut Vec<cascadia_ai::nnue_train::Sample>>,
 ) -> (cascadia_core::scoring::ScoreBreakdown, cascadia_core::scoring::ScoreBreakdown) {
     let cards = ScoringCards::all_a();
     let mut game = GameState::new(4, cards, rng);
@@ -327,6 +327,13 @@ fn simulate_game_inner(
 
         // If MCE strategy and sample_sink provided, collect training samples
         // from the same MCE run (avoids running the pipeline twice).
+        //
+        // MCE cache samples come from HYPOTHETICAL afterstates (every evaluated candidate,
+        // not just the one actually played), so aux_bear/aux_salmon/target_wildlife are
+        // not accurately knowable from a single game trajectory. We write them as 0 and
+        // the training pipeline treats them as value-only samples (aux loss contributes
+        // zero from these positions). MCE cache samples still use MCV3 format so the
+        // loader can read them alongside self-play data without format gymnastics.
         let mv = if sample_sink.is_some() {
             if let Strategy::MCE { ref net, rollouts } = strategy {
                 let tops = cascadia_ai::mce::top_moves_mce(&game, net, *rollouts, &mut search_rng, 15);
@@ -339,7 +346,13 @@ fn simulate_game_inner(
                         ).total as f32;
                         let target = (*avg as f32 - current).max(0.0);
                         let features = cascadia_ai::nnue::extract_features(&g.boards[game.current_player]);
-                        sample_sink.as_mut().unwrap().push((features, target));
+                        sample_sink.as_mut().unwrap().push(cascadia_ai::nnue_train::Sample {
+                            features,
+                            target,
+                            aux_bear: 0.0,
+                            aux_salmon: 0.0,
+                            target_wildlife: 0.0,
+                        });
                     }
                 }
                 tops.into_iter().next().map(|(mv, avg)| {
@@ -420,11 +433,14 @@ fn run_benchmark(strategy: &Strategy, num_games: usize) -> BenchResult {
     for i in 0..num_games {
         let mut rng = StdRng::seed_from_u64(i as u64 + seed_offset);
         let (base, with_bonus) = if is_mce {
-            let mut game_samples = Vec::new();
+            let mut game_samples: Vec<cascadia_ai::nnue_train::Sample> = Vec::new();
             let result = simulate_game_inner(&mut rng, strategy, Some(&mut game_samples));
             if !game_samples.is_empty() {
                 total_samples += game_samples.len();
-                let _ = cascadia_ai::nnue_train::append_mce_samples(samples_path, &game_samples);
+                // MCV3 format: aux+wildlife fields are zero for MCE cache samples, but
+                // the format is consistent so v3-aware trainings can load them alongside
+                // self-play data without format gymnastics.
+                let _ = cascadia_ai::nnue_train::append_mce_samples_v3(samples_path, &game_samples);
             }
             result
         } else {
@@ -839,10 +855,10 @@ fn main() {
         };
 
         println!("Exact expectimax self-play: {} games, weights={}", num_games, weights_path);
-        println!("  Value samples → {}", out_path);
+        println!("  Value samples (MCV3) → {}", out_path);
         println!("  Policy samples → {}", policy_out);
         let start = Instant::now();
-        let mut all_value_samples: Vec<(Vec<u16>, f32)> = Vec::new();
+        let mut all_value_samples: Vec<cascadia_ai::nnue_train::Sample> = Vec::new();
         let mut all_policy_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
         let mut total_final_score = 0u64;
 
@@ -851,7 +867,8 @@ fn main() {
             let cards = ScoringCards::all_a();
             let mut game = GameState::new(4, cards, &mut rng);
 
-            let mut turn_value_records: Vec<(Vec<u16>, f32)> = Vec::new();
+            // Each turn record: (features, current_total, current_wildlife)
+            let mut turn_value_records: Vec<(Vec<u16>, f32, f32)> = Vec::new();
             let mut turn_policy_records: Vec<(Vec<(Vec<u16>, f32)>, f32)> = Vec::new();
 
             while !game.is_game_over() {
@@ -865,9 +882,10 @@ fn main() {
                     continue;
                 }
 
-                let current = cascadia_core::scoring::ScoreBreakdown::compute(
+                let cur_bd = cascadia_core::scoring::ScoreBreakdown::compute(
                     &mut game.boards[0].clone(), &game.scoring_cards,
-                ).total as f32;
+                );
+                let current = cur_bd.total as f32;
 
                 // Get all scored candidates with expectimax (for policy data)
                 let results = cascadia_ai::mce::score_all_candidates_expectimax(&game, &net);
@@ -886,21 +904,35 @@ fn main() {
                     .unwrap();
                 if !execute_scored_move(&mut game, &best_mv) { break; }
 
-                // Value data: afterstate of chosen move
+                // Value data: afterstate of chosen move, with current total + wildlife
+                let after_bd = cascadia_core::scoring::ScoreBreakdown::compute(
+                    &mut game.boards[0], &game.scoring_cards,
+                );
                 let bag_info = cascadia_ai::nnue::BagInfo::from_game(&game);
                 let features = cascadia_ai::nnue::extract_features_with_bag(
                     &game.boards[0], Some(&bag_info));
-                turn_value_records.push((features, current));
+                turn_value_records.push((features, after_bd.total as f32, after_bd.wildlife_total() as f32));
             }
 
-            let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+            let final_bd = cascadia_core::scoring::ScoreBreakdown::compute(
                 &mut game.boards[0], &game.scoring_cards,
-            ).total as f32;
+            );
+            let final_score = final_bd.total as f32;
+            let final_wildlife = final_bd.wildlife_total() as f32;
+            let final_bear_pairs = cascadia_ai::nnue_train::count_bear_pairs(&game.boards[0]) as f32;
+            let final_salmon_chain = cascadia_ai::nnue_train::longest_salmon_chain(&game.boards[0]) as f32;
             total_final_score += final_score as u64;
 
-            for (features, current) in turn_value_records {
+            for (features, current, current_wildlife) in turn_value_records {
                 let delta = (final_score - current).max(0.0);
-                all_value_samples.push((features, delta));
+                let delta_wildlife = (final_wildlife - current_wildlife).max(0.0);
+                all_value_samples.push(cascadia_ai::nnue_train::Sample {
+                    features,
+                    target: delta,
+                    aux_bear: final_bear_pairs,
+                    aux_salmon: final_salmon_chain,
+                    target_wildlife: delta_wildlife,
+                });
             }
 
             for (candidates, current) in turn_policy_records {
@@ -917,7 +949,7 @@ fn main() {
         }
         eprintln!();
 
-        cascadia_ai::nnue_train::append_mce_samples(
+        cascadia_ai::nnue_train::append_mce_samples_v3(
             std::path::Path::new(out_path), &all_value_samples,
         ).expect("Failed to write value samples");
 
@@ -961,10 +993,10 @@ fn main() {
             .unwrap_or("mce_selfplay_policy.bin");
 
         println!("MCE value self-play: {} games, rollouts={}, weights={}", num_games, rollouts, weights_path);
-        println!("  Value samples → {}", out_path);
+        println!("  Value samples (MCV3) → {}", out_path);
         println!("  Policy samples → {}", policy_out);
         let start = Instant::now();
-        let mut all_value_samples: Vec<(Vec<u16>, f32)> = Vec::new();
+        let mut all_value_samples: Vec<cascadia_ai::nnue_train::Sample> = Vec::new();
         let mut all_policy_groups: Vec<cascadia_ai::nnue_train::PolicyGroup> = Vec::new();
         let mut total_final_score = 0u64;
 
@@ -974,8 +1006,8 @@ fn main() {
             let mut game = GameState::new(4, cards, &mut rng);
             let mut search_rng = StdRng::seed_from_u64(rng.gen());
 
-            // Per-turn records: (chosen_afterstate_features, current_score)
-            let mut turn_value_records: Vec<(Vec<u16>, f32)> = Vec::new();
+            // Per-turn records: (chosen_afterstate_features, current_total, current_wildlife)
+            let mut turn_value_records: Vec<(Vec<u16>, f32, f32)> = Vec::new();
             // Per-turn policy records: (all_candidate_features_and_scores)
             let mut turn_policy_records: Vec<(Vec<(Vec<u16>, f32)>, f32)> = Vec::new();
 
@@ -990,9 +1022,10 @@ fn main() {
                     continue;
                 }
 
-                let current = cascadia_core::scoring::ScoreBreakdown::compute(
+                let cur_bd = cascadia_core::scoring::ScoreBreakdown::compute(
                     &mut game.boards[0].clone(), &game.scoring_cards,
-                ).total as f32;
+                );
+                let current = cur_bd.total as f32;
 
                 // Get all scored candidates (for policy data) and play the best
                 let results = cascadia_ai::mce::mce_candidates_with_features(
@@ -1010,22 +1043,36 @@ fn main() {
                 let best_mv = results[0].0;
                 if !execute_scored_move(&mut game, &best_mv) { break; }
 
-                // Value data: afterstate of chosen move
+                // Value data: afterstate of chosen move, with current total + wildlife
+                let after_bd = cascadia_core::scoring::ScoreBreakdown::compute(
+                    &mut game.boards[0], &game.scoring_cards,
+                );
                 let bag_info = cascadia_ai::nnue::BagInfo::from_game(&game);
                 let features = cascadia_ai::nnue::extract_features_with_bag(
                     &game.boards[0], Some(&bag_info));
-                turn_value_records.push((features, current));
+                turn_value_records.push((features, after_bd.total as f32, after_bd.wildlife_total() as f32));
             }
 
-            let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+            let final_bd = cascadia_core::scoring::ScoreBreakdown::compute(
                 &mut game.boards[0], &game.scoring_cards,
-            ).total as f32;
+            );
+            let final_score = final_bd.total as f32;
+            let final_wildlife = final_bd.wildlife_total() as f32;
+            let final_bear_pairs = cascadia_ai::nnue_train::count_bear_pairs(&game.boards[0]) as f32;
+            let final_salmon_chain = cascadia_ai::nnue_train::longest_salmon_chain(&game.boards[0]) as f32;
             total_final_score += final_score as u64;
 
-            // Value samples: delta labels
-            for (features, current) in turn_value_records {
+            // Value samples: delta labels with aux + wildlife targets
+            for (features, current, current_wildlife) in turn_value_records {
                 let delta = (final_score - current).max(0.0);
-                all_value_samples.push((features, delta));
+                let delta_wildlife = (final_wildlife - current_wildlife).max(0.0);
+                all_value_samples.push(cascadia_ai::nnue_train::Sample {
+                    features,
+                    target: delta,
+                    aux_bear: final_bear_pairs,
+                    aux_salmon: final_salmon_chain,
+                    target_wildlife: delta_wildlife,
+                });
             }
 
             // Policy samples: grouped with value target
@@ -1043,8 +1090,8 @@ fn main() {
         }
         eprintln!();
 
-        // Write value samples (MCEP format)
-        cascadia_ai::nnue_train::append_mce_samples(
+        // Write value samples (MCV3 format)
+        cascadia_ai::nnue_train::append_mce_samples_v3(
             std::path::Path::new(out_path), &all_value_samples,
         ).expect("Failed to write value samples");
 
@@ -1145,25 +1192,16 @@ fn main() {
             games.into_iter().flat_map(|g| g.samples).collect::<Vec<_>>()
         };
 
-        // Write samples — use v2 format (MCV2) if --aux-targets flag is set,
-        // otherwise default to v1 MCEP for backward compat with existing data.
-        let use_v2 = args.iter().any(|a| a == "--aux-targets");
-        if use_v2 {
-            cascadia_ai::nnue_train::append_mce_samples_v2(
-                std::path::Path::new(out_path), &samples,
-            ).expect("Failed to write v2 samples");
-            println!("Generated {} samples from {} games in {:.1?} (MCV2 format with aux targets)",
-                samples.len(), num_games, start.elapsed());
-        } else {
-            let mcep_samples: Vec<(Vec<u16>, f32)> = samples.iter()
-                .map(|s| (s.features.clone(), s.target))
-                .collect();
-            cascadia_ai::nnue_train::append_mce_samples(
-                std::path::Path::new(out_path), &mcep_samples,
-            ).expect("Failed to write samples");
-            println!("Generated {} samples from {} games in {:.1?}",
-                samples.len(), num_games, start.elapsed());
-        }
+        // Write samples: default to MCV3 format (includes aux_bear, aux_salmon, target_wildlife).
+        // MCV3 is the required format going forward — all new caches and training data must have
+        // aux fields and wildlife targets populated so downstream trainings can use any head.
+        // Legacy MCEP and MCV2 are still READABLE for loading old data, but we never WRITE them.
+        let _ = args.iter().any(|a| a == "--aux-targets"); // flag retained for back-compat but now always on
+        cascadia_ai::nnue_train::append_mce_samples_v3(
+            std::path::Path::new(out_path), &samples,
+        ).expect("Failed to write v3 samples");
+        println!("Generated {} samples from {} games in {:.1?} (MCV3 format: aux targets + target_wildlife)",
+            samples.len(), num_games, start.elapsed());
         return;
     } else if run_export_pytorch {
         // Load MCE samples, augment with rotations+translations, export as raw binary
@@ -1250,7 +1288,7 @@ fn main() {
             let cards = ScoringCards::all_a();
             let mut game = GameState::new(4, cards, &mut rng);
             let mut search_rng = StdRng::seed_from_u64(rng.gen());
-            let mut game_samples: Vec<(Vec<u16>, f32)> = Vec::new();
+            let mut game_samples: Vec<cascadia_ai::nnue_train::Sample> = Vec::new();
 
             while !game.is_game_over() {
                 if game.current_player != 0 {
@@ -1262,7 +1300,9 @@ fn main() {
                     }
                     continue;
                 }
-                // AI turn: collect samples + play MCE move in one pass
+                // AI turn: collect samples + play MCE move in one pass.
+                // Each candidate evaluation is a hypothetical afterstate so aux and
+                // target_wildlife are 0 (see note in simulate_game_inner).
                 let tops = cascadia_ai::mce::top_moves_mce(&game, &net, rollouts, &mut search_rng, 15);
                 for (mv, avg) in &tops {
                     let mut g = game.clone();
@@ -1274,7 +1314,13 @@ fn main() {
                         let bag_info = cascadia_ai::nnue::BagInfo::from_game(&g);
                         let features = cascadia_ai::nnue::extract_features_with_bag(
                             &g.boards[game.current_player], Some(&bag_info));
-                        game_samples.push((features, target));
+                        game_samples.push(cascadia_ai::nnue_train::Sample {
+                            features,
+                            target,
+                            aux_bear: 0.0,
+                            aux_salmon: 0.0,
+                            target_wildlife: 0.0,
+                        });
                     }
                 }
                 let mv = tops.into_iter().next().map(|(mv, avg)| {
@@ -1291,7 +1337,7 @@ fn main() {
             ).total;
             total_final_score += final_score as u64;
             total_samples += game_samples.len();
-            cascadia_ai::nnue_train::append_mce_samples(
+            cascadia_ai::nnue_train::append_mce_samples_v3(
                 std::path::Path::new(out_path), &game_samples,
             ).expect("Failed to append samples");
 
