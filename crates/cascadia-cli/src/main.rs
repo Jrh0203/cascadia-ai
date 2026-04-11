@@ -1107,7 +1107,7 @@ fn main() {
         println!("  Policy: {} groups → {}", all_policy_groups.len(), policy_out);
         return;
     } else if run_self_play {
-        // Generate NNUE self-play games and write to MCEP format
+        // Generate NNUE self-play games and write to MCV3 format
         let weights_path = args.iter().position(|a| a == "--weights")
             .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
         let out_path = args.iter().position(|a| a == "--out")
@@ -1115,6 +1115,10 @@ fn main() {
             .unwrap_or("self_play_samples.bin");
         let epsilon: f32 = args.iter().position(|a| a == "--epsilon")
             .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.1);
+        // Optional simulated-annealing temperature — if present, replaces ε-greedy
+        // with softmax sampling over NNUE-scored candidates.
+        let temperature: Option<f32> = args.iter().position(|a| a == "--temperature")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok());
 
         let top_pct: f32 = args.iter().position(|a| a == "--top-pct")
             .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(100.0);
@@ -1124,15 +1128,26 @@ fn main() {
         });
         let strategy = if net.is_some() { "NNUE" } else { "greedy" };
         let filter_str = if top_pct < 100.0 { format!(", top {}%", top_pct) } else { String::new() };
-        println!("Generating {} self-play games ({}, epsilon={}{}, out={})",
-            num_games, strategy, epsilon, filter_str, out_path);
+        let mode_str = if let Some(t) = temperature {
+            format!("softmax(T={})", t)
+        } else {
+            format!("epsilon={}", epsilon)
+        };
+        println!("Generating {} self-play games ({}, {}{}, out={})",
+            num_games, strategy, mode_str, filter_str, out_path);
 
         let start = Instant::now();
         let seed = rand::random::<u64>();
 
+        let mode = if let Some(t) = temperature {
+            cascadia_ai::nnue_train::SamplingMode::Softmax(t)
+        } else {
+            cascadia_ai::nnue_train::SamplingMode::EpsilonGreedy(epsilon)
+        };
+
         // Always use generate_games so we get per-game final_scores for free.
-        let mut games = cascadia_ai::nnue_train::generate_games(
-            num_games, seed, net.as_ref(), epsilon, 4,
+        let mut games = cascadia_ai::nnue_train::generate_games_with_mode(
+            num_games, seed, net.as_ref(), mode, 4,
         );
 
         // Compute self-play score distribution stats over ALL games (before any filtering).

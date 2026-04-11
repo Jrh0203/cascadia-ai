@@ -31,8 +31,14 @@ CASCADIA_CLI = "./target/release/cascadia-cli"
 
 
 def run_self_play(num_games, weights_path, out_path, epsilon=0.1, top_pct=100.0,
-                  aux_targets=False):
-    """Generate self-play data using Rust (fast, parallel)."""
+                  aux_targets=False, opp_weights=None, temperature=None):
+    """Generate self-play data using Rust (fast, parallel).
+
+    - aux_targets: write MCV3 format with aux + target_wildlife (recommended default).
+    - opp_weights: path to opponent NNUE weights — players 1-3 use this net. Used for
+      cross-training (two runs with --opp-weights pointing at each other).
+    - temperature: if set, replaces ε-greedy with softmax sampling at the given T.
+    """
     cmd = [
         CASCADIA_CLI, str(num_games),
         "--self-play",
@@ -45,8 +51,16 @@ def run_self_play(num_games, weights_path, out_path, epsilon=0.1, top_pct=100.0,
         cmd.extend(["--top-pct", str(top_pct)])
     if aux_targets:
         cmd.append("--aux-targets")
+    if opp_weights:
+        cmd.extend(["--opp-weights", opp_weights])
+    if temperature is not None:
+        cmd.extend(["--temperature", str(temperature)])
 
-    print(f"  Generating {num_games} self-play games (epsilon={epsilon})...")
+    extras = []
+    if opp_weights: extras.append(f"opp={opp_weights}")
+    if temperature is not None: extras.append(f"T={temperature}")
+    extra_str = f" [{' '.join(extras)}]" if extras else ""
+    print(f"  Generating {num_games} self-play games (epsilon={epsilon}){extra_str}...")
     t0 = time.time()
     result = subprocess.run(cmd, capture_output=True, text=True)
     print(f"  {result.stdout.strip()}")
@@ -74,7 +88,8 @@ def merge_samples(files, out_path):
 
 def run_pytorch_training(samples_path, epochs, lr, init_weights, out_weights,
                          hidden1=512, hidden2=64, batch_size=4096, optimizer='sgd',
-                         use_aux=False, aux_bear_weight=0.3, aux_salmon_weight=0.3):
+                         use_aux=False, aux_bear_weight=0.3, aux_salmon_weight=0.3,
+                         split_value_head=False):
     """Run PyTorch training."""
     cmd = [
         sys.executable, "-u", "train_pytorch.py",
@@ -89,14 +104,20 @@ def run_pytorch_training(samples_path, epochs, lr, init_weights, out_weights,
         "--out", out_weights,
         "--no-augment",  # skip augmentation for speed with large self-play data
     ]
-    if use_aux:
+    if use_aux or split_value_head:
         cmd.append("--use-aux")
         cmd.extend(["--aux-bear-weight", str(aux_bear_weight)])
         cmd.extend(["--aux-salmon-weight", str(aux_salmon_weight)])
+    if split_value_head:
+        cmd.append("--split-value-head")
     if init_weights and os.path.exists(init_weights):
         cmd.extend(["--init-weights", init_weights])
 
-    print(f"  Training: {epochs} epochs, lr={lr}, {hidden1}→{hidden2}{' [aux]' if use_aux else ''}")
+    tags = []
+    if split_value_head: tags.append("split")
+    if use_aux and not split_value_head: tags.append("aux")
+    tag_str = f" [{','.join(tags)}]" if tags else ""
+    print(f"  Training: {epochs} epochs, lr={lr}, {hidden1}→{hidden2}{tag_str}")
     t0 = time.time()
     result = subprocess.run(cmd, capture_output=False)
     if result.returncode != 0:
@@ -147,9 +168,22 @@ def main():
     parser.add_argument('--iter-prefix', default='nnue_weights_hybrid_iter',
                         help='Prefix for per-iteration weight files')
     parser.add_argument('--aux-targets', action='store_true',
-                        help='Generate v2 (MCV2) self-play with aux bear/salmon targets and train multi-task')
+                        help='Generate MCV3 self-play with aux targets and train multi-task '
+                             '(now default for all new pipelines; flag retained for clarity)')
     parser.add_argument('--aux-bear-weight', type=float, default=0.3)
     parser.add_argument('--aux-salmon-weight', type=float, default=0.3)
+    parser.add_argument('--split-value-head', action='store_true',
+                        help='Use v5 split value head architecture (wildlife + habitat+tokens, '
+                             '1:1 sum at inference). Requires self-play data in MCV3 format.')
+    parser.add_argument('--opp-weights', default=None,
+                        help='Opponent NNUE weights for cross-training: players 1-3 in self-play '
+                             'use this net instead of the training net. Useful for running two '
+                             'trainings in tandem where each uses the other as opponent.')
+    parser.add_argument('--temperature', type=float, default=None,
+                        help='Enable softmax sampling in self-play with this initial temperature. '
+                             'If set, replaces ε-greedy; anneal to --temperature-end across iterations.')
+    parser.add_argument('--temperature-end', type=float, default=None,
+                        help='Target temperature at the final iteration. Linear anneal from --temperature.')
     args = parser.parse_args()
 
     current_weights = args.init_weights
@@ -185,24 +219,47 @@ def main():
             current_epsilon = args.epsilon
         print(f"  ε = {current_epsilon:.3f}")
 
+        # Compute current temperature (for SA) if annealing
+        current_temperature = None
+        if args.temperature is not None:
+            if args.temperature_end is not None and args.iterations > 1:
+                progress = (iteration - 1) / (args.iterations - 1)
+                current_temperature = args.temperature - progress * (args.temperature - args.temperature_end)
+            else:
+                current_temperature = args.temperature
+            print(f"  T = {current_temperature:.3f} (softmax sampling)")
+
         run_self_play(
             args.self_play_games,
             current_weights,
             self_play_path,
             epsilon=current_epsilon,
             top_pct=args.top_pct,
-            aux_targets=args.aux_targets,
+            aux_targets=args.aux_targets or args.split_value_head,
+            opp_weights=args.opp_weights,
+            temperature=current_temperature,
         )
 
         # 2. Merge self-play + MCE expert data (fresh each iteration, no accumulation)
-        # NOTE: when --aux-targets, mce cache must also be MCV2 (skip mixing for now)
+        # When using aux targets / split heads, the MCE cache must also be MCV3 so it
+        # has aux + target_wildlife fields. The cache has been upgraded to MCV3 — mix it
+        # in unless explicitly disabled.
         merged_path = f"training_merged_iter{actual_iter}.bin"
         if os.path.exists(merged_path):
             os.remove(merged_path)
         files_to_merge = [self_play_path]
-        # Don't mix MCE cache when using aux targets — formats differ
-        if not args.aux_targets and not args.no_mce and args.mce_samples != 'none' and os.path.exists(args.mce_samples):
-            files_to_merge.append(args.mce_samples)
+        if not args.no_mce and args.mce_samples != 'none' and os.path.exists(args.mce_samples):
+            # Check magic byte to ensure we only mix compatible formats
+            with open(args.mce_samples, 'rb') as f:
+                magic = f.read(4)
+            if args.aux_targets or args.split_value_head:
+                if magic != b'MCV3':
+                    print(f"  Skipping MCE cache {args.mce_samples}: magic={magic!r}, "
+                          f"need MCV3 for aux/split training")
+                else:
+                    files_to_merge.append(args.mce_samples)
+            else:
+                files_to_merge.append(args.mce_samples)
         merge_samples(files_to_merge, merged_path)
 
         # 3. Train
@@ -218,6 +275,7 @@ def main():
             use_aux=args.aux_targets,
             aux_bear_weight=args.aux_bear_weight,
             aux_salmon_weight=args.aux_salmon_weight,
+            split_value_head=args.split_value_head,
         )
 
         # 4. Benchmark

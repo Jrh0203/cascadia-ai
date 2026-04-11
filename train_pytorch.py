@@ -29,30 +29,56 @@ from torch.utils.data import Dataset, DataLoader
 
 # ─── Load MCE samples from our binary format ───
 
-def load_mce_samples(path, return_aux=False):
-    """Load samples from MCEP (v1) or MCV2 (v2 with aux targets) format.
+def load_mce_samples(path, return_aux=False, return_split=False, require_aux=False):
+    """Load samples from MCEP (v1), MCV2 (v2 with aux targets), or MCV3 (v3 with target_wildlife).
+
+    Args:
+        return_aux: include aux_bear, aux_salmon in the return tuple
+        return_split: include target_wildlife in the return tuple (forces v3)
+        require_aux: raise if the file is legacy MCEP (enforces
+            "don't train on data without aux fields" policy)
 
     Returns:
-        (features_list, targets) if return_aux=False (backward compat)
+        (features_list, targets) if neither flag set (backward compat)
         (features_list, targets, aux_bear, aux_salmon) if return_aux=True
+        (features_list, targets, aux_bear, aux_salmon, target_wildlife) if return_split=True
     """
     with open(path, 'rb') as f:
         data = f.read()
 
     pos = 0
-    if data[:4] == b'MCV2':
+    magic = data[:4]
+    if magic == b'MCV3':
+        is_v3 = True
         is_v2 = True
-    elif data[:4] == b'MCEP':
+    elif magic == b'MCV2':
+        is_v3 = False
+        is_v2 = True
+    elif magic == b'MCEP':
+        is_v3 = False
         is_v2 = False
     else:
-        raise ValueError(f"Bad magic: {data[:4]}")
+        raise ValueError(f"Bad magic: {magic}")
+
+    if require_aux and not is_v2:
+        raise ValueError(
+            f"{path} is MCEP (legacy, no aux fields) and require_aux=True. "
+            "Policy: don't train on data without aux fields. Regenerate as MCV3."
+        )
+    if return_split and not is_v3:
+        raise ValueError(
+            f"{path} is {magic.decode()} which lacks target_wildlife. "
+            "return_split=True requires MCV3 data. Regenerate."
+        )
+
     pos = 4
-    extra = 8 if is_v2 else 0
+    extra = (8 if is_v2 else 0) + (4 if is_v3 else 0)
 
     features_list = []
     targets = []
     aux_bear = []
     aux_salmon = []
+    target_wildlife = []
     while pos + 2 <= len(data):
         nf = struct.unpack_from('<H', data, pos)[0]
         pos += 2
@@ -72,13 +98,21 @@ def load_mce_samples(path, return_aux=False):
         else:
             ab = 0.0
             asm = 0.0
+        if is_v3:
+            tw = struct.unpack_from('<f', data, pos)[0]
+            pos += 4
+        else:
+            tw = 0.0
         features_list.append(feats)
         targets.append(target)
         aux_bear.append(ab)
         aux_salmon.append(asm)
+        target_wildlife.append(tw)
 
-    fmt = "MCV2" if is_v2 else "MCEP"
+    fmt = "MCV3" if is_v3 else ("MCV2" if is_v2 else "MCEP")
     print(f"Loaded {len(features_list)} samples from {path} ({fmt})")
+    if return_split:
+        return features_list, targets, aux_bear, aux_salmon, target_wildlife
     if return_aux:
         return features_list, targets, aux_bear, aux_salmon
     return features_list, targets
@@ -209,20 +243,24 @@ def apply_transform(features, cell_table, dir_shift):
 
 
 class NNUEDatasetMCEP(Dataset):
-    """Load from MCEP binary format with online augmentation.
+    """Load from MCEP/MCV2/MCV3 binary format with online augmentation.
     Each epoch, every sample gets a random rotation+translation applied.
 
-    If aux_bear and aux_salmon are provided, __getitem__ returns 4-tuples
-    (features, value_target, bear_target, salmon_target) for multi-task training.
+    If aux_bear and aux_salmon are provided, collate_packed returns tuples with them.
+    If target_wildlife is also provided, collate_packed adds it as a fifth element
+    for split-value-head training.
     """
     def __init__(self, features_list, targets, num_features, augment=True,
-                 aux_bear=None, aux_salmon=None):
+                 aux_bear=None, aux_salmon=None, target_wildlife=None):
         self.num_features = num_features
         self.targets = torch.tensor(targets, dtype=torch.float32)
         self.has_aux = aux_bear is not None and aux_salmon is not None
         if self.has_aux:
             self.aux_bear = torch.tensor(aux_bear, dtype=torch.float32)
             self.aux_salmon = torch.tensor(aux_salmon, dtype=torch.float32)
+        self.has_split = target_wildlife is not None
+        if self.has_split:
+            self.target_wildlife = torch.tensor(target_wildlife, dtype=torch.float32)
         self.augment = augment
         # Store sparse features as numpy arrays for vectorized augmentation
         self.features_np = [np.array(f, dtype=np.int32) for f in features_list]
@@ -252,6 +290,11 @@ class NNUEDatasetMCEP(Dataset):
                 self.packed_np[chunk_start:chunk_end] = np.packbits(dense, axis=1, bitorder='little')
 
             self.targets_np = np.array(targets, dtype=np.float32)
+            if self.has_aux:
+                self.aux_bear_np = np.array(aux_bear, dtype=np.float32)
+                self.aux_salmon_np = np.array(aux_salmon, dtype=np.float32)
+            if self.has_split:
+                self.target_wildlife_np = np.array(target_wildlife, dtype=np.float32)
             print(f"  Done in {time.time()-t0:.1f}s ({self.packed_np.nbytes / 1e9:.1f} GB)")
 
         # Pre-compute feature index remapping tables for all transforms
@@ -308,6 +351,11 @@ class NNUEDatasetMCEP(Dataset):
         # Unpack all bits at once: [batch, packed_width] → [batch, packed_width, 8] → [batch, packed_width*8]
         bits = packed_batch.unsqueeze(-1).bitwise_right_shift(self._unpack_bits).bitwise_and(1)
         dense = bits.reshape(len(batch), -1)[:, :self.num_features].float()
+        if self.has_aux and self.has_split:
+            aux_b = torch.from_numpy(self.aux_bear_np[idx_np])
+            aux_s = torch.from_numpy(self.aux_salmon_np[idx_np])
+            tw = torch.from_numpy(self.target_wildlife_np[idx_np])
+            return dense, targets, aux_b, aux_s, tw
         if self.has_aux:
             aux_b = self.aux_bear[indices]
             aux_s = self.aux_salmon[indices]
@@ -411,21 +459,27 @@ def collate_sparse(batch):
 # ─── NNUE Model ───
 
 class NNUE(nn.Module):
-    def __init__(self, num_features, hidden1=512, hidden2=64):
+    def __init__(self, num_features, hidden1=512, hidden2=64, split_value_heads=False):
         super().__init__()
         self.num_features = num_features
+        self.split_value_heads = split_value_heads
         self.fc1 = nn.Linear(num_features, hidden1)
         self.fc2 = nn.Linear(hidden1, hidden2)
-        self.fc3 = nn.Linear(hidden2, 1)          # value head
+        self.fc3 = nn.Linear(hidden2, 1)          # legacy total value head
         self.fc3_policy = nn.Linear(hidden2, 1)    # policy head
         # Auxiliary heads (v4 multi-task training):
         # fc3_aux_bear predicts final bear pair count
         # fc3_aux_salmon predicts final longest salmon chain length
-        # These are TRAINING ONLY — discarded when saving Rust weights for inference.
         self.fc3_aux_bear = nn.Linear(hidden2, 1)
         self.fc3_aux_salmon = nn.Linear(hidden2, 1)
-        # Small random init so gradients flow through shared layers
-        for head in (self.fc3_policy, self.fc3_aux_bear, self.fc3_aux_salmon):
+        # Split value heads (v5 architecture):
+        # fc3_value_wildlife predicts wildlife-only remaining score
+        # fc3_value_habitat predicts (habitat + tokens + bonus) remaining score
+        # At inference, value = wildlife + habitat (1:1 sum, no variable blend).
+        self.fc3_value_wildlife = nn.Linear(hidden2, 1)
+        self.fc3_value_habitat = nn.Linear(hidden2, 1)
+        for head in (self.fc3_policy, self.fc3_aux_bear, self.fc3_aux_salmon,
+                     self.fc3_value_wildlife, self.fc3_value_habitat):
             nn.init.xavier_uniform_(head.weight)
             nn.init.zeros_(head.bias)
 
@@ -433,22 +487,45 @@ class NNUE(nn.Module):
         # x is dense binary vector [batch, num_features]
         h1 = torch.relu(self.fc1(x))
         h2 = torch.relu(self.fc2(h1))
+        if self.split_value_heads:
+            wildlife = self.fc3_value_wildlife(h2).squeeze(-1)
+            habitat = self.fc3_value_habitat(h2).squeeze(-1)
+            return wildlife + habitat  # 1:1 sum
         return self.fc3(h2).squeeze(-1)
 
     def forward_dual(self, x):
         """Returns (value, policy_logit) — both [batch]."""
         h1 = torch.relu(self.fc1(x))
         h2 = torch.relu(self.fc2(h1))
-        value = self.fc3(h2).squeeze(-1)
+        if self.split_value_heads:
+            wildlife = self.fc3_value_wildlife(h2).squeeze(-1)
+            habitat = self.fc3_value_habitat(h2).squeeze(-1)
+            value = wildlife + habitat
+        else:
+            value = self.fc3(h2).squeeze(-1)
         policy = self.fc3_policy(h2).squeeze(-1)
         return value, policy
 
     def forward_multi(self, x):
-        """Returns (value, aux_bear, aux_salmon) — all [batch]. For v4 multi-task training."""
+        """Returns (value, aux_bear, aux_salmon) — all [batch]. For v4 multi-task training
+        when split_value_heads=False."""
         h1 = torch.relu(self.fc1(x))
         h2 = torch.relu(self.fc2(h1))
         return (
             self.fc3(h2).squeeze(-1),
+            self.fc3_aux_bear(h2).squeeze(-1),
+            self.fc3_aux_salmon(h2).squeeze(-1),
+        )
+
+    def forward_split(self, x):
+        """Returns (wildlife, habitat, aux_bear, aux_salmon) — all [batch].
+        For v5 split-value-head multi-task training. Value targets for wildlife and
+        habitat components are trained separately with MSE losses summed 1:1."""
+        h1 = torch.relu(self.fc1(x))
+        h2 = torch.relu(self.fc2(h1))
+        return (
+            self.fc3_value_wildlife(h2).squeeze(-1),
+            self.fc3_value_habitat(h2).squeeze(-1),
             self.fc3_aux_bear(h2).squeeze(-1),
             self.fc3_aux_salmon(h2).squeeze(-1),
         )
@@ -555,10 +632,17 @@ def load_rust_weights(path, num_features, hidden1, hidden2):
 
 
 def save_rust_weights(path, model):
-    """Save weights in Rust NNUE binary format."""
+    """Save weights in Rust NNUE binary format.
+
+    Version 1: legacy single value head (fc3) + policy head.
+    Version 2: version 1 + split value heads (fc3_value_wildlife + fc3_value_habitat)
+               appended at the end. Written when `model.split_value_heads` is True.
+    """
+    split = getattr(model, 'split_value_heads', False)
+    version = 2 if split else 1
     with open(path, 'wb') as f:
         f.write(b'NNUE')
-        f.write(struct.pack('<I', 1))
+        f.write(struct.pack('<I', version))
 
         # W1: [num_features, hidden1]
         w1 = model.fc1.weight.data.t().cpu().numpy()  # Linear stores [out, in], we want [in, out]
@@ -570,7 +654,7 @@ def save_rust_weights(path, model):
         f.write(w2.astype(np.float32).tobytes())
         f.write(model.fc2.bias.data.cpu().numpy().astype(np.float32).tobytes())
 
-        # W3: [hidden2] (value head)
+        # W3: [hidden2] (legacy total value head, kept for back-compat even with split heads)
         w3 = model.fc3.weight.data.cpu().numpy().flatten()
         f.write(w3.astype(np.float32).tobytes())
         f.write(model.fc3.bias.data.cpu().numpy().astype(np.float32).tobytes())
@@ -580,7 +664,17 @@ def save_rust_weights(path, model):
         f.write(w3p.astype(np.float32).tobytes())
         f.write(model.fc3_policy.bias.data.cpu().numpy().astype(np.float32).tobytes())
 
-    print(f"Saved weights to {path}")
+        if split:
+            # Split value heads (v2)
+            w3w = model.fc3_value_wildlife.weight.data.cpu().numpy().flatten()
+            f.write(w3w.astype(np.float32).tobytes())
+            f.write(model.fc3_value_wildlife.bias.data.cpu().numpy().astype(np.float32).tobytes())
+            w3h = model.fc3_value_habitat.weight.data.cpu().numpy().flatten()
+            f.write(w3h.astype(np.float32).tobytes())
+            f.write(model.fc3_value_habitat.bias.data.cpu().numpy().astype(np.float32).tobytes())
+
+    suffix = " (v2, split heads)" if split else ""
+    print(f"Saved weights to {path}{suffix}")
 
 
 def load_weights_into_model(model, w1, b1, w2, b2, w3, b3, w3_policy=None, b3_policy=None):
@@ -628,30 +722,45 @@ def train(args):
         dataset = NNUEDatasetExported(exported_path)
         num_features = dataset.num_features
     else:
-        # Load with aux targets if requested via --use-aux
-        loaded = load_mce_samples(args.samples, return_aux=args.use_aux)
-        if args.use_aux:
-            features_list, targets, aux_bear, aux_salmon = loaded
-            print(f"  Loaded aux targets: bear range [{min(aux_bear):.0f}..{max(aux_bear):.0f}], salmon range [{min(aux_salmon):.0f}..{max(aux_salmon):.0f}]")
+        # Split value heads require target_wildlife (MCV3 format).
+        # Loader enforces the "don't train on data without aux fields" policy when use_aux is set.
+        if args.split_value_head:
+            features_list, targets, aux_bear, aux_salmon, target_wildlife = load_mce_samples(
+                args.samples, return_split=True, require_aux=True,
+            )
+            print(f"  Loaded split-head targets: "
+                  f"bear [{min(aux_bear):.0f}..{max(aux_bear):.0f}], "
+                  f"salmon [{min(aux_salmon):.0f}..{max(aux_salmon):.0f}], "
+                  f"wildlife_target mean={sum(target_wildlife)/len(target_wildlife):.2f}")
+        elif args.use_aux:
+            features_list, targets, aux_bear, aux_salmon = load_mce_samples(
+                args.samples, return_aux=True, require_aux=True,
+            )
+            target_wildlife = None
+            print(f"  Loaded aux targets: bear range [{min(aux_bear):.0f}..{max(aux_bear):.0f}], "
+                  f"salmon range [{min(aux_salmon):.0f}..{max(aux_salmon):.0f}]")
         else:
-            features_list, targets = loaded
+            features_list, targets = load_mce_samples(args.samples)
             aux_bear = None
             aux_salmon = None
+            target_wildlife = None
         for f in features_list:
             for i in range(len(f)):
                 if f[i] >= num_features:
                     f[i] = num_features - 1
         dataset = NNUEDatasetMCEP(
             features_list, targets, num_features, augment=not args.no_augment,
-            aux_bear=aux_bear, aux_salmon=aux_salmon,
+            aux_bear=aux_bear, aux_salmon=aux_salmon, target_wildlife=target_wildlife,
         )
 
     collate_fn = dataset.collate_packed if (hasattr(dataset, 'packed_np') and dataset.packed_np is not None) else None
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
 
     # Model
-    model = NNUE(num_features, args.hidden1, args.hidden2).to(device)
-    print(f"Architecture: {num_features} -> {args.hidden1} -> {args.hidden2} -> 1")
+    model = NNUE(num_features, args.hidden1, args.hidden2,
+                 split_value_heads=args.split_value_head).to(device)
+    print(f"Architecture: {num_features} -> {args.hidden1} -> {args.hidden2} -> 1"
+          + (" [split value heads]" if args.split_value_head else ""))
     print(f"Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
     # Load initial weights if provided
@@ -677,7 +786,11 @@ def train(args):
 
     criterion = nn.MSELoss()
     use_aux = args.use_aux and getattr(dataset, 'has_aux', False)
-    if use_aux:
+    use_split = args.split_value_head and getattr(dataset, 'has_split', False)
+    if use_split:
+        print(f"  Split-head multi-task training: wildlife_mse + habitat_mse (1:1) + "
+              f"bear (w={args.aux_bear_weight}) + salmon (w={args.aux_salmon_weight})")
+    elif use_aux:
         print(f"  Multi-task training: value + bear (w={args.aux_bear_weight}) + salmon (w={args.aux_salmon_weight})")
 
     # Training loop
@@ -690,14 +803,43 @@ def train(args):
 
         model.train()
         total_loss = 0.0
-        total_v_loss = 0.0
+        total_v_loss = 0.0       # overall value RMSE (from split sum or total head)
+        total_w_loss = 0.0       # wildlife head MSE
+        total_h_loss = 0.0       # habitat head MSE
         total_b_loss = 0.0
         total_s_loss = 0.0
         num_samples = 0
         epoch_start = time.time()
 
         for batch in loader:
-            if use_aux and len(batch) == 4:
+            if use_split and len(batch) == 5:
+                # (dense, target_total, aux_bear, aux_salmon, target_wildlife)
+                batch_x, batch_y_total, batch_b, batch_s, batch_yw = batch
+                batch_x = batch_x.to(device)
+                batch_y_total = batch_y_total.to(device)
+                batch_yw = batch_yw.to(device)
+                batch_b = batch_b.to(device)
+                batch_s = batch_s.to(device)
+                # target_habitat = target_total - target_wildlife
+                batch_yh = batch_y_total - batch_yw
+                wildlife_pred, habitat_pred, aux_b, aux_s = model.forward_split(batch_x)
+                w_loss = criterion(wildlife_pred, batch_yw)
+                h_loss = criterion(habitat_pred, batch_yh)
+                b_loss = criterion(aux_b, batch_b)
+                s_loss = criterion(aux_s, batch_s)
+                # 1:1 sum of wildlife and habitat losses (user directive: no variable blending)
+                value_loss = w_loss + h_loss
+                loss = value_loss + args.aux_bear_weight * b_loss + args.aux_salmon_weight * s_loss
+                # For reporting: value RMSE from (wildlife_pred + habitat_pred) vs target_total
+                with torch.no_grad():
+                    total_pred = wildlife_pred + habitat_pred
+                    v_mse = criterion(total_pred, batch_y_total)
+                total_v_loss += v_mse.item() * batch_x.shape[0]
+                total_w_loss += w_loss.item() * batch_x.shape[0]
+                total_h_loss += h_loss.item() * batch_x.shape[0]
+                total_b_loss += b_loss.item() * batch_x.shape[0]
+                total_s_loss += s_loss.item() * batch_x.shape[0]
+            elif use_aux and len(batch) == 4:
                 batch_x, batch_y, batch_b, batch_s = batch
                 batch_x = batch_x.to(device)
                 batch_y = batch_y.to(device)
@@ -732,7 +874,15 @@ def train(args):
         v_rmse = (total_v_loss / num_samples) ** 0.5
         current_lr = optimizer.param_groups[0]['lr']
         elapsed = time.time() - epoch_start
-        if use_aux:
+        if use_split:
+            w_rmse = (total_w_loss / num_samples) ** 0.5
+            h_rmse = (total_h_loss / num_samples) ** 0.5
+            b_rmse = (total_b_loss / num_samples) ** 0.5
+            s_rmse = (total_s_loss / num_samples) ** 0.5
+            print(f"  Epoch {epoch+1}/{args.epochs}: V={v_rmse:.4f} "
+                  f"W={w_rmse:.4f} H={h_rmse:.4f} B={b_rmse:.4f} S={s_rmse:.4f} "
+                  f"lr={current_lr:.6f} ({elapsed:.1f}s)")
+        elif use_aux:
             b_rmse = (total_b_loss / num_samples) ** 0.5
             s_rmse = (total_s_loss / num_samples) ** 0.5
             print(f"  Epoch {epoch+1}/{args.epochs}: V={v_rmse:.4f} B={b_rmse:.4f} S={s_rmse:.4f} lr={current_lr:.6f} ({elapsed:.1f}s)")
@@ -1196,9 +1346,13 @@ if __name__ == '__main__':
     val_parser.add_argument('--optimizer', default='adam', choices=['adam', 'sgd'])
     val_parser.add_argument('--out', default='nnue_weights_pytorch.bin')
     val_parser.add_argument('--use-aux', action='store_true',
-                            help='Load aux targets from MCV2 file and train with multi-task loss')
+                            help='Load aux targets from MCV2+ file and train with multi-task loss')
     val_parser.add_argument('--aux-bear-weight', type=float, default=0.3)
     val_parser.add_argument('--aux-salmon-weight', type=float, default=0.3)
+    val_parser.add_argument('--split-value-head', action='store_true',
+                            help='Enable v5 split value head architecture: predict wildlife '
+                                 'and habitat+tokens remaining as separate heads, summed 1:1 at '
+                                 'inference. Requires MCV3 input data (target_wildlife per sample).')
 
     # Policy training
     pol_parser = subparsers.add_parser('policy', help='Train policy+value from MCP2 data')

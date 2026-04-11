@@ -114,7 +114,18 @@ pub struct GameResult {
 }
 
 /// Generate self-play games, returning per-game results (for top-% filtering).
+/// Uses ε-greedy sampling. For SA softmax sampling, use `generate_games_with_mode`.
 pub fn generate_games(num_games: usize, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> Vec<GameResult> {
+    generate_games_with_mode(num_games, seed, net, SamplingMode::EpsilonGreedy(epsilon), num_players)
+}
+
+pub fn generate_games_with_mode(
+    num_games: usize,
+    seed: u64,
+    net: Option<&NNUENetwork>,
+    mode: SamplingMode,
+    num_players: usize,
+) -> Vec<GameResult> {
     let num_threads = thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
@@ -129,12 +140,13 @@ pub fn generate_games(num_games: usize, seed: u64, net: Option<&NNUENetwork>, ep
             };
             let thread_seed = seed.wrapping_add(t as u64 * 1000000);
             let net_clone = net.cloned();
+            let mode = mode;
             thread::spawn(move || {
                 let mut rng = StdRng::seed_from_u64(thread_seed);
                 let mut results = Vec::with_capacity(n);
                 for _ in 0..n {
                     let game_seed = rng.gen::<u64>();
-                    results.push(generate_single_game(game_seed, net_clone.as_ref(), epsilon, num_players));
+                    results.push(generate_single_game(game_seed, net_clone.as_ref(), mode, num_players));
                 }
                 results
             })
@@ -149,7 +161,7 @@ pub fn generate_games(num_games: usize, seed: u64, net: Option<&NNUENetwork>, ep
 }
 
 /// Generate one game, return its samples and final score.
-fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> GameResult {
+fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, mode: SamplingMode, num_players: usize) -> GameResult {
     let mut samples = Vec::new();
     let mut rng = StdRng::seed_from_u64(seed);
     let cards = ScoringCards::all_a();
@@ -166,12 +178,22 @@ fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_
             continue;
         }
         greedy_pre_move(&mut game, &mut rng);
-        let mv = if epsilon > 0.0 && rng.gen::<f32>() < epsilon {
-            pick_random_move(&game, &mut rng)
-        } else {
-            match net {
-                Some(n) => pick_best_move_nnue(&game, n),
-                None => greedy_move(&game),
+        let mv = match mode {
+            SamplingMode::EpsilonGreedy(epsilon) => {
+                if epsilon > 0.0 && rng.gen::<f32>() < epsilon {
+                    pick_random_move(&game, &mut rng)
+                } else {
+                    match net {
+                        Some(n) => pick_best_move_nnue(&game, n),
+                        None => greedy_move(&game),
+                    }
+                }
+            }
+            SamplingMode::Softmax(temperature) => {
+                match net {
+                    Some(n) => pick_softmax_move_nnue(&game, n, temperature, &mut rng),
+                    None => greedy_move(&game),
+                }
             }
         };
         match mv {
@@ -207,9 +229,29 @@ fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_
     GameResult { samples, final_score }
 }
 
+/// Sampling mode for self-play move selection.
+#[derive(Clone, Copy)]
+pub enum SamplingMode {
+    /// ε-greedy: with probability ε pick a random move, otherwise argmax.
+    EpsilonGreedy(f32),
+    /// Simulated annealing: softmax(score / temperature), sample from the distribution.
+    /// T → 0 recovers argmax; T → ∞ approaches uniform sampling.
+    Softmax(f32),
+}
+
 /// Generate training data from self-play games (flat, all games included).
 /// `num_players`: 1 for pre-training (AI gets all turns), 4 for realistic play.
 pub fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) -> Vec<Sample> {
+    generate_samples_with_mode(num_games, seed, net, SamplingMode::EpsilonGreedy(epsilon), num_players)
+}
+
+pub fn generate_samples_with_mode(
+    num_games: usize,
+    seed: u64,
+    net: Option<&NNUENetwork>,
+    mode: SamplingMode,
+    num_players: usize,
+) -> Vec<Sample> {
     let num_threads = thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
@@ -224,7 +266,7 @@ pub fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, 
             };
             let thread_seed = seed.wrapping_add(t as u64 * 1000000);
             let net_clone = net.cloned();
-            let epsilon = epsilon;
+            let mode = mode;
             let num_players = num_players;
             thread::spawn(move || {
                 let mut rng = StdRng::seed_from_u64(thread_seed);
@@ -232,7 +274,7 @@ pub fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, 
 
                 for _ in 0..n {
                     let game_seed = rng.gen::<u64>();
-                    generate_game_samples(&mut samples, game_seed, net_clone.as_ref(), epsilon, num_players);
+                    generate_game_samples(&mut samples, game_seed, net_clone.as_ref(), mode, num_players);
                 }
 
                 samples
@@ -255,7 +297,7 @@ pub fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, 
 /// as the label for sample N-2 instead of the AI's actual (sometimes random) move.
 /// This is sound because move 20 is a leaf — no future to worry about, so greedy
 /// IS optimal. K=1 is essentially free (one extra greedy_move call per game).
-fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUENetwork>, epsilon: f32, num_players: usize) {
+fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUENetwork>, mode: SamplingMode, num_players: usize) {
     let mut rng = StdRng::seed_from_u64(seed);
     let cards = ScoringCards::all_a();
     let mut game = GameState::new(num_players, cards, &mut rng);
@@ -287,13 +329,23 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
             state_before_last_ai_move = Some(game.clone());
         }
 
-        // Epsilon-greedy: with probability epsilon, pick a random valid move
-        let mv = if epsilon > 0.0 && rng.gen::<f32>() < epsilon {
-            pick_random_move(&game, &mut rng)
-        } else {
-            match net {
-                Some(n) => pick_best_move_nnue(&game, n),
-                None => greedy_move(&game),
+        // Select move according to sampling mode
+        let mv = match mode {
+            SamplingMode::EpsilonGreedy(epsilon) => {
+                if epsilon > 0.0 && rng.gen::<f32>() < epsilon {
+                    pick_random_move(&game, &mut rng)
+                } else {
+                    match net {
+                        Some(n) => pick_best_move_nnue(&game, n),
+                        None => greedy_move(&game),
+                    }
+                }
+            }
+            SamplingMode::Softmax(temperature) => {
+                match net {
+                    Some(n) => pick_softmax_move_nnue(&game, n, temperature, &mut rng),
+                    None => greedy_move(&game), // no net → fall back to greedy
+                }
             }
         };
         match mv {
@@ -1624,6 +1676,121 @@ pub fn pick_best_move_nnue(
     }
 
     best.map(|(mv, _)| mv)
+}
+
+/// Simulated-annealing move selection: scores all candidate moves with NNUE,
+/// applies softmax(score / temperature), then samples from that distribution.
+///
+/// Higher temperature → broader exploration (approaches uniform as T → ∞).
+/// Lower temperature → greedier (approaches argmax as T → 0).
+///
+/// Replaces ε-greedy in self-play when you want smooth exploration control.
+/// Typical schedule: T_start=2.0 (broad exploration in iter1), T_end=0.1 (near-argmax at iter_final).
+pub fn pick_softmax_move_nnue(
+    game: &GameState,
+    net: &NNUENetwork,
+    temperature: f32,
+    rng: &mut StdRng,
+) -> Option<crate::eval::ScoredMove> {
+    use crate::eval::ScoredMove;
+    use cascadia_core::hex::HexCoord;
+    use rand::Rng;
+
+    let mp: Vec<_> = game.market.available()
+        .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+    if mp.is_empty() { return None; }
+
+    let cards = game.scoring_cards;
+    let turns = game.turns_remaining;
+    let player = game.current_player;
+    let mut board = game.boards[player].clone();
+    let base_move = crate::eval::best_move_with_potential(&mut board, &mp, &cards, turns);
+
+    let mut candidates: Vec<ScoredMove> = crate::search::candidate_moves_pub(game);
+    if let Some(ref bm) = base_move {
+        if !candidates.iter().any(|c| c.tile_q == bm.tile_q && c.tile_r == bm.tile_r
+            && c.rotation == bm.rotation && c.wildlife_q == bm.wildlife_q && c.wildlife_r == bm.wildlife_r) {
+            candidates.push(*bm);
+        }
+    }
+    candidates.truncate(15);
+
+    if candidates.is_empty() {
+        return base_move;
+    }
+
+    let bag_info = crate::nnue::BagInfo::from_game_for_player(game, player);
+
+    // Score each candidate
+    let mut scored: Vec<(ScoredMove, f32)> = Vec::with_capacity(candidates.len());
+    for mv in &candidates {
+        let coord = HexCoord::new(mv.tile_q, mv.tile_r);
+        let tile = match mp.iter().find(|&&(i, _, _)| i == mv.market_index) {
+            Some(&(_, tile, _)) => tile,
+            None => continue,
+        };
+        let wildlife = match mp.iter().find(|&&(i, _, _)| {
+            i == mv.wildlife_market_index.unwrap_or(mv.market_index)
+        }) {
+            Some(&(_, _, wl)) => wl,
+            None => continue,
+        };
+
+        let mut eval_board = board.clone();
+        if eval_board.place_tile(coord, tile, mv.rotation).is_none() {
+            continue;
+        }
+        if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
+            let wcoord = HexCoord::new(wq, wr);
+            if let Some(idx) = wcoord.to_index() {
+                eval_board.place_wildlife(idx, wildlife);
+            }
+        }
+        if mv.wildlife_market_index.is_some() {
+            eval_board.nature_tokens = eval_board.nature_tokens.saturating_sub(1);
+        }
+
+        let actual = cascadia_core::scoring::ScoreBreakdown::compute(
+            &mut eval_board, &cards,
+        ).total as f32;
+        let remaining = net.evaluate_with_bag(&eval_board, &bag_info);
+        let estimated_final = actual + remaining;
+        scored.push((*mv, estimated_final));
+    }
+
+    if scored.is_empty() {
+        return None;
+    }
+
+    // Degenerate temperature: fall back to argmax
+    if temperature <= 1e-6 {
+        return scored.into_iter().max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(mv, _)| mv);
+    }
+
+    // Softmax with numerical stability: subtract max before exp
+    let max_score = scored.iter().map(|(_, s)| *s).fold(f32::NEG_INFINITY, f32::max);
+    let mut weights: Vec<f32> = scored.iter()
+        .map(|(_, s)| ((s - max_score) / temperature).exp())
+        .collect();
+    let sum: f32 = weights.iter().sum();
+    if sum <= 0.0 || !sum.is_finite() {
+        // Numerical blowup — fall back to argmax
+        return scored.into_iter().max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(mv, _)| mv);
+    }
+    for w in weights.iter_mut() { *w /= sum; }
+
+    // Sample from the distribution
+    let r: f32 = rng.gen::<f32>();
+    let mut cum = 0.0;
+    for (i, w) in weights.iter().enumerate() {
+        cum += w;
+        if r <= cum {
+            return Some(scored[i].0);
+        }
+    }
+    Some(scored.last().unwrap().0)
 }
 
 /// Enumerate ALL legal moves and score each afterstate with NNUE.
