@@ -451,19 +451,21 @@ async fn make_move(
 
     // Solo 4p sim: auto-advance opponents using the configured opponent strength.
     //
-    // IMPORTANT: opponents do NOT take the free 3-of-a-kind replacement here,
-    // to exactly match the CLI benchmark behavior (simulate_game_inner in
-    // cascadia-cli/src/main.rs skips pre-move optimization for opponents). The
-    // CLI's `pre_move_optimize` only runs for player 0; opponents play their
-    // best move directly on whatever market state they see. Having web
-    // opponents be slightly "smarter" (free replace) than CLI opponents was
-    // causing web-game scores to drift 3+ points below CLI bench means.
+    // Opponents ALWAYS take the free 3-of-a-kind replacement when available — this
+    // is strictly an improvement over the drafted market state and any rational
+    // player would take it. The CLI's `simulate_game_inner` was missing this and
+    // the fix has been mirrored there so web and CLI benchmarks match.
     let solo_sim = *state.solo_sim.lock().unwrap();
     let opponent_strength = *state.opponent_strength.lock().unwrap();
     if solo_sim {
         while !game.is_game_over() && game.current_player != 0 {
             let p = game.current_player;
-            let _ = p; // used only for event log (disabled with free-replace)
+            if let Some(overflow_wl) = game.can_replace_overflow() {
+                game.replace_overflow();
+                state.events.lock().unwrap().push(
+                    format!("P{} used free replacement (3× {:?})", p + 1, overflow_wl)
+                );
+            }
             // Dispatch opponent move selection on the configured strength.
             let opp_mv = pick_move_by_strength(
                 &game,

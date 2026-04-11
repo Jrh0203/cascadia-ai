@@ -221,14 +221,9 @@ fn bear_halfpair_bonus(board: &Board) -> f32 {
 }
 
 fn advance_opponents(game: &mut GameState, ai_player: usize) {
-    while !game.is_game_over() && game.current_player != ai_player {
-        match greedy_move(game) {
-            Some(mv) => {
-                if !execute_scored_move(game, &mv) { break; }
-            }
-            None => break,
-        }
-    }
+    // Delegate to the canonical helper which applies the free 3-of-a-kind
+    // overflow replacement before each opponent move. See search::advance_opponents.
+    crate::search::advance_opponents(game, ai_player)
 }
 
 /// Deep expectimax search: look ahead `depth` AI turns with `branching` top

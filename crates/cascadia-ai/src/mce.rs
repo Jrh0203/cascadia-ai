@@ -341,14 +341,7 @@ pub fn best_move_expectimax_1ply(
         if !crate::search::execute_scored_move(&mut g, mv) { continue; }
 
         // Simulate opponents (deterministic, greedy)
-        while !g.is_game_over() && g.current_player != player {
-            match crate::search::greedy_move(&g) {
-                Some(opp_mv) => {
-                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
-                }
-                None => break,
-            }
-        }
+        crate::search::advance_opponents(&mut g, player);
 
         if g.is_game_over() {
             // Game ended — use final score
@@ -478,14 +471,7 @@ pub fn best_move_expectimax_2ply(
         if !crate::search::execute_scored_move(&mut g, mv) { continue; }
 
         // Simulate opponents
-        while !g.is_game_over() && g.current_player != player {
-            match crate::search::greedy_move(&g) {
-                Some(opp_mv) => {
-                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
-                }
-                None => break,
-            }
-        }
+        crate::search::advance_opponents(&mut g, player);
 
         if g.is_game_over() {
             let score = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64;
@@ -528,14 +514,7 @@ pub fn score_all_candidates_expectimax(
         let features = crate::nnue::extract_features_with_bag(&g.boards[player], Some(&bag_info));
 
         // Simulate opponents
-        while !g.is_game_over() && g.current_player != player {
-            match crate::search::greedy_move(&g) {
-                Some(opp_mv) => {
-                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
-                }
-                None => break,
-            }
-        }
+        crate::search::advance_opponents(&mut g, player);
 
         let score = if g.is_game_over() {
             ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64
@@ -711,14 +690,7 @@ pub fn best_move_expectimax_nply(
         if !crate::search::execute_scored_move(&mut g, mv) { continue; }
 
         // Simulate opponents
-        while !g.is_game_over() && g.current_player != player {
-            match crate::search::greedy_move(&g) {
-                Some(opp_mv) => {
-                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
-                }
-                None => break,
-            }
-        }
+        crate::search::advance_opponents(&mut g, player);
 
         let score = if g.is_game_over() {
             ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64
@@ -885,14 +857,7 @@ pub fn best_move_wildlife_deep(
         if !crate::search::execute_scored_move(&mut g, mv) { continue; }
 
         // Simulate opponents for this turn only
-        while !g.is_game_over() && g.current_player != player {
-            match crate::search::greedy_move(&g) {
-                Some(opp_mv) => {
-                    if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
-                }
-                None => break,
-            }
-        }
+        crate::search::advance_opponents(&mut g, player);
 
         if g.is_game_over() {
             let score = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f64;
@@ -1102,12 +1067,7 @@ pub fn best_move_hybrid(
         if !crate::search::execute_scored_move(&mut g, mv) { continue; }
 
         // Simulate opponents
-        while !g.is_game_over() && g.current_player != player {
-            match crate::search::greedy_move(&g) {
-                Some(opp_mv) => { crate::search::execute_scored_move(&mut g, &opp_mv); }
-                None => break,
-            }
-        }
+        crate::search::advance_opponents(&mut g, player);
 
         let score = if g.is_game_over() {
             ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total as f32
@@ -1170,6 +1130,9 @@ pub fn best_move_hybrid(
                     let mut ai_turns = 0;
                     while !g.is_game_over() {
                         if g.current_player != player {
+                            if g.can_replace_overflow().is_some() {
+                                g.replace_overflow();
+                            }
                             match crate::search::greedy_move(&g) {
                                 Some(opp) => { if !crate::search::execute_scored_move(&mut g, &opp) { break; } }
                                 None => break,
@@ -1471,6 +1434,9 @@ fn run_mce_candidates_on(
                     let mut ai_turns = 0;
                     while !g.is_game_over() {
                         if g.current_player != player {
+                            if g.can_replace_overflow().is_some() {
+                                g.replace_overflow();
+                            }
                             match crate::search::greedy_move(&g) {
                                 Some(opp) => { if !crate::search::execute_scored_move(&mut g, &opp) { break; } }
                                 None => break,
@@ -1828,6 +1794,10 @@ fn run_mce_candidates_impl(
 
                         while !g.is_game_over() {
                             if g.current_player != player {
+                                // Opponents also take the free 3-of-a-kind replacement
+                                if g.can_replace_overflow().is_some() {
+                                    g.replace_overflow();
+                                }
                                 match greedy_move(&g) {
                                     Some(opp_mv) => {
                                         if !execute_scored_move(&mut g, &opp_mv) { break; }

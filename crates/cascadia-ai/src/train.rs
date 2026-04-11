@@ -121,6 +121,10 @@ fn play_and_collect_updates(
 
     while !game.is_game_over() {
         if game.current_player != 0 {
+            // Free 3-of-a-kind replacement for opponents (mirrors runtime behavior)
+            if game.can_replace_overflow().is_some() {
+                game.replace_overflow();
+            }
             match greedy_move(&game) {
                 Some(mv) => {
                     if !execute_scored_move(&mut game, &mv) { break; }

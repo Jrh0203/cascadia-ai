@@ -294,6 +294,13 @@ fn simulate_game_inner(
         // If --opp-weights was set via OPPONENT_NET, opponents use that network
         // instead of player 0's net (for "v3 vs v1" style head-to-head experiments).
         if game.current_player != 0 {
+            // Opponents ALWAYS take the free 3-of-a-kind replacement if available.
+            // This is strictly an improvement over the current market state and
+            // any rational player would take it. Without this, benchmark opponents
+            // were systematically weaker than real play, inflating player 0's scores.
+            if game.can_replace_overflow().is_some() {
+                game.replace_overflow();
+            }
             let opp_mv = if let Some(opp) = opponent_net() {
                 cascadia_ai::nnue_train::pick_best_move_nnue(&game, opp)
                     .or_else(|| greedy_move(&game))

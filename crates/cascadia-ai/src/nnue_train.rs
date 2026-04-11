@@ -171,6 +171,12 @@ fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, mode: SamplingMode
 
     while !game.is_game_over() {
         if game.current_player != 0 {
+            // Opponents ALWAYS take the free 3-of-a-kind replacement if available.
+            // Must match the inference-time opponent behavior (CLI bench +
+            // cascadia-web) so training data reflects realistic opponent play.
+            if game.can_replace_overflow().is_some() {
+                game.replace_overflow();
+            }
             match greedy_move(&game) {
                 Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
                 None => break,
@@ -310,7 +316,13 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
 
     while !game.is_game_over() {
         if game.current_player != 0 {
-            // Opponents play greedy (must match benchmark for consistency)
+            // Opponents play greedy (must match benchmark for consistency).
+            // Always take the free 3-of-a-kind replacement — mirrors inference-
+            // time opponent behavior (CLI bench + cascadia-web) so training data
+            // reflects realistic opponent play.
+            if game.can_replace_overflow().is_some() {
+                game.replace_overflow();
+            }
             match greedy_move(&game) {
                 Some(mv) => {
                     if !execute_scored_move(&mut game, &mv) { break; }

@@ -166,15 +166,8 @@ fn simulate(
         return 0.0;
     }
 
-    // Simulate opponents (greedy, deterministic)
-    while !g.is_game_over() && g.current_player != player {
-        match crate::search::greedy_move(&g) {
-            Some(opp_mv) => {
-                if !crate::search::execute_scored_move(&mut g, &opp_mv) { break; }
-            }
-            None => break,
-        }
-    }
+    // Simulate opponents (greedy, deterministic, with free-replace for overflow)
+    crate::search::advance_opponents(&mut g, player);
 
     // Recurse into child
     let edge = &mut node.children[child_idx];

@@ -634,8 +634,17 @@ pub fn greedy_move(game: &GameState) -> Option<ScoredMove> {
 }
 
 /// Advance the game past non-AI players' turns using greedy strategy.
-fn advance_opponents(game: &mut GameState, ai_player: usize) {
+///
+/// Each opponent takes the free 3-of-a-kind overflow replacement when available
+/// before picking their move. This is strictly an improvement over the current
+/// market state and any rational player would take it. Inference-time opponent
+/// loops (CLI bench, cascadia-web, MCE rollouts, training data generation) all
+/// use this same behavior to stay consistent.
+pub fn advance_opponents(game: &mut GameState, ai_player: usize) {
     while !game.is_game_over() && game.current_player != ai_player {
+        if game.can_replace_overflow().is_some() {
+            game.replace_overflow();
+        }
         match greedy_move(game) {
             Some(mv) => {
                 if !execute_scored_move(game, &mv) { break; }
