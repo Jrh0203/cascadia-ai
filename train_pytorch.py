@@ -770,6 +770,17 @@ def train(args):
                 args.init_weights, num_features, args.hidden1, args.hidden2)
             load_weights_into_model(model, w1, b1, w2, b2, w3, b3, w3p, b3p)
             print(f"Loaded initial weights from {args.init_weights}")
+            # When switching to split value heads from a legacy single-head init,
+            # seed fc3_value_wildlife and fc3_value_habitat as fc3/2 so the forward
+            # pass (wildlife + habitat) ≈ legacy fc3 at step 0. Without this, the
+            # split heads are random and the network effectively starts from scratch.
+            if args.split_value_head:
+                with torch.no_grad():
+                    model.fc3_value_wildlife.weight.copy_(model.fc3.weight * 0.5)
+                    model.fc3_value_wildlife.bias.copy_(model.fc3.bias * 0.5)
+                    model.fc3_value_habitat.weight.copy_(model.fc3.weight * 0.5)
+                    model.fc3_value_habitat.bias.copy_(model.fc3.bias * 0.5)
+                print(f"  Seeded split value heads as fc3/2 (wildlife + habitat ≈ legacy fc3 at step 0)")
         except Exception as e:
             print(f"Warning: could not load weights: {e}. Starting fresh.")
 
