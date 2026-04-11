@@ -19,24 +19,100 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 24px;
+    padding: 8px 16px;
     background: #16213e;
     border-bottom: 1px solid #0f3460;
+    gap: 12px;
   }
-  header h1 { font-size: 20px; color: #e0e0e0; font-weight: 600; }
-  .header-controls { display: flex; gap: 12px; align-items: center; }
+  header h1 {
+    font-size: 16px;
+    color: #e0e0e0;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+  }
+  .header-controls {
+    display: flex;
+    gap: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .ctrl-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 0 10px;
+    border-right: 1px solid #0f3460;
+    height: 28px;
+  }
+  .ctrl-group:first-child { padding-left: 0; }
+  .ctrl-group:last-child { border-right: none; padding-right: 0; }
+  .ctrl-label {
+    font-size: 10px;
+    color: #8899b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 2px;
+    user-select: none;
+  }
   button {
     background: #0f3460;
     color: #e0e0e0;
     border: 1px solid #533483;
-    padding: 6px 16px;
+    padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 12px;
+    line-height: 1.2;
+    transition: background 0.12s, border-color 0.12s;
   }
   button:hover { background: #533483; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button:disabled:hover { background: #0f3460; }
   button.active { background: #533483; border-color: #e94560; }
+  /* Header buttons get nowrap to keep the row compact; side-panel buttons
+     that use width:100% still allow wrapping so long labels fit. */
+  .header-controls button { white-space: nowrap; }
+  button.icon-btn {
+    padding: 5px 8px;
+    font-size: 14px;
+    line-height: 1;
+  }
+  /* Strength dropdowns — custom styled to match buttons */
+  .strength-select {
+    background: #0f3460;
+    color: #e0e0e0;
+    border: 1px solid #533483;
+    padding: 4px 22px 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1.2;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M1 3.5 L5 7 L9 3.5' stroke='%238899b8' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    transition: background-color 0.12s, border-color 0.12s;
+  }
+  .strength-select:hover {
+    background-color: #533483;
+    border-color: #e94560;
+  }
+  .strength-select:focus { outline: none; border-color: #e94560; }
+  .strength-select option {
+    background: #16213e;
+    color: #e0e0e0;
+  }
+  .turn-info {
+    font-size: 11px;
+    color: #bbb;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
 
   .main-area {
     display: flex;
@@ -272,12 +348,12 @@
   }
   .view-btn {
     font-size: 11px;
-    padding: 2px 8px;
-    margin: 0 1px;
+    padding: 3px 8px;
   }
   .view-btn.active {
     background: #e94560;
     color: #fff;
+    border-color: #e94560;
   }
   .candidate-item {
     display: flex;
@@ -380,32 +456,61 @@
 <header>
   <h1>CASCADIA</h1>
   <div class="header-controls">
-    <button id="suggest-move-btn" style="font-size:12px"
-            onclick="doSuggestMove()">💡 Suggest</button>
-    <button id="clear-suggest-btn" style="font-size:12px; display:none"
-            onclick="dismissSuggestion()">✕ Clear Suggestion</button>
-    <button id="best-move-btn" style="font-size:12px"
-            onclick="doBestMove()">🤖 Best Move</button>
-    <button id="auto-play-btn" style="font-size:12px"
-            onclick="toggleAutoPlay()">▶️ Auto Play</button>
-    <button id="undo-btn" style="font-size:12px"
-            onclick="doUndo()">↶ Undo</button>
-    <span id="view-player-buttons" style="display:none; margin-left:8px;">
-      <span style="font-size:12px; color:#888">View:</span>
+
+    <!-- Player action group: helpers for the human's turn -->
+    <div class="ctrl-group">
+      <button id="suggest-move-btn" onclick="doSuggestMove()"
+              title="Show top-10 candidate moves ranked by the helper AI">💡 Suggest</button>
+      <button id="clear-suggest-btn" class="icon-btn" onclick="dismissSuggestion()"
+              title="Clear suggestion overlay" style="display:none">✕</button>
+      <button id="best-move-btn" onclick="doBestMove()"
+              title="Execute the helper AI's top move immediately">🎯 Best</button>
+      <button id="auto-play-btn" onclick="toggleAutoPlay()"
+              title="Auto-play with the helper AI until game end">▶️ Auto</button>
+      <button id="undo-btn" class="icon-btn" onclick="doUndo()" title="Undo last move">↶</button>
+    </div>
+
+    <!-- AI strength group: configures helper AI + opponent AI -->
+    <div class="ctrl-group" id="ai-strength-group">
+      <span class="ctrl-label">Helper</span>
+      <select id="human-strength-select" class="strength-select" onchange="setStrengths()"
+              title="AI used for Suggest / Best Move / Auto Play. Higher = smarter but slower. MCE(750) is the production baseline (~95-96 mean, ~3 min per move).">
+        <option value="greedy">Greedy</option>
+        <option value="nnue">NNUE</option>
+        <option value="mce50">MCE(50)</option>
+        <option value="mce750" selected>MCE(750)</option>
+      </select>
+      <span class="ctrl-label" style="margin-left:6px;">Opponents</span>
+      <select id="opponent-strength-select" class="strength-select" onchange="setStrengths()"
+              title="AI used by players 2-4 in Solo (4p sim) mode. ⚠ MCE(750) is VERY slow — ~5 min per opponent move (15+ min per full round).">
+        <option value="greedy">Greedy</option>
+        <option value="nnue" selected>NNUE</option>
+        <option value="mce50">MCE(50)</option>
+        <option value="mce750">MCE(750)</option>
+      </select>
+    </div>
+
+    <!-- View switcher (visible only in 4p sim) -->
+    <span id="view-player-buttons" class="ctrl-group" style="display:none;">
+      <span class="ctrl-label">View</span>
       <button class="view-btn" data-view="0" onclick="setViewPlayer(0)">P1</button>
       <button class="view-btn" data-view="1" onclick="setViewPlayer(1)">P2</button>
       <button class="view-btn" data-view="2" onclick="setViewPlayer(2)">P3</button>
       <button class="view-btn" data-view="3" onclick="setViewPlayer(3)">P4</button>
     </span>
-    <button id="show-results-btn" style="font-size:12px; display:none"
-            onclick="showGameOver()">📊 Show Results</button>
-    <span id="turn-info"></span>
-    <button onclick="restartGame()">Restart</button>
-    <button onclick="newGame(1)">Solo</button>
-    <button onclick="newGame(4, true)" title="Solo vs 3 greedy AIs">Solo (4p sim)</button>
-    <button onclick="newGame(2)" style="display:none">2P</button>
-    <button onclick="newGame(3)" style="display:none">3P</button>
-    <button onclick="newGame(4)" style="display:none">4P</button>
+
+    <!-- Game session group: turn info + new-game controls -->
+    <div class="ctrl-group">
+      <span id="turn-info" class="turn-info"></span>
+      <button id="show-results-btn" class="icon-btn" onclick="showGameOver()"
+              title="Show final results" style="display:none">📊</button>
+      <button class="icon-btn" onclick="restartGame()" title="Restart the same game seed">↻</button>
+      <button onclick="newGame(1)" title="Start a new solo game (1 player)">Solo</button>
+      <button onclick="newGame(4, true)" title="Start a new game vs 3 AI opponents">Solo 4p</button>
+      <button onclick="newGame(2)" style="display:none">2P</button>
+      <button onclick="newGame(3)" style="display:none">3P</button>
+      <button onclick="newGame(4)" style="display:none">4P</button>
+    </div>
   </div>
 </header>
 
@@ -509,22 +614,32 @@ const SCORING_DESCRIPTIONS = {
     bear: {
       rule: 'Score for pairs of bears (exactly 2 adjacent, isolated from other bears)',
       points: '1p=4 · 2p=11 · 3p=19 · 4p=27',
+      // Best: 4 pairs = 8 bears for 27 pts → 27/8 = 3.4 pts/bear
+      best: { score: 27, count: 8 },
     },
     elk: {
       rule: 'Score for straight lines of adjacent elk',
       points: '1=2 · 2=5 · 3=9 · 4+=13',
+      // Best: line of 4 = 13 pts → 13/4 = 3.25 pts/elk
+      best: { score: 13, count: 4 },
     },
     salmon: {
       rule: 'Score for runs (chains, no branching, isolated)',
       points: '1=2 · 2=4 · 3=7 · 4=11 · 5=15 · 6=20 · 7+=26',
+      // Best: chain of 7 = 26 pts → 26/7 = 3.71 pts/salmon
+      best: { score: 26, count: 7 },
     },
     hawk: {
       rule: 'Score for isolated hawks (not adjacent to other hawks)',
       points: '1=2 · 2=5 · 3=8 · 4=11 · 5=14 · 6=18 · 7=22 · 8+=28',
+      // Best: 8 isolated = 28 pts → 28/8 = 3.5 pts/hawk
+      best: { score: 28, count: 8 },
     },
     fox: {
       rule: 'Each fox scores for the number of unique wildlife types adjacent to it',
       points: '1 pt per unique adjacent type',
+      // No fixed max — depends on neighborhood
+      best: null,
     },
   },
 };
@@ -967,16 +1082,21 @@ function renderScores() {
 
     const wildlifeNames = ['bear', 'elk', 'salmon', 'hawk', 'fox'];
     let wildlifeTotal = 0;
+    let wildlifeCountTotal = 0;
     for (let i = 0; i < 5; i++) {
       wildlifeTotal += score.wildlife[i];
+      const count = (score.wildlife_counts && score.wildlife_counts[i]) || 0;
+      wildlifeCountTotal += count;
+      const ppa = count > 0 ? (score.wildlife[i] / count).toFixed(1) : '—';
       html += `<div class="score-row">
         <span class="label">${WILDLIFE_EMOJI[wildlifeNames[i]]} ${wildlifeNames[i]}</span>
-        <span>${score.wildlife[i]}</span>
+        <span>${score.wildlife[i]} <span style="color:#888; font-size:0.85em">(${ppa})</span></span>
       </div>`;
     }
+    const wlAvg = wildlifeCountTotal > 0 ? (wildlifeTotal / wildlifeCountTotal).toFixed(1) : '—';
     html += `<div class="score-row score-subtotal">
       <span class="label">wildlife subtotal</span>
-      <span>${wildlifeTotal}</span>
+      <span>${wildlifeTotal} <span style="color:#888; font-size:0.85em">(${wlAvg})</span></span>
     </div>`;
 
     html += `<div class="score-row">
@@ -1148,9 +1268,14 @@ function renderScoringRef() {
   const animals = ['bear', 'elk', 'salmon', 'hawk', 'fox'];
   el.innerHTML = animals.map(a => {
     const d = descs[a];
+    let bestStr = '';
+    if (d.best) {
+      const ppa = (d.best.score / d.best.count).toFixed(2);
+      bestStr = ` <span style="color:#888; font-weight:normal; font-size:0.85em">(${d.best.score}/${d.best.count} = ${ppa})</span>`;
+    }
     return `<div class="scoring-card">
       <div class="card-header">
-        <span class="animal-name">${WILDLIFE_EMOJI[a]} ${a}</span>
+        <span class="animal-name">${WILDLIFE_EMOJI[a]} ${a}${bestStr}</span>
         <span class="variant-badge">${variant}</span>
       </div>
       <div class="desc">${d.rule}</div>
@@ -1825,7 +1950,61 @@ canvas.addEventListener('wheel', (e) => {
 window.addEventListener('resize', render);
 
 // --- Init ---
+// ── AI strength selection (human player + opponents) ──
+// Persisted in localStorage and synced to the server via /api/strengths.
+
+async function setStrengths() {
+  const human = document.getElementById('human-strength-select').value;
+  const opponent = document.getElementById('opponent-strength-select').value;
+  localStorage.setItem('human-strength', human);
+  localStorage.setItem('opponent-strength', opponent);
+  try {
+    await fetch('/api/strengths', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ human, opponent }),
+    });
+  } catch (e) {
+    console.warn('Failed to sync strengths to server:', e);
+  }
+}
+
+async function loadStrengths() {
+  // Load from localStorage first (survives page reload), fall back to server defaults.
+  const savedHuman = localStorage.getItem('human-strength');
+  const savedOpp = localStorage.getItem('opponent-strength');
+  if (savedHuman || savedOpp) {
+    const hSel = document.getElementById('human-strength-select');
+    const oSel = document.getElementById('opponent-strength-select');
+    if (savedHuman) hSel.value = savedHuman;
+    if (savedOpp) oSel.value = savedOpp;
+    // Push to server so the session is in sync.
+    await setStrengths();
+  } else {
+    // First visit: pull server defaults and reflect in the UI.
+    try {
+      const r = await fetch('/api/strengths');
+      if (r.ok) {
+        const s = await r.json();
+        document.getElementById('human-strength-select').value = s.human;
+        document.getElementById('opponent-strength-select').value = s.opponent;
+        if (!s.nnue_available) {
+          // Disable NNUE-backed options when no weights are loaded.
+          for (const id of ['human-strength-select', 'opponent-strength-select']) {
+            const sel = document.getElementById(id);
+            for (const opt of sel.options) {
+              if (opt.value !== 'greedy') opt.disabled = true;
+            }
+            sel.value = 'greedy';
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+}
+
 async function init() {
+  await loadStrengths();
   const res = await fetch('/api/state');
   gameState = await res.json();
   renderAll();

@@ -16,6 +16,39 @@ use cascadia_core::hex::HexCoord;
 use cascadia_core::scoring::ScoreBreakdown;
 use cascadia_core::types::*;
 
+/// AI strength tiers for both the human player's suggestion AI and the
+/// opponents' move selection. Ordered weakest → strongest.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum Strength {
+    /// Plain greedy with potential-aware top-8 joint tile+wildlife scoring.
+    /// No neural net required. ~76 mean in benchmarks.
+    Greedy,
+    /// NNUE direct evaluation (~25 candidate afterstate forward passes).
+    /// Fast, deterministic. ~90 mean with v4 iter10 weights.
+    Nnue,
+    /// MCE with 50 rollouts. Medium-cost search; ~91 mean.
+    Mce50,
+    /// MCE with 750 rollouts + mulligan-aware pre-move. Production-strength
+    /// ~95-96 mean. VERY SLOW for opponents (3-5 min per move × 3 opponents).
+    Mce750,
+}
+
+impl Default for Strength {
+    fn default() -> Self { Strength::Mce750 }
+}
+
+impl Strength {
+    fn label(&self) -> &'static str {
+        match self {
+            Strength::Greedy => "greedy",
+            Strength::Nnue => "nnue",
+            Strength::Mce50 => "mce(50)",
+            Strength::Mce750 => "mce(750)+mulligan",
+        }
+    }
+}
+
 struct AppState {
     game: Mutex<GameState>,
     rng: Mutex<StdRng>,
@@ -23,6 +56,12 @@ struct AppState {
     solo_sim: Mutex<bool>,
     history: Mutex<Vec<GameState>>,
     events: Mutex<Vec<String>>,
+    /// Strength used for the human player's suggest/best-move (autoplay) AI.
+    /// Default Mce750. Set via /api/set-strengths.
+    human_strength: Mutex<Strength>,
+    /// Strength used for opponents (players 1-3) in solo-sim mode.
+    /// Default Nnue (fast). Set via /api/set-strengths.
+    opponent_strength: Mutex<Strength>,
 }
 
 // --- JSON response types ---
@@ -75,6 +114,8 @@ struct ScoreView {
     player: usize,
     habitat: [u16; 5],
     wildlife: [u16; 5],
+    /// Number of placed wildlife of each type. Used by UI to compute pts/animal.
+    wildlife_counts: [u16; 5],
     nature_tokens: u16,
     habitat_bonus: [u8; 5],
     total: u16,
@@ -202,10 +243,16 @@ fn build_game_view_for_with(game: &mut GameState, view_player: usize, events: Ve
             } else {
                 ScoreBreakdown::compute(&mut game.boards[p], &game.scoring_cards)
             };
+            let board = &game.boards[p];
+            let mut wildlife_counts = [0u16; 5];
+            for w in 0..5 {
+                wildlife_counts[w] = board.wildlife_positions[w].len() as u16;
+            }
             ScoreView {
                 player: p,
                 habitat: breakdown.habitat,
                 wildlife: breakdown.wildlife,
+                wildlife_counts,
                 nature_tokens: breakdown.nature_tokens,
                 habitat_bonus: breakdown.habitat_bonus,
                 total: breakdown.total,
@@ -240,6 +287,50 @@ fn build_game_view_for_with(game: &mut GameState, view_player: usize, events: Ve
 #[derive(Deserialize)]
 struct StateQuery {
     view: Option<usize>,
+}
+
+/// Pick a move for the given game state using the given AI strength.
+/// Used by both the human-player suggest/autoplay path (Mce750 default) and
+/// the opponent loop in solo_sim (Nnue default).
+///
+/// - `Greedy`: plain potential-aware greedy, no NNUE required
+/// - `Nnue`: NNUE direct candidate-afterstate evaluation (requires net)
+/// - `Mce50`: Monte Carlo with 50 rollouts (requires net)
+/// - `Mce750`: Monte Carlo with 750 rollouts (requires net)
+///
+/// If the caller requests an NNUE-backed strength but no net is loaded,
+/// falls back to greedy (with strategic candidates) so the caller always
+/// gets a move.
+fn pick_move_by_strength(
+    game: &cascadia_core::game::GameState,
+    strength: Strength,
+    net: Option<&cascadia_ai::nnue::NNUENetwork>,
+    rng: &Mutex<StdRng>,
+) -> Option<cascadia_ai::eval::ScoredMove> {
+    use cascadia_ai::nnue_train::pick_best_move_nnue;
+    match strength {
+        Strength::Greedy => cascadia_ai::mce::best_move_no_rollouts(game),
+        Strength::Nnue => match net {
+            Some(n) => pick_best_move_nnue(game, n),
+            None => cascadia_ai::mce::best_move_no_rollouts(game),
+        },
+        Strength::Mce50 => match net {
+            Some(n) => {
+                let seed = rng.lock().unwrap().gen::<u64>();
+                let mut search_rng = StdRng::seed_from_u64(seed);
+                cascadia_ai::mce::best_move_mce(game, n, 50, &mut search_rng)
+            }
+            None => cascadia_ai::mce::best_move_no_rollouts(game),
+        },
+        Strength::Mce750 => match net {
+            Some(n) => {
+                let seed = rng.lock().unwrap().gen::<u64>();
+                let mut search_rng = StdRng::seed_from_u64(seed);
+                cascadia_ai::mce::best_move_mce(game, n, 750, &mut search_rng)
+            }
+            None => cascadia_ai::mce::best_move_no_rollouts(game),
+        },
+    }
 }
 
 async fn get_state(
@@ -358,24 +449,28 @@ async fn make_move(
             if wl_placed { "" } else { " (skipped wildlife)" }));
     }
 
-    // Solo 4p sim: auto-advance opponents with greedy play until back to player 0
+    // Solo 4p sim: auto-advance opponents using the configured opponent strength.
+    //
+    // IMPORTANT: opponents do NOT take the free 3-of-a-kind replacement here,
+    // to exactly match the CLI benchmark behavior (simulate_game_inner in
+    // cascadia-cli/src/main.rs skips pre-move optimization for opponents). The
+    // CLI's `pre_move_optimize` only runs for player 0; opponents play their
+    // best move directly on whatever market state they see. Having web
+    // opponents be slightly "smarter" (free replace) than CLI opponents was
+    // causing web-game scores to drift 3+ points below CLI bench means.
     let solo_sim = *state.solo_sim.lock().unwrap();
+    let opponent_strength = *state.opponent_strength.lock().unwrap();
     if solo_sim {
         while !game.is_game_over() && game.current_player != 0 {
             let p = game.current_player;
-            // Greedy opponents ALWAYS take the free 3-of-a-kind replacement when available
-            if let Some(overflow_wl) = game.can_replace_overflow() {
-                game.replace_overflow();
-                state.events.lock().unwrap().push(
-                    format!("P{} used free replacement (3× {:?})", p + 1, overflow_wl)
-                );
-            }
-            // Use NNUE-guided move selection for opponents (if weights loaded)
-            let opp_mv = if let Some(ref net) = state.nnue {
-                cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
-            } else {
-                cascadia_ai::mce::best_move_no_rollouts(&game)
-            };
+            let _ = p; // used only for event log (disabled with free-replace)
+            // Dispatch opponent move selection on the configured strength.
+            let opp_mv = pick_move_by_strength(
+                &game,
+                opponent_strength,
+                state.nnue.as_deref(),
+                &state.rng,
+            );
             match opp_mv {
                 Some(mv) => {
                     let market_idx = mv.market_index;
@@ -485,30 +580,65 @@ async fn suggest_move(
     }
 
     let net_opt = state.nnue.clone();
+    let human_strength = *state.human_strength.lock().unwrap();
     let mut rng = state.rng.lock().unwrap();
     let mut search_rng = StdRng::seed_from_u64(rng.gen());
     drop(rng);
 
-    // Evaluate pre-move actions using the same MCE logic as best_move
-    let pre_action = if let Some(ref net) = net_opt {
-        evaluate_pre_moves(&game, net, &mut search_rng)
-    } else {
-        // No NNUE — just flag overflow if available
-        if game.can_replace_overflow().is_some() {
+    // Pre-move evaluation only makes sense when we have a net and a search-based strength.
+    // For pure greedy, there's no mulligan reasoning — just flag overflow if available.
+    let use_mulligan_reasoning = matches!(
+        human_strength,
+        Strength::Nnue | Strength::Mce50 | Strength::Mce750
+    );
+    let pre_action = if use_mulligan_reasoning {
+        if let Some(ref net) = net_opt {
+            evaluate_pre_moves(&game, net, &mut search_rng)
+        } else if game.can_replace_overflow().is_some() {
             Some(serde_json::json!({ "type": "replace_overflow", "recommended": true }))
         } else { None }
-    };
+    } else if game.can_replace_overflow().is_some() {
+        Some(serde_json::json!({ "type": "replace_overflow", "recommended": true }))
+    } else { None };
 
-    // Always compute move candidates (top-10 with MCE scores)
-    let scored_candidates: Vec<(cascadia_ai::eval::ScoredMove, f64)> = if let Some(ref net) = net_opt {
-        cascadia_ai::mce::top_moves_mce(&game, net, 750, &mut search_rng, 10)
-    } else {
-        let mp: Vec<_> = game.market.available()
-            .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
-        let player = game.current_player;
-        let mut board = game.boards[player].clone();
-        cascadia_ai::eval::best_move_with_potential(&mut board, &mp, &game.scoring_cards, game.turns_remaining)
-            .into_iter().map(|m| (m, m.score as f64)).collect()
+    // Compute top-10 candidates using the configured strength.
+    let scored_candidates: Vec<(cascadia_ai::eval::ScoredMove, f64)> = match (human_strength, net_opt.as_ref()) {
+        (Strength::Mce750, Some(net)) => {
+            cascadia_ai::mce::top_moves_mce(&game, net, 750, &mut search_rng, 10)
+        }
+        (Strength::Mce50, Some(net)) => {
+            cascadia_ai::mce::top_moves_mce(&game, net, 50, &mut search_rng, 10)
+        }
+        (Strength::Nnue, Some(net)) => {
+            // NNUE-only: use pick_best_move_nnue to get the single best move,
+            // then fall back to greedy candidates for the remaining 9 slots.
+            // This is a "best + context" presentation for the UI.
+            let mut cands: Vec<(cascadia_ai::eval::ScoredMove, f64)> = Vec::new();
+            if let Some(best) = cascadia_ai::nnue_train::pick_best_move_nnue(&game, net) {
+                cands.push((best, best.score as f64));
+            }
+            let mp: Vec<_> = game.market.available()
+                .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+            let mut board = game.boards[game.current_player].clone();
+            if let Some(g) = cascadia_ai::eval::best_move_with_potential(
+                &mut board, &mp, &game.scoring_cards, game.turns_remaining,
+            ) {
+                if cands.iter().all(|(m, _)| !(m.tile_q == g.tile_q && m.tile_r == g.tile_r
+                    && m.rotation == g.rotation && m.wildlife_q == g.wildlife_q)) {
+                    cands.push((g, g.score as f64));
+                }
+            }
+            cands
+        }
+        // Greedy (or no-net fallback): just greedy candidates
+        _ => {
+            let mp: Vec<_> = game.market.available()
+                .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+            let player = game.current_player;
+            let mut board = game.boards[player].clone();
+            cascadia_ai::eval::best_move_with_potential(&mut board, &mp, &game.scoring_cards, game.turns_remaining)
+                .into_iter().map(|m| (m, m.score as f64)).collect()
+        }
     };
 
     fn mv_to_json(mv: &cascadia_ai::eval::ScoredMove, avg_score: f64) -> serde_json::Value {
@@ -543,6 +673,7 @@ async fn suggest_move(
                     _ => "move",
                 }
             } else { "move" },
+            "strategy": human_strength.label(),
             "mv": mv_obj,
             "candidates": cand_list,
         });
@@ -567,144 +698,110 @@ async fn best_move_endpoint(
         return Err((StatusCode::BAD_REQUEST, "Game is over".to_string()));
     }
 
-    let cards = game.scoring_cards;
+    let human_strength = *state.human_strength.lock().unwrap();
+    let use_mulligan = matches!(
+        human_strength,
+        Strength::Nnue | Strength::Mce50 | Strength::Mce750
+    );
 
-    // If NNUE weights are loaded, use MCE with mulligan-aware pre-move optimization
-    // (our best-in-class strategy at 92.9 mean, P90=101)
-    let mv = if let Some(ref net) = state.nnue {
-        let mut rng = state.rng.lock().unwrap();
-        let mut search_rng = StdRng::seed_from_u64(rng.gen());
-        drop(rng);
-
-        // Pre-move: decide whether to replace 3-of-a-kind or mulligan.
-        // Commits actions to the REAL game state (snapshotted for undo).
-        let mut applied_replace_overflow = false;
-        let mut applied_mulligans = 0u32;
-        {
+    // If the strength is search-based and weights are loaded, run mulligan-aware
+    // pre-move optimization. This is IDENTICAL to the CLI's `pre_move_optimize` so
+    // the web player's scoring matches CLI benchmarks:
+    //   - `analyze_mulligan_fast` for exact enumerated EV (over all 625 possible draws)
+    //   - Same replace_overflow / mulligan / mulligan_pinecone priority chain
+    //   - Same MAX_MULLIGANS = 5 cap
+    //
+    // Previously this used a 3-sample greedy heuristic which under-performed the
+    // CLI by ~1.4 points in 4-game web-API self-tests. The enumerated version
+    // matches the CLI bench (95.9 base mean).
+    let mut applied_replace_overflow = false;
+    let mut applied_mulligans = 0u32;
+    if use_mulligan {
+        if let Some(ref net) = state.nnue {
             // Snapshot for undo BEFORE any pre-move actions
             let mut hist = state.history.lock().unwrap();
             hist.push(game.clone());
             if hist.len() > 50 { hist.remove(0); }
             drop(hist);
 
-            // Pre-move using greedy eval (fast, same as CLI benchmarks)
-            const MULLIGAN_SAMPLES: usize = 3;
             const MAX_MULLIGANS: usize = 5;
-            let player = game.current_player;
-            let cards = game.scoring_cards;
-
-            let greedy_eval = |g: &cascadia_core::game::GameState| -> f32 {
-                let mp: Vec<_> = g.market.available()
-                    .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
-                let turns = g.turns_remaining;
-                let mut board = g.boards[g.current_player].clone();
-                cascadia_ai::eval::best_move_with_potential(&mut board, &mp, &cards, turns)
-                    .map(|m| m.score as f32)
-                    .unwrap_or(0.0)
-            };
-
-            let mut mulligans_used = 0;
+            let mut mulligans_used = 0usize;
             loop {
-                let baseline = greedy_eval(&game);
+                let analysis = cascadia_ai::mce::analyze_mulligan_fast(&game, net);
 
-                // Free 3-of-a-kind replacement — only if it improves
+                // Option 1: Free 3-of-a-kind replacement — only if it improves
+                //           current_best (not just the header row).
                 if let Some(overflow_wl) = game.can_replace_overflow() {
                     let mut test = game.clone();
                     test.replace_overflow();
-                    let after = greedy_eval(&test);
-                    if after > baseline + 0.5 {
+                    let post_analysis = cascadia_ai::mce::analyze_mulligan_fast(&test, net);
+                    if post_analysis.current_best > analysis.current_best {
+                        let gain = post_analysis.current_best - analysis.current_best;
                         game.replace_overflow();
                         applied_replace_overflow = true;
-                        state.events.lock().unwrap().push(
-                            format!("P1 🤖 used free 3-of-a-kind replacement (3× {:?}, +{:.1})", overflow_wl, after - baseline)
-                        );
+                        state.events.lock().unwrap().push(format!(
+                            "P1 🤖 used free 3-of-a-kind replacement (3× {:?}, +{:.1})",
+                            overflow_wl, gain
+                        ));
                         continue;
                     }
                 }
 
-                // Paid mulligan
-                if mulligans_used < MAX_MULLIGANS && game.boards[player].nature_tokens > 0 {
-                    let mut total = 0.0f32;
-                    let mut samples = 0;
-                    for _ in 0..MULLIGAN_SAMPLES {
-                        let mut t = game.clone();
-                        t.shuffle_bags(&mut search_rng);
-                        if t.mulligan_wildlife() {
-                            total += greedy_eval(&t);
-                            samples += 1;
-                        }
-                    }
-                    if samples > 0 {
-                        let expected = total / samples as f32;
-                        if expected > baseline + 1.5 {
-                            if game.mulligan_wildlife() {
-                                mulligans_used += 1;
-                                applied_mulligans += 1;
-                                state.events.lock().unwrap().push(
-                                    format!("P1 🤖 🌲 spent pinecone for mulligan (EV +{:.1})", expected - baseline)
-                                );
-                                continue;
-                            }
-                        }
+                // Option 2: Enumerated single-token mulligan
+                if mulligans_used < MAX_MULLIGANS && analysis.should_mulligan {
+                    if game.mulligan_wildlife() {
+                        mulligans_used += 1;
+                        applied_mulligans += 1;
+                        let ev_gain = analysis.mulligan_ev - 1.0 - analysis.current_best;
+                        state.events.lock().unwrap().push(format!(
+                            "P1 🤖 🌲 spent pinecone for mulligan (EV +{:.1})", ev_gain
+                        ));
+                        continue;
                     }
                 }
+
+                // Option 3: Mulligan + pinecone (2-token, exact EV)
+                if mulligans_used < MAX_MULLIGANS && analysis.should_mulligan_pinecone {
+                    if game.mulligan_wildlife() {
+                        mulligans_used += 1;
+                        applied_mulligans += 1;
+                        let ev_gain = analysis.mulligan_pinecone_ev - 2.0 - analysis.current_best;
+                        state.events.lock().unwrap().push(format!(
+                            "P1 🤖 🌲🌲 spent 2 pinecones for mulligan (EV +{:.1})", ev_gain
+                        ));
+                        continue;
+                    }
+                }
+
                 break;
             }
         }
-
-        // Pick best move from the (now possibly mulliganed) game state
-        let best = cascadia_ai::mce::best_move_mce(&game, net, 750, &mut search_rng);
-        if let Some(mv) = best {
-            let mut result = serde_json::json!({
-                "market_index": mv.market_index,
-                "q": mv.tile_q,
-                "r": mv.tile_r,
-                "rotation": mv.rotation,
-                "score": mv.score,
-                "strategy": "mce+mulligan",
-                "applied_replace_overflow": applied_replace_overflow,
-                "applied_mulligans": applied_mulligans,
-            });
-            if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
-                result["wildlife_q"] = serde_json::json!(wq);
-                result["wildlife_r"] = serde_json::json!(wr);
-            }
-            if let Some(wmi) = mv.wildlife_market_index {
-                result["wildlife_market_index"] = serde_json::json!(wmi);
-            }
-            return Ok(Json(result));
-        }
-        None
-    } else {
-        // Fallback: greedy
-        let market_pairs: Vec<_> = game.market.available()
-            .map(|(i, pair)| (i, pair.tile, pair.wildlife)).collect();
-        let player = game.current_player;
-        let board = &mut game.boards[player];
-        cascadia_ai::eval::best_move(board, &market_pairs, &cards)
-    };
-
-    match mv {
-        Some(mv) => {
-            let mut result = serde_json::json!({
-                "market_index": mv.market_index,
-                "q": mv.tile_q,
-                "r": mv.tile_r,
-                "rotation": mv.rotation,
-                "score": mv.score,
-                "strategy": "greedy",
-            });
-            if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
-                result["wildlife_q"] = serde_json::json!(wq);
-                result["wildlife_r"] = serde_json::json!(wr);
-            }
-            if let Some(wmi) = mv.wildlife_market_index {
-                result["wildlife_market_index"] = serde_json::json!(wmi);
-            }
-            Ok(Json(result))
-        }
-        None => Err((StatusCode::BAD_REQUEST, "No moves available".to_string())),
     }
+
+    // Pick best move using the configured strength.
+    let mv = pick_move_by_strength(&game, human_strength, state.nnue.as_deref(), &state.rng);
+
+    if let Some(mv) = mv {
+        let mut result = serde_json::json!({
+            "market_index": mv.market_index,
+            "q": mv.tile_q,
+            "r": mv.tile_r,
+            "rotation": mv.rotation,
+            "score": mv.score,
+            "strategy": human_strength.label(),
+            "applied_replace_overflow": applied_replace_overflow,
+            "applied_mulligans": applied_mulligans,
+        });
+        if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
+            result["wildlife_q"] = serde_json::json!(wq);
+            result["wildlife_r"] = serde_json::json!(wr);
+        }
+        if let Some(wmi) = mv.wildlife_market_index {
+            result["wildlife_market_index"] = serde_json::json!(wmi);
+        }
+        return Ok(Json(result));
+    }
+    Err((StatusCode::BAD_REQUEST, "No moves available".to_string()))
 }
 
 async fn replace_overflow(
@@ -742,6 +839,46 @@ async fn undo(
     Ok(Json(build_game_view(&mut game)))
 }
 
+#[derive(Serialize)]
+struct StrengthsResponse {
+    human: Strength,
+    opponent: Strength,
+    nnue_available: bool,
+}
+
+#[derive(Deserialize)]
+struct SetStrengthsRequest {
+    human: Option<Strength>,
+    opponent: Option<Strength>,
+}
+
+async fn get_strengths(
+    State(state): State<std::sync::Arc<AppState>>,
+) -> Json<StrengthsResponse> {
+    Json(StrengthsResponse {
+        human: *state.human_strength.lock().unwrap(),
+        opponent: *state.opponent_strength.lock().unwrap(),
+        nnue_available: state.nnue.is_some(),
+    })
+}
+
+async fn set_strengths(
+    State(state): State<std::sync::Arc<AppState>>,
+    Json(req): Json<SetStrengthsRequest>,
+) -> Json<StrengthsResponse> {
+    if let Some(h) = req.human {
+        *state.human_strength.lock().unwrap() = h;
+    }
+    if let Some(o) = req.opponent {
+        *state.opponent_strength.lock().unwrap() = o;
+    }
+    Json(StrengthsResponse {
+        human: *state.human_strength.lock().unwrap(),
+        opponent: *state.opponent_strength.lock().unwrap(),
+        nnue_available: state.nnue.is_some(),
+    })
+}
+
 async fn new_game(
     State(state): State<std::sync::Arc<AppState>>,
     Json(req): Json<NewGameRequest>,
@@ -773,17 +910,33 @@ async fn main() {
     // Default to Solo 4p sim
     let game = GameState::new(4, ScoringCards::all_a(), &mut rng);
 
-    // Try to load the best NNUE weights for MCE-powered suggestions
-    let nnue = {
-        let candidates = ["nnue_weights_mce93.bin", "nnue_weights.bin"];
-        candidates.iter()
-            .find_map(|path| {
-                cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(path)).ok()
-            })
-            .map(std::sync::Arc::new)
-    };
-    if nnue.is_some() {
-        println!("✓ Loaded NNUE weights — /api/best-move will use MCE with mulligan-aware pre-move");
+    // Try to load the best NNUE weights for MCE-powered suggestions.
+    // Preference order (highest → lowest bench score):
+    //   v3_iter20  — MCE(750) 95.9  (current production baseline, 21.7 MB new architecture)
+    //   v4_iter10  — MCE(750) 95.5  (overnight v4 aux-heads run, ties v3 in half iters)
+    //   mce93      — MCE(50)  92.9  (legacy 5108-feature baseline, 10.7 MB)
+    //   generic    — fallback
+    let nnue_candidates = [
+        "nnue_weights_v3_iter20.bin",
+        "nnue_weights_v4_iter10.bin",
+        "nnue_weights_mce93.bin",
+        "nnue_weights.bin",
+    ];
+    let mut loaded_weight_path: Option<&str> = None;
+    let nnue = nnue_candidates.iter()
+        .find_map(|&path| {
+            match cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(path)) {
+                Ok(net) => {
+                    loaded_weight_path = Some(path);
+                    Some(net)
+                }
+                Err(_) => None,
+            }
+        })
+        .map(std::sync::Arc::new);
+    if let Some(path) = loaded_weight_path {
+        println!("✓ Loaded NNUE weights from {}", path);
+        println!("  /api/best-move will use MCE with mulligan-aware pre-move");
     } else {
         println!("⚠ No NNUE weights found — /api/best-move will use greedy baseline");
     }
@@ -795,6 +948,8 @@ async fn main() {
         solo_sim: Mutex::new(true), // default to solo 4p sim
         history: Mutex::new(Vec::new()),
         events: Mutex::new(Vec::new()),
+        human_strength: Mutex::new(Strength::Mce750),
+        opponent_strength: Mutex::new(Strength::Nnue),
     });
 
     let app = Router::new()
@@ -807,6 +962,7 @@ async fn main() {
         .route("/api/replace-overflow", post(replace_overflow))
         .route("/api/best-move", get(best_move_endpoint))
         .route("/api/suggest-move", get(suggest_move))
+        .route("/api/strengths", get(get_strengths).post(set_strengths))
         .with_state(state);
 
     let addr = "0.0.0.0:3000";
