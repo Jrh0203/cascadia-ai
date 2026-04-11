@@ -1643,8 +1643,11 @@ fn run_mce_candidates_impl(
         }
     }
 
-    // Re-rank with NNUE afterstate evaluation for better initial ordering
+    // Re-rank with NNUE afterstate evaluation for better initial ordering.
+    // If MCE_RANK_EXPECTIMAX is set, use exact 1-ply wildlife enumeration on top of NNUE
+    // (more accurate but ~250us vs 10us per candidate).
     let bag_info = crate::nnue::BagInfo::from_game(game);
+    let use_rank_expectimax = std::env::var("MCE_RANK_EXPECTIMAX").is_ok();
     for mv in candidates.iter_mut() {
         let coord = cascadia_core::hex::HexCoord::new(mv.tile_q, mv.tile_r);
         let tile = mp.iter().find(|&&(i, _, _)| i == mv.market_index).map(|&(_, t, _)| t);
@@ -1652,24 +1655,65 @@ fn run_mce_candidates_impl(
             i == mv.wildlife_market_index.unwrap_or(mv.market_index)
         }).map(|&(_, _, w)| w);
         if let Some(tile) = tile {
-            let mut eval_board = game.boards[player].clone();
-            if eval_board.place_tile(coord, tile, mv.rotation).is_some() {
-                if let (Some(wq), Some(wr), Some(wl)) = (mv.wildlife_q, mv.wildlife_r, wildlife) {
-                    let wcoord = cascadia_core::hex::HexCoord::new(wq, wr);
-                    if let Some(widx) = wcoord.to_index() {
-                        eval_board.place_wildlife(widx, wl);
+            // Construct the after-state game so we can call evaluate_leaf_with_next_market
+            let mut after_game = game.clone();
+            if !crate::search::execute_scored_move(&mut after_game, mv) {
+                // Fallback to legacy NNUE-only ranking if execution fails
+                let mut eval_board = game.boards[player].clone();
+                if eval_board.place_tile(coord, tile, mv.rotation).is_some() {
+                    if let (Some(wq), Some(wr), Some(wl)) = (mv.wildlife_q, mv.wildlife_r, wildlife) {
+                        let wcoord = cascadia_core::hex::HexCoord::new(wq, wr);
+                        if let Some(widx) = wcoord.to_index() {
+                            eval_board.place_wildlife(widx, wl);
+                        }
                     }
+                    let actual = ScoreBreakdown::compute(&mut eval_board, &cards).total as f32;
+                    let remaining = net.evaluate_with_bag(&eval_board, &bag_info);
+                    mv.eval = ((actual + remaining) * 1000.0) as i32;
                 }
-                let actual = ScoreBreakdown::compute(&mut eval_board, &cards).total as f32;
-                let remaining = net.evaluate_with_bag(&eval_board, &bag_info);
-                mv.eval = ((actual + remaining) * 1000.0) as i32;
+                continue;
+            }
+            if use_rank_expectimax {
+                // Need the AI's afterstate, not the post-opponent state. execute_scored_move
+                // advances current_player. Use the previous player index (the AI).
+                let v = evaluate_leaf_with_next_market(&after_game, player, net);
+                mv.eval = (v * 1000.0) as i32;
+            } else {
+                let mut eval_board = game.boards[player].clone();
+                if eval_board.place_tile(coord, tile, mv.rotation).is_some() {
+                    if let (Some(wq), Some(wr), Some(wl)) = (mv.wildlife_q, mv.wildlife_r, wildlife) {
+                        let wcoord = cascadia_core::hex::HexCoord::new(wq, wr);
+                        if let Some(widx) = wcoord.to_index() {
+                            eval_board.place_wildlife(widx, wl);
+                        }
+                    }
+                    let actual = ScoreBreakdown::compute(&mut eval_board, &cards).total as f32;
+                    let remaining = net.evaluate_with_bag(&eval_board, &bag_info);
+                    mv.eval = ((actual + remaining) * 1000.0) as i32;
+                }
             }
         }
     }
 
-    // Sort candidates + sources together by NNUE-based eval
-    let mut indexed: Vec<(usize, i32)> = candidates.iter().enumerate().map(|(i, c)| (i, c.eval)).collect();
-    indexed.sort_by(|a, b| b.1.cmp(&a.1));
+    // Sort candidates + sources together by NNUE-based eval.
+    // If MCE_GUMBEL_TOPK is set, perturb eval with Gumbel(0, T) noise before sorting,
+    // implementing Gumbel-top-k stochastic sampling per Danihelka et al. (ICLR 2022).
+    // This gives lower-ranked candidates a chance at survival, addressing the
+    // observed 0.349 Spearman correlation between eval rank and MCE rank.
+    let use_gumbel_topk = std::env::var("MCE_GUMBEL_TOPK").is_ok();
+    let gumbel_temp: f64 = std::env::var("MCE_GUMBEL_TEMP")
+        .ok().and_then(|s| s.parse().ok()).unwrap_or(3000.0);
+    let mut indexed: Vec<(usize, f64)> = if use_gumbel_topk {
+        // Sample independent Gumbel(0,1) using inverse-CDF: -log(-log(U))
+        candidates.iter().enumerate().map(|(i, c)| {
+            let u: f64 = rng.gen_range(1e-12..1.0);
+            let g: f64 = -(-u.ln()).ln();
+            (i, c.eval as f64 + gumbel_temp * g)
+        }).collect()
+    } else {
+        candidates.iter().enumerate().map(|(i, c)| (i, c.eval as f64)).collect()
+    };
+    indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
     let sorted_candidates: Vec<ScoredMove> = indexed.iter().map(|&(i, _)| candidates[i]).collect();
     let sorted_sources: Vec<CandidateSource> = indexed.iter().map(|&(i, _)| sources[i]).collect();
     candidates = sorted_candidates;
@@ -1761,6 +1805,10 @@ fn run_mce_candidates_impl(
                 let cands = Arc::clone(&candidates_arc);
                 let player = player;
                 let use_expectimax_rollouts = std::env::var("MCE_EXPECTIMAX_ROLLOUTS").is_ok();
+                let use_leaf_expectimax = std::env::var("MCE_LEAF_EXPECTIMAX").is_ok();
+                let use_leaf_expectimax2 = std::env::var("MCE_LEAF_EXPECTIMAX2").is_ok();
+                let use_leaf_market_aware = std::env::var("MCE_LEAF_MARKET").is_ok();
+                let use_leaf_market2 = std::env::var("MCE_LEAF_MARKET2").is_ok();
 
                 thread::spawn(move || {
                     let mut results: Vec<(usize, u64)> = Vec::with_capacity(work.len());
@@ -1817,6 +1865,26 @@ fn run_mce_candidates_impl(
 
                         let score = if g.is_game_over() {
                             ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total
+                        } else if use_leaf_market2 {
+                            // 2-step market-aware leaf
+                            let v = evaluate_leaf_market_aware_2step(&g, player, &net);
+                            let tier = tier_bonus(&g.boards[player]);
+                            (v + tier) as u16
+                        } else if use_leaf_market_aware {
+                            // Market-aware leaf: max over actual market wildlife
+                            let v = evaluate_leaf_market_aware(&g, player, &net);
+                            let tier = tier_bonus(&g.boards[player]);
+                            (v + tier) as u16
+                        } else if use_leaf_expectimax2 {
+                            // 2-step lookahead leaf eval (chained wildlife placement)
+                            let v = evaluate_leaf_with_next_2_markets(&g, player, &net);
+                            let tier = tier_bonus(&g.boards[player]);
+                            (v + tier) as u16
+                        } else if use_leaf_expectimax {
+                            // Stronger leaf eval: NNUE + exact 1-ply wildlife enumeration
+                            let v = evaluate_leaf_with_next_market(&g, player, &net);
+                            let tier = tier_bonus(&g.boards[player]);
+                            (v + tier) as u16
                         } else {
                             let actual = ScoreBreakdown::compute(&mut g.boards[player], &g.scoring_cards).total;
                             let bag_info = crate::nnue::BagInfo::from_game(&g);
@@ -1901,6 +1969,451 @@ fn run_mce_candidates_impl(
     }
 
     scored.into_iter().map(|(_, mv, avg)| (mv, avg)).collect()
+}
+
+/// 2-step lookahead leaf eval: chains TWO turns of optimal wildlife placement.
+///
+/// Step 1: For each animal type, compute best placement delta on current board.
+/// Step 2: For the BEST type chosen at step 1, place it then recompute step-1
+///         on the updated board (with adjusted bag).
+/// Returns: actual + NNUE_remaining + E[step1_delta] + E[step2_delta_after_step1].
+///
+/// Effectively gives 2 turns of optimal wildlife lookahead at the rollout terminal.
+fn evaluate_leaf_with_next_2_markets(
+    g: &GameState,
+    player: usize,
+    net: &NNUENetwork,
+) -> f32 {
+    let cards = g.scoring_cards;
+    let actual = ScoreBreakdown::compute(&mut g.boards[player].clone(), &cards).total as f32;
+    let bag_info = crate::nnue::BagInfo::from_game(g);
+    let nnue_remaining = net.evaluate_with_bag(&g.boards[player], &bag_info).max(0.0);
+
+    // Step 1: best wildlife delta + best placement index per type
+    let mut working = g.boards[player].clone();
+    let positions: arrayvec::ArrayVec<u16, 64> = working.placed_tiles.iter().copied().collect();
+    let mut step1_value = [0.0f32; 5];
+    let mut step1_best_idx = [usize::MAX; 5];
+
+    for animal_idx in 0..5 {
+        let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+        let variant = cards.variant_for(animal);
+        let base_wl = cascadia_core::scoring::wildlife::score_wildlife(&working, animal, variant) as f32;
+
+        let mut best_delta = 0.0f32;
+        for &ti in &positions {
+            let idx = ti as usize;
+            if !working.grid.get(idx).can_place_wildlife(animal) { continue; }
+            if let Some(wa) = working.place_wildlife(idx, animal) {
+                let with = cascadia_core::scoring::wildlife::score_wildlife(&working, animal, variant) as f32;
+                let delta = with - base_wl;
+                let keystone = if working.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                if delta + keystone > best_delta {
+                    best_delta = delta + keystone;
+                    step1_best_idx[animal_idx] = idx;
+                }
+                working.undo(wa);
+            }
+        }
+        step1_value[animal_idx] = best_delta;
+    }
+
+    let bag_counts: [u32; 5] = [
+        bag_info.remaining[0] as u32, bag_info.remaining[1] as u32,
+        bag_info.remaining[2] as u32, bag_info.remaining[3] as u32,
+        bag_info.remaining[4] as u32,
+    ];
+    let bag_total: u32 = bag_counts.iter().sum();
+
+    if bag_total < 8 {
+        // Not enough remaining bag for 2-step — fall back to step 1 only
+        let step1_ev = expected_best_wildlife_4draws(&step1_value, &bag_counts, bag_total);
+        return actual + nnue_remaining + step1_ev;
+    }
+
+    // Step 2: for each step1 choice, compute step-1 on the post-step1 board
+    let mut step2_value: [[f32; 5]; 5] = [[0.0; 5]; 5];
+    for s1_animal in 0..5 {
+        if step1_best_idx[s1_animal] == usize::MAX { continue; }
+        let animal1 = Wildlife::from_u8(s1_animal as u8).unwrap();
+        if let Some(wa) = working.place_wildlife(step1_best_idx[s1_animal], animal1) {
+            for s2_animal in 0..5 {
+                let animal2 = Wildlife::from_u8(s2_animal as u8).unwrap();
+                let variant2 = cards.variant_for(animal2);
+                let base_wl2 = cascadia_core::scoring::wildlife::score_wildlife(&working, animal2, variant2) as f32;
+
+                let mut best_delta2 = 0.0f32;
+                for &ti in &positions {
+                    let idx = ti as usize;
+                    if !working.grid.get(idx).can_place_wildlife(animal2) { continue; }
+                    if let Some(wa2) = working.place_wildlife(idx, animal2) {
+                        let with2 = cascadia_core::scoring::wildlife::score_wildlife(&working, animal2, variant2) as f32;
+                        let delta2 = with2 - base_wl2;
+                        let keystone2 = if working.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                        if delta2 + keystone2 > best_delta2 {
+                            best_delta2 = delta2 + keystone2;
+                        }
+                        working.undo(wa2);
+                    }
+                }
+                step2_value[s1_animal][s2_animal] = best_delta2;
+            }
+            working.undo(wa);
+        }
+    }
+
+    // For each (drawn type1, drawn type2), the AI picks the best path
+    // Exact joint enumeration: 5^4 step-1 draws × identify best step-1 type → use that type's
+    // step-2 deltas → 5^4 step-2 draws.  Total ~390K ops per leaf.
+    let mut joint_ev = 0.0f32;
+    let mut total_prob = 0.0f32;
+    for t0 in 0..5u8 {
+        let c0 = bag_counts[t0 as usize]; if c0 == 0 { continue; }
+        let p0 = c0 as f32 / bag_total as f32;
+        for t1 in 0..5u8 {
+            let c1 = bag_counts[t1 as usize] - if t1 == t0 { 1 } else { 0 };
+            if c1 == 0 { continue; }
+            let p1 = c1 as f32 / (bag_total - 1) as f32;
+            for t2 in 0..5u8 {
+                let c2 = bag_counts[t2 as usize]
+                    - if t2 == t0 { 1 } else { 0 } - if t2 == t1 { 1 } else { 0 };
+                if c2 == 0 { continue; }
+                let p2 = c2 as f32 / (bag_total - 2) as f32;
+                for t3 in 0..5u8 {
+                    let c3 = bag_counts[t3 as usize]
+                        - if t3 == t0 { 1 } else { 0 } - if t3 == t1 { 1 } else { 0 }
+                        - if t3 == t2 { 1 } else { 0 };
+                    if c3 == 0 { continue; }
+                    let p3 = c3 as f32 / (bag_total - 3) as f32;
+                    let prob_step1 = p0 * p1 * p2 * p3;
+                    // AI picks the type with the best step-1 wildlife value
+                    let types = [t0 as usize, t1 as usize, t2 as usize, t3 as usize];
+                    let best_t1 = *types.iter().max_by(|&&a, &&b| {
+                        step1_value[a].partial_cmp(&step1_value[b]).unwrap_or(std::cmp::Ordering::Equal)
+                    }).unwrap();
+                    let immediate1 = step1_value[best_t1];
+                    // Step 2: bag has been reduced by the chosen type
+                    let mut bag2 = bag_counts;
+                    if bag2[best_t1] > 0 { bag2[best_t1] -= 1; }
+                    let total2 = bag_total - 1;
+                    let step2_ev_inner = expected_best_wildlife_4draws(&step2_value[best_t1], &bag2, total2);
+                    joint_ev += prob_step1 * (immediate1 + step2_ev_inner);
+                    total_prob += prob_step1;
+                }
+            }
+        }
+    }
+    let two_step_ev = if total_prob > 0.0 { joint_ev / total_prob } else { 0.0 };
+
+    actual + nnue_remaining + two_step_ev
+}
+
+/// Compute E[max wildlife_value over 4 iid draws from bag] using exact 5^4 enumeration.
+fn expected_best_wildlife_4draws(
+    wildlife_value: &[f32; 5],
+    bag_counts: &[u32; 5],
+    bag_total: u32,
+) -> f32 {
+    if bag_total < 4 { return 0.0; }
+    let mut ev = 0.0f32;
+    let mut total_prob = 0.0f32;
+    for t0 in 0..5u8 {
+        let c0 = bag_counts[t0 as usize];
+        if c0 == 0 { continue; }
+        let p0 = c0 as f32 / bag_total as f32;
+        for t1 in 0..5u8 {
+            let c1 = bag_counts[t1 as usize] - if t1 == t0 { 1 } else { 0 };
+            if c1 == 0 { continue; }
+            let p1 = c1 as f32 / (bag_total - 1) as f32;
+            for t2 in 0..5u8 {
+                let c2 = bag_counts[t2 as usize]
+                    - if t2 == t0 { 1 } else { 0 }
+                    - if t2 == t1 { 1 } else { 0 };
+                if c2 == 0 { continue; }
+                let p2 = c2 as f32 / (bag_total - 2) as f32;
+                for t3 in 0..5u8 {
+                    let c3 = bag_counts[t3 as usize]
+                        - if t3 == t0 { 1 } else { 0 }
+                        - if t3 == t1 { 1 } else { 0 }
+                        - if t3 == t2 { 1 } else { 0 };
+                    if c3 == 0 { continue; }
+                    let p3 = c3 as f32 / (bag_total - 3) as f32;
+                    let prob = p0 * p1 * p2 * p3;
+                    let best_wl = wildlife_value[t0 as usize]
+                        .max(wildlife_value[t1 as usize])
+                        .max(wildlife_value[t2 as usize])
+                        .max(wildlife_value[t3 as usize]);
+                    ev += prob * best_wl;
+                    total_prob += prob;
+                }
+            }
+        }
+    }
+    if total_prob > 0.0 { ev / total_prob } else { 0.0 }
+}
+
+/// 2-step market-aware leaf: chains two turns of optimal wildlife placement.
+///
+/// Step 1: AI picks best wildlife from CURRENT market.
+/// Step 2: market loses chosen pair, refills 1 fresh from bag (chance node).
+///         AI picks best of (3 leftover + 1 fresh) using post-step1 wildlife values.
+///
+/// Computes:
+///   actual + NNUE(remaining) + step1_value + E[step2_value]
+fn evaluate_leaf_market_aware_2step(
+    g: &GameState,
+    player: usize,
+    net: &NNUENetwork,
+) -> f32 {
+    let cards = g.scoring_cards;
+    let actual = ScoreBreakdown::compute(&mut g.boards[player].clone(), &cards).total as f32;
+    let bag_info = crate::nnue::BagInfo::from_game(g);
+    let nnue_remaining = net.evaluate_with_bag(&g.boards[player], &bag_info).max(0.0);
+
+    // Step 1: compute wildlife_value per type and best placement index per type
+    let mut working = g.boards[player].clone();
+    let positions: arrayvec::ArrayVec<u16, 64> = working.placed_tiles.iter().copied().collect();
+    let mut step1_value = [0.0f32; 5];
+    let mut step1_best_idx = [usize::MAX; 5];
+
+    for animal_idx in 0..5 {
+        let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+        let variant = cards.variant_for(animal);
+        let base_wl = cascadia_core::scoring::wildlife::score_wildlife(&working, animal, variant) as f32;
+        let mut best_delta = 0.0f32;
+        for &ti in &positions {
+            let idx = ti as usize;
+            if !working.grid.get(idx).can_place_wildlife(animal) { continue; }
+            if let Some(wa) = working.place_wildlife(idx, animal) {
+                let with = cascadia_core::scoring::wildlife::score_wildlife(&working, animal, variant) as f32;
+                let delta = with - base_wl;
+                let keystone = if working.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                if delta + keystone > best_delta {
+                    best_delta = delta + keystone;
+                    step1_best_idx[animal_idx] = idx;
+                }
+                working.undo(wa);
+            }
+        }
+        step1_value[animal_idx] = best_delta;
+    }
+
+    // AI's step-1 choice: best wildlife in CURRENT market
+    let market_wildlife: Vec<Wildlife> = g.market.pairs.iter().flatten()
+        .map(|p| p.wildlife)
+        .collect();
+    if market_wildlife.is_empty() {
+        return actual + nnue_remaining;
+    }
+    let step1_chosen = *market_wildlife.iter()
+        .max_by(|a, b| step1_value[**a as usize].partial_cmp(&step1_value[**b as usize]).unwrap())
+        .unwrap();
+    let step1_v = step1_value[step1_chosen as usize];
+
+    // Compute step2_value matrix for the post-step1 board
+    let mut step2_value = [0.0f32; 5];
+    if step1_best_idx[step1_chosen as usize] != usize::MAX {
+        let animal1 = step1_chosen;
+        if let Some(wa) = working.place_wildlife(step1_best_idx[animal1 as usize], animal1) {
+            for animal_idx in 0..5 {
+                let animal2 = Wildlife::from_u8(animal_idx as u8).unwrap();
+                let variant2 = cards.variant_for(animal2);
+                let base_wl2 = cascadia_core::scoring::wildlife::score_wildlife(&working, animal2, variant2) as f32;
+                let mut best_delta2 = 0.0f32;
+                for &ti in &positions {
+                    let idx = ti as usize;
+                    if !working.grid.get(idx).can_place_wildlife(animal2) { continue; }
+                    if let Some(wa2) = working.place_wildlife(idx, animal2) {
+                        let with2 = cascadia_core::scoring::wildlife::score_wildlife(&working, animal2, variant2) as f32;
+                        let delta2 = with2 - base_wl2;
+                        let keystone2 = if working.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                        if delta2 + keystone2 > best_delta2 {
+                            best_delta2 = delta2 + keystone2;
+                        }
+                        working.undo(wa2);
+                    }
+                }
+                step2_value[animal_idx] = best_delta2;
+            }
+            working.undo(wa);
+        }
+    }
+
+    // Step 2: pick best of (3 leftover wildlife + 1 fresh draw)
+    let leftover_max = market_wildlife.iter()
+        .filter(|&&w| w != step1_chosen)
+        .map(|&w| step2_value[w as usize])
+        .fold(0.0f32, f32::max);
+
+    // Fresh draw: E[max(leftover_max, step2_value[fresh])]
+    let bag_counts: [u32; 5] = [
+        bag_info.remaining[0] as u32, bag_info.remaining[1] as u32,
+        bag_info.remaining[2] as u32, bag_info.remaining[3] as u32,
+        bag_info.remaining[4] as u32,
+    ];
+    let bag_total: u32 = bag_counts.iter().sum();
+    let step2_v = if bag_total > 0 {
+        let mut ev = 0.0f32;
+        for t in 0..5 {
+            let p = bag_counts[t] as f32 / bag_total as f32;
+            let v = step2_value[t].max(leftover_max);
+            ev += p * v;
+        }
+        ev
+    } else {
+        leftover_max
+    };
+
+    actual + nnue_remaining + step1_v + step2_v
+}
+
+/// Market-aware leaf eval: uses the ACTUAL market wildlife (not bag enumeration).
+/// At the rollout leaf, the AI's next turn will draft from the current market —
+/// 3 leftover from the rollout's last refill + whatever's in market now. We don't
+/// need to enumerate fresh draws, just look at what's actually there.
+///
+/// Computes: actual + NNUE(remaining) + max_over_market_wildlife(wildlife_value).
+fn evaluate_leaf_market_aware(
+    g: &GameState,
+    player: usize,
+    net: &NNUENetwork,
+) -> f32 {
+    let cards = g.scoring_cards;
+    let actual = ScoreBreakdown::compute(&mut g.boards[player].clone(), &cards).total as f32;
+    let bag_info = crate::nnue::BagInfo::from_game(g);
+    let nnue_remaining = net.evaluate_with_bag(&g.boards[player], &bag_info).max(0.0);
+
+    // Compute best wildlife delta per type (in-place mutation on a single clone)
+    let mut working = g.boards[player].clone();
+    let positions: arrayvec::ArrayVec<u16, 64> = working.placed_tiles.iter().copied().collect();
+    let mut wildlife_value = [0.0f32; 5];
+    for animal_idx in 0..5 {
+        let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+        let variant = cards.variant_for(animal);
+        let base_wl = cascadia_core::scoring::wildlife::score_wildlife(&working, animal, variant) as f32;
+        let mut best_delta = 0.0f32;
+        for &ti in &positions {
+            let idx = ti as usize;
+            if !working.grid.get(idx).can_place_wildlife(animal) { continue; }
+            if let Some(wa) = working.place_wildlife(idx, animal) {
+                let with = cascadia_core::scoring::wildlife::score_wildlife(&working, animal, variant) as f32;
+                let delta = with - base_wl;
+                let keystone = if working.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                if delta + keystone > best_delta { best_delta = delta + keystone; }
+                working.undo(wa);
+            }
+        }
+        wildlife_value[animal_idx] = best_delta;
+    }
+
+    // The AI's next-turn move: pick best wildlife from the CURRENT market
+    let mut next_value = 0.0f32;
+    for pair in g.market.pairs.iter().flatten() {
+        let v = wildlife_value[pair.wildlife as usize];
+        if v > next_value { next_value = v; }
+    }
+
+    actual + nnue_remaining + next_value
+}
+
+/// Fast leaf evaluation that augments NNUE with exact 1-ply wildlife enumeration.
+/// Used inside MCE rollouts when MCE_LEAF_EXPECTIMAX is set.
+///
+/// Computes:
+///   actual_score + NNUE(remaining) + E[best_next_market_wildlife_delta]
+///
+/// The expectation is over the 5^4 = 625 wildlife refill outcomes in the next market,
+/// weighted by exact bag-conditioned probabilities. Wildlife "value" per type is the
+/// best placement delta on the current board (in-place place/undo, no clones).
+///
+/// Cost: ~1 board clone + 5 × N_open_slots × wildlife_score + 625 array ops.
+/// This corrects the NNUE leaf bias for short-horizon pattern completion.
+fn evaluate_leaf_with_next_market(
+    g: &GameState,
+    player: usize,
+    net: &NNUENetwork,
+) -> f32 {
+    let cards = g.scoring_cards;
+    let actual = ScoreBreakdown::compute(&mut g.boards[player].clone(), &cards).total as f32;
+    let bag_info = crate::nnue::BagInfo::from_game(g);
+    let nnue_remaining = net.evaluate_with_bag(&g.boards[player], &bag_info).max(0.0);
+
+    // Compute best wildlife delta per type using in-place mutation on a single clone
+    let mut working = g.boards[player].clone();
+    let positions: arrayvec::ArrayVec<u16, 64> = working.placed_tiles.iter().copied().collect();
+    let mut wildlife_value = [0.0f32; 5];
+
+    for animal_idx in 0..5 {
+        let animal = Wildlife::from_u8(animal_idx as u8).unwrap();
+        let variant = cards.variant_for(animal);
+        let base_wl = cascadia_core::scoring::wildlife::score_wildlife(&working, animal, variant) as f32;
+
+        let mut best_delta = 0.0f32;
+        for &ti in &positions {
+            let idx = ti as usize;
+            if !working.grid.get(idx).can_place_wildlife(animal) { continue; }
+            if let Some(wa) = working.place_wildlife(idx, animal) {
+                let with = cascadia_core::scoring::wildlife::score_wildlife(&working, animal, variant) as f32;
+                let delta = with - base_wl;
+                let keystone = if working.grid.get(idx).is_keystone() { 1.0 } else { 0.0 };
+                if delta + keystone > best_delta {
+                    best_delta = delta + keystone;
+                }
+                working.undo(wa);
+            }
+        }
+        wildlife_value[animal_idx] = best_delta;
+    }
+
+    // Exact enumeration of next-market wildlife refill (5^4 = 625 cases)
+    let bag_counts: [u32; 5] = [
+        bag_info.remaining[0] as u32, bag_info.remaining[1] as u32,
+        bag_info.remaining[2] as u32, bag_info.remaining[3] as u32,
+        bag_info.remaining[4] as u32,
+    ];
+    let bag_total: u32 = bag_counts.iter().sum();
+
+    let expected_wildlife_bonus = if bag_total >= 4 {
+        let mut ev = 0.0f32;
+        let mut total_prob = 0.0f32;
+        for t0 in 0..5u8 {
+            let c0 = bag_counts[t0 as usize];
+            if c0 == 0 { continue; }
+            let p0 = c0 as f32 / bag_total as f32;
+            for t1 in 0..5u8 {
+                let c1 = bag_counts[t1 as usize] - if t1 == t0 { 1 } else { 0 };
+                if c1 == 0 { continue; }
+                let p1 = c1 as f32 / (bag_total - 1) as f32;
+                for t2 in 0..5u8 {
+                    let c2 = bag_counts[t2 as usize]
+                        - if t2 == t0 { 1 } else { 0 }
+                        - if t2 == t1 { 1 } else { 0 };
+                    if c2 == 0 { continue; }
+                    let p2 = c2 as f32 / (bag_total - 2) as f32;
+                    for t3 in 0..5u8 {
+                        let c3 = bag_counts[t3 as usize]
+                            - if t3 == t0 { 1 } else { 0 }
+                            - if t3 == t1 { 1 } else { 0 }
+                            - if t3 == t2 { 1 } else { 0 };
+                        if c3 == 0 { continue; }
+                        let p3 = c3 as f32 / (bag_total - 3) as f32;
+                        let prob = p0 * p1 * p2 * p3;
+                        let best_wl = wildlife_value[t0 as usize]
+                            .max(wildlife_value[t1 as usize])
+                            .max(wildlife_value[t2 as usize])
+                            .max(wildlife_value[t3 as usize]);
+                        ev += prob * best_wl;
+                        total_prob += prob;
+                    }
+                }
+            }
+        }
+        if total_prob > 0.0 { ev / total_prob } else { 0.0 }
+    } else {
+        0.0
+    };
+
+    actual + nnue_remaining + expected_wildlife_bonus
 }
 
 /// Tier bonus: reward boards that have reached high-scoring wildlife tiers.

@@ -3,7 +3,7 @@
 //! Architecture: sparse binary inputs → 512 ReLU → 64 ReLU → 1 scalar
 //!
 //! Feature layout:
-//!   [0 .. 4851)       Per-cell: 441 cells × 11 features (wildlife/terrain)
+//!   [0 .. 4851)       Per-cell: 441 cells × 11 features (wildlife/terrain primary)
 //!   [4851 .. 4872)    Turn number one-hot (21, 0-20)
 //!   [4872 .. 4881)    Nature tokens one-hot (9, 0-8)
 //!   [4881 .. 4911)    Wildlife count per type, legacy (6 bins × 5 types, counts 0-5)
@@ -15,6 +15,18 @@
 //!   [5307 .. 7512)    Allowed wildlife per cell: 441 cells × 5 flags
 //!   [7512 .. 7562)    Extended wildlife count: 10 bins × 5 types (0-9)
 //!   [7562 .. 7670)    Terrain pairwise: 3 dirs × 36 terrain pair states
+//!
+//!   ─── v2 features (appended for backward compat) ───
+//!   [7670 .. 9875)    SECONDARY terrain per cell: 441 × 5 = 2205 (fixes dual-terrain blindness)
+//!   [9875 .. 9945)    Habitat extended: 5 × 14 = 70  (0-13+)
+//!   [9945 .. 10000)   Wildlife count extended2: 5 × 11 = 55  (0-10+)
+//!   [10000 .. 10040)  Pairwise extension capacity: 5 × 8 = 40  (0-7+)
+//!   [10040 .. 10088)  Smart pattern v2 features = 48
+//!   [10088 .. 10193)  Bag remaining extended: 5 × 21 = 105  (0-20)
+//!   [10193 .. 10263)  Opponent habitat extended: 5 × 14 = 70  (0-13+)
+//!   [10263 .. 10351)  Market visibility: 4 slots × 22 = 88
+//!   [10351 .. 10456)  Tile bag terrain distribution: 5 × 21 = 105  (0-20+)
+//!   [10456 .. 10561)  Tile bag wildlife capacity: 5 × 21 = 105  (0-20+)
 
 use cascadia_core::board::Board;
 use cascadia_core::hex::{HexCoord, ADJACENCY, GRID_SIZE};
@@ -66,12 +78,64 @@ pub const OPP_HAB_FEATURES: usize = 5 * OPP_HAB_BINS; // 55
 const TERRAIN_PAIR_STATES: usize = 6 * 6; // 36
 pub const TERRAIN_PAIR_FEATURES: usize = PAIR_DIRS * TERRAIN_PAIR_STATES; // 108
 
+// ── v2 feature blocks (appended for backward compat) ──
+/// Per-cell SECONDARY terrain: 441 cells × 5 terrains. Fires only on dual-terrain tiles.
+pub const SEC_TERRAIN_FEATURES: usize = GRID_SIZE * 5; // 2205
+/// Habitat size extended: 5 terrains × 14 bins (0-13+). Higher resolution than legacy.
+pub const HAB_EXT_BINS: usize = 14;
+pub const HAB_EXT_FEATURES: usize = 5 * HAB_EXT_BINS; // 70
+/// Wildlife count extended-v2: 5 types × 11 bins (0-10+).
+pub const WL_COUNT_EXT2_BINS: usize = 11;
+pub const WL_COUNT_EXT2_FEATURES: usize = 5 * WL_COUNT_EXT2_BINS; // 55
+/// Pairwise extension capacity: per-wildlife count of placed-W tiles adjacent to empty-W-allowed cells.
+/// 5 wildlife × 8 bins (0-7+).
+pub const EXT_CAP_FEATURES: usize = 5 * 8; // 40
+/// Smart pattern v2: extendable lines/runs, bear waste, at-risk hawks, max-div foxes, forced slots.
+const PAT_EXT_ELK_LINES: usize = 4;     // 0/1/2/3+ extendable elk lines
+const PAT_EXT_SALMON_RUNS: usize = 4;
+const PAT_BEAR_EXT_SINGLES: usize = 4;
+const PAT_BEAR_WASTE: usize = 4;
+const PAT_HAWK_AT_RISK: usize = 4;
+const PAT_FORCED_ALLOC: usize = 5 * 4;  // 5 wildlife × 4 bins
+const PAT_MAX_DIV_FOX: usize = 4;
+const PAT_KEYSTONE_OPEN: usize = 4;
+pub const PATTERN_V2_FEATURES: usize = PAT_EXT_ELK_LINES + PAT_EXT_SALMON_RUNS
+    + PAT_BEAR_EXT_SINGLES + PAT_BEAR_WASTE + PAT_HAWK_AT_RISK
+    + PAT_FORCED_ALLOC + PAT_MAX_DIV_FOX + PAT_KEYSTONE_OPEN; // 4+4+4+4+4+20+4+4 = 48
+/// Bag remaining extended: 5 types × 21 bins (0-20).
+pub const BAG_EXT_BINS: usize = 21;
+pub const BAG_EXT_FEATURES: usize = 5 * BAG_EXT_BINS; // 105
+/// Opponent habitat extended: 5 terrains × 14 bins (0-13+).
+pub const OPP_HAB_EXT_BINS: usize = 14;
+pub const OPP_HAB_EXT_FEATURES: usize = 5 * OPP_HAB_EXT_BINS; // 70
+/// Market visibility: 4 slots × 22 features each.
+/// Per slot: 5 t1 (one-hot terrain1) + 6 t2 (one-hot terrain2 OR none) + 5 allowed wildlife mask
+///          + 1 keystone bit + 5 wildlife token (one-hot)
+pub const MARKET_PER_SLOT: usize = 5 + 6 + 5 + 1 + 5; // 22
+pub const MARKET_FEATURES: usize = 4 * MARKET_PER_SLOT; // 88
+/// Tile bag terrain distribution: 5 terrains × 21 bins (0-20+).
+/// Counts tiles in tile bag with each terrain (primary OR secondary).
+pub const TBAG_TERRAIN_FEATURES: usize = 5 * BAG_EXT_BINS; // 105
+/// Tile bag wildlife capacity: 5 wildlife × 21 bins (0-20+).
+/// Counts tiles in tile bag whose allowed mask includes each wildlife.
+pub const TBAG_WL_FEATURES: usize = 5 * BAG_EXT_BINS; // 105
+
 /// Feature count of the original architecture (for backward-compatible weight loading)
 /// Old: 441×11 + 110 + 147 + 89 = 5197 (no bag/opponent/allowed features)
 pub const NUM_FEATURES_LEGACY: usize = 5197;
-pub const NUM_FEATURES: usize = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES
+/// v1 architecture (= what iter1-20 weights were trained with)
+pub const NUM_FEATURES_V1: usize = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES
     + BAG_FEATURES + OPP_HAB_FEATURES + ALLOWED_WL_FEATURES + WL_COUNT_EXT_FEATURES
-    + TERRAIN_PAIR_FEATURES;
+    + TERRAIN_PAIR_FEATURES; // 7670
+/// v2 architecture (current) — appends new feature blocks for richer info
+/// 7670 (v1) + 2205 (sec terrain) + 70 (hab ext) + 55 (wl ext2) + 40 (ext cap)
+///          + 48 (pat v2) + 105 (bag ext) + 70 (opp hab ext) + 88 (market)
+///          + 105 (tbag terrain) + 105 (tbag wl) = 10561
+pub const NUM_FEATURES: usize = NUM_FEATURES_V1
+    + SEC_TERRAIN_FEATURES + HAB_EXT_FEATURES + WL_COUNT_EXT2_FEATURES
+    + EXT_CAP_FEATURES + PATTERN_V2_FEATURES
+    + BAG_EXT_FEATURES + OPP_HAB_EXT_FEATURES
+    + MARKET_FEATURES + TBAG_TERRAIN_FEATURES + TBAG_WL_FEATURES; // 10561
 pub const HIDDEN1: usize = if cfg!(feature = "large-net") { 1024 } else { 512 };
 pub const HIDDEN2: usize = if cfg!(feature = "large-net") { 128 } else { 64 };
 
@@ -324,6 +388,22 @@ pub fn extract_bag_features(board: &Board, bag: &BagInfo) -> Vec<u16> {
     features
 }
 
+/// A market slot's tile + wildlife token (mirror of `cascadia_core::market::MarketPair`
+/// kept here so we can pass it through `BagInfo` without depending on game state).
+#[derive(Clone, Copy, Default)]
+pub struct MarketSlotInfo {
+    /// 0 = empty slot; otherwise (terrain1 as u8 + 1)
+    pub terrain1: u8,
+    /// 0 = no second terrain; otherwise (terrain2 as u8 + 1)
+    pub terrain2: u8,
+    /// 5-bit wildlife mask (which animals can go on this tile)
+    pub allowed_mask: u8,
+    /// True if this is a single-terrain (keystone) tile
+    pub keystone: bool,
+    /// 0 = no token; otherwise (wildlife as u8 + 1)
+    pub wildlife_token: u8,
+}
+
 /// Game-level information visible to the AI beyond the player's own board:
 /// bag composition and opponent habitat sizes.
 #[derive(Clone, Default)]
@@ -332,6 +412,14 @@ pub struct BagInfo {
     pub remaining: [u8; 5],
     /// Max opponent habitat size per terrain [Forest, Prairie, Wetland, Mountain, River]
     pub max_opponent_habitat: [u8; 5],
+    /// The 4 market slots (tile + wildlife token), or empty
+    pub market: [MarketSlotInfo; 4],
+    /// Count of remaining tile-bag tiles having each terrain (counts both primary AND secondary).
+    /// Indexed by Terrain (Forest, Prairie, Wetland, Mountain, River).
+    pub tbag_terrain: [u8; 5],
+    /// Count of remaining tile-bag tiles whose allowed mask includes each wildlife.
+    /// Indexed by Wildlife (Bear, Elk, Salmon, Hawk, Fox).
+    pub tbag_wildlife: [u8; 5],
 }
 
 impl BagInfo {
@@ -369,7 +457,33 @@ impl BagInfo {
             }
         }
 
-        BagInfo { remaining, max_opponent_habitat }
+        // Market slot info
+        let mut market: [MarketSlotInfo; 4] = Default::default();
+        for (i, slot) in game.market.pairs.iter().enumerate() {
+            if let Some(pair) = slot {
+                let cell = pair.tile.to_cell();
+                let t1 = cell.primary_terrain().map(|t| (t as u8) + 1).unwrap_or(0);
+                let t2 = cell.secondary_terrain().map(|t| (t as u8) + 1).unwrap_or(0);
+                market[i] = MarketSlotInfo {
+                    terrain1: t1,
+                    terrain2: t2,
+                    allowed_mask: pair.tile.allowed.0,
+                    keystone: pair.tile.keystone,
+                    wildlife_token: (pair.wildlife as u8) + 1,
+                };
+            }
+        }
+
+        // Tile bag distributions: counts over remaining tiles
+        let (tbag_terrain, tbag_wildlife) = game.tile_bag.feature_distributions();
+
+        BagInfo {
+            remaining,
+            max_opponent_habitat,
+            market,
+            tbag_terrain,
+            tbag_wildlife,
+        }
     }
 }
 
@@ -511,7 +625,368 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // v2 feature blocks (appended at NUM_FEATURES_V1 = 7670)
+    // ─────────────────────────────────────────────────────────────────
+    extract_v2_features(board, bag, &mut features);
+
     features
+}
+
+/// Extract all v2 feature blocks, appending to `features`.
+/// All v2 indices are relative to NUM_FEATURES_V1 = 7670.
+fn extract_v2_features(board: &Board, bag: Option<&BagInfo>, features: &mut Vec<u16>) {
+    let v2_base = NUM_FEATURES_V1;
+
+    // ── Block A: per-cell SECONDARY terrain (441 × 5 = 2205) ──
+    // Fires only on dual-terrain placed tiles.
+    let sec_base = v2_base;
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let cell = board.grid.get(idx);
+        if let Some(t) = cell.secondary_terrain() {
+            features.push((sec_base + idx * 5 + t as usize) as u16);
+        }
+    }
+
+    // ── Block B: habitat extended 0-13 (5 × 14 = 70) ──
+    let hab_ext_base = sec_base + SEC_TERRAIN_FEATURES;
+    for terrain in 0..5 {
+        let size = (board.largest_group[terrain] as usize).min(HAB_EXT_BINS - 1);
+        features.push((hab_ext_base + terrain * HAB_EXT_BINS + size) as u16);
+    }
+
+    // ── Block C: wildlife count extended 0-10 (5 × 11 = 55) ──
+    let wl_ext2_base = hab_ext_base + HAB_EXT_FEATURES;
+    for wtype in 0..5 {
+        let count = board.wildlife_positions[wtype].len().min(WL_COUNT_EXT2_BINS - 1);
+        features.push((wl_ext2_base + wtype * WL_COUNT_EXT2_BINS + count) as u16);
+    }
+
+    // ── Block D: pairwise extension capacity (5 × 8 = 40) ──
+    // For each wildlife type W, count placed-W tiles having ≥1 empty neighbor that allows W.
+    let ext_cap_base = wl_ext2_base + WL_COUNT_EXT2_FEATURES;
+    let adj = &*ADJACENCY;
+    let mut ext_cap_counts = [0u32; 5];
+    for wtype in 0..5 {
+        let positions = &board.wildlife_positions[wtype];
+        let target_wildlife = Wildlife::from_u8(wtype as u8).unwrap();
+        for &pos in positions.iter() {
+            let mut has_extension = false;
+            for nidx in adj.neighbors_of(pos as usize) {
+                let cell = board.grid.get(nidx);
+                if cell.is_present() && !cell.has_wildlife()
+                   && cell.allowed_wildlife().contains(target_wildlife) {
+                    has_extension = true;
+                    break;
+                }
+            }
+            if has_extension {
+                ext_cap_counts[wtype] += 1;
+            }
+        }
+    }
+    for wtype in 0..5 {
+        let count = (ext_cap_counts[wtype] as usize).min(7);
+        features.push((ext_cap_base + wtype * 8 + count) as u16);
+    }
+
+    // ── Block E: smart pattern v2 (48 features) ──
+    let pat_v2_base = ext_cap_base + EXT_CAP_FEATURES;
+    extract_pattern_v2_features(board, features, pat_v2_base);
+
+    // ── Block F: bag remaining extended 0-20 (5 × 21 = 105) ──
+    if let Some(b) = bag {
+        let bag_ext_base = pat_v2_base + PATTERN_V2_FEATURES;
+        for wtype in 0..5 {
+            let count = (b.remaining[wtype] as usize).min(BAG_EXT_BINS - 1);
+            features.push((bag_ext_base + wtype * BAG_EXT_BINS + count) as u16);
+        }
+
+        // ── Block G: opponent habitat extended 0-13 (5 × 14 = 70) ──
+        let opp_ext_base = bag_ext_base + BAG_EXT_FEATURES;
+        for terrain in 0..5 {
+            let size = (b.max_opponent_habitat[terrain] as usize).min(OPP_HAB_EXT_BINS - 1);
+            features.push((opp_ext_base + terrain * OPP_HAB_EXT_BINS + size) as u16);
+        }
+
+        // ── Block H: market visibility (4 × 22 = 88) ──
+        // Per slot layout: [t1: 5][t2: 6][allowed_mask: 5][keystone: 1][wildlife_token: 5]
+        let market_base = opp_ext_base + OPP_HAB_EXT_FEATURES;
+        for (i, slot) in b.market.iter().enumerate() {
+            let slot_base = market_base + i * MARKET_PER_SLOT;
+            // terrain1: 0=empty slot (no fire); 1-5 = terrain
+            if slot.terrain1 > 0 {
+                let t = (slot.terrain1 - 1) as usize;
+                features.push((slot_base + t) as u16);
+            }
+            // terrain2: 0 = none, 1-5 = terrain (we use 6 bits: 0=none, 1-5=terrain)
+            // Encoding: bit position (slot_base + 5 + slot.terrain2 as usize)
+            let t2_off = slot_base + 5;
+            // Always emit a "t2" bit: 0..5 covers (none,F,P,W,M,R)
+            features.push((t2_off + slot.terrain2 as usize) as u16);
+            // Allowed wildlife mask: 5 bits
+            let allowed_off = slot_base + 5 + 6;
+            let mask = slot.allowed_mask;
+            for w in 0..5 {
+                if mask & (1 << w) != 0 {
+                    features.push((allowed_off + w) as u16);
+                }
+            }
+            // Keystone bit
+            let key_off = slot_base + 5 + 6 + 5;
+            if slot.keystone {
+                features.push(key_off as u16);
+            }
+            // Wildlife token: 0=none, 1-5 = wildlife
+            let wt_off = slot_base + 5 + 6 + 5 + 1;
+            if slot.wildlife_token > 0 {
+                let w = (slot.wildlife_token - 1) as usize;
+                features.push((wt_off + w) as u16);
+            }
+        }
+
+        // ── Block I: tile bag terrain distribution (5 × 21 = 105) ──
+        let tbag_terr_base = market_base + MARKET_FEATURES;
+        for t in 0..5 {
+            let count = (b.tbag_terrain[t] as usize).min(BAG_EXT_BINS - 1);
+            features.push((tbag_terr_base + t * BAG_EXT_BINS + count) as u16);
+        }
+
+        // ── Block J: tile bag wildlife capacity (5 × 21 = 105) ──
+        let tbag_wl_base = tbag_terr_base + TBAG_TERRAIN_FEATURES;
+        for w in 0..5 {
+            let count = (b.tbag_wildlife[w] as usize).min(BAG_EXT_BINS - 1);
+            features.push((tbag_wl_base + w * BAG_EXT_BINS + count) as u16);
+        }
+    }
+}
+
+/// Extract Block E (smart pattern v2) features. Indices are relative to `base`.
+fn extract_pattern_v2_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let adj = &*ADJACENCY;
+
+    // ── Extendable elk lines (4 bins: 0/1/2/3+) ──
+    // An elk line is "extendable" if at least one end has an empty cell allowing elk.
+    // Quick approximation: count elk components where any constituent has an elk-allowed empty neighbor.
+    let elk_positions = &board.wildlife_positions[Wildlife::Elk as usize];
+    let mut elk_extendable_components = 0usize;
+    {
+        let mut visited = [false; 441];
+        for &pos in elk_positions.iter() {
+            let idx = pos as usize;
+            if visited[idx] { continue; }
+            // BFS the elk component
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(pos);
+            visited[idx] = true;
+            let mut has_extension = false;
+            while let Some(cur) = queue.pop() {
+                for nidx in adj.neighbors_of(cur as usize) {
+                    let cell = board.grid.get(nidx);
+                    if cell.placed_wildlife() == Some(Wildlife::Elk) {
+                        if !visited[nidx] {
+                            visited[nidx] = true;
+                            queue.push(nidx as u16);
+                        }
+                    } else if cell.is_present() && !cell.has_wildlife()
+                              && cell.allowed_wildlife().contains(Wildlife::Elk) {
+                        has_extension = true;
+                    }
+                }
+            }
+            if has_extension {
+                elk_extendable_components += 1;
+            }
+        }
+    }
+    features.push((base + elk_extendable_components.min(3)) as u16);
+
+    // ── Extendable salmon runs (4 bins) ──
+    let pat2_off1 = base + PAT_EXT_ELK_LINES;
+    let salmon_positions = &board.wildlife_positions[Wildlife::Salmon as usize];
+    let mut salmon_extendable_components = 0usize;
+    {
+        let mut visited = [false; 441];
+        for &pos in salmon_positions.iter() {
+            let idx = pos as usize;
+            if visited[idx] { continue; }
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(pos);
+            visited[idx] = true;
+            let mut has_extension = false;
+            while let Some(cur) = queue.pop() {
+                for nidx in adj.neighbors_of(cur as usize) {
+                    let cell = board.grid.get(nidx);
+                    if cell.placed_wildlife() == Some(Wildlife::Salmon) {
+                        if !visited[nidx] {
+                            visited[nidx] = true;
+                            queue.push(nidx as u16);
+                        }
+                    } else if cell.is_present() && !cell.has_wildlife()
+                              && cell.allowed_wildlife().contains(Wildlife::Salmon) {
+                        has_extension = true;
+                    }
+                }
+            }
+            if has_extension {
+                salmon_extendable_components += 1;
+            }
+        }
+    }
+    features.push((pat2_off1 + salmon_extendable_components.min(3)) as u16);
+
+    // ── Bear singletons with extension (4 bins) ──
+    // Lone bears (component size 1) that have at least one bear-allowed empty neighbor.
+    let pat2_off2 = pat2_off1 + PAT_EXT_SALMON_RUNS;
+    let bear_positions = &board.wildlife_positions[Wildlife::Bear as usize];
+    let mut bear_extendable_singles = 0usize;
+    {
+        // Count component sizes per bear
+        let mut visited = [false; 441];
+        for &pos in bear_positions.iter() {
+            let idx = pos as usize;
+            if visited[idx] { continue; }
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(pos);
+            visited[idx] = true;
+            let mut size = 0usize;
+            let mut roots = arrayvec::ArrayVec::<u16, 24>::new();
+            while let Some(cur) = queue.pop() {
+                size += 1;
+                roots.push(cur);
+                for nidx in adj.neighbors_of(cur as usize) {
+                    if !visited[nidx]
+                       && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear) {
+                        visited[nidx] = true;
+                        queue.push(nidx as u16);
+                    }
+                }
+            }
+            if size == 1 {
+                let r = roots[0] as usize;
+                let extends = adj.neighbors_of(r).any(|nidx| {
+                    let c = board.grid.get(nidx);
+                    c.is_present() && !c.has_wildlife()
+                        && c.allowed_wildlife().contains(Wildlife::Bear)
+                });
+                if extends {
+                    bear_extendable_singles += 1;
+                }
+            }
+        }
+    }
+    features.push((pat2_off2 + bear_extendable_singles.min(3)) as u16);
+
+    // ── Bear waste (4 bins): bears in components of size ≥3 (worth 0 in Card A) ──
+    let pat2_off3 = pat2_off2 + PAT_BEAR_EXT_SINGLES;
+    let mut bear_waste = 0usize;
+    {
+        let mut visited = [false; 441];
+        for &pos in bear_positions.iter() {
+            let idx = pos as usize;
+            if visited[idx] { continue; }
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(pos);
+            visited[idx] = true;
+            let mut size = 0usize;
+            while let Some(cur) = queue.pop() {
+                size += 1;
+                for nidx in adj.neighbors_of(cur as usize) {
+                    if !visited[nidx]
+                       && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear) {
+                        visited[nidx] = true;
+                        queue.push(nidx as u16);
+                    }
+                }
+            }
+            if size >= 3 {
+                bear_waste += size;
+            }
+        }
+    }
+    features.push((pat2_off3 + bear_waste.min(3)) as u16);
+
+    // ── At-risk isolated hawks (4 bins) ──
+    // Hawks currently isolated but with a hawk-allowed empty neighbor (could lose isolation).
+    let pat2_off4 = pat2_off3 + PAT_BEAR_WASTE;
+    let hawk_positions = &board.wildlife_positions[Wildlife::Hawk as usize];
+    let mut hawks_at_risk = 0usize;
+    for &pos in hawk_positions.iter() {
+        let idx = pos as usize;
+        let mut isolated = true;
+        let mut has_hawk_slot = false;
+        for nidx in adj.neighbors_of(idx) {
+            let cell = board.grid.get(nidx);
+            if cell.placed_wildlife() == Some(Wildlife::Hawk) {
+                isolated = false;
+                break;
+            }
+            if cell.is_present() && !cell.has_wildlife()
+               && cell.allowed_wildlife().contains(Wildlife::Hawk) {
+                has_hawk_slot = true;
+            }
+        }
+        if isolated && has_hawk_slot {
+            hawks_at_risk += 1;
+        }
+    }
+    features.push((pat2_off4 + hawks_at_risk.min(3)) as u16);
+
+    // ── Forced single-allocation slots per wildlife (5 × 4 = 20) ──
+    // Empty placed cells where exactly one wildlife type is allowed.
+    let pat2_off5 = pat2_off4 + PAT_HAWK_AT_RISK;
+    let mut forced_counts = [0usize; 5];
+    for &tile_idx in board.placed_tiles.iter() {
+        let cell = board.grid.get(tile_idx as usize);
+        if !cell.is_present() || cell.has_wildlife() { continue; }
+        let mask = cell.allowed_wildlife();
+        let bits = mask.0.count_ones();
+        if bits == 1 {
+            // Find the single allowed wildlife
+            for w in 0..5 {
+                if mask.0 & (1 << w) != 0 {
+                    forced_counts[w] += 1;
+                    break;
+                }
+            }
+        }
+    }
+    for wtype in 0..5 {
+        let bin = forced_counts[wtype].min(3);
+        features.push((pat2_off5 + wtype * 4 + bin) as u16);
+    }
+
+    // ── Max-diversity foxes (4 bins): foxes adjacent to ≥4 distinct species ──
+    let pat2_off6 = pat2_off5 + PAT_FORCED_ALLOC;
+    let fox_positions = &board.wildlife_positions[Wildlife::Fox as usize];
+    let mut max_div_foxes = 0usize;
+    for &pos in fox_positions.iter() {
+        let mut mask = 0u8;
+        for nidx in adj.neighbors_of(pos as usize) {
+            if let Some(w) = board.grid.get(nidx).placed_wildlife() {
+                mask |= 1 << (w as u8);
+            }
+        }
+        if mask.count_ones() >= 4 {
+            max_div_foxes += 1;
+        }
+    }
+    features.push((pat2_off6 + max_div_foxes.min(3)) as u16);
+
+    // ── Open keystone slots (4 bins) ──
+    // Empty placed cells whose tile is a keystone (single-terrain). Approximation:
+    // we treat single-terrain (no secondary) cells as keystone-equivalent.
+    let pat2_off7 = pat2_off6 + PAT_MAX_DIV_FOX;
+    let mut open_keystone = 0usize;
+    for &tile_idx in board.placed_tiles.iter() {
+        let cell = board.grid.get(tile_idx as usize);
+        if !cell.is_present() || cell.has_wildlife() { continue; }
+        if cell.secondary_terrain().is_none() {
+            open_keystone += 1;
+        }
+    }
+    features.push((pat2_off7 + open_keystone.min(3)) as u16);
 }
 
 /// Extract wildlife pattern features: bear pairs, elk lines, salmon runs,

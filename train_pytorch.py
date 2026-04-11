@@ -29,22 +29,34 @@ from torch.utils.data import Dataset, DataLoader
 
 # ─── Load MCE samples from our binary format ───
 
-def load_mce_samples(path):
-    """Load samples from MCEP binary format. Returns (features_list, targets)."""
+def load_mce_samples(path, return_aux=False):
+    """Load samples from MCEP (v1) or MCV2 (v2 with aux targets) format.
+
+    Returns:
+        (features_list, targets) if return_aux=False (backward compat)
+        (features_list, targets, aux_bear, aux_salmon) if return_aux=True
+    """
     with open(path, 'rb') as f:
         data = f.read()
 
     pos = 0
-    if data[:4] != b'MCEP':
+    if data[:4] == b'MCV2':
+        is_v2 = True
+    elif data[:4] == b'MCEP':
+        is_v2 = False
+    else:
         raise ValueError(f"Bad magic: {data[:4]}")
     pos = 4
+    extra = 8 if is_v2 else 0
 
     features_list = []
     targets = []
+    aux_bear = []
+    aux_salmon = []
     while pos + 2 <= len(data):
         nf = struct.unpack_from('<H', data, pos)[0]
         pos += 2
-        if nf > 1024 or pos + nf * 2 + 4 > len(data):
+        if nf > 1024 or pos + nf * 2 + 4 + extra > len(data):
             break
         feats = []
         for _ in range(nf):
@@ -52,10 +64,23 @@ def load_mce_samples(path):
             pos += 2
         target = struct.unpack_from('<f', data, pos)[0]
         pos += 4
+        if is_v2:
+            ab = struct.unpack_from('<f', data, pos)[0]
+            pos += 4
+            asm = struct.unpack_from('<f', data, pos)[0]
+            pos += 4
+        else:
+            ab = 0.0
+            asm = 0.0
         features_list.append(feats)
         targets.append(target)
+        aux_bear.append(ab)
+        aux_salmon.append(asm)
 
-    print(f"Loaded {len(features_list)} samples from {path}")
+    fmt = "MCV2" if is_v2 else "MCEP"
+    print(f"Loaded {len(features_list)} samples from {path} ({fmt})")
+    if return_aux:
+        return features_list, targets, aux_bear, aux_salmon
     return features_list, targets
 
 
@@ -185,10 +210,19 @@ def apply_transform(features, cell_table, dir_shift):
 
 class NNUEDatasetMCEP(Dataset):
     """Load from MCEP binary format with online augmentation.
-    Each epoch, every sample gets a random rotation+translation applied."""
-    def __init__(self, features_list, targets, num_features, augment=True):
+    Each epoch, every sample gets a random rotation+translation applied.
+
+    If aux_bear and aux_salmon are provided, __getitem__ returns 4-tuples
+    (features, value_target, bear_target, salmon_target) for multi-task training.
+    """
+    def __init__(self, features_list, targets, num_features, augment=True,
+                 aux_bear=None, aux_salmon=None):
         self.num_features = num_features
         self.targets = torch.tensor(targets, dtype=torch.float32)
+        self.has_aux = aux_bear is not None and aux_salmon is not None
+        if self.has_aux:
+            self.aux_bear = torch.tensor(aux_bear, dtype=torch.float32)
+            self.aux_salmon = torch.tensor(aux_salmon, dtype=torch.float32)
         self.augment = augment
         # Store sparse features as numpy arrays for vectorized augmentation
         self.features_np = [np.array(f, dtype=np.int32) for f in features_list]
@@ -198,14 +232,25 @@ class NNUEDatasetMCEP(Dataset):
         self._unpack_bits = torch.arange(8, dtype=torch.uint8)
         self.packed_width = (num_features + 7) // 8
         if not augment:
-            print(f"  Bit-packing {len(features_list)} samples for fast loading...")
+            print(f"  Bit-packing {len(features_list)} samples for fast loading (chunked packbits)...")
             t0 = time.time()
             self.packed_np = np.zeros((len(features_list), self.packed_width), dtype=np.uint8)
-            for i, f in enumerate(self.features_np):
-                for fi in f:
-                    if fi < num_features:
-                        self.packed_np[i, fi >> 3] |= (1 << (fi & 7))
-            # Pre-compute targets as numpy too
+
+            # Chunked dense+packbits approach: build a dense [chunk, num_features]
+            # uint8 matrix in chunks, then use np.packbits which is fully vectorized
+            # in C. For 2M samples × 10561 features in chunks of 10K = ~100MB per
+            # chunk, ~200 chunks total. Much faster than np.bitwise_or.at.
+            chunk_size = 10000
+            n_samples = len(features_list)
+            for chunk_start in range(0, n_samples, chunk_size):
+                chunk_end = min(chunk_start + chunk_size, n_samples)
+                dense = np.zeros((chunk_end - chunk_start, num_features), dtype=np.uint8)
+                for i in range(chunk_start, chunk_end):
+                    valid = self.features_np[i][self.features_np[i] < num_features]
+                    dense[i - chunk_start, valid] = 1
+                # bitorder='little' to match the Rust feature encoding (bit fi&7 in byte fi>>3)
+                self.packed_np[chunk_start:chunk_end] = np.packbits(dense, axis=1, bitorder='little')
+
             self.targets_np = np.array(targets, dtype=np.float32)
             print(f"  Done in {time.time()-t0:.1f}s ({self.packed_np.nbytes / 1e9:.1f} GB)")
 
@@ -256,12 +301,17 @@ class NNUEDatasetMCEP(Dataset):
     def collate_packed(self, batch):
         """Batch-level bit unpacking — one tensor operation for the whole batch."""
         indices = torch.tensor([b[0] for b in batch], dtype=torch.long)
+        idx_np = indices.numpy()
         # Grab packed rows as one numpy slice → torch tensor
-        packed_batch = torch.from_numpy(self.packed_np[indices.numpy()])
-        targets = torch.from_numpy(self.targets_np[indices.numpy()])
+        packed_batch = torch.from_numpy(self.packed_np[idx_np])
+        targets = torch.from_numpy(self.targets_np[idx_np])
         # Unpack all bits at once: [batch, packed_width] → [batch, packed_width, 8] → [batch, packed_width*8]
         bits = packed_batch.unsqueeze(-1).bitwise_right_shift(self._unpack_bits).bitwise_and(1)
         dense = bits.reshape(len(batch), -1)[:, :self.num_features].float()
+        if self.has_aux:
+            aux_b = self.aux_bear[indices]
+            aux_s = self.aux_salmon[indices]
+            return dense, targets, aux_b, aux_s
         return dense, targets
 
 
@@ -368,9 +418,16 @@ class NNUE(nn.Module):
         self.fc2 = nn.Linear(hidden1, hidden2)
         self.fc3 = nn.Linear(hidden2, 1)          # value head
         self.fc3_policy = nn.Linear(hidden2, 1)    # policy head
+        # Auxiliary heads (v4 multi-task training):
+        # fc3_aux_bear predicts final bear pair count
+        # fc3_aux_salmon predicts final longest salmon chain length
+        # These are TRAINING ONLY — discarded when saving Rust weights for inference.
+        self.fc3_aux_bear = nn.Linear(hidden2, 1)
+        self.fc3_aux_salmon = nn.Linear(hidden2, 1)
         # Small random init so gradients flow through shared layers
-        nn.init.xavier_uniform_(self.fc3_policy.weight)
-        nn.init.zeros_(self.fc3_policy.bias)
+        for head in (self.fc3_policy, self.fc3_aux_bear, self.fc3_aux_salmon):
+            nn.init.xavier_uniform_(head.weight)
+            nn.init.zeros_(head.bias)
 
     def forward(self, x):
         # x is dense binary vector [batch, num_features]
@@ -385,6 +442,16 @@ class NNUE(nn.Module):
         value = self.fc3(h2).squeeze(-1)
         policy = self.fc3_policy(h2).squeeze(-1)
         return value, policy
+
+    def forward_multi(self, x):
+        """Returns (value, aux_bear, aux_salmon) — all [batch]. For v4 multi-task training."""
+        h1 = torch.relu(self.fc1(x))
+        h2 = torch.relu(self.fc2(h1))
+        return (
+            self.fc3(h2).squeeze(-1),
+            self.fc3_aux_bear(h2).squeeze(-1),
+            self.fc3_aux_salmon(h2).squeeze(-1),
+        )
 
 
 def save_policy_net_rust(path, model):
@@ -561,12 +628,23 @@ def train(args):
         dataset = NNUEDatasetExported(exported_path)
         num_features = dataset.num_features
     else:
-        features_list, targets = load_mce_samples(args.samples)
+        # Load with aux targets if requested via --use-aux
+        loaded = load_mce_samples(args.samples, return_aux=args.use_aux)
+        if args.use_aux:
+            features_list, targets, aux_bear, aux_salmon = loaded
+            print(f"  Loaded aux targets: bear range [{min(aux_bear):.0f}..{max(aux_bear):.0f}], salmon range [{min(aux_salmon):.0f}..{max(aux_salmon):.0f}]")
+        else:
+            features_list, targets = loaded
+            aux_bear = None
+            aux_salmon = None
         for f in features_list:
             for i in range(len(f)):
                 if f[i] >= num_features:
                     f[i] = num_features - 1
-        dataset = NNUEDatasetMCEP(features_list, targets, num_features, augment=not args.no_augment)
+        dataset = NNUEDatasetMCEP(
+            features_list, targets, num_features, augment=not args.no_augment,
+            aux_bear=aux_bear, aux_salmon=aux_salmon,
+        )
 
     collate_fn = dataset.collate_packed if (hasattr(dataset, 'packed_np') and dataset.packed_np is not None) else None
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
@@ -598,6 +676,9 @@ def train(args):
         warmup_epochs = 0
 
     criterion = nn.MSELoss()
+    use_aux = args.use_aux and getattr(dataset, 'has_aux', False)
+    if use_aux:
+        print(f"  Multi-task training: value + bear (w={args.aux_bear_weight}) + salmon (w={args.aux_salmon_weight})")
 
     # Training loop
     for epoch in range(args.epochs):
@@ -609,15 +690,34 @@ def train(args):
 
         model.train()
         total_loss = 0.0
+        total_v_loss = 0.0
+        total_b_loss = 0.0
+        total_s_loss = 0.0
         num_samples = 0
         epoch_start = time.time()
 
-        for batch_x, batch_y in loader:
-            batch_x = batch_x.to(device)
-            batch_y = batch_y.to(device)
-
-            pred = model(batch_x)
-            loss = criterion(pred, batch_y)
+        for batch in loader:
+            if use_aux and len(batch) == 4:
+                batch_x, batch_y, batch_b, batch_s = batch
+                batch_x = batch_x.to(device)
+                batch_y = batch_y.to(device)
+                batch_b = batch_b.to(device)
+                batch_s = batch_s.to(device)
+                value, aux_b, aux_s = model.forward_multi(batch_x)
+                v_loss = criterion(value, batch_y)
+                b_loss = criterion(aux_b, batch_b)
+                s_loss = criterion(aux_s, batch_s)
+                loss = v_loss + args.aux_bear_weight * b_loss + args.aux_salmon_weight * s_loss
+                total_v_loss += v_loss.item() * batch_x.shape[0]
+                total_b_loss += b_loss.item() * batch_x.shape[0]
+                total_s_loss += s_loss.item() * batch_x.shape[0]
+            else:
+                batch_x, batch_y = batch[0], batch[1]
+                batch_x = batch_x.to(device)
+                batch_y = batch_y.to(device)
+                pred = model(batch_x)
+                loss = criterion(pred, batch_y)
+                total_v_loss += loss.item() * batch_x.shape[0]
 
             optimizer.zero_grad()
             loss.backward()
@@ -629,10 +729,15 @@ def train(args):
         if scheduler and epoch >= warmup_epochs:
             scheduler.step()
 
-        rmse = (total_loss / num_samples) ** 0.5
+        v_rmse = (total_v_loss / num_samples) ** 0.5
         current_lr = optimizer.param_groups[0]['lr']
         elapsed = time.time() - epoch_start
-        print(f"  Epoch {epoch+1}/{args.epochs}: RMSE={rmse:.4f} lr={current_lr:.6f} ({elapsed:.1f}s)")
+        if use_aux:
+            b_rmse = (total_b_loss / num_samples) ** 0.5
+            s_rmse = (total_s_loss / num_samples) ** 0.5
+            print(f"  Epoch {epoch+1}/{args.epochs}: V={v_rmse:.4f} B={b_rmse:.4f} S={s_rmse:.4f} lr={current_lr:.6f} ({elapsed:.1f}s)")
+        else:
+            print(f"  Epoch {epoch+1}/{args.epochs}: RMSE={v_rmse:.4f} lr={current_lr:.6f} ({elapsed:.1f}s)")
 
         # Checkpoint every epoch
         save_rust_weights(args.out, model)
@@ -1084,12 +1189,16 @@ if __name__ == '__main__':
     val_parser.add_argument('--batch-size', type=int, default=4096)
     val_parser.add_argument('--hidden1', type=int, default=512)
     val_parser.add_argument('--hidden2', type=int, default=64)
-    val_parser.add_argument('--num-features', type=int, default=7670)
+    val_parser.add_argument('--num-features', type=int, default=10561)
     val_parser.add_argument('--init-weights', default=None)
     val_parser.add_argument('--exported', default=None)
     val_parser.add_argument('--no-augment', action='store_true')
     val_parser.add_argument('--optimizer', default='adam', choices=['adam', 'sgd'])
     val_parser.add_argument('--out', default='nnue_weights_pytorch.bin')
+    val_parser.add_argument('--use-aux', action='store_true',
+                            help='Load aux targets from MCV2 file and train with multi-task loss')
+    val_parser.add_argument('--aux-bear-weight', type=float, default=0.3)
+    val_parser.add_argument('--aux-salmon-weight', type=float, default=0.3)
 
     # Policy training
     pol_parser = subparsers.add_parser('policy', help='Train policy+value from MCP2 data')
@@ -1099,7 +1208,7 @@ if __name__ == '__main__':
     pol_parser.add_argument('--batch-size', type=int, default=64, help='Groups per batch')
     pol_parser.add_argument('--hidden1', type=int, default=512)
     pol_parser.add_argument('--hidden2', type=int, default=64)
-    pol_parser.add_argument('--num-features', type=int, default=7670)
+    pol_parser.add_argument('--num-features', type=int, default=10561)
     pol_parser.add_argument('--init-weights', default=None)
     pol_parser.add_argument('--policy-weight', type=float, default=0.5, help='Weight for policy loss')
     pol_parser.add_argument('--freeze-shared', action='store_true', help='Only train policy head')
@@ -1113,7 +1222,7 @@ if __name__ == '__main__':
     sp_parser.add_argument('--lr', type=float, default=0.001)
     sp_parser.add_argument('--hidden1', type=int, default=256)
     sp_parser.add_argument('--hidden2', type=int, default=64)
-    sp_parser.add_argument('--num-features', type=int, default=7670)
+    sp_parser.add_argument('--num-features', type=int, default=10561)
     sp_parser.add_argument('--init-weights', default=None, help='PyTorch checkpoint to resume from')
     sp_parser.add_argument('--out', default='policy_net.pt')
 
@@ -1134,7 +1243,7 @@ if __name__ == '__main__':
         parser2.add_argument('--batch-size', type=int, default=4096)
         parser2.add_argument('--hidden1', type=int, default=512)
         parser2.add_argument('--hidden2', type=int, default=64)
-        parser2.add_argument('--num-features', type=int, default=7670)
+        parser2.add_argument('--num-features', type=int, default=10561)
         parser2.add_argument('--init-weights', default=None)
         parser2.add_argument('--exported', default=None)
         parser2.add_argument('--no-augment', action='store_true')

@@ -149,6 +149,27 @@ impl TileBag {
     pub fn shuffle<R: Rng>(&mut self, rng: &mut R) {
         self.tiles.shuffle(rng);
     }
+
+    /// Returns (terrain_distribution, wildlife_capacity) summaries used by NNUE features.
+    /// - terrain_distribution[t] = count of remaining tiles whose primary OR secondary terrain == t
+    /// - wildlife_capacity[w] = count of remaining tiles whose allowed mask includes wildlife w
+    pub fn feature_distributions(&self) -> ([u8; 5], [u8; 5]) {
+        use crate::types::Wildlife;
+        let mut terrain = [0u8; 5];
+        let mut wildlife = [0u8; 5];
+        for tile in &self.tiles {
+            terrain[tile.terrain1 as usize] = terrain[tile.terrain1 as usize].saturating_add(1);
+            if let Some(t2) = tile.terrain2 {
+                terrain[t2 as usize] = terrain[t2 as usize].saturating_add(1);
+            }
+            for w in Wildlife::ALL {
+                if tile.allowed.contains(w) {
+                    wildlife[w as usize] = wildlife[w as usize].saturating_add(1);
+                }
+            }
+        }
+        (terrain, wildlife)
+    }
 }
 
 /// The wildlife token bag.

@@ -22,10 +22,16 @@ import subprocess
 import sys
 import time
 
+# Force line-buffered stdout so logs flush immediately when piped to tee/files.
+# Without this, multi-line subprocess output (e.g. self-play stats) sits in
+# Python's stdout buffer for minutes before showing up.
+sys.stdout.reconfigure(line_buffering=True)
+
 CASCADIA_CLI = "./target/release/cascadia-cli"
 
 
-def run_self_play(num_games, weights_path, out_path, epsilon=0.1, top_pct=100.0):
+def run_self_play(num_games, weights_path, out_path, epsilon=0.1, top_pct=100.0,
+                  aux_targets=False):
     """Generate self-play data using Rust (fast, parallel)."""
     cmd = [
         CASCADIA_CLI, str(num_games),
@@ -37,6 +43,8 @@ def run_self_play(num_games, weights_path, out_path, epsilon=0.1, top_pct=100.0)
         cmd.extend(["--weights", weights_path])
     if top_pct < 100.0:
         cmd.extend(["--top-pct", str(top_pct)])
+    if aux_targets:
+        cmd.append("--aux-targets")
 
     print(f"  Generating {num_games} self-play games (epsilon={epsilon})...")
     t0 = time.time()
@@ -65,7 +73,8 @@ def merge_samples(files, out_path):
 
 
 def run_pytorch_training(samples_path, epochs, lr, init_weights, out_weights,
-                         hidden1=512, hidden2=64, batch_size=4096, optimizer='sgd'):
+                         hidden1=512, hidden2=64, batch_size=4096, optimizer='sgd',
+                         use_aux=False, aux_bear_weight=0.3, aux_salmon_weight=0.3):
     """Run PyTorch training."""
     cmd = [
         sys.executable, "-u", "train_pytorch.py",
@@ -80,10 +89,14 @@ def run_pytorch_training(samples_path, epochs, lr, init_weights, out_weights,
         "--out", out_weights,
         "--no-augment",  # skip augmentation for speed with large self-play data
     ]
+    if use_aux:
+        cmd.append("--use-aux")
+        cmd.extend(["--aux-bear-weight", str(aux_bear_weight)])
+        cmd.extend(["--aux-salmon-weight", str(aux_salmon_weight)])
     if init_weights and os.path.exists(init_weights):
         cmd.extend(["--init-weights", init_weights])
 
-    print(f"  Training: {epochs} epochs, lr={lr}, {hidden1}→{hidden2}")
+    print(f"  Training: {epochs} epochs, lr={lr}, {hidden1}→{hidden2}{' [aux]' if use_aux else ''}")
     t0 = time.time()
     result = subprocess.run(cmd, capture_output=False)
     if result.returncode != 0:
@@ -116,6 +129,8 @@ def main():
     parser.add_argument('--epochs-per-iter', type=int, default=15)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epsilon', type=float, default=0.1)
+    parser.add_argument('--epsilon-end', type=float, default=None,
+                        help='If set, anneal ε from --epsilon to this value linearly across iterations')
     parser.add_argument('--top-pct', type=float, default=100.0,
                         help='Keep only top N%% of self-play games by score (default: 100, all games)')
     parser.add_argument('--hidden1', type=int, default=512)
@@ -127,6 +142,14 @@ def main():
     parser.add_argument('--init-weights', default=None)
     parser.add_argument('--out', default='nnue_weights_hybrid.bin')
     parser.add_argument('--benchmark-games', type=int, default=50)
+    parser.add_argument('--iter-offset', type=int, default=0,
+                        help='Add this to iteration numbers (avoids overwriting existing iter files)')
+    parser.add_argument('--iter-prefix', default='nnue_weights_hybrid_iter',
+                        help='Prefix for per-iteration weight files')
+    parser.add_argument('--aux-targets', action='store_true',
+                        help='Generate v2 (MCV2) self-play with aux bear/salmon targets and train multi-task')
+    parser.add_argument('--aux-bear-weight', type=float, default=0.3)
+    parser.add_argument('--aux-salmon-weight', type=float, default=0.3)
     args = parser.parse_args()
 
     current_weights = args.init_weights
@@ -143,34 +166,47 @@ def main():
 
     for iteration in range(1, args.iterations + 1):
         iter_start = time.time()
+        actual_iter = iteration + args.iter_offset
         print(f"{'='*60}")
-        print(f"  ITERATION {iteration}/{args.iterations}")
+        print(f"  ITERATION {iteration}/{args.iterations} (file iter={actual_iter})")
         print(f"{'='*60}")
 
         # 1. Generate self-play data (fresh each iteration)
-        self_play_path = f"self_play_iter{iteration}.bin"
+        self_play_path = f"self_play_iter{actual_iter}.bin"
         if os.path.exists(self_play_path):
             os.remove(self_play_path)
         strategy = "NNUE" if current_weights else "greedy"
+
+        # Compute current epsilon from annealing schedule (if --epsilon-end set)
+        if args.epsilon_end is not None and args.iterations > 1:
+            progress = (iteration - 1) / (args.iterations - 1)
+            current_epsilon = args.epsilon - progress * (args.epsilon - args.epsilon_end)
+        else:
+            current_epsilon = args.epsilon
+        print(f"  ε = {current_epsilon:.3f}")
+
         run_self_play(
             args.self_play_games,
             current_weights,
             self_play_path,
-            epsilon=args.epsilon,
+            epsilon=current_epsilon,
             top_pct=args.top_pct,
+            aux_targets=args.aux_targets,
         )
 
         # 2. Merge self-play + MCE expert data (fresh each iteration, no accumulation)
-        merged_path = f"training_merged_iter{iteration}.bin"
+        # NOTE: when --aux-targets, mce cache must also be MCV2 (skip mixing for now)
+        merged_path = f"training_merged_iter{actual_iter}.bin"
         if os.path.exists(merged_path):
             os.remove(merged_path)
         files_to_merge = [self_play_path]
-        if not args.no_mce and args.mce_samples != 'none' and os.path.exists(args.mce_samples):
+        # Don't mix MCE cache when using aux targets — formats differ
+        if not args.aux_targets and not args.no_mce and args.mce_samples != 'none' and os.path.exists(args.mce_samples):
             files_to_merge.append(args.mce_samples)
         merge_samples(files_to_merge, merged_path)
 
         # 3. Train
-        iter_weights = f"nnue_weights_hybrid_iter{iteration}.bin"
+        iter_weights = f"{args.iter_prefix}{actual_iter}.bin"
         run_pytorch_training(
             merged_path,
             epochs=args.epochs_per_iter,
@@ -179,6 +215,9 @@ def main():
             out_weights=iter_weights,
             hidden1=args.hidden1,
             hidden2=args.hidden2,
+            use_aux=args.aux_targets,
+            aux_bear_weight=args.aux_bear_weight,
+            aux_salmon_weight=args.aux_salmon_weight,
         )
 
         # 4. Benchmark

@@ -1,8 +1,12 @@
 pub mod eval;
 pub mod expectimax;
+pub mod greedy_ub;
 pub mod mce;
+pub mod gumbel_mcts;
 pub mod mcts;
 pub mod move_gen;
+pub mod nrpa;
+pub mod ol_mcts;
 pub mod nnue;
 pub mod nnue_train;
 pub mod ntuple;

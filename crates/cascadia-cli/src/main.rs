@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::thread;
 use std::time::Instant;
 
@@ -10,6 +11,15 @@ use cascadia_core::types::ScoringCards;
 use cascadia_ai::eval::{best_move_with_potential, best_move_lookahead};
 use cascadia_ai::ntuple::NTupleNetwork;
 use cascadia_ai::search::{best_move_beam, best_move_mcts, execute_scored_move, greedy_move};
+
+/// Optional separate NNUE for opponents (players 1..N).
+/// If set via --opp-weights, opponents use this network instead of player 0's net.
+/// Used for "AI vs other AI" experiments (e.g., new model vs previous model).
+static OPPONENT_NET: OnceLock<Arc<cascadia_ai::nnue::NNUENetwork>> = OnceLock::new();
+
+fn opponent_net() -> Option<&'static Arc<cascadia_ai::nnue::NNUENetwork>> {
+    OPPONENT_NET.get()
+}
 
 #[derive(Clone)]
 enum Strategy {
@@ -25,6 +35,9 @@ enum Strategy {
     Hybrid { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize, top_k: usize },
     MCTS { net: Arc<cascadia_ai::nnue::NNUENetwork>, simulations: usize },
     PolicyMCE { net: Arc<cascadia_ai::nnue::NNUENetwork>, policy: Arc<cascadia_ai::nnue::PolicyNetwork>, rollouts: usize, top_k: usize },
+    NRPA { net: Arc<cascadia_ai::nnue::NNUENetwork>, level: usize, n: usize },
+    OpenLoopMCTS { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize },
+    GumbelMCTS { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize, m: usize },
 }
 
 impl std::fmt::Display for Strategy {
@@ -42,6 +55,9 @@ impl std::fmt::Display for Strategy {
             Strategy::Hybrid { rollouts, top_k, .. } => write!(f, "hybrid(k={},n={})", top_k, rollouts),
             Strategy::MCTS { simulations, .. } => write!(f, "mcts(n={})", simulations),
             Strategy::PolicyMCE { rollouts, top_k, .. } => write!(f, "policy-mce(k={},n={})", top_k, rollouts),
+            Strategy::NRPA { level, n, .. } => write!(f, "nrpa(L={},N={})", level, n),
+            Strategy::OpenLoopMCTS { rollouts, .. } => write!(f, "ol-mcts(n={})", rollouts),
+            Strategy::GumbelMCTS { rollouts, m, .. } => write!(f, "gumbel-mcts(n={},m={})", rollouts, m),
         }
     }
 }
@@ -87,6 +103,15 @@ fn pick_move(
         Strategy::PolicyMCE { net, policy, rollouts, top_k } => {
             cascadia_ai::mce::best_move_mce_with_policy(game, net, policy, *rollouts, *top_k, search_rng)
         }
+        Strategy::NRPA { net, .. } => {
+            cascadia_ai::nrpa::best_move_nrpa(game, net, search_rng)
+        }
+        Strategy::OpenLoopMCTS { net, rollouts } => {
+            cascadia_ai::ol_mcts::best_move_ol_mcts(game, net, *rollouts, search_rng)
+        }
+        Strategy::GumbelMCTS { net, rollouts, m } => {
+            cascadia_ai::gumbel_mcts::best_move_gumbel_mcts(game, net, *rollouts, *m, search_rng)
+        }
     }
 }
 
@@ -116,7 +141,10 @@ fn pre_move_optimize(
         Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. }
             | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net }
             | Strategy::MCTS { ref net, .. }
-            | Strategy::PolicyMCE { ref net, .. } => Some(net.clone()),
+            | Strategy::PolicyMCE { ref net, .. }
+            | Strategy::NRPA { ref net, .. }
+            | Strategy::OpenLoopMCTS { ref net, .. }
+            | Strategy::GumbelMCTS { ref net, .. } => Some(net.clone()),
         _ => None,
     };
 
@@ -262,17 +290,27 @@ fn simulate_game_inner(
     let mut search_rng = StdRng::seed_from_u64(rng.gen());
 
     while !game.is_game_over() {
-        // Player 0 is the AI; players 1-3 use NNUE if available, otherwise greedy
+        // Player 0 is the AI; players 1-3 use NNUE if available, otherwise greedy.
+        // If --opp-weights was set via OPPONENT_NET, opponents use that network
+        // instead of player 0's net (for "v3 vs v1" style head-to-head experiments).
         if game.current_player != 0 {
-            let opp_mv = match strategy {
-                Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. }
-                    | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net }
-                    | Strategy::MCTS { ref net, .. }
-                    | Strategy::PolicyMCE { ref net, .. } => {
-                    cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
-                        .or_else(|| greedy_move(&game))
+            let opp_mv = if let Some(opp) = opponent_net() {
+                cascadia_ai::nnue_train::pick_best_move_nnue(&game, opp)
+                    .or_else(|| greedy_move(&game))
+            } else {
+                match strategy {
+                    Strategy::NNUE { ref net } | Strategy::MCE { ref net, .. }
+                        | Strategy::Hybrid { ref net, .. } | Strategy::ExactExpectimax { ref net }
+                        | Strategy::MCTS { ref net, .. }
+                        | Strategy::PolicyMCE { ref net, .. }
+                        | Strategy::NRPA { ref net, .. }
+                        | Strategy::OpenLoopMCTS { ref net, .. }
+                        | Strategy::GumbelMCTS { ref net, .. } => {
+                        cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
+                            .or_else(|| greedy_move(&game))
+                    }
+                    _ => greedy_move(&game),
                 }
-                _ => greedy_move(&game),
             };
             match opp_mv {
                 Some(mv) => {
@@ -344,6 +382,12 @@ struct BenchResult {
     avg_wildlife: [f64; 5],
     avg_tokens: f64,
     avg_habitat_bonus: f64,
+    // Per-game per-category scores for distribution stats
+    habitat_per_game: [Vec<u16>; 5],
+    wildlife_per_game: [Vec<u16>; 5],
+    tokens_per_game: Vec<u16>,
+    habitat_total_per_game: Vec<u16>,
+    wildlife_total_per_game: Vec<u16>,
 }
 
 fn run_benchmark(strategy: &Strategy, num_games: usize) -> BenchResult {
@@ -355,6 +399,14 @@ fn run_benchmark(strategy: &Strategy, num_games: usize) -> BenchResult {
     let mut total_wildlife = [0u64; 5];
     let mut total_tokens = 0u64;
     let mut total_habitat_bonus = 0u64;
+    // Per-game per-category for distribution stats
+    let mut habitat_per_game: [Vec<u16>; 5] = Default::default();
+    let mut wildlife_per_game: [Vec<u16>; 5] = Default::default();
+    let mut tokens_per_game: Vec<u16> = Vec::with_capacity(num_games);
+    let mut habitat_total_per_game: Vec<u16> = Vec::with_capacity(num_games);
+    let mut wildlife_total_per_game: Vec<u16> = Vec::with_capacity(num_games);
+    for v in habitat_per_game.iter_mut() { v.reserve(num_games); }
+    for v in wildlife_per_game.iter_mut() { v.reserve(num_games); }
 
     // For MCE strategy, automatically collect training samples as a side effect
     let is_mce = matches!(strategy, Strategy::MCE { .. });
@@ -380,10 +432,19 @@ fn run_benchmark(strategy: &Strategy, num_games: usize) -> BenchResult {
         };
         scores.push(base.total);
         scores_with_bonus.push(with_bonus.total);
+        let mut hab_sum: u16 = 0;
+        let mut wl_sum: u16 = 0;
         for t in 0..5 {
             total_habitat[t] += base.habitat[t] as u64;
             total_wildlife[t] += base.wildlife[t] as u64;
+            habitat_per_game[t].push(base.habitat[t]);
+            wildlife_per_game[t].push(base.wildlife[t]);
+            hab_sum += base.habitat[t];
+            wl_sum += base.wildlife[t];
         }
+        habitat_total_per_game.push(hab_sum);
+        wildlife_total_per_game.push(wl_sum);
+        tokens_per_game.push(base.nature_tokens);
         total_tokens += base.nature_tokens as u64;
         total_habitat_bonus += with_bonus.habitat_bonus.iter().map(|&b| b as u64).sum::<u64>();
     }
@@ -416,7 +477,25 @@ fn run_benchmark(strategy: &Strategy, num_games: usize) -> BenchResult {
         ],
         avg_tokens: total_tokens as f64 / n,
         avg_habitat_bonus: total_habitat_bonus as f64 / n,
+        habitat_per_game,
+        wildlife_per_game,
+        tokens_per_game,
+        habitat_total_per_game,
+        wildlife_total_per_game,
     }
+}
+
+/// Returns (mean, p10, median, p90, max)
+fn dist_stats(v: &mut Vec<u16>) -> (f64, u16, u16, u16, u16) {
+    if v.is_empty() { return (0.0, 0, 0, 0, 0); }
+    let n = v.len();
+    let mean: f64 = v.iter().map(|&x| x as f64).sum::<f64>() / n as f64;
+    v.sort();
+    let p10 = v[n / 10];
+    let median = v[n / 2];
+    let p90 = v[9 * n / 10];
+    let max = v[n - 1];
+    (mean, p10, median, p90, max)
 }
 
 fn print_result(r: &BenchResult) {
@@ -459,18 +538,29 @@ fn print_result(r: &BenchResult) {
     println!();
     let terrains = ["Forest", "Prairie", "Wetland", "Mountain", "River"];
     let wildlife = ["Bear", "Elk", "Salmon", "Hawk", "Fox"];
-    println!("  Score Breakdown (averages):");
+    println!("  Score Breakdown (mean | P10 | median | P90 | max):");
     let hab_total: f64 = r.avg_habitat.iter().sum();
     let wl_total: f64 = r.avg_wildlife.iter().sum();
-    println!("    Habitat:  {:.1} total (+{:.1} bonus)", hab_total, r.avg_habitat_bonus);
+    let mut hab_total_v = r.habitat_total_per_game.clone();
+    let (_, hab_p10, hab_med, hab_p90, hab_max) = dist_stats(&mut hab_total_v);
+    println!("    Habitat:  {:5.1} | {:3} | {:3} | {:3} | {:3}    (+{:.1} bonus)",
+             hab_total, hab_p10, hab_med, hab_p90, hab_max, r.avg_habitat_bonus);
     for (i, name) in terrains.iter().enumerate() {
-        println!("      {:<10} {:.1}", name, r.avg_habitat[i]);
+        let mut v = r.habitat_per_game[i].clone();
+        let (m, p10, med, p90, mx) = dist_stats(&mut v);
+        println!("      {:<10} {:5.1} | {:3} | {:3} | {:3} | {:3}", name, m, p10, med, p90, mx);
     }
-    println!("    Wildlife: {:.1} total", wl_total);
+    let mut wl_total_v = r.wildlife_total_per_game.clone();
+    let (_, wl_p10, wl_med, wl_p90, wl_max) = dist_stats(&mut wl_total_v);
+    println!("    Wildlife: {:5.1} | {:3} | {:3} | {:3} | {:3}", wl_total, wl_p10, wl_med, wl_p90, wl_max);
     for (i, name) in wildlife.iter().enumerate() {
-        println!("      {:<10} {:.1}", name, r.avg_wildlife[i]);
+        let mut v = r.wildlife_per_game[i].clone();
+        let (m, p10, med, p90, mx) = dist_stats(&mut v);
+        println!("      {:<10} {:5.1} | {:3} | {:3} | {:3} | {:3}", name, m, p10, med, p90, mx);
     }
-    println!("    Tokens:   {:.1}", r.avg_tokens);
+    let mut tok_v = r.tokens_per_game.clone();
+    let (tok_m, tok_p10, tok_med, tok_p90, tok_max) = dist_stats(&mut tok_v);
+    println!("    Tokens:   {:5.1} | {:3} | {:3} | {:3} | {:3}", tok_m, tok_p10, tok_med, tok_p90, tok_max);
     println!();
 
     let bucket_size = 5;
@@ -677,6 +767,22 @@ fn main() {
         return;
     }
 
+    // Optional opponent NNUE: load and stash in OPPONENT_NET so simulate_game_inner
+    // uses it for players 1..3 instead of player 0's net.
+    if let Some(opp_path) = args.iter().position(|a| a == "--opp-weights")
+        .and_then(|i| args.get(i + 1))
+    {
+        match cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(opp_path)) {
+            Ok(net) => {
+                let _ = OPPONENT_NET.set(Arc::new(net));
+                eprintln!("✓ Opponent NNUE loaded from {}", opp_path);
+            }
+            Err(e) => {
+                eprintln!("⚠ Failed to load --opp-weights {}: {}", opp_path, e);
+            }
+        }
+    }
+
     let num_games: usize = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(10_000);
 
     let run_all = args.iter().any(|a| a == "--all");
@@ -693,6 +799,19 @@ fn main() {
 
     let run_mce_selfplay = args.iter().any(|a| a == "--mce-selfplay");
     let run_exact_selfplay = args.iter().any(|a| a == "--exact-selfplay");
+
+    // --greedy-ub: print the greedy upper bound for various move counts.
+    // Useful for sanity-checking the upper bound oracle from the CLI.
+    if args.iter().any(|a| a == "--greedy-ub") {
+        let r: usize = args.iter().position(|a| a == "--moves")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(20);
+        println!("Greedy upper bound for {} remaining moves:", r);
+        for moves in 0..=r {
+            let ub = cascadia_ai::greedy_ub::greedy_upper_bound(moves);
+            println!("  R={:2} → UB={}", moves, ub);
+        }
+        return;
+    }
 
     if run_exact_selfplay {
         // Play full games with exact expectimax, record value + policy data
@@ -964,11 +1083,56 @@ fn main() {
         let start = Instant::now();
         let seed = rand::random::<u64>();
 
+        // Always use generate_games so we get per-game final_scores for free.
+        let mut games = cascadia_ai::nnue_train::generate_games(
+            num_games, seed, net.as_ref(), epsilon, 4,
+        );
+
+        // Compute self-play score distribution stats over ALL games (before any filtering).
+        // This gives a near-noise-free measure of the AI's play quality at this iteration.
+        {
+            let mut scores: Vec<u16> = games.iter().map(|g| g.final_score).collect();
+            scores.sort();
+            let n = scores.len();
+            if n > 0 {
+                let mean: f64 = scores.iter().map(|&s| s as f64).sum::<f64>() / n as f64;
+                let p10 = scores[n / 10];
+                let median = scores[n / 2];
+                let p90 = scores[9 * n / 10];
+                let min = scores[0];
+                let max = scores[n - 1];
+                let std_dev: f64 = (scores.iter().map(|&s| {
+                    let d = s as f64 - mean;
+                    d * d
+                }).sum::<f64>() / n as f64).sqrt();
+                let stderr = std_dev / (n as f64).sqrt();
+                println!("  Self-play score distribution (n={}, ε={}):", n, epsilon);
+                println!("    Mean:   {:.2} (±{:.3} stderr)", mean, stderr);
+                println!("    Median: {}", median);
+                println!("    P10:    {}", p10);
+                println!("    P90:    {}", p90);
+                println!("    Min/Max: {}/{}", min, max);
+                println!("    StdDev: {:.2}", std_dev);
+                // Histogram of buckets of size 5
+                let bucket = 5usize;
+                let min_b = (min as usize / bucket) * bucket;
+                let max_b = (max as usize / bucket + 1) * bucket;
+                println!("    Distribution:");
+                let mut b = min_b;
+                while b < max_b {
+                    let count = scores.iter().filter(|&&s| {
+                        (s as usize) >= b && (s as usize) < b + bucket
+                    }).count();
+                    let bar_len = (count * 60) / n.max(1);
+                    let bar: String = "█".repeat(bar_len);
+                    println!("    {:3}-{:3}: {:6} {}", b, b + bucket - 1, count, bar);
+                    b += bucket;
+                }
+            }
+        }
+
+        // Optional top-pct filtering (e.g., elite games only)
         let samples = if top_pct < 100.0 {
-            // Generate per-game results, sort by score, keep top %
-            let mut games = cascadia_ai::nnue_train::generate_games(
-                num_games, seed, net.as_ref(), epsilon, 4,
-            );
             games.sort_by(|a, b| b.final_score.cmp(&a.final_score));
             let keep = ((games.len() as f32 * top_pct / 100.0).ceil() as usize).max(1);
             let cutoff = games[keep - 1].final_score;
@@ -978,21 +1142,28 @@ fn main() {
             games.truncate(keep);
             games.into_iter().flat_map(|g| g.samples).collect::<Vec<_>>()
         } else {
-            cascadia_ai::nnue_train::generate_samples(
-                num_games, seed, net.as_ref(), epsilon, 4,
-            )
+            games.into_iter().flat_map(|g| g.samples).collect::<Vec<_>>()
         };
 
-        // Write as MCEP format
-        let mcep_samples: Vec<(Vec<u16>, f32)> = samples.iter()
-            .map(|s| (s.features.clone(), s.target))
-            .collect();
-        cascadia_ai::nnue_train::append_mce_samples(
-            std::path::Path::new(out_path), &mcep_samples,
-        ).expect("Failed to write samples");
-
-        println!("Generated {} samples from {} games in {:.1?}",
-            samples.len(), num_games, start.elapsed());
+        // Write samples — use v2 format (MCV2) if --aux-targets flag is set,
+        // otherwise default to v1 MCEP for backward compat with existing data.
+        let use_v2 = args.iter().any(|a| a == "--aux-targets");
+        if use_v2 {
+            cascadia_ai::nnue_train::append_mce_samples_v2(
+                std::path::Path::new(out_path), &samples,
+            ).expect("Failed to write v2 samples");
+            println!("Generated {} samples from {} games in {:.1?} (MCV2 format with aux targets)",
+                samples.len(), num_games, start.elapsed());
+        } else {
+            let mcep_samples: Vec<(Vec<u16>, f32)> = samples.iter()
+                .map(|s| (s.features.clone(), s.target))
+                .collect();
+            cascadia_ai::nnue_train::append_mce_samples(
+                std::path::Path::new(out_path), &mcep_samples,
+            ).expect("Failed to write samples");
+            println!("Generated {} samples from {} games in {:.1?}",
+                samples.len(), num_games, start.elapsed());
+        }
         return;
     } else if run_export_pytorch {
         // Load MCE samples, augment with rotations+translations, export as raw binary
@@ -1765,6 +1936,40 @@ fn main() {
             let policy = cascadia_ai::nnue::PolicyNetwork::load(std::path::Path::new(policy_path))
                 .expect("Failed to load policy weights");
             Strategy::PolicyMCE { net: Arc::new(net), policy: Arc::new(policy), rollouts, top_k }
+        } else if args.iter().any(|a| a == "--nrpa") {
+            let weights_path = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("nnue_weights.bin");
+            let level: usize = args.iter().position(|a| a == "--level")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(2);
+            let n: usize = args.iter().position(|a| a == "--n")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(30);
+            let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights for NRPA");
+            // Honor env vars too (NRPA_LEVEL, NRPA_N) — set to override CLI
+            std::env::set_var("NRPA_LEVEL", level.to_string());
+            std::env::set_var("NRPA_N", n.to_string());
+            Strategy::NRPA { net: Arc::new(net), level, n }
+        } else if args.iter().any(|a| a == "--ol-mcts") {
+            let weights_path = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("nnue_weights.bin");
+            let rollouts = args.iter().position(|a| a == "--rollouts")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
+            let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights for OL-MCTS");
+            Strategy::OpenLoopMCTS { net: Arc::new(net), rollouts }
+        } else if args.iter().any(|a| a == "--gumbel-mcts") {
+            let weights_path = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("nnue_weights.bin");
+            let rollouts = args.iter().position(|a| a == "--rollouts")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
+            let m: usize = args.iter().position(|a| a == "--m")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(15);
+            let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights for Gumbel-MCTS");
+            Strategy::GumbelMCTS { net: Arc::new(net), rollouts, m }
         } else if args.iter().any(|a| a == "--mce") {
             let weights_path = args.iter().position(|a| a == "--weights")
                 .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
