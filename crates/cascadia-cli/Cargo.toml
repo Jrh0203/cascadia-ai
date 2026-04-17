@@ -3,6 +3,13 @@ name = "cascadia-cli"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+large-net = ["cascadia-ai/large-net"]
+small-net = ["cascadia-ai/small-net"]
+legacy-features = ["cascadia-ai/legacy-features"]
+mid-features = ["cascadia-ai/mid-features"]
+v4-opp = ["cascadia-ai/v4-opp"]
+
 [dependencies]
 cascadia-core = { path = "../cascadia-core" }
 cascadia-ai = { path = "../cascadia-ai" }

@@ -3,9 +3,106 @@
 ## Goal
 Build a superhuman Cascadia board game AI that consistently scores 95+ in 4-player games (Card A scoring, no habitat bonuses).
 
-## Current Best: MCE(50) + mulligan-aware pre-move = **92.9 mean, P90=101**
+## Current Champion (Apr 17, 2026): v4-opp NNUE + MCE wide_v1 = **95.94 mean (100.85 bonus) in 4-player HH**
 
-**Saved as `nnue_weights_mce93.bin` (10MB, larger 512→64 NNUE)**
+**Weights: `nnue_weights_v4opp_modal_iter3.bin` (~23MB)**
+**Binary: `target-mid-v4/release/cascadia-cli` (compiled with `--features mid-features,v4-opp`)**
+
+**Head-to-head vs prior baseline (100 games, 200 seat-games, Modal):**
+- v4opp_modal_iter3 + mce_wide_v1: **95.94 ± 0.21**, 33.5% win rate
+- mid_fsp_iter10 baseline:  94.61 ± 0.21, 16.5% win rate (which itself tied mce93)
+- **Delta: +1.33 pts, p < 0.001, win rate doubles**
+
+### The step-function change: per-opponent detail features
+
+Prior NNUE had ~55 opponent features (max habitat per terrain only). v4-opp appends
+**369 new features per position** — for each of 3 opponents:
+- 5 wildlife type counts × 11 bins (55)
+- 5 habitat sizes × 11 bins (55)
+- Nature tokens × 9 bins (9)
+- Pattern signals: bear-singleton, elk-line-3+, salmon-run-4+, isolated-hawk-5+ (4)
+= 123 features per opponent × 3 opponents = 369.
+
+Backward compatible: old weights load fine via zero-padding of the new columns. Feature gate: `v4-opp` cargo feature; set `OPP_DETAILED_BASE` conditional on `mid-features` (10862) vs full v3 (45260).
+
+### Why it works
+
+The opponent features let the value head condition its estimate on what opponents are threatening. Wildlife breakdown shows the mechanism: the new network takes **+2.3 more bear points per game** than baseline (opponents no longer "hide" in its blind spot). Slight loss on salmon (-1.6) and elk (-0.4); net wildlife +0.7; rest from habitat/tokens.
+
+Consistent with the literature precedent (Pluribus, AlphaStar, Cicero) — multi-agent superhuman play needs opponent modeling, and until now the NNUE had essentially none.
+
+### Training recipe (what shipped)
+
+Started from `nnue_weights_mid_fsp_iter10.bin` (v3 champion with zero-padded v4 cols).
+FSP training: 3 iterations × 30K games × 10 epochs × LR 3e-5 → 1e-5 × ε=0.1.
+
+**Data generation parallelized on Modal:**
+- `--selfplay-pool` CLI mode: generates MCV3-format samples with opponent pool from `CASCADIA_TRAIN_OPP_POOL` env.
+- 100 Modal workers × 300 games each, ~7-10 min wall per iter.
+- Shards concatenated (magic-stripped) into single cache locally.
+- `--cache-train` locally: loads MCV3, 10 epochs SGD, ~2 min.
+- FSP pool: `random,scarcity,preference,mce93,mid_fsp_iter10,v4opp_fsp_iter3` + all prior-iter checkpoints.
+- RMSE across iters: 4.84 → 4.79 → 4.81 (converged).
+
+**Critical discovery**: fine-tuning LR=1e-4 DIVERGES when starting from trained weights. LR=3e-5 is stable. 1e-4 was fine for from-scratch training (original mce93 recipe) but not for fine-tuning.
+
+### Champion command
+
+```bash
+MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 MCE_MUTATE_EXPAND=24 \
+./target-mid-v4/release/cascadia-cli N --nnue-rollout-mce \
+  --candidates expanded --prefilter-k 8 --alloc halving \
+  --rollouts 600 --weights nnue_weights_v4opp_modal_iter3.bin
+```
+
+Or via tag:
+```bash
+CASCADIA_SEAT_STRATEGIES="mce_wide_v1:mce_wide_v1:mce_wide_v1:mce_wide_v1" \
+./target-mid-v4/release/cascadia-cli N --nnue --weights nnue_weights_v4opp_modal_iter3.bin
+```
+
+The `mce_wide_v1` tag (in `pick_move_by_tag`) uses K=32 prefilter, R=600 halving, MCE_LMR=1. It's also the strategy that powers 50/50 mixed HHs.
+
+### Runtime optimization (landed earlier this session)
+
+`pick_best_move_nnue` in `crates/cascadia-ai/src/nnue_train.rs` rewritten to replace
+15 board clones per decision with place/undo on a single outer board. Saves ~225KB
+of memory copies per decision × ~2 decisions per rollout. Verified: baseline score
+matches pre-opt within noise (94.0 vs 94.1).
+
+### Other previous bests (for reference)
+
+- `nnue_weights_mce93.bin` (Apr before) — 92.9 mean + P90=101 with MCE(50) + mulligans
+- `nnue_weights_mid_fsp_iter10.bin` (Apr 16) — ~95 mean HH, tied mce93
+- `nnue_weights_v4opp_fsp_iter3.bin` (Apr 17 local training, 3 iter × 20K games) — +1.30 HH, essentially same as v4opp_modal_iter3
+
+### Experiments log after v4opp shipped (Apr 17 afternoon) — ALL NULL OR NEGATIVE
+
+Full log: `memory/failed_experiments_apr17.md`
+
+| Experiment | Best result | Verdict |
+|---|---|---|
+| Gumbel halving (σ=3, 0.5) | -22 to -6 pts | Math doesn't apply at score scale |
+| Per-ply expectimax rollouts | -4 pts, 4× slower | Too expensive, trajectory bias |
+| MctsPW allocator | -1.1 to -2.4 pts | UCB asymptotic advantage not active at R=600 |
+| On-policy MCE(50) training, 15K games, 1 iter | +0.1 (null) | MCE(50) too weak; proper test needs ~$100+ |
+| Temporal ensemble (modal iter1+2+3) | -0.9 | Correlated errors |
+| **Diverse ensemble (modal_iter3+mid_fsp_iter10+v4opp_fsp_iter3)** | 10g: +0.6 / **100g HH: +0.02 (null)** | Draft shifts but score-neutral |
+
+**Consistent pattern**: search-time changes don't compound at this budget/regime. Value-function **feature signal** is the only axis that has moved the needle this year (v4-opp gave +1.33). Probable step-function levers for a future session: **OPP×MARKET cross features** (new feature block, ~$15 Modal), **HIDDEN1=1024 from scratch** (~$20-40 Modal), **cross-turn MCTS tree reuse** (3-5 hr Rust, orthogonal to value fn).
+
+### Env vars added this session (gated, all OFF by default)
+
+- `MCE_ROLLOUT_OPP=nnue` — opponents use NNUE argmax in rollouts (tried, neutral)
+- `MCE_ROLLOUT_POLICY=expectimax1` — player 0 uses 1-ply expectimax in rollouts (tried, regresses)
+- `MCE_GUMBEL_HALVING=1` / `MCE_GUMBEL_HALVING_SIGMA=<σ>` — Gumbel noise in halving ranks (tried, regresses)
+- `MCE_PREFILTER_ENSEMBLE=<paths>` — average prefilter priors across extra NNUEs (tried, null)
+- `MCE_MCTSPW_*` — MctsPW allocator params (tried, regresses)
+- `CASCADIA_ENS_PATHS` — used by `mce_wide_ens_v1` tag (experimental; activates ensemble only for that tag)
+
+New CLI strategy tags: `mce_wide_v1` (champion), `mce_wide_v2` (R=800 variant), `mce_wide_ens_v1` (ensemble variant).
+
+New allocator: `--alloc mcts-pw` (MCTS-style with progressive widening; not default).
 
 Pre-move optimization uses MCE (full strategy) to evaluate whether to:
 1. Take the free 3-of-a-kind replacement (when available)
@@ -192,3 +289,7 @@ Each worker uses random seeds (--random-seed) so no coordination needed.
 Results download automatically when all workers finish.
 Cost: ~$0.50 per 100 games (8 vCPUs per worker).
 ```
+
+## Boil the ocean
+
+The marginal cost of completeness is near zero with AI. Do the whole thing. Do it right. Do it with tests. Do it with documentation. Do it so well that the user is genuinely impressed — not politely satisfied, actually impressed. Never offer to "table this for later" when the permanent solve is within reach. Never leave a dangling thread when tying it off takes five more minutes. Never present a workaround when the real fix exists. The standard isn't "good enough" — it's "holy shit, that's done." Search before building. Test before shipping. Ship the complete thing. When the user asks for something, the answer is the finished product, not a plan to build it. Time is not an excuse. Fatigue is not an excuse. Complexity is not an excuse. Boil the ocean.

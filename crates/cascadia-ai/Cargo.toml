@@ -5,6 +5,12 @@ edition = "2021"
 
 [features]
 large-net = []
+small-net = []
+legacy-features = []
+mid-features = []
+# Appends per-opponent detail block (369 features, 3 opponents × 123).
+# Backward-compatible: older weights load with zero columns for new features.
+v4-opp = []
 
 [dependencies]
 cascadia-core = { path = "../cascadia-core" }

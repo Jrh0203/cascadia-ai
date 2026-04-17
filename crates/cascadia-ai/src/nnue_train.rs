@@ -207,7 +207,10 @@ fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, mode: SamplingMode
             None => break,
         }
         let bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
-        let bag_info = crate::nnue::BagInfo::from_game(&game);
+        // Use player 0's POV for BagInfo so opp_detail ordering matches the
+        // features extracted from boards[0]. from_game() would use whoever
+        // current_player happens to be (usually opponents post-move).
+        let bag_info = crate::nnue::BagInfo::from_game_for_player(&game, 0);
         afterstates.push((
             crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)),
             bd.total,
@@ -251,6 +254,55 @@ pub fn generate_samples(num_games: usize, seed: u64, net: Option<&NNUENetwork>, 
     generate_samples_with_mode(num_games, seed, net, SamplingMode::EpsilonGreedy(epsilon), num_players)
 }
 
+/// A single opponent kind in the training opponent pool.
+#[derive(Clone)]
+pub enum OpponentKind {
+    /// Greedy play (the original default).
+    Greedy,
+    /// Frozen NNUE opponent (per-path weights, strong).
+    Nnue(NNUENetwork),
+    /// Draft uniformly at random from the market, then place greedily.
+    Random,
+    /// Draft the market slot whose wildlife is most scarce in the bag
+    /// (measured from public info: tokens placed on any board).
+    Scarcity,
+    /// Draft weighted by a per-game random preference distribution over
+    /// the 5 wildlife types. Uniform case reduces to Random.
+    Preference,
+}
+
+/// Parse the CASCADIA_TRAIN_OPP_POOL env var into a Vec of opponent kinds.
+/// Format: comma-separated list. Each entry is either a path to a `.bin`
+/// weights file (interpreted as an Nnue opponent) or one of the tags
+/// `greedy`, `random`, `scarcity`, `preference`.
+fn parse_opp_pool(spec: &str) -> Vec<OpponentKind> {
+    let mut pool = Vec::new();
+    for raw in spec.split(',') {
+        let s = raw.trim();
+        if s.is_empty() { continue; }
+        let kind = match s.to_lowercase().as_str() {
+            "greedy" => Some(OpponentKind::Greedy),
+            "random" => Some(OpponentKind::Random),
+            "scarcity" => Some(OpponentKind::Scarcity),
+            "preference" => Some(OpponentKind::Preference),
+            _ => None,
+        };
+        if let Some(k) = kind {
+            pool.push(k);
+        } else {
+            // Treat as a path to NNUE weights
+            match NNUENetwork::load(std::path::Path::new(s)) {
+                Ok(n) => {
+                    eprintln!("[train] Pool: loaded NNUE opponent from {}", s);
+                    pool.push(OpponentKind::Nnue(n));
+                }
+                Err(e) => eprintln!("[train] Pool: failed to load {}: {} (skipped)", s, e),
+            }
+        }
+    }
+    pool
+}
+
 pub fn generate_samples_with_mode(
     num_games: usize,
     seed: u64,
@@ -258,6 +310,56 @@ pub fn generate_samples_with_mode(
     mode: SamplingMode,
     num_players: usize,
 ) -> Vec<Sample> {
+    // CASCADIA_TRAIN_PLAYER_MCE=<N> — have player 0 select moves via MCE(N)
+    // during self-play data generation instead of single-ply NNUE argmax.
+    // Aligns training state distribution with eval state distribution (where
+    // player 0 also plays MCE). Costs ~3× sample-gen time per rollout budget.
+    let player_mce: Option<usize> = std::env::var("CASCADIA_TRAIN_PLAYER_MCE").ok()
+        .and_then(|s| s.parse().ok())
+        .filter(|&n| n > 0);
+    if let Some(r) = player_mce {
+        eprintln!("[train] Player 0 uses MCE({}) instead of NNUE-direct", r);
+    }
+
+    // Resolve the opponent pool in priority order:
+    //   1. CASCADIA_TRAIN_OPP_POOL (multi-opponent, per-game sampling)
+    //   2. CASCADIA_TRAIN_OPP_WEIGHTS (single frozen NNUE — legacy)
+    //   3. Default: greedy opponent (original behavior)
+    let pool: Vec<OpponentKind> = if let Ok(spec) = std::env::var("CASCADIA_TRAIN_OPP_POOL") {
+        if !spec.is_empty() {
+            let p = parse_opp_pool(&spec);
+            if p.is_empty() {
+                eprintln!("[train] OPP_POOL parsed empty, falling back to greedy");
+                vec![OpponentKind::Greedy]
+            } else {
+                eprintln!("[train] Opponent pool has {} entries (per-seat independent sampling)", p.len());
+                if std::env::var("CASCADIA_TRAIN_OPP_WEIGHTS").is_ok() {
+                    eprintln!("[train] NOTE: OPP_WEIGHTS is also set but OPP_POOL wins");
+                }
+                p
+            }
+        } else {
+            vec![OpponentKind::Greedy]
+        }
+    } else if let Ok(p) = std::env::var("CASCADIA_TRAIN_OPP_WEIGHTS") {
+        if p.is_empty() {
+            vec![OpponentKind::Greedy]
+        } else {
+            match NNUENetwork::load(std::path::Path::new(&p)) {
+                Ok(n) => {
+                    eprintln!("[train] Loaded frozen opponent net from {}", p);
+                    vec![OpponentKind::Nnue(n)]
+                }
+                Err(e) => {
+                    eprintln!("[train] Failed to load opponent weights {}: {} (using greedy)", p, e);
+                    vec![OpponentKind::Greedy]
+                }
+            }
+        }
+    } else {
+        vec![OpponentKind::Greedy]
+    };
+
     let num_threads = thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
@@ -272,15 +374,29 @@ pub fn generate_samples_with_mode(
             };
             let thread_seed = seed.wrapping_add(t as u64 * 1000000);
             let net_clone = net.cloned();
+            let pool_clone = pool.clone();
             let mode = mode;
             let num_players = num_players;
+            let player_mce_t = player_mce;
             thread::spawn(move || {
                 let mut rng = StdRng::seed_from_u64(thread_seed);
                 let mut samples = Vec::with_capacity(n * 20);
 
                 for _ in 0..n {
                     let game_seed = rng.gen::<u64>();
-                    generate_game_samples(&mut samples, game_seed, net_clone.as_ref(), mode, num_players);
+                    // Per-SEAT independent sampling: each of (num_players - 1) opponent
+                    // seats picks its opponent kind uniformly from the pool. Produces
+                    // heterogeneous market conditions within a single game — sometimes
+                    // all 3 opponents happen to be random, sometimes all strong, often
+                    // mixed. This is strictly more opponent variety than per-game
+                    // sampling and the diversity the learner actually needs.
+                    let seat_opps: Vec<OpponentKind> = (0..num_players.saturating_sub(1))
+                        .map(|_| pool_clone[rng.gen_range(0..pool_clone.len())].clone())
+                        .collect();
+                    generate_game_samples(
+                        &mut samples, game_seed, net_clone.as_ref(),
+                        &seat_opps, mode, num_players, player_mce_t,
+                    );
                 }
 
                 samples
@@ -303,10 +419,34 @@ pub fn generate_samples_with_mode(
 /// as the label for sample N-2 instead of the AI's actual (sometimes random) move.
 /// This is sound because move 20 is a leaf — no future to worry about, so greedy
 /// IS optimal. K=1 is essentially free (one extra greedy_move call per game).
-fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUENetwork>, mode: SamplingMode, num_players: usize) {
+fn generate_game_samples(
+    samples: &mut Vec<Sample>,
+    seed: u64,
+    net: Option<&NNUENetwork>,
+    seat_opps: &[OpponentKind],
+    mode: SamplingMode,
+    num_players: usize,
+    player_mce: Option<usize>,
+) {
     let mut rng = StdRng::seed_from_u64(seed);
     let cards = ScoringCards::all_a();
     let mut game = GameState::new(num_players, cards, &mut rng);
+
+    // CASCADIA_TRAIN_OPP_NNUE=1 — legacy flag. Honored only if EVERY seat in the
+    // pool pick is Greedy (OPP_POOL / specific kinds otherwise dictate behavior).
+    let opp_nnue: bool = seat_opps.iter().all(|o| matches!(o, OpponentKind::Greedy))
+        && std::env::var("CASCADIA_TRAIN_OPP_NNUE").ok()
+            .map(|s| !s.is_empty() && s != "0").unwrap_or(false);
+
+    // Per-seat preference vector for any Preference opponent. Sampled once at
+    // game start and held constant — each preference seat has a consistent
+    // drafting "character" across the 20 turns.
+    let mut seat_prefs: Vec<Option<[f32; 5]>> = Vec::with_capacity(seat_opps.len());
+    for opp in seat_opps {
+        seat_prefs.push(if matches!(opp, OpponentKind::Preference) {
+            Some(crate::draft_opponents::sample_preferences(&mut rng))
+        } else { None });
+    }
 
     // Collect afterstate features + scores during the game
     // (features, current_total, current_wildlife_only)
@@ -316,14 +456,34 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
 
     while !game.is_game_over() {
         if game.current_player != 0 {
-            // Opponents play greedy (must match benchmark for consistency).
-            // Always take the free 3-of-a-kind replacement — mirrors inference-
-            // time opponent behavior (CLI bench + cascadia-web) so training data
-            // reflects realistic opponent play.
+            // Always take the free 3-of-a-kind replacement before drafting.
             if game.can_replace_overflow().is_some() {
                 game.replace_overflow();
             }
-            match greedy_move(&game) {
+            // seat_opps is indexed by (current_player - 1): seat 0 is the AI.
+            let seat_idx = game.current_player - 1;
+            let opp = &seat_opps[seat_idx.min(seat_opps.len() - 1)];
+            let opp_mv = match opp {
+                OpponentKind::Greedy => {
+                    if opp_nnue {
+                        match net {
+                            Some(n) => pick_best_move_nnue(&game, n).or_else(|| greedy_move(&game)),
+                            None => greedy_move(&game),
+                        }
+                    } else {
+                        greedy_move(&game)
+                    }
+                }
+                OpponentKind::Nnue(n) => pick_best_move_nnue(&game, n).or_else(|| greedy_move(&game)),
+                OpponentKind::Random => crate::draft_opponents::random_draft_move(&game, &mut rng)
+                    .or_else(|| greedy_move(&game)),
+                OpponentKind::Scarcity => crate::draft_opponents::scarcity_draft_move(&game, &mut rng)
+                    .or_else(|| greedy_move(&game)),
+                OpponentKind::Preference => crate::draft_opponents::preference_draft_move(
+                    &game, seat_prefs[seat_idx.min(seat_prefs.len() - 1)].as_ref().unwrap(), &mut rng,
+                ).or_else(|| greedy_move(&game)),
+            };
+            match opp_mv {
                 Some(mv) => {
                     if !execute_scored_move(&mut game, &mv) { break; }
                 }
@@ -341,11 +501,24 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
             state_before_last_ai_move = Some(game.clone());
         }
 
-        // Select move according to sampling mode
+        // Select move according to sampling mode. When CASCADIA_TRAIN_PLAYER_MCE
+        // is set and a net is available, use MCE(N) instead of NNUE-direct for
+        // player 0's greedy pick — aligns training state distribution with the
+        // distribution seen at eval time (where player 0 also plays MCE).
         let mv = match mode {
             SamplingMode::EpsilonGreedy(epsilon) => {
                 if epsilon > 0.0 && rng.gen::<f32>() < epsilon {
                     pick_random_move(&game, &mut rng)
+                } else if let (Some(rollouts), Some(n)) = (player_mce, net) {
+                    let mut cands = crate::mce::expanded_candidates(&game);
+                    if cands.len() > 8 {
+                        cands = crate::mce::nnue_prefilter_candidates(&game, n, cands, 8);
+                    }
+                    crate::mce::best_move_nnue_rollout_mce(
+                        &game, n, rollouts,
+                        crate::mce::GreedyMceAlloc::SeqHalving,
+                        cands, &mut rng,
+                    )
                 } else {
                     match net {
                         Some(n) => pick_best_move_nnue(&game, n),
@@ -367,9 +540,10 @@ fn generate_game_samples(samples: &mut Vec<Sample>, seed: u64, net: Option<&NNUE
             None => break,
         }
 
-        // Record afterstate features + current scores (total + wildlife-only)
+        // Record afterstate features + current scores (total + wildlife-only).
+        // BagInfo from player 0's POV so opp_detail ordering matches boards[0] features.
         let bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
-        let bag_info = crate::nnue::BagInfo::from_game(&game);
+        let bag_info = crate::nnue::BagInfo::from_game_for_player(&game, 0);
         afterstates.push((
             crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)),
             bd.total,
@@ -841,6 +1015,12 @@ fn rotate_features(features: &[u16], rotation_table: &[Option<usize>; 441], dir_
     const TERRAIN_PAIR_STATES: usize = 36;
     const TERRAIN_PAIR_END: usize = EXT_WL_END + 3 * TERRAIN_PAIR_STATES; // 7670
 
+    // v3 block boundaries
+    const V2_END: usize = 10561; // NUM_FEATURES_V2
+    const ADJ_FPC: usize = 6 * 13; // ADJ_FEATURES_PER_CELL = 78
+    const ADJ_SPD: usize = 13;     // ADJ_STATES_PER_DIR
+    const ADJ_END: usize = V2_END + 441 * ADJ_FPC; // 44959
+
     let mut rotated = Vec::with_capacity(features.len());
     for &f in features {
         let fi = f as usize;
@@ -881,7 +1061,33 @@ fn rotate_features(features: &[u16], rotation_table: &[Option<usize>; 441], dir_
                 pair_state = swap_terrain_pair(pair_state);
             }
             rotated.push((EXT_WL_END + new_dir * TERRAIN_PAIR_STATES + pair_state) as u16);
+        } else if fi < V2_END {
+            // v2 blocks between terrain pairwise and v3 — mostly pass through.
+            // Secondary terrain per cell (7670..9875) should remap cell index.
+            let sec_base = TERRAIN_PAIR_END;
+            let sec_end = sec_base + 441 * 5;
+            if fi < sec_end {
+                let rel = fi - sec_base;
+                let cell_idx = rel / 5;
+                let offset = rel % 5;
+                let new_cell = rotation_table[cell_idx]?;
+                rotated.push((sec_base + new_cell * 5 + offset) as u16);
+            } else {
+                rotated.push(f); // hab ext, wl ext, ext cap, pat v2, bag, opp, market, tbag
+            }
+        } else if fi < ADJ_END {
+            // v3 Block K: per-cell adjacency — remap cell + rotate direction
+            let rel = fi - V2_END;
+            let cell_idx = rel / ADJ_FPC;
+            let within_cell = rel % ADJ_FPC;
+            let dir = within_cell / ADJ_SPD;
+            let state = within_cell % ADJ_SPD;
+            let new_cell = rotation_table[cell_idx]?;
+            // 120° rotation = 2 steps in 6-direction space
+            let new_dir = (dir + 2 * dir_shift) % 6;
+            rotated.push((V2_END + new_cell * ADJ_FPC + new_dir * ADJ_SPD + state) as u16);
         } else {
+            // v3 Blocks L/M/N (tbag ext, overflow) — global, no remap
             rotated.push(f);
         }
     }
@@ -1133,7 +1339,21 @@ pub fn train_from_cache(
     let mut stats = TrainStats::default();
     eprint!("  Loading cache from {:?}...", cache_path);
     let start = std::time::Instant::now();
-    let mut samples = load_cache_samples(cache_path)?;
+
+    // Detect format: MCV3/MCV2/MCEP start with 4-byte magic. Legacy game-oriented
+    // cache (training_cache_90plus.bin) has no magic — starts with u16 num_positions.
+    let magic = {
+        use std::io::Read;
+        let mut f = std::fs::File::open(cache_path)?;
+        let mut m = [0u8; 4];
+        f.read_exact(&mut m).ok();
+        m
+    };
+    let mut samples = if &magic == b"MCV3" || &magic == b"MCV2" || &magic == b"MCEP" {
+        load_mce_samples(cache_path)?
+    } else {
+        load_cache_samples(cache_path)?
+    };
     eprintln!(" {} samples in {:.1?}", samples.len(), start.elapsed());
     stats.num_samples = samples.len();
 
@@ -1228,33 +1448,71 @@ pub fn train_nnue(
         eprintln!("  Pre-training complete. Fine-tuning on 4p...");
     }
 
+    // CASCADIA_TRAIN_LR_DECAY=<end_lr> enables linear LR decay from `lr` (epoch 0)
+    // down to <end_lr> (final epoch) within each iteration. If unset, LR stays flat.
+    let end_lr: f32 = std::env::var("CASCADIA_TRAIN_LR_DECAY").ok()
+        .and_then(|s| s.parse::<f32>().ok())
+        .unwrap_or(lr);
+    if end_lr != lr {
+        eprintln!("  [LR decay enabled: {} → {} linearly across {} epochs per iter]", lr, end_lr, epochs);
+    }
+
+    // CASCADIA_TRAIN_TEMPERATURE=<τ> switches player 0's move selection from
+    // ε-greedy to softmax sampling over NNUE scores with temperature τ.
+    // Higher τ = more exploration (τ=1 is natural; τ=0.5 is sharper/greedier;
+    // τ=2+ is very exploratory). This is AlphaZero-style exploration.
+    // If set, epsilon is ignored.
+    let sample_temperature: Option<f32> = std::env::var("CASCADIA_TRAIN_TEMPERATURE").ok()
+        .and_then(|s| s.parse::<f32>().ok())
+        .filter(|&t| t > 0.0);
+    if let Some(t) = sample_temperature {
+        eprintln!("  [Softmax sampling enabled: τ={} (overrides ε-greedy)]", t);
+    }
+
     // Main training: 4-player iterations
     for iter in 0..iterations {
         let use_net = if iter == 0 && !pretrain { None } else { Some(&*net) };
         let iter_epsilon = if iter == 0 && !pretrain { 0.0 } else { epsilon };
         let iter_label = if use_net.is_some() {
-            if iter_epsilon > 0.0 { "4p self-play+explore" } else { "4p self-play" }
+            if sample_temperature.is_some() { "4p self-play+softmax" }
+            else if iter_epsilon > 0.0 { "4p self-play+explore" }
+            else { "4p self-play" }
         } else { "4p greedy" };
+
+        let mode = match sample_temperature {
+            Some(t) if use_net.is_some() => SamplingMode::Softmax(t),
+            _ => SamplingMode::EpsilonGreedy(iter_epsilon),
+        };
 
         eprint!("  Iteration {}/{} ({}): generating {} games...",
             iter + 1, iterations, iter_label, num_games);
         let start = std::time::Instant::now();
-        let mut samples = generate_samples(num_games, seed + iter as u64 * 12345, use_net, iter_epsilon, 4);
+        let mut samples = generate_samples_with_mode(num_games, seed + iter as u64 * 12345, use_net, mode, 4);
         let gen_time = start.elapsed();
         eprintln!(" {} samples in {:.1?}", samples.len(), gen_time);
 
         stats.num_samples = samples.len();
         let batch_size = 256;
+        let mut last_good_rmse: f64 = f64::INFINITY;
+        let mut diverged = false;
 
         for epoch in 0..epochs {
             samples.shuffle(&mut rng);
+
+            // Linear LR decay within this iteration.
+            let epoch_lr = if epochs <= 1 {
+                lr
+            } else {
+                let t = epoch as f32 / (epochs - 1) as f32;
+                lr + (end_lr - lr) * t
+            };
 
             let mut epoch_loss = 0.0f64;
             let mut epoch_count = 0usize;
 
             for batch_start in (0..samples.len()).step_by(batch_size) {
                 let batch_end = (batch_start + batch_size).min(samples.len());
-                let batch_lr = lr / (batch_end - batch_start) as f32;
+                let batch_lr = epoch_lr / (batch_end - batch_start) as f32;
 
                 for sample in &samples[batch_start..batch_end] {
                     let loss = net.train_sample(&sample.features, sample.target, batch_lr);
@@ -1265,10 +1523,24 @@ pub fn train_nnue(
 
             let avg_loss = epoch_loss / epoch_count as f64;
             let rmse = avg_loss.sqrt();
-            eprint!("\r  Iter {}, Epoch {}/{}: RMSE={:.2}    ", iter + 1, epoch + 1, epochs, rmse);
+            eprint!("\r  Iter {}, Epoch {}/{}: RMSE={:.2} lr={:.6}    ", iter + 1, epoch + 1, epochs, rmse, epoch_lr);
             stats.final_rmse = rmse;
+            if rmse.is_finite() {
+                last_good_rmse = rmse;
+            } else {
+                eprintln!("\n  [DIVERGED at epoch {} — RMSE={}, halting this iter, not saving]", epoch + 1, rmse);
+                // Keep stats.final_rmse = NaN (from the assignment above) so the
+                // outer CLI layer can detect divergence and refuse to save.
+                let _ = last_good_rmse;
+                diverged = true;
+                break;
+            }
         }
-        // Save weights after each iteration
+        if diverged {
+            eprintln!("  [iter {} diverged — existing weights file left untouched]", iter + 1);
+            break;
+        }
+        // Save weights after each iteration (only if we didn't diverge)
         let weights_path = std::env::args()
             .position(|a| a == "--weights")
             .and_then(|i| std::env::args().nth(i + 1))
@@ -1648,6 +1920,14 @@ pub fn pick_best_move_nnue(
 
     let bag_info = crate::nnue::BagInfo::from_game_for_player(game, player);
 
+    // Optimization: use place/undo on the single outer `board` rather than
+    // cloning it per candidate. Saves 15 × ~15KB board copies per decision
+    // (each rollout calls pick_best_move_nnue ~2 times, so ~450KB/rollout).
+    //
+    // Safety: place_tile/place_wildlife return UndoAction handles that exactly
+    // reverse their effects (including keystone nature_tokens). ScoreBreakdown::compute
+    // takes &mut but only reads state. Candidates where tile placement fails
+    // leave `board` untouched (place_tile returns None without mutating).
     let mut best: Option<(ScoredMove, f32)> = None;
     for mv in &candidates {
         let coord = HexCoord::new(mv.tile_q, mv.tile_r);
@@ -1662,29 +1942,34 @@ pub fn pick_best_move_nnue(
             None => continue,
         };
 
-        let mut eval_board = board.clone();
-        if eval_board.place_tile(coord, tile, mv.rotation).is_none() {
-            continue;
-        }
-        if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
-            let wcoord = HexCoord::new(wq, wr);
-            if let Some(idx) = wcoord.to_index() {
-                eval_board.place_wildlife(idx, wildlife);
-            }
-        }
-        if mv.wildlife_market_index.is_some() {
-            eval_board.nature_tokens = eval_board.nature_tokens.saturating_sub(1);
-        }
+        let tile_act = match board.place_tile(coord, tile, mv.rotation) {
+            Some(a) => a,
+            None => continue,
+        };
+        let wl_act = if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
+            HexCoord::new(wq, wr).to_index()
+                .and_then(|idx| board.place_wildlife(idx, wildlife))
+        } else { None };
+        let nt_saved = if mv.wildlife_market_index.is_some() {
+            let saved = board.nature_tokens;
+            board.nature_tokens = board.nature_tokens.saturating_sub(1);
+            Some(saved)
+        } else { None };
 
         let actual = cascadia_core::scoring::ScoreBreakdown::compute(
-            &mut eval_board, &cards,
+            &mut board, &cards,
         ).total as f32;
-        let remaining = net.evaluate_with_bag(&eval_board, &bag_info);
+        let remaining = net.evaluate_with_bag(&board, &bag_info);
         let estimated_final = actual + remaining;
 
         if best.is_none() || estimated_final > best.as_ref().unwrap().1 {
             best = Some((*mv, estimated_final));
         }
+
+        // Undo in reverse order of application.
+        if let Some(saved) = nt_saved { board.nature_tokens = saved; }
+        if let Some(wa) = wl_act { board.undo(wa); }
+        board.undo(tile_act);
     }
 
     best.map(|(mv, _)| mv)
@@ -2033,7 +2318,8 @@ mod tests {
     #[test]
     fn test_feature_block_boundaries() {
         // Verify the constants match between here and nnue.rs
-        assert_eq!(crate::nnue::NUM_FEATURES, 7670);
+        assert_eq!(crate::nnue::NUM_FEATURES, 45260);
+        assert_eq!(crate::nnue::NUM_FEATURES_V2, 10561);
         assert_eq!(crate::nnue::CELL_FEATURES, 4851);
         assert_eq!(crate::nnue::PHASE_FEATURES, 110);
         assert_eq!(crate::nnue::PAIR_FEATURES, 147);
@@ -2043,6 +2329,11 @@ mod tests {
         assert_eq!(crate::nnue::ALLOWED_WL_FEATURES, 2205);
         assert_eq!(crate::nnue::WL_COUNT_EXT_FEATURES, 50);
         assert_eq!(crate::nnue::TERRAIN_PAIR_FEATURES, 108);
+        // v3 blocks
+        assert_eq!(crate::nnue::CELL_ADJ_FEATURES, 34398);
+        assert_eq!(crate::nnue::TBAG_TERRAIN_EXT_FEATURES, 150);
+        assert_eq!(crate::nnue::TBAG_WL_EXT_FEATURES, 150);
+        assert_eq!(crate::nnue::OVERFLOW_FEATURES, 1);
     }
 
     #[test]

@@ -38,6 +38,9 @@ enum Strategy {
     NRPA { net: Arc<cascadia_ai::nnue::NNUENetwork>, level: usize, n: usize },
     OpenLoopMCTS { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize },
     GumbelMCTS { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize, m: usize },
+    GreedyMCE { rollouts: usize, alloc: cascadia_ai::mce::GreedyMceAlloc, expanded: bool },
+    NnueRolloutMCE { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize, alloc: cascadia_ai::mce::GreedyMceAlloc, expanded: bool, prefilter_k: usize, exact_endgame: usize },
+    UctMcts { simulations: usize, parallel: bool },
 }
 
 impl std::fmt::Display for Strategy {
@@ -58,6 +61,45 @@ impl std::fmt::Display for Strategy {
             Strategy::NRPA { level, n, .. } => write!(f, "nrpa(L={},N={})", level, n),
             Strategy::OpenLoopMCTS { rollouts, .. } => write!(f, "ol-mcts(n={})", rollouts),
             Strategy::GumbelMCTS { rollouts, m, .. } => write!(f, "gumbel-mcts(n={},m={})", rollouts, m),
+            Strategy::GreedyMCE { rollouts, alloc, expanded } => {
+                let a = match alloc {
+                    cascadia_ai::mce::GreedyMceAlloc::Uniform => "uniform",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalving => "halving",
+                    cascadia_ai::mce::GreedyMceAlloc::Ucb => "ucb",
+                    cascadia_ai::mce::GreedyMceAlloc::UniformCRN => "crn",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingCRN => "halving-crn",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingEarlyTerm => "halving-et",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingCI => "halving-ci",
+                    cascadia_ai::mce::GreedyMceAlloc::SuccessiveRejects => "sr",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingPW => "halving-pw",
+                    cascadia_ai::mce::GreedyMceAlloc::ThompsonSampling => "thompson",
+                    cascadia_ai::mce::GreedyMceAlloc::MctsPW => "mcts-pw",
+                };
+                let e = if *expanded { ",expanded" } else { "" };
+                write!(f, "greedy-mce(n={},{}{})", rollouts, a, e)
+            }
+            Strategy::NnueRolloutMCE { rollouts, alloc, expanded, prefilter_k, exact_endgame, .. } => {
+                let a = match alloc {
+                    cascadia_ai::mce::GreedyMceAlloc::Uniform => "uniform",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalving => "halving",
+                    cascadia_ai::mce::GreedyMceAlloc::Ucb => "ucb",
+                    cascadia_ai::mce::GreedyMceAlloc::UniformCRN => "crn",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingCRN => "halving-crn",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingEarlyTerm => "halving-et",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingCI => "halving-ci",
+                    cascadia_ai::mce::GreedyMceAlloc::SuccessiveRejects => "sr",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingPW => "halving-pw",
+                    cascadia_ai::mce::GreedyMceAlloc::ThompsonSampling => "thompson",
+                    cascadia_ai::mce::GreedyMceAlloc::MctsPW => "mcts-pw",
+                };
+                let e = if *expanded { ",expanded" } else { "" };
+                let p = if *prefilter_k > 0 { format!(",pfk={}", prefilter_k) } else { String::new() };
+                let g = if *exact_endgame > 0 { format!(",eg={}", exact_endgame) } else { String::new() };
+                write!(f, "nnue-rollout-mce(n={},{}{}{}{})", rollouts, a, e, p, g)
+            }
+            Strategy::UctMcts { simulations, parallel } => {
+                write!(f, "uct-mcts(n={}{})", simulations, if *parallel { ",parallel" } else { "" })
+            }
         }
     }
 }
@@ -111,6 +153,46 @@ fn pick_move(
         }
         Strategy::GumbelMCTS { net, rollouts, m } => {
             cascadia_ai::gumbel_mcts::best_move_gumbel_mcts(game, net, *rollouts, *m, search_rng)
+        }
+        Strategy::GreedyMCE { rollouts, alloc, expanded } => {
+            let candidates = if *expanded {
+                cascadia_ai::mce::expanded_candidates(game)
+            } else {
+                cascadia_ai::mce::default_greedy_mce_candidates(game)
+            };
+            cascadia_ai::mce::best_move_greedy_mce_v2(game, *rollouts, *alloc, candidates, search_rng)
+        }
+        Strategy::NnueRolloutMCE { net, rollouts, alloc, expanded, prefilter_k, exact_endgame } => {
+            // Exact-endgame switch: when turns_remaining is small, use exact expectimax
+            // (terminal scoring is exact when game ends after the move).
+            if *exact_endgame > 0 && game.turns_remaining as usize <= *exact_endgame {
+                let depth = (*exact_endgame).saturating_sub(1).max(1);  // depth=remaining-1
+                return cascadia_ai::mce::best_move_expectimax_nply(game, net, depth);
+            }
+            let mut candidates = if *expanded {
+                cascadia_ai::mce::expanded_candidates(game)
+            } else {
+                cascadia_ai::mce::default_greedy_mce_candidates(game)
+            };
+            if *prefilter_k > 0 && candidates.len() > *prefilter_k {
+                // MCE_MUTATE_EXPAND=N: keep N extra near-miss candidates beyond
+                // prefilter-K. These are the next-best that prefilter would drop.
+                // SHA handles the larger pool automatically. Tests whether the
+                // prefilter's NNUE ranking missed a candidate that MCE rollouts
+                // would have found superior.
+                let expand: usize = std::env::var("MCE_MUTATE_EXPAND").ok()
+                    .and_then(|s| s.parse().ok()).unwrap_or(0);
+                let k = *prefilter_k + expand;
+                candidates = cascadia_ai::mce::nnue_prefilter_candidates(game, net, candidates, k);
+            }
+            cascadia_ai::mce::best_move_nnue_rollout_mce(game, net, *rollouts, *alloc, candidates, search_rng)
+        }
+        Strategy::UctMcts { simulations, parallel } => {
+            if *parallel {
+                cascadia_ai::uct_mcts::best_move_uct_mcts_parallel(game, *simulations, search_rng)
+            } else {
+                cascadia_ai::uct_mcts::best_move_uct_mcts(game, *simulations, search_rng)
+            }
         }
     }
 }
@@ -276,6 +358,208 @@ fn pre_move_optimize_slow(
     }
 }
 
+/// Temporarily set env vars, run f(), then restore. Safe for sequential callers
+/// because env var reads inside MCE threads all happen between the set/restore.
+fn pick_with_env<F, T>(vars: &[(&str, &str)], f: F) -> T
+where F: FnOnce() -> T,
+{
+    let prev: Vec<(String, Option<String>)> = vars.iter()
+        .map(|(k, _)| (k.to_string(), std::env::var(k).ok()))
+        .collect();
+    for (k, v) in vars {
+        std::env::set_var(k, v);
+    }
+    let result = f();
+    for (k, prev_v) in &prev {
+        match prev_v {
+            Some(v) => std::env::set_var(k, v),
+            None => std::env::remove_var(k),
+        }
+    }
+    result
+}
+
+/// Dispatch a move by strategy tag. Used for per-seat strategies in head-to-head mode.
+fn pick_move_by_tag(
+    game: &GameState,
+    tag: &str,
+    net: Option<&Arc<cascadia_ai::nnue::NNUENetwork>>,
+    search_rng: &mut StdRng,
+) -> Option<cascadia_ai::eval::ScoredMove> {
+    match tag {
+        "greedy" => cascadia_ai::search::greedy_move(game),
+        "nnue" => match net {
+            Some(n) => cascadia_ai::nnue_train::pick_best_move_nnue(game, n)
+                .or_else(|| cascadia_ai::search::greedy_move(game)),
+            None => cascadia_ai::search::greedy_move(game),
+        }
+        "mce" | "mce_base" | "mce_200r" => match net {
+            Some(n) => {
+                let mut cands = cascadia_ai::mce::expanded_candidates(game);
+                if cands.len() > 8 {
+                    cands = cascadia_ai::mce::nnue_prefilter_candidates(game, n, cands, 8);
+                }
+                cascadia_ai::mce::best_move_nnue_rollout_mce(
+                    game, n, 200,
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                    cands, search_rng,
+                )
+            }
+            None => cascadia_ai::search::greedy_move(game),
+        }
+        "mce_100r" => match net {
+            Some(n) => {
+                let mut cands = cascadia_ai::mce::expanded_candidates(game);
+                if cands.len() > 8 {
+                    cands = cascadia_ai::mce::nnue_prefilter_candidates(game, n, cands, 8);
+                }
+                cascadia_ai::mce::best_move_nnue_rollout_mce(
+                    game, n, 100,
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                    cands, search_rng,
+                )
+            }
+            None => cascadia_ai::search::greedy_move(game),
+        }
+        "mce_sr" => match net {
+            Some(n) => {
+                let mut cands = cascadia_ai::mce::expanded_candidates(game);
+                if cands.len() > 8 {
+                    cands = cascadia_ai::mce::nnue_prefilter_candidates(game, n, cands, 8);
+                }
+                cascadia_ai::mce::best_move_nnue_rollout_mce(
+                    game, n, 200,
+                    cascadia_ai::mce::GreedyMceAlloc::SuccessiveRejects,
+                    cands, search_rng,
+                )
+            }
+            None => cascadia_ai::search::greedy_move(game),
+        }
+        "mce_default" => match net {
+            Some(n) => {
+                let cands = cascadia_ai::mce::default_greedy_mce_candidates(game);
+                cascadia_ai::mce::best_move_nnue_rollout_mce(
+                    game, n, 200,
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                    cands, search_rng,
+                )
+            }
+            None => cascadia_ai::search::greedy_move(game),
+        }
+        // Feature-specific variants: set env vars for duration of MCE call.
+        // Safe because pick_move_by_tag is called sequentially and MCE's
+        // threads all join before the call returns.
+        "mce_strategy" | "mce_strat" => pick_with_env(
+            &[("MCE_STRATEGY_BIAS", "1")],
+            || pick_move_by_tag(game, "mce", net, search_rng),
+        ),
+        "mce_cv" | "mce_cv_0.85" => pick_with_env(
+            &[("MCE_CV_ALPHA", "0.85")],
+            || pick_move_by_tag(game, "mce", net, search_rng),
+        ),
+        "mce_lmr" => pick_with_env(
+            &[("MCE_LMR", "1")],
+            || pick_move_by_tag(game, "mce", net, search_rng),
+        ),
+        "mce_full" => pick_with_env(
+            &[("MCE_CV_ALPHA", "0.85"), ("MCE_LMR", "1"), ("MCE_STRATEGY_BIAS", "1")],
+            || pick_move_by_tag(game, "mce", net, search_rng),
+        ),
+        // mce_wide_v1: wider prefilter (K=32) + larger halving budget (R=600).
+        // Empirically beats champion by +2.0 pts mean (20g local, seed=42).
+        // K=8 prefilter coverage: 58.9% → 84.3% (simulation, matches Rust halving budget).
+        "mce_wide_v1" => pick_with_env(
+            &[("MCE_LMR", "1"), ("MCE_DIVERSE_PREFILTER", "1")],
+            || match net {
+                Some(n) => {
+                    let mut cands = cascadia_ai::mce::expanded_candidates(game);
+                    if cands.len() > 32 {
+                        cands = cascadia_ai::mce::nnue_prefilter_candidates(game, n, cands, 32);
+                    }
+                    cascadia_ai::mce::best_move_nnue_rollout_mce(
+                        game, n, 600,
+                        cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                        cands, search_rng,
+                    )
+                }
+                None => cascadia_ai::search::greedy_move(game),
+            },
+        ),
+        // mce_wide_ens_v1: mce_wide_v1 + diverse prefilter ensemble. Paths
+        // come from env var CASCADIA_ENS_PATHS (comma-separated) so callers
+        // can point the ensemble at /weights/... in Modal, or relative paths
+        // locally. If CASCADIA_ENS_PATHS is unset, behaves identically to
+        // mce_wide_v1 (ensemble stays empty).
+        "mce_wide_ens_v1" => {
+            let ens = std::env::var("CASCADIA_ENS_PATHS").unwrap_or_default();
+            let ens_str: &str = Box::leak(ens.into_boxed_str());
+            pick_with_env(
+                &[
+                    ("MCE_LMR", "1"),
+                    ("MCE_DIVERSE_PREFILTER", "1"),
+                    ("MCE_PREFILTER_ENSEMBLE", ens_str),
+                ],
+                || match net {
+                    Some(n) => {
+                        let mut cands = cascadia_ai::mce::expanded_candidates(game);
+                        if cands.len() > 32 {
+                            cands = cascadia_ai::mce::nnue_prefilter_candidates(game, n, cands, 32);
+                        }
+                        cascadia_ai::mce::best_move_nnue_rollout_mce(
+                            game, n, 600,
+                            cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                            cands, search_rng,
+                        )
+                    }
+                    None => cascadia_ai::search::greedy_move(game),
+                },
+            )
+        },
+        // mce_wide_v2: R=800 variant (sim-predicted 85.5% K=8 coverage).
+        // Within noise of v1 empirically but costs more.
+        "mce_wide_v2" => pick_with_env(
+            &[("MCE_LMR", "1"), ("MCE_DIVERSE_PREFILTER", "1")],
+            || match net {
+                Some(n) => {
+                    let mut cands = cascadia_ai::mce::expanded_candidates(game);
+                    if cands.len() > 32 {
+                        cands = cascadia_ai::mce::nnue_prefilter_candidates(game, n, cands, 32);
+                    }
+                    cascadia_ai::mce::best_move_nnue_rollout_mce(
+                        game, n, 800,
+                        cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                        cands, search_rng,
+                    )
+                }
+                None => cascadia_ai::search::greedy_move(game),
+            },
+        ),
+        // Wildcard: any tag starting "mce_" not matched above = "mce" behavior
+        // (used for NNUE-model head-to-head with per-seat weights)
+        t if t.starts_with("mce_") => pick_move_by_tag(game, "mce", net, search_rng),
+        // Wildcard: any "nnue_*" = "nnue" behavior
+        t if t.starts_with("nnue_") => pick_move_by_tag(game, "nnue", net, search_rng),
+        "mce_500r" => match net {
+            Some(n) => {
+                let mut cands = cascadia_ai::mce::expanded_candidates(game);
+                if cands.len() > 8 {
+                    cands = cascadia_ai::mce::nnue_prefilter_candidates(game, n, cands, 8);
+                }
+                cascadia_ai::mce::best_move_nnue_rollout_mce(
+                    game, n, 500,
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                    cands, search_rng,
+                )
+            }
+            None => cascadia_ai::search::greedy_move(game),
+        }
+        _ => {
+            eprintln!("Unknown strategy tag '{}', falling back to greedy", tag);
+            cascadia_ai::search::greedy_move(game)
+        }
+    }
+}
+
 fn simulate_game(rng: &mut StdRng, strategy: &Strategy) -> (cascadia_core::scoring::ScoreBreakdown, cascadia_core::scoring::ScoreBreakdown) {
     simulate_game_inner(rng, strategy, None)
 }
@@ -289,7 +573,79 @@ fn simulate_game_inner(
     let mut game = GameState::new(4, cards, rng);
     let mut search_rng = StdRng::seed_from_u64(rng.gen());
 
+    // CASCADIA_OPPONENTS_SAME=1: make all 4 players use the same strategy as player 0.
+    // Makes the benchmark "self-play style" — use to test if the strategy holds up
+    // against equivalent competition (no free ride from weak greedy opponents).
+    let opponents_same = std::env::var("CASCADIA_OPPONENTS_SAME").ok()
+        .map(|s| !s.is_empty() && s != "0").unwrap_or(false);
+
+    // CASCADIA_SEAT_STRATEGIES="tag:tag:tag:tag" — head-to-head with different
+    // strategies per seat. Tags: "greedy", "nnue", "mce", "mce_sr", "mce_100r".
+    // Requires that the `strategy` passed in has an NNUE net (for mce/nnue tags).
+    let seat_tags: Option<Vec<String>> = std::env::var("CASCADIA_SEAT_STRATEGIES").ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.split(':').map(|t| t.to_string()).collect());
+    // Extract NNUE net from strategy for tag-based dispatch.
+    let seat_net: Option<Arc<cascadia_ai::nnue::NNUENetwork>> = match strategy {
+        Strategy::NNUE { net } | Strategy::MCE { net, .. }
+            | Strategy::Hybrid { net, .. } | Strategy::ExactExpectimax { net }
+            | Strategy::MCTS { net, .. } | Strategy::PolicyMCE { net, .. }
+            | Strategy::NRPA { net, .. } | Strategy::OpenLoopMCTS { net, .. }
+            | Strategy::GumbelMCTS { net, .. } | Strategy::NnueRolloutMCE { net, .. }
+            | Strategy::Expectimax { net, .. } => Some(net.clone()),
+        _ => None,
+    };
+    // CASCADIA_SEAT_WEIGHTS="path1:path2:path3:path4" — per-seat NNUE weights.
+    // When set with SEAT_STRATEGIES, each seat uses its own weights for MCE/NNUE
+    // decisions. Enables head-to-head between different NNUE models.
+    let seat_nets: Option<Vec<Arc<cascadia_ai::nnue::NNUENetwork>>> =
+        std::env::var("CASCADIA_SEAT_WEIGHTS").ok()
+            .filter(|s| !s.is_empty())
+            .map(|s| {
+                s.split(':').map(|path| {
+                    Arc::new(cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(path))
+                        .unwrap_or_else(|_| panic!("failed to load seat weights: {}", path)))
+                }).collect()
+            });
+
+    // Per-seat preference vectors for the "preference" draft opponent.
+    // Sampled once per game per seat and held constant across all 20 turns.
+    // Only touched when a seat's tag is "preference".
+    let num_seats = game.num_players;
+    let mut seat_preferences: Vec<Option<[f32; 5]>> = vec![None; num_seats];
+
     while !game.is_game_over() {
+        // HEAD-TO-HEAD MODE: if seat_tags set, dispatch each player's move by tag.
+        if let Some(ref tags) = seat_tags {
+            let p = game.current_player;
+            if game.can_replace_overflow().is_some() {
+                game.replace_overflow();
+            }
+            let tag = tags.get(p).map(|s| s.as_str()).unwrap_or("greedy");
+            // If per-seat NNUE weights provided, use this seat's net.
+            // Otherwise fall back to the strategy's net.
+            let net_for_seat: Option<&Arc<cascadia_ai::nnue::NNUENetwork>> =
+                seat_nets.as_ref().and_then(|nets| nets.get(p))
+                    .or(seat_net.as_ref());
+            let mv = match tag {
+                "random" => cascadia_ai::draft_opponents::random_draft_move(&game, &mut search_rng),
+                "scarcity" => cascadia_ai::draft_opponents::scarcity_draft_move(&game, &mut search_rng),
+                "preference" => {
+                    if seat_preferences[p].is_none() {
+                        seat_preferences[p] = Some(cascadia_ai::draft_opponents::sample_preferences(&mut search_rng));
+                    }
+                    let prefs = seat_preferences[p].as_ref().unwrap();
+                    cascadia_ai::draft_opponents::preference_draft_move(&game, prefs, &mut search_rng)
+                }
+                _ => pick_move_by_tag(&game, tag, net_for_seat, &mut search_rng),
+            };
+            match mv {
+                Some(m) => { if !execute_scored_move(&mut game, &m) { break; } }
+                None => break,
+            }
+            continue;
+        }
+
         // Player 0 is the AI; players 1-3 use NNUE if available, otherwise greedy.
         // If --opp-weights was set via OPPONENT_NET, opponents use that network
         // instead of player 0's net (for "v3 vs v1" style head-to-head experiments).
@@ -301,7 +657,12 @@ fn simulate_game_inner(
             if game.can_replace_overflow().is_some() {
                 game.replace_overflow();
             }
-            let opp_mv = if let Some(opp) = opponent_net() {
+            let opp_mv = if opponents_same {
+                // Run the FULL strategy (including MCE, prefilter, etc) for this opponent.
+                // Also needs pre-move optimization for fairness.
+                pre_move_optimize(&mut game, strategy, &cards, &mut search_rng);
+                pick_move(&game, strategy, &cards, &mut search_rng)
+            } else if let Some(opp) = opponent_net() {
                 cascadia_ai::nnue_train::pick_best_move_nnue(&game, opp)
                     .or_else(|| greedy_move(&game))
             } else {
@@ -312,7 +673,8 @@ fn simulate_game_inner(
                         | Strategy::PolicyMCE { ref net, .. }
                         | Strategy::NRPA { ref net, .. }
                         | Strategy::OpenLoopMCTS { ref net, .. }
-                        | Strategy::GumbelMCTS { ref net, .. } => {
+                        | Strategy::GumbelMCTS { ref net, .. }
+                        | Strategy::NnueRolloutMCE { ref net, .. } => {
                         cascadia_ai::nnue_train::pick_best_move_nnue(&game, net)
                             .or_else(|| greedy_move(&game))
                     }
@@ -380,7 +742,10 @@ fn simulate_game_inner(
         }
     }
 
-    // Return both base score and score with habitat bonuses
+    // Return both base score and score with habitat bonuses.
+    //
+    // When CASCADIA_OPPONENTS_SAME=1, also dump per-player breakdowns to stderr
+    // (parsed by symmetric-bench script for self-play stats).
     let base = cascadia_core::scoring::ScoreBreakdown::compute(
         &mut game.boards[0],
         &game.scoring_cards,
@@ -390,6 +755,32 @@ fn simulate_game_inner(
         &game.scoring_cards,
         0,
     );
+    if opponents_same || seat_tags.is_some() {
+        // Dump all 4 player scores in a parseable format (shared between
+        // symmetric and head-to-head modes). Head-to-head adds seat-tag labels.
+        let tags_str = seat_tags.as_ref().map(|t| t.join(":"))
+            .unwrap_or_else(|| "self:self:self:self".to_string());
+        eprintln!("===SYMMETRIC_GAME_BEGIN=== tags={}", tags_str);
+        for p in 0..game.num_players {
+            let bd = cascadia_core::scoring::ScoreBreakdown::compute(
+                &mut game.boards[p], &game.scoring_cards,
+            );
+            let bd_bonus = cascadia_core::scoring::ScoreBreakdown::compute_with_bonuses(
+                &mut game.boards, &game.scoring_cards, p,
+            );
+            let hab: u16 = bd.habitat.iter().sum();
+            let wl: u16 = bd.wildlife.iter().sum();
+            let tokens = bd.nature_tokens;
+            let b = bd.wildlife[0];
+            let e = bd.wildlife[1];
+            let s = bd.wildlife[2];
+            let h = bd.wildlife[3];
+            let f = bd.wildlife[4];
+            eprintln!("SYMPLAYER p={} base={} bonus={} hab={} wl={} tok={} bear={} elk={} salmon={} hawk={} fox={}",
+                p, bd.total, bd_bonus.total, hab, wl, tokens, b, e, s, h, f);
+        }
+        eprintln!("===SYMMETRIC_GAME_END===");
+    }
     (base, with_bonus)
 }
 
@@ -819,9 +1210,14 @@ fn main() {
     let run_train_mce_policy = args.iter().any(|a| a == "--train-mce-policy");
     let run_export_pytorch = args.iter().any(|a| a == "--export-pytorch");
     let run_self_play = args.iter().any(|a| a == "--self-play");
+    let run_selfplay_pool = args.iter().any(|a| a == "--selfplay-pool");
 
     let run_mce_selfplay = args.iter().any(|a| a == "--mce-selfplay");
     let run_exact_selfplay = args.iter().any(|a| a == "--exact-selfplay");
+    let run_tile_token_selfplay = args.iter().any(|a| a == "--tile-token-selfplay");
+    let run_rich_tile_token_selfplay = args.iter().any(|a| a == "--rich-tile-token-selfplay");
+    let run_external_eval = args.iter().any(|a| a == "--external-eval");
+    let run_gnn_mce_bench = args.iter().any(|a| a == "--gnn-mce-bench");
 
     // --greedy-ub: print the greedy upper bound for various move counts.
     // Useful for sanity-checking the upper bound oracle from the CLI.
@@ -833,6 +1229,430 @@ fn main() {
             let ub = cascadia_ai::greedy_ub::greedy_upper_bound(moves);
             println!("  R={:2} → UB={}", moves, ub);
         }
+        return;
+    }
+
+    // --train-policy: collect MCE-scored candidates and train the policy head.
+    // Plays N games, at each AI turn scores top-K candidates with MCE,
+    // then trains w3_policy via cross-entropy on softmax(MCE_scores/τ).
+    if args.iter().any(|a| a == "--train-policy") {
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        let init_path = args.iter().position(|a| a == "--init-weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
+        let load_path = init_path.unwrap_or(weights_path);
+        let mut net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(load_path))
+            .unwrap_or_else(|e| { eprintln!("Failed to load {}: {}", load_path, e); std::process::exit(1); });
+
+        let n_games: usize = num_games.max(1);
+        let rollouts_per_cand: usize = args.iter().position(|a| a == "--rollouts-per-cand")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(100);
+        let max_cands: usize = args.iter().position(|a| a == "--max-candidates")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(50);
+        let temperature: f32 = args.iter().position(|a| a == "--temperature")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(2.0);
+        let policy_lr: f32 = args.iter().position(|a| a == "--policy-lr")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.01);
+        let epochs: usize = args.iter().position(|a| a == "--epochs")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(20);
+        let seed_base: u64 = std::env::var("CASCADIA_SEED_OFFSET").ok()
+            .and_then(|s| s.parse().ok()).unwrap_or(0);
+
+        eprintln!("Policy head training: {} games, {} rollouts/cand, max {} cands, τ={}, lr={}, epochs={}",
+            n_games, rollouts_per_cand, max_cands, temperature, policy_lr, epochs);
+        eprintln!("  Weights: {} → {}", load_path, weights_path);
+
+        // Try loading pre-collected data (from Modal) instead of collecting
+        let load_data_path = args.iter().position(|a| a == "--load-policy-data")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
+
+        if let Some(path) = load_data_path {
+            use std::io::Read;
+            let mut f = std::fs::File::open(path).expect("Failed to open policy data");
+            let mut magic = [0u8; 4];
+            f.read_exact(&mut magic).unwrap();
+            assert_eq!(&magic, b"PDAT", "Bad policy data magic");
+            let mut buf4 = [0u8; 4];
+            f.read_exact(&mut buf4).unwrap();
+            let n_pos = u32::from_le_bytes(buf4) as usize;
+
+            let mut all_positions: Vec<cascadia_ai::nnue::PositionPolicyData> = Vec::with_capacity(n_pos);
+            let mut buf2 = [0u8; 2];
+            for _ in 0..n_pos {
+                // Base features
+                f.read_exact(&mut buf2).unwrap();
+                let nb = u16::from_le_bytes(buf2) as usize;
+                let mut base = Vec::with_capacity(nb);
+                for _ in 0..nb { f.read_exact(&mut buf2).unwrap(); base.push(u16::from_le_bytes(buf2)); }
+                // Candidates
+                f.read_exact(&mut buf4).unwrap();
+                let nc = u32::from_le_bytes(buf4) as usize;
+                let mut cands = Vec::with_capacity(nc);
+                for _ in 0..nc {
+                    f.read_exact(&mut buf2).unwrap();
+                    let nf = u16::from_le_bytes(buf2) as usize;
+                    let mut feats = Vec::with_capacity(nf);
+                    for _ in 0..nf { f.read_exact(&mut buf2).unwrap(); feats.push(u16::from_le_bytes(buf2)); }
+                    f.read_exact(&mut buf4).unwrap();
+                    let score = f32::from_le_bytes(buf4);
+                    cands.push((feats, score));
+                }
+                all_positions.push(cascadia_ai::nnue::PositionPolicyData { base_features: base, candidates: cands });
+            }
+            eprintln!("  Loaded {} positions from {}", all_positions.len(), path);
+
+            // Train
+            let mut policy_net = cascadia_ai::policy_net::PolicyNetwork::from_nnue(&net);
+            eprintln!("  PolicyNetwork: {} → {} → {} → 1",
+                cascadia_ai::nnue::NUM_FEATURES, 512, 256);
+            let train_start = Instant::now();
+            for epoch in 0..epochs {
+                let mut eloss = 0.0f64;
+                let mut eagree = 0usize;
+                let mut en = 0usize;
+                for pos in &all_positions {
+                    let (l, c) = policy_net.train_ranking(pos, policy_lr, temperature);
+                    eloss += l as f64; if c { eagree += 1; } en += 1;
+                }
+                if (epoch+1) % 10 == 0 || epoch == 0 || epoch == epochs-1 {
+                    eprint!("\r  Epoch {}/{}: loss={:.4} agree={:.1}%",
+                        epoch+1, epochs, eloss/en.max(1) as f64, 100.0*eagree as f64/en.max(1) as f64);
+                }
+            }
+            eprintln!("\n  Training: {} epochs in {:.1?}", epochs, train_start.elapsed());
+            let mut fa = 0usize; let mut fn_ = 0usize; let mut fl = 0.0f64;
+            for pos in &all_positions {
+                let (l, c) = policy_net.train_ranking(pos, 0.0, temperature);
+                fl += l as f64; if c { fa += 1; } fn_ += 1;
+            }
+            eprintln!("  Final: loss={:.4} agree={:.1}%", fl/fn_.max(1) as f64, 100.0*fa as f64/fn_.max(1) as f64);
+            policy_net.save(std::path::Path::new(weights_path)).expect("save");
+            eprintln!("  Saved to {}", weights_path);
+            return;
+        }
+
+        // Phase 1: Collect data (play games, score candidates with MCE)
+        let start = Instant::now();
+        let mut all_positions: Vec<cascadia_ai::nnue::PositionPolicyData> = Vec::new();
+        let cards = ScoringCards::all_a();
+
+        for g in 0..n_games {
+            let mut rng = StdRng::seed_from_u64(seed_base + g as u64 * 1000 + 42);
+            let mut game = GameState::new(4, cards, &mut rng);
+            let mut search_rng = StdRng::seed_from_u64(rng.gen());
+
+            while !game.is_game_over() {
+                if game.current_player != 0 {
+                    if game.can_replace_overflow().is_some() { game.replace_overflow(); }
+                    let mv = cascadia_ai::nnue_train::pick_best_move_nnue(&game, &net)
+                        .or_else(|| greedy_move(&game));
+                    match mv { Some(m) => { if !execute_scored_move(&mut game, &m) { break; } } None => break }
+                    continue;
+                }
+                if game.can_replace_overflow().is_some() { game.replace_overflow(); }
+
+                let candidates = cascadia_ai::mce::expanded_candidates(&game);
+                if candidates.is_empty() { break; }
+                let (nnue_sorted, _) = cascadia_ai::mce::nnue_prefilter_with_priors(
+                    &game, &net, candidates, max_cands);
+
+                let mce_results = cascadia_ai::mce::rank_all_candidates_mce(
+                    &game, &net, rollouts_per_cand, &nnue_sorted, &mut search_rng);
+
+                // Collect base features + (afterstate_features, mce_score) for each candidate
+                let player = game.current_player;
+                let bag_before = cascadia_ai::nnue::BagInfo::from_game_for_player(&game, player);
+                let base_features = cascadia_ai::nnue::extract_features_with_bag(
+                    &game.boards[player], Some(&bag_before));
+
+                let mut cand_data: Vec<(Vec<u16>, f32)> = Vec::new();
+                for (mv, stat) in &mce_results {
+                    let mut gs = game.clone();
+                    if execute_scored_move(&mut gs, mv) {
+                        let bag = cascadia_ai::nnue::BagInfo::from_game_for_player(&gs, player);
+                        let features = cascadia_ai::nnue::extract_features_with_bag(&gs.boards[player], Some(&bag));
+                        cand_data.push((features, stat.mean as f32));
+                    }
+                }
+                all_positions.push(cascadia_ai::nnue::PositionPolicyData {
+                    base_features,
+                    candidates: cand_data,
+                });
+
+                // Play MCE-best move
+                if let Some((best, _)) = mce_results.first() {
+                    if !execute_scored_move(&mut game, best) { break; }
+                } else { break; }
+            }
+            eprint!("\r  Game {}/{}: {} positions collected", g+1, n_games, all_positions.len());
+        }
+        let collect_time = start.elapsed();
+        eprintln!("\n  Collection: {} positions in {:.1?}", all_positions.len(), collect_time);
+
+        // Save collected data to binary for offline training
+        let data_path = args.iter().position(|a| a == "--save-policy-data")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
+        if let Some(path) = data_path {
+            use std::io::Write;
+            let mut f = std::fs::File::create(path).expect("Failed to create policy data file");
+            f.write_all(b"PDAT").unwrap();
+            let n_pos = all_positions.len() as u32;
+            f.write_all(&n_pos.to_le_bytes()).unwrap();
+            for pos in &all_positions {
+                // Base features
+                let nb = pos.base_features.len() as u16;
+                f.write_all(&nb.to_le_bytes()).unwrap();
+                for &fi in &pos.base_features { f.write_all(&fi.to_le_bytes()).unwrap(); }
+                // Candidates
+                let nc = pos.candidates.len() as u32;
+                f.write_all(&nc.to_le_bytes()).unwrap();
+                for (feats, score) in &pos.candidates {
+                    let nf = feats.len() as u16;
+                    f.write_all(&nf.to_le_bytes()).unwrap();
+                    for &fi in feats { f.write_all(&fi.to_le_bytes()).unwrap(); }
+                    f.write_all(&score.to_le_bytes()).unwrap();
+                }
+            }
+            eprintln!("  Policy data saved to {}", path);
+            if epochs == 0 { return; }
+        }
+
+        // Phase 2: Train wide policy network (initialized from value NNUE's first layer)
+        let mut policy_net = cascadia_ai::policy_net::PolicyNetwork::from_nnue(&net);
+        eprintln!("  PolicyNetwork: {} → {} → {} → 1 ({:.1}M params)",
+            cascadia_ai::nnue::NUM_FEATURES, 512, 256,
+            (cascadia_ai::nnue::NUM_FEATURES * 512 + 512 * 256 + 256) as f64 / 1e6);
+
+        let train_start = Instant::now();
+        for epoch in 0..epochs {
+            let mut epoch_loss = 0.0f64;
+            let mut epoch_agree = 0usize;
+            let mut epoch_n = 0usize;
+            for pos in &all_positions {
+                let (loss, correct) = policy_net.train_ranking(pos, policy_lr, temperature);
+                epoch_loss += loss as f64;
+                if correct { epoch_agree += 1; }
+                epoch_n += 1;
+            }
+            if (epoch + 1) % 10 == 0 || epoch == 0 || epoch == epochs - 1 {
+                let avg_loss = epoch_loss / epoch_n.max(1) as f64;
+                let agree_pct = 100.0 * epoch_agree as f64 / epoch_n.max(1) as f64;
+                eprint!("\r  Epoch {}/{}: loss={:.4} agree={:.1}%", epoch+1, epochs, avg_loss, agree_pct);
+            }
+        }
+        let train_time = train_start.elapsed();
+        // Final eval pass (lr=0)
+        let mut final_agree = 0usize;
+        let mut final_n = 0usize;
+        let mut final_loss_sum = 0.0f64;
+        for pos in &all_positions {
+            let (loss, correct) = policy_net.train_ranking(pos, 0.0, temperature);
+            final_loss_sum += loss as f64;
+            if correct { final_agree += 1; }
+            final_n += 1;
+        }
+        eprintln!("\n  Training: {} epochs in {:.1?}", epochs, train_time);
+        eprintln!("  Final: loss={:.4} top-1 agree={:.1}% ({}/{})",
+            final_loss_sum / final_n.max(1) as f64,
+            100.0 * final_agree as f64 / final_n.max(1) as f64,
+            final_agree, final_n);
+
+        // Save policy network
+        policy_net.save(std::path::Path::new(weights_path)).expect("Failed to save");
+        eprintln!("  Saved policy net to {}", weights_path);
+        return;
+    }
+
+    // --rank-correlation: measure NNUE prefilter vs MCE ground-truth ranking.
+    // For one game, at each AI turn:
+    //   1. Generate expanded candidates
+    //   2. Score all with NNUE (prefilter scoring)
+    //   3. Score all with MCE (uniform, N rollouts per candidate)
+    //   4. Print per-candidate comparison lines
+    if args.iter().any(|a| a == "--rank-correlation") {
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        let rollouts_per_cand: usize = args.iter().position(|a| a == "--rollouts-per-cand")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(100);
+
+        let net = Arc::new(
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights for rank-correlation")
+        );
+
+        let use_random_seed = args.iter().any(|a| a == "--random-seed");
+        let seed_offset: u64 = std::env::var("CASCADIA_SEED_OFFSET")
+            .ok().and_then(|s| s.parse().ok()).unwrap_or(0);
+        let mut entropy_rng = if use_random_seed {
+            StdRng::from_entropy()
+        } else {
+            StdRng::seed_from_u64(0xCAFE_BEEF + seed_offset)
+        };
+
+        let cards = ScoringCards::all_a();
+        let mut game = GameState::new(4, cards, &mut entropy_rng);
+        let mut search_rng = StdRng::seed_from_u64(entropy_rng.gen());
+
+        eprintln!("rank-correlation: seed_offset={}, rollouts_per_cand={}, weights={}",
+                  seed_offset, rollouts_per_cand, weights_path);
+
+        let mut ai_turn = 0u32;
+        let mce_opponents = args.iter().any(|a| a == "--mce-opponents");
+        if mce_opponents {
+            eprintln!("  Opponents: MCE(50) with prefilter-k 8");
+        }
+        let net_arc = std::sync::Arc::new(net.clone());
+
+        while !game.is_game_over() {
+            if game.current_player != 0 {
+                if game.can_replace_overflow().is_some() {
+                    game.replace_overflow();
+                }
+                let opp_mv = if mce_opponents {
+                    let mut cands = cascadia_ai::mce::expanded_candidates(&game);
+                    if cands.len() > 8 {
+                        cands = cascadia_ai::mce::nnue_prefilter_candidates(&game, &net, cands, 8);
+                    }
+                    cascadia_ai::mce::best_move_nnue_rollout_mce(
+                        &game, &net, 50,
+                        cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                        cands, &mut search_rng,
+                    )
+                } else {
+                    cascadia_ai::nnue_train::pick_best_move_nnue(&game, &net)
+                        .or_else(|| greedy_move(&game))
+                };
+                match opp_mv {
+                    Some(mv) => { if !execute_scored_move(&mut game, &mv) { break; } }
+                    None => break,
+                }
+                continue;
+            }
+
+            ai_turn += 1;
+
+            // Free overflow replacement
+            if game.can_replace_overflow().is_some() {
+                game.replace_overflow();
+            }
+
+            // 1. Generate expanded candidates, cap to --max-candidates
+            let max_cands: usize = args.iter().position(|a| a == "--max-candidates")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(999);
+            let candidates = cascadia_ai::mce::expanded_candidates(&game);
+            let n_cands = candidates.len();
+            if n_cands == 0 {
+                eprintln!("  turn {} — no candidates, skipping", ai_turn);
+                break;
+            }
+
+            // 2. Score all with NNUE prefilter (returns sorted by NNUE score desc),
+            //    capped to max_candidates so MCE budget is bounded.
+            let (nnue_sorted, nnue_priors) = cascadia_ai::mce::nnue_prefilter_with_priors(
+                &game, &net, candidates.clone(), max_cands,
+            );
+
+            // Build a map from candidate key to (nnue_rank, nnue_score)
+            // Key includes wildlife_market_index to distinguish nature-token drafts
+            type CandKey = (usize, Option<usize>, i8, i8, u8, Option<i8>, Option<i8>);
+            let cand_key = |mv: &cascadia_ai::eval::ScoredMove| -> CandKey {
+                (mv.market_index, mv.wildlife_market_index, mv.tile_q, mv.tile_r, mv.rotation, mv.wildlife_q, mv.wildlife_r)
+            };
+            let mut nnue_map: std::collections::HashMap<CandKey, (usize, f32)> =
+                std::collections::HashMap::new();
+            for (rank, (mv, &score)) in nnue_sorted.iter().zip(nnue_priors.iter()).enumerate() {
+                nnue_map.insert(cand_key(mv), (rank, score));
+            }
+
+            // 3. Score NNUE's top candidates with MCE (uniform rollouts, no elimination).
+            //    Both NNUE and MCE evaluate the SAME candidate set (NNUE top-K).
+            let mce_results = cascadia_ai::mce::rank_all_candidates_mce(
+                &game, &net, rollouts_per_cand, &nnue_sorted, &mut search_rng,
+            );
+
+            // Build MCE rank map
+            let mut mce_map: std::collections::HashMap<CandKey, (usize, cascadia_ai::mce::MceStat)> =
+                std::collections::HashMap::new();
+            for (rank, (mv, stat)) in mce_results.iter().enumerate() {
+                mce_map.insert(cand_key(mv), (rank, stat.clone()));
+            }
+
+            // Resolve wildlife type names from market
+            let wl_name = |mv: &cascadia_ai::eval::ScoredMove| -> &'static str {
+                let wi = mv.wildlife_market_index.unwrap_or(mv.market_index);
+                match game.market.pairs.get(wi).and_then(|p| p.as_ref()) {
+                    Some(p) => match p.wildlife as u8 {
+                        0 => "bear", 1 => "elk", 2 => "salmon", 3 => "hawk", 4 => "fox", _ => "?"
+                    },
+                    None => "?",
+                }
+            };
+
+            // Board state summary for this turn
+            let board = &game.boards[0];
+            let hab_score: u16 = board.largest_group.iter().sum();
+            let wl_counts: Vec<usize> = (0..5).map(|w| board.wildlife_positions[w].len()).collect();
+            let tokens = board.nature_tokens;
+            let turns_left = game.turns_remaining;
+
+            // 4. Print JSONL per-candidate
+            let mut n_common = 0usize;
+            for (nnue_rank, mv) in nnue_sorted.iter().enumerate() {
+                let key = cand_key(mv);
+                let (mce_rank, stat) = match mce_map.get(&key) {
+                    Some((r, s)) => (*r, s.clone()),
+                    None => continue,
+                };
+                n_common += 1;
+                let nnue_score = nnue_priors.get(nnue_rank).copied().unwrap_or(0.0);
+                let is_independent = mv.wildlife_market_index.is_some();
+                let wildlife = wl_name(mv);
+                println!(
+                    "{{\"turn\":{},\"n_cands\":{},\"nnue_rank\":{},\"mce_rank\":{},\
+\"nnue_score\":{:.2},\"mce_mean\":{:.2},\"mce_std\":{:.2},\"mce_min\":{},\"mce_max\":{},\"mce_median\":{:.1},\
+\"market\":{},\"wildlife\":\"{}\",\"independent\":{},\
+\"tile_q\":{},\"tile_r\":{},\"rot\":{},\"wl_q\":{},\"wl_r\":{},\
+\"hab\":{},\"wl_bear\":{},\"wl_elk\":{},\"wl_salmon\":{},\"wl_hawk\":{},\"wl_fox\":{},\"tokens\":{},\"turns_left\":{}}}",
+                    ai_turn, nnue_sorted.len(),
+                    nnue_rank, mce_rank,
+                    nnue_score, stat.mean, stat.std, stat.min, stat.max, stat.median,
+                    mv.market_index, wildlife, is_independent,
+                    mv.tile_q, mv.tile_r, mv.rotation,
+                    mv.wildlife_q.unwrap_or(-99), mv.wildlife_r.unwrap_or(-99),
+                    hab_score, wl_counts[0], wl_counts[1], wl_counts[2], wl_counts[3], wl_counts[4],
+                    tokens, turns_left,
+                );
+            }
+
+            eprintln!("  turn {} — {} expanded, {} NNUE top-{}, {} MCE-scored, {} common",
+                      ai_turn, n_cands, nnue_sorted.len(), max_cands, mce_results.len(), n_common);
+
+            // Play the MCE-best move to continue the game
+            if let Some((best_mv, _)) = mce_results.first() {
+                if !execute_scored_move(&mut game, best_mv) { break; }
+            } else {
+                break;
+            }
+        }
+
+        // Print final scores for all players (same SYMPLAYER format used by HH)
+        for p in 0..game.num_players {
+            let bd = cascadia_core::scoring::ScoreBreakdown::compute(
+                &mut game.boards[p], &game.scoring_cards,
+            );
+            let bd_bonus = cascadia_core::scoring::ScoreBreakdown::compute_with_bonuses(
+                &mut game.boards, &game.scoring_cards, p,
+            );
+            let hab: u16 = bd.habitat.iter().sum();
+            let wl: u16 = bd.wildlife.iter().sum();
+            println!(
+                "{{\"type\":\"score\",\"player\":{},\"base\":{},\"bonus\":{},\"hab\":{},\"wl\":{},\"tok\":{},\"bear\":{},\"elk\":{},\"salmon\":{},\"hawk\":{},\"fox\":{}}}",
+                p, bd.total, bd_bonus.total, hab, wl, bd.nature_tokens,
+                bd.wildlife[0], bd.wildlife[1], bd.wildlife[2], bd.wildlife[3], bd.wildlife[4]);
+        }
+        eprintln!("rank-correlation: done, {} AI turns", ai_turn);
         return;
     }
 
@@ -1113,6 +1933,59 @@ fn main() {
         println!("  Value: {} samples → {}", all_value_samples.len(), out_path);
         println!("  Policy: {} groups → {}", all_policy_groups.len(), policy_out);
         return;
+    } else if run_selfplay_pool {
+        // FSP self-play with opponent pool from CASCADIA_TRAIN_OPP_POOL env.
+        // Used by Modal parallel data generation — each worker produces a shard
+        // that gets concatenated into one training cache.
+        //
+        // Usage:
+        //   CASCADIA_TRAIN_OPP_POOL="random,scarcity,mce93.bin,iter10.bin" \
+        //   CASCADIA_TRAIN_SEED=<seed> \
+        //   cascadia-cli N --selfplay-pool --init-weights W_IN --out shard.bin \
+        //     [--epsilon 0.1] [--temperature 2.0]
+        let init_path = args.iter().position(|a| a == "--init-weights")
+            .or_else(|| args.iter().position(|a| a == "--weights"))
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("selfplay_pool_samples.bin");
+        let epsilon: f32 = args.iter().position(|a| a == "--epsilon")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.1);
+        let temperature: Option<f32> = args.iter().position(|a| a == "--temperature")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok());
+        let seed: u64 = std::env::var("CASCADIA_TRAIN_SEED").ok()
+            .and_then(|s| s.parse().ok()).unwrap_or(42);
+
+        let net = init_path.and_then(|p| {
+            match cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(p)) {
+                Ok(n) => { eprintln!("[selfplay-pool] loaded weights from {}", p); Some(n) }
+                Err(e) => { eprintln!("[selfplay-pool] failed to load {}: {}", p, e); None }
+            }
+        });
+
+        let mode = if let Some(t) = temperature {
+            cascadia_ai::nnue_train::SamplingMode::Softmax(t)
+        } else {
+            cascadia_ai::nnue_train::SamplingMode::EpsilonGreedy(epsilon)
+        };
+
+        eprintln!("[selfplay-pool] {} games, seed={}, out={}",
+                  num_games, seed, out_path);
+        let start = Instant::now();
+        let samples = cascadia_ai::nnue_train::generate_samples_with_mode(
+            num_games, seed, net.as_ref(), mode, 4,
+        );
+        let elapsed = start.elapsed();
+
+        cascadia_ai::nnue_train::append_mce_samples_v3(
+            std::path::Path::new(out_path), &samples,
+        ).expect("Failed to write shard");
+        eprintln!("[selfplay-pool] {} samples from {} games in {:.1?} → {}",
+                  samples.len(), num_games, elapsed, out_path);
+        println!("SAMPLES={}", samples.len());
+        println!("GAMES={}", num_games);
+        println!("ELAPSED_SEC={}", elapsed.as_secs_f64());
+        return;
     } else if run_self_play {
         // Generate NNUE self-play games and write to MCV3 format
         let weights_path = args.iter().position(|a| a == "--weights")
@@ -1224,6 +2097,727 @@ fn main() {
         ).expect("Failed to write v3 samples");
         println!("Generated {} samples from {} games in {:.1?} (MCV3 format: aux targets + target_wildlife)",
             samples.len(), num_games, start.elapsed());
+
+        // Also write tile-token format alongside MCV3 if requested
+        if args.iter().any(|a| a == "--tile-token-out") {
+            println!("  NOTE: Use --tile-token-selfplay for dedicated tile-token generation.");
+            println!("  The standard --self-play pipeline only saves sparse features, not board states.");
+        }
+        return;
+    } else if run_tile_token_selfplay {
+        // Generate self-play games and write tile-token format for transformer/GNN training.
+        // This captures full board states (including tile rotations) at each position.
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("tile_tokens.bin");
+        let epsilon: f32 = args.iter().position(|a| a == "--epsilon")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.1);
+
+        let net = weights_path.and_then(|p| {
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(p)).ok()
+        });
+        let strategy = if net.is_some() { "NNUE" } else { "greedy" };
+        println!("Generating {} tile-token self-play games ({}, epsilon={}, out={})",
+            num_games, strategy, epsilon, out_path);
+
+        let start = Instant::now();
+        use rand::SeedableRng;
+        let seed_offset: u64 = std::env::var("CASCADIA_SEED_OFFSET").ok()
+            .and_then(|s| s.parse().ok()).unwrap_or(0);
+        let base_seed: u64 = if args.iter().any(|a| a == "--random-seed") {
+            rand::random()
+        } else { 42 };
+
+        let num_players = 4;
+        // Parallelize across threads: each thread plays its share of games and collects samples.
+        let num_threads = std::thread::available_parallelism()
+            .map(|n| n.get()).unwrap_or(4);
+        let games_per_thread = (num_games + num_threads - 1) / num_threads;
+        println!("  Using {} threads ({} games/thread)", num_threads, games_per_thread);
+
+        type TTSample = (Vec<cascadia_ai::nnue::TileToken>, cascadia_ai::nnue::GlobalFeatures, f32);
+        let net_arc = std::sync::Arc::new(net);
+
+        let handles: Vec<_> = (0..num_threads).map(|t| {
+            let n_this = if t < num_threads - 1 {
+                games_per_thread.min(num_games.saturating_sub(t * games_per_thread))
+            } else {
+                num_games.saturating_sub(t * games_per_thread)
+            };
+            let thread_seed = base_seed
+                .wrapping_add(seed_offset)
+                .wrapping_add((t as u64) * 1_000_000);
+            let net = std::sync::Arc::clone(&net_arc);
+            std::thread::spawn(move || {
+                let mut results: Vec<TTSample> = Vec::new();
+                let mut total_score: u64 = 0;
+                for game_idx in 0..n_this {
+                    let mut rng = rand::rngs::StdRng::seed_from_u64(thread_seed.wrapping_add(game_idx as u64));
+                    let cards = cascadia_core::types::ScoringCards::all_a();
+                    let mut game = cascadia_core::game::GameState::new(num_players, cards, &mut rng);
+
+                    let mut snapshots: Vec<(cascadia_core::board::Board, cascadia_ai::nnue::BagInfo)> = Vec::new();
+                    while !game.is_game_over() {
+                        if game.current_player == 0 {
+                            if game.can_replace_overflow().is_some() {
+                                game.replace_overflow();
+                            }
+                            let bag = cascadia_ai::nnue::BagInfo::from_game(&game);
+                            snapshots.push((game.boards[0].clone(), bag));
+
+                            let mv = if let Some(ref n) = *net {
+                                let cands = cascadia_ai::search::candidate_moves_decomposed(&game, n);
+                                if cands.is_empty() {
+                                    cascadia_ai::eval::best_move_with_potential(
+                                        &mut game.boards[0].clone(),
+                                        &game.market.available().map(|(i, p)| (i, p.tile, p.wildlife)).collect::<Vec<_>>(),
+                                        &game.scoring_cards, game.turns_remaining,
+                                    )
+                                } else if rng.gen::<f32>() < epsilon {
+                                    use rand::seq::SliceRandom;
+                                    Some(*cands.choose(&mut rng).unwrap())
+                                } else {
+                                    Some(cands[0])
+                                }
+                            } else {
+                                cascadia_ai::search::greedy_move(&game)
+                            };
+                            if let Some(mv) = mv {
+                                if !cascadia_ai::search::execute_scored_move(&mut game, &mv) { break; }
+                            } else { break; }
+                        } else {
+                            if game.can_replace_overflow().is_some() {
+                                game.replace_overflow();
+                            }
+                            match cascadia_ai::search::greedy_move(&game) {
+                                Some(mv) => { if !cascadia_ai::search::execute_scored_move(&mut game, &mv) { break; } }
+                                None => break,
+                            }
+                        }
+                    }
+
+                    let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut game.boards[0].clone(), &game.scoring_cards,
+                    ).total;
+                    total_score += final_score as u64;
+
+                    for (board, bag) in &snapshots {
+                        let current_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                            &mut board.clone(), &game.scoring_cards,
+                        ).total;
+                        let delta = (final_score as f32) - (current_score as f32);
+                        let (tokens, global) = cascadia_ai::nnue::extract_tile_tokens(board, Some(bag));
+                        results.push((tokens, global, delta));
+                    }
+                }
+                (results, total_score, n_this)
+            })
+        }).collect();
+
+        let mut all_samples: Vec<TTSample> = Vec::new();
+        let mut total_score = 0u64;
+        for h in handles {
+            let (results, ts, _n) = h.join().unwrap();
+            all_samples.extend(results);
+            total_score += ts;
+        }
+
+        cascadia_ai::nnue::write_tile_token_samples(out_path, &all_samples)
+            .expect("Failed to write tile-token samples");
+        let avg = total_score as f64 / num_games as f64;
+        println!("Generated {} tile-token samples from {} games in {:.1?} (avg score {:.1})",
+            all_samples.len(), num_games, start.elapsed(), avg);
+        return;
+    } else if run_rich_tile_token_selfplay {
+        // Generate self-play games and write RICH tile-token format (TIL2) for transformer training.
+        // Each tile carries per-cell adjacency info (6 dirs × wildlife + terrain) — NNUE-v3-level
+        // richness per tile, encoded as a sparse one-hot bag of features inside the transformer.
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
+        let out_path = args.iter().position(|a| a == "--out")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("rich_tile_tokens.bin");
+        let epsilon: f32 = args.iter().position(|a| a == "--epsilon")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.1);
+
+        let net = weights_path.and_then(|p| {
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(p)).ok()
+        });
+        let strategy = if net.is_some() { "NNUE" } else { "greedy" };
+        println!("Generating {} RICH tile-token self-play games ({}, epsilon={}, out={})",
+            num_games, strategy, epsilon, out_path);
+
+        let start = Instant::now();
+        use rand::SeedableRng;
+        let seed_offset: u64 = std::env::var("CASCADIA_SEED_OFFSET").ok()
+            .and_then(|s| s.parse().ok()).unwrap_or(0);
+        let base_seed: u64 = if args.iter().any(|a| a == "--random-seed") {
+            rand::random()
+        } else { 42 };
+
+        let num_players = 4;
+        let num_threads = std::thread::available_parallelism()
+            .map(|n| n.get()).unwrap_or(4);
+        let games_per_thread = (num_games + num_threads - 1) / num_threads;
+        println!("  Using {} threads ({} games/thread)", num_threads, games_per_thread);
+
+        type RichSample = (Vec<cascadia_ai::nnue::RichTileToken>, cascadia_ai::nnue::GlobalFeatures, f32);
+        let net_arc = std::sync::Arc::new(net);
+
+        let handles: Vec<_> = (0..num_threads).map(|t| {
+            let n_this = if t < num_threads - 1 {
+                games_per_thread.min(num_games.saturating_sub(t * games_per_thread))
+            } else {
+                num_games.saturating_sub(t * games_per_thread)
+            };
+            let thread_seed = base_seed
+                .wrapping_add(seed_offset)
+                .wrapping_add((t as u64) * 1_000_000);
+            let net = std::sync::Arc::clone(&net_arc);
+            std::thread::spawn(move || {
+                let mut results: Vec<RichSample> = Vec::new();
+                let mut total_score: u64 = 0;
+                for game_idx in 0..n_this {
+                    let mut rng = rand::rngs::StdRng::seed_from_u64(thread_seed.wrapping_add(game_idx as u64));
+                    let cards = cascadia_core::types::ScoringCards::all_a();
+                    let mut game = cascadia_core::game::GameState::new(num_players, cards, &mut rng);
+
+                    let mut snapshots: Vec<(cascadia_core::board::Board, cascadia_ai::nnue::BagInfo)> = Vec::new();
+                    while !game.is_game_over() {
+                        if game.current_player == 0 {
+                            if game.can_replace_overflow().is_some() {
+                                game.replace_overflow();
+                            }
+                            let bag = cascadia_ai::nnue::BagInfo::from_game(&game);
+                            snapshots.push((game.boards[0].clone(), bag));
+
+                            let mv = if let Some(ref n) = *net {
+                                let cands = cascadia_ai::search::candidate_moves_decomposed(&game, n);
+                                if cands.is_empty() {
+                                    cascadia_ai::eval::best_move_with_potential(
+                                        &mut game.boards[0].clone(),
+                                        &game.market.available().map(|(i, p)| (i, p.tile, p.wildlife)).collect::<Vec<_>>(),
+                                        &game.scoring_cards, game.turns_remaining,
+                                    )
+                                } else if rng.gen::<f32>() < epsilon {
+                                    use rand::seq::SliceRandom;
+                                    Some(*cands.choose(&mut rng).unwrap())
+                                } else {
+                                    Some(cands[0])
+                                }
+                            } else {
+                                cascadia_ai::search::greedy_move(&game)
+                            };
+                            if let Some(mv) = mv {
+                                if !cascadia_ai::search::execute_scored_move(&mut game, &mv) { break; }
+                            } else { break; }
+                        } else {
+                            if game.can_replace_overflow().is_some() {
+                                game.replace_overflow();
+                            }
+                            match cascadia_ai::search::greedy_move(&game) {
+                                Some(mv) => { if !cascadia_ai::search::execute_scored_move(&mut game, &mv) { break; } }
+                                None => break,
+                            }
+                        }
+                    }
+
+                    let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut game.boards[0].clone(), &game.scoring_cards,
+                    ).total;
+                    total_score += final_score as u64;
+
+                    for (board, bag) in &snapshots {
+                        let current_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                            &mut board.clone(), &game.scoring_cards,
+                        ).total;
+                        let delta = (final_score as f32) - (current_score as f32);
+                        let (tokens, global) = cascadia_ai::nnue::extract_rich_tile_tokens(board, Some(bag));
+                        results.push((tokens, global, delta));
+                    }
+                }
+                (results, total_score, n_this)
+            })
+        }).collect();
+
+        let mut all_samples: Vec<RichSample> = Vec::new();
+        let mut total_score = 0u64;
+        for h in handles {
+            let (results, ts, _n) = h.join().unwrap();
+            all_samples.extend(results);
+            total_score += ts;
+        }
+
+        cascadia_ai::nnue::write_rich_tile_token_samples(out_path, &all_samples)
+            .expect("Failed to write rich tile-token samples");
+        let avg = total_score as f64 / num_games as f64;
+        println!("Generated {} rich tile-token samples from {} games in {:.1?} (avg score {:.1})",
+            all_samples.len(), num_games, start.elapsed(), avg);
+        return;
+    } else if run_external_eval {
+        // Play N games where player 0 uses an external evaluator (via stdin/stdout).
+        //
+        // Protocol (all messages framed as: u8 type + u32 LE length + payload):
+        //   Rust → Python:
+        //     0x01 EVAL:  u8 num_candidates,
+        //                 for each: u8 num_tiles,
+        //                           (11 * num_tiles) tile bytes,
+        //                           45 global bytes,
+        //                           f32 current_score (LE)
+        //     0x02 DONE:  u16 final_score (LE)
+        //     0x03 FINAL: empty
+        //   Python → Rust:
+        //     0x10 PICK:  u8 chosen_idx
+        //
+        // All logging goes to stderr. stdout is protocol-only.
+        use std::io::{Read, Write};
+
+        let num_players = 4;
+        use rand::SeedableRng;
+        let base_seed: u64 = if args.iter().any(|a| a == "--random-seed") {
+            rand::random()
+        } else { 42 };
+        let seed_offset: u64 = std::env::var("CASCADIA_SEED_OFFSET").ok()
+            .and_then(|s| s.parse().ok()).unwrap_or(0);
+
+        let stdout = std::io::stdout();
+        let stdin = std::io::stdin();
+        let mut stdout = stdout.lock();
+        let mut stdin = stdin.lock();
+
+        eprintln!("[external-eval] Playing {} games with external evaluator", num_games);
+
+        let mut all_scores: Vec<u16> = Vec::with_capacity(num_games);
+        let eval_start = Instant::now();
+
+        for game_idx in 0..num_games {
+            let mut rng = rand::rngs::StdRng::seed_from_u64(
+                base_seed.wrapping_add(seed_offset + game_idx as u64));
+            let cards = cascadia_core::types::ScoringCards::all_a();
+            let mut game = cascadia_core::game::GameState::new(num_players, cards, &mut rng);
+
+            while !game.is_game_over() {
+                if game.current_player != 0 {
+                    if game.can_replace_overflow().is_some() {
+                        game.replace_overflow();
+                    }
+                    match cascadia_ai::search::greedy_move(&game) {
+                        Some(mv) => { if !cascadia_ai::search::execute_scored_move(&mut game, &mv) { break; } }
+                        None => break,
+                    }
+                    continue;
+                }
+
+                // Player 0's turn
+                if game.can_replace_overflow().is_some() {
+                    game.replace_overflow();
+                }
+
+                // Generate candidates (use a lightweight enumeration — all decomposed
+                // candidate moves, same as in self-play when no NNUE is loaded).
+                // We reuse candidate_moves_decomposed with a dummy net if available.
+                let candidates: Vec<cascadia_ai::eval::ScoredMove> = {
+                    let mp: Vec<_> = game.market.available()
+                        .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+                    if mp.is_empty() {
+                        Vec::new()
+                    } else {
+                        let mut c = Vec::new();
+                        // Simple: for each market combo (single-slot draft), get the
+                        // best move for that combo via existing eval. Also try all
+                        // independent drafts if nature tokens are available.
+                        let cards = game.scoring_cards;
+                        let turns = game.turns_remaining;
+                        let board = &game.boards[0];
+                        for &(idx, tile, wl) in &mp {
+                            let restricted = vec![(idx, tile, wl)];
+                            let mut b = board.clone();
+                            if let Some(mv) = cascadia_ai::eval::best_move_with_potential(
+                                &mut b, &restricted, &cards, turns) {
+                                c.push(mv);
+                            }
+                        }
+                        if board.nature_tokens > 0 && mp.len() >= 2 {
+                            for &(ti, tile, _) in &mp {
+                                for &(wi, _, wl) in &mp {
+                                    if ti == wi { continue; }
+                                    let restricted = vec![(ti, tile, wl)];
+                                    let mut b = board.clone();
+                                    if let Some(mut mv) = cascadia_ai::eval::best_move_with_potential(
+                                        &mut b, &restricted, &cards, turns) {
+                                        mv.wildlife_market_index = Some(wi);
+                                        c.push(mv);
+                                    }
+                                }
+                            }
+                        }
+                        c
+                    }
+                };
+
+                if candidates.is_empty() {
+                    break;
+                }
+
+                // Build tile tokens for each candidate's afterstate + current_score
+                let mut payload: Vec<u8> = Vec::new();
+                payload.push(candidates.len() as u8);
+                for mv in &candidates {
+                    let mut g = game.clone();
+                    if !cascadia_ai::search::execute_scored_move(&mut g, mv) {
+                        // shouldn't happen, but fill with minimal data
+                        payload.push(0);
+                        payload.extend_from_slice(&[0u8; 45]);
+                        payload.extend_from_slice(&0f32.to_le_bytes());
+                        continue;
+                    }
+                    let bag = cascadia_ai::nnue::BagInfo::from_game(&g);
+                    let (tokens, global) = cascadia_ai::nnue::extract_tile_tokens(&g.boards[0], Some(&bag));
+                    let current_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut g.boards[0].clone(), &g.scoring_cards,
+                    ).total as f32;
+
+                    payload.push(tokens.len() as u8);
+                    for t in &tokens {
+                        payload.extend_from_slice(&t.terrain_triangles);
+                        payload.push(t.wildlife);
+                        payload.push(t.allowed_mask);
+                        let flags = (t.keystone as u8) | ((t.has_wildlife as u8) << 1);
+                        payload.push(flags);
+                        payload.push(t.q as u8);
+                        payload.push(t.r as u8);
+                    }
+                    // Globals (45 bytes)
+                    payload.push(global.turn);
+                    payload.push(global.nature_tokens);
+                    payload.extend_from_slice(&global.wildlife_counts);
+                    payload.extend_from_slice(&global.largest_habitat);
+                    payload.extend_from_slice(&global.bag_remaining);
+                    payload.extend_from_slice(&global.opp_habitat);
+                    payload.extend_from_slice(&global.market_terrain1);
+                    payload.extend_from_slice(&global.market_terrain2);
+                    payload.extend_from_slice(&global.market_wildlife);
+                    payload.extend_from_slice(&global.tbag_terrain);
+                    payload.extend_from_slice(&global.tbag_wildlife);
+                    payload.push(global.overflow_used as u8);
+                    // current_score as f32 LE
+                    payload.extend_from_slice(&current_score.to_le_bytes());
+                }
+
+                // Write EVAL frame
+                stdout.write_all(&[0x01u8]).expect("stdout write");
+                stdout.write_all(&(payload.len() as u32).to_le_bytes()).expect("stdout write");
+                stdout.write_all(&payload).expect("stdout write");
+                stdout.flush().expect("stdout flush");
+
+                // Read PICK
+                let mut header = [0u8; 5]; // type(1) + length(4)
+                stdin.read_exact(&mut header).expect("stdin read");
+                if header[0] != 0x10 {
+                    eprintln!("[external-eval] FATAL: expected PICK (0x10), got {:#x}", header[0]);
+                    std::process::exit(1);
+                }
+                let pick_len = u32::from_le_bytes([header[1], header[2], header[3], header[4]]) as usize;
+                let mut pick_data = vec![0u8; pick_len];
+                stdin.read_exact(&mut pick_data).expect("stdin read pick");
+                let chosen_idx = pick_data[0] as usize;
+                if chosen_idx >= candidates.len() {
+                    eprintln!("[external-eval] FATAL: chosen index {} >= num candidates {}", chosen_idx, candidates.len());
+                    std::process::exit(1);
+                }
+
+                let chosen = candidates[chosen_idx];
+                if !cascadia_ai::search::execute_scored_move(&mut game, &chosen) { break; }
+            }
+
+            let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                &mut game.boards[0].clone(), &game.scoring_cards,
+            ).total;
+            all_scores.push(final_score);
+
+            // Write DONE frame
+            stdout.write_all(&[0x02u8]).expect("stdout write");
+            stdout.write_all(&(2u32).to_le_bytes()).expect("stdout write");
+            stdout.write_all(&final_score.to_le_bytes()).expect("stdout write");
+            stdout.flush().expect("stdout flush");
+
+            eprintln!("[external-eval] Game {}/{}: {} pts ({:.1}s total)",
+                game_idx + 1, num_games, final_score, eval_start.elapsed().as_secs_f64());
+        }
+
+        // FINAL
+        stdout.write_all(&[0x03u8]).expect("stdout write");
+        stdout.write_all(&(0u32).to_le_bytes()).expect("stdout write");
+        stdout.flush().expect("stdout flush");
+
+        let mean = all_scores.iter().map(|&s| s as f64).sum::<f64>() / all_scores.len() as f64;
+        eprintln!("[external-eval] DONE: mean {:.1} across {} games", mean, all_scores.len());
+        return;
+    } else if run_gnn_mce_bench {
+        // GNN MCE benchmark: at each player-0 decision, do N rollouts per candidate
+        // (greedy policy for all players during rollout), collect leaf tile-tokens,
+        // send to Python for batched GNN evaluation. Python responds with chosen_idx.
+        //
+        // Protocol (framed as: u8 type + u32 LE length + payload):
+        //   Rust → Python:
+        //     0x04 MCE_EVAL:
+        //         u8 num_candidates
+        //         u16 LE rollouts_per_candidate (R)
+        //         for each of (num_candidates * R):
+        //             u8 num_tiles,
+        //             (11 * num_tiles) tile bytes,
+        //             45 global bytes,
+        //             f32 LE leaf_current_score
+        //     0x02 DONE:  u16 final_score
+        //     0x03 FINAL: empty
+        //   Python → Rust:
+        //     0x10 PICK:  u8 chosen_idx
+        use std::io::{Read, Write};
+        use rand::SeedableRng;
+
+        let num_players = 4;
+        let rollouts: usize = args.iter().position(|a| a == "--rollouts")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(50);
+        let depth: usize = args.iter().position(|a| a == "--depth")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(6);
+        let base_seed: u64 = if args.iter().any(|a| a == "--random-seed") {
+            rand::random()
+        } else { 42 };
+        let seed_offset: u64 = std::env::var("CASCADIA_SEED_OFFSET").ok()
+            .and_then(|s| s.parse().ok()).unwrap_or(0);
+
+        let stdout = std::io::stdout();
+        let stdin = std::io::stdin();
+        let mut stdout = stdout.lock();
+        let mut stdin = stdin.lock();
+
+        eprintln!("[gnn-mce-bench] {} games, rollouts={}, depth={}",
+            num_games, rollouts, depth);
+
+        let mut all_scores: Vec<u16> = Vec::with_capacity(num_games);
+        let bench_start = Instant::now();
+
+        for game_idx in 0..num_games {
+            let mut rng = rand::rngs::StdRng::seed_from_u64(
+                base_seed.wrapping_add(seed_offset + game_idx as u64));
+            let cards = cascadia_core::types::ScoringCards::all_a();
+            let mut game = cascadia_core::game::GameState::new(num_players, cards, &mut rng);
+
+            while !game.is_game_over() {
+                if game.current_player != 0 {
+                    if game.can_replace_overflow().is_some() {
+                        game.replace_overflow();
+                    }
+                    match cascadia_ai::search::greedy_move(&game) {
+                        Some(mv) => { if !cascadia_ai::search::execute_scored_move(&mut game, &mv) { break; } }
+                        None => break,
+                    }
+                    continue;
+                }
+
+                // Player 0 turn
+                if game.can_replace_overflow().is_some() {
+                    game.replace_overflow();
+                }
+
+                // Generate candidate moves (same logic as external-eval)
+                let candidates: Vec<cascadia_ai::eval::ScoredMove> = {
+                    let mp: Vec<_> = game.market.available()
+                        .map(|(i, p)| (i, p.tile, p.wildlife)).collect();
+                    if mp.is_empty() {
+                        Vec::new()
+                    } else {
+                        let mut c = Vec::new();
+                        let cards = game.scoring_cards;
+                        let turns = game.turns_remaining;
+                        let board = &game.boards[0];
+                        for &(idx, tile, wl) in &mp {
+                            let restricted = vec![(idx, tile, wl)];
+                            let mut b = board.clone();
+                            if let Some(mv) = cascadia_ai::eval::best_move_with_potential(
+                                &mut b, &restricted, &cards, turns) {
+                                c.push(mv);
+                            }
+                        }
+                        if board.nature_tokens > 0 && mp.len() >= 2 {
+                            for &(ti, tile, _) in &mp {
+                                for &(wi, _, wl) in &mp {
+                                    if ti == wi { continue; }
+                                    let restricted = vec![(ti, tile, wl)];
+                                    let mut b = board.clone();
+                                    if let Some(mut mv) = cascadia_ai::eval::best_move_with_potential(
+                                        &mut b, &restricted, &cards, turns) {
+                                        mv.wildlife_market_index = Some(wi);
+                                        c.push(mv);
+                                    }
+                                }
+                            }
+                        }
+                        c
+                    }
+                };
+
+                if candidates.is_empty() {
+                    break;
+                }
+
+                // Do rollouts in parallel: for each candidate × R rollouts, play
+                // greedy for both sides from the afterstate for `depth` AI turns,
+                // then capture the leaf (board, bag, current_score).
+                let num_threads = std::thread::available_parallelism()
+                    .map(|n| n.get()).unwrap_or(8);
+                type Leaf = (Vec<cascadia_ai::nnue::TileToken>, cascadia_ai::nnue::GlobalFeatures, f32);
+                let mut work_items: Vec<(usize, u64)> = Vec::new();
+                for (ci, _mv) in candidates.iter().enumerate() {
+                    for _ in 0..rollouts {
+                        work_items.push((ci, rng.gen()));
+                    }
+                }
+                let chunk_size = ((work_items.len() + num_threads - 1) / num_threads).max(1);
+                let game_arc = std::sync::Arc::new(game.clone());
+                let candidates_arc = std::sync::Arc::new(candidates.clone());
+
+                let handles: Vec<_> = work_items.chunks(chunk_size).map(|chunk| {
+                    let work = chunk.to_vec();
+                    let g = std::sync::Arc::clone(&game_arc);
+                    let c = std::sync::Arc::clone(&candidates_arc);
+                    std::thread::spawn(move || {
+                        let mut results: Vec<(usize, Leaf)> = Vec::with_capacity(work.len());
+                        for &(ci, seed) in &work {
+                            let mut gs = (*g).clone();
+                            let mut rr = rand::rngs::StdRng::seed_from_u64(seed);
+                            gs.shuffle_bags(&mut rr);
+                            if !cascadia_ai::search::execute_scored_move(&mut gs, &c[ci]) {
+                                continue;
+                            }
+                            let mut ai_turns = 0usize;
+                            while !gs.is_game_over() {
+                                if gs.current_player != 0 {
+                                    if gs.can_replace_overflow().is_some() {
+                                        gs.replace_overflow();
+                                    }
+                                    match cascadia_ai::search::greedy_move(&gs) {
+                                        Some(mv) => { if !cascadia_ai::search::execute_scored_move(&mut gs, &mv) { break; } }
+                                        None => break,
+                                    }
+                                    continue;
+                                }
+                                ai_turns += 1;
+                                if ai_turns > depth { break; }
+                                if gs.can_replace_overflow().is_some() {
+                                    gs.replace_overflow();
+                                }
+                                match cascadia_ai::search::greedy_move(&gs) {
+                                    Some(mv) => { if !cascadia_ai::search::execute_scored_move(&mut gs, &mv) { break; } }
+                                    None => break,
+                                }
+                            }
+                            // Capture leaf
+                            let bag = cascadia_ai::nnue::BagInfo::from_game(&gs);
+                            let (tokens, global) = cascadia_ai::nnue::extract_tile_tokens(&gs.boards[0], Some(&bag));
+                            let leaf_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                                &mut gs.boards[0].clone(), &gs.scoring_cards,
+                            ).total as f32;
+                            results.push((ci, (tokens, global, leaf_score)));
+                        }
+                        results
+                    })
+                }).collect();
+
+                // Collect per-candidate leaves in order
+                let mut leaves_by_ci: Vec<Vec<Leaf>> = (0..candidates.len())
+                    .map(|_| Vec::with_capacity(rollouts)).collect();
+                for h in handles {
+                    for (ci, leaf) in h.join().unwrap() {
+                        leaves_by_ci[ci].push(leaf);
+                    }
+                }
+
+                // Serialize MCE_EVAL payload
+                let mut payload: Vec<u8> = Vec::new();
+                payload.push(candidates.len() as u8);
+                payload.extend_from_slice(&(rollouts as u16).to_le_bytes());
+                for ci in 0..candidates.len() {
+                    for r in 0..rollouts {
+                        if r < leaves_by_ci[ci].len() {
+                            let (tokens, global, leaf_score) = &leaves_by_ci[ci][r];
+                            payload.push(tokens.len() as u8);
+                            for t in tokens {
+                                payload.extend_from_slice(&t.terrain_triangles);
+                                payload.push(t.wildlife);
+                                payload.push(t.allowed_mask);
+                                let flags = (t.keystone as u8) | ((t.has_wildlife as u8) << 1);
+                                payload.push(flags);
+                                payload.push(t.q as u8);
+                                payload.push(t.r as u8);
+                            }
+                            payload.push(global.turn);
+                            payload.push(global.nature_tokens);
+                            payload.extend_from_slice(&global.wildlife_counts);
+                            payload.extend_from_slice(&global.largest_habitat);
+                            payload.extend_from_slice(&global.bag_remaining);
+                            payload.extend_from_slice(&global.opp_habitat);
+                            payload.extend_from_slice(&global.market_terrain1);
+                            payload.extend_from_slice(&global.market_terrain2);
+                            payload.extend_from_slice(&global.market_wildlife);
+                            payload.extend_from_slice(&global.tbag_terrain);
+                            payload.extend_from_slice(&global.tbag_wildlife);
+                            payload.push(global.overflow_used as u8);
+                            payload.extend_from_slice(&leaf_score.to_le_bytes());
+                        } else {
+                            // Rollout failed: emit empty-ish leaf (0 tiles, score=0)
+                            payload.push(0);
+                            payload.extend_from_slice(&[0u8; 45]);
+                            payload.extend_from_slice(&0f32.to_le_bytes());
+                        }
+                    }
+                }
+
+                stdout.write_all(&[0x04u8]).expect("stdout write");
+                stdout.write_all(&(payload.len() as u32).to_le_bytes()).expect("stdout write");
+                stdout.write_all(&payload).expect("stdout write");
+                stdout.flush().expect("stdout flush");
+
+                let mut header = [0u8; 5];
+                stdin.read_exact(&mut header).expect("stdin read");
+                if header[0] != 0x10 {
+                    eprintln!("[gnn-mce-bench] FATAL: expected PICK, got {:#x}", header[0]);
+                    std::process::exit(1);
+                }
+                let pick_len = u32::from_le_bytes([header[1], header[2], header[3], header[4]]) as usize;
+                let mut pick_data = vec![0u8; pick_len];
+                stdin.read_exact(&mut pick_data).expect("stdin read pick");
+                let chosen_idx = pick_data[0] as usize;
+                if chosen_idx >= candidates.len() {
+                    eprintln!("[gnn-mce-bench] FATAL: chosen idx {} >= num candidates {}", chosen_idx, candidates.len());
+                    std::process::exit(1);
+                }
+                let chosen = candidates[chosen_idx];
+                if !cascadia_ai::search::execute_scored_move(&mut game, &chosen) { break; }
+            }
+
+            let final_score = cascadia_core::scoring::ScoreBreakdown::compute(
+                &mut game.boards[0].clone(), &game.scoring_cards,
+            ).total;
+            all_scores.push(final_score);
+
+            stdout.write_all(&[0x02u8]).expect("stdout write");
+            stdout.write_all(&(2u32).to_le_bytes()).expect("stdout write");
+            stdout.write_all(&final_score.to_le_bytes()).expect("stdout write");
+            stdout.flush().expect("stdout flush");
+
+            eprintln!("[gnn-mce-bench] Game {}/{}: {} pts ({:.1}s total)",
+                game_idx + 1, num_games, final_score, bench_start.elapsed().as_secs_f64());
+        }
+
+        stdout.write_all(&[0x03u8]).expect("stdout write");
+        stdout.write_all(&(0u32).to_le_bytes()).expect("stdout write");
+        stdout.flush().expect("stdout flush");
+
+        let mean = all_scores.iter().map(|&s| s as f64).sum::<f64>() / all_scores.len() as f64;
+        eprintln!("[gnn-mce-bench] DONE: mean {:.1} across {} games", mean, all_scores.len());
         return;
     } else if run_export_pytorch {
         // Load MCE samples, augment with rotations+translations, export as raw binary
@@ -1849,10 +3443,17 @@ fn main() {
                 .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
                 .unwrap_or("nnue_weights.bin")
         );
+        // --init-weights <path>: load initial weights from this path instead of
+        // --weights. Useful when you want input and output to be different files
+        // (checkpoint-style training: train iter N from iter N-1, save as iter N).
+        let init_weights_path: Option<std::path::PathBuf> = args.iter().position(|a| a == "--init-weights")
+            .and_then(|i| args.get(i + 1))
+            .map(|s| std::path::PathBuf::from(s));
 
-        let mut net = if weights_path.exists() {
-            println!("Loading NNUE weights from {:?}...", weights_path);
-            cascadia_ai::nnue::NNUENetwork::load(&weights_path).unwrap_or_else(|e| {
+        let load_path = init_weights_path.as_ref().unwrap_or(&weights_path);
+        let mut net = if load_path.exists() {
+            println!("Loading NNUE weights from {:?}...", load_path);
+            cascadia_ai::nnue::NNUENetwork::load(load_path).unwrap_or_else(|e| {
                 eprintln!("Failed to load: {}, starting fresh", e);
                 cascadia_ai::nnue::NNUENetwork::new()
             })
@@ -1861,16 +3462,24 @@ fn main() {
             cascadia_ai::nnue::NNUENetwork::new()
         };
 
-        println!("Training NNUE: {} games, {} epochs, lr={}, weights={:?}",
-            train_games, epochs, lr, weights_path);
+        // CASCADIA_TRAIN_SEED overrides the default seed (42). Useful for
+        // iterative training where each iter should explore different data.
+        let seed: u64 = std::env::var("CASCADIA_TRAIN_SEED").ok()
+            .and_then(|s| s.parse().ok()).unwrap_or(42);
+        println!("Training NNUE: {} games, {} epochs, lr={}, seed={}, weights={:?}",
+            train_games, epochs, lr, seed, weights_path);
         let start = Instant::now();
-        let stats = cascadia_ai::nnue_train::train_nnue(&mut net, train_games, epochs, lr, 42);
+        let stats = cascadia_ai::nnue_train::train_nnue(&mut net, train_games, epochs, lr, seed);
         let elapsed = start.elapsed();
 
         println!("Training complete in {:.1?}", elapsed);
         println!("  Samples:    {}", stats.num_samples);
         println!("  Final RMSE: {:.2}", stats.final_rmse);
 
+        if !stats.final_rmse.is_finite() {
+            eprintln!("  [ABORTED save: final RMSE non-finite ({}), weights file left untouched]", stats.final_rmse);
+            std::process::exit(2);
+        }
         net.save(&weights_path).expect("Failed to save NNUE weights");
         println!("  Weights saved to {:?}", weights_path);
         return;
@@ -2047,6 +3656,65 @@ fn main() {
             let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
                 .expect("Failed to load NNUE weights for MCE");
             Strategy::MCE { net: Arc::new(net), rollouts }
+        } else if args.iter().any(|a| a == "--greedy-mce") {
+            let rollouts = args.iter().position(|a| a == "--rollouts")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
+            let alloc = args.iter().position(|a| a == "--alloc")
+                .and_then(|i| args.get(i + 1))
+                .map(|s| match s.as_str() {
+                    "halving" | "seq-halving" => cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                    "ucb" => cascadia_ai::mce::GreedyMceAlloc::Ucb,
+                    "crn" | "uniform-crn" => cascadia_ai::mce::GreedyMceAlloc::UniformCRN,
+                    "halving-crn" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingCRN,
+                    "halving-et" | "halving-early-term" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingEarlyTerm,
+                    "halving-ci" | "halving-conf" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingCI,
+                    "sr" | "successive-rejects" => cascadia_ai::mce::GreedyMceAlloc::SuccessiveRejects,
+                    "halving-pw" | "halving-progressive" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingPW,
+                    "thompson" | "ts" => cascadia_ai::mce::GreedyMceAlloc::ThompsonSampling,
+                    "mcts-pw" | "mcts" => cascadia_ai::mce::GreedyMceAlloc::MctsPW,
+                    _ => cascadia_ai::mce::GreedyMceAlloc::Uniform,
+                }).unwrap_or(cascadia_ai::mce::GreedyMceAlloc::Uniform);
+            let expanded = args.iter().position(|a| a == "--candidates")
+                .and_then(|i| args.get(i + 1))
+                .map(|s| s == "expanded").unwrap_or(false);
+            Strategy::GreedyMCE { rollouts, alloc, expanded }
+        } else if args.iter().any(|a| a == "--uct-mcts") {
+            let simulations = args.iter().position(|a| a == "--simulations")
+                .or_else(|| args.iter().position(|a| a == "--rollouts"))
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
+            let parallel = args.iter().any(|a| a == "--parallel");
+            Strategy::UctMcts { simulations, parallel }
+        } else if args.iter().any(|a| a == "--nnue-rollout-mce") {
+            let weights_path = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .unwrap_or("nnue_weights.bin");
+            let rollouts = args.iter().position(|a| a == "--rollouts")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
+            let alloc = args.iter().position(|a| a == "--alloc")
+                .and_then(|i| args.get(i + 1))
+                .map(|s| match s.as_str() {
+                    "halving" | "seq-halving" => cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                    "ucb" => cascadia_ai::mce::GreedyMceAlloc::Ucb,
+                    "crn" | "uniform-crn" => cascadia_ai::mce::GreedyMceAlloc::UniformCRN,
+                    "halving-crn" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingCRN,
+                    "halving-et" | "halving-early-term" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingEarlyTerm,
+                    "halving-ci" | "halving-conf" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingCI,
+                    "sr" | "successive-rejects" => cascadia_ai::mce::GreedyMceAlloc::SuccessiveRejects,
+                    "halving-pw" | "halving-progressive" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingPW,
+                    "thompson" | "ts" => cascadia_ai::mce::GreedyMceAlloc::ThompsonSampling,
+                    "mcts-pw" | "mcts" => cascadia_ai::mce::GreedyMceAlloc::MctsPW,
+                    _ => cascadia_ai::mce::GreedyMceAlloc::Uniform,
+                }).unwrap_or(cascadia_ai::mce::GreedyMceAlloc::Uniform);
+            let expanded = args.iter().position(|a| a == "--candidates")
+                .and_then(|i| args.get(i + 1))
+                .map(|s| s == "expanded").unwrap_or(false);
+            let prefilter_k: usize = args.iter().position(|a| a == "--prefilter-k")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0);
+            let exact_endgame: usize = args.iter().position(|a| a == "--exact-endgame")
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0);
+            let net = cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(weights_path))
+                .expect("Failed to load NNUE weights for nnue-rollout-mce");
+            Strategy::NnueRolloutMCE { net: Arc::new(net), rollouts, alloc, expanded, prefilter_k, exact_endgame }
         } else if args.iter().any(|a| a == "--nnue") {
             let weights_path = args.iter().position(|a| a == "--weights")
                 .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
