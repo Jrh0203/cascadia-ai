@@ -1248,9 +1248,16 @@ pub enum GreedyMceAlloc {
     /// Confidence-interval-aware halving: instead of halving the alive set by
     /// rank, eliminate any candidate whose UCB (mean + z*stderr) falls below
     /// the leader's LCB (mean - z*stderr). Adaptive — tight matches keep more
-    /// candidates alive; clear winners eliminate aggressively. z=1.5.
-    /// DEPRECATED: regresses, kept for backward compat.
+    /// candidates alive; clear winners eliminate aggressively.
+    /// Z tunable via MCE_HALVING_CI_Z (default 1.5).
+    /// MCE_HALVING_CI_FLOOR=1 → also enforce hard top-half-by-mean as floor.
     SeqHalvingCI,
+    /// Heteroscedastic-variance-weighted halving (OCBA-inspired).
+    /// Within each round, allocate budget proportional to variance/gap-squared
+    /// so high-variance candidates near the leader get more samples.
+    /// Eliminates by hard halving (top-half-by-mean) each round.
+    /// Asymptotically optimal under heterogeneous variance (Audibert+ 2010).
+    SeqHalvingHetero,
     /// Successive Rejects (Audibert & Bubeck 2010). K-1 phases; each phase
     /// eliminates the WORST remaining arm. Budget per phase grows to give
     /// more rollouts to harder-to-distinguish pairs late in the tournament.
@@ -1278,6 +1285,14 @@ pub enum GreedyMceAlloc {
     /// that sit at low NNUE rank. PW+UCB keeps discovering candidates while
     /// focusing on promising ones.
     MctsPW,
+    /// PUCT (AlphaZero-style): UCB1 with NNUE-prior weighting in the exploration term.
+    ///   PUCT(a) = Q(a) + c · P(a) · √N / (1 + n_a)
+    /// Where P(a) = softmax over NNUE priors (scaled by `MCE_PUCT_TAU`).
+    /// Differs from MctsPW by using prior probability (not visit-rank) for exploration
+    /// weighting. Lit: AlphaGo Zero (Silver 2017), AlphaZero (Silver 2018).
+    /// Tunables: MCE_PUCT_C (default 2.0), MCE_PUCT_TAU (default 8.0 — softmax temp).
+    /// Single-shot batched: explore via PUCT, run small batch per selection.
+    Puct,
 }
 
 /// Expanded candidate set generator for greedy MCE (used with `--candidates expanded`).
@@ -1444,10 +1459,14 @@ fn softmax_greedy_move(game: &GameState, temperature: f32, rng: &mut StdRng) -> 
     Some(options.last().unwrap().0)
 }
 
+/// Returns (final_score, control_variate). The CV is an NNUE eval taken at a
+/// fixed mid-rollout point (after `MCE_CV_AT_TURN` of player 0's plies, default 2).
+/// Correlated with final_score; usable for variance reduction at decision time.
+/// If MCE_CV_AT_TURN <= 0 or game ends before that turn, CV is set to final_score.
 fn run_nnue_rollout(
     mut gs: GameState, player: usize, seed: u64, candidate: &ScoredMove,
     net: &NNUENetwork,
-) -> u64 {
+) -> (u64, u64) {
     // MCE_OPP_TEMPERATURE: opponent softmax temperature in rollouts.
     // 0 or unset = greedy (default). >0 = softmax sampling over market options.
     // Pluribus insight: don't assume opponents play argmax.
@@ -1475,9 +1494,22 @@ fn run_nnue_rollout(
                  || s.eq_ignore_ascii_case("exmx1"))
         .unwrap_or(false);
 
+    // MCE_CV_AT_TURN: take control-variate NNUE eval after this many of player 0's
+    // plies. Default 2 — gives enough bag-shuffle variation to be informative.
+    // Set to 0 (or unset MCE_CONTROL_VARIATES) to skip the eval entirely (free path).
+    let cv_at_turn: usize = std::env::var("MCE_CV_AT_TURN").ok()
+        .and_then(|s| s.parse().ok()).unwrap_or(2);
+    // Only collect the mid-rollout CV eval if the caller actually plans to use it.
+    // Otherwise the extra NNUE forward + ScoreBreakdown::compute per rollout is pure
+    // wasted compute and slows down the rollout pipeline by ~25-40% (M1 measurements).
+    let cv_collect_enabled: bool = std::env::var("MCE_CONTROL_VARIATES").ok()
+        .map(|s| !s.is_empty() && s != "0").unwrap_or(false);
+
     let mut rr = StdRng::seed_from_u64(seed);
     gs.shuffle_bags(&mut rr);
-    if !execute_scored_move(&mut gs, candidate) { return 0; }
+    if !execute_scored_move(&mut gs, candidate) { return (0, 0); }
+    let mut player_turns_done: usize = 1; // candidate move counts as player turn 1
+    let mut cv_eval: Option<u64> = None;
     while !gs.is_game_over() {
         if gs.current_player != player {
             if gs.can_replace_overflow().is_some() {
@@ -1499,6 +1531,13 @@ fn run_nnue_rollout(
             if gs.can_replace_overflow().is_some() {
                 gs.replace_overflow();
             }
+            // Take control-variate NNUE eval at the start of player 0's `cv_at_turn`-th turn.
+            if cv_collect_enabled && cv_eval.is_none() && cv_at_turn > 0 && player_turns_done >= cv_at_turn {
+                let bag = crate::nnue::BagInfo::from_game_for_player(&gs, player);
+                let cur = ScoreBreakdown::compute(&mut gs.boards[player].clone(), &gs.scoring_cards).total as f64;
+                let remaining = net.evaluate_with_bag(&gs.boards[player], &bag) as f64;
+                cv_eval = Some(((cur + remaining).max(0.0)) as u64);
+            }
             let pm = if rollout_policy_expectimax {
                 best_move_expectimax_1ply(&gs, net)
             } else {
@@ -1508,11 +1547,14 @@ fn run_nnue_rollout(
                 Some(mv) => { if !execute_scored_move(&mut gs, &mv) { break; } }
                 None => break,
             }
+            player_turns_done += 1;
         }
     }
-    ScoreBreakdown::compute(
+    let final_score = ScoreBreakdown::compute(
         &mut gs.boards[player], &gs.scoring_cards,
-    ).total as u64
+    ).total as u64;
+    let cv = cv_eval.unwrap_or(final_score);
+    (final_score, cv)
 }
 
 /// Pure-greedy Monte Carlo Evaluation: no value network at all.
@@ -1721,7 +1763,13 @@ pub fn best_move_greedy_mce_v2(
         }
         GreedyMceAlloc::SeqHalvingCI => {
             // Confidence-interval-aware halving (greedy variant).
-            const Z: f64 = 1.5;
+            // Z tunable via MCE_HALVING_CI_Z (default 1.5).
+            // MCE_HALVING_CI_FLOOR=1 → also apply hard halving as a floor:
+            //   alive_next = intersect(CI_kept, top-half-by-mean).
+            let z: f64 = std::env::var("MCE_HALVING_CI_Z").ok()
+                .and_then(|s| s.parse().ok()).unwrap_or(1.5);
+            let hard_floor: bool = std::env::var("MCE_HALVING_CI_FLOOR").ok()
+                .map(|s| !s.is_empty() && s != "0").unwrap_or(false);
             let num_rounds = (n_cands as f64).log2().ceil().max(1.0) as usize;
             let mut alive: Vec<usize> = (0..n_cands).collect();
             let budget_per_round = (num_rollouts / num_rounds).max(n_cands);
@@ -1744,12 +1792,21 @@ pub fn best_move_greedy_mce_v2(
                     }).collect();
                     if stats.is_empty() { break; }
                     let leader_lcb = stats.iter().fold(f64::NEG_INFINITY, |acc, &(_, m, se)| {
-                        let lcb = m - Z * se;
+                        let lcb = m - z * se;
                         if lcb > acc { lcb } else { acc }
                     });
                     let mut kept: Vec<usize> = stats.iter().filter_map(|&(ci, m, se)| {
-                        if m + Z * se >= leader_lcb { Some(ci) } else { None }
+                        if m + z * se >= leader_lcb { Some(ci) } else { None }
                     }).collect();
+                    if hard_floor {
+                        let mut by_mean: Vec<(usize, f64)> = stats.iter()
+                            .map(|&(ci, m, _)| (ci, m)).collect();
+                        by_mean.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                        let max_keep = ((alive.len() + 1) / 2).max(2);
+                        let top: std::collections::HashSet<usize> = by_mean.into_iter()
+                            .take(max_keep).map(|(ci, _)| ci).collect();
+                        kept.retain(|ci| top.contains(ci));
+                    }
                     if kept.len() < 2 {
                         let mut by_mean: Vec<(usize, f64)> = stats.iter()
                             .map(|&(ci, m, _)| (ci, m)).collect();
@@ -1757,6 +1814,82 @@ pub fn best_move_greedy_mce_v2(
                         kept = by_mean.into_iter().take(2.min(stats.len())).map(|(ci, _)| ci).collect();
                     }
                     alive = kept;
+                }
+            }
+        }
+        GreedyMceAlloc::SeqHalvingHetero => {
+            // Heteroscedastic allocation (OCBA-inspired): within each halving
+            // round, give MORE rollouts to high-variance candidates close to
+            // the leader, FEWER to low-variance or far-from-leader candidates.
+            // Asymptotically optimal under heterogeneous variance (Audibert+ 2010).
+            // Eliminate by hard halving each round (so it's seq-halving-shaped).
+            // Round 0: uniform allocation (no variance estimates yet).
+            let num_rounds = (n_cands as f64).log2().ceil().max(1.0) as usize;
+            let mut alive: Vec<usize> = (0..n_cands).collect();
+            let budget_per_round = (num_rollouts / num_rounds).max(n_cands);
+            for round in 0..num_rounds {
+                if alive.is_empty() { break; }
+                // Compute per-candidate target rollouts for this round
+                let total_round = budget_per_round.max(alive.len());
+                let pers: Vec<usize> = if round == 0 {
+                    // Uniform first round to seed variance estimates
+                    let per = (total_round / alive.len()).max(1);
+                    alive.iter().map(|_| per).collect()
+                } else {
+                    // Compute (mean, var) for alive candidates
+                    let stats: Vec<(usize, f64, f64)> = alive.iter().filter_map(|&ci| {
+                        if counts[ci] == 0 { return None; }
+                        let n = counts[ci] as f64;
+                        let mean = totals[ci] as f64 / n;
+                        let var = (sumsq[ci] as f64 / n - mean * mean).max(1.0);
+                        Some((ci, mean, var))
+                    }).collect();
+                    if stats.is_empty() {
+                        let per = (total_round / alive.len()).max(1);
+                        alive.iter().map(|_| per).collect()
+                    } else {
+                        // Find leader by mean
+                        let leader = stats.iter().cloned().fold(stats[0],
+                            |acc, x| if x.1 > acc.1 { x } else { acc });
+                        // OCBA-lite: weight_i = var_i / max(gap_i², ε), leader gets sqrt(sum_others sq_weight)
+                        let eps = 1.0_f64;
+                        let mut weights: Vec<(usize, f64)> = Vec::with_capacity(alive.len());
+                        let mut sum_w_sq = 0.0_f64;
+                        for &(ci, m, v) in &stats {
+                            if ci == leader.0 { continue; }
+                            let gap = (leader.1 - m).abs().max(0.5);
+                            let w = v / (gap * gap + eps);
+                            weights.push((ci, w));
+                            sum_w_sq += w * w / v.max(1.0);
+                        }
+                        let leader_w = (sum_w_sq.sqrt()).max(1.0);
+                        weights.push((leader.0, leader_w));
+                        let total_w: f64 = weights.iter().map(|(_, w)| *w).sum();
+                        let scale = total_round as f64 / total_w.max(1e-9);
+                        // Map weights back to alive order
+                        let weight_map: std::collections::HashMap<usize, f64> =
+                            weights.into_iter().collect();
+                        alive.iter().map(|ci| {
+                            let w = *weight_map.get(ci).unwrap_or(&1.0);
+                            ((w * scale).round() as usize).max(1)
+                        }).collect()
+                    }
+                };
+                let mut work = Vec::with_capacity(pers.iter().sum());
+                for (idx, &ci) in alive.iter().enumerate() {
+                    for _ in 0..pers[idx] { work.push((ci, rng.gen())); }
+                }
+                run_work(work, &mut totals, &mut sumsq, &mut counts);
+                // Standard halving on means
+                if round < num_rounds - 1 {
+                    let mut scored: Vec<(usize, f64)> = alive.iter()
+                        .filter_map(|&ci| {
+                            if counts[ci] == 0 { return None; }
+                            Some((ci, totals[ci] as f64 / counts[ci] as f64))
+                        }).collect();
+                    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                    let keep = (scored.len() + 1) / 2;
+                    alive = scored.into_iter().take(keep).map(|(i, _)| i).collect();
                 }
             }
         }
@@ -1893,6 +2026,16 @@ pub fn best_move_greedy_mce_v2(
         GreedyMceAlloc::MctsPW => {
             // greedy-MCE path: fallback to Uniform (MctsPW only meaningful
             // for NNUE-rollout path which has the real implementation).
+            let per = num_rollouts / n_cands.max(1);
+            let mut work = Vec::with_capacity(per * n_cands);
+            for ci in 0..n_cands {
+                for _ in 0..per { work.push((ci, rng.gen())); }
+            }
+            run_work(work, &mut totals, &mut sumsq, &mut counts);
+        }
+        GreedyMceAlloc::Puct => {
+            // greedy-MCE path: fallback to Uniform (PUCT requires NNUE priors,
+            // not available in greedy-MCE path).
             let per = num_rollouts / n_cands.max(1);
             let mut work = Vec::with_capacity(per * n_cands);
             for ci in 0..n_cands {
@@ -2325,6 +2468,16 @@ pub fn best_move_nnue_rollout_mce(
     let cands_arc = std::sync::Arc::new(candidates.clone());
     let net_arc = std::sync::Arc::new(net.clone());
 
+    // MCE_CONTROL_VARIATES: enable per-rollout NNUE-eval-as-control-variate
+    // adjustment at decision time. Subtracts β·(B - meanB) from rollout means
+    // to reduce variance. β estimated online per candidate via Cov(R,B)/Var(B).
+    let use_cv: bool = std::env::var("MCE_CONTROL_VARIATES").ok()
+        .map(|s| !s.is_empty() && s != "0").unwrap_or(false);
+    // Accumulators for control variates (always populated; cheap).
+    let cv_totals = std::cell::RefCell::new(vec![0u64; n_cands]);
+    let cv_sumsq = std::cell::RefCell::new(vec![0u64; n_cands]);
+    let cross = std::cell::RefCell::new(vec![0i128; n_cands]);
+
     let run_work = |work_items: Vec<(usize, u64)>,
                     totals: &mut Vec<u64>, sumsq: &mut Vec<u64>, counts: &mut Vec<u32>| {
         let num_threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
@@ -2335,19 +2488,25 @@ pub fn best_move_nnue_rollout_mce(
             let c = std::sync::Arc::clone(&cands_arc);
             let n = std::sync::Arc::clone(&net_arc);
             std::thread::spawn(move || {
-                let mut results: Vec<(usize, u64)> = Vec::with_capacity(work.len());
+                let mut results: Vec<(usize, u64, u64)> = Vec::with_capacity(work.len());
                 for &(ci, seed) in &work {
-                    let score = run_nnue_rollout((*g).clone(), player, seed, &c[ci], &n);
-                    results.push((ci, score));
+                    let (score, cv) = run_nnue_rollout((*g).clone(), player, seed, &c[ci], &n);
+                    results.push((ci, score, cv));
                 }
                 results
             })
         }).collect();
+        let mut cvt = cv_totals.borrow_mut();
+        let mut cvs = cv_sumsq.borrow_mut();
+        let mut crs = cross.borrow_mut();
         for h in handles {
-            for (ci, score) in h.join().unwrap() {
+            for (ci, score, cv) in h.join().unwrap() {
                 totals[ci] += score;
                 sumsq[ci] += score * score;
                 counts[ci] += 1;
+                cvt[ci] += cv;
+                cvs[ci] += cv * cv;
+                crs[ci] += (score as i128) * (cv as i128);
             }
         }
     };
@@ -2514,7 +2673,12 @@ pub fn best_move_nnue_rollout_mce(
         GreedyMceAlloc::SeqHalvingCI => {
             // Confidence-interval-aware halving. Each round, eliminate any
             // candidate whose UCB < leader's LCB. Adaptive elimination rate.
-            const Z: f64 = 1.5;
+            // Z tunable via MCE_HALVING_CI_Z (default 1.5).
+            // MCE_HALVING_CI_FLOOR=1 → also enforce hard top-half-by-mean cap.
+            let z: f64 = std::env::var("MCE_HALVING_CI_Z").ok()
+                .and_then(|s| s.parse().ok()).unwrap_or(1.5);
+            let hard_floor: bool = std::env::var("MCE_HALVING_CI_FLOOR").ok()
+                .map(|s| !s.is_empty() && s != "0").unwrap_or(false);
             let num_rounds = (n_cands as f64).log2().ceil().max(1.0) as usize;
             let mut alive: Vec<usize> = (0..n_cands).collect();
             let budget_per_round = (num_rollouts / num_rounds).max(n_cands);
@@ -2539,13 +2703,22 @@ pub fn best_move_nnue_rollout_mce(
                     }).collect();
                     if stats.is_empty() { break; }
                     let leader_lcb = stats.iter().fold(f64::NEG_INFINITY, |acc, &(_, m, se)| {
-                        let lcb = m - Z * se;
+                        let lcb = m - z * se;
                         if lcb > acc { lcb } else { acc }
                     });
                     // Keep candidates whose UCB >= leader_lcb
                     let mut kept: Vec<usize> = stats.iter().filter_map(|&(ci, m, se)| {
-                        if m + Z * se >= leader_lcb { Some(ci) } else { None }
+                        if m + z * se >= leader_lcb { Some(ci) } else { None }
                     }).collect();
+                    if hard_floor {
+                        let mut by_mean: Vec<(usize, f64)> = stats.iter()
+                            .map(|&(ci, m, _)| (ci, m)).collect();
+                        by_mean.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                        let max_keep = ((alive.len() + 1) / 2).max(2);
+                        let top: std::collections::HashSet<usize> = by_mean.into_iter()
+                            .take(max_keep).map(|(ci, _)| ci).collect();
+                        kept.retain(|ci| top.contains(ci));
+                    }
                     // Safety: always keep at least 2 (so final round has competition)
                     if kept.len() < 2 {
                         let mut by_mean: Vec<(usize, f64)> = stats.iter()
@@ -2554,6 +2727,77 @@ pub fn best_move_nnue_rollout_mce(
                         kept = by_mean.into_iter().take(2.min(stats.len())).map(|(ci, _)| ci).collect();
                     }
                     alive = kept;
+                }
+            }
+        }
+        GreedyMceAlloc::SeqHalvingHetero => {
+            // Heteroscedastic-variance-weighted halving (NNUE-rollout-MCE path).
+            // Within each round, allocate budget proportional to var/gap² so
+            // high-variance candidates near the leader get more samples (OCBA).
+            // Eliminate by hard halving each round.
+            let num_rounds = (n_cands as f64).log2().ceil().max(1.0) as usize;
+            let mut alive: Vec<usize> = (0..n_cands).collect();
+            let budget_per_round = (num_rollouts / num_rounds).max(n_cands);
+            for round in 0..num_rounds {
+                if alive.is_empty() { break; }
+                let total_round = budget_per_round.max(alive.len());
+                let pers: Vec<usize> = if round == 0 {
+                    let per = (total_round / alive.len()).max(1);
+                    let raw_pers: Vec<f64> = alive.iter().map(|&ci| (per as f64) * lmr_mult(ci)).collect();
+                    let raw_sum: f64 = raw_pers.iter().sum();
+                    let target_sum = (per as f64) * (alive.len() as f64);
+                    let scale = if raw_sum > 0.0 { target_sum / raw_sum } else { 1.0 };
+                    raw_pers.iter().map(|p| ((p * scale).round() as usize).max(1)).collect()
+                } else {
+                    let stats: Vec<(usize, f64, f64)> = alive.iter().filter_map(|&ci| {
+                        if counts[ci] == 0 { return None; }
+                        let n = counts[ci] as f64;
+                        let mean = totals[ci] as f64 / n;
+                        let var = (sumsq[ci] as f64 / n - mean * mean).max(1.0);
+                        Some((ci, mean, var))
+                    }).collect();
+                    if stats.is_empty() {
+                        let per = (total_round / alive.len()).max(1);
+                        alive.iter().map(|_| per).collect()
+                    } else {
+                        let leader = stats.iter().cloned().fold(stats[0],
+                            |acc, x| if x.1 > acc.1 { x } else { acc });
+                        let eps = 1.0_f64;
+                        let mut weights: Vec<(usize, f64)> = Vec::with_capacity(alive.len());
+                        let mut sum_w_sq = 0.0_f64;
+                        for &(ci, m, v) in &stats {
+                            if ci == leader.0 { continue; }
+                            let gap = (leader.1 - m).abs().max(0.5);
+                            let w = v / (gap * gap + eps);
+                            weights.push((ci, w));
+                            sum_w_sq += w * w / v.max(1.0);
+                        }
+                        let leader_w = (sum_w_sq.sqrt()).max(1.0);
+                        weights.push((leader.0, leader_w));
+                        let total_w: f64 = weights.iter().map(|(_, w)| *w).sum();
+                        let scale = total_round as f64 / total_w.max(1e-9);
+                        let weight_map: std::collections::HashMap<usize, f64> =
+                            weights.into_iter().collect();
+                        alive.iter().map(|ci| {
+                            let w = *weight_map.get(ci).unwrap_or(&1.0);
+                            ((w * scale).round() as usize).max(1)
+                        }).collect()
+                    }
+                };
+                let mut work = Vec::with_capacity(pers.iter().sum());
+                for (idx, &ci) in alive.iter().enumerate() {
+                    for _ in 0..pers[idx] { work.push((ci, rng.gen())); }
+                }
+                run_work(work, &mut totals, &mut sumsq, &mut counts);
+                if round < num_rounds - 1 {
+                    let mut scored: Vec<(usize, f64)> = alive.iter()
+                        .filter_map(|&ci| {
+                            if counts[ci] == 0 { return None; }
+                            Some((ci, totals[ci] as f64 / counts[ci] as f64))
+                        }).collect();
+                    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                    let keep = (scored.len() + 1) / 2;
+                    alive = scored.into_iter().take(keep).map(|(i, _)| i).collect();
                 }
             }
         }
@@ -2753,23 +2997,103 @@ pub fn best_move_nnue_rollout_mce(
                 spent += actual_batch;
             }
         }
+        GreedyMceAlloc::Puct => {
+            // PUCT: AlphaZero-style allocator. Selection rule:
+            //   PUCT(a) = Q(a) + c · P(a) · √N / (1 + n_a)
+            // where Q(a) = empirical mean (normalized to [0,1] via /100 to match c scale),
+            // P(a) = softmax over NNUE priors with temperature τ, N = total visits.
+            // Differs from MctsPW: prior probability (not visit-rank) drives exploration.
+            // Lit: AlphaGo Zero (Silver 2017), AlphaZero (Silver 2018).
+            let c_puct: f64 = std::env::var("MCE_PUCT_C").ok()
+                .and_then(|s| s.parse().ok()).unwrap_or(2.0);
+            let tau: f64 = std::env::var("MCE_PUCT_TAU").ok()
+                .and_then(|s| s.parse().ok()).unwrap_or(8.0);
+            // Default batch=32 to amortize thread-spawn overhead (~10 cores × 4 rollouts each).
+            // PUCT loses much of its theoretical advantage at batch>1, but pure-MCTS-1 is
+            // serial-limited and 30x slower. 32 is a pragmatic choice.
+            let batch: usize = std::env::var("MCE_PUCT_BATCH").ok()
+                .and_then(|s| s.parse().ok()).unwrap_or(32);
+            // Compute P(a) from NNUE priors via softmax.
+            let priors_f64: Vec<f64> = if !priors.is_empty() {
+                priors.iter().map(|&p| p as f64).collect()
+            } else {
+                vec![0.0; n_cands] // uniform prior fallback
+            };
+            let max_p = priors_f64.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let exps: Vec<f64> = priors_f64.iter().map(|&p| ((p - max_p) / tau.max(0.5)).exp()).collect();
+            let sum_exp: f64 = exps.iter().sum();
+            let p_action: Vec<f64> = exps.iter().map(|e| e / sum_exp.max(1e-9)).collect();
+            // Seed each candidate with 1 rollout so empirical means exist.
+            let mut seed_work = Vec::with_capacity(n_cands);
+            for ci in 0..n_cands {
+                seed_work.push((ci, rng.gen()));
+            }
+            run_work(seed_work, &mut totals, &mut sumsq, &mut counts);
+            let mut spent = n_cands;
+            while spent < num_rollouts {
+                let total_visits: u32 = counts.iter().sum();
+                let n_total_sqrt = (total_visits.max(1) as f64).sqrt();
+                let mut best_ucb = f64::NEG_INFINITY;
+                let mut best_ci = 0usize;
+                for ci in 0..n_cands {
+                    let n = counts[ci].max(1) as f64;
+                    let mean = totals[ci] as f64 / n;
+                    let q = mean / 100.0;
+                    let u = c_puct * p_action[ci] * n_total_sqrt / (1.0 + n);
+                    let score = q + u;
+                    if score > best_ucb { best_ucb = score; best_ci = ci; }
+                }
+                let actual_batch = batch.min(num_rollouts - spent);
+                let mut work = Vec::with_capacity(actual_batch);
+                for _ in 0..actual_batch { work.push((best_ci, rng.gen())); }
+                run_work(work, &mut totals, &mut sumsq, &mut counts);
+                spent += actual_batch;
+            }
+        }
     }
 
     // Final decision: optionally blend rollout mean with NNUE prior (control variate / shrinkage).
     // If Gumbel halving was active, add the same frozen Gumbel prior to the final scoring
     // for Danihelka 2022 consistency (policy improvement guarantee).
+    // If MCE_CONTROL_VARIATES is set, apply per-candidate variance-reduction adjustment.
+    // CORRECTED FORM: subtract β_i · (mean_B_i − prior_i) where prior_i is the
+    // candidate's afterstate NNUE eval (a deterministic, candidate-specific quantity
+    // approximating E[B|state_i]). This removes the bag-noise-induced deviation of
+    // mid-rollout B from its expected value, without biasing the comparison across
+    // candidates (which the prior subtraction does NOT do — earlier `global_mean_B`
+    // version regressed by 17 base points). Falls back to no adjustment if priors empty.
+    // MCE_CV_BETA_CAP: clip estimated β to ±cap (default 2.0) for numerical stability.
+    let cv_beta_cap: f64 = std::env::var("MCE_CV_BETA_CAP").ok()
+        .and_then(|s| s.parse().ok()).unwrap_or(2.0);
+    let cvt = cv_totals.borrow();
+    let cvs = cv_sumsq.borrow();
+    let crs = cross.borrow();
     let mut best_idx = 0;
     let mut best_adj = f64::NEG_INFINITY;
     for (ci, (&t, &n)) in totals.iter().zip(counts.iter()).enumerate() {
         if n == 0 { continue; }
-        let rollout_mean = t as f64 / n as f64;
-        let prior = if !priors.is_empty() { priors[ci] as f64 } else { rollout_mean };
-        let mut adj = (cv_alpha as f64) * rollout_mean + ((1.0 - cv_alpha) as f64) * prior;
+        let nf = n as f64;
+        let rollout_mean = t as f64 / nf;
+        let cv_adjusted_mean = if use_cv && n >= 4 && !priors.is_empty() {
+            let mean_b = cvt[ci] as f64 / nf;
+            let var_b = (cvs[ci] as f64 / nf - mean_b * mean_b).max(1.0);
+            let cov_rb = crs[ci] as f64 / nf - rollout_mean * mean_b;
+            let beta = (cov_rb / var_b).clamp(-cv_beta_cap, cv_beta_cap);
+            // Use per-candidate prior (afterstate NNUE eval) as the structural baseline
+            // for E[B|state_i]. mean_b - prior_i is the bag-noise-induced deviation.
+            let prior_i = priors[ci] as f64;
+            rollout_mean - beta * (mean_b - prior_i)
+        } else {
+            rollout_mean
+        };
+        let prior = if !priors.is_empty() { priors[ci] as f64 } else { cv_adjusted_mean };
+        let mut adj = (cv_alpha as f64) * cv_adjusted_mean + ((1.0 - cv_alpha) as f64) * prior;
         if use_gumbel_halving && !gumbel_priors.is_empty() {
             adj += gumbel_sigma * gumbel_priors[ci];
         }
         if adj > best_adj { best_adj = adj; best_idx = ci; }
     }
+    drop(cvt); drop(cvs); drop(crs);
     if best_adj < 0.0 { return None; }
     let mv = candidates[best_idx];
     let rollout_mean_best = if counts[best_idx] > 0 {

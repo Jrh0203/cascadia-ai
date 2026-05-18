@@ -170,6 +170,30 @@ impl TileBag {
         }
         (terrain, wildlife)
     }
+
+    /// Joint terrain × wildlife distribution: joint[t][w] = count of remaining
+    /// tiles whose primary OR secondary terrain == t AND whose allowed mask
+    /// includes wildlife w. Each tile contributes to up to 2 (t,w) cells per
+    /// allowed wildlife (once for terrain1, once for terrain2 if dual). Used by
+    /// the v5-feat NNUE block to give the value function a joint signal for
+    /// "how many drafts that benefit me are still available?".
+    pub fn joint_distribution(&self) -> [[u8; 5]; 5] {
+        use crate::types::Wildlife;
+        let mut joint = [[0u8; 5]; 5];
+        for tile in &self.tiles {
+            let t1 = tile.terrain1 as usize;
+            let t2 = tile.terrain2.map(|t| t as usize);
+            for w in Wildlife::ALL {
+                if !tile.allowed.contains(w) { continue; }
+                let wi = w as usize;
+                joint[t1][wi] = joint[t1][wi].saturating_add(1);
+                if let Some(ti) = t2 {
+                    joint[ti][wi] = joint[ti][wi].saturating_add(1);
+                }
+            }
+        }
+        joint
+    }
 }
 
 /// The wildlife token bag.

@@ -172,7 +172,36 @@ fn build_game_view_for(game: &mut GameState, view_player: usize) -> GameView {
     build_game_view_for_with(game, view_player, Vec::new())
 }
 
+/// Parse a display-only ScoringCards override of the form "B,A,C,A,A"
+/// (5 letters, one per wildlife in [Bear, Elk, Salmon, Hawk, Fox] order).
+/// Falls back to all-A on any parse error or wrong length.
+fn parse_display_cards(s: &str) -> Option<cascadia_core::types::ScoringCards> {
+    use cascadia_core::types::{ScoringCards, ScoringCardVariant};
+    let parts: Vec<&str> = s.split(',').map(|x| x.trim()).collect();
+    if parts.len() != 5 { return None; }
+    let mut cards = [ScoringCardVariant::A; 5];
+    for (i, p) in parts.iter().enumerate() {
+        cards[i] = match p.to_ascii_uppercase().as_str() {
+            "A" => ScoringCardVariant::A,
+            "B" => ScoringCardVariant::B,
+            "C" => ScoringCardVariant::C,
+            "D" => ScoringCardVariant::D,
+            _ => return None,
+        };
+    }
+    Some(ScoringCards { cards })
+}
+
 fn build_game_view_for_with(game: &mut GameState, view_player: usize, events: Vec<String>) -> GameView {
+    build_game_view_for_with_cards(game, view_player, events, None)
+}
+
+fn build_game_view_for_with_cards(
+    game: &mut GameState,
+    view_player: usize,
+    events: Vec<String>,
+    display_cards: Option<cascadia_core::types::ScoringCards>,
+) -> GameView {
     let view_player = view_player.min(game.num_players.saturating_sub(1));
     let board = &game.boards[view_player];
     let frontier = board.frontier();
@@ -236,12 +265,15 @@ fn build_game_view_for_with(game: &mut GameState, view_player: usize, events: Ve
     // Habitat majority bonuses only apply at end of game in multiplayer
     let is_game_over = game.is_game_over();
     let is_multiplayer = game.num_players > 1;
+    // Use display_cards override (UI selector) when provided; otherwise use the
+    // game's actual scoring_cards (always Card A — AI logic is unaffected).
+    let cards_for_display = display_cards.unwrap_or(game.scoring_cards);
     let scores: Vec<ScoreView> = (0..game.num_players)
         .map(|p| {
             let breakdown = if is_game_over && is_multiplayer {
-                ScoreBreakdown::compute_with_bonuses(&mut game.boards, &game.scoring_cards, p)
+                ScoreBreakdown::compute_with_bonuses(&mut game.boards, &cards_for_display, p)
             } else {
-                ScoreBreakdown::compute(&mut game.boards[p], &game.scoring_cards)
+                ScoreBreakdown::compute(&mut game.boards[p], &cards_for_display)
             };
             let board = &game.boards[p];
             let mut wildlife_counts = [0u16; 5];
@@ -287,6 +319,10 @@ fn build_game_view_for_with(game: &mut GameState, view_player: usize, events: Ve
 #[derive(Deserialize)]
 struct StateQuery {
     view: Option<usize>,
+    /// Display-only scoring-card override, e.g. "B,A,C,A,D" for
+    /// Bear=B, Elk=A, Salmon=C, Hawk=A, Fox=D. Server recomputes the score
+    /// breakdowns with these cards but the game state and AI still use Card A.
+    display_cards: Option<String>,
 }
 
 /// Pick a move for the given game state using the given AI strength.
@@ -340,7 +376,8 @@ async fn get_state(
     let mut game = state.game.lock().unwrap();
     let view = q.view.unwrap_or(game.current_player);
     let events = state.events.lock().unwrap().clone();
-    Json(build_game_view_for_with(&mut game, view, events))
+    let display_cards = q.display_cards.as_deref().and_then(parse_display_cards);
+    Json(build_game_view_for_with_cards(&mut game, view, events, display_cards))
 }
 
 async fn make_move(
@@ -913,12 +950,29 @@ async fn main() {
     let game = GameState::new(4, ScoringCards::all_a(), &mut rng);
 
     // Try to load the best NNUE weights for MCE-powered suggestions.
-    // Preference order (highest → lowest bench score):
-    //   v3_iter20  — MCE(750) 95.9  (current production baseline, 21.7 MB new architecture)
-    //   v4_iter10  — MCE(750) 95.5  (overnight v4 aux-heads run, ties v3 in half iters)
-    //   mce93      — MCE(50)  92.9  (legacy 5108-feature baseline, 10.7 MB)
-    //   generic    — fallback
-    let nnue_candidates = [
+    //
+    // Order is FEATURE-GATED: each binary prioritises weights that natively
+    // match its compiled feature set, because NNUENetwork::load is permissive
+    // and will silently load mismatched weights with truncation/zero-padding,
+    // producing a network that "loads" but plays poorly. Putting the matched
+    // file first ensures the right pairing wins.
+    #[cfg(feature = "v6-peak")]
+    let nnue_candidates: &[&str] = &[
+        "nnue_weights_v6peak_iter20.bin",   // native — v6peak features (17,608)
+        "nnue_weights_v4opp_modal_iter3.bin", // partial-match fallback
+        "nnue_weights_mce93.bin",
+        "nnue_weights.bin",
+    ];
+    #[cfg(all(feature = "v4-opp", not(feature = "v6-peak")))]
+    let nnue_candidates: &[&str] = &[
+        "nnue_weights_v4opp_modal_iter3.bin", // native — v4opp features (11,231)
+        "nnue_weights_v3_iter20.bin",
+        "nnue_weights_v4_iter10.bin",
+        "nnue_weights_mce93.bin",
+        "nnue_weights.bin",
+    ];
+    #[cfg(not(any(feature = "v4-opp", feature = "v6-peak")))]
+    let nnue_candidates: &[&str] = &[
         "nnue_weights_v3_iter20.bin",
         "nnue_weights_v4_iter10.bin",
         "nnue_weights_mce93.bin",

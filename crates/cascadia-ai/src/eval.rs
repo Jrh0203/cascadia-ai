@@ -64,9 +64,13 @@ pub fn best_move_with_potential(
     // Potential weight scales with turns remaining: full weight early, zero on last turn.
     // In 4p, turns_remaining counts ALL players, so AI turns = turns_remaining / 4.
     let ai_turns_left = (turns_remaining as f32 / 4.0).max(0.0);
-    // Hand-crafted potential disabled — NNUE afterstate scoring handles this better
+    // Hand-crafted potential disabled by default — NNUE afterstate scoring
+    // handles future-value better when an NNUE is present. For pure-greedy
+    // benches (no NNUE, e.g. testing under alternate scoring cards), set
+    // `CASCADIA_GREEDY_POTENTIAL=1` to enable the per-card dispatch heuristic.
     let _potential_scale = (ai_turns_left / 10.0).min(1.0);
-    let use_potential = false;
+    let use_potential = std::env::var("CASCADIA_GREEDY_POTENTIAL").ok()
+        .map(|s| !s.is_empty() && s != "0").unwrap_or(false);
     let frontier = board.frontier();
     if frontier.is_empty() || market.is_empty() {
         return None;

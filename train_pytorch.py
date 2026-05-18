@@ -29,32 +29,47 @@ from torch.utils.data import Dataset, DataLoader
 
 # ─── Load MCE samples from our binary format ───
 
-def load_mce_samples(path, return_aux=False, return_split=False, require_aux=False):
-    """Load samples from MCEP (v1), MCV2 (v2 with aux targets), or MCV3 (v3 with target_wildlife).
+NUM_HEADS_V5 = 11  # 5 wildlife + 5 per-terrain hab+bonus + 1 tokens
+
+
+def load_mce_samples(path, return_aux=False, return_split=False, return_split11=False,
+                     require_aux=False):
+    """Load samples from MCEP (v1), MCV2 (v2 + aux), MCV3 (v3 + target_wildlife),
+    or MCV4 (v4 + per-subscore targets for 11-head split).
 
     Args:
         return_aux: include aux_bear, aux_salmon in the return tuple
-        return_split: include target_wildlife in the return tuple (forces v3)
+        return_split: include target_wildlife in the return tuple (forces v3+)
+        return_split11: include subscore_targets [N, 11] in the return tuple (forces v4)
         require_aux: raise if the file is legacy MCEP (enforces
             "don't train on data without aux fields" policy)
 
     Returns:
-        (features_list, targets) if neither flag set (backward compat)
+        (features_list, targets) if no flag set
         (features_list, targets, aux_bear, aux_salmon) if return_aux=True
         (features_list, targets, aux_bear, aux_salmon, target_wildlife) if return_split=True
+        (features_list, targets, aux_bear, aux_salmon, target_wildlife, subscore_targets)
+            if return_split11=True
     """
     with open(path, 'rb') as f:
         data = f.read()
 
     pos = 0
     magic = data[:4]
-    if magic == b'MCV3':
+    if magic == b'MCV4':
+        is_v4 = True
+        is_v3 = True
+        is_v2 = True
+    elif magic == b'MCV3':
+        is_v4 = False
         is_v3 = True
         is_v2 = True
     elif magic == b'MCV2':
+        is_v4 = False
         is_v3 = False
         is_v2 = True
     elif magic == b'MCEP':
+        is_v4 = False
         is_v3 = False
         is_v2 = False
     else:
@@ -63,22 +78,28 @@ def load_mce_samples(path, return_aux=False, return_split=False, require_aux=Fal
     if require_aux and not is_v2:
         raise ValueError(
             f"{path} is MCEP (legacy, no aux fields) and require_aux=True. "
-            "Policy: don't train on data without aux fields. Regenerate as MCV3."
+            "Policy: don't train on data without aux fields. Regenerate as MCV3+."
         )
     if return_split and not is_v3:
         raise ValueError(
             f"{path} is {magic.decode()} which lacks target_wildlife. "
-            "return_split=True requires MCV3 data. Regenerate."
+            "return_split=True requires MCV3+ data. Regenerate."
+        )
+    if return_split11 and not is_v4:
+        raise ValueError(
+            f"{path} is {magic.decode()} which lacks subscore_targets. "
+            "return_split11=True requires MCV4 data. Regenerate via v5-feat selfplay-pool."
         )
 
     pos = 4
-    extra = (8 if is_v2 else 0) + (4 if is_v3 else 0)
+    extra = (8 if is_v2 else 0) + (4 if is_v3 else 0) + (NUM_HEADS_V5 * 4 if is_v4 else 0)
 
     features_list = []
     targets = []
     aux_bear = []
     aux_salmon = []
     target_wildlife = []
+    subscore_targets = []
     while pos + 2 <= len(data):
         nf = struct.unpack_from('<H', data, pos)[0]
         pos += 2
@@ -103,14 +124,22 @@ def load_mce_samples(path, return_aux=False, return_split=False, require_aux=Fal
             pos += 4
         else:
             tw = 0.0
+        if is_v4:
+            sub = list(struct.unpack_from('<' + 'f' * NUM_HEADS_V5, data, pos))
+            pos += NUM_HEADS_V5 * 4
+        else:
+            sub = [0.0] * NUM_HEADS_V5
         features_list.append(feats)
         targets.append(target)
         aux_bear.append(ab)
         aux_salmon.append(asm)
         target_wildlife.append(tw)
+        subscore_targets.append(sub)
 
-    fmt = "MCV3" if is_v3 else ("MCV2" if is_v2 else "MCEP")
+    fmt = "MCV4" if is_v4 else ("MCV3" if is_v3 else ("MCV2" if is_v2 else "MCEP"))
     print(f"Loaded {len(features_list)} samples from {path} ({fmt})")
+    if return_split11:
+        return features_list, targets, aux_bear, aux_salmon, target_wildlife, subscore_targets
     if return_split:
         return features_list, targets, aux_bear, aux_salmon, target_wildlife
     if return_aux:
@@ -139,6 +168,14 @@ ALLOWED_END = OPP_HAB_END + 441 * ALLOWED_WL_PC  # 7512
 EXT_WL_END = ALLOWED_END + 50  # 7562
 TERRAIN_PAIR_STATES = 36
 TERRAIN_PAIR_END = EXT_WL_END + 3 * TERRAIN_PAIR_STATES  # 7670
+
+# v3 feature block boundaries
+V2_END = 10561  # NUM_FEATURES_V2
+SEC_TERRAIN_BASE = TERRAIN_PAIR_END  # 7670
+SEC_TERRAIN_END = SEC_TERRAIN_BASE + 441 * 5  # 9875
+ADJ_SPD = 13   # ADJ_STATES_PER_DIR (7 wildlife + 6 terrain)
+ADJ_FPC = 6 * ADJ_SPD  # 78 features per cell
+ADJ_END = V2_END + 441 * ADJ_FPC  # 44959
 
 
 def build_cell_remap(dq, dr, rot):
@@ -251,7 +288,8 @@ class NNUEDatasetMCEP(Dataset):
     for split-value-head training.
     """
     def __init__(self, features_list, targets, num_features, augment=True,
-                 aux_bear=None, aux_salmon=None, target_wildlife=None):
+                 aux_bear=None, aux_salmon=None, target_wildlife=None,
+                 subscore_targets=None):
         self.num_features = num_features
         self.targets = torch.tensor(targets, dtype=torch.float32)
         self.has_aux = aux_bear is not None and aux_salmon is not None
@@ -261,6 +299,9 @@ class NNUEDatasetMCEP(Dataset):
         self.has_split = target_wildlife is not None
         if self.has_split:
             self.target_wildlife = torch.tensor(target_wildlife, dtype=torch.float32)
+        self.has_split11 = subscore_targets is not None
+        if self.has_split11:
+            self.subscore_targets = torch.tensor(subscore_targets, dtype=torch.float32)
         self.augment = augment
         # Store sparse features as numpy arrays for vectorized augmentation
         self.features_np = [np.array(f, dtype=np.int32) for f in features_list]
@@ -295,6 +336,8 @@ class NNUEDatasetMCEP(Dataset):
                 self.aux_salmon_np = np.array(aux_salmon, dtype=np.float32)
             if self.has_split:
                 self.target_wildlife_np = np.array(target_wildlife, dtype=np.float32)
+            if self.has_split11:
+                self.subscore_targets_np = np.array(subscore_targets, dtype=np.float32)
             print(f"  Done in {time.time()-t0:.1f}s ({self.packed_np.nbytes / 1e9:.1f} GB)")
 
         # Pre-compute feature index remapping tables for all transforms
@@ -351,6 +394,12 @@ class NNUEDatasetMCEP(Dataset):
         # Unpack all bits at once: [batch, packed_width] → [batch, packed_width, 8] → [batch, packed_width*8]
         bits = packed_batch.unsqueeze(-1).bitwise_right_shift(self._unpack_bits).bitwise_and(1)
         dense = bits.reshape(len(batch), -1)[:, :self.num_features].float()
+        if self.has_split11:
+            sub = torch.from_numpy(self.subscore_targets_np[idx_np])
+            # Carry aux + wildlife alongside for compound losses if needed.
+            aux_b = torch.from_numpy(self.aux_bear_np[idx_np]) if self.has_aux else torch.zeros(len(batch))
+            aux_s = torch.from_numpy(self.aux_salmon_np[idx_np]) if self.has_aux else torch.zeros(len(batch))
+            return dense, targets, aux_b, aux_s, sub
         if self.has_aux and self.has_split:
             aux_b = torch.from_numpy(self.aux_bear_np[idx_np])
             aux_s = torch.from_numpy(self.aux_salmon_np[idx_np])
@@ -403,7 +452,29 @@ def _remap_single_feature(fi, cell_table, rot, num_features):
             my, n = ps // 6, ps % 6
             ps = n * 6 + my
         return EXT_WL_END + ((d + dir_shift) % 3) * TERRAIN_PAIR_STATES + ps
+    elif fi < V2_END:
+        # v2 blocks (7670..10561): remap secondary terrain per cell, pass through rest
+        if fi < SEC_TERRAIN_END:
+            rel = fi - SEC_TERRAIN_BASE
+            cell_idx = rel // 5
+            offset = rel % 5
+            new_cell = cell_table[cell_idx]
+            if new_cell < 0: return -1
+            return SEC_TERRAIN_BASE + new_cell * 5 + offset
+        return fi
+    elif fi < ADJ_END:
+        # v3 Block K: per-cell adjacency — remap cell + rotate direction
+        rel = fi - V2_END
+        cell_idx = rel // ADJ_FPC
+        within_cell = rel % ADJ_FPC
+        d = within_cell // ADJ_SPD
+        state = within_cell % ADJ_SPD
+        new_cell = cell_table[cell_idx]
+        if new_cell < 0: return -1
+        new_dir = (d + 2 * dir_shift) % 6  # 120° = 2 steps in 6-dir space
+        return V2_END + new_cell * ADJ_FPC + new_dir * ADJ_SPD + state
     else:
+        # v3 Blocks L/M/N (tbag ext, overflow) — global
         return fi
 
 
@@ -459,27 +530,31 @@ def collate_sparse(batch):
 # ─── NNUE Model ───
 
 class NNUE(nn.Module):
-    def __init__(self, num_features, hidden1=512, hidden2=64, split_value_heads=False):
+    def __init__(self, num_features, hidden1=512, hidden2=64,
+                 split_value_heads=False, split11_value_heads=False):
         super().__init__()
         self.num_features = num_features
         self.split_value_heads = split_value_heads
+        self.split11_value_heads = split11_value_heads
         self.fc1 = nn.Linear(num_features, hidden1)
         self.fc2 = nn.Linear(hidden1, hidden2)
         self.fc3 = nn.Linear(hidden2, 1)          # legacy total value head
         self.fc3_policy = nn.Linear(hidden2, 1)    # policy head
         # Auxiliary heads (v4 multi-task training):
-        # fc3_aux_bear predicts final bear pair count
-        # fc3_aux_salmon predicts final longest salmon chain length
         self.fc3_aux_bear = nn.Linear(hidden2, 1)
         self.fc3_aux_salmon = nn.Linear(hidden2, 1)
-        # Split value heads (v5 architecture):
-        # fc3_value_wildlife predicts wildlife-only remaining score
-        # fc3_value_habitat predicts (habitat + tokens + bonus) remaining score
-        # At inference, value = wildlife + habitat (1:1 sum, no variable blend).
+        # 2-head split value heads (legacy v5 path):
         self.fc3_value_wildlife = nn.Linear(hidden2, 1)
         self.fc3_value_habitat = nn.Linear(hidden2, 1)
+        # 11-head split value architecture (v5 / v5-feat):
+        # Output layout matches Rust nnue::HEAD_* constants:
+        #   [0..5]: per-wildlife (bear, elk, salmon, hawk, fox)
+        #   [5..10]: per-terrain hab+bonus (forest, prairie, wetland, mountain, river)
+        #   [10]: tokens
+        # At inference, value = sum of all 11 heads.
+        self.fc3_heads = nn.Linear(hidden2, NUM_HEADS_V5)
         for head in (self.fc3_policy, self.fc3_aux_bear, self.fc3_aux_salmon,
-                     self.fc3_value_wildlife, self.fc3_value_habitat):
+                     self.fc3_value_wildlife, self.fc3_value_habitat, self.fc3_heads):
             nn.init.xavier_uniform_(head.weight)
             nn.init.zeros_(head.bias)
 
@@ -487,11 +562,20 @@ class NNUE(nn.Module):
         # x is dense binary vector [batch, num_features]
         h1 = torch.relu(self.fc1(x))
         h2 = torch.relu(self.fc2(h1))
+        if self.split11_value_heads:
+            heads = self.fc3_heads(h2)  # [batch, NUM_HEADS_V5]
+            return heads.sum(dim=-1)
         if self.split_value_heads:
             wildlife = self.fc3_value_wildlife(h2).squeeze(-1)
             habitat = self.fc3_value_habitat(h2).squeeze(-1)
             return wildlife + habitat  # 1:1 sum
         return self.fc3(h2).squeeze(-1)
+
+    def forward_split11(self, x):
+        """Returns per-head outputs [batch, NUM_HEADS_V5] for split-head training."""
+        h1 = torch.relu(self.fc1(x))
+        h2 = torch.relu(self.fc2(h1))
+        return self.fc3_heads(h2)
 
     def forward_dual(self, x):
         """Returns (value, policy_logit) — both [batch]."""
@@ -635,11 +719,14 @@ def save_rust_weights(path, model):
     """Save weights in Rust NNUE binary format.
 
     Version 1: legacy single value head (fc3) + policy head.
-    Version 2: version 1 + split value heads (fc3_value_wildlife + fc3_value_habitat)
-               appended at the end. Written when `model.split_value_heads` is True.
+    Version 2: v1 + 2-head split value heads (fc3_value_wildlife + fc3_value_habitat).
+    Version 3: v2 + 11-head split value heads (fc3_heads, NUM_HEADS_V5 outputs).
+               Written when `model.split11_value_heads` is True. The Rust loader reads
+               the 11-head block as flat [NUM_HEADS × HIDDEN2] row-major + [NUM_HEADS] biases.
     """
-    split = getattr(model, 'split_value_heads', False)
-    version = 2 if split else 1
+    split11 = getattr(model, 'split11_value_heads', False)
+    split = getattr(model, 'split_value_heads', False) or split11
+    version = 3 if split11 else (2 if split else 1)
     with open(path, 'wb') as f:
         f.write(b'NNUE')
         f.write(struct.pack('<I', version))
@@ -665,7 +752,7 @@ def save_rust_weights(path, model):
         f.write(model.fc3_policy.bias.data.cpu().numpy().astype(np.float32).tobytes())
 
         if split:
-            # Split value heads (v2)
+            # 2-head split value heads (v2 and v3 both write this block)
             w3w = model.fc3_value_wildlife.weight.data.cpu().numpy().flatten()
             f.write(w3w.astype(np.float32).tobytes())
             f.write(model.fc3_value_wildlife.bias.data.cpu().numpy().astype(np.float32).tobytes())
@@ -673,7 +760,15 @@ def save_rust_weights(path, model):
             f.write(w3h.astype(np.float32).tobytes())
             f.write(model.fc3_value_habitat.bias.data.cpu().numpy().astype(np.float32).tobytes())
 
-    suffix = " (v2, split heads)" if split else ""
+        if split11:
+            # 11-head split (v3 only). Linear stores [out=NUM_HEADS, in=hidden2]; flatten
+            # produces [head_0_h_0, head_0_h_1, ..., head_NUM-1_h_HIDDEN2-1] which matches
+            # the Rust layout w3_heads[h * HIDDEN2 + j].
+            w3h = model.fc3_heads.weight.data.cpu().numpy().flatten()
+            f.write(w3h.astype(np.float32).tobytes())
+            f.write(model.fc3_heads.bias.data.cpu().numpy().astype(np.float32).tobytes())
+
+    suffix = " (v3, 11-head split)" if split11 else (" (v2, 2-head split)" if split else "")
     print(f"Saved weights to {path}{suffix}")
 
 
@@ -722,9 +817,16 @@ def train(args):
         dataset = NNUEDatasetExported(exported_path)
         num_features = dataset.num_features
     else:
-        # Split value heads require target_wildlife (MCV3 format).
-        # Loader enforces the "don't train on data without aux fields" policy when use_aux is set.
-        if args.split_value_head:
+        # Split-11 needs MCV4 (subscore_targets); 2-split needs MCV3 (target_wildlife).
+        subscore_targets = None
+        if args.split11_value_head:
+            features_list, targets, aux_bear, aux_salmon, target_wildlife, subscore_targets = load_mce_samples(
+                args.samples, return_split11=True, require_aux=True,
+            )
+            sub_arr = np.array(subscore_targets, dtype=np.float32)
+            print(f"  Loaded MCV4 / 11-head targets: "
+                  f"per-head means={sub_arr.mean(axis=0).round(2).tolist()}")
+        elif args.split_value_head:
             features_list, targets, aux_bear, aux_salmon, target_wildlife = load_mce_samples(
                 args.samples, return_split=True, require_aux=True,
             )
@@ -751,6 +853,7 @@ def train(args):
         dataset = NNUEDatasetMCEP(
             features_list, targets, num_features, augment=not args.no_augment,
             aux_bear=aux_bear, aux_salmon=aux_salmon, target_wildlife=target_wildlife,
+            subscore_targets=subscore_targets,
         )
 
     collate_fn = dataset.collate_packed if (hasattr(dataset, 'packed_np') and dataset.packed_np is not None) else None
@@ -758,9 +861,14 @@ def train(args):
 
     # Model
     model = NNUE(num_features, args.hidden1, args.hidden2,
-                 split_value_heads=args.split_value_head).to(device)
-    print(f"Architecture: {num_features} -> {args.hidden1} -> {args.hidden2} -> 1"
-          + (" [split value heads]" if args.split_value_head else ""))
+                 split_value_heads=args.split_value_head,
+                 split11_value_heads=args.split11_value_head).to(device)
+    head_label = ""
+    if args.split11_value_head:
+        head_label = f" [11-head split: 5 wildlife + 5 hab+bonus + 1 tokens]"
+    elif args.split_value_head:
+        head_label = " [2-head split: wildlife + habitat]"
+    print(f"Architecture: {num_features} -> {args.hidden1} -> {args.hidden2} -> 1{head_label}")
     print(f"Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
     # Load initial weights if provided
@@ -798,7 +906,10 @@ def train(args):
     criterion = nn.MSELoss()
     use_aux = args.use_aux and getattr(dataset, 'has_aux', False)
     use_split = args.split_value_head and getattr(dataset, 'has_split', False)
-    if use_split:
+    use_split11 = args.split11_value_head and getattr(dataset, 'has_split11', False)
+    if use_split11:
+        print(f"  11-head split multi-task training: sum of per-head MSEs (uniform weight)")
+    elif use_split:
         print(f"  Split-head multi-task training: wildlife_mse + habitat_mse (1:1) + "
               f"bear (w={args.aux_bear_weight}) + salmon (w={args.aux_salmon_weight})")
     elif use_aux:
@@ -823,7 +934,21 @@ def train(args):
         epoch_start = time.time()
 
         for batch in loader:
-            if use_split and len(batch) == 5:
+            if use_split11 and len(batch) == 5:
+                # (dense, target_total_with_bonus, aux_bear, aux_salmon, subscore_targets[batch, 11])
+                batch_x, batch_y_total, _batch_b, _batch_s, batch_sub = batch
+                batch_x = batch_x.to(device)
+                batch_y_total = batch_y_total.to(device)
+                batch_sub = batch_sub.to(device)
+                heads_pred = model.forward_split11(batch_x)  # [batch, NUM_HEADS_V5]
+                # Per-head MSE summed uniformly (KataGo-style decomposed loss).
+                head_losses = ((heads_pred - batch_sub) ** 2).mean(dim=0)  # [NUM_HEADS_V5]
+                loss = head_losses.sum()
+                with torch.no_grad():
+                    total_pred = heads_pred.sum(dim=-1)
+                    v_mse = criterion(total_pred, batch_y_total)
+                total_v_loss += v_mse.item() * batch_x.shape[0]
+            elif use_split and len(batch) == 5:
                 # (dense, target_total, aux_bear, aux_salmon, target_wildlife)
                 batch_x, batch_y_total, batch_b, batch_s, batch_yw = batch
                 batch_x = batch_x.to(device)
@@ -900,8 +1025,19 @@ def train(args):
         else:
             print(f"  Epoch {epoch+1}/{args.epochs}: RMSE={v_rmse:.4f} lr={current_lr:.6f} ({elapsed:.1f}s)")
 
-        # Checkpoint every epoch
+        # Checkpoint every epoch to the final output path
         save_rust_weights(args.out, model)
+
+        # Optional per-epoch checkpoint: save to a path that encodes the global
+        # epoch number (accounting for --epoch-offset from a previous resume).
+        # Used by Modal's train_on_gpu to recover from GPU preemption.
+        if getattr(args, 'save_every_epoch', None):
+            global_ep = epoch + 1 + getattr(args, 'epoch_offset', 0)
+            ep_path = args.save_every_epoch.replace("{e}", str(global_ep))
+            try:
+                save_rust_weights(ep_path, model)
+            except Exception as _e:
+                print(f"  (warning: per-epoch checkpoint save failed: {_e})")
 
     print(f"\nTraining complete. Final weights: {args.out}")
 
@@ -1350,7 +1486,7 @@ if __name__ == '__main__':
     val_parser.add_argument('--batch-size', type=int, default=4096)
     val_parser.add_argument('--hidden1', type=int, default=512)
     val_parser.add_argument('--hidden2', type=int, default=64)
-    val_parser.add_argument('--num-features', type=int, default=10561)
+    val_parser.add_argument('--num-features', type=int, default=45260)
     val_parser.add_argument('--init-weights', default=None)
     val_parser.add_argument('--exported', default=None)
     val_parser.add_argument('--no-augment', action='store_true')
@@ -1364,6 +1500,17 @@ if __name__ == '__main__':
                             help='Enable v5 split value head architecture: predict wildlife '
                                  'and habitat+tokens remaining as separate heads, summed 1:1 at '
                                  'inference. Requires MCV3 input data (target_wildlife per sample).')
+    val_parser.add_argument('--split11-value-head', action='store_true',
+                            help='Enable v5-feat 11-head split value architecture (KataGo-style): '
+                                 'predict 5 wildlife + 5 per-terrain hab+bonus + 1 tokens as separate '
+                                 'heads, summed at inference. Requires MCV4 input data with per-subscore '
+                                 'targets. Loss = sum of per-head MSEs (uniform weight).')
+    val_parser.add_argument('--save-every-epoch', default=None,
+                            help='Path template for per-epoch checkpoints; "{e}" is replaced '
+                                 'with the global epoch number. Used for Modal preemption recovery.')
+    val_parser.add_argument('--epoch-offset', type=int, default=0,
+                            help='Starting global epoch number (for resume from preemption). '
+                                 'Checkpoints are named with epoch_offset + local_epoch.')
 
     # Policy training
     pol_parser = subparsers.add_parser('policy', help='Train policy+value from MCP2 data')
@@ -1373,7 +1520,7 @@ if __name__ == '__main__':
     pol_parser.add_argument('--batch-size', type=int, default=64, help='Groups per batch')
     pol_parser.add_argument('--hidden1', type=int, default=512)
     pol_parser.add_argument('--hidden2', type=int, default=64)
-    pol_parser.add_argument('--num-features', type=int, default=10561)
+    pol_parser.add_argument('--num-features', type=int, default=45260)
     pol_parser.add_argument('--init-weights', default=None)
     pol_parser.add_argument('--policy-weight', type=float, default=0.5, help='Weight for policy loss')
     pol_parser.add_argument('--freeze-shared', action='store_true', help='Only train policy head')
@@ -1387,7 +1534,7 @@ if __name__ == '__main__':
     sp_parser.add_argument('--lr', type=float, default=0.001)
     sp_parser.add_argument('--hidden1', type=int, default=256)
     sp_parser.add_argument('--hidden2', type=int, default=64)
-    sp_parser.add_argument('--num-features', type=int, default=10561)
+    sp_parser.add_argument('--num-features', type=int, default=45260)
     sp_parser.add_argument('--init-weights', default=None, help='PyTorch checkpoint to resume from')
     sp_parser.add_argument('--out', default='policy_net.pt')
 
@@ -1408,7 +1555,7 @@ if __name__ == '__main__':
         parser2.add_argument('--batch-size', type=int, default=4096)
         parser2.add_argument('--hidden1', type=int, default=512)
         parser2.add_argument('--hidden2', type=int, default=64)
-        parser2.add_argument('--num-features', type=int, default=10561)
+        parser2.add_argument('--num-features', type=int, default=45260)
         parser2.add_argument('--init-weights', default=None)
         parser2.add_argument('--exported', default=None)
         parser2.add_argument('--no-augment', action='store_true')

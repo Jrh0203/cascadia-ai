@@ -41,6 +41,18 @@ enum Strategy {
     GreedyMCE { rollouts: usize, alloc: cascadia_ai::mce::GreedyMceAlloc, expanded: bool },
     NnueRolloutMCE { net: Arc<cascadia_ai::nnue::NNUENetwork>, rollouts: usize, alloc: cascadia_ai::mce::GreedyMceAlloc, expanded: bool, prefilter_k: usize, exact_endgame: usize },
     UctMcts { simulations: usize, parallel: bool },
+    /// Cross-turn persistent open-loop UCT MCTS (Exp #6). Tree state persists
+    /// across an AI's turns within a single game; the chosen edge's child
+    /// subtree is promoted to root after each move so search budget compounds.
+    /// `parallel` enables root-parallelism (independent trees across cores).
+    /// `net` enables NNUE-guided rollouts (AI uses NNUE-greedy, opponents use
+    /// plain greedy). When `net` is None the rollout policy is pure greedy
+    /// (matching `uct_mcts.rs`).
+    MctsTree {
+        simulations: usize,
+        parallel: bool,
+        net: Option<Arc<cascadia_ai::nnue::NNUENetwork>>,
+    },
 }
 
 impl std::fmt::Display for Strategy {
@@ -74,6 +86,8 @@ impl std::fmt::Display for Strategy {
                     cascadia_ai::mce::GreedyMceAlloc::SeqHalvingPW => "halving-pw",
                     cascadia_ai::mce::GreedyMceAlloc::ThompsonSampling => "thompson",
                     cascadia_ai::mce::GreedyMceAlloc::MctsPW => "mcts-pw",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingHetero => "halving-hetero",
+                    cascadia_ai::mce::GreedyMceAlloc::Puct => "puct",
                 };
                 let e = if *expanded { ",expanded" } else { "" };
                 write!(f, "greedy-mce(n={},{}{})", rollouts, a, e)
@@ -91,6 +105,8 @@ impl std::fmt::Display for Strategy {
                     cascadia_ai::mce::GreedyMceAlloc::SeqHalvingPW => "halving-pw",
                     cascadia_ai::mce::GreedyMceAlloc::ThompsonSampling => "thompson",
                     cascadia_ai::mce::GreedyMceAlloc::MctsPW => "mcts-pw",
+                    cascadia_ai::mce::GreedyMceAlloc::SeqHalvingHetero => "halving-hetero",
+                    cascadia_ai::mce::GreedyMceAlloc::Puct => "puct",
                 };
                 let e = if *expanded { ",expanded" } else { "" };
                 let p = if *prefilter_k > 0 { format!(",pfk={}", prefilter_k) } else { String::new() };
@@ -99,6 +115,11 @@ impl std::fmt::Display for Strategy {
             }
             Strategy::UctMcts { simulations, parallel } => {
                 write!(f, "uct-mcts(n={}{})", simulations, if *parallel { ",parallel" } else { "" })
+            }
+            Strategy::MctsTree { simulations, parallel, net } => {
+                let n = if net.is_some() { ",nnue" } else { "" };
+                write!(f, "mcts-tree(n={}{}{})", simulations,
+                    if *parallel { ",parallel" } else { "" }, n)
             }
         }
     }
@@ -194,6 +215,20 @@ fn pick_move(
                 cascadia_ai::uct_mcts::best_move_uct_mcts(game, *simulations, search_rng)
             }
         }
+        Strategy::MctsTree { simulations, parallel, net } => {
+            // One-shot fallback when no persistent forest is threaded through
+            // (e.g., opponent-side dispatch under CASCADIA_OPPONENTS_SAME).
+            // Player 0's bench loop installs a persistent forest and bypasses
+            // pick_move for MctsTree decisions.
+            let n = if *parallel {
+                thread::available_parallelism().map(|n| n.get()).unwrap_or(4)
+            } else { 1 };
+            let seed = search_rng.gen::<u64>();
+            let mut forest = cascadia_ai::mcts_tree::PersistentUctForest::new_with_net(
+                game.current_player, n, seed, net.as_ref().map(Arc::clone),
+            );
+            forest.pick_move(game, *simulations)
+        }
     }
 }
 
@@ -227,6 +262,7 @@ fn pre_move_optimize(
             | Strategy::NRPA { ref net, .. }
             | Strategy::OpenLoopMCTS { ref net, .. }
             | Strategy::GumbelMCTS { ref net, .. } => Some(net.clone()),
+        Strategy::MctsTree { net: Some(n), .. } => Some(n.clone()),
         _ => None,
     };
 
@@ -485,6 +521,27 @@ fn pick_move_by_tag(
                 None => cascadia_ai::search::greedy_move(game),
             },
         ),
+        // mce_wide_v1_b/c/d: identical to mce_wide_v1. Distinct tags exist so a
+        // 4-player head-to-head tournament can put 4 different weight files in 4
+        // different seats while running the same algorithm — fair multi-model
+        // round-robin without confounding by R or allocator differences.
+        "mce_wide_v1_b" | "mce_wide_v1_c" | "mce_wide_v1_d" => pick_with_env(
+            &[("MCE_LMR", "1"), ("MCE_DIVERSE_PREFILTER", "1")],
+            || match net {
+                Some(n) => {
+                    let mut cands = cascadia_ai::mce::expanded_candidates(game);
+                    if cands.len() > 32 {
+                        cands = cascadia_ai::mce::nnue_prefilter_candidates(game, n, cands, 32);
+                    }
+                    cascadia_ai::mce::best_move_nnue_rollout_mce(
+                        game, n, 600,
+                        cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                        cands, search_rng,
+                    )
+                }
+                None => cascadia_ai::search::greedy_move(game),
+            },
+        ),
         // mce_wide_ens_v1: mce_wide_v1 + diverse prefilter ensemble. Paths
         // come from env var CASCADIA_ENS_PATHS (comma-separated) so callers
         // can point the ensemble at /weights/... in Modal, or relative paths
@@ -564,12 +621,34 @@ fn simulate_game(rng: &mut StdRng, strategy: &Strategy) -> (cascadia_core::scori
     simulate_game_inner(rng, strategy, None)
 }
 
+/// Parse "A,B,C,A,D" → ScoringCards (Bear, Elk, Salmon, Hawk, Fox order).
+fn parse_scoring_cards(s: &str) -> Option<ScoringCards> {
+    use cascadia_core::types::ScoringCardVariant;
+    let parts: Vec<&str> = s.split(',').map(|x| x.trim()).collect();
+    if parts.len() != 5 { return None; }
+    let mut cards = [ScoringCardVariant::A; 5];
+    for (i, p) in parts.iter().enumerate() {
+        cards[i] = match p.to_ascii_uppercase().as_str() {
+            "A" => ScoringCardVariant::A,
+            "B" => ScoringCardVariant::B,
+            "C" => ScoringCardVariant::C,
+            "D" => ScoringCardVariant::D,
+            _ => return None,
+        };
+    }
+    Some(ScoringCards { cards })
+}
+
 fn simulate_game_inner(
     rng: &mut StdRng,
     strategy: &Strategy,
     mut sample_sink: Option<&mut Vec<cascadia_ai::nnue_train::Sample>>,
 ) -> (cascadia_core::scoring::ScoreBreakdown, cascadia_core::scoring::ScoreBreakdown) {
-    let cards = ScoringCards::all_a();
+    // CASCADIA_SCORING_CARDS="A,B,C,A,D" — override scoring cards for [Bear, Elk, Salmon, Hawk, Fox].
+    // Defaults to all-A. Useful for benching against alternate rule sets.
+    let cards = std::env::var("CASCADIA_SCORING_CARDS").ok()
+        .and_then(|s| parse_scoring_cards(&s))
+        .unwrap_or_else(ScoringCards::all_a);
     let mut game = GameState::new(4, cards, rng);
     let mut search_rng = StdRng::seed_from_u64(rng.gen());
 
@@ -593,6 +672,7 @@ fn simulate_game_inner(
             | Strategy::NRPA { net, .. } | Strategy::OpenLoopMCTS { net, .. }
             | Strategy::GumbelMCTS { net, .. } | Strategy::NnueRolloutMCE { net, .. }
             | Strategy::Expectimax { net, .. } => Some(net.clone()),
+        Strategy::MctsTree { net: Some(n), .. } => Some(n.clone()),
         _ => None,
     };
     // CASCADIA_SEAT_WEIGHTS="path1:path2:path3:path4" — per-seat NNUE weights.
@@ -614,6 +694,49 @@ fn simulate_game_inner(
     let num_seats = game.num_players;
     let mut seat_preferences: Vec<Option<[f32; 5]>> = vec![None; num_seats];
 
+    // Per-seat persistent UCT MCTS forests for cross-turn tree reuse (Exp #6).
+    // A forest is allocated for a seat iff that seat actually plays MctsTree:
+    //   - Strategy::MctsTree: seat 0 always; seats 1..N when CASCADIA_OPPONENTS_SAME=1.
+    //   - seat_tags mode: any seat whose tag == "mcts_tree".
+    // Forest seeds are derived from search_rng so the result is reproducible
+    // game-by-game given the outer RNG.
+    let mcts_tree_tag_sims: usize = std::env::var("MCTS_TREE_TAG_SIMS")
+        .ok().and_then(|s| s.parse().ok()).unwrap_or(600);
+    let mcts_tree_tag_parallel: bool = std::env::var("MCTS_TREE_TAG_PARALLEL").ok()
+        .map(|s| !s.is_empty() && s != "0" && s.to_ascii_lowercase() != "false")
+        .unwrap_or(false);
+    let init_forest_for = |p: usize, parallel: bool, seed: u64,
+                            net: Option<Arc<cascadia_ai::nnue::NNUENetwork>>| {
+        let n = if parallel {
+            thread::available_parallelism().map(|nn| nn.get()).unwrap_or(4)
+        } else { 1 };
+        cascadia_ai::mcts_tree::PersistentUctForest::new_with_net(p, n, seed, net)
+    };
+    let mut mcts_forests: Vec<Option<cascadia_ai::mcts_tree::PersistentUctForest>> =
+        (0..num_seats).map(|p| {
+            // Tag-mode allocation: seat tag == "mcts_tree". Use the strategy's
+            // NNUE net (if any) for NNUE-guided rollouts, mirroring how MCE
+            // tags consume the strategy's net.
+            if let Some(ref tags) = seat_tags {
+                if tags.get(p).map(|t| t == "mcts_tree").unwrap_or(false) {
+                    let n = seat_nets.as_ref().and_then(|nets| nets.get(p))
+                        .or(seat_net.as_ref())
+                        .map(Arc::clone);
+                    return Some(init_forest_for(p, mcts_tree_tag_parallel, search_rng.gen(), n));
+                }
+            }
+            // Strategy-mode allocation.
+            match strategy {
+                Strategy::MctsTree { parallel, net, .. } => {
+                    if p == 0 || opponents_same {
+                        Some(init_forest_for(p, *parallel, search_rng.gen(),
+                            net.as_ref().map(Arc::clone)))
+                    } else { None }
+                }
+                _ => None,
+            }
+        }).collect();
+
     while !game.is_game_over() {
         // HEAD-TO-HEAD MODE: if seat_tags set, dispatch each player's move by tag.
         if let Some(ref tags) = seat_tags {
@@ -627,20 +750,30 @@ fn simulate_game_inner(
             let net_for_seat: Option<&Arc<cascadia_ai::nnue::NNUENetwork>> =
                 seat_nets.as_ref().and_then(|nets| nets.get(p))
                     .or(seat_net.as_ref());
-            let mv = match tag {
-                "random" => cascadia_ai::draft_opponents::random_draft_move(&game, &mut search_rng),
-                "scarcity" => cascadia_ai::draft_opponents::scarcity_draft_move(&game, &mut search_rng),
-                "preference" => {
-                    if seat_preferences[p].is_none() {
-                        seat_preferences[p] = Some(cascadia_ai::draft_opponents::sample_preferences(&mut search_rng));
+            let mv = if let Some(forest) = mcts_forests[p].as_mut() {
+                // Tag mode: persistent MCTS-tree decision for this seat.
+                forest.pick_move(&game, mcts_tree_tag_sims)
+            } else {
+                match tag {
+                    "random" => cascadia_ai::draft_opponents::random_draft_move(&game, &mut search_rng),
+                    "scarcity" => cascadia_ai::draft_opponents::scarcity_draft_move(&game, &mut search_rng),
+                    "preference" => {
+                        if seat_preferences[p].is_none() {
+                            seat_preferences[p] = Some(cascadia_ai::draft_opponents::sample_preferences(&mut search_rng));
+                        }
+                        let prefs = seat_preferences[p].as_ref().unwrap();
+                        cascadia_ai::draft_opponents::preference_draft_move(&game, prefs, &mut search_rng)
                     }
-                    let prefs = seat_preferences[p].as_ref().unwrap();
-                    cascadia_ai::draft_opponents::preference_draft_move(&game, prefs, &mut search_rng)
+                    _ => pick_move_by_tag(&game, tag, net_for_seat, &mut search_rng),
                 }
-                _ => pick_move_by_tag(&game, tag, net_for_seat, &mut search_rng),
             };
             match mv {
-                Some(m) => { if !execute_scored_move(&mut game, &m) { break; } }
+                Some(m) => {
+                    if !execute_scored_move(&mut game, &m) { break; }
+                    if let Some(forest) = mcts_forests[p].as_mut() {
+                        forest.advance(&m);
+                    }
+                }
                 None => break,
             }
             continue;
@@ -650,6 +783,7 @@ fn simulate_game_inner(
         // If --opp-weights was set via OPPONENT_NET, opponents use that network
         // instead of player 0's net (for "v3 vs v1" style head-to-head experiments).
         if game.current_player != 0 {
+            let p = game.current_player;
             // Opponents ALWAYS take the free 3-of-a-kind replacement if available.
             // This is strictly an improvement over the current market state and
             // any rational player would take it. Without this, benchmark opponents
@@ -657,7 +791,19 @@ fn simulate_game_inner(
             if game.can_replace_overflow().is_some() {
                 game.replace_overflow();
             }
-            let opp_mv = if opponents_same {
+            let opp_mv = if let Some(forest) = mcts_forests[p].as_mut() {
+                // Persistent MCTS-tree opponent (opponents_same + Strategy::MctsTree).
+                // Run pre-move optimization for fairness (matches the equivalent
+                // pick_move dispatch behavior under opponents_same).
+                if opponents_same {
+                    pre_move_optimize(&mut game, strategy, &cards, &mut search_rng);
+                }
+                let sims = match strategy {
+                    Strategy::MctsTree { simulations, .. } => *simulations,
+                    _ => mcts_tree_tag_sims,
+                };
+                forest.pick_move(&game, sims)
+            } else if opponents_same {
                 // Run the FULL strategy (including MCE, prefilter, etc) for this opponent.
                 // Also needs pre-move optimization for fairness.
                 pre_move_optimize(&mut game, strategy, &cards, &mut search_rng);
@@ -684,6 +830,9 @@ fn simulate_game_inner(
             match opp_mv {
                 Some(mv) => {
                     if !execute_scored_move(&mut game, &mv) { break; }
+                    if let Some(forest) = mcts_forests[p].as_mut() {
+                        forest.advance(&mv);
+                    }
                 }
                 None => break,
             }
@@ -694,16 +843,16 @@ fn simulate_game_inner(
         // Iterative: keep applying pre-move actions as long as expected value improves.
         pre_move_optimize(&mut game, strategy, &cards, &mut search_rng);
 
-        // If MCE strategy and sample_sink provided, collect training samples
-        // from the same MCE run (avoids running the pipeline twice).
-        //
-        // MCE cache samples come from HYPOTHETICAL afterstates (every evaluated candidate,
-        // not just the one actually played), so aux_bear/aux_salmon/target_wildlife are
-        // not accurately knowable from a single game trajectory. We write them as 0 and
-        // the training pipeline treats them as value-only samples (aux loss contributes
-        // zero from these positions). MCE cache samples still use MCV3 format so the
-        // loader can read them alongside self-play data without format gymnastics.
-        let mv = if sample_sink.is_some() {
+        // Persistent MCTS-tree decision for player 0 (Exp #6 default mode).
+        // Bypasses the stateless pick_move path so cross-turn tree state is
+        // preserved. Falls through to the existing logic when no forest exists.
+        let mv = if let Some(forest) = mcts_forests[0].as_mut() {
+            let sims = match strategy {
+                Strategy::MctsTree { simulations, .. } => *simulations,
+                _ => mcts_tree_tag_sims,
+            };
+            forest.pick_move(&game, sims)
+        } else if sample_sink.is_some() {
             if let Strategy::MCE { ref net, rollouts } = strategy {
                 let tops = cascadia_ai::mce::top_moves_mce(&game, net, *rollouts, &mut search_rng, 15);
                 // Collect afterstate samples from all evaluated candidates
@@ -721,6 +870,7 @@ fn simulate_game_inner(
                             aux_bear: 0.0,
                             aux_salmon: 0.0,
                             target_wildlife: 0.0,
+                            subscore_targets: [0.0; cascadia_ai::nnue::NUM_HEADS],
                         });
                     }
                 }
@@ -737,6 +887,9 @@ fn simulate_game_inner(
         match mv {
             Some(mv) => {
                 if !execute_scored_move(&mut game, &mv) { break; }
+                if let Some(forest) = mcts_forests[0].as_mut() {
+                    forest.advance(&mv);
+                }
             }
             None => break,
         }
@@ -1181,6 +1334,16 @@ fn main() {
         return;
     }
 
+    // Cross-binary daemon mode: reads text commands from stdin, maintains one
+    // GameState internally, replies on stdout. See run_daemon() for protocol.
+    if args.iter().any(|a| a == "--daemon") {
+        let weights_path = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights.bin");
+        run_daemon(weights_path);
+        return;
+    }
+
     // Optional opponent NNUE: load and stash in OPPONENT_NET so simulate_game_inner
     // uses it for players 1..3 instead of player 0's net.
     if let Some(opp_path) = args.iter().position(|a| a == "--opp-weights")
@@ -1208,6 +1371,7 @@ fn main() {
     let run_collect_mcts = args.iter().any(|a| a == "--collect-mcts");
     let run_collect_mce_policy = args.iter().any(|a| a == "--collect-mce-policy");
     let run_train_mce_policy = args.iter().any(|a| a == "--train-mce-policy");
+    let run_train_pairwise = args.iter().any(|a| a == "--train-pairwise");
     let run_export_pytorch = args.iter().any(|a| a == "--export-pytorch");
     let run_self_play = args.iter().any(|a| a == "--self-play");
     let run_selfplay_pool = args.iter().any(|a| a == "--selfplay-pool");
@@ -1759,6 +1923,7 @@ fn main() {
                     aux_bear: final_bear_pairs,
                     aux_salmon: final_salmon_chain,
                     target_wildlife: delta_wildlife,
+                    subscore_targets: [0.0; cascadia_ai::nnue::NUM_HEADS],
                 });
             }
 
@@ -1899,6 +2064,7 @@ fn main() {
                     aux_bear: final_bear_pairs,
                     aux_salmon: final_salmon_chain,
                     target_wildlife: delta_wildlife,
+                    subscore_targets: [0.0; cascadia_ai::nnue::NUM_HEADS],
                 });
             }
 
@@ -1977,14 +2143,23 @@ fn main() {
         );
         let elapsed = start.elapsed();
 
+        // v5-feat builds write MCV4 (with per-subscore deltas for split-head training);
+        // older builds write MCV3 (target_wildlife only).
+        #[cfg(feature = "v5-feat")]
+        cascadia_ai::nnue_train::append_mce_samples_v4(
+            std::path::Path::new(out_path), &samples,
+        ).expect("Failed to write shard");
+        #[cfg(not(feature = "v5-feat"))]
         cascadia_ai::nnue_train::append_mce_samples_v3(
             std::path::Path::new(out_path), &samples,
         ).expect("Failed to write shard");
-        eprintln!("[selfplay-pool] {} samples from {} games in {:.1?} → {}",
-                  samples.len(), num_games, elapsed, out_path);
+        let fmt_label = if cfg!(feature = "v5-feat") { "MCV4" } else { "MCV3" };
+        eprintln!("[selfplay-pool] {} samples from {} games in {:.1?} → {} ({})",
+                  samples.len(), num_games, elapsed, out_path, fmt_label);
         println!("SAMPLES={}", samples.len());
         println!("GAMES={}", num_games);
         println!("ELAPSED_SEC={}", elapsed.as_secs_f64());
+        println!("FORMAT={}", fmt_label);
         return;
     } else if run_self_play {
         // Generate NNUE self-play games and write to MCV3 format
@@ -2936,6 +3111,7 @@ fn main() {
                             aux_bear: 0.0,
                             aux_salmon: 0.0,
                             target_wildlife: 0.0,
+                            subscore_targets: [0.0; cascadia_ai::nnue::NUM_HEADS],
                         });
                     }
                 }
@@ -3350,6 +3526,44 @@ fn main() {
         println!("  {:.1}s/game wall, {} threads",
                  elapsed.as_secs_f64() / num_games as f64, num_threads);
         return;
+    } else if run_train_pairwise {
+        // Exp #4: train value head with pairwise ranking loss on MCP2 grouped data.
+        let epochs: usize = args.iter().position(|a| a == "--epochs")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(10);
+        let lr: f32 = args.iter().position(|a| a == "--lr")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.00003);
+        let groups_path = args.iter().position(|a| a == "--groups")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("mce_grouped.bin");
+        let weights_in = args.iter().position(|a| a == "--init-weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()));
+        let weights_out = args.iter().position(|a| a == "--weights")
+            .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+            .unwrap_or("nnue_weights_pairwise.bin");
+        let pairwise_weight: f32 = args.iter().position(|a| a == "--pairwise-weight")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(0.5);
+        let margin: f32 = args.iter().position(|a| a == "--margin")
+            .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(1.0);
+        let mut net = if let Some(path) = weights_in {
+            println!("Loading initial weights from {}...", path);
+            cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(path))
+                .expect("Failed to load init weights")
+        } else {
+            println!("Starting with fresh weights");
+            cascadia_ai::nnue::NNUENetwork::new()
+        };
+        println!("Pairwise training: groups={}, epochs={}, lr={}, alpha={}, margin={}",
+                 groups_path, epochs, lr, pairwise_weight, margin);
+        let start = Instant::now();
+        let stats = cascadia_ai::nnue_train::train_from_mcp2_pairwise(
+            &mut net, std::path::Path::new(groups_path), epochs, lr, pairwise_weight, margin,
+        ).expect("Pairwise training failed");
+        println!("Training complete in {:.1?}", start.elapsed());
+        println!("  Total samples: {}", stats.num_samples);
+        println!("  Final RMSE:    {:.2}", stats.final_rmse);
+        net.save(std::path::Path::new(weights_out)).expect("Failed to save");
+        println!("  Weights saved to {}", weights_out);
+        return;
     } else if run_train_mce_policy {
         let epochs: usize = args.iter().position(|a| a == "--epochs")
             .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(15);
@@ -3672,6 +3886,8 @@ fn main() {
                     "halving-pw" | "halving-progressive" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingPW,
                     "thompson" | "ts" => cascadia_ai::mce::GreedyMceAlloc::ThompsonSampling,
                     "mcts-pw" | "mcts" => cascadia_ai::mce::GreedyMceAlloc::MctsPW,
+                    "halving-hetero" | "hetero" | "ocba" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingHetero,
+                    "puct" | "alphazero" => cascadia_ai::mce::GreedyMceAlloc::Puct,
                     _ => cascadia_ai::mce::GreedyMceAlloc::Uniform,
                 }).unwrap_or(cascadia_ai::mce::GreedyMceAlloc::Uniform);
             let expanded = args.iter().position(|a| a == "--candidates")
@@ -3684,6 +3900,20 @@ fn main() {
                 .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
             let parallel = args.iter().any(|a| a == "--parallel");
             Strategy::UctMcts { simulations, parallel }
+        } else if args.iter().any(|a| a == "--mcts-tree") {
+            let simulations = args.iter().position(|a| a == "--simulations")
+                .or_else(|| args.iter().position(|a| a == "--rollouts"))
+                .and_then(|i| args.get(i + 1)).and_then(|s| s.parse().ok()).unwrap_or(750);
+            let parallel = args.iter().any(|a| a == "--parallel");
+            // --weights enables NNUE-guided rollouts (optional; without it the
+            // tree uses greedy rollouts, matching `uct_mcts.rs`).
+            let net = args.iter().position(|a| a == "--weights")
+                .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
+                .and_then(|path| {
+                    cascadia_ai::nnue::NNUENetwork::load(std::path::Path::new(path))
+                        .ok().map(|n| Arc::new(n))
+                });
+            Strategy::MctsTree { simulations, parallel, net }
         } else if args.iter().any(|a| a == "--nnue-rollout-mce") {
             let weights_path = args.iter().position(|a| a == "--weights")
                 .and_then(|i| args.get(i + 1).map(|s| s.as_str()))
@@ -3703,6 +3933,8 @@ fn main() {
                     "halving-pw" | "halving-progressive" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingPW,
                     "thompson" | "ts" => cascadia_ai::mce::GreedyMceAlloc::ThompsonSampling,
                     "mcts-pw" | "mcts" => cascadia_ai::mce::GreedyMceAlloc::MctsPW,
+                    "halving-hetero" | "hetero" | "ocba" => cascadia_ai::mce::GreedyMceAlloc::SeqHalvingHetero,
+                    "puct" | "alphazero" => cascadia_ai::mce::GreedyMceAlloc::Puct,
                     _ => cascadia_ai::mce::GreedyMceAlloc::Uniform,
                 }).unwrap_or(cascadia_ai::mce::GreedyMceAlloc::Uniform);
             let expanded = args.iter().position(|a| a == "--candidates")
@@ -3779,5 +4011,383 @@ fn main() {
             }
             println!();
         }
+    }
+}
+
+// =====================================================================
+// Cross-binary daemon mode
+//
+// Two daemons (one per cascadia-cli binary, each loaded with its own NNUE
+// weights) cooperate with a Python coordinator to play a head-to-head game.
+// Each daemon maintains its own GameState, kept in sync by replaying the
+// same action sequence via APPLY commands.
+//
+// Protocol (line-based text on stdin/stdout):
+//   READY                     — emitted on startup once weights are loaded
+//   INIT <seed:u64>           — reset to fresh game with `seed` (both daemons
+//                               must use the same seed). Replies: OK <hash>
+//   PICK                      — daemon picks a move for the CURRENT player
+//                               using mce_wide_v1, applies it (and any pre-move
+//                               actions) to ITS state, and returns the action
+//                               sequence so the other daemon can replay.
+//                               Replies: ACTIONS <a1>;<a2>;...   (or "ACTIONS"
+//                               if no moves; or "ERROR ...")
+//   APPLY <action>            — apply one action to this daemon's state.
+//                               Action grammar:
+//                                  O                                 (free overflow replace)
+//                                  M                                 (mulligan, spends a token)
+//                                  P <market> <q> <r> <rot> <wq> <wr>     (-100 = no wildlife)
+//                                  I <tile_m> <wl_m> <q> <r> <rot> <wq> <wr>
+//                               Replies: OK <hash>  or  ERROR <msg>
+//   HASH                      — sync verify; replies: HASH <u64>
+//   GAMEOVER                  — replies: YES or NO
+//   CURPLAYER                 — replies: CUR <player_idx>
+//   SCORES                    — final scores; replies: SCORES s0 s1 s2 s3
+//   BREAKDOWN                 — full per-player breakdown
+//   QUIT                      — exit cleanly
+// =====================================================================
+
+fn run_daemon(weights_path: &str) {
+    use std::io::{BufRead, Write};
+    use cascadia_ai::nnue::NNUENetwork;
+    use cascadia_ai::eval::ScoredMove;
+
+    let net = match NNUENetwork::load(std::path::Path::new(weights_path)) {
+        Ok(n) => Arc::new(n),
+        Err(e) => {
+            eprintln!("DAEMON_ERROR failed to load weights {}: {}", weights_path, e);
+            std::process::exit(1);
+        }
+    };
+    eprintln!("DAEMON_LOADED weights={}", weights_path);
+
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+
+    let mut game: Option<GameState> = None;
+    let mut search_rng = StdRng::seed_from_u64(0);
+
+    writeln!(out, "READY").ok();
+    out.flush().ok();
+
+    let mut buf = String::new();
+    let mut handle = stdin.lock();
+    loop {
+        buf.clear();
+        let n = match handle.read_line(&mut buf) {
+            Ok(0) => break, // EOF
+            Ok(n) => n,
+            Err(_) => break,
+        };
+        if n == 0 { break; }
+        let line = buf.trim_end();
+        if line.is_empty() { continue; }
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.is_empty() { continue; }
+
+        let resp = match parts[0] {
+            "INIT" => {
+                let seed: u64 = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(42);
+                let mut init_rng = StdRng::seed_from_u64(seed);
+                let cards = ScoringCards::all_a();
+                let g = GameState::new(4, cards, &mut init_rng);
+                let h = state_hash(&g);
+                game = Some(g);
+                search_rng = StdRng::seed_from_u64(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+                format!("OK {}", h)
+            }
+            "PICK" => {
+                let g = game.as_mut().expect("INIT first");
+                if g.is_game_over() {
+                    "ERROR game_over".to_string()
+                } else {
+                    let actions = daemon_pick(g, &net, &mut search_rng);
+                    if actions.is_empty() {
+                        "ACTIONS".to_string()
+                    } else {
+                        format!("ACTIONS {}", actions.join(";"))
+                    }
+                }
+            }
+            "APPLY" => {
+                let g = game.as_mut().expect("INIT first");
+                let action_str = parts[1..].join(" ");
+                match daemon_apply(g, &action_str) {
+                    Ok(()) => format!("OK {}", state_hash(g)),
+                    Err(e) => format!("ERROR {}", e),
+                }
+            }
+            "HASH" => {
+                let g = game.as_ref().expect("INIT first");
+                format!("HASH {}", state_hash(g))
+            }
+            "GAMEOVER" => {
+                let g = game.as_ref().expect("INIT first");
+                if g.is_game_over() { "YES".to_string() } else { "NO".to_string() }
+            }
+            "CURPLAYER" => {
+                let g = game.as_ref().expect("INIT first");
+                format!("CUR {}", g.current_player)
+            }
+            "SCORES" => {
+                let g = game.as_mut().expect("INIT first");
+                let mut scores = Vec::with_capacity(g.num_players);
+                for p in 0..g.num_players {
+                    let bd = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut g.boards[p], &g.scoring_cards);
+                    scores.push(bd.total);
+                }
+                format!("SCORES {}", scores.iter().map(|s| s.to_string())
+                    .collect::<Vec<_>>().join(" "))
+            }
+            "BREAKDOWN" => {
+                let g = game.as_mut().expect("INIT first");
+                let n = g.num_players;
+                // Compute base breakdowns per player first to avoid repeated borrow conflicts.
+                let mut bases = Vec::with_capacity(n);
+                for p in 0..n {
+                    let bd = cascadia_core::scoring::ScoreBreakdown::compute(
+                        &mut g.boards[p], &g.scoring_cards);
+                    bases.push(bd);
+                }
+                // Now compute with-bonus for each player.
+                let mut lines = Vec::with_capacity(n);
+                for p in 0..n {
+                    let wbd = cascadia_core::scoring::ScoreBreakdown::compute_with_bonuses(
+                        &mut g.boards, &g.scoring_cards, p);
+                    let bd = bases[p];
+                    let hab: u16 = bd.habitat.iter().sum();
+                    let wl: u16 = bd.wildlife.iter().sum();
+                    let bonus: u16 = wbd.habitat_bonus.iter().map(|&b| b as u16).sum();
+                    lines.push(format!(
+                        "p={} base={} bonus={} hab={} wl={} tok={} bear={} elk={} salmon={} hawk={} fox={}",
+                        p, bd.total, bonus, hab, wl, bd.nature_tokens,
+                        bd.wildlife[0], bd.wildlife[1], bd.wildlife[2],
+                        bd.wildlife[3], bd.wildlife[4]
+                    ));
+                }
+                format!("BREAKDOWN {}", lines.join("|"))
+            }
+            "QUIT" => {
+                writeln!(out, "BYE").ok();
+                out.flush().ok();
+                return;
+            }
+            _ => format!("ERROR unknown_cmd {}", parts[0]),
+        };
+
+        writeln!(out, "{}", resp).ok();
+        out.flush().ok();
+    }
+}
+
+/// Compute a deterministic state hash for sync verification across binaries.
+/// Hashes board cell raw words + market positions + bag sizes + game state ints.
+fn state_hash(game: &GameState) -> u64 {
+    use std::hash::{Hash, Hasher};
+    use std::collections::hash_map::DefaultHasher;
+    let mut h = DefaultHasher::new();
+
+    game.num_players.hash(&mut h);
+    game.current_player.hash(&mut h);
+    game.turns_remaining.hash(&mut h);
+    game.overflow_used_this_turn.hash(&mut h);
+
+    for board in &game.boards {
+        // Hash a compact projection of each cell.
+        for cell in board.grid.cells.iter() {
+            // Cell is Copy + small; hash its bit-pattern via Debug-derived Hash if available.
+            // Otherwise project to u32: presence | terrain bits | wildlife bits.
+            let projection = cell_projection(*cell);
+            projection.hash(&mut h);
+        }
+        board.nature_tokens.hash(&mut h);
+        for &g in &board.largest_group {
+            g.hash(&mut h);
+        }
+    }
+
+    // Market: hash each pair (tile + wildlife) compactly.
+    for (i, slot) in game.market.pairs.iter().enumerate() {
+        i.hash(&mut h);
+        let proj = market_slot_projection(slot);
+        proj.hash(&mut h);
+    }
+
+    h.finish()
+}
+
+#[inline]
+fn cell_projection(cell: cascadia_core::types::Cell) -> u32 {
+    // Cell wraps a u16 with all of presence/terrain/wildlife packed in.
+    cell.0 as u32
+}
+
+#[inline]
+fn market_slot_projection(slot: &Option<cascadia_core::market::MarketPair>) -> u32 {
+    // Project the slot (tile + wildlife) into a u32.
+    // Use Debug + FNV-1a — both daemons compile from identical cascadia-core
+    // source, so the Debug format is byte-stable across binaries.
+    let s = format!("{:?}", slot);
+    let mut h = 2166136261u32;
+    for b in s.bytes() {
+        h ^= b as u32;
+        h = h.wrapping_mul(16777619);
+    }
+    h
+}
+
+/// Run pre-move optimisation + main pick on `game` using `net` (mce_wide_v1).
+/// Mutates the game state and returns the sequence of actions taken so the
+/// peer daemon can replay them.
+fn daemon_pick(
+    game: &mut GameState,
+    net: &Arc<cascadia_ai::nnue::NNUENetwork>,
+    search_rng: &mut StdRng,
+) -> Vec<String> {
+    use cascadia_ai::eval::ScoredMove;
+
+    let mut actions = Vec::with_capacity(4);
+    const MAX_MULLIGANS: usize = 5;
+    let mut mulligans_used = 0;
+
+    // Pre-move optimisation loop — mirrors pre_move_optimize() but records actions.
+    loop {
+        let analysis = cascadia_ai::mce::analyze_mulligan_fast(game, net);
+
+        if game.can_replace_overflow().is_some() {
+            let mut test = game.clone();
+            test.replace_overflow();
+            let post = cascadia_ai::mce::analyze_mulligan_fast(&test, net);
+            if post.current_best > analysis.current_best {
+                game.replace_overflow();
+                actions.push("O".to_string());
+                continue;
+            }
+        }
+
+        if mulligans_used < MAX_MULLIGANS && analysis.should_mulligan {
+            if game.mulligan_wildlife() {
+                mulligans_used += 1;
+                actions.push("M".to_string());
+                continue;
+            }
+        }
+        if mulligans_used < MAX_MULLIGANS && analysis.should_mulligan_pinecone {
+            if game.mulligan_wildlife() {
+                mulligans_used += 1;
+                actions.push("M".to_string());
+                continue;
+            }
+        }
+        break;
+    }
+
+    // Main move via mce_wide_v1.
+    let mv: Option<ScoredMove> = pick_with_env(
+        &[("MCE_LMR", "1"), ("MCE_DIVERSE_PREFILTER", "1")],
+        || {
+            let mut cands = cascadia_ai::mce::expanded_candidates(game);
+            if cands.len() > 32 {
+                cands = cascadia_ai::mce::nnue_prefilter_candidates(game, net, cands, 32);
+            }
+            cascadia_ai::mce::best_move_nnue_rollout_mce(
+                game, net, 600,
+                cascadia_ai::mce::GreedyMceAlloc::SeqHalving,
+                cands, search_rng,
+            )
+        },
+    );
+
+    if let Some(mv) = mv {
+        let wq = mv.wildlife_q.map(|x| x as i32).unwrap_or(-100);
+        let wr = mv.wildlife_r.map(|x| x as i32).unwrap_or(-100);
+        let action_str = if let Some(wmi) = mv.wildlife_market_index {
+            format!("I {} {} {} {} {} {} {}",
+                mv.market_index, wmi, mv.tile_q, mv.tile_r, mv.rotation, wq, wr)
+        } else {
+            format!("P {} {} {} {} {} {}",
+                mv.market_index, mv.tile_q, mv.tile_r, mv.rotation, wq, wr)
+        };
+        if cascadia_ai::search::execute_scored_move(game, &mv) {
+            actions.push(action_str);
+        }
+    }
+
+    actions
+}
+
+fn daemon_apply(game: &mut GameState, action: &str) -> Result<(), String> {
+    use cascadia_core::game::PlayerMove;
+    use cascadia_core::hex::HexCoord;
+
+    let parts: Vec<&str> = action.split_whitespace().collect();
+    if parts.is_empty() {
+        return Err("empty_action".to_string());
+    }
+    match parts[0] {
+        "O" => {
+            if !game.replace_overflow() {
+                return Err("overflow_failed".to_string());
+            }
+            Ok(())
+        }
+        "M" => {
+            if !game.mulligan_wildlife() {
+                return Err("mulligan_failed".to_string());
+            }
+            Ok(())
+        }
+        "P" => {
+            // P market q r rot wq wr
+            if parts.len() != 7 {
+                return Err(format!("P_bad_arity {}", parts.len()));
+            }
+            let market: usize = parts[1].parse().map_err(|_| "P_market".to_string())?;
+            let q: i8 = parts[2].parse().map_err(|_| "P_q".to_string())?;
+            let r: i8 = parts[3].parse().map_err(|_| "P_r".to_string())?;
+            let rot: u8 = parts[4].parse().map_err(|_| "P_rot".to_string())?;
+            let wq: i32 = parts[5].parse().map_err(|_| "P_wq".to_string())?;
+            let wr: i32 = parts[6].parse().map_err(|_| "P_wr".to_string())?;
+            let placement = if wq == -100 || wr == -100 {
+                None
+            } else {
+                HexCoord::new(wq as i8, wr as i8).to_index()
+            };
+            let pm = PlayerMove {
+                market_index: market,
+                tile_coord: HexCoord::new(q, r),
+                rotation: rot,
+                wildlife_placement: placement,
+            };
+            if !game.execute_move(pm) {
+                return Err("P_execute_failed".to_string());
+            }
+            Ok(())
+        }
+        "I" => {
+            // I tile_m wl_m q r rot wq wr
+            if parts.len() != 8 {
+                return Err(format!("I_bad_arity {}", parts.len()));
+            }
+            let tile_m: usize = parts[1].parse().map_err(|_| "I_tm".to_string())?;
+            let wl_m: usize = parts[2].parse().map_err(|_| "I_wm".to_string())?;
+            let q: i8 = parts[3].parse().map_err(|_| "I_q".to_string())?;
+            let r: i8 = parts[4].parse().map_err(|_| "I_r".to_string())?;
+            let rot: u8 = parts[5].parse().map_err(|_| "I_rot".to_string())?;
+            let wq: i32 = parts[6].parse().map_err(|_| "I_wq".to_string())?;
+            let wr: i32 = parts[7].parse().map_err(|_| "I_wr".to_string())?;
+            let placement = if wq == -100 || wr == -100 {
+                None
+            } else {
+                HexCoord::new(wq as i8, wr as i8).to_index()
+            };
+            if !game.execute_independent_move(tile_m, wl_m, HexCoord::new(q, r), rot, placement) {
+                return Err("I_execute_failed".to_string());
+            }
+            Ok(())
+        }
+        other => Err(format!("unknown_action {}", other)),
     }
 }

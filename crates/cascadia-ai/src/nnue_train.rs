@@ -19,18 +19,25 @@ use crate::search::{execute_scored_move, greedy_move};
 /// A training sample: board features + target score(s).
 ///
 /// `target` is the main value target (final_score - current_score), i.e. the TOTAL
-/// remaining points to gain from this afterstate to game end.
+/// remaining points to gain from this afterstate to game end. For MCV3 format,
+/// this is the base score (no habitat majority bonuses). For MCV4 (v5 split-head
+/// training), this is the bonus-INCLUDED total: the sum of `subscore_targets`.
 ///
 /// `target_wildlife` is the WILDLIFE-only remaining points (final_wildlife - current_wildlife).
 /// The habitat+tokens remaining is derived as `target - target_wildlife`. Stored as a
-/// separate field to avoid recomputation during multi-head training. v5 split-value-head
-/// architecture uses this for the wildlife value head target.
+/// separate field to avoid recomputation during multi-head training. v5 2-head split
+/// uses this for the wildlife value head target.
+///
+/// `subscore_targets` (v5 / MCV4): per-subscore remaining deltas for 11-head split
+/// training. Layout matches `nnue::HEAD_*` constants:
+///   [0..5]:  per-wildlife (bear, elk, salmon, hawk, fox)
+///   [5..10]: per-terrain hab + final-bonus (forest, prairie, wetland, mountain, river)
+///   [10]:    nature tokens
+/// Sum equals `target` for MCV4 data. For MCV3-loaded data, all zero.
 ///
 /// `aux_bear` and `aux_salmon` are auxiliary regression targets used by
 /// multi-head training (v4 architecture). They are the FINAL bear pair count
 /// and FINAL longest salmon chain length for the game this sample came from.
-/// All afterstates of the same game share the same aux targets — they predict
-/// "where this game is headed."
 #[derive(Clone)]
 pub struct Sample {
     pub features: Vec<u16>,
@@ -38,6 +45,7 @@ pub struct Sample {
     pub aux_bear: f32,
     pub aux_salmon: f32,
     pub target_wildlife: f32,
+    pub subscore_targets: [f32; crate::nnue::NUM_HEADS],
 }
 
 /// Count isolated bear pairs (connected components of size exactly 2).
@@ -160,14 +168,52 @@ pub fn generate_games_with_mode(
     all_results
 }
 
+/// Per-afterstate intermediate state captured during play. Captures everything
+/// needed to compute per-subscore (final - current) deltas at game end.
+struct Afterstate {
+    features: Vec<u16>,
+    /// Single-player base score (no habitat bonus); legacy `target` field source.
+    current_total: u16,
+    /// Wildlife-only sum (legacy target_wildlife field source).
+    current_wildlife: u16,
+    /// Per-wildlife sub-scores at this afterstate.
+    current_wildlife_per: [u16; 5],
+    /// Per-terrain habitat sizes (= per-terrain habitat sub-score; bonus is 0 mid-game).
+    current_hab_per: [u16; 5],
+    /// Nature tokens held by player 0.
+    current_tokens: u16,
+}
+
+/// Parse "A,B,C,A,D" → ScoringCards (Bear, Elk, Salmon, Hawk, Fox order).
+fn parse_train_cards(s: &str) -> Option<ScoringCards> {
+    use cascadia_core::types::ScoringCardVariant;
+    let parts: Vec<&str> = s.split(',').map(|x| x.trim()).collect();
+    if parts.len() != 5 { return None; }
+    let mut cards = [ScoringCardVariant::A; 5];
+    for (i, p) in parts.iter().enumerate() {
+        cards[i] = match p.to_ascii_uppercase().as_str() {
+            "A" => ScoringCardVariant::A,
+            "B" => ScoringCardVariant::B,
+            "C" => ScoringCardVariant::C,
+            "D" => ScoringCardVariant::D,
+            _ => return None,
+        };
+    }
+    Some(ScoringCards { cards })
+}
+
 /// Generate one game, return its samples and final score.
 fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, mode: SamplingMode, num_players: usize) -> GameResult {
+    use cascadia_core::types::Terrain;
     let mut samples = Vec::new();
     let mut rng = StdRng::seed_from_u64(seed);
-    let cards = ScoringCards::all_a();
+    // Allow CASCADIA_SCORING_CARDS env override so training data can be
+    // produced with alt scoring (e.g. for cards-alt builds).
+    let cards = std::env::var("CASCADIA_SCORING_CARDS").ok()
+        .and_then(|s| parse_train_cards(&s))
+        .unwrap_or_else(ScoringCards::all_a);
     let mut game = GameState::new(num_players, cards, &mut rng);
-    // Each afterstate: (features, total_score, wildlife_only_score)
-    let mut afterstates: Vec<(Vec<u16>, u16, u16)> = Vec::with_capacity(20);
+    let mut afterstates: Vec<Afterstate> = Vec::with_capacity(20);
 
     while !game.is_game_over() {
         if game.current_player != 0 {
@@ -211,31 +257,74 @@ fn generate_single_game(seed: u64, net: Option<&NNUENetwork>, mode: SamplingMode
         // features extracted from boards[0]. from_game() would use whoever
         // current_player happens to be (usually opponents post-move).
         let bag_info = crate::nnue::BagInfo::from_game_for_player(&game, 0);
-        afterstates.push((
-            crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)),
-            bd.total,
-            bd.wildlife_total(),
-        ));
-    }
-
-    let final_bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
-    let final_score = final_bd.total;
-    let final_wildlife = final_bd.wildlife_total();
-    let final_bear_pairs = count_bear_pairs(&game.boards[0]) as f32;
-    let final_salmon_chain = longest_salmon_chain(&game.boards[0]) as f32;
-    for (features, current_score, current_wildlife) in afterstates {
-        let remaining = final_score.saturating_sub(current_score) as f32;
-        let remaining_wildlife = final_wildlife.saturating_sub(current_wildlife) as f32;
-        samples.push(Sample {
-            features,
-            target: remaining,
-            aux_bear: final_bear_pairs,
-            aux_salmon: final_salmon_chain,
-            target_wildlife: remaining_wildlife,
+        let mut hab_per = [0u16; 5];
+        for t in Terrain::ALL { hab_per[t as usize] = bd.habitat[t as usize]; }
+        afterstates.push(Afterstate {
+            features: crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)),
+            current_total: bd.total,
+            current_wildlife: bd.wildlife_total(),
+            current_wildlife_per: bd.wildlife,
+            current_hab_per: hab_per,
+            current_tokens: bd.nature_tokens,
         });
     }
 
-    GameResult { samples, final_score }
+    // Compute per-subscore final values WITH habitat majority bonus baked into
+    // the per-terrain head (the bonus is rank-based vs. opponents and only
+    // determinable at game end). Sum of per-subscore deltas equals
+    // `final_total_with_bonus - current_total_no_bonus`.
+    let final_bd_with_bonus = if num_players >= 2 {
+        ScoreBreakdown::compute_with_bonuses(&mut game.boards, &game.scoring_cards, 0)
+    } else {
+        ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards)
+    };
+    let final_score_base = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards).total;
+    let final_score_with_bonus = final_bd_with_bonus.total;
+    let final_wildlife = final_bd_with_bonus.wildlife_total();
+    let final_wildlife_per = final_bd_with_bonus.wildlife;
+    let mut final_hab_plus_bonus = [0u16; 5];
+    for t in Terrain::ALL {
+        let ti = t as usize;
+        final_hab_plus_bonus[ti] = final_bd_with_bonus.habitat[ti]
+            + final_bd_with_bonus.habitat_bonus[ti] as u16;
+    }
+    let final_tokens = final_bd_with_bonus.nature_tokens;
+    let final_bear_pairs = count_bear_pairs(&game.boards[0]) as f32;
+    let final_salmon_chain = longest_salmon_chain(&game.boards[0]) as f32;
+    for st in afterstates {
+        // Legacy `target` = base score remaining (no bonus) for back-compat with
+        // MCV3-trained models loading via target field. This MAY differ from the
+        // sum of subscore_targets (which IS bonus-included).
+        let remaining_base = final_score_base.saturating_sub(st.current_total) as f32;
+        let remaining_wildlife = final_wildlife.saturating_sub(st.current_wildlife) as f32;
+        let mut subscore: [f32; crate::nnue::NUM_HEADS] = [0.0; crate::nnue::NUM_HEADS];
+        // Heads 0..5: per-wildlife
+        for w in 0..5 {
+            subscore[w] = (final_wildlife_per[w] as i32 - st.current_wildlife_per[w] as i32) as f32;
+        }
+        // Heads 5..10: per-terrain (hab + bonus)
+        for t in 0..5 {
+            subscore[5 + t] = (final_hab_plus_bonus[t] as i32 - st.current_hab_per[t] as i32) as f32;
+        }
+        // Head 10: tokens
+        subscore[10] = (final_tokens as i32 - st.current_tokens as i32) as f32;
+        // Sanity: target_with_bonus = sum of subscores
+        let target_with_bonus = (final_score_with_bonus as i32 - st.current_total as i32) as f32;
+        // We intentionally use bonus-included target for MCV4 — the sum of subscores.
+        // The legacy `remaining_base` is only emitted in MCV3 paths (older callers).
+        // Both kept for backward-compat readability; downstream chooses.
+        let _ = remaining_base; // keep computation but use target_with_bonus below
+        samples.push(Sample {
+            features: st.features,
+            target: target_with_bonus,
+            aux_bear: final_bear_pairs,
+            aux_salmon: final_salmon_chain,
+            target_wildlife: remaining_wildlife,
+            subscore_targets: subscore,
+        });
+    }
+
+    GameResult { samples, final_score: final_score_base }
 }
 
 /// Sampling mode for self-play move selection.
@@ -429,7 +518,9 @@ fn generate_game_samples(
     player_mce: Option<usize>,
 ) {
     let mut rng = StdRng::seed_from_u64(seed);
-    let cards = ScoringCards::all_a();
+    let cards = std::env::var("CASCADIA_SCORING_CARDS").ok()
+        .and_then(|s| parse_train_cards(&s))
+        .unwrap_or_else(ScoringCards::all_a);
     let mut game = GameState::new(num_players, cards, &mut rng);
 
     // CASCADIA_TRAIN_OPP_NNUE=1 — legacy flag. Honored only if EVERY seat in the
@@ -448,9 +539,10 @@ fn generate_game_samples(
         } else { None });
     }
 
-    // Collect afterstate features + scores during the game
-    // (features, current_total, current_wildlife_only)
-    let mut afterstates: Vec<(Vec<u16>, u16, u16)> = Vec::with_capacity(20);
+    // Collect afterstate features + per-subscore current values during the game.
+    // Captures everything generate_game_samples needs to produce both legacy MCV3
+    // targets (target, target_wildlife) AND v5 MCV4 per-subscore deltas.
+    let mut afterstates: Vec<Afterstate> = Vec::with_capacity(20);
     // Saved state right before the AI's LAST move (for K=1 exact label)
     let mut state_before_last_ai_move: Option<GameState> = None;
 
@@ -540,21 +632,42 @@ fn generate_game_samples(
             None => break,
         }
 
-        // Record afterstate features + current scores (total + wildlife-only).
-        // BagInfo from player 0's POV so opp_detail ordering matches boards[0] features.
+        // Record afterstate features + per-subscore current values for v5 split-head
+        // training. BagInfo from player 0's POV so opp_detail ordering matches features.
+        use cascadia_core::types::Terrain;
         let bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
         let bag_info = crate::nnue::BagInfo::from_game_for_player(&game, 0);
-        afterstates.push((
-            crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)),
-            bd.total,
-            bd.wildlife_total(),
-        ));
+        let mut hab_per = [0u16; 5];
+        for t in Terrain::ALL { hab_per[t as usize] = bd.habitat[t as usize]; }
+        afterstates.push(Afterstate {
+            features: crate::nnue::extract_features_with_bag(&game.boards[0], Some(&bag_info)),
+            current_total: bd.total,
+            current_wildlife: bd.wildlife_total(),
+            current_wildlife_per: bd.wildlife,
+            current_hab_per: hab_per,
+            current_tokens: bd.nature_tokens,
+        });
     }
 
-    // Final scores (total + wildlife-only)
+    // Final scores (with bonus included for split-head per-terrain target).
+    use cascadia_core::types::Terrain;
+    let final_bd_with_bonus = if num_players >= 2 {
+        ScoreBreakdown::compute_with_bonuses(&mut game.boards, &game.scoring_cards, 0)
+    } else {
+        ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards)
+    };
     let final_bd = ScoreBreakdown::compute(&mut game.boards[0], &game.scoring_cards);
     let final_score = final_bd.total;
     let final_wildlife = final_bd.wildlife_total();
+    let final_score_with_bonus = final_bd_with_bonus.total;
+    let final_wildlife_per = final_bd_with_bonus.wildlife;
+    let mut final_hab_plus_bonus = [0u16; 5];
+    for t in Terrain::ALL {
+        let ti = t as usize;
+        final_hab_plus_bonus[ti] = final_bd_with_bonus.habitat[ti]
+            + final_bd_with_bonus.habitat_bonus[ti] as u16;
+    }
+    let final_tokens = final_bd_with_bonus.nature_tokens;
 
     // Auxiliary targets: count final bear pairs and longest salmon chain.
     // All afterstates from this game share the same aux targets — they predict
@@ -584,22 +697,34 @@ fn generate_game_samples(
     // Delta labels: remaining points to gain.
     // For sample N-2 (state with 1 AI move remaining = afterstates[len-2]), use the
     // optimal final score. For all other samples, use the actual final score.
+    // For v5 11-head training, target = bonus-INCLUDED total (sum of subscore_targets).
+    // Per-subscore deltas are computed from the bonus-aware final breakdown.
     let n = afterstates.len();
-    for (i, (features, current_score, current_wildlife)) in afterstates.iter().enumerate() {
+    for (i, st) in afterstates.iter().enumerate() {
         let (label_final, label_final_wildlife) = if i == n.saturating_sub(2) {
-            // never under-estimate either
             (optimal_final_score.max(final_score), optimal_final_wildlife.max(final_wildlife))
         } else {
             (final_score, final_wildlife)
         };
-        let remaining = label_final.saturating_sub(*current_score) as f32;
-        let remaining_wildlife = label_final_wildlife.saturating_sub(*current_wildlife) as f32;
+        let remaining_wildlife = label_final_wildlife.saturating_sub(st.current_wildlife) as f32;
+        let _ = label_final; // legacy base-only target (kept for read-side back-compat)
+        // Target = bonus-included remaining (matches sum of subscore_targets).
+        let target_with_bonus = (final_score_with_bonus as i32 - st.current_total as i32) as f32;
+        let mut subscore: [f32; crate::nnue::NUM_HEADS] = [0.0; crate::nnue::NUM_HEADS];
+        for w in 0..5 {
+            subscore[w] = (final_wildlife_per[w] as i32 - st.current_wildlife_per[w] as i32) as f32;
+        }
+        for t in 0..5 {
+            subscore[5 + t] = (final_hab_plus_bonus[t] as i32 - st.current_hab_per[t] as i32) as f32;
+        }
+        subscore[10] = (final_tokens as i32 - st.current_tokens as i32) as f32;
         samples.push(Sample {
-            features: features.clone(),
-            target: remaining,
+            features: st.features.clone(),
+            target: target_with_bonus,
             aux_bear: final_bear_pairs,
             aux_salmon: final_salmon_chain,
             target_wildlife: remaining_wildlife,
+            subscore_targets: subscore,
         });
     }
 
@@ -619,12 +744,12 @@ fn generate_game_samples(
             let mut buf: Vec<u8> = Vec::with_capacity(1024);
             buf.extend_from_slice(&(afterstates.len() as u16).to_le_bytes());
             buf.extend_from_slice(&final_score.to_le_bytes());
-            for (features, current_score, _current_wildlife) in &afterstates {
-                buf.extend_from_slice(&(features.len() as u16).to_le_bytes());
-                for &f in features {
+            for st in &afterstates {
+                buf.extend_from_slice(&(st.features.len() as u16).to_le_bytes());
+                for &f in &st.features {
                     buf.extend_from_slice(&(f as u16).to_le_bytes());
                 }
-                buf.extend_from_slice(&current_score.to_le_bytes());
+                buf.extend_from_slice(&st.current_total.to_le_bytes());
             }
             let _ = file.write_all(&buf);
         }
@@ -700,7 +825,7 @@ pub fn load_cache_samples(cache_path: &std::path::Path) -> std::io::Result<Vec<S
                 None => { game_ok = false; break; }
             };
             let target = final_score.saturating_sub(current_score) as f32;
-            game_samples.push(Sample { features, target, aux_bear: 0.0, aux_salmon: 0.0, target_wildlife: 0.0 });
+            game_samples.push(Sample { features, target, aux_bear: 0.0, aux_salmon: 0.0, target_wildlife: 0.0, subscore_targets: [0.0; crate::nnue::NUM_HEADS] });
         }
 
         if game_ok {
@@ -720,13 +845,17 @@ pub fn load_cache_samples(cache_path: &std::path::Path) -> std::io::Result<Vec<S
 }
 
 // ── MCE Policy Samples: flat file format ──
-// Magic: 4 bytes b"MCEP" (v1), b"MCV2" (v2 with aux), b"MCV3" (v3 adds target_wildlife)
+// Magic: 4 bytes b"MCEP" (v1), b"MCV2" (v2 with aux), b"MCV3" (v3 adds target_wildlife),
+//        b"MCV4" (v4 adds NUM_HEADS subscore deltas for v5 split-head training)
 // v1: u16 nf, nf × u16 features, f32 target
-// v2: u16 nf, nf × u16 features, f32 target, f32 aux_bear, f32 aux_salmon
-// v3: u16 nf, nf × u16 features, f32 target, f32 aux_bear, f32 aux_salmon, f32 target_wildlife
+// v2: v1 + f32 aux_bear, f32 aux_salmon
+// v3: v2 + f32 target_wildlife
+// v4: v3 + NUM_HEADS × f32 subscore_targets
+//     (target field is bonus-included total; sum of subscore_targets equals target.)
 const MCE_POLICY_MAGIC: &[u8; 4] = b"MCEP";
 const MCE_POLICY_MAGIC_V2: &[u8; 4] = b"MCV2";
 const MCE_POLICY_MAGIC_V3: &[u8; 4] = b"MCV3";
+const MCE_POLICY_MAGIC_V4: &[u8; 4] = b"MCV4";
 
 /// Append MCE-labeled samples to a file in legacy MCEP (v1) format.
 /// Prefer `append_mce_samples_v3` for all new work — MCEP loses aux + wildlife targets.
@@ -753,8 +882,9 @@ pub fn append_mce_samples(
     Ok(())
 }
 
-/// Load all MCE policy samples from a file (auto-detects v1 MCEP, v2 MCV2, or v3 MCV3).
-/// For v1/v2 samples loaded here, `target_wildlife` is set to 0.0 (not trainable for split heads).
+/// Load all MCE policy samples from a file (auto-detects v1 MCEP, v2 MCV2, v3 MCV3, or v4 MCV4).
+/// For v1/v2 samples, `target_wildlife` is set to 0.0; for v1-v3 samples,
+/// `subscore_targets` is all-zero (not trainable for 11-head split heads).
 pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> {
     use std::io::Read;
     let mut file = std::fs::File::open(path)?;
@@ -764,16 +894,20 @@ pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> 
     if bytes.len() < 4 {
         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "file too short"));
     }
+    let is_v4 = &bytes[..4] == MCE_POLICY_MAGIC_V4;
     let is_v3 = &bytes[..4] == MCE_POLICY_MAGIC_V3;
     let is_v2 = &bytes[..4] == MCE_POLICY_MAGIC_V2;
     let is_v1 = &bytes[..4] == MCE_POLICY_MAGIC;
-    if !is_v1 && !is_v2 && !is_v3 {
+    if !is_v1 && !is_v2 && !is_v3 && !is_v4 {
         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "bad magic"));
     }
     pos += 4;
     // Per-sample extra bytes beyond `target`:
-    //   v1: 0, v2: 8 (aux_bear + aux_salmon), v3: 12 (v2 + target_wildlife)
-    let extra_per_sample: usize = if is_v3 { 12 } else if is_v2 { 8 } else { 0 };
+    //   v1: 0, v2: 8, v3: 12, v4: 12 + NUM_HEADS*4
+    let extra_per_sample: usize = if is_v4 { 12 + crate::nnue::NUM_HEADS * 4 }
+                                  else if is_v3 { 12 }
+                                  else if is_v2 { 8 }
+                                  else { 0 };
     let mut samples = Vec::new();
     while pos + 2 <= bytes.len() {
         let nf = u16::from_le_bytes([bytes[pos], bytes[pos+1]]) as usize;
@@ -786,7 +920,7 @@ pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> 
         }
         let target = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
         pos += 4;
-        let (aux_bear, aux_salmon) = if is_v2 || is_v3 {
+        let (aux_bear, aux_salmon) = if is_v2 || is_v3 || is_v4 {
             let b = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
             pos += 4;
             let s = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
@@ -795,14 +929,21 @@ pub fn load_mce_samples(path: &std::path::Path) -> std::io::Result<Vec<Sample>> 
         } else {
             (0.0, 0.0)
         };
-        let target_wildlife = if is_v3 {
+        let target_wildlife = if is_v3 || is_v4 {
             let w = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
             pos += 4;
             w
         } else {
             0.0
         };
-        samples.push(Sample { features, target, aux_bear, aux_salmon, target_wildlife });
+        let mut subscore_targets = [0.0f32; crate::nnue::NUM_HEADS];
+        if is_v4 {
+            for st in subscore_targets.iter_mut() {
+                *st = f32::from_le_bytes([bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]]);
+                pos += 4;
+            }
+        }
+        samples.push(Sample { features, target, aux_bear, aux_salmon, target_wildlife, subscore_targets });
     }
     Ok(samples)
 }
@@ -858,6 +999,40 @@ pub fn append_mce_samples_v3(
         buf.extend_from_slice(&sample.aux_bear.to_le_bytes());
         buf.extend_from_slice(&sample.aux_salmon.to_le_bytes());
         buf.extend_from_slice(&sample.target_wildlife.to_le_bytes());
+    }
+    file.write_all(&buf)?;
+    Ok(())
+}
+
+/// Append samples in v4 format: v3 fields + NUM_HEADS subscore_targets.
+/// Required for v5 split-value-head training (11 per-subscore deltas per sample).
+/// `target` field is the bonus-INCLUDED total (sum of subscore_targets) — differs
+/// from MCV3 where `target` is base-only.
+pub fn append_mce_samples_v4(
+    path: &std::path::Path,
+    samples: &[Sample],
+) -> std::io::Result<()> {
+    use std::io::Write;
+    let is_new = !path.exists();
+    let mut file = std::fs::OpenOptions::new()
+        .create(true).append(true).open(path)?;
+    let bytes_per_sample = 2 + 4 + 4 + 4 + 4 + crate::nnue::NUM_HEADS * 4 + 64; // ~120 bytes
+    let mut buf: Vec<u8> = Vec::with_capacity(samples.len() * bytes_per_sample);
+    if is_new {
+        buf.extend_from_slice(MCE_POLICY_MAGIC_V4);
+    }
+    for sample in samples {
+        buf.extend_from_slice(&(sample.features.len() as u16).to_le_bytes());
+        for &f in &sample.features {
+            buf.extend_from_slice(&f.to_le_bytes());
+        }
+        buf.extend_from_slice(&sample.target.to_le_bytes());
+        buf.extend_from_slice(&sample.aux_bear.to_le_bytes());
+        buf.extend_from_slice(&sample.aux_salmon.to_le_bytes());
+        buf.extend_from_slice(&sample.target_wildlife.to_le_bytes());
+        for &st in &sample.subscore_targets {
+            buf.extend_from_slice(&st.to_le_bytes());
+        }
     }
     file.write_all(&buf)?;
     Ok(())
@@ -1151,10 +1326,10 @@ fn augment_with_rotations(samples: &[Sample]) -> Vec<Sample> {
 
         // 2 rotations of original
         if let Some(rot) = rotate_features(&sample.features, &table_120, 1) {
-            augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
+            augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw, subscore_targets: sample.subscore_targets });
         } else { skipped += 1; }
         if let Some(rot) = rotate_features(&sample.features, &table_240, 2) {
-            augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
+            augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw, subscore_targets: sample.subscore_targets });
         } else { skipped += 1; }
 
         // 24 translations
@@ -1162,14 +1337,14 @@ fn augment_with_rotations(samples: &[Sample]) -> Vec<Sample> {
             if let Some(trans) = translate_features(&sample.features, table) {
                 // 2 rotations of each translation
                 if let Some(rot) = rotate_features(&trans, &table_120, 1) {
-                    augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
+                    augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw, subscore_targets: sample.subscore_targets });
                 } else { skipped += 1; }
                 if let Some(rot) = rotate_features(&trans, &table_240, 2) {
-                    augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
+                    augmented.push(Sample { features: rot, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw, subscore_targets: sample.subscore_targets });
                 } else { skipped += 1; }
 
                 // The translation itself (after rotations so we still have `trans`)
-                augmented.push(Sample { features: trans, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw });
+                augmented.push(Sample { features: trans, target: sample.target, aux_bear: aux_b, aux_salmon: aux_s, target_wildlife: tw, subscore_targets: sample.subscore_targets });
             } else { skipped += 1; }
         }
     }
@@ -1330,6 +1505,123 @@ pub fn train_from_mce_samples_with_checkpoint(
 
 /// Train NNUE from the high-score cache file (expert imitation learning).
 /// This trains on ~1000+ games that scored 90+, labeled with delta targets.
+/// Train value head with pairwise ranking loss (Exp #4).
+/// Loads MCP2 grouped data (one group per game state, K candidates each scored by MCE).
+/// For each group, applies pairwise sigmoid loss `−log σ(score_winner − score_loser)`
+/// over all C(K,2) candidate pairs (skipping pairs with MCE-score-difference < margin
+/// to avoid noise). Backprops through entire network. Optionally blends with MSE
+/// loss on the per-candidate MCE score (alpha=pairwise_weight).
+///
+/// Theory: pairwise loss is invariant to per-position score offsets, so it doesn't
+/// dominate gradients on noisy positions. Tests the hypothesis that ranking-only
+/// signal helps where MSE struggles.
+pub fn train_from_mcp2_pairwise(
+    net: &mut NNUENetwork,
+    groups_path: &std::path::Path,
+    epochs: usize,
+    lr: f32,
+    pairwise_weight: f32,  // 0.0 = pure MSE, 1.0 = pure pairwise
+    margin: f32,           // skip pairs whose MCE-score-diff < margin (default 1.0)
+) -> std::io::Result<TrainStats> {
+    let mut stats = TrainStats::default();
+    eprint!("  Loading MCP2 groups from {:?}...", groups_path);
+    let start = std::time::Instant::now();
+    let groups = load_policy_data(groups_path)?;
+    eprintln!(" {} groups in {:.1?}", groups.len(), start.elapsed());
+    if groups.is_empty() { return Ok(stats); }
+
+    // Filter out groups with < 2 candidates (no pairwise to do)
+    let groups: Vec<PolicyGroup> = groups.into_iter()
+        .filter(|g| g.candidates.len() >= 2).collect();
+    stats.num_samples = groups.iter().map(|g| g.candidates.len()).sum();
+
+    let mut rng = StdRng::seed_from_u64(42);
+    let mut group_indices: Vec<usize> = (0..groups.len()).collect();
+
+    eprintln!("  Mode: pairwise ranking (alpha={}, margin={})", pairwise_weight, margin);
+
+    for epoch in 0..epochs {
+        group_indices.shuffle(&mut rng);
+        let mut total_pair_loss = 0.0f64;
+        let mut total_mse_loss = 0.0f64;
+        let mut pair_count = 0usize;
+        let mut sample_count = 0usize;
+
+        for &gi in &group_indices {
+            let group = &groups[gi];
+            let n_cands = group.candidates.len();
+
+            // Forward pass: compute value pred for each candidate
+            // We re-run net.forward per candidate (no shared backbone optimization here —
+            // this is fine-tuning so cost is dominated by data loading anyway)
+            let preds: Vec<f32> = group.candidates.iter()
+                .map(|(feats, _)| net.forward(feats)).collect();
+            let mce_scores: Vec<f32> = group.candidates.iter().map(|(_, s)| *s).collect();
+
+            // ── Pairwise loss + gradients ──
+            // For each pair (i, j) with mce_i > mce_j + margin:
+            //   target: pred_i should be > pred_j
+            //   loss: -log sigmoid(pred_i - pred_j) = log(1 + exp(-(pred_i - pred_j)))
+            //   d_loss/d_pred_i = -sigmoid(-(pred_i - pred_j)) = -(1 - σ(diff)) = σ(diff) - 1
+            //   d_loss/d_pred_j = +sigmoid(-(pred_i - pred_j)) = 1 - σ(diff)
+            //
+            // Apply gradients per-candidate by accumulating per-candidate d_pred,
+            // then run a target-style update: net.train_sample(features, pred + d_pred, lr)
+            // doesn't quite work because train_sample uses (out - target) gradient.
+            // Workaround: we set target = pred - d_pred, so (pred - target) = d_pred (same gradient).
+            let mut d_pred = vec![0.0f32; n_cands];
+            if pairwise_weight > 0.0 {
+                for i in 0..n_cands {
+                    for j in 0..n_cands {
+                        if i == j { continue; }
+                        let mce_diff = mce_scores[i] - mce_scores[j];
+                        if mce_diff < margin { continue; } // i not clearly better than j
+                        let pred_diff = preds[i] - preds[j];
+                        let s = 1.0 / (1.0 + (-pred_diff).exp());
+                        let loss = -((s.max(1e-9)).ln());
+                        total_pair_loss += loss as f64;
+                        pair_count += 1;
+                        // d_loss / d(pred_i) = -(1 - s) = s - 1
+                        // d_loss / d(pred_j) = +(1 - s)
+                        let g = pairwise_weight * (s - 1.0);
+                        d_pred[i] += g;
+                        d_pred[j] -= g;
+                    }
+                }
+            }
+            // ── MSE component ──
+            if pairwise_weight < 1.0 {
+                let alpha_mse = 1.0 - pairwise_weight;
+                for i in 0..n_cands {
+                    let mse_grad = preds[i] - mce_scores[i];
+                    d_pred[i] += alpha_mse * mse_grad;
+                    total_mse_loss += (mse_grad * mse_grad) as f64;
+                    sample_count += 1;
+                }
+            }
+
+            // Apply per-candidate gradient via target-style update.
+            // Normalize d_pred by approx pair count per candidate (each candidate
+            // participates in ~n_cands-1 pairs) to keep effective gradient bounded.
+            // Also clip target deviation to ±5 for stability.
+            let batch_lr = lr / (n_cands as f32);
+            let pair_norm = (n_cands as f32 - 1.0).max(1.0);
+            for i in 0..n_cands {
+                let dp = (d_pred[i] / pair_norm).clamp(-5.0, 5.0);
+                let target = preds[i] - dp;
+                let _ = net.train_sample(&group.candidates[i].0, target, batch_lr);
+            }
+        }
+        let avg_pair = if pair_count > 0 { total_pair_loss / pair_count as f64 } else { 0.0 };
+        let mse_rmse = if sample_count > 0 { (total_mse_loss / sample_count as f64).sqrt() } else { 0.0 };
+        eprint!("\r  Epoch {}/{}: pair_loss={:.4}, mse_rmse={:.2}, pairs={}, samples={}    ",
+                epoch + 1, epochs, avg_pair, mse_rmse, pair_count, sample_count);
+        stats.final_rmse = mse_rmse;
+    }
+    eprintln!();
+    Ok(stats)
+}
+
 pub fn train_from_cache(
     net: &mut NNUENetwork,
     cache_path: &std::path::Path,
@@ -1357,6 +1649,19 @@ pub fn train_from_cache(
     eprintln!(" {} samples in {:.1?}", samples.len(), start.elapsed());
     stats.num_samples = samples.len();
 
+    // Heteroscedastic NLL mode: CASCADIA_TRAIN_HETEROSCEDASTIC=1 → use
+    // train_sample_heteroscedastic (Kendall & Gal 2017). Sets has_heteroscedastic
+    // on the net so the v4 save format writes the variance head. Only relevant
+    // when fine-tuning from v1/v2/v3 weights (will initialize w3_var to zero
+    // which means initial log_var = 0 → σ = 1 → identical-to-MSE first step,
+    // then variance head learns).
+    let use_heteroscedastic: bool = std::env::var("CASCADIA_TRAIN_HETEROSCEDASTIC").ok()
+        .map(|s| !s.is_empty() && s != "0").unwrap_or(false);
+    if use_heteroscedastic {
+        net.has_heteroscedastic = true;
+        eprintln!("  Mode: heteroscedastic NLL (Kendall & Gal 2017)");
+    }
+
     let mut rng = StdRng::seed_from_u64(42);
     let batch_size = 256;
 
@@ -1368,7 +1673,11 @@ pub fn train_from_cache(
             let batch_end = (batch_start + batch_size).min(samples.len());
             let batch_lr = lr / (batch_end - batch_start) as f32;
             for sample in &samples[batch_start..batch_end] {
-                let l = net.train_sample(&sample.features, sample.target, batch_lr);
+                let l = if use_heteroscedastic {
+                    net.train_sample_heteroscedastic(&sample.features, sample.target, batch_lr)
+                } else {
+                    net.train_sample(&sample.features, sample.target, batch_lr)
+                };
                 loss += l as f64;
                 count += 1;
             }

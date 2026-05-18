@@ -11,6 +11,36 @@ mid-features = []
 # Appends per-opponent detail block (369 features, 3 opponents × 123).
 # Backward-compatible: older weights load with zero columns for new features.
 v4-opp = []
+# v5: appends new feature blocks (frontier, richer opp patterns, bonus distance,
+# habitat structure, tile-bag joint distribution) AND switches to 11-head split
+# value architecture (5 wildlife + 5 per-terrain hab+bonus + 1 tokens).
+# Used together with mid-features+v4-opp for the v5feat champion.
+v5-feat = []
+# v6-peak: complete feature redesign — bounded play region (LOCAL_RADIUS=6,
+# 127 cells) shrinks all per-cell blocks 71%, plus three new high-value blocks:
+# (1) per-cell 6-dir wildlife adjacency (5,334 features) — fixes the 3-vs-6
+# direction gap that mid+v4-opp+v5-feat had, since Cascadia scoring uses 6
+# directions for bear/salmon/hawk/fox/habitat;
+# (2) per-cell 6-dir terrain-on-edge (4,572 features) — habitat connectivity
+# context the network previously had to infer;
+# (3) HabitatBucket smaller variant (1,905 features) — Stockfish-style cluster
+# membership conditioning per cell.
+# Total: ~17,608 features. Mutually exclusive with v5-feat.
+v6-peak = []
+# cards-alt: appends ~192 features tailored to the alt scoring set
+# (Bear C, Elk B, Salmon D, Hawk D, Fox B). Player-side: bear size histograms,
+# elk shape histograms, salmon-run adjacency counts, hawk LOS-pair counts by
+# intervening-types, fox pair-types histograms (117 features). Opponent-side:
+# alt-card threat metrics per opp (25 × 3 = 75 features). Requires v4-opp +
+# mid-features.
+cards-alt = []
+# cards-alt-v2: appends ~10,000 PER-PIECE relational features (per-hawk LOS by
+# direction, per-salmon adjacency-class, per-fox pair-type, per-bear component
+# context, per-elk shape role). Replaces aggregated cards-alt histograms with
+# position-aware features that preserve direct credit assignment per placed
+# wildlife — the original NNUE design pattern (Stockfish HalfKP).
+# Implies cards-alt (the original block stays, new block is appended).
+cards-alt-v2 = ["cards-alt"]
 
 [dependencies]
 cascadia-core = { path = "../cascadia-core" }

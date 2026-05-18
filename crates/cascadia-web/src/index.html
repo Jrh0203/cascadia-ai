@@ -557,6 +557,31 @@
 
     <div class="panel-section">
       <h2>Score</h2>
+      <div id="scoring-cards" style="font-size:11px; color:#888; margin-bottom:10px; display:flex; flex-direction:column; gap:3px;">
+        <div style="font-weight:bold; color:#bcd; margin-bottom:2px;">Scoring cards (display only — AI uses A)</div>
+        <div style="display:grid; grid-template-columns: 60px 1fr 60px 1fr; gap:4px 8px; align-items:center;">
+          <label for="card-bear">🐻 bear</label>
+          <select id="card-bear" onchange="onCardChange()" style="background:#0f3460;color:#e0e0e0;border:1px solid #234;padding:2px;font-size:11px;">
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+          </select>
+          <label for="card-elk">🫎 elk</label>
+          <select id="card-elk" onchange="onCardChange()" style="background:#0f3460;color:#e0e0e0;border:1px solid #234;padding:2px;font-size:11px;">
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+          </select>
+          <label for="card-salmon">🐟 salmon</label>
+          <select id="card-salmon" onchange="onCardChange()" style="background:#0f3460;color:#e0e0e0;border:1px solid #234;padding:2px;font-size:11px;">
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+          </select>
+          <label for="card-hawk">🦅 hawk</label>
+          <select id="card-hawk" onchange="onCardChange()" style="background:#0f3460;color:#e0e0e0;border:1px solid #234;padding:2px;font-size:11px;">
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+          </select>
+          <label for="card-fox">🦊 fox</label>
+          <select id="card-fox" onchange="onCardChange()" style="background:#0f3460;color:#e0e0e0;border:1px solid #234;padding:2px;font-size:11px;">
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+          </select>
+        </div>
+      </div>
       <div id="scores"></div>
     </div>
 
@@ -625,20 +650,101 @@ const SCORING_DESCRIPTIONS = {
     },
     salmon: {
       rule: 'Score for runs (chains, no branching, isolated)',
-      points: '1=2 · 2=4 · 3=7 · 4=11 · 5=15 · 6=20 · 7+=26',
-      // Best: chain of 7 = 26 pts → 26/7 = 3.71 pts/salmon
-      best: { score: 26, count: 7 },
+      points: '1=2 · 2=5 · 3=8 · 4=12 · 5=16 · 6=20 · 7+=25',
+      // Best: chain of 7 = 25 pts → 25/7 = 3.57 pts/salmon
+      best: { score: 25, count: 7 },
     },
     hawk: {
       rule: 'Score for isolated hawks (not adjacent to other hawks)',
-      points: '1=2 · 2=5 · 3=8 · 4=11 · 5=14 · 6=18 · 7=22 · 8+=28',
-      // Best: 8 isolated = 28 pts → 28/8 = 3.5 pts/hawk
-      best: { score: 28, count: 8 },
+      points: '1=2 · 2=5 · 3=8 · 4=11 · 5=14 · 6=18 · 7=22 · 8+=26',
+      // Best: 8 isolated = 26 pts → 26/8 = 3.25 pts/hawk
+      best: { score: 26, count: 8 },
     },
     fox: {
       rule: 'Each fox scores for the number of unique wildlife types adjacent to it',
       points: '1 pt per unique adjacent type',
       // No fixed max — depends on neighborhood
+      best: null,
+    },
+  },
+  B: {
+    bear: {
+      rule: 'Score 10 pts per group of EXACTLY 3 bears (no other size scores).',
+      points: 'group of 3 = 10 pts each',
+      best: null,
+    },
+    elk: {
+      rule: 'Shape match: single, pair, dense triangle of 3, triangle+1 (rhombus). Each elk in one shape.',
+      points: '1=2 · 2=5 · triangle-3=9 · cluster-4=13',
+      best: { score: 13, count: 4 },
+    },
+    salmon: {
+      rule: 'Short runs only — same chain rule as A, capped at 5.',
+      points: '1=2 · 2=4 · 3=9 · 4=11 · 5+=17',
+      best: { score: 17, count: 5 },
+    },
+    hawk: {
+      rule: 'Count hawks that have line-of-sight to a NON-adjacent hawk.',
+      points: '2=5 · 3=9 · 4=12 · 5=16 · 6=20 · 7=24 · 8+=28',
+      best: { score: 28, count: 8 },
+    },
+    fox: {
+      rule: 'Per fox: # of unique adjacent wildlife TYPES that appear ≥ 2 times (foxes excluded).',
+      points: '1 pair-type = 3 · 2 = 5 · 3+ = 7',
+      best: null,
+    },
+  },
+  C: {
+    bear: {
+      rule: 'Groups of 1/2/3 bears each score; +3 bonus if you have at least one of each size.',
+      points: '1=2 · 2=5 · 3=8 · all-three-sizes bonus = +3',
+      best: null,
+    },
+    elk: {
+      rule: 'Any contiguous group of elk; size determines points (cap at 8). Best partition is taken.',
+      points: '1=2 · 2=4 · 3=7 · 4=10 · 5=14 · 6=18 · 7=23 · 8+=28',
+      best: { score: 28, count: 8 },
+    },
+    salmon: {
+      rule: 'Only runs of length 3+ score (same chain rule as A).',
+      points: '3=10 · 4=12 · 5+=15',
+      best: { score: 15, count: 5 },
+    },
+    hawk: {
+      rule: '3 pts per pair of hawks sharing line of sight (non-adjacent only). Each pair counted once.',
+      points: '3 pts per LOS pair',
+      best: null,
+    },
+    fox: {
+      rule: 'Per fox: count of the SINGLE most-frequent adjacent non-fox type (e.g. 5 of one type = 5).',
+      points: '0–6 pts per fox',
+      best: null,
+    },
+  },
+  D: {
+    bear: {
+      rule: 'Groups of size 2/3/4 score; size 1 and 5+ score 0.',
+      points: '2=5 · 3=8 · 4=14',
+      best: { score: 14, count: 4 },
+    },
+    elk: {
+      rule: 'Choose any hex point as a center; ring score = # elk adjacent. Each elk in ≤ 1 ring; rings can span components.',
+      points: '1=2 · 2=5 · 3=8 · 4=12 · 5=16 · 6=21',
+      best: { score: 21, count: 6 },
+    },
+    salmon: {
+      rule: 'Min run size 3. 1 pt per salmon in run + 1 pt per UNIQUE non-salmon adjacent token (each counted once).',
+      points: '(|run| + |unique adj animals|), runs < 3 score 0',
+      best: null,
+    },
+    hawk: {
+      rule: 'Pair of hawks with LOS; per pair, score by # unique non-hawk types in cells between. Each hawk in ≤ 1 pair.',
+      points: '1 type=4 · 2=7 · 3+=9 (per pair)',
+      best: null,
+    },
+    fox: {
+      rule: 'Per ADJACENT fox-pair: count unique non-fox wildlife types appearing ≥ 2 times in the 8 surrounding cells. Each fox in ≤ 1 pair.',
+      points: '1 pair-type=5 · 2=7 · 3=9 · 4=11',
       best: null,
     },
   },
@@ -1258,18 +1364,63 @@ function resetTurn() {
   updateClearSuggestBtn();
 }
 
+function getDisplayCards() {
+  const ids = ['card-bear', 'card-elk', 'card-salmon', 'card-hawk', 'card-fox'];
+  return ids.map(id => {
+    const el = document.getElementById(id);
+    return (el && el.value) || 'A';
+  });
+}
+
+function displayCardsParam() {
+  const cards = getDisplayCards();
+  // Only emit param when at least one differs from A (keep URLs cleaner).
+  return cards.every(c => c === 'A') ? '' : `&display_cards=${cards.join(',')}`;
+}
+
+async function onCardChange() {
+  // Persist selection across page reloads.
+  try {
+    localStorage.setItem('cascadia.scoring_cards', JSON.stringify(getDisplayCards()));
+  } catch (e) {}
+  await refreshStateOnly();
+  renderScores();
+  renderScoringRef();
+}
+
+function loadStoredCards() {
+  try {
+    const raw = localStorage.getItem('cascadia.scoring_cards');
+    if (!raw) return;
+    const cards = JSON.parse(raw);
+    if (!Array.isArray(cards) || cards.length !== 5) return;
+    const ids = ['card-bear', 'card-elk', 'card-salmon', 'card-hawk', 'card-fox'];
+    cards.forEach((v, i) => {
+      const el = document.getElementById(ids[i]);
+      if (el && ['A','B','C','D'].includes(v)) el.value = v;
+    });
+  } catch (e) {}
+}
+
+async function refreshStateOnly() {
+  try {
+    const res = await fetch(`/api/state?view=${viewPlayer}${displayCardsParam()}`);
+    if (res.ok) gameState = await res.json();
+  } catch (e) {}
+}
+
 function renderScoringRef() {
   const el = document.getElementById('scoring-ref');
-  // Current variant is always A for now
-  const variant = 'A';
-  const descs = SCORING_DESCRIPTIONS[variant];
-  if (!descs) { el.innerHTML = ''; return; }
-
+  if (!el) return;
+  const cards = getDisplayCards();
   const animals = ['bear', 'elk', 'salmon', 'hawk', 'fox'];
-  el.innerHTML = animals.map(a => {
+
+  el.innerHTML = animals.map((a, i) => {
+    const variant = cards[i];
+    const descs = SCORING_DESCRIPTIONS[variant] || SCORING_DESCRIPTIONS.A;
     const d = descs[a];
     let bestStr = '';
-    if (d.best) {
+    if (d && d.best) {
       const ppa = (d.best.score / d.best.count).toFixed(2);
       bestStr = ` <span style="color:#888; font-weight:normal; font-size:0.85em">(${d.best.score}/${d.best.count} = ${ppa})</span>`;
     }
@@ -1278,8 +1429,8 @@ function renderScoringRef() {
         <span class="animal-name">${WILDLIFE_EMOJI[a]} ${a}${bestStr}</span>
         <span class="variant-badge">${variant}</span>
       </div>
-      <div class="desc">${d.rule}</div>
-      <div class="points">${d.points}</div>
+      <div class="desc">${d ? d.rule : ''}</div>
+      <div class="points">${d ? d.points : ''}</div>
     </div>`;
   }).join('');
 }
@@ -1289,7 +1440,18 @@ async function renderAll() {
   // what's in gameState, refetch with the selected view
   if (gameState && gameState.num_players > 1 && gameState.view_player !== viewPlayer) {
     try {
-      const res = await fetch(`/api/state?view=${viewPlayer}`);
+      const res = await fetch(`/api/state?view=${viewPlayer}${displayCardsParam()}`);
+      if (res.ok) gameState = await res.json();
+    } catch (e) {}
+  }
+  // If the user has any non-A scoring card selected, the most recent gameState
+  // (returned by a POST endpoint that doesn't accept display_cards) was scored
+  // with Card A. Re-fetch with display_cards so the right-panel scores match
+  // the selected variants. No-op when all cards are A.
+  if (gameState && !getDisplayCards().every(c => c === 'A')) {
+    try {
+      const view = (gameState.num_players > 1) ? viewPlayer : 0;
+      const res = await fetch(`/api/state?view=${view}${displayCardsParam()}`);
       if (res.ok) gameState = await res.json();
     } catch (e) {}
   }
@@ -1823,7 +1985,7 @@ async function updateFromState(newState) {
   if (gameState && gameState.num_players > 1 && gameState.view_player !== viewPlayer) {
     // Refetch with our selected view
     try {
-      const res = await fetch(`/api/state?view=${viewPlayer}`);
+      const res = await fetch(`/api/state?view=${viewPlayer}${displayCardsParam()}`);
       if (res.ok) gameState = await res.json();
     } catch (e) {}
   }
@@ -1832,7 +1994,7 @@ async function updateFromState(newState) {
 async function setViewPlayer(p) {
   viewPlayer = p;
   try {
-    const res = await fetch(`/api/state?view=${p}`);
+    const res = await fetch(`/api/state?view=${p}${displayCardsParam()}`);
     if (!res.ok) return;
     gameState = await res.json();
     // Don't reset turn — preserve in-progress action state
@@ -2005,7 +2167,8 @@ async function loadStrengths() {
 
 async function init() {
   await loadStrengths();
-  const res = await fetch('/api/state');
+  loadStoredCards();
+  const res = await fetch(`/api/state?view=0${displayCardsParam()}`);
   gameState = await res.json();
   renderAll();
 }

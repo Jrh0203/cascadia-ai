@@ -103,8 +103,7 @@ def merge_with_mce_cache(self_play_path, mce_cache_path, out_path):
     print(f"  [merge] self-play only → {out_path} ({os.path.getsize(out_path)/1e6:.0f} MB)")
 
 
-def train_variant(variant, samples_path, init_weights, out_weights, args, logfile):
-    """Launch a training subprocess for one variant. Returns the Popen object."""
+def _build_train_cmd(variant, samples_path, init_weights, out_weights, args):
     cmd = [
         sys.executable, "-u", "train_pytorch.py", "value",
         "--samples", samples_path,
@@ -124,9 +123,29 @@ def train_variant(variant, samples_path, init_weights, out_weights, args, logfil
         cmd.append("--split-value-head")
     if init_weights and os.path.exists(init_weights):
         cmd.extend(["--init-weights", init_weights])
+    return cmd
 
+
+def train_variant(variant, samples_path, init_weights, out_weights, args, logfile):
+    """Launch a training subprocess for one variant (background). Returns Popen."""
+    cmd = _build_train_cmd(variant, samples_path, init_weights, out_weights, args)
     logf = open(logfile, 'w')
     return subprocess.Popen(cmd, stdout=logf, stderr=subprocess.STDOUT), logf
+
+
+def train_variant_serial(variant, samples_path, init_weights, out_weights, args, logfile):
+    """Run a training subprocess foreground (blocking). Returns exit code.
+
+    Use this when --serial is set so the two variants don't fight for MPS GPU time.
+    On Apple Silicon MPS, multi-process GPU sharing has unfair scheduling and causes
+    catastrophic epoch-time variance (13× range on iter1). Serial execution is
+    actually faster in wall time despite being 'sequential' because each epoch runs
+    at predictable speed (~130s vs 78-1062s under contention).
+    """
+    cmd = _build_train_cmd(variant, samples_path, init_weights, out_weights, args)
+    with open(logfile, 'w') as logf:
+        r = subprocess.run(cmd, stdout=logf, stderr=subprocess.STDOUT)
+    return r.returncode
 
 
 def quick_bench(weights_path, num_games=50, logfile=None):
@@ -191,6 +210,14 @@ def main():
     parser.add_argument("--benchmark-games", type=int, default=50)
     parser.add_argument("--run-name", default="tandem",
                         help="Subdirectory name under tandem_runs/")
+    parser.add_argument("--serial", action="store_true",
+                        help="Run the two variant trainings sequentially instead of in parallel. "
+                             "On MPS GPU this is actually faster in wall time because it avoids "
+                             "multi-process GPU contention (13× epoch-time variance in parallel "
+                             "mode). Recommended when both variants share the same GPU.")
+    parser.add_argument("--iter-offset", type=int, default=0,
+                        help="Start numbering iterations from offset+1. Use when continuing a "
+                             "prior run (e.g. --iter-offset 2 to resume from iter3).")
 
     args = parser.parse_args()
 
@@ -203,7 +230,8 @@ def main():
 
     print(f"=== Tandem training: SA + split-head ===")
     print(f"  Run dir:             {run_dir}")
-    print(f"  Iterations:          {args.iterations}")
+    print(f"  Iterations:          {args.iterations} (starting at iter {args.iter_offset+1})")
+    print(f"  Training mode:       {'SERIAL' if args.serial else 'PARALLEL'}")
     print(f"  Self-play games/iter: {args.self_play_games}")
     print(f"  Self-play driver:    {args.self_play_mode}")
     if args.self_play_mode == "sa":
@@ -222,63 +250,87 @@ def main():
 
     total_start = time.time()
 
-    for iteration in range(1, args.iterations + 1):
+    for step in range(1, args.iterations + 1):
+        iteration = step + args.iter_offset
         iter_start = time.time()
         iter_dir = run_dir / f"iter{iteration:02d}"
         iter_dir.mkdir(exist_ok=True)
 
         print(f"{'='*66}")
-        print(f"  ITERATION {iteration}/{args.iterations}")
+        print(f"  ITERATION {iteration} (step {step}/{args.iterations})")
         print(f"{'='*66}")
 
         # 1. Self-play: one batch, driven by best_weights.
+        # If self_play.bin already exists in the iter dir (e.g. copied from a prior
+        # run you killed), reuse it. This lets you resume without re-paying the
+        # self-play generation cost.
         self_play_path = str(iter_dir / "self_play.bin")
-        if os.path.exists(self_play_path):
-            os.remove(self_play_path)
 
+        # Anneal on the GLOBAL iter number (iter_offset + step), over the combined
+        # run length. This lets a resumed run pick up the schedule where the prior
+        # run left off — if original was iters 1..10 and we resume at iter 3, the
+        # schedule still targets the same T at iter 10.
+        global_total = args.iterations + args.iter_offset
         if args.self_play_mode == "sa":
-            current_temp = anneal(args.temperature_start, args.temperature_end, iteration, args.iterations)
+            current_temp = anneal(args.temperature_start, args.temperature_end, iteration, global_total)
             current_eps = None
         else:
-            current_eps = anneal(args.epsilon_start, args.epsilon_end, iteration, args.iterations)
+            current_eps = anneal(args.epsilon_start, args.epsilon_end, iteration, global_total)
             current_temp = None
 
-        ok = run_self_play(
-            num_games=args.self_play_games,
-            weights_path=best_weights,
-            out_path=self_play_path,
-            epsilon=current_eps,
-            temperature=current_temp,
-        )
-        if not ok:
-            print("  [FATAL] self-play failed, stopping")
-            return 1
+        if os.path.exists(self_play_path) and os.path.getsize(self_play_path) > 1024:
+            size_mb = os.path.getsize(self_play_path) / 1e6
+            print(f"  [self-play] REUSING existing {self_play_path} ({size_mb:.0f} MB)")
+        else:
+            ok = run_self_play(
+                num_games=args.self_play_games,
+                weights_path=best_weights,
+                out_path=self_play_path,
+                epsilon=current_eps,
+                temperature=current_temp,
+            )
+            if not ok:
+                print("  [FATAL] self-play failed, stopping")
+                return 1
 
         # 2. Merge self-play + MCE cache (if MCV3)
         merged_path = str(iter_dir / "training.bin")
         merge_with_mce_cache(self_play_path, args.mce_samples, merged_path)
 
-        # 3. Launch both trainings in parallel on the same data.
+        # 3. Launch both trainings (serial or parallel) on the same data.
         sa_out = str(iter_dir / f"sa_iter{iteration}.bin")
         split_out = str(iter_dir / f"split_iter{iteration}.bin")
         sa_log = str(iter_dir / "train_sa.log")
         split_log = str(iter_dir / "train_split.log")
 
-        print(f"  [train] launching SA + split-head in parallel on {merged_path}")
         t_train = time.time()
-        sa_proc, sa_logf = train_variant(
-            "sa", merged_path, sa_weights or best_weights, sa_out, args, sa_log,
-        )
-        split_proc, split_logf = train_variant(
-            "split", merged_path, split_weights or best_weights, split_out, args, split_log,
-        )
-
-        sa_rc = sa_proc.wait()
-        split_rc = split_proc.wait()
-        sa_logf.close()
-        split_logf.close()
+        if args.serial:
+            print(f"  [train] running SA on {merged_path} (serial)")
+            t_sa = time.time()
+            sa_rc = train_variant_serial(
+                "sa", merged_path, sa_weights or best_weights, sa_out, args, sa_log,
+            )
+            print(f"  [train] SA done (exit={sa_rc}, {time.time()-t_sa:.0f}s)")
+            print(f"  [train] running split on {merged_path} (serial)")
+            t_split = time.time()
+            split_rc = train_variant_serial(
+                "split", merged_path, split_weights or best_weights, split_out, args, split_log,
+            )
+            print(f"  [train] split done (exit={split_rc}, {time.time()-t_split:.0f}s)")
+        else:
+            print(f"  [train] launching SA + split-head in parallel on {merged_path}")
+            sa_proc, sa_logf = train_variant(
+                "sa", merged_path, sa_weights or best_weights, sa_out, args, sa_log,
+            )
+            split_proc, split_logf = train_variant(
+                "split", merged_path, split_weights or best_weights, split_out, args, split_log,
+            )
+            sa_rc = sa_proc.wait()
+            split_rc = split_proc.wait()
+            sa_logf.close()
+            split_logf.close()
         print(f"  [train] SA exit={sa_rc}, split exit={split_rc}, "
-              f"wall={time.time()-t_train:.0f}s")
+              f"total_wall={time.time()-t_train:.0f}s")
         if sa_rc != 0 or split_rc != 0:
             print(f"  [WARN] at least one training failed — check logs at {iter_dir}")
             # Keep going: re-use prior weights for the failing variant next iter
@@ -328,6 +380,7 @@ def main():
             f.write(f"iter {iteration}: sa={sa_str}  split={split_str}  "
                     f"best={Path(best_weights).name if best_weights else '-'}  "
                     f"{iter_elapsed:.0f}s\n")
+            f.flush()
 
     total_elapsed = time.time() - total_start
     print(f"{'='*66}")

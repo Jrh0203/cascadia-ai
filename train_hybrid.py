@@ -71,6 +71,44 @@ def run_self_play(num_games, weights_path, out_path, epsilon=0.1, top_pct=100.0,
     return True
 
 
+def run_self_play_modal(num_games, weights_path, out_path, epsilon=0.1,
+                        aux_targets=False, temperature=None, num_workers=20,
+                        max_retries=2):
+    """Generate self-play data on Modal workers. Retries on failure."""
+    games_per_worker = num_games // num_workers
+    cmd = [
+        sys.executable, "-m", "modal", "run", "modal_collect.py::self_play",
+        "--num-workers", str(num_workers),
+        "--games-per-worker", str(games_per_worker),
+        "--epsilon", str(epsilon),
+        "--out", out_path,
+    ]
+    if weights_path and os.path.exists(weights_path):
+        cmd.extend(["--weights", weights_path])
+    if aux_targets:
+        cmd.append("--aux-targets")
+    if temperature is not None:
+        cmd.extend(["--temperature", str(temperature)])
+
+    for attempt in range(1, max_retries + 1):
+        label = f" (attempt {attempt}/{max_retries})" if max_retries > 1 else ""
+        print(f"  Modal self-play: {num_workers} workers × {games_per_worker} games = {num_games}{label}")
+        t0 = time.time()
+        result = subprocess.run(cmd, capture_output=False)
+        if result.returncode == 0:
+            print(f"  Modal self-play done in {time.time()-t0:.1f}s")
+            break
+        print(f"  WARNING: Modal self-play failed (exit {result.returncode})")
+        if attempt < max_retries:
+            print(f"  Retrying in 10s...")
+            time.sleep(10)
+    else:
+        print(f"  ERROR: Modal self-play failed after {max_retries} attempts, falling back to local")
+        return run_self_play(num_games, weights_path, out_path, epsilon=epsilon,
+                             aux_targets=aux_targets, temperature=temperature)
+    return True
+
+
 def merge_samples(files, out_path):
     """Merge multiple MCEP files into one."""
     with open(out_path, 'wb') as out:
@@ -184,6 +222,10 @@ def main():
                              'If set, replaces ε-greedy; anneal to --temperature-end across iterations.')
     parser.add_argument('--temperature-end', type=float, default=None,
                         help='Target temperature at the final iteration. Linear anneal from --temperature.')
+    parser.add_argument('--modal-workers', type=int, default=0,
+                        help='If >0, run self-play on Modal with this many workers instead of locally. '
+                             'Each worker gets (self-play-games / modal-workers) games. '
+                             'Requires Modal setup (pip install modal && python3 -m modal setup).')
     args = parser.parse_args()
 
     current_weights = args.init_weights
@@ -229,16 +271,27 @@ def main():
                 current_temperature = args.temperature
             print(f"  T = {current_temperature:.3f} (softmax sampling)")
 
-        run_self_play(
-            args.self_play_games,
-            current_weights,
-            self_play_path,
-            epsilon=current_epsilon,
-            top_pct=args.top_pct,
-            aux_targets=args.aux_targets or args.split_value_head,
-            opp_weights=args.opp_weights,
-            temperature=current_temperature,
-        )
+        if args.modal_workers > 0:
+            run_self_play_modal(
+                args.self_play_games,
+                current_weights,
+                self_play_path,
+                epsilon=current_epsilon,
+                aux_targets=args.aux_targets or args.split_value_head,
+                temperature=current_temperature,
+                num_workers=args.modal_workers,
+            )
+        else:
+            run_self_play(
+                args.self_play_games,
+                current_weights,
+                self_play_path,
+                epsilon=current_epsilon,
+                top_pct=args.top_pct,
+                aux_targets=args.aux_targets or args.split_value_head,
+                opp_weights=args.opp_weights,
+                temperature=current_temperature,
+            )
 
         # 2. Merge self-play + MCE expert data (fresh each iteration, no accumulation)
         # When using aux targets / split heads, the MCE cache must also be MCV3 so it

@@ -191,6 +191,190 @@ pub const NUM_FEATURES_MID: usize = NUM_FEATURES_V2
 pub const NUM_FEATURES_V3_V4: usize = NUM_FEATURES_V3 + OPP_DETAILED_FEATURES; // 45629
 pub const NUM_FEATURES_MID_V4: usize = NUM_FEATURES_MID + OPP_DETAILED_FEATURES; // 11231
 
+// ── v5-feat: frontier + richer opp patterns + bonus distance + habitat structure
+//             + tile-bag joint distribution ──────────────────────────────
+//
+// Block layout (all gated on v5-feat, appended after v4-opp block):
+//   V5_FRONTIER_BASE       : 441 cells × 1 bit = 441 (is on frontier)
+//   V5_FRONT_WL_BASE       : 441 cells × 5 bits = 2205 (this frontier cell has wildlife W in any neighbor)
+//   V5_FRONT_TERR_BASE     : 441 cells × 5 bits = 2205 (this frontier cell touches a terrain T on a shared edge)
+//   V5_OPP_PAT_BASE        : 3 opps × 36 = 108 (richer P4 pattern histograms)
+//   V5_BONUS_DIST_BASE     : 5 terr × 3 opps × 21 bins = 315 (signed (my - opp) hab diff)
+//   V5_HAB_STRUCT_BASE     : 5 terr × (6 cluster-count bins + 11 second-largest bins) = 85
+//   V5_TBAG_JOINT_BASE     : 5 terr × 5 wildlife × 21 bins = 525 (joint count of bag tiles with terrain T AND allowed wildlife W)
+//
+// Total v5-feat additions: 5,884 features.
+pub const V5_FRONTIER_FLAG_FEATURES: usize = GRID_SIZE; // 441
+pub const V5_FRONT_WL_FEATURES: usize = GRID_SIZE * 5;  // 2205
+pub const V5_FRONT_TERR_FEATURES: usize = GRID_SIZE * 5; // 2205
+
+// Per-opp pattern histograms (P4): bear singletons, longest elk, longest salmon, isolated hawks
+pub const V5_OPP_BEAR_SING_BINS: usize = 8;   // 0..7+
+pub const V5_OPP_ELK_LINE_BINS: usize = 8;    // 0..7+
+pub const V5_OPP_SALMON_RUN_BINS: usize = 10; // 0..9+
+pub const V5_OPP_ISOL_HAWK_BINS: usize = 10;  // 0..9+
+pub const V5_OPP_PAT_PER_OPP: usize = V5_OPP_BEAR_SING_BINS + V5_OPP_ELK_LINE_BINS
+    + V5_OPP_SALMON_RUN_BINS + V5_OPP_ISOL_HAWK_BINS; // 36
+pub const V5_OPP_PAT_FEATURES: usize = NUM_OPP_SLOTS * V5_OPP_PAT_PER_OPP; // 108
+
+// Bonus-threshold-distance (P5): per terrain × opp, signed diff bins -10..-1, 0, 1..10+
+pub const V5_BONUS_DIFF_BINS: usize = 21; // -10..=-1, 0, 1..=10+
+pub const V5_BONUS_DIST_FEATURES: usize = 5 * NUM_OPP_SLOTS * V5_BONUS_DIFF_BINS; // 315
+
+// Habitat structure (P6): per terrain, count of distinct clusters + 2nd largest size
+pub const V5_HAB_CLUSTER_COUNT_BINS: usize = 6; // 0..5+
+pub const V5_HAB_SECOND_BINS: usize = 11;       // 0..10+
+pub const V5_HAB_STRUCT_PER_TERR: usize = V5_HAB_CLUSTER_COUNT_BINS + V5_HAB_SECOND_BINS; // 17
+pub const V5_HAB_STRUCT_FEATURES: usize = 5 * V5_HAB_STRUCT_PER_TERR; // 85
+
+// Tile-bag joint terrain × wildlife distribution (P7)
+pub const V5_TBAG_JOINT_BINS: usize = 21; // 0..20+
+pub const V5_TBAG_JOINT_FEATURES: usize = 5 * 5 * V5_TBAG_JOINT_BINS; // 525
+
+pub const V5_FEAT_FEATURES: usize = V5_FRONTIER_FLAG_FEATURES
+    + V5_FRONT_WL_FEATURES + V5_FRONT_TERR_FEATURES
+    + V5_OPP_PAT_FEATURES + V5_BONUS_DIST_FEATURES
+    + V5_HAB_STRUCT_FEATURES + V5_TBAG_JOINT_FEATURES; // 5884
+
+pub const NUM_FEATURES_MID_V4_V5: usize = NUM_FEATURES_MID_V4 + V5_FEAT_FEATURES; // 17115
+pub const NUM_FEATURES_V3_V4_V5: usize = NUM_FEATURES_V3_V4 + V5_FEAT_FEATURES;   // 51513
+
+// ──────────────────────────────────────────────────────────────────────
+// cards-alt feature block (Bear C, Elk B, Salmon D, Hawk D, Fox B)
+// ──────────────────────────────────────────────────────────────────────
+//
+// Player-side (117 features): replaces the network's blind spots under the
+// alt scoring set. The existing PATTERN_FEATURES / PATTERN_V2_FEATURES blocks
+// remain in the index space (the network just learns to under-weight them
+// under alt scoring) — these new features supply the missing alt-card signal.
+//
+// Bear C (21):    counts of components at sizes 1/2/3/4+ (5 bins each = 20)
+//                 + all-three-sizes-present bit (1)
+// Elk B (25):     counts of shapes singleton/pair/triangle/rhombus/blob (5 each)
+// Salmon D (21):  for top-3 runs, qualifying-bit (1) + adj-non-salmon types
+//                 (6 bins) = 7 per run × 3 = 21
+// Hawk D (25):    count-by-intervening-types histogram, 5 type-classes ×
+//                 5 count-bins = 25 (binned LOS-pair census)
+// Fox B (25):     count-by-pair-types histogram, 5 pair-type-classes ×
+//                 5 count-bins = 25 (binned per-fox pair-type census)
+//
+// Opponent-side (75 features): per-opponent alt-card threat summary, 25 each.
+// Per opp: best bear size class (5), densest elk shape (5), best salmon
+// adj-animal count (5), best hawk LOS-pair-types (5), best fox pair-types (5).
+
+pub const ALT_BEAR_SIZE_BINS: usize = 5;       // 0/1/2/3/4+ count
+pub const ALT_BEAR_FEATURES: usize = 4 * ALT_BEAR_SIZE_BINS + 1; // 4 sizes × 5 bins + all-3-sizes bit = 21
+
+pub const ALT_ELK_SHAPE_BINS: usize = 5;       // 0/1/2/3/4+ count of each shape
+pub const ALT_ELK_FEATURES: usize = 5 * ALT_ELK_SHAPE_BINS; // 5 shape kinds × 5 = 25
+
+pub const ALT_SALMON_TOP_RUNS: usize = 3;
+pub const ALT_SALMON_ADJ_BINS: usize = 6;      // 0/1/2/3/4/5+ unique adj types
+pub const ALT_SALMON_PER_RUN: usize = 1 + ALT_SALMON_ADJ_BINS; // qualifies-bit + adj-bins = 7
+pub const ALT_SALMON_FEATURES: usize = ALT_SALMON_TOP_RUNS * ALT_SALMON_PER_RUN; // 21
+
+pub const ALT_HAWK_PT_CLASSES: usize = 5;      // 0/1/2/3/4+ unique types between
+pub const ALT_HAWK_COUNT_BINS: usize = 5;      // 0/1/2/3/4+ pairs
+pub const ALT_HAWK_FEATURES: usize = ALT_HAWK_PT_CLASSES * ALT_HAWK_COUNT_BINS; // 25
+
+pub const ALT_FOX_PT_CLASSES: usize = 5;       // 0/1/2/3/4+ pair-types per fox
+pub const ALT_FOX_COUNT_BINS: usize = 5;       // 0/1/2/3/4+ foxes
+pub const ALT_FOX_FEATURES: usize = ALT_FOX_PT_CLASSES * ALT_FOX_COUNT_BINS; // 25
+
+pub const ALT_PLAYER_FEATURES: usize = ALT_BEAR_FEATURES + ALT_ELK_FEATURES
+    + ALT_SALMON_FEATURES + ALT_HAWK_FEATURES + ALT_FOX_FEATURES; // 117
+
+pub const ALT_OPP_BEAR_BINS: usize = 5;        // best size class (no/single/pair/triple/quad+)
+pub const ALT_OPP_ELK_SHAPE_BINS: usize = 5;   // best shape (no/single/pair/triangle/rhombus+)
+pub const ALT_OPP_SALMON_BINS: usize = 5;      // 0/1/2/3/4+ best D-pts equivalent
+pub const ALT_OPP_HAWK_BINS: usize = 5;        // best LOS-pair-types (0/1/2/3/4+)
+pub const ALT_OPP_FOX_BINS: usize = 5;         // best per-fox pair-types (0/1/2/3+)
+pub const ALT_OPP_PER_OPP: usize = ALT_OPP_BEAR_BINS + ALT_OPP_ELK_SHAPE_BINS
+    + ALT_OPP_SALMON_BINS + ALT_OPP_HAWK_BINS + ALT_OPP_FOX_BINS; // 25
+pub const ALT_OPP_FEATURES: usize = NUM_OPP_SLOTS * ALT_OPP_PER_OPP; // 75
+
+pub const CARDS_ALT_FEATURES: usize = ALT_PLAYER_FEATURES + ALT_OPP_FEATURES; // 192
+
+pub const NUM_FEATURES_MID_V4_ALT: usize = NUM_FEATURES_MID_V4 + CARDS_ALT_FEATURES; // 11423
+
+// ──────────────────────────────────────────────────────────────────────
+// cards-alt-v2: per-piece relational features
+// ──────────────────────────────────────────────────────────────────────
+//
+// Replaces the cards-alt histogram approach with PER-CELL × pattern-class
+// features. The 21×21 grid (441 cells) hosts at most 20 wildlife placements;
+// per-piece features fire only for cells containing the relevant wildlife,
+// giving direct credit assignment and preserving positional information that
+// the histogram approach destroyed.
+//
+// Each block emits ONE feature per qualifying cell:
+//   ALT2_HAWK_LOS:    127 cells × 6 dirs × 5 LOS-classes  = 3,810
+//   ALT2_SALMON_CTX:  127 cells × 16 (4 len-classes × 4 adj-classes) = 2,032
+//   ALT2_FOX_CTX:     127 cells × 16 (4 PT-classes × 4 density-classes) = 2,032
+//   ALT2_BEAR_CTX:    127 cells × 12 (4 size-classes × 3 ext-classes) = 1,524
+//   ALT2_ELK_CTX:     127 cells × 7 shape-roles  = 889
+//
+// Total: ~10,287 features. Only emitted when `cards-alt-v2` feature is on.
+// Backward-compatible: appended after the existing cards-alt block, so a
+// cards-alt-v15 weights file loads with zero-padding for the new columns.
+// (V6_LOCAL_CELLS=127 reused as the bounded play region — empirically 99.9% of
+// real placements; same trick v6-peak used.)
+//
+// Note: per-piece blocks are gated to fire ONLY on the player's own board (not
+// per opponent — opponents are still summarized via the existing `alt_*_class`
+// fields in OpponentDetail). This is consistent with how NNUE evaluates the
+// player's afterstate.
+
+pub const ALT2_HAWK_LOS_DIRS: usize = 6;
+pub const ALT2_HAWK_LOS_CLASSES: usize = 5; // 0=no_partner, 1=adj_partner, 2=partner_0_types, 3=partner_1_type, 4=partner_2plus_types
+pub const ALT2_HAWK_LOS_PER_CELL: usize = ALT2_HAWK_LOS_DIRS * ALT2_HAWK_LOS_CLASSES; // 30
+pub const ALT2_HAWK_LOS_FEATURES: usize = V6_LOCAL_CELLS * ALT2_HAWK_LOS_PER_CELL; // 3810
+
+pub const ALT2_SALMON_LEN_CLASSES: usize = 4; // 0=invalid_or_singleton, 1=len2, 2=len3-4, 3=len5+
+pub const ALT2_SALMON_ADJ_CLASSES: usize = 4; // 0=0_types, 1=1_type, 2=2_types, 3=3+_types
+pub const ALT2_SALMON_PER_CELL: usize = ALT2_SALMON_LEN_CLASSES * ALT2_SALMON_ADJ_CLASSES; // 16
+pub const ALT2_SALMON_FEATURES: usize = V6_LOCAL_CELLS * ALT2_SALMON_PER_CELL; // 2032
+
+pub const ALT2_FOX_PT_CLASSES: usize = 4; // 0=0_pair_types, 1=1, 2=2, 3=3+
+pub const ALT2_FOX_DENSITY_CLASSES: usize = 4; // 0=0-1_adj, 1=2-3, 2=4-5, 3=6_adj
+pub const ALT2_FOX_PER_CELL: usize = ALT2_FOX_PT_CLASSES * ALT2_FOX_DENSITY_CLASSES; // 16
+pub const ALT2_FOX_FEATURES: usize = V6_LOCAL_CELLS * ALT2_FOX_PER_CELL; // 2032
+
+pub const ALT2_BEAR_SIZE_CLASSES: usize = 4; // 0=size1, 1=size2, 2=size3, 3=size4+
+pub const ALT2_BEAR_EXT_CLASSES: usize = 3; // 0=no_ext, 1=1-2_slots, 2=3+_slots
+pub const ALT2_BEAR_PER_CELL: usize = ALT2_BEAR_SIZE_CLASSES * ALT2_BEAR_EXT_CLASSES; // 12
+pub const ALT2_BEAR_FEATURES: usize = V6_LOCAL_CELLS * ALT2_BEAR_PER_CELL; // 1524
+
+pub const ALT2_ELK_SHAPE_CLASSES: usize = 7; // 0=single, 1=pair-end, 2=triangle-vertex, 3=rhombus-vertex, 4=line-of-3, 5=line-of-4+, 6=blob/other
+pub const ALT2_ELK_FEATURES: usize = V6_LOCAL_CELLS * ALT2_ELK_SHAPE_CLASSES; // 889
+
+pub const CARDS_ALT_V2_FEATURES: usize =
+    ALT2_HAWK_LOS_FEATURES
+    + ALT2_SALMON_FEATURES
+    + ALT2_FOX_FEATURES
+    + ALT2_BEAR_FEATURES
+    + ALT2_ELK_FEATURES; // 10287
+
+pub const NUM_FEATURES_MID_V4_ALT_V2: usize = NUM_FEATURES_MID_V4_ALT + CARDS_ALT_V2_FEATURES; // 21710
+
+#[cfg(feature = "cards-alt-v2")]
+pub const CARDS_ALT_V2_BASE: usize = NUM_FEATURES_MID_V4_ALT;
+
+/// Base index where the v5-feat block starts. Always appended after the v4-opp block.
+pub const V5_FEAT_BASE: usize = if cfg!(feature = "legacy-features") && cfg!(feature = "v4-opp") {
+    NUM_FEATURES_LEGACY + OPP_DETAILED_FEATURES
+} else if cfg!(feature = "legacy-features") {
+    NUM_FEATURES_LEGACY
+} else if cfg!(feature = "mid-features") && cfg!(feature = "v4-opp") {
+    NUM_FEATURES_MID_V4
+} else if cfg!(feature = "mid-features") {
+    NUM_FEATURES_MID
+} else if cfg!(feature = "v4-opp") {
+    NUM_FEATURES_V3_V4
+} else {
+    NUM_FEATURES_V3
+};
+
 /// Base index where the v4-opp block starts in the feature index space.
 /// Crucially, opp-detail indices don't care about whether cell-adj etc fire;
 /// they just append after the last non-v4 block (mid or v3), so a v4 weights
@@ -201,13 +385,136 @@ pub const OPP_DETAILED_BASE: usize = if cfg!(feature = "legacy-features") { NUM_
                                      else if cfg!(feature = "mid-features") { NUM_FEATURES_MID }
                                      else { NUM_FEATURES_V3 };
 
-pub const NUM_FEATURES: usize = if cfg!(feature = "legacy-features") && cfg!(feature = "v4-opp") {
+// ── v6-peak: bounded play region + 6-dir adjacency + HabitatBucket ────
+//
+// Complete feature redesign that addresses three known bottlenecks:
+// 1. Play region bound: empirical analysis of 50K v5sh game states showed only
+//    37% of the 21×21 grid is ever used. Active region is hex-distance ≤ 6 from
+//    grid center = 127 cells (captures 99.9% of placements). Per-cell blocks
+//    shrink ~71%.
+// 2. 3-vs-6 direction gap: pre-v6 only encoded 3 line directions of pairwise
+//    wildlife adjacency. But Cascadia scoring uses 6-direction adjacency for
+//    bear pairs, salmon runs, hawk isolation, fox diversity, and habitat union.
+//    v6 adds full per-cell 6-direction wildlife AND terrain adjacency at the
+//    affordable v6-bounded scale.
+// 3. Habitat cluster opacity: pre-v6 forced the network to infer cluster
+//    membership from pattern-feature aggregates. v6 adds Stockfish-style
+//    cluster-role conditioning per cell (in-largest / in-2nd / in-isolated).
+//
+// v6-peak feature layout (total ~17,608 — comparable size to v5 but with
+// fundamentally better coverage):
+//
+//   [0..1397)         Per-cell core (127 × 11)
+//   [1397..1507)      Phase (110)
+//   [1507..1654)      Pairwise wl adj (147, 3 line dirs — kept for elk lines)
+//   [1654..1743)      Patterns v1 (89)
+//   [1743..1798)      Bag remaining (55)
+//   [1798..1853)      Opp habitat (55)
+//   [1853..2488)      Allowed wl per cell (127 × 5 = 635)
+//   [2488..2538)      WL count ext (50)
+//   [2538..2646)      Terrain pairwise (108)
+//   [2646..3281)      Sec terrain per cell (127 × 5 = 635)
+//   [3281..3351)      Hab ext (70)
+//   [3351..3406)      WL count ext2 (55)
+//   [3406..3446)      Pair ext capacity (40)
+//   [3446..3494)      Pattern v2 (48)
+//   [3494..3599)      Bag ext (105)
+//   [3599..3669)      Opp hab ext (70)
+//   [3669..3757)      Market (88)
+//   [3757..3862)      Tbag terrain (105)
+//   [3862..3967)      Tbag wildlife (105)
+//   [3967..4117)      Tbag terrain ext (150)
+//   [4117..4267)      Tbag wildlife ext (150)
+//   [4267..4268)      Overflow (1)
+//   [4268..4637)      v4-opp block (369)
+//   [4637..4764)      v5-feat frontier flag (127, shrunk from 441)
+//   [4764..4872)      v5-feat opp pattern detail (108)
+//   [4872..5187)      v5-feat bonus distance (315)
+//   [5187..5272)      v5-feat hab structure (85)
+//   [5272..5797)      v5-feat tbag joint (525)
+//   [5797..11131)     ⭐ NEW per-cell 6-dir wildlife adj (127 × 6 × 7 = 5,334)
+//   [11131..15703)    ⭐ NEW per-cell 6-dir terrain edge (127 × 6 × 6 = 4,572)
+//   [15703..17608)    ⭐ NEW HabitatBucket smaller (127 × 5 × 3 = 1,905)
+//
+// IMPORTANT: v6-peak is mutually exclusive with v5-feat. Use one or the other.
+
+pub const V6_LOCAL_RADIUS: i32 = 6;
+pub const V6_LOCAL_CELLS: usize = 127; // 1 + 6 + 12 + 18 + 24 + 30 + 36
+pub const V6_FPC: usize = 11;          // FEATURES_PER_CELL_V6
+pub const V6_CELL_FEATURES: usize = V6_LOCAL_CELLS * V6_FPC; // 1397
+pub const V6_ALLOWED_WL_FEATURES: usize = V6_LOCAL_CELLS * 5; // 635
+pub const V6_SEC_TERRAIN_FEATURES: usize = V6_LOCAL_CELLS * 5; // 635
+pub const V6_FRONTIER_FLAG_FEATURES: usize = V6_LOCAL_CELLS;  // 127
+// 6-direction per-cell adjacency
+pub const V6_ADJ_DIRS: usize = 6;
+pub const V6_ADJ_WL_STATES: usize = 7;       // 0=no tile, 1-5=wildlife, 6=tile-no-wildlife
+pub const V6_ADJ_TERR_STATES: usize = 6;     // 0=no tile, 1-5=terrain
+pub const V6_CELL_ADJ_WL_FEATURES: usize = V6_LOCAL_CELLS * V6_ADJ_DIRS * V6_ADJ_WL_STATES; // 5334
+pub const V6_CELL_ADJ_TERR_FEATURES: usize = V6_LOCAL_CELLS * V6_ADJ_DIRS * V6_ADJ_TERR_STATES; // 4572
+// HabitatBucket smaller: per-cell (terrain × cluster role)
+pub const V6_HAB_BUCKET_ROLES: usize = 3;    // 0=largest, 1=2nd-largest, 2=isolated
+pub const V6_HAB_BUCKET_FEATURES: usize = V6_LOCAL_CELLS * 5 * V6_HAB_BUCKET_ROLES; // 1905
+
+pub const NUM_FEATURES_V6_PEAK: usize =
+    V6_CELL_FEATURES                  // 1397
+    + PHASE_FEATURES                  // 110
+    + PAIR_FEATURES                   // 147
+    + PATTERN_FEATURES                // 89
+    + BAG_FEATURES                    // 55
+    + OPP_HAB_FEATURES                // 55
+    + V6_ALLOWED_WL_FEATURES          // 635
+    + WL_COUNT_EXT_FEATURES           // 50
+    + TERRAIN_PAIR_FEATURES           // 108
+    + V6_SEC_TERRAIN_FEATURES         // 635
+    + HAB_EXT_FEATURES                // 70
+    + WL_COUNT_EXT2_FEATURES          // 55
+    + EXT_CAP_FEATURES                // 40
+    + PATTERN_V2_FEATURES             // 48
+    + BAG_EXT_FEATURES                // 105
+    + OPP_HAB_EXT_FEATURES            // 70
+    + MARKET_FEATURES                 // 88
+    + TBAG_TERRAIN_FEATURES           // 105
+    + TBAG_WL_FEATURES                // 105
+    + TBAG_TERRAIN_EXT_FEATURES       // 150
+    + TBAG_WL_EXT_FEATURES            // 150
+    + OVERFLOW_FEATURES               // 1
+    + OPP_DETAILED_FEATURES           // 369 (v4-opp)
+    + V6_FRONTIER_FLAG_FEATURES       // 127
+    + V5_OPP_PAT_FEATURES             // 108
+    + V5_BONUS_DIST_FEATURES          // 315
+    + V5_HAB_STRUCT_FEATURES          // 85
+    + V5_TBAG_JOINT_FEATURES          // 525
+    + V6_CELL_ADJ_WL_FEATURES         // 5334
+    + V6_CELL_ADJ_TERR_FEATURES       // 4572
+    + V6_HAB_BUCKET_FEATURES;         // 1905
+// = 17608
+
+pub const NUM_FEATURES: usize = if cfg!(feature = "v6-peak") {
+    NUM_FEATURES_V6_PEAK
+} else if cfg!(feature = "cards-alt-v2") && cfg!(feature = "mid-features") && cfg!(feature = "v4-opp") {
+    NUM_FEATURES_MID_V4_ALT_V2
+} else if cfg!(feature = "cards-alt") && cfg!(feature = "mid-features") && cfg!(feature = "v4-opp") {
+    NUM_FEATURES_MID_V4_ALT
+} else if cfg!(feature = "v5-feat") && cfg!(feature = "mid-features") && cfg!(feature = "v4-opp") {
+    NUM_FEATURES_MID_V4_V5
+} else if cfg!(feature = "v5-feat") && cfg!(feature = "v4-opp") {
+    NUM_FEATURES_V3_V4_V5
+} else if cfg!(feature = "v5-feat") && cfg!(feature = "mid-features") {
+    NUM_FEATURES_MID + V5_FEAT_FEATURES
+} else if cfg!(feature = "v5-feat") {
+    NUM_FEATURES_V3 + V5_FEAT_FEATURES
+} else if cfg!(feature = "legacy-features") && cfg!(feature = "v4-opp") {
     NUM_FEATURES_LEGACY + OPP_DETAILED_FEATURES
 } else if cfg!(feature = "legacy-features") { NUM_FEATURES_LEGACY }
   else if cfg!(feature = "mid-features") && cfg!(feature = "v4-opp") { NUM_FEATURES_MID_V4 }
   else if cfg!(feature = "mid-features") { NUM_FEATURES_MID }
   else if cfg!(feature = "v4-opp") { NUM_FEATURES_V3_V4 }
   else { NUM_FEATURES_V3 };
+
+/// Base index where the cards-alt block starts (mutually exclusive with v5/v6).
+/// Always appended after the v4-opp block when `cards-alt` is enabled.
+#[cfg(feature = "cards-alt")]
+pub const CARDS_ALT_BASE: usize = NUM_FEATURES_MID_V4;
 
 /// Training data for one position's policy candidates (delta-feature approach).
 pub struct PositionPolicyData {
@@ -225,6 +532,33 @@ pub const HIDDEN1: usize = if cfg!(feature = "small-net") { 256 }
 pub const HIDDEN2: usize = if cfg!(feature = "small-net") { 32 }
                            else if cfg!(feature = "large-net") { 128 }
                            else { 64 };
+
+// ── v5-feat: split-value-heads architecture (P3) ─────────────────────
+//
+// 11 heads (KataGo-style decomposed value). When `has_split11_heads` is true on
+// an NNUENetwork, `forward()` returns the sum of all head outputs.
+//
+// Head index → subscore:
+//   0..5: per-wildlife remaining (bear, elk, salmon, hawk, fox)
+//   5..10: per-terrain hab+bonus remaining (forest, prairie, wetland, mountain, river)
+//   10: nature tokens remaining
+//
+// Sum of head outputs = total remaining points (= final_score - current_score
+// including habitat majority bonuses, attributed per-terrain). The decomposition
+// gives finer credit-assignment signal during training and lets each head
+// specialize on a distinct sub-game without interference from other subscores.
+pub const NUM_HEADS: usize = 11;
+pub const HEAD_BEAR: usize = 0;
+pub const HEAD_ELK: usize = 1;
+pub const HEAD_SALMON: usize = 2;
+pub const HEAD_HAWK: usize = 3;
+pub const HEAD_FOX: usize = 4;
+pub const HEAD_HAB_FOREST: usize = 5;
+pub const HEAD_HAB_PRAIRIE: usize = 6;
+pub const HEAD_HAB_WETLAND: usize = 7;
+pub const HEAD_HAB_MOUNTAIN: usize = 8;
+pub const HEAD_HAB_RIVER: usize = 9;
+pub const HEAD_TOKENS: usize = 10;
 
 // ─────────────────────────────────────────────────────────────────────
 // Feature extraction
@@ -509,6 +843,31 @@ pub struct OpponentDetail {
     pub has_salmon_run_4plus: bool,
     /// Opponent's isolated-hawk count (5 or 6 = threat; bin at emit).
     pub isolated_hawk_count: u8,
+    // ── v5-feat richer pattern detail (P4) ──
+    /// Number of bear singletons (component size 1).
+    pub bear_singleton_count: u8,
+    /// Length of the longest elk line in any of 3 line directions.
+    pub longest_elk_line: u8,
+    /// Length of the longest valid salmon run (≤2 neighbors per cell).
+    pub longest_salmon_run: u8,
+    // ── cards-alt opponent threat metrics ──
+    // Gated on cards-alt feature so non-alt builds (v4opp, v5, v6) don't pay
+    // the per-BagInfo cost of 5 extra BFS-style scans per opponent.
+    /// Best bear-component class observed (0=none, 1=single, 2=pair, 3=triple, 4=quad+).
+    #[cfg(feature = "cards-alt")]
+    pub alt_bear_class: u8,
+    /// Densest elk shape achieved (0=none, 1=single, 2=pair, 3=triangle, 4=rhombus+).
+    #[cfg(feature = "cards-alt")]
+    pub alt_elk_shape: u8,
+    /// Best Card-D salmon run "score-equivalent" class (0=no qualifying, 1=3, 2=4, 3=5+, 4=5+with adj animals).
+    #[cfg(feature = "cards-alt")]
+    pub alt_salmon_class: u8,
+    /// Best Card-D hawk LOS-pair intervening-types count (0..4+).
+    #[cfg(feature = "cards-alt")]
+    pub alt_hawk_pair_types: u8,
+    /// Best Card-B fox pair-types count for any single fox (0..4+).
+    #[cfg(feature = "cards-alt")]
+    pub alt_fox_pair_types: u8,
 }
 
 /// Game-level information visible to the AI beyond the player's own board:
@@ -533,6 +892,14 @@ pub struct BagInfo {
     /// Entries ordered by relative seat offset from the observing player (1, 2, 3).
     /// For games with fewer than 4 players, unused slots are default (all zero).
     pub opp_detail: [OpponentDetail; NUM_OPP_SLOTS],
+    // ── v5-feat additions ──
+    /// Joint count of remaining tile-bag tiles per (terrain, allowed_wildlife) pair.
+    /// joint[t][w] = number of bag tiles whose terrain (primary OR secondary) == t
+    /// AND whose allowed mask includes wildlife w. Used by the P7 NNUE block.
+    pub tbag_joint: [[u8; 5]; 5],
+    /// Observing player's largest habitat per terrain (used by P5 bonus-distance
+    /// features to compute my_size - opp_size). Mirrors `Board.largest_group`.
+    pub my_largest_group: [u8; 5],
 }
 
 impl BagInfo {
@@ -599,6 +966,14 @@ impl BagInfo {
             slot += 1;
         }
 
+        // v5-feat: joint terrain × wildlife distribution from tile bag.
+        let tbag_joint = game.tile_bag.joint_distribution();
+        // v5-feat: observing player's own largest habitat per terrain (for bonus-distance feature).
+        let mut my_largest_group = [0u8; 5];
+        for t in 0..5 {
+            my_largest_group[t] = game.boards[player].largest_group[t] as u8;
+        }
+
         BagInfo {
             remaining,
             max_opponent_habitat,
@@ -607,11 +982,18 @@ impl BagInfo {
             tbag_wildlife,
             overflow_used: game.overflow_used_this_turn,
             opp_detail,
+            tbag_joint,
+            my_largest_group,
         }
     }
 }
 
 /// Compute a single opponent's detail from its board. Read-only.
+/// Populates v4-opp fields (binary pattern flags) AND v5-feat richer pattern
+/// counts (bear_singleton_count, longest_elk_line, longest_salmon_run).
+/// All fields are computed unconditionally — the cost is dominated by BFS over
+/// small wildlife sets, and gating extraction (not population) keeps the data
+/// path simple.
 fn compute_opponent_detail(board: &Board) -> OpponentDetail {
     let adj = &*ADJACENCY;
     let wildlife_counts: [u8; 5] =
@@ -619,19 +1001,34 @@ fn compute_opponent_detail(board: &Board) -> OpponentDetail {
     let largest_group: [u8; 5] =
         std::array::from_fn(|i| board.largest_group[i] as u8);
 
-    // Bear-singleton: any bear whose bear neighbours count is zero.
-    let mut has_bear_singleton = false;
-    for &p in board.wildlife_positions[Wildlife::Bear as usize].iter() {
-        let pos = p as usize;
-        let bear_neigh = adj.neighbors_of(pos)
-            .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Bear))
-            .count();
-        if bear_neigh == 0 { has_bear_singleton = true; break; }
+    // Bear singletons: count components of size exactly 1.
+    let mut bear_singleton_count: u8 = 0;
+    {
+        let mut visited = [false; 441];
+        for &p in board.wildlife_positions[Wildlife::Bear as usize].iter() {
+            let idx = p as usize;
+            if visited[idx] { continue; }
+            let mut size = 0u16;
+            let mut queue: arrayvec::ArrayVec<u16, 24> = arrayvec::ArrayVec::new();
+            queue.push(p); visited[idx] = true;
+            while let Some(cur) = queue.pop() {
+                size += 1;
+                for n in adj.neighbors_of(cur as usize) {
+                    if !visited[n]
+                       && board.grid.get(n).placed_wildlife() == Some(Wildlife::Bear) {
+                        visited[n] = true;
+                        if !queue.is_full() { queue.push(n as u16); }
+                    }
+                }
+            }
+            if size == 1 { bear_singleton_count = bear_singleton_count.saturating_add(1); }
+        }
     }
+    let has_bear_singleton = bear_singleton_count > 0;
 
-    // Longest elk line along any of 3 hex line directions.
-    let mut has_elk_line_3plus = false;
-    'elk: for &p in board.wildlife_positions[Wildlife::Elk as usize].iter() {
+    // Longest elk line: walk all 3 directions for each elk, keep max.
+    let mut longest_elk_line: u16 = 0;
+    for &p in board.wildlife_positions[Wildlife::Elk as usize].iter() {
         let coord = cascadia_core::hex::HexCoord::from_index(p as usize);
         for &(dq, dr) in &cascadia_core::hex::HexCoord::LINE_DIRECTIONS {
             let mut len = 1u16;
@@ -649,34 +1046,44 @@ fn compute_opponent_detail(board: &Board) -> OpponentDetail {
                     c = cascadia_core::hex::HexCoord::new(c.q - dq, c.r - dr);
                 } else { break; }
             }
-            if len >= 3 { has_elk_line_3plus = true; break 'elk; }
+            if len > longest_elk_line { longest_elk_line = len; }
         }
     }
+    let has_elk_line_3plus = longest_elk_line >= 3;
 
-    // Salmon: largest connected run length (BFS from each salmon, dedupe via visited).
-    let mut has_salmon_run_4plus = false;
+    // Salmon: longest valid run (component where each cell has ≤2 salmon neighbors).
+    // BFS from each salmon, dedupe via visited, track max valid run length.
+    let mut longest_salmon_run: u16 = 0;
     {
         let mut visited = [false; 441];
         for &p in board.wildlife_positions[Wildlife::Salmon as usize].iter() {
             let start = p as usize;
             if visited[start] { continue; }
-            // BFS
-            let mut stack: arrayvec::ArrayVec<usize, 32> = arrayvec::ArrayVec::new();
-            stack.push(start); visited[start] = true;
-            let mut len = 0u16;
+            let mut component: arrayvec::ArrayVec<u16, 32> = arrayvec::ArrayVec::new();
+            let mut stack: arrayvec::ArrayVec<u16, 32> = arrayvec::ArrayVec::new();
+            stack.push(p); visited[start] = true;
             while let Some(cur) = stack.pop() {
-                len += 1;
-                for n in adj.neighbors_of(cur) {
+                component.push(cur);
+                for n in adj.neighbors_of(cur as usize) {
                     if !visited[n]
                         && board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon) {
                         visited[n] = true;
-                        if !stack.is_full() { stack.push(n); }
+                        if !stack.is_full() { stack.push(n as u16); }
                     }
                 }
             }
-            if len >= 4 { has_salmon_run_4plus = true; break; }
+            // Validate: each cell in component has ≤2 salmon neighbors.
+            let valid = component.iter().all(|&c| {
+                adj.neighbors_of(c as usize)
+                    .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon))
+                    .count() <= 2
+            });
+            if valid && (component.len() as u16) > longest_salmon_run {
+                longest_salmon_run = component.len() as u16;
+            }
         }
     }
+    let has_salmon_run_4plus = longest_salmon_run >= 4;
 
     // Isolated hawk count.
     let mut isolated_hawks = 0u8;
@@ -687,6 +1094,24 @@ fn compute_opponent_detail(board: &Board) -> OpponentDetail {
         if !has_hawk_neigh { isolated_hawks += 1; }
     }
 
+    // ── cards-alt opponent threat metrics ──
+    // Computed only when cards-alt is enabled. TODO (perf): for hot benches
+    // these can share scan work with the existing bear/elk/salmon BFS above
+    // (currently independent passes); also worth caching opp_detail across
+    // BagInfo::from_game calls inside one outer move (~3750 redundant calls
+    // per move under MCE-750 rollouts because rollout-level BagInfo never
+    // changes for the opp side until an opponent simulated turn fires).
+    #[cfg(feature = "cards-alt")]
+    let alt_bear_class = compute_alt_bear_class(board);
+    #[cfg(feature = "cards-alt")]
+    let alt_elk_shape = compute_alt_elk_shape(board);
+    #[cfg(feature = "cards-alt")]
+    let alt_salmon_class = compute_alt_salmon_class(board);
+    #[cfg(feature = "cards-alt")]
+    let alt_hawk_pair_types = compute_alt_hawk_pair_types(board);
+    #[cfg(feature = "cards-alt")]
+    let alt_fox_pair_types = compute_alt_fox_pair_types(board);
+
     OpponentDetail {
         wildlife_counts,
         largest_group,
@@ -695,7 +1120,259 @@ fn compute_opponent_detail(board: &Board) -> OpponentDetail {
         has_elk_line_3plus,
         has_salmon_run_4plus,
         isolated_hawk_count: isolated_hawks,
+        bear_singleton_count,
+        longest_elk_line: longest_elk_line.min(255) as u8,
+        longest_salmon_run: longest_salmon_run.min(255) as u8,
+        #[cfg(feature = "cards-alt")]
+        alt_bear_class,
+        #[cfg(feature = "cards-alt")]
+        alt_elk_shape,
+        #[cfg(feature = "cards-alt")]
+        alt_salmon_class,
+        #[cfg(feature = "cards-alt")]
+        alt_hawk_pair_types,
+        #[cfg(feature = "cards-alt")]
+        alt_fox_pair_types,
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// cards-alt feature computation helpers (always compiled, gated on emit)
+// ─────────────────────────────────────────────────────────────────────
+
+/// Per-component sizes for a wildlife type (BFS, hex adjacency).
+#[cfg(feature = "cards-alt")]
+fn alt_components(board: &Board, w: Wildlife) -> arrayvec::ArrayVec<u16, 32> {
+    let positions = &board.wildlife_positions[w as usize];
+    let adj = &*ADJACENCY;
+    let mut out = arrayvec::ArrayVec::<u16, 32>::new();
+    let mut visited = [false; 441];
+    for &p in positions.iter() {
+        let idx = p as usize;
+        if visited[idx] { continue; }
+        let mut size = 0u16;
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(p);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            size += 1;
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && board.grid.get(n).placed_wildlife() == Some(w) {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let _ = out.try_push(size);
+    }
+    out
+}
+
+/// Best bear size class observed: 0=none, 1=single, 2=pair, 3=triple, 4=quad+.
+#[cfg(feature = "cards-alt")]
+fn compute_alt_bear_class(board: &Board) -> u8 {
+    let sizes = alt_components(board, Wildlife::Bear);
+    let max = sizes.iter().copied().max().unwrap_or(0);
+    match max {
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        _ => 4,
+    }
+}
+
+/// Densest elk shape: 0=none, 1=single, 2=pair, 3=triangle (3 mutually adjacent),
+/// 4=rhombus (triangle + ≥1 adjacent extra).
+#[cfg(feature = "cards-alt")]
+fn compute_alt_elk_shape(board: &Board) -> u8 {
+    let positions = &board.wildlife_positions[Wildlife::Elk as usize];
+    if positions.is_empty() { return 0; }
+    let adj = &*ADJACENCY;
+    // Count mutually-adjacent triads. If any 4-component has a triangle subshape, shape=4.
+    // Cheap check: for each elk, neighbors & elk_set; pair of those mutually adjacent → triangle.
+    let mut elk = [false; 441];
+    for &p in positions.iter() { elk[p as usize] = true; }
+    let mut max_shape: u8 = 1; // any elk = singleton
+    // Check pair (≥2 adjacent elk anywhere).
+    let mut has_pair = false;
+    for &p in positions.iter() {
+        for n in adj.neighbors_of(p as usize) {
+            if elk[n] { has_pair = true; break; }
+        }
+        if has_pair { break; }
+    }
+    if has_pair && max_shape < 2 { max_shape = 2; }
+    // Check triangle: any 3 mutually-adjacent.
+    let mut triangle_anchors: arrayvec::ArrayVec<u16, 32> = arrayvec::ArrayVec::new();
+    'outer: for &p in positions.iter() {
+        let nbrs: arrayvec::ArrayVec<u16, 6> = adj.neighbors_of(p as usize)
+            .filter(|&n| elk[n])
+            .map(|n| n as u16)
+            .collect();
+        for i in 0..nbrs.len() {
+            for j in (i + 1)..nbrs.len() {
+                let a = nbrs[i] as usize;
+                let b = nbrs[j] as usize;
+                if adj.neighbors_of(a).any(|n| n == b) {
+                    if max_shape < 3 { max_shape = 3; }
+                    let _ = triangle_anchors.try_push(p);
+                    continue 'outer;
+                }
+            }
+        }
+    }
+    // Check rhombus: any cell in a triangle that has a 4th elk-neighbor outside the triad.
+    if max_shape >= 3 {
+        for &t in triangle_anchors.iter() {
+            let elk_n: usize = adj.neighbors_of(t as usize).filter(|&n| elk[n]).count();
+            // If center has ≥3 elk neighbors, rhombus exists.
+            if elk_n >= 3 { max_shape = 4; break; }
+        }
+        // Or any vertex of the triangle has an elk neighbor outside the triad.
+        if max_shape < 4 {
+            for &t in triangle_anchors.iter() {
+                let mut tri_neigh = arrayvec::ArrayVec::<u16, 6>::new();
+                for n in adj.neighbors_of(t as usize) {
+                    if elk[n] { let _ = tri_neigh.try_push(n as u16); }
+                }
+                // For each pair forming the triangle with t, check if any other elk
+                // is adjacent to either of those vertices.
+                for i in 0..tri_neigh.len() {
+                    for j in (i + 1)..tri_neigh.len() {
+                        let a = tri_neigh[i] as usize;
+                        let b = tri_neigh[j] as usize;
+                        if !adj.neighbors_of(a).any(|n| n == b) { continue; }
+                        // a and b are part of a triangle with t. Check 4th elk adjacent to a or b.
+                        for v in [a, b] {
+                            for n in adj.neighbors_of(v) {
+                                if elk[n] && n != t as usize && n != a && n != b {
+                                    max_shape = 4;
+                                    break;
+                                }
+                            }
+                            if max_shape == 4 { break; }
+                        }
+                        if max_shape == 4 { break; }
+                    }
+                    if max_shape == 4 { break; }
+                }
+                if max_shape == 4 { break; }
+            }
+        }
+    }
+    max_shape
+}
+
+/// Best Card-D salmon "score class": 0=no qualifying run, 1=qualifying min,
+/// 2=length 4, 3=length 5+, 4=length 5+ with ≥3 adjacent non-salmon types.
+#[cfg(feature = "cards-alt")]
+fn compute_alt_salmon_class(board: &Board) -> u8 {
+    let positions = &board.wildlife_positions[Wildlife::Salmon as usize];
+    if positions.is_empty() { return 0; }
+    let adj = &*ADJACENCY;
+    let mut visited = [false; 441];
+    let mut best: u8 = 0;
+    for &p in positions.iter() {
+        let idx = p as usize;
+        if visited[idx] { continue; }
+        let mut comp = arrayvec::ArrayVec::<u16, 32>::new();
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(p);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            let _ = comp.try_push(c);
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon) {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let valid = comp.iter().all(|&c| {
+            adj.neighbors_of(c as usize)
+                .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon))
+                .count() <= 2
+        });
+        if !valid { continue; }
+        let len = comp.len();
+        if len < 3 { continue; }
+        let mut seen = [false; 441];
+        let mut adj_types = 0u32;
+        for &c in &comp {
+            for n in adj.neighbors_of(c as usize) {
+                if seen[n] { continue; }
+                seen[n] = true;
+                if let Some(w) = board.grid.get(n).placed_wildlife() {
+                    if w != Wildlife::Salmon { adj_types += 1; }
+                }
+            }
+        }
+        let class: u8 = if len == 3 { 1 }
+                        else if len == 4 { 2 }
+                        else if adj_types >= 3 { 4 }
+                        else { 3 };
+        if class > best { best = class; }
+    }
+    best
+}
+
+/// Best hawk LOS-pair intervening unique non-hawk types observed (0..4+).
+#[cfg(feature = "cards-alt")]
+fn compute_alt_hawk_pair_types(board: &Board) -> u8 {
+    let positions = &board.wildlife_positions[Wildlife::Hawk as usize];
+    if positions.len() < 2 { return 0; }
+    let mut hawk_set = [false; 441];
+    for &p in positions.iter() { hawk_set[p as usize] = true; }
+    let mut best: u32 = 0;
+    for &p in positions.iter() {
+        let coord = cascadia_core::hex::HexCoord::from_index(p as usize);
+        for &(dq, dr) in &cascadia_core::hex::HexCoord::DIRECTIONS {
+            let mut cur = cascadia_core::hex::HexCoord::new(coord.q + dq, coord.r + dr);
+            let mut steps = 1u32;
+            let mut types_mask = 0u8;
+            loop {
+                match cur.to_index() {
+                    Some(idx) => {
+                        if hawk_set[idx] {
+                            if steps >= 2 {
+                                let unique = (types_mask & !(1 << Wildlife::Hawk as u8)).count_ones();
+                                if unique > best { best = unique; }
+                            }
+                            break;
+                        }
+                        if let Some(w) = board.grid.get(idx).placed_wildlife() {
+                            types_mask |= 1 << (w as u8);
+                        }
+                    }
+                    None => break,
+                }
+                cur = cascadia_core::hex::HexCoord::new(cur.q + dq, cur.r + dr);
+                steps += 1;
+            }
+        }
+    }
+    best.min(4) as u8
+}
+
+/// Best per-fox pair-type count (0..4+) — count of non-fox types with ≥2 in adjacent cells.
+#[cfg(feature = "cards-alt")]
+fn compute_alt_fox_pair_types(board: &Board) -> u8 {
+    let positions = &board.wildlife_positions[Wildlife::Fox as usize];
+    if positions.is_empty() { return 0; }
+    let adj = &*ADJACENCY;
+    let mut best: u32 = 0;
+    for &p in positions.iter() {
+        let mut counts = [0u8; 5];
+        for n in adj.neighbors_of(p as usize) {
+            if let Some(w) = board.grid.get(n).placed_wildlife() {
+                if w != Wildlife::Fox { counts[w as usize] += 1; }
+            }
+        }
+        let pair_types = counts.iter().filter(|&&c| c >= 2).count() as u32;
+        if pair_types > best { best = pair_types; }
+    }
+    best.min(4) as u8
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -983,6 +1660,15 @@ pub fn extract_features(board: &Board) -> Vec<u16> {
 
 /// Extract active feature indices from a board state, optionally with bag composition.
 pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u16> {
+    // v6-peak uses a completely different feature layout (bounded play region +
+    // 6-dir adjacency + HabitatBucket). Dispatch to the dedicated v6 extractor.
+    #[cfg(feature = "v6-peak")]
+    {
+        return extract_features_v6_peak(board, bag);
+    }
+
+    #[allow(unreachable_code)]
+    {
     let mut features = Vec::with_capacity(450);
 
     // ── Per-cell features ──
@@ -1139,13 +1825,258 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
         extract_opp_detailed_features(b, &mut features, OPP_DETAILED_BASE);
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // cards-alt block (appended at CARDS_ALT_BASE = NUM_FEATURES_MID_V4)
+    // Player-side alt-card pattern features + per-opp alt threat metrics.
+    // ─────────────────────────────────────────────────────────────────
+    #[cfg(feature = "cards-alt")]
+    {
+        let mut alt_off = CARDS_ALT_BASE;
+        extract_alt_bear_features(board, &mut features, alt_off);
+        alt_off += ALT_BEAR_FEATURES;
+        extract_alt_elk_features(board, &mut features, alt_off);
+        alt_off += ALT_ELK_FEATURES;
+        extract_alt_salmon_features(board, &mut features, alt_off);
+        alt_off += ALT_SALMON_FEATURES;
+        extract_alt_hawk_features(board, &mut features, alt_off);
+        alt_off += ALT_HAWK_FEATURES;
+        extract_alt_fox_features(board, &mut features, alt_off);
+        alt_off += ALT_FOX_FEATURES;
+        if let Some(b) = bag {
+            extract_alt_opp_features(b, &mut features, alt_off);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // cards-alt-v2 block (appended at CARDS_ALT_V2_BASE = NUM_FEATURES_MID_V4_ALT)
+    // Per-piece relational features: each placed wildlife emits a single feature
+    // index encoding its alt-card-relevant context. Sparse, position-aware.
+    // ─────────────────────────────────────────────────────────────────
+    #[cfg(feature = "cards-alt-v2")]
+    {
+        let mut v2_off = CARDS_ALT_V2_BASE;
+        extract_alt2_hawk_los_features(board, &mut features, v2_off);
+        v2_off += ALT2_HAWK_LOS_FEATURES;
+        extract_alt2_salmon_features(board, &mut features, v2_off);
+        v2_off += ALT2_SALMON_FEATURES;
+        extract_alt2_fox_features(board, &mut features, v2_off);
+        v2_off += ALT2_FOX_FEATURES;
+        extract_alt2_bear_features(board, &mut features, v2_off);
+        v2_off += ALT2_BEAR_FEATURES;
+        extract_alt2_elk_features(board, &mut features, v2_off);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // v5-feat block (appended at V5_FEAT_BASE)
+    // Frontier (P2), richer per-opp pattern (P4), bonus distance (P5),
+    // habitat structure (P6), tile-bag joint distribution (P7).
+    // ─────────────────────────────────────────────────────────────────
+    #[cfg(feature = "v5-feat")]
+    {
+        extract_v5_frontier_features(board, &mut features, V5_FEAT_BASE);
+        if let Some(b) = bag {
+            let opp_pat_base = V5_FEAT_BASE
+                + V5_FRONTIER_FLAG_FEATURES
+                + V5_FRONT_WL_FEATURES
+                + V5_FRONT_TERR_FEATURES;
+            extract_v5_opp_pattern_features(b, &mut features, opp_pat_base);
+            let bonus_base = opp_pat_base + V5_OPP_PAT_FEATURES;
+            extract_v5_bonus_distance_features(b, &mut features, bonus_base);
+            let tbag_base = bonus_base + V5_BONUS_DIST_FEATURES + V5_HAB_STRUCT_FEATURES;
+            extract_v5_tbag_joint_features(b, &mut features, tbag_base);
+        }
+        let hab_struct_base = V5_FEAT_BASE
+            + V5_FRONTIER_FLAG_FEATURES + V5_FRONT_WL_FEATURES + V5_FRONT_TERR_FEATURES
+            + V5_OPP_PAT_FEATURES + V5_BONUS_DIST_FEATURES;
+        extract_v5_hab_structure_features(board, &mut features, hab_struct_base);
+    }
+
     features
+    } // end allow(unreachable_code) block (v6-peak returns earlier)
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// v5-feat extraction helpers
+// ─────────────────────────────────────────────────────────────────────
+
+/// P2 frontier features:
+/// - 441 cells: 1 bit per cell "is on frontier" (empty cell with at least one placed neighbor)
+/// - 441 × 5 cells: 1 bit per (cell, wildlife) "this frontier cell has wildlife W in any neighbor"
+/// - 441 × 5 cells: 1 bit per (cell, terrain) "this frontier cell touches terrain T on a shared edge"
+/// Sparsity: ~10-20 frontier cells × ~5 fires each = ~50-200 active features.
+#[cfg(any(feature = "v5-feat", feature = "v6-peak"))]
+fn extract_v5_frontier_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let adj = &*ADJACENCY;
+    let frontier = board.frontier();
+    let flag_base = base;
+    let wl_base = base + V5_FRONTIER_FLAG_FEATURES;
+    let terr_base = wl_base + V5_FRONT_WL_FEATURES;
+
+    for &fpos in frontier.iter() {
+        let idx = fpos as usize;
+        // Frontier flag.
+        features.push((flag_base + idx) as u16);
+
+        // For each direction, look at the neighbor (which must be a placed tile
+        // for this cell to be on the frontier). Encode the wildlife code +
+        // the terrain that faces this frontier cell.
+        let mut wl_seen = [false; 5];
+        let mut terr_seen = [false; 5];
+        for dir in 0..6 {
+            let nidx_val = adj.neighbors[idx][dir];
+            if nidx_val == u16::MAX { continue; }
+            let nidx = nidx_val as usize;
+            let n_cell = board.grid.get(nidx);
+            if !n_cell.is_present() { continue; }
+            // Wildlife on neighbor (only if placed).
+            if let Some(w) = n_cell.placed_wildlife() {
+                let wi = w as usize;
+                if wi < 5 && !wl_seen[wi] {
+                    wl_seen[wi] = true;
+                    features.push((wl_base + idx * 5 + wi) as u16);
+                }
+            }
+            // Terrain on the neighbor's edge that faces this cell (shared edge).
+            // The shared edge from neighbor's POV is direction (dir + 3) % 6.
+            let nrot = board.rotations[nidx];
+            if let Some(t) = cascadia_core::board::terrain_on_edge(n_cell, nrot, (dir + 3) % 6) {
+                let ti = t as usize;
+                if ti < 5 && !terr_seen[ti] {
+                    terr_seen[ti] = true;
+                    features.push((terr_base + idx * 5 + ti) as u16);
+                }
+            }
+        }
+    }
+}
+
+/// P4 richer per-opp pattern histograms (replaces v4-opp's 4 binary flags with
+/// 4 small histograms: bear singletons, longest elk line, longest salmon run,
+/// isolated hawk count). Per opp: 36 features. 3 opps × 36 = 108 total.
+#[cfg(any(feature = "v5-feat", feature = "v6-peak"))]
+fn extract_v5_opp_pattern_features(bag: &BagInfo, features: &mut Vec<u16>, base: usize) {
+    for (slot, opp) in bag.opp_detail.iter().enumerate() {
+        let slot_base = base + slot * V5_OPP_PAT_PER_OPP;
+        let bear_base = slot_base;
+        let elk_base = bear_base + V5_OPP_BEAR_SING_BINS;
+        let salmon_base = elk_base + V5_OPP_ELK_LINE_BINS;
+        let hawk_base = salmon_base + V5_OPP_SALMON_RUN_BINS;
+
+        let bb = (opp.bear_singleton_count as usize).min(V5_OPP_BEAR_SING_BINS - 1);
+        features.push((bear_base + bb) as u16);
+        let eb = (opp.longest_elk_line as usize).min(V5_OPP_ELK_LINE_BINS - 1);
+        features.push((elk_base + eb) as u16);
+        let sb = (opp.longest_salmon_run as usize).min(V5_OPP_SALMON_RUN_BINS - 1);
+        features.push((salmon_base + sb) as u16);
+        let hb = (opp.isolated_hawk_count as usize).min(V5_OPP_ISOL_HAWK_BINS - 1);
+        features.push((hawk_base + hb) as u16);
+    }
+}
+
+/// P5 bonus-threshold-distance features: for each (terrain, opponent), the
+/// signed difference (my_largest_group[t] - opp.largest_group[t]) binned to
+/// 21 bins (-10..=-1, 0, 1..=10+). 5 terrains × 3 opps × 21 = 315 features.
+/// Sparsity: 15 active features per position (one bin per terrain×opp pair).
+#[cfg(any(feature = "v5-feat", feature = "v6-peak"))]
+fn extract_v5_bonus_distance_features(bag: &BagInfo, features: &mut Vec<u16>, base: usize) {
+    for t in 0..5 {
+        for (slot, opp) in bag.opp_detail.iter().enumerate() {
+            let mine = bag.my_largest_group[t] as i32;
+            let theirs = opp.largest_group[t] as i32;
+            let diff = (mine - theirs).clamp(-10, 10);
+            // bin index: -10 → 0, ... 0 → 10, ... 10 → 20
+            let bin = (diff + 10) as usize;
+            let block_base = base + (t * NUM_OPP_SLOTS + slot) * V5_BONUS_DIFF_BINS;
+            features.push((block_base + bin) as u16);
+        }
+    }
+}
+
+/// P6 habitat structure: per terrain, count of distinct connected groups +
+/// 2nd-largest group size. 5 × (6 + 11) = 85 features. Sparsity: 10 active.
+/// Implementation: BFS over all cells of each terrain to enumerate components.
+#[cfg(any(feature = "v5-feat", feature = "v6-peak"))]
+fn extract_v5_hab_structure_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let adj = &*ADJACENCY;
+    for t in 0..5 {
+        let terrain_t = match cascadia_core::types::Terrain::from_u8(t as u8) {
+            Some(tt) => tt,
+            None => continue,
+        };
+        // Mark cells that have a tile facing terrain_t on at least one edge.
+        // This is the same predicate the union-find uses; we re-derive via cells.
+        let mut visited = [false; 441];
+        let mut sizes: arrayvec::ArrayVec<u16, 64> = arrayvec::ArrayVec::new();
+        for &tile_idx in board.placed_tiles.iter() {
+            let idx = tile_idx as usize;
+            if visited[idx] { continue; }
+            let cell = board.grid.get(idx);
+            if !cell.is_present() { continue; }
+            // Cell qualifies if it has terrain_t on some edge.
+            let has_t = (0..6).any(|d| {
+                cascadia_core::board::terrain_on_edge(cell, board.rotations[idx], d)
+                    == Some(terrain_t)
+            });
+            if !has_t { continue; }
+            // BFS the component connected via shared-terrain edges.
+            let mut queue: arrayvec::ArrayVec<u16, 128> = arrayvec::ArrayVec::new();
+            queue.push(tile_idx);
+            visited[idx] = true;
+            let mut size = 0u16;
+            while let Some(cur) = queue.pop() {
+                size += 1;
+                let cur_idx = cur as usize;
+                let cur_cell = board.grid.get(cur_idx);
+                let cur_rot = board.rotations[cur_idx];
+                for d in 0..6 {
+                    let n_val = adj.neighbors[cur_idx][d];
+                    if n_val == u16::MAX { continue; }
+                    let n_idx = n_val as usize;
+                    if visited[n_idx] { continue; }
+                    let n_cell = board.grid.get(n_idx);
+                    if !n_cell.is_present() { continue; }
+                    // Both cells must show terrain_t on the shared edge.
+                    let my_terr = cascadia_core::board::terrain_on_edge(cur_cell, cur_rot, d);
+                    let n_terr = cascadia_core::board::terrain_on_edge(
+                        n_cell, board.rotations[n_idx], (d + 3) % 6);
+                    if my_terr == Some(terrain_t) && n_terr == Some(terrain_t) {
+                        visited[n_idx] = true;
+                        if !queue.is_full() { queue.push(n_val); }
+                    }
+                }
+            }
+            if size > 0 && !sizes.is_full() { sizes.push(size); }
+        }
+        // Sort descending: largest first, second-largest at index 1.
+        sizes.sort_unstable_by(|a, b| b.cmp(a));
+        let cluster_count = sizes.len().min(V5_HAB_CLUSTER_COUNT_BINS - 1);
+        let second_size = if sizes.len() >= 2 { sizes[1] as usize } else { 0 };
+        let second_bin = second_size.min(V5_HAB_SECOND_BINS - 1);
+        let count_base = base + t * V5_HAB_STRUCT_PER_TERR;
+        features.push((count_base + cluster_count) as u16);
+        let second_base = count_base + V5_HAB_CLUSTER_COUNT_BINS;
+        features.push((second_base + second_bin) as u16);
+    }
+}
+
+/// P7 tile-bag joint terrain × wildlife distribution. 5×5 cells × 21 bins each.
+/// Per (t, w) cell: how many remaining bag tiles have terrain T (primary or
+/// secondary) AND allow wildlife W. Always exactly 25 features active.
+#[cfg(any(feature = "v5-feat", feature = "v6-peak"))]
+fn extract_v5_tbag_joint_features(bag: &BagInfo, features: &mut Vec<u16>, base: usize) {
+    for t in 0..5 {
+        for w in 0..5 {
+            let count = (bag.tbag_joint[t][w] as usize).min(V5_TBAG_JOINT_BINS - 1);
+            let cell_base = base + (t * 5 + w) * V5_TBAG_JOINT_BINS;
+            features.push((cell_base + count) as u16);
+        }
+    }
 }
 
 /// Emit per-opponent detail features. `base` is the absolute starting index
 /// in the feature index space (one of NUM_FEATURES_LEGACY, NUM_FEATURES_MID,
 /// or NUM_FEATURES_V3 depending on cargo-feature combination).
-#[cfg(feature = "v4-opp")]
+#[cfg(any(feature = "v4-opp", feature = "v5-feat", feature = "v6-peak"))]
 fn extract_opp_detailed_features(bag: &BagInfo, features: &mut Vec<u16>, base: usize) {
     for (slot, opp) in bag.opp_detail.iter().enumerate() {
         let slot_base = base + slot * OPP_DET_PER_OPP;
@@ -1477,59 +2408,71 @@ fn extract_pattern_v2_features(board: &Board, features: &mut Vec<u16>, base: usi
     features.push((pat2_off2 + bear_extendable_singles.min(3)) as u16);
 
     // ── Bear waste (4 bins): bears in components of size ≥3 (worth 0 in Card A) ──
+    // GATED OFF under cards-alt builds: under Bear C/D/B, components of size 3 (or 4)
+    // are HIGH-VALUE, not waste. The Card-A "waste" signal would actively mislead.
+    // Feature SLOT remains in the index space (so older weights load) — we just
+    // don't emit, leaving the network's existing weight on the dead bin to do nothing.
     let pat2_off3 = pat2_off2 + PAT_BEAR_EXT_SINGLES;
-    let mut bear_waste = 0usize;
+    #[cfg(not(feature = "cards-alt"))]
     {
-        let mut visited = [false; 441];
-        for &pos in bear_positions.iter() {
-            let idx = pos as usize;
-            if visited[idx] { continue; }
-            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
-            queue.push(pos);
-            visited[idx] = true;
-            let mut size = 0usize;
-            while let Some(cur) = queue.pop() {
-                size += 1;
-                for nidx in adj.neighbors_of(cur as usize) {
-                    if !visited[nidx]
-                       && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear) {
-                        visited[nidx] = true;
-                        queue.push(nidx as u16);
+        let mut bear_waste = 0usize;
+        {
+            let mut visited = [false; 441];
+            for &pos in bear_positions.iter() {
+                let idx = pos as usize;
+                if visited[idx] { continue; }
+                let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+                queue.push(pos);
+                visited[idx] = true;
+                let mut size = 0usize;
+                while let Some(cur) = queue.pop() {
+                    size += 1;
+                    for nidx in adj.neighbors_of(cur as usize) {
+                        if !visited[nidx]
+                           && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear) {
+                            visited[nidx] = true;
+                            queue.push(nidx as u16);
+                        }
                     }
                 }
-            }
-            if size >= 3 {
-                bear_waste += size;
+                if size >= 3 {
+                    bear_waste += size;
+                }
             }
         }
+        features.push((pat2_off3 + bear_waste.min(3)) as u16);
     }
-    features.push((pat2_off3 + bear_waste.min(3)) as u16);
 
     // ── At-risk isolated hawks (4 bins) ──
-    // Hawks currently isolated but with a hawk-allowed empty neighbor (could lose isolation).
+    // GATED OFF under cards-alt builds: under Hawk B/C/D, "at risk of losing
+    // isolation" is the OPPOSITE incentive — losing isolation creates LOS pairs
+    // which is what those cards reward.
     let pat2_off4 = pat2_off3 + PAT_BEAR_WASTE;
-    let hawk_positions = &board.wildlife_positions[Wildlife::Hawk as usize];
-    let mut hawks_at_risk = 0usize;
-    for &pos in hawk_positions.iter() {
-        let idx = pos as usize;
-        let mut isolated = true;
-        let mut has_hawk_slot = false;
-        for nidx in adj.neighbors_of(idx) {
-            let cell = board.grid.get(nidx);
-            if cell.placed_wildlife() == Some(Wildlife::Hawk) {
-                isolated = false;
-                break;
+    #[cfg(not(feature = "cards-alt"))]
+    {
+        let hawk_positions = &board.wildlife_positions[Wildlife::Hawk as usize];
+        let mut hawks_at_risk = 0usize;
+        for &pos in hawk_positions.iter() {
+            let idx = pos as usize;
+            let mut isolated = true;
+            let mut has_hawk_slot = false;
+            for nidx in adj.neighbors_of(idx) {
+                let cell = board.grid.get(nidx);
+                if cell.placed_wildlife() == Some(Wildlife::Hawk) {
+                    isolated = false;
+                    break;
+                }
+                if cell.is_present() && !cell.has_wildlife()
+                   && cell.allowed_wildlife().contains(Wildlife::Hawk) {
+                    has_hawk_slot = true;
+                }
             }
-            if cell.is_present() && !cell.has_wildlife()
-               && cell.allowed_wildlife().contains(Wildlife::Hawk) {
-                has_hawk_slot = true;
+            if isolated && has_hawk_slot {
+                hawks_at_risk += 1;
             }
         }
-        if isolated && has_hawk_slot {
-            hawks_at_risk += 1;
-        }
+        features.push((pat2_off4 + hawks_at_risk.min(3)) as u16);
     }
-    features.push((pat2_off4 + hawks_at_risk.min(3)) as u16);
 
     // ── Forced single-allocation slots per wildlife (5 × 4 = 20) ──
     // Empty placed cells where exactly one wildlife type is allowed.
@@ -1556,21 +2499,27 @@ fn extract_pattern_v2_features(board: &Board, features: &mut Vec<u16>, base: usi
     }
 
     // ── Max-diversity foxes (4 bins): foxes adjacent to ≥4 distinct species ──
+    // GATED OFF under cards-alt builds: Card-A diversity is the wrong target for
+    // Fox B (pair-types), Fox C (single-type max), Fox D (pair-pair-types). The
+    // network has dedicated alt-aware fox features (ALT2_FOX_CTX) for those.
     let pat2_off6 = pat2_off5 + PAT_FORCED_ALLOC;
-    let fox_positions = &board.wildlife_positions[Wildlife::Fox as usize];
-    let mut max_div_foxes = 0usize;
-    for &pos in fox_positions.iter() {
-        let mut mask = 0u8;
-        for nidx in adj.neighbors_of(pos as usize) {
-            if let Some(w) = board.grid.get(nidx).placed_wildlife() {
-                mask |= 1 << (w as u8);
+    #[cfg(not(feature = "cards-alt"))]
+    {
+        let fox_positions = &board.wildlife_positions[Wildlife::Fox as usize];
+        let mut max_div_foxes = 0usize;
+        for &pos in fox_positions.iter() {
+            let mut mask = 0u8;
+            for nidx in adj.neighbors_of(pos as usize) {
+                if let Some(w) = board.grid.get(nidx).placed_wildlife() {
+                    mask |= 1 << (w as u8);
+                }
+            }
+            if mask.count_ones() >= 4 {
+                max_div_foxes += 1;
             }
         }
-        if mask.count_ones() >= 4 {
-            max_div_foxes += 1;
-        }
+        features.push((pat2_off6 + max_div_foxes.min(3)) as u16);
     }
-    features.push((pat2_off6 + max_div_foxes.min(3)) as u16);
 
     // ── Open keystone slots (4 bins) ──
     // Empty placed cells whose tile is a keystone (single-terrain). Approximation:
@@ -1828,6 +2777,28 @@ pub struct NNUENetwork {
     pub b3_wildlife: f32,
     pub w3_habitat: Vec<f32>,   // [HIDDEN2]
     pub b3_habitat: f32,
+    /// 11-head split value architecture (v5-feat / P3). Layout:
+    ///   w3_heads: row-major [NUM_HEADS × HIDDEN2]; head h's weights live at
+    ///             w3_heads[h*HIDDEN2 .. (h+1)*HIDDEN2].
+    ///   b3_heads: [NUM_HEADS]; per-head bias.
+    /// When `has_split11_heads` is true, forward() returns sum of head outputs.
+    /// When false, falls back to has_split_value_heads (2-head) or legacy w3/b3.
+    pub has_split11_heads: bool,
+    pub w3_heads: Vec<f32>,     // [NUM_HEADS * HIDDEN2]
+    pub b3_heads: Vec<f32>,     // [NUM_HEADS]
+    /// Heteroscedastic-NLL head (v7 / Exp #3). Predicts log-variance σ² of the
+    /// rollout-distribution-conditional-on-position. Used by the loss
+    /// 0.5·(y−μ)²/σ² + 0.5·log σ² (Kendall & Gal 2017) so that the network
+    /// down-weights gradients on intrinsically noisy positions instead of
+    /// blowing capacity trying to fit unfittable variance. The trained σ²
+    /// is also exposed via `evaluate_logvar` for use by the search-time
+    /// variance-adaptive halving allocator (SeqHalvingHetero).
+    /// When `has_heteroscedastic` is false, w3_var/b3_var are zero (loaded
+    /// weights without the head produce log_var ≈ 0 → σ ≈ 1, which is harmless
+    /// for inference but defeats the loss benefit at training time).
+    pub has_heteroscedastic: bool,
+    pub w3_var: Vec<f32>,       // [HIDDEN2]
+    pub b3_var: f32,
 }
 
 impl NNUENetwork {
@@ -1877,11 +2848,21 @@ impl NNUENetwork {
         let w3_habitat = vec![0.0; HIDDEN2];
         let b3_habitat = 0.0;
 
+        // 11-head split (v5) — initialized to zero; only meaningful when
+        // has_split11_heads is true (set by training pipeline / load).
+        let w3_heads = vec![0.0; NUM_HEADS * HIDDEN2];
+        let b3_heads = vec![0.0; NUM_HEADS];
+
         NNUENetwork {
             w1, b1, w2, b2, w3, b3,
             w3_policy, b3_policy,
             has_split_value_heads: false,
             w3_wildlife, b3_wildlife, w3_habitat, b3_habitat,
+            has_split11_heads: false,
+            w3_heads, b3_heads,
+            has_heteroscedastic: false,
+            w3_var: vec![0.0; HIDDEN2],
+            b3_var: 0.0,
         }
     }
 
@@ -1934,6 +2915,31 @@ impl NNUENetwork {
             self.b3_wildlife = others.iter().map(|o| o.b3_wildlife).sum::<f32>() / n;
             self.b3_habitat = others.iter().map(|o| o.b3_habitat).sum::<f32>() / n;
         }
+
+        // 11-head split (v5)
+        let all_11 = others.iter().all(|o| o.has_split11_heads);
+        self.has_split11_heads = all_11;
+        if all_11 {
+            for idx in 0..NUM_HEADS * HIDDEN2 {
+                let s: f32 = others.iter().map(|o| o.w3_heads[idx]).sum();
+                self.w3_heads[idx] = s / n;
+            }
+            for h in 0..NUM_HEADS {
+                let s: f32 = others.iter().map(|o| o.b3_heads[h]).sum();
+                self.b3_heads[h] = s / n;
+            }
+        }
+
+        // Heteroscedastic head (v7)
+        let all_het = others.iter().all(|o| o.has_heteroscedastic);
+        self.has_heteroscedastic = all_het;
+        if all_het {
+            for j in 0..HIDDEN2 {
+                let s: f32 = others.iter().map(|o| o.w3_var[j]).sum();
+                self.w3_var[j] = s / n;
+            }
+            self.b3_var = others.iter().map(|o| o.b3_var).sum::<f32>() / n;
+        }
     }
 
     /// Full forward pass from sparse features. Returns predicted value.
@@ -1971,7 +2977,19 @@ impl NNUENetwork {
             *v = v.max(0.0);
         }
 
-        // Output (value head): split heads if enabled, legacy total head otherwise.
+        // Output (value head). Priority: 11-head split (v5) > 2-head split > legacy.
+        if self.has_split11_heads {
+            let mut sum = 0.0f32;
+            for h in 0..NUM_HEADS {
+                let mut head = self.b3_heads[h];
+                let row = &self.w3_heads[h * HIDDEN2..(h + 1) * HIDDEN2];
+                for j in 0..HIDDEN2 {
+                    head += h2[j] * row[j];
+                }
+                sum += head;
+            }
+            return sum;
+        }
         if self.has_split_value_heads {
             let mut wildlife = self.b3_wildlife;
             let mut habitat = self.b3_habitat;
@@ -1989,6 +3007,36 @@ impl NNUENetwork {
         }
 
         out
+    }
+
+    /// Forward pass returning per-head outputs (only meaningful if has_split11_heads).
+    /// Used for diagnostics and split-head training validation.
+    pub fn forward_heads(&self, features: &[u16]) -> [f32; NUM_HEADS] {
+        let mut h1 = [0.0f32; HIDDEN1];
+        h1.copy_from_slice(&self.b1);
+        for &fi in features {
+            let base = fi as usize * HIDDEN1;
+            let col = &self.w1[base..base + HIDDEN1];
+            for j in 0..HIDDEN1 { h1[j] += col[j]; }
+        }
+        for v in h1.iter_mut() { *v = v.max(0.0); }
+        let mut h2 = [0.0f32; HIDDEN2];
+        h2.copy_from_slice(&self.b2);
+        for i in 0..HIDDEN1 {
+            if h1[i] > 0.0 {
+                let base = i * HIDDEN2;
+                let row = &self.w2[base..base + HIDDEN2];
+                for j in 0..HIDDEN2 { h2[j] += h1[i] * row[j]; }
+            }
+        }
+        for v in h2.iter_mut() { *v = v.max(0.0); }
+        let mut heads = [0.0f32; NUM_HEADS];
+        for h in 0..NUM_HEADS {
+            heads[h] = self.b3_heads[h];
+            let row = &self.w3_heads[h * HIDDEN2..(h + 1) * HIDDEN2];
+            for j in 0..HIDDEN2 { heads[h] += h2[j] * row[j]; }
+        }
+        heads
     }
 
     /// Forward pass returning both value and policy logit.
@@ -2018,8 +3066,17 @@ impl NNUENetwork {
         }
         for v in h2.iter_mut() { *v = v.max(0.0); }
 
-        // Value head: split heads if enabled, legacy total head otherwise
-        let value = if self.has_split_value_heads {
+        // Value head: 11-head split (v5) > 2-head split > legacy total head.
+        let value = if self.has_split11_heads {
+            let mut sum = 0.0f32;
+            for h in 0..NUM_HEADS {
+                let mut head = self.b3_heads[h];
+                let row = &self.w3_heads[h * HIDDEN2..(h + 1) * HIDDEN2];
+                for j in 0..HIDDEN2 { head += h2[j] * row[j]; }
+                sum += head;
+            }
+            sum
+        } else if self.has_split_value_heads {
             let mut wildlife = self.b3_wildlife;
             let mut habitat = self.b3_habitat;
             for j in 0..HIDDEN2 {
@@ -2078,7 +3135,17 @@ impl NNUENetwork {
             }
         }
         for v in h2.iter_mut() { *v = v.max(0.0); }
-        // Output: split heads if enabled, legacy total head otherwise.
+        // Output: 11-head split (v5) > 2-head split > legacy total head.
+        if self.has_split11_heads {
+            let mut sum = 0.0f32;
+            for h in 0..NUM_HEADS {
+                let mut head = self.b3_heads[h];
+                let row = &self.w3_heads[h * HIDDEN2..(h + 1) * HIDDEN2];
+                for j in 0..HIDDEN2 { head += h2[j] * row[j]; }
+                sum += head;
+            }
+            return sum;
+        }
         if self.has_split_value_heads {
             let mut wildlife = self.b3_wildlife;
             let mut habitat = self.b3_habitat;
@@ -2550,7 +3617,16 @@ impl NNUENetwork {
 
         // version=1: legacy single value head + policy head
         // version=2: adds split value heads (wildlife + habitat) appended at end
-        let version: u32 = if self.has_split_value_heads { 2 } else { 1 };
+        // version=3: adds 11-head split block appended at very end
+        //            (NUM_HEADS × HIDDEN2 weights + NUM_HEADS biases)
+        // version=4: adds heteroscedastic w3_var + b3_var at the very end
+        //            (HIDDEN2 + 1 floats). Implies v3 11-head block precedes
+        //            (we always write split + 11-head sections when v3+; if
+        //            those heads aren't trained, zeros are written).
+        let version: u32 = if self.has_heteroscedastic { 4 }
+                           else if self.has_split11_heads { 3 }
+                           else if self.has_split_value_heads { 2 }
+                           else { 1 };
         file.write_all(b"NNUE")?;
         file.write_all(&version.to_le_bytes())?;
 
@@ -2582,8 +3658,10 @@ impl NNUENetwork {
         }
         file.write_all(&self.b3_policy.to_le_bytes())?;
 
-        // Split value heads (v2 only): w3_wildlife + b3_wildlife + w3_habitat + b3_habitat
-        if self.has_split_value_heads {
+        // Split value heads (v2 and v3+): w3_wildlife + b3_wildlife + w3_habitat + b3_habitat
+        // When v4 (heteroscedastic) is enabled, also write split + 11-head blocks (zeros if
+        // not trained) so layout is unambiguous.
+        if self.has_split_value_heads || self.has_split11_heads || self.has_heteroscedastic {
             for &v in &self.w3_wildlife {
                 file.write_all(&v.to_le_bytes())?;
             }
@@ -2592,6 +3670,24 @@ impl NNUENetwork {
                 file.write_all(&v.to_le_bytes())?;
             }
             file.write_all(&self.b3_habitat.to_le_bytes())?;
+        }
+
+        // 11-head split (v3 and v4): NUM_HEADS × HIDDEN2 weights + NUM_HEADS biases
+        if self.has_split11_heads || self.has_heteroscedastic {
+            for &v in &self.w3_heads {
+                file.write_all(&v.to_le_bytes())?;
+            }
+            for &v in &self.b3_heads {
+                file.write_all(&v.to_le_bytes())?;
+            }
+        }
+
+        // Heteroscedastic head (v4 only): w3_var [HIDDEN2] + b3_var
+        if self.has_heteroscedastic {
+            for &v in &self.w3_var {
+                file.write_all(&v.to_le_bytes())?;
+            }
+            file.write_all(&self.b3_var.to_le_bytes())?;
         }
 
         Ok(())
@@ -2618,7 +3714,7 @@ impl NNUENetwork {
             Ok(f32::from_le_bytes(buf))
         };
 
-        // Layout (from start): header(8) + w1 + b1 + w2 + b2 + w3 + b3 + w3_policy + b3_policy + [split heads]
+        // Layout (from start): header(8) + w1 + b1 + w2 + b2 + w3 + b3 + w3_policy + b3_policy + [split heads (v2+)] + [11-head block (v3)]
         // We don't know w1_features upfront (legacy files had smaller NUM_FEATURES). Compute it by
         // subtracting everything else from the file size.
         let file_size = file.metadata()?.len();
@@ -2626,13 +3722,21 @@ impl NNUENetwork {
         let fixed_after_w1 = ((HIDDEN1 + HIDDEN1 * HIDDEN2 + HIDDEN2 + HIDDEN2 + 1) as u64) * 4;
         let policy_head_size = (HIDDEN2 + 1) as u64 * 4;
         let split_head_size = (2 * (HIDDEN2 + 1)) as u64 * 4; // w3_wildlife + b + w3_habitat + b
-        // The v1 file has no split heads appended, v2 does.
-        let trailing_size = policy_head_size + if version >= 2 { split_head_size } else { 0 };
+        let split11_head_size = ((NUM_HEADS * HIDDEN2 + NUM_HEADS) as u64) * 4;
+        let het_head_size = ((HIDDEN2 + 1) as u64) * 4; // w3_var + b3_var
+        // The v1 file has no split heads appended, v2 has 2-head, v3 has both 2-head + 11-head,
+        // v4 adds heteroscedastic head at the very end.
+        let trailing_size = policy_head_size
+            + if version >= 2 { split_head_size } else { 0 }
+            + if version >= 3 { split11_head_size } else { 0 }
+            + if version >= 4 { het_head_size } else { 0 };
         // Compute w1 features from remaining bytes. If the file is v1 without a policy head
         // (truly legacy), fall back by assuming zero trailing. That's best-effort.
         let mut w1_bytes = file_size.saturating_sub(header_size + fixed_after_w1 + trailing_size);
         let mut trailing_has_policy = true;
         let mut trailing_has_split = version >= 2;
+        let mut trailing_has_11 = version >= 3;
+        let trailing_has_het = version >= 4;
         let mut computed_features = w1_bytes / (HIDDEN1 as u64 * 4);
         if computed_features > NUM_FEATURES as u64 {
             // Stored in a newer file with more features than we know — cap and warn.
@@ -2645,6 +3749,7 @@ impl NNUENetwork {
                 w1_bytes = w1_bytes_no_trailing;
                 trailing_has_policy = false;
                 trailing_has_split = false;
+                trailing_has_11 = false;
                 computed_features = (w1_bytes / (HIDDEN1 as u64 * 4)).min(NUM_FEATURES as u64);
             }
         }
@@ -2688,7 +3793,7 @@ impl NNUENetwork {
             (vec![0.0; HIDDEN2], 0.0)
         };
 
-        // Split value heads (v2 only)
+        // Split value heads (v2 and v3 both write this block)
         let (has_split, w3_wildlife, b3_wildlife, w3_habitat, b3_habitat) = if trailing_has_split {
             let mut ww = Vec::with_capacity(HIDDEN2);
             for _ in 0..HIDDEN2 {
@@ -2705,12 +3810,168 @@ impl NNUENetwork {
             (false, vec![0.0; HIDDEN2], 0.0, vec![0.0; HIDDEN2], 0.0)
         };
 
+        // 11-head split (v3 and v4): NUM_HEADS × HIDDEN2 weights + NUM_HEADS biases
+        let (has_split11, w3_heads, b3_heads) = if trailing_has_11 {
+            let mut wh = Vec::with_capacity(NUM_HEADS * HIDDEN2);
+            for _ in 0..NUM_HEADS * HIDDEN2 {
+                wh.push(read_f32(&mut file)?);
+            }
+            let mut bh = Vec::with_capacity(NUM_HEADS);
+            for _ in 0..NUM_HEADS {
+                bh.push(read_f32(&mut file)?);
+            }
+            (true, wh, bh)
+        } else {
+            (false, vec![0.0; NUM_HEADS * HIDDEN2], vec![0.0; NUM_HEADS])
+        };
+
+        // Heteroscedastic head (v4): w3_var [HIDDEN2] + b3_var
+        let (has_het, w3_var, b3_var) = if trailing_has_het {
+            let mut wv = Vec::with_capacity(HIDDEN2);
+            for _ in 0..HIDDEN2 {
+                wv.push(read_f32(&mut file)?);
+            }
+            let bv = read_f32(&mut file)?;
+            (true, wv, bv)
+        } else {
+            (false, vec![0.0; HIDDEN2], 0.0)
+        };
+
         Ok(NNUENetwork {
             w1, b1, w2, b2, w3, b3,
             w3_policy, b3_policy,
             has_split_value_heads: has_split,
             w3_wildlife, b3_wildlife, w3_habitat, b3_habitat,
+            has_split11_heads: has_split11,
+            w3_heads, b3_heads,
+            has_heteroscedastic: has_het,
+            w3_var, b3_var,
         })
+    }
+
+    /// Forward pass returning (mean_pred, log_var_pred). Only meaningful when
+    /// `has_heteroscedastic` is true; otherwise log_var = 0 (σ² = 1).
+    /// Used by the heteroscedastic NLL loss + by the variance-adaptive halving
+    /// allocator at search time.
+    pub fn forward_with_logvar(&self, features: &[u16]) -> (f32, f32) {
+        let mut h1 = [0.0f32; HIDDEN1];
+        h1.copy_from_slice(&self.b1);
+        for &fi in features {
+            let base = fi as usize * HIDDEN1;
+            let col = &self.w1[base..base + HIDDEN1];
+            for j in 0..HIDDEN1 {
+                h1[j] += col[j];
+            }
+        }
+        for v in h1.iter_mut() { *v = v.max(0.0); }
+        let mut h2 = [0.0f32; HIDDEN2];
+        h2.copy_from_slice(&self.b2);
+        for i in 0..HIDDEN1 {
+            if h1[i] > 0.0 {
+                let base = i * HIDDEN2;
+                let row = &self.w2[base..base + HIDDEN2];
+                for j in 0..HIDDEN2 { h2[j] += h1[i] * row[j]; }
+            }
+        }
+        for v in h2.iter_mut() { *v = v.max(0.0); }
+        let mut mean = self.b3;
+        for j in 0..HIDDEN2 { mean += h2[j] * self.w3[j]; }
+        let mut log_var = self.b3_var;
+        for j in 0..HIDDEN2 { log_var += h2[j] * self.w3_var[j]; }
+        // Clamp log_var to prevent numerical issues (σ in [exp(-3), exp(6)] = [0.05, 403])
+        let log_var = log_var.clamp(-3.0, 6.0);
+        (mean, log_var)
+    }
+
+    /// Heteroscedastic NLL training step (Kendall & Gal 2017).
+    /// Loss = 0.5·(target − μ)²/exp(log_var) + 0.5·log_var.
+    /// Updates w1, b1, w2, b2, w3, b3 (mean head), AND w3_var, b3_var (var head).
+    /// Returns the squared error (target − μ)² for tracking RMSE comparable to
+    /// the legacy MSE training loop.
+    pub fn train_sample_heteroscedastic(&mut self, features: &[u16], target: f32, lr: f32) -> f32 {
+        // ─── Forward (with intermediates) ───
+        let mut h1 = [0.0f32; HIDDEN1];
+        h1.copy_from_slice(&self.b1);
+        for &fi in features {
+            let base = fi as usize * HIDDEN1;
+            let col = &self.w1[base..base + HIDDEN1];
+            for j in 0..HIDDEN1 { h1[j] += col[j]; }
+        }
+        let mut h1_pre = [0.0f32; HIDDEN1];
+        h1_pre.copy_from_slice(&h1);
+        for v in h1.iter_mut() { *v = v.max(0.0); }
+
+        let mut h2 = [0.0f32; HIDDEN2];
+        h2.copy_from_slice(&self.b2);
+        for i in 0..HIDDEN1 {
+            if h1[i] > 0.0 {
+                let base = i * HIDDEN2;
+                let row = &self.w2[base..base + HIDDEN2];
+                for j in 0..HIDDEN2 { h2[j] += h1[i] * row[j]; }
+            }
+        }
+        let mut h2_pre = [0.0f32; HIDDEN2];
+        h2_pre.copy_from_slice(&h2);
+        for v in h2.iter_mut() { *v = v.max(0.0); }
+
+        let mut mean = self.b3;
+        for j in 0..HIDDEN2 { mean += h2[j] * self.w3[j]; }
+        let mut log_var = self.b3_var;
+        for j in 0..HIDDEN2 { log_var += h2[j] * self.w3_var[j]; }
+        let log_var = log_var.clamp(-3.0, 6.0);
+        let inv_var = (-log_var).exp();
+        let err = mean - target;
+        let sq_err = err * err;
+        // Loss = 0.5·err²·inv_var + 0.5·log_var. We don't return the NLL itself
+        // (caller wants RMSE-comparable signal); return sq_err so old logging works.
+        // Gradients (per-sample, scaled by lr externally):
+        //   d_loss/d_mean = err · inv_var
+        //   d_loss/d_log_var = 0.5 · (1 − err² · inv_var)
+        let d_mean = err * inv_var * lr;
+        let d_logvar = 0.5 * (1.0 - sq_err * inv_var) * lr;
+
+        // ─── Output layer gradients ───
+        for j in 0..HIDDEN2 {
+            self.w3[j] -= d_mean * h2[j];
+            self.w3_var[j] -= d_logvar * h2[j];
+        }
+        self.b3 -= d_mean;
+        self.b3_var -= d_logvar;
+
+        // d_h2 = (d_mean·w3 + d_logvar·w3_var) · relu'(h2_pre)
+        let mut d_h2 = [0.0f32; HIDDEN2];
+        for j in 0..HIDDEN2 {
+            if h2_pre[j] > 0.0 {
+                d_h2[j] = d_mean * self.w3[j] + d_logvar * self.w3_var[j];
+            }
+        }
+
+        // Layer 2 gradients
+        for i in 0..HIDDEN1 {
+            if h1[i] > 0.0 {
+                let base = i * HIDDEN2;
+                for j in 0..HIDDEN2 { self.w2[base + j] -= d_h2[j] * h1[i]; }
+            }
+        }
+        for j in 0..HIDDEN2 { self.b2[j] -= d_h2[j]; }
+
+        // d_h1 = W2^T @ d_h2 * relu'(h1_pre)
+        let mut d_h1 = [0.0f32; HIDDEN1];
+        for i in 0..HIDDEN1 {
+            if h1_pre[i] > 0.0 {
+                let base = i * HIDDEN2;
+                for j in 0..HIDDEN2 { d_h1[i] += self.w2[base + j] * d_h2[j]; }
+            }
+        }
+
+        // Layer 1 gradients (only active features)
+        for &fi in features {
+            let base = fi as usize * HIDDEN1;
+            for j in 0..HIDDEN1 { self.w1[base + j] -= d_h1[j]; }
+        }
+        for j in 0..HIDDEN1 { self.b1[j] -= d_h1[j]; }
+
+        sq_err
     }
 }
 
@@ -2819,5 +4080,1058 @@ impl PolicyNetwork {
         eprintln!("Loaded PolicyNetwork: {}→{}→{}→1", num_features, hidden1, hidden2);
 
         Ok(PolicyNetwork { num_features, hidden1, hidden2, w1, b1, w2, b2, w3, b3 })
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// v6-peak: bounded play region + 6-dir adjacency + HabitatBucket
+// ─────────────────────────────────────────────────────────────────────
+
+#[cfg(any(feature = "v6-peak", feature = "cards-alt-v2"))]
+mod v6_peak {
+    use super::*;
+    use std::sync::OnceLock;
+
+    /// Hex distance from cell at (col, row) to grid center.
+    /// Note: cascadia_core::hex::GRID_SIZE is the TOTAL cell count (441);
+    /// the linear dimension is GRID_DIM = 21. Center axial coords are (0, 0)
+    /// at array (col=10, row=10).
+    #[inline]
+    fn hex_dist_from_center(col: usize, row: usize) -> i32 {
+        let q = col as i32 - 10;
+        let r = row as i32 - 10;
+        q.abs().max(r.abs()).max((q + r).abs())
+    }
+    const GRID_DIM: usize = 21;
+
+    /// Build the 441 → 127 lookup. Cells within hex distance ≤ V6_LOCAL_RADIUS
+    /// from grid center get a local index assigned in spiral order (innermost ring
+    /// first). Out-of-region cells map to -1.
+    fn build_global_to_local() -> [i16; 441] {
+        let mut tbl = [-1i16; 441];
+        let mut next = 0u16;
+        for d in 0..=V6_LOCAL_RADIUS {
+            for col in 0..GRID_DIM {
+                for row in 0..GRID_DIM {
+                    if hex_dist_from_center(col, row) == d {
+                        let global = col * GRID_DIM + row;
+                        tbl[global] = next as i16;
+                        next += 1;
+                    }
+                }
+            }
+        }
+        debug_assert_eq!(next as usize, V6_LOCAL_CELLS,
+            "spiral build produced {} cells, expected {}", next, V6_LOCAL_CELLS);
+        tbl
+    }
+
+    fn build_local_to_global(g2l: &[i16; 441]) -> [u16; V6_LOCAL_CELLS] {
+        let mut tbl = [0u16; V6_LOCAL_CELLS];
+        for (g, &l) in g2l.iter().enumerate() {
+            if l >= 0 { tbl[l as usize] = g as u16; }
+        }
+        tbl
+    }
+
+    static GLOBAL_TO_LOCAL: OnceLock<[i16; 441]> = OnceLock::new();
+    static LOCAL_TO_GLOBAL: OnceLock<[u16; V6_LOCAL_CELLS]> = OnceLock::new();
+
+    #[inline]
+    pub fn global_to_local(global_idx: usize) -> i16 {
+        GLOBAL_TO_LOCAL.get_or_init(build_global_to_local)[global_idx]
+    }
+
+    #[inline]
+    pub fn local_to_global(local_idx: usize) -> u16 {
+        let g2l = GLOBAL_TO_LOCAL.get_or_init(build_global_to_local);
+        LOCAL_TO_GLOBAL.get_or_init(|| build_local_to_global(g2l))[local_idx]
+    }
+
+    /// For each terrain T, compute every cell's "habitat cluster role":
+    ///   0 = part of largest connected T-cluster
+    ///   1 = part of 2nd-largest T-cluster
+    ///   2 = part of any other cluster (3rd+, singletons, etc.)
+    ///   None = cell does not show terrain T on any edge (skip emitting role)
+    ///
+    /// Returns: roles[cell_idx][terrain_idx] = Option<u8>
+    pub fn compute_habitat_roles(board: &Board) -> [[Option<u8>; 5]; 441] {
+        let adj = &*ADJACENCY;
+        let mut roles: [[Option<u8>; 5]; 441] = [[None; 5]; 441];
+
+        for t in 0..5 {
+            let terrain_t = match cascadia_core::types::Terrain::from_u8(t as u8) {
+                Some(tt) => tt,
+                None => continue,
+            };
+
+            // BFS each connected component (sharing terrain_t on shared edges).
+            let mut visited = [false; 441];
+            let mut clusters: Vec<Vec<u16>> = Vec::new();
+
+            for &tile_idx in board.placed_tiles.iter() {
+                let idx = tile_idx as usize;
+                if visited[idx] { continue; }
+                let cell = board.grid.get(idx);
+                if !cell.is_present() { continue; }
+                // Cell qualifies for terrain T if it has T on any edge.
+                let has_t = (0..6).any(|d| {
+                    cascadia_core::board::terrain_on_edge(cell, board.rotations[idx], d)
+                        == Some(terrain_t)
+                });
+                if !has_t { continue; }
+                // BFS this cluster.
+                let mut comp: Vec<u16> = Vec::new();
+                let mut queue: Vec<u16> = vec![tile_idx];
+                visited[idx] = true;
+                while let Some(cur) = queue.pop() {
+                    comp.push(cur);
+                    let cur_idx = cur as usize;
+                    let cur_cell = board.grid.get(cur_idx);
+                    let cur_rot = board.rotations[cur_idx];
+                    for d in 0..6 {
+                        let n_val = adj.neighbors[cur_idx][d];
+                        if n_val == u16::MAX { continue; }
+                        let n_idx = n_val as usize;
+                        if visited[n_idx] { continue; }
+                        let n_cell = board.grid.get(n_idx);
+                        if !n_cell.is_present() { continue; }
+                        // Both cells must show terrain_t on the shared edge.
+                        let my_terr = cascadia_core::board::terrain_on_edge(cur_cell, cur_rot, d);
+                        let n_terr = cascadia_core::board::terrain_on_edge(
+                            n_cell, board.rotations[n_idx], (d + 3) % 6);
+                        if my_terr == Some(terrain_t) && n_terr == Some(terrain_t) {
+                            visited[n_idx] = true;
+                            queue.push(n_val);
+                        }
+                    }
+                }
+                clusters.push(comp);
+            }
+
+            // Sort clusters by size desc, assign roles.
+            let mut indexed: Vec<(usize, &Vec<u16>)> = clusters.iter().enumerate().collect();
+            indexed.sort_unstable_by(|a, b| b.1.len().cmp(&a.1.len()));
+            for (rank, (_, comp)) in indexed.iter().enumerate() {
+                let role: u8 = if rank == 0 { 0 } else if rank == 1 { 1 } else { 2 };
+                for &cell in comp.iter() {
+                    roles[cell as usize][t] = Some(role);
+                }
+            }
+        }
+
+        roles
+    }
+}
+
+#[cfg(feature = "v6-peak")]
+pub use v6_peak::{global_to_local as v6_global_to_local, local_to_global as v6_local_to_global};
+
+/// v6-peak feature extraction. Self-contained; does not share code with the
+/// existing extract_features_with_bag for the v5 layout — uses the v6 layout
+/// documented in the V6_PEAK_LAYOUT comment block above.
+///
+/// All per-cell blocks operate over LOCAL_CELLS=127 cells (hex distance ≤ 6
+/// from grid center). Tiles placed outside this region (~0.1% of cases) silently
+/// do not contribute per-cell features but still influence pairwise/pattern/
+/// adjacency-style features unaffected by per-cell indexing.
+#[cfg(feature = "v6-peak")]
+pub fn extract_features_v6_peak(board: &Board, bag: Option<&BagInfo>) -> Vec<u16> {
+    let mut features = Vec::with_capacity(800);
+    let adj = &*ADJACENCY;
+
+    // Block bases — laid out in the order documented in V6_PEAK_LAYOUT.
+    let mut base = 0usize;
+    let cell_core_base = base; base += V6_CELL_FEATURES;             // 1397
+    let phase_base = base;     base += PHASE_FEATURES;                // 110
+    let pair_wl_base = base;   base += PAIR_FEATURES;                 // 147
+    let pattern_base = base;   base += PATTERN_FEATURES;              // 89
+    let bag_base = base;       base += BAG_FEATURES;                  // 55
+    let opp_hab_base = base;   base += OPP_HAB_FEATURES;              // 55
+    let allowed_base = base;   base += V6_ALLOWED_WL_FEATURES;        // 635
+    let wl_ext_base = base;    base += WL_COUNT_EXT_FEATURES;         // 50
+    let terr_pair_base = base; base += TERRAIN_PAIR_FEATURES;         // 108
+    let sec_terr_base = base;  base += V6_SEC_TERRAIN_FEATURES;       // 635
+    let hab_ext_base = base;   base += HAB_EXT_FEATURES;              // 70
+    let wl_ext2_base = base;   base += WL_COUNT_EXT2_FEATURES;        // 55
+    let ext_cap_base = base;   base += EXT_CAP_FEATURES;              // 40
+    let pat2_base = base;      base += PATTERN_V2_FEATURES;           // 48
+    let bag_ext_base = base;   base += BAG_EXT_FEATURES;              // 105
+    let opp_ext_base = base;   base += OPP_HAB_EXT_FEATURES;          // 70
+    let market_base = base;    base += MARKET_FEATURES;               // 88
+    let tbag_t_base = base;    base += TBAG_TERRAIN_FEATURES;         // 105
+    let tbag_w_base = base;    base += TBAG_WL_FEATURES;              // 105
+    let tbag_te_base = base;   base += TBAG_TERRAIN_EXT_FEATURES;     // 150
+    let tbag_we_base = base;   base += TBAG_WL_EXT_FEATURES;          // 150
+    let overflow_base = base;  base += OVERFLOW_FEATURES;             // 1
+    let v4opp_base = base;     base += OPP_DETAILED_FEATURES;         // 369
+    let frontier_base = base;  base += V6_FRONTIER_FLAG_FEATURES;     // 127
+    let v5opp_base = base;     base += V5_OPP_PAT_FEATURES;           // 108
+    let bonus_base = base;     base += V5_BONUS_DIST_FEATURES;        // 315
+    let hab_str_base = base;   base += V5_HAB_STRUCT_FEATURES;        // 85
+    let tbag_j_base = base;    base += V5_TBAG_JOINT_FEATURES;        // 525
+    let cell_adj_wl_base = base;   base += V6_CELL_ADJ_WL_FEATURES;   // 5334
+    let cell_adj_terr_base = base; base += V6_CELL_ADJ_TERR_FEATURES; // 4572
+    let hab_bucket_base = base;    base += V6_HAB_BUCKET_FEATURES;    // 1905
+    debug_assert_eq!(base, NUM_FEATURES_V6_PEAK);
+
+    // Compute habitat roles once (used by HabitatBucket block).
+    let hab_roles = v6_peak::compute_habitat_roles(board);
+
+    // ── Per-cell core (1397) ──
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let local = v6_peak::global_to_local(idx);
+        if local < 0 { continue; }
+        let cell = board.grid.get(idx);
+        let cb = cell_core_base + local as usize * V6_FPC;
+        if let Some(w) = cell.placed_wildlife() {
+            features.push((cb + w as usize) as u16);
+        } else {
+            features.push((cb + 5) as u16); // tile_no_wildlife
+        }
+        if let Some(t) = cell.primary_terrain() {
+            features.push((cb + 6 + t as usize) as u16);
+        }
+    }
+
+    // ── Phase (110) ──
+    let turn = (board.tile_count as usize).saturating_sub(3).min(20);
+    features.push((phase_base + turn) as u16);
+    let tokens = (board.nature_tokens as usize).min(8);
+    features.push((phase_base + TURN_FEATURES + tokens) as u16);
+    let wl_block = phase_base + TURN_FEATURES + TOKEN_FEATURES;
+    for wtype in 0..5 {
+        let count = board.wildlife_positions[wtype].len().min(5);
+        features.push((wl_block + wtype * 6 + count) as u16);
+    }
+    let hab_block = wl_block + WL_COUNT_FEATURES;
+    for terrain in 0..5 {
+        let size = (board.largest_group[terrain] as usize).min(9);
+        features.push((hab_block + terrain * 10 + size) as u16);
+    }
+
+    // ── Pairwise wildlife adj (147, 3 line dirs — kept as-is) ──
+    for &tile_idx in board.placed_tiles.iter() {
+        let start = HexCoord::from_index(tile_idx as usize);
+        let my_wl = wildlife_code(board, tile_idx as usize);
+        for (dir, &(dq, dr)) in HexCoord::LINE_DIRECTIONS.iter().enumerate() {
+            let neighbor = HexCoord::new(start.q + dq, start.r + dr);
+            if let Some(nidx) = neighbor.to_index() {
+                let n_wl = wildlife_code(board, nidx);
+                if my_wl > 0 || n_wl > 0 {
+                    let pair_idx = dir * PAIR_STATES + my_wl as usize * 7 + n_wl as usize;
+                    features.push((pair_wl_base + pair_idx) as u16);
+                }
+            }
+        }
+    }
+
+    // ── Patterns v1 (89) ──
+    extract_pattern_features(board, &mut features, pattern_base);
+
+    // ── Bag remaining + opp hab (55 + 55) ──
+    if let Some(b) = bag {
+        for wtype in 0..5 {
+            let count = (b.remaining[wtype] as usize).min(BAG_BINS - 1);
+            features.push((bag_base + wtype * BAG_BINS + count) as u16);
+        }
+        for terrain in 0..5 {
+            let size = (b.max_opponent_habitat[terrain] as usize).min(OPP_HAB_BINS - 1);
+            features.push((opp_hab_base + terrain * OPP_HAB_BINS + size) as u16);
+        }
+    }
+
+    // ── Allowed wl per cell (635) ──
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let local = v6_peak::global_to_local(idx);
+        if local < 0 { continue; }
+        let cell = board.grid.get(idx);
+        if cell.is_present() && !cell.has_wildlife() {
+            let mask = cell.allowed_wildlife();
+            for w in Wildlife::ALL {
+                if mask.contains(w) {
+                    features.push((allowed_base + local as usize * 5 + w as usize) as u16);
+                }
+            }
+        }
+    }
+
+    // ── Wildlife count ext (50) ──
+    for wtype in 0..5 {
+        let count = board.wildlife_positions[wtype].len().min(9);
+        features.push((wl_ext_base + wtype * 10 + count) as u16);
+    }
+
+    // ── Terrain pairwise (108) ──
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let coord = HexCoord::from_index(idx);
+        for (dir, &(dq, dr)) in HexCoord::LINE_DIRECTIONS.iter().enumerate() {
+            let neighbor = HexCoord::new(coord.q + dq, coord.r + dr);
+            if let Some(nidx) = neighbor.to_index() {
+                if !board.grid.get(nidx).is_present() { continue; }
+                let my_terrain = terrain_code_on_edge(board, idx, dir);
+                let n_terrain = terrain_code_on_edge(board, nidx, (dir + 3) % 6);
+                if my_terrain > 0 && n_terrain > 0 {
+                    let pair_idx = dir * TERRAIN_PAIR_STATES + my_terrain as usize * 6 + n_terrain as usize;
+                    features.push((terr_pair_base + pair_idx) as u16);
+                }
+            }
+        }
+    }
+
+    // ── Sec terrain per cell (635) ──
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let local = v6_peak::global_to_local(idx);
+        if local < 0 { continue; }
+        let cell = board.grid.get(idx);
+        if let Some(t) = cell.secondary_terrain() {
+            features.push((sec_terr_base + local as usize * 5 + t as usize) as u16);
+        }
+    }
+
+    // ── Hab ext (70), wl_ext2 (55) ──
+    for terrain in 0..5 {
+        let size = (board.largest_group[terrain] as usize).min(HAB_EXT_BINS - 1);
+        features.push((hab_ext_base + terrain * HAB_EXT_BINS + size) as u16);
+    }
+    for wtype in 0..5 {
+        let count = board.wildlife_positions[wtype].len().min(WL_COUNT_EXT2_BINS - 1);
+        features.push((wl_ext2_base + wtype * WL_COUNT_EXT2_BINS + count) as u16);
+    }
+
+    // ── Pair extension capacity (40) ──
+    {
+        let mut ext_cap_counts = [0u32; 5];
+        for wtype in 0..5 {
+            let positions = &board.wildlife_positions[wtype];
+            let target_wildlife = Wildlife::from_u8(wtype as u8).unwrap();
+            for &pos in positions.iter() {
+                let mut has_extension = false;
+                for nidx in adj.neighbors_of(pos as usize) {
+                    let cell = board.grid.get(nidx);
+                    if cell.is_present() && !cell.has_wildlife()
+                       && cell.allowed_wildlife().contains(target_wildlife) {
+                        has_extension = true;
+                        break;
+                    }
+                }
+                if has_extension { ext_cap_counts[wtype] += 1; }
+            }
+        }
+        for wtype in 0..5 {
+            let count = (ext_cap_counts[wtype] as usize).min(7);
+            features.push((ext_cap_base + wtype * 8 + count) as u16);
+        }
+    }
+
+    // ── Pattern v2 (48) ──
+    extract_pattern_v2_features(board, &mut features, pat2_base);
+
+    // ── Bag ext, opp hab ext, market, tbag terrain/wl/ext, overflow ──
+    if let Some(b) = bag {
+        for wtype in 0..5 {
+            let count = (b.remaining[wtype] as usize).min(BAG_EXT_BINS - 1);
+            features.push((bag_ext_base + wtype * BAG_EXT_BINS + count) as u16);
+        }
+        for terrain in 0..5 {
+            let size = (b.max_opponent_habitat[terrain] as usize).min(OPP_HAB_EXT_BINS - 1);
+            features.push((opp_ext_base + terrain * OPP_HAB_EXT_BINS + size) as u16);
+        }
+        for (i, slot) in b.market.iter().enumerate() {
+            let slot_base = market_base + i * MARKET_PER_SLOT;
+            if slot.terrain1 > 0 {
+                features.push((slot_base + (slot.terrain1 - 1) as usize) as u16);
+            }
+            features.push((slot_base + 5 + slot.terrain2 as usize) as u16);
+            let allowed_off = slot_base + 5 + 6;
+            for w in 0..5 {
+                if slot.allowed_mask & (1 << w) != 0 {
+                    features.push((allowed_off + w) as u16);
+                }
+            }
+            if slot.keystone {
+                features.push((slot_base + 5 + 6 + 5) as u16);
+            }
+            if slot.wildlife_token > 0 {
+                features.push((slot_base + 5 + 6 + 5 + 1 + (slot.wildlife_token - 1) as usize) as u16);
+            }
+        }
+        for t in 0..5 {
+            let count = (b.tbag_terrain[t] as usize).min(BAG_EXT_BINS - 1);
+            features.push((tbag_t_base + t * BAG_EXT_BINS + count) as u16);
+            let count2 = (b.tbag_terrain[t] as usize).min(TBAG_EXT_BINS - 1);
+            features.push((tbag_te_base + t * TBAG_EXT_BINS + count2) as u16);
+        }
+        for w in 0..5 {
+            let count = (b.tbag_wildlife[w] as usize).min(BAG_EXT_BINS - 1);
+            features.push((tbag_w_base + w * BAG_EXT_BINS + count) as u16);
+            let count2 = (b.tbag_wildlife[w] as usize).min(TBAG_EXT_BINS - 1);
+            features.push((tbag_we_base + w * TBAG_EXT_BINS + count2) as u16);
+        }
+        if b.overflow_used {
+            features.push(overflow_base as u16);
+        }
+
+        // ── v4-opp block (369) ──
+        extract_opp_detailed_features(b, &mut features, v4opp_base);
+
+        // ── v5-feat opp pattern detail (108) ──
+        extract_v5_opp_pattern_features(b, &mut features, v5opp_base);
+
+        // ── v5-feat bonus distance (315) ──
+        extract_v5_bonus_distance_features(b, &mut features, bonus_base);
+
+        // ── v5-feat tbag joint (525) ──
+        extract_v5_tbag_joint_features(b, &mut features, tbag_j_base);
+    }
+
+    // ── v5-feat hab structure (85) — board-only ──
+    extract_v5_hab_structure_features(board, &mut features, hab_str_base);
+
+    // ── v5-feat frontier flag v6 (127) ──
+    let frontier = board.frontier();
+    for &fpos in frontier.iter() {
+        let local = v6_peak::global_to_local(fpos as usize);
+        if local < 0 { continue; }
+        features.push((frontier_base + local as usize) as u16);
+    }
+
+    // ── Per-cell 6-dir wildlife adjacency (5334) ⭐ NEW ──
+    // For each placed tile within v6 region, encode each of 6 neighbors' wildlife state.
+    // States: 0=no tile (out-of-bounds OR empty cell), 1-5=wildlife type, 6=tile-no-wildlife.
+    // Indexing: cell_adj_wl_base + local_idx * 6 * 7 + dir * 7 + wl_state
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let local = v6_peak::global_to_local(idx);
+        if local < 0 { continue; }
+        let lbase = cell_adj_wl_base + local as usize * V6_ADJ_DIRS * V6_ADJ_WL_STATES;
+        for dir in 0..6 {
+            let n_val = adj.neighbors[idx][dir];
+            let wl_state = if n_val == u16::MAX {
+                0u8 // OOB treated as no tile
+            } else {
+                wildlife_code(board, n_val as usize)
+            };
+            features.push((lbase + dir * V6_ADJ_WL_STATES + wl_state as usize) as u16);
+        }
+    }
+
+    // ── Per-cell 6-dir terrain-on-edge (4572) ⭐ NEW ──
+    // For each placed tile within v6 region, encode each neighbor's terrain on the
+    // shared edge facing back toward us.
+    // States: 0=no tile, 1-5=terrain type.
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let local = v6_peak::global_to_local(idx);
+        if local < 0 { continue; }
+        let lbase = cell_adj_terr_base + local as usize * V6_ADJ_DIRS * V6_ADJ_TERR_STATES;
+        for dir in 0..6 {
+            let n_val = adj.neighbors[idx][dir];
+            let terr_state = if n_val == u16::MAX {
+                0u8
+            } else {
+                terrain_code_on_edge(board, n_val as usize, (dir + 3) % 6)
+            };
+            features.push((lbase + dir * V6_ADJ_TERR_STATES + terr_state as usize) as u16);
+        }
+    }
+
+    // ── HabitatBucket smaller (1905) ⭐ NEW ──
+    // For each placed cell × each terrain T it touches, emit (terrain × cluster role).
+    // Indexing: hab_bucket_base + local_idx * 5 * 3 + t * 3 + role
+    for &tile_idx in board.placed_tiles.iter() {
+        let idx = tile_idx as usize;
+        let local = v6_peak::global_to_local(idx);
+        if local < 0 { continue; }
+        let lbase = hab_bucket_base + local as usize * 5 * V6_HAB_BUCKET_ROLES;
+        for t in 0..5 {
+            if let Some(role) = hab_roles[idx][t] {
+                features.push((lbase + t * V6_HAB_BUCKET_ROLES + role as usize) as u16);
+            }
+        }
+    }
+
+    features
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// cards-alt feature extraction
+// ─────────────────────────────────────────────────────────────────────
+
+#[cfg(feature = "cards-alt")]
+fn extract_alt_bear_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let sizes = alt_components(board, Wildlife::Bear);
+    let mut counts = [0u32; 4]; // [size-1, size-2, size-3, size-4+]
+    for &s in sizes.iter() {
+        match s { 1 => counts[0] += 1, 2 => counts[1] += 1, 3 => counts[2] += 1, _ => counts[3] += 1, }
+    }
+    for k in 0..4 {
+        let bin = (counts[k] as usize).min(ALT_BEAR_SIZE_BINS - 1);
+        features.push((base + k * ALT_BEAR_SIZE_BINS + bin) as u16);
+    }
+    let all_three = counts[0] >= 1 && counts[1] >= 1 && counts[2] >= 1;
+    if all_three {
+        features.push((base + 4 * ALT_BEAR_SIZE_BINS) as u16);
+    }
+}
+
+#[cfg(feature = "cards-alt")]
+fn extract_alt_elk_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let positions = &board.wildlife_positions[Wildlife::Elk as usize];
+    if positions.is_empty() {
+        // Emit zero-bin for each shape kind.
+        for k in 0..5 { features.push((base + k * ALT_ELK_SHAPE_BINS) as u16); }
+        return;
+    }
+    let adj = &*ADJACENCY;
+    let mut elk = [false; 441];
+    for &p in positions.iter() { elk[p as usize] = true; }
+
+    // Component scan: for each component, classify into:
+    //   single | pair | triangle | rhombus | blob (anything else, incl. lines)
+    let mut visited = [false; 441];
+    let mut counts = [0u32; 5]; // [single, pair, triangle, rhombus, blob]
+    for &p in positions.iter() {
+        let idx = p as usize;
+        if visited[idx] { continue; }
+        let mut comp = arrayvec::ArrayVec::<u16, 32>::new();
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(p);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            let _ = comp.try_push(c);
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && elk[n] {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let n = comp.len();
+        let kind = match n {
+            1 => 0, // single
+            2 => 1, // pair
+            _ => {
+                // Detect triangle (any 3 mutually adjacent)
+                let mut has_triangle = false;
+                for i in 0..comp.len() {
+                    let a = comp[i] as usize;
+                    let mut tri_nbrs: arrayvec::ArrayVec<u16, 6> = arrayvec::ArrayVec::new();
+                    for nn in adj.neighbors_of(a) {
+                        if elk[nn] && comp.contains(&(nn as u16)) {
+                            let _ = tri_nbrs.try_push(nn as u16);
+                        }
+                    }
+                    for ii in 0..tri_nbrs.len() {
+                        for jj in (ii + 1)..tri_nbrs.len() {
+                            let b = tri_nbrs[ii] as usize;
+                            let cc = tri_nbrs[jj] as usize;
+                            if adj.neighbors_of(b).any(|nn| nn == cc) {
+                                has_triangle = true;
+                                break;
+                            }
+                        }
+                        if has_triangle { break; }
+                    }
+                    if has_triangle { break; }
+                }
+                if n == 3 && has_triangle { 2 }      // triangle
+                else if n == 4 && has_triangle { 3 } // rhombus = 4-cluster with triangle subshape
+                else { 4 }                            // blob (line, Y-shape, larger cluster)
+            }
+        };
+        counts[kind] += 1;
+    }
+    for k in 0..5 {
+        let bin = (counts[k] as usize).min(ALT_ELK_SHAPE_BINS - 1);
+        features.push((base + k * ALT_ELK_SHAPE_BINS + bin) as u16);
+    }
+}
+
+#[cfg(feature = "cards-alt")]
+fn extract_alt_salmon_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let positions = &board.wildlife_positions[Wildlife::Salmon as usize];
+    let adj = &*ADJACENCY;
+    // Find all valid runs with (length, adj_unique_non_salmon_types).
+    let mut runs: arrayvec::ArrayVec<(usize, u32), 32> = arrayvec::ArrayVec::new();
+    let mut visited = [false; 441];
+    for &p in positions.iter() {
+        let idx = p as usize;
+        if visited[idx] { continue; }
+        let mut comp = arrayvec::ArrayVec::<u16, 32>::new();
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(p);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            let _ = comp.try_push(c);
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon) {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let valid = comp.iter().all(|&c| {
+            adj.neighbors_of(c as usize)
+                .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon))
+                .count() <= 2
+        });
+        if !valid { continue; }
+        let mut seen = [false; 441];
+        let mut adj_types = 0u32;
+        for &c in &comp {
+            for n in adj.neighbors_of(c as usize) {
+                if seen[n] { continue; }
+                seen[n] = true;
+                if let Some(w) = board.grid.get(n).placed_wildlife() {
+                    if w != Wildlife::Salmon { adj_types += 1; }
+                }
+            }
+        }
+        let _ = runs.try_push((comp.len(), adj_types));
+    }
+    // Sort by run length descending; emit top-3 (qualifying-bit + adj-types-bin).
+    runs.sort_by(|a, b| b.0.cmp(&a.0));
+    for slot in 0..ALT_SALMON_TOP_RUNS {
+        let off = base + slot * ALT_SALMON_PER_RUN;
+        if let Some(&(len, adj_types)) = runs.get(slot) {
+            if len >= 3 {
+                features.push(off as u16); // qualifying bit
+            }
+            let adj_bin = (adj_types as usize).min(ALT_SALMON_ADJ_BINS - 1);
+            features.push((off + 1 + adj_bin) as u16);
+        } else {
+            // Empty slot: emit adj-types=0 bin so the column still fires consistently.
+            features.push((off + 1) as u16);
+        }
+    }
+}
+
+#[cfg(feature = "cards-alt")]
+fn extract_alt_hawk_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    use cascadia_core::hex::HexCoord;
+    let positions = &board.wildlife_positions[Wildlife::Hawk as usize];
+    let mut counts = [0u32; ALT_HAWK_PT_CLASSES]; // bins by intervening unique non-hawk types
+    if positions.len() >= 2 {
+        let mut hawk_set = [false; 441];
+        let mut pos_to_idx = [u8::MAX; 441];
+        for (i, &p) in positions.iter().enumerate() {
+            hawk_set[p as usize] = true;
+            pos_to_idx[p as usize] = i as u8;
+        }
+        for (i, &p) in positions.iter().enumerate() {
+            let coord = HexCoord::from_index(p as usize);
+            for &(dq, dr) in &HexCoord::DIRECTIONS {
+                let mut cur = HexCoord::new(coord.q + dq, coord.r + dr);
+                let mut steps = 1u32;
+                let mut types_mask = 0u8;
+                loop {
+                    match cur.to_index() {
+                        Some(idx) => {
+                            if hawk_set[idx] {
+                                let j = pos_to_idx[idx];
+                                if (i as u8) < j && steps >= 2 {
+                                    let unique = (types_mask & !(1 << Wildlife::Hawk as u8)).count_ones() as usize;
+                                    let cls = unique.min(ALT_HAWK_PT_CLASSES - 1);
+                                    counts[cls] += 1;
+                                }
+                                break;
+                            }
+                            if let Some(w) = board.grid.get(idx).placed_wildlife() {
+                                types_mask |= 1 << (w as u8);
+                            }
+                        }
+                        None => break,
+                    }
+                    cur = HexCoord::new(cur.q + dq, cur.r + dr);
+                    steps += 1;
+                }
+            }
+        }
+    }
+    for k in 0..ALT_HAWK_PT_CLASSES {
+        let bin = (counts[k] as usize).min(ALT_HAWK_COUNT_BINS - 1);
+        features.push((base + k * ALT_HAWK_COUNT_BINS + bin) as u16);
+    }
+}
+
+#[cfg(feature = "cards-alt")]
+fn extract_alt_fox_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let positions = &board.wildlife_positions[Wildlife::Fox as usize];
+    let adj = &*ADJACENCY;
+    let mut counts = [0u32; ALT_FOX_PT_CLASSES]; // foxes by # of pair-types
+    for &p in positions.iter() {
+        let mut tcounts = [0u8; 5];
+        for n in adj.neighbors_of(p as usize) {
+            if let Some(w) = board.grid.get(n).placed_wildlife() {
+                if w != Wildlife::Fox { tcounts[w as usize] += 1; }
+            }
+        }
+        let pair_types = tcounts.iter().filter(|&&c| c >= 2).count();
+        let cls = pair_types.min(ALT_FOX_PT_CLASSES - 1);
+        counts[cls] += 1;
+    }
+    for k in 0..ALT_FOX_PT_CLASSES {
+        let bin = (counts[k] as usize).min(ALT_FOX_COUNT_BINS - 1);
+        features.push((base + k * ALT_FOX_COUNT_BINS + bin) as u16);
+    }
+}
+
+#[cfg(feature = "cards-alt")]
+fn extract_alt_opp_features(bag: &BagInfo, features: &mut Vec<u16>, base: usize) {
+    for (slot, opp) in bag.opp_detail.iter().enumerate() {
+        let slot_base = base + slot * ALT_OPP_PER_OPP;
+        let mut off = slot_base;
+        // Bear class (5 bins)
+        features.push((off + (opp.alt_bear_class as usize).min(ALT_OPP_BEAR_BINS - 1)) as u16);
+        off += ALT_OPP_BEAR_BINS;
+        // Elk shape (5 bins)
+        features.push((off + (opp.alt_elk_shape as usize).min(ALT_OPP_ELK_SHAPE_BINS - 1)) as u16);
+        off += ALT_OPP_ELK_SHAPE_BINS;
+        // Salmon class (5 bins)
+        features.push((off + (opp.alt_salmon_class as usize).min(ALT_OPP_SALMON_BINS - 1)) as u16);
+        off += ALT_OPP_SALMON_BINS;
+        // Hawk pair-types (5 bins)
+        features.push((off + (opp.alt_hawk_pair_types as usize).min(ALT_OPP_HAWK_BINS - 1)) as u16);
+        off += ALT_OPP_HAWK_BINS;
+        // Fox pair-types (5 bins)
+        features.push((off + (opp.alt_fox_pair_types as usize).min(ALT_OPP_FOX_BINS - 1)) as u16);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// cards-alt-v2: per-piece relational feature extractors
+// ─────────────────────────────────────────────────────────────────────
+//
+// Helpers reuse v6_peak::global_to_local for the bounded play region (127
+// cells, 99.9% coverage of real placements). Off-region cells are silently
+// skipped — they won't fire for placed wildlife in practice.
+
+#[cfg(feature = "cards-alt-v2")]
+fn alt2_local_idx(global_idx: usize) -> Option<usize> {
+    let l = v6_peak::global_to_local(global_idx);
+    if l < 0 { None } else { Some(l as usize) }
+}
+
+/// Block A: per-hawk × direction × LOS-class.
+/// 5 classes per direction:
+///   0 = no other hawk on this hex axis (or off-grid)
+///   1 = adjacent partner hawk (LOS pair scores 0 under D, but not "no partner")
+///   2 = non-adjacent partner with 0 intervening non-hawk wildlife types
+///   3 = non-adjacent partner with 1 intervening type
+///   4 = non-adjacent partner with 2+ intervening types
+#[cfg(feature = "cards-alt-v2")]
+fn extract_alt2_hawk_los_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    use cascadia_core::hex::HexCoord;
+    let positions = &board.wildlife_positions[Wildlife::Hawk as usize];
+    if positions.is_empty() { return; }
+    let mut hawk_set = [false; 441];
+    for &p in positions.iter() { hawk_set[p as usize] = true; }
+
+    for &p in positions.iter() {
+        let local = match alt2_local_idx(p as usize) { Some(l) => l, None => continue };
+        let coord = HexCoord::from_index(p as usize);
+        let cell_base = base + local * ALT2_HAWK_LOS_PER_CELL;
+        for (dir_i, &(dq, dr)) in HexCoord::DIRECTIONS.iter().enumerate() {
+            let mut cur = HexCoord::new(coord.q + dq, coord.r + dr);
+            let mut steps = 1u16;
+            let mut types_mask = 0u8;
+            let mut class: u8 = 0; // default no_partner
+            loop {
+                match cur.to_index() {
+                    Some(idx) => {
+                        if hawk_set[idx] {
+                            class = if steps == 1 { 1 } // adj_partner
+                            else {
+                                let unique = (types_mask & !(1 << Wildlife::Hawk as u8)).count_ones();
+                                match unique {
+                                    0 => 2,
+                                    1 => 3,
+                                    _ => 4,
+                                }
+                            };
+                            break;
+                        }
+                        if let Some(w) = board.grid.get(idx).placed_wildlife() {
+                            types_mask |= 1 << (w as u8);
+                        }
+                    }
+                    None => break,
+                }
+                cur = HexCoord::new(cur.q + dq, cur.r + dr);
+                steps += 1;
+            }
+            features.push((cell_base + dir_i * ALT2_HAWK_LOS_CLASSES + class as usize) as u16);
+        }
+    }
+}
+
+/// Block B: per-salmon × (length-class × adj-class).
+/// Each salmon belongs to one component (run if valid). Encode the run's
+/// length class plus the count of unique non-salmon adjacent types from the
+/// salmon's perspective (its 6 neighbors).
+#[cfg(feature = "cards-alt-v2")]
+fn extract_alt2_salmon_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let positions = &board.wildlife_positions[Wildlife::Salmon as usize];
+    if positions.is_empty() { return; }
+    let adj = &*ADJACENCY;
+
+    // First pass: build per-salmon (component_size, valid).
+    let mut visited = [false; 441];
+    let mut salmon_meta: [(u8, bool); 441] = [(0, false); 441];
+
+    for &p in positions.iter() {
+        let idx = p as usize;
+        if visited[idx] { continue; }
+        let mut comp = arrayvec::ArrayVec::<u16, 32>::new();
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(p);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            let _ = comp.try_push(c);
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon) {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let valid = comp.iter().all(|&c| {
+            adj.neighbors_of(c as usize)
+                .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon))
+                .count() <= 2
+        });
+        let len = comp.len() as u8;
+        for &c in &comp {
+            salmon_meta[c as usize] = (len, valid);
+        }
+    }
+
+    for &p in positions.iter() {
+        let local = match alt2_local_idx(p as usize) { Some(l) => l, None => continue };
+        let (len, valid) = salmon_meta[p as usize];
+        // Length class (4 bins): invalid_or_singleton, len2, len3-4, len5+
+        let len_class: usize = if !valid || len <= 1 { 0 }
+                                else if len == 2 { 1 }
+                                else if len <= 4 { 2 }
+                                else { 3 };
+        // Adj-class: count unique non-salmon adjacent TYPES around this salmon
+        let mut types_mask = 0u8;
+        for n in adj.neighbors_of(p as usize) {
+            if let Some(w) = board.grid.get(n).placed_wildlife() {
+                if w != Wildlife::Salmon { types_mask |= 1 << (w as u8); }
+            }
+        }
+        let adj_count = types_mask.count_ones() as usize;
+        let adj_class = adj_count.min(ALT2_SALMON_ADJ_CLASSES - 1);
+
+        let class = len_class * ALT2_SALMON_ADJ_CLASSES + adj_class;
+        features.push((base + local * ALT2_SALMON_PER_CELL + class) as u16);
+    }
+}
+
+/// Block C: per-fox × (pair-type-class × density-class).
+#[cfg(feature = "cards-alt-v2")]
+fn extract_alt2_fox_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let positions = &board.wildlife_positions[Wildlife::Fox as usize];
+    if positions.is_empty() { return; }
+    let adj = &*ADJACENCY;
+
+    for &p in positions.iter() {
+        let local = match alt2_local_idx(p as usize) { Some(l) => l, None => continue };
+        let mut tcounts = [0u8; 5];
+        let mut occupied = 0u8;
+        for n in adj.neighbors_of(p as usize) {
+            if let Some(w) = board.grid.get(n).placed_wildlife() {
+                if w != Wildlife::Fox { tcounts[w as usize] += 1; }
+                occupied += 1;
+            }
+        }
+        let pair_types = tcounts.iter().filter(|&&c| c >= 2).count();
+        let pt_class = pair_types.min(ALT2_FOX_PT_CLASSES - 1);
+        // Density class: 0=0-1, 1=2-3, 2=4-5, 3=6
+        let density_class: usize = if occupied <= 1 { 0 }
+                                   else if occupied <= 3 { 1 }
+                                   else if occupied <= 5 { 2 }
+                                   else { 3 };
+        let class = pt_class * ALT2_FOX_DENSITY_CLASSES + density_class;
+        features.push((base + local * ALT2_FOX_PER_CELL + class) as u16);
+    }
+}
+
+/// Block D: per-bear × (size-class × extension-class).
+#[cfg(feature = "cards-alt-v2")]
+fn extract_alt2_bear_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    let positions = &board.wildlife_positions[Wildlife::Bear as usize];
+    if positions.is_empty() { return; }
+    let adj = &*ADJACENCY;
+
+    // Component scan to compute (size, ext_slots) per bear.
+    let mut visited = [false; 441];
+    let mut bear_meta: [(u8, u8); 441] = [(0, 0); 441];
+    for &p in positions.iter() {
+        let idx = p as usize;
+        if visited[idx] { continue; }
+        let mut comp = arrayvec::ArrayVec::<u16, 32>::new();
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(p);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            let _ = comp.try_push(c);
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && board.grid.get(n).placed_wildlife() == Some(Wildlife::Bear) {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let size = comp.len() as u8;
+        // Ext slots: count unique empty cells adjacent to ANY component member that allow bear.
+        let mut seen = [false; 441];
+        let mut ext = 0u8;
+        for &c in &comp {
+            for n in adj.neighbors_of(c as usize) {
+                if seen[n] { continue; }
+                seen[n] = true;
+                let cell = board.grid.get(n);
+                if cell.is_present() && !cell.has_wildlife() && cell.can_place_wildlife(Wildlife::Bear) {
+                    ext += 1;
+                }
+            }
+        }
+        for &c in &comp {
+            bear_meta[c as usize] = (size, ext);
+        }
+    }
+
+    for &p in positions.iter() {
+        let local = match alt2_local_idx(p as usize) { Some(l) => l, None => continue };
+        let (size, ext) = bear_meta[p as usize];
+        // Size class (4): single, pair, triple, quad+
+        let size_class: usize = match size { 1 => 0, 2 => 1, 3 => 2, _ => 3 };
+        // Ext class (3): 0=no_ext, 1=1-2_slots, 2=3+_slots
+        let ext_class: usize = if ext == 0 { 0 }
+                                else if ext <= 2 { 1 }
+                                else { 2 };
+        let class = size_class * ALT2_BEAR_EXT_CLASSES + ext_class;
+        features.push((base + local * ALT2_BEAR_PER_CELL + class) as u16);
+    }
+}
+
+/// Block E: per-elk × shape-role.
+/// Roles: 0=single, 1=pair-end, 2=triangle-vertex (3 mutually adjacent),
+///        3=rhombus-vertex (in a 4-cluster containing a triangle),
+///        4=line-of-3, 5=line-of-4+, 6=blob/other (size 5+ non-line, etc.)
+#[cfg(feature = "cards-alt-v2")]
+fn extract_alt2_elk_features(board: &Board, features: &mut Vec<u16>, base: usize) {
+    use cascadia_core::hex::HexCoord;
+    let positions = &board.wildlife_positions[Wildlife::Elk as usize];
+    if positions.is_empty() { return; }
+    let adj = &*ADJACENCY;
+    let mut elk = [false; 441];
+    for &p in positions.iter() { elk[p as usize] = true; }
+
+    // BFS per component, classify shape, assign role to each member.
+    let mut visited = [false; 441];
+    let mut elk_role: [u8; 441] = [0; 441];
+
+    for &p in positions.iter() {
+        let idx = p as usize;
+        if visited[idx] { continue; }
+        let mut comp = arrayvec::ArrayVec::<u16, 32>::new();
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(p);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            let _ = comp.try_push(c);
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && elk[n] {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let n = comp.len();
+        // Shape detection
+        let mut has_triangle = false;
+        for i in 0..comp.len() {
+            let a = comp[i] as usize;
+            let mut tri_nbrs: arrayvec::ArrayVec<u16, 6> = arrayvec::ArrayVec::new();
+            for nn in adj.neighbors_of(a) {
+                if elk[nn] && comp.contains(&(nn as u16)) {
+                    let _ = tri_nbrs.try_push(nn as u16);
+                }
+            }
+            for ii in 0..tri_nbrs.len() {
+                for jj in (ii + 1)..tri_nbrs.len() {
+                    let b = tri_nbrs[ii] as usize;
+                    let cc = tri_nbrs[jj] as usize;
+                    if adj.neighbors_of(b).any(|nn| nn == cc) {
+                        has_triangle = true;
+                        break;
+                    }
+                }
+                if has_triangle { break; }
+            }
+            if has_triangle { break; }
+        }
+        // Line detection: if no triangle, check if ALL elk are colinear in some axis.
+        let is_line = !has_triangle && {
+            // Pick first elk, scan all 3 directions; if all elk fit on one line through any axis, it's a line.
+            let mut found_line = false;
+            if comp.len() >= 2 {
+                let coord0 = HexCoord::from_index(comp[0] as usize);
+                'lines: for &(dq, dr) in &HexCoord::LINE_DIRECTIONS {
+                    // Walk back from coord0
+                    let mut start = coord0;
+                    loop {
+                        let prev = HexCoord::new(start.q - dq, start.r - dr);
+                        if let Some(pidx) = prev.to_index() {
+                            if elk[pidx] { start = prev; continue; }
+                        }
+                        break;
+                    }
+                    let mut line_set = [false; 441];
+                    let mut line_count = 0usize;
+                    let mut cur = start;
+                    loop {
+                        if let Some(idx) = cur.to_index() {
+                            if elk[idx] {
+                                line_set[idx] = true;
+                                line_count += 1;
+                                cur = HexCoord::new(cur.q + dq, cur.r + dr);
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+                    if line_count == comp.len() && comp.iter().all(|&c| line_set[c as usize]) {
+                        found_line = true;
+                        break 'lines;
+                    }
+                }
+            }
+            found_line
+        };
+        let role: u8 = if n == 1 { 0 }
+                       else if n == 2 { 1 }
+                       else if n == 3 && has_triangle { 2 }
+                       else if n == 4 && has_triangle { 3 }
+                       else if is_line && n == 3 { 4 }
+                       else if is_line && n >= 4 { 5 }
+                       else { 6 };
+        for &c in &comp {
+            elk_role[c as usize] = role;
+        }
+    }
+
+    for &p in positions.iter() {
+        let local = match alt2_local_idx(p as usize) { Some(l) => l, None => continue };
+        let role = elk_role[p as usize] as usize;
+        features.push((base + local * ALT2_ELK_SHAPE_CLASSES + role) as u16);
     }
 }

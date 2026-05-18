@@ -245,8 +245,6 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
                 let with = cascadia_core::scoring::wildlife::score_wildlife(
                     &board_clone, combo.wildlife, variant,
                 );
-                // Compute setup bonus while wildlife is still placed
-                let setup = wildlife_setup_bonus(&board_clone, ti as usize, combo.wildlife);
                 board_clone.undo(wa);
 
                 let delta = with.saturating_sub(without);
@@ -260,29 +258,21 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
                 }
             }
 
-            board_clone.undo(action);
-
-            // Compute potential for this placement+wildlife combo
+            // Compute potential while the TILE is still placed.
+            // Saves a redundant place_tile+undo cycle vs the original code.
+            // Correctness: place+undo+place is equivalent to a single place for
+            // board state (Board::undo fully restores merged UF groups).
             let potential = if local_best_wq.is_some() {
-                // Re-place tile and wildlife to compute potential
-                let a = board_clone
-                    .place_tile(HexCoord::new(placement.q, placement.r), combo.tile, placement.rot)
-                    .unwrap();
                 let wc = HexCoord::new(local_best_wq.unwrap(), local_best_wr.unwrap());
                 let wa = board_clone.place_wildlife(wc.to_index().unwrap(), combo.wildlife);
                 let p = board_potential(&board_clone, cards);
                 if let Some(wa) = wa { board_clone.undo(wa); }
-                board_clone.undo(a);
                 p
             } else {
-                // Just tile, no wildlife
-                let a = board_clone
-                    .place_tile(HexCoord::new(placement.q, placement.r), combo.tile, placement.rot)
-                    .unwrap();
-                let p = board_potential(&board_clone, cards);
-                board_clone.undo(a);
-                p
+                board_potential(&board_clone, cards)
             };
+
+            board_clone.undo(action);
 
             let local_eval = (local_best_total as i32) * EVAL_SCALE + potential;
 

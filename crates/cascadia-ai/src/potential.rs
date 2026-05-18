@@ -1,22 +1,80 @@
 use cascadia_core::board::Board;
 use cascadia_core::hex::{HexCoord, ADJACENCY};
-use cascadia_core::types::{ScoringCards, Wildlife};
+use cascadia_core::types::{ScoringCardVariant, ScoringCards, Wildlife};
 
 /// Compute a potential bonus estimating future scoring opportunities.
 /// Returns a value in "fractional points" (scaled by 10 to avoid floats).
-/// Uses actual marginal values from Card A scoring tables.
-pub fn board_potential(board: &Board, _cards: &ScoringCards) -> i32 {
+/// Per-animal heuristics dispatch to the active scoring-card variant.
+pub fn board_potential(board: &Board, cards: &ScoringCards) -> i32 {
     let mut potential: i32 = 0;
 
     potential += habitat_potential(board);
-    potential += bear_potential(board);
-    potential += elk_potential(board);
-    potential += salmon_potential(board);
-    potential += hawk_potential(board);
-    potential += fox_potential(board);
+    potential += bear_potential_dispatch(board, cards.variant_for(Wildlife::Bear));
+    potential += elk_potential_dispatch(board, cards.variant_for(Wildlife::Elk));
+    potential += salmon_potential_dispatch(board, cards.variant_for(Wildlife::Salmon));
+    potential += hawk_potential_dispatch(board, cards.variant_for(Wildlife::Hawk));
+    potential += fox_potential_dispatch(board, cards.variant_for(Wildlife::Fox));
     potential += empty_slot_potential(board);
 
     potential
+}
+
+#[inline]
+fn bear_potential_dispatch(board: &Board, v: ScoringCardVariant) -> i32 {
+    match v {
+        ScoringCardVariant::A => bear_potential(board),
+        ScoringCardVariant::C => bear_potential_c(board),
+        // Bear B (groups of exactly 3) and D (sizes 2/3/4) have different sweet
+        // spots. For now use Card A's "extend toward small groups" heuristic as
+        // a rough proxy — it's directionally correct (more bears → more points).
+        _ => bear_potential(board),
+    }
+}
+
+#[inline]
+fn elk_potential_dispatch(board: &Board, v: ScoringCardVariant) -> i32 {
+    match v {
+        ScoringCardVariant::A => elk_potential(board),
+        ScoringCardVariant::B => elk_potential_b(board),
+        // Elk C (any contiguous group, super-linear) and D (rings around any hex
+        // center) prefer dense clusters too — Card B is the best single proxy.
+        ScoringCardVariant::C | ScoringCardVariant::D => elk_potential_b(board),
+    }
+}
+
+#[inline]
+fn salmon_potential_dispatch(board: &Board, v: ScoringCardVariant) -> i32 {
+    match v {
+        ScoringCardVariant::A => salmon_potential(board),
+        ScoringCardVariant::D => salmon_potential_d(board),
+        // Salmon B/C use the same chain rule as A, just with different score
+        // tables — A's "extend the run" heuristic is directionally correct.
+        _ => salmon_potential(board),
+    }
+}
+
+#[inline]
+fn hawk_potential_dispatch(board: &Board, v: ScoringCardVariant) -> i32 {
+    match v {
+        ScoringCardVariant::A => hawk_potential(board),
+        ScoringCardVariant::D => hawk_potential_d(board),
+        // Hawk B/C also reward LOS — Card A's "isolate" heuristic is the
+        // OPPOSITE of what they want, but we don't have variant-specific
+        // potentials yet. Fall back to A and accept the mismatch.
+        _ => hawk_potential(board),
+    }
+}
+
+#[inline]
+fn fox_potential_dispatch(board: &Board, v: ScoringCardVariant) -> i32 {
+    match v {
+        ScoringCardVariant::A => fox_potential(board),
+        ScoringCardVariant::B => fox_potential_b(board),
+        // Fox C (single-type max count) and D (pair scoring) need their own
+        // heuristics; B's "encourage same-type adjacency" is closer to C/D
+        // than A's "encourage diversity".
+        ScoringCardVariant::C | ScoringCardVariant::D => fox_potential_b(board),
+    }
 }
 
 /// Habitat potential: bonus for frontier cells adjacent to same-terrain tiles,
@@ -387,6 +445,334 @@ fn fox_potential(board: &Board) -> i32 {
     }
 
     potential
+}
+
+/// Bear potential (Card C): reward growing groups toward sizes 1/2/3.
+/// Marginals: an empty pair-completion is +5 (2-pt loss as singleton + 5-pt pair = +3 net),
+/// a 2→3 extension is +3 (8-pt triple − 5-pt pair). Sizes >3 score 0 so they're penalised.
+/// +3 set-completion bonus rewarded if board has size-1 + size-2 components and a 3 is reachable.
+fn bear_potential_c(board: &Board) -> i32 {
+    let positions = &board.wildlife_positions[Wildlife::Bear as usize];
+    let adj = &*ADJACENCY;
+    if positions.is_empty() {
+        return 0;
+    }
+
+    // Per-component sizes (BFS), and per-component "can extend by 1" flag.
+    let mut visited = [false; 441];
+    let mut sizes = arrayvec::ArrayVec::<u16, 32>::new();
+    let mut extendable = arrayvec::ArrayVec::<bool, 32>::new();
+
+    for &pos in positions.iter() {
+        let idx = pos as usize;
+        if visited[idx] { continue; }
+        let mut comp = arrayvec::ArrayVec::<u16, 32>::new();
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(pos);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            let _ = comp.try_push(c);
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && board.grid.get(n).placed_wildlife() == Some(Wildlife::Bear) {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let mut can_ext = false;
+        for &p in &comp {
+            for n in adj.neighbors_of(p as usize) {
+                let cell = board.grid.get(n);
+                if cell.is_present() && !cell.has_wildlife() && cell.can_place_wildlife(Wildlife::Bear) {
+                    can_ext = true;
+                    break;
+                }
+            }
+            if can_ext { break; }
+        }
+        let _ = sizes.try_push(comp.len() as u16);
+        let _ = extendable.try_push(can_ext);
+    }
+
+    let mut p: i32 = 0;
+    let mut has_1 = false;
+    let mut has_2 = false;
+    let mut has_3 = false;
+    for (&s, &ext) in sizes.iter().zip(extendable.iter()) {
+        match s {
+            1 => {
+                has_1 = true;
+                if ext { p += 30; } // +3 to grow to pair (5 pts vs 2 pts)
+            }
+            2 => {
+                has_2 = true;
+                if ext { p += 30; } // +3 to grow to triple (8 pts vs 5 pts)
+            }
+            3 => {
+                has_3 = true;
+                if ext { p -= 80; } // BIG penalty: 4+ scores 0, lose all 8 pts
+            }
+            _ => { p -= 30; } // already in dead zone
+        }
+    }
+    // Bonus completion: if we have 2 of the 3 sizes, partial credit toward +3 bonus.
+    let sizes_present = (has_1 as i32) + (has_2 as i32) + (has_3 as i32);
+    p += sizes_present * 10; // gradient toward the bonus
+
+    p
+}
+
+/// Elk potential (Card B): reward DENSE shapes (triangle, rhombus) rather than lines.
+/// Marginals: single = 2, pair = 5, triangle = 9, rhombus = 13.
+/// "Triangle" = 3 mutually-adjacent elk. "Rhombus" = triangle + 1 adjacent elk.
+fn elk_potential_b(board: &Board) -> i32 {
+    let positions = &board.wildlife_positions[Wildlife::Elk as usize];
+    if positions.is_empty() { return 0; }
+    let adj = &*ADJACENCY;
+    let mut p: i32 = 0;
+
+    for &pos in positions.iter() {
+        let idx = pos as usize;
+        // Count elk neighbors and "elk-able" empty neighbors.
+        let mut elk_n = 0u8;
+        let mut grow = 0u8;
+        for n in adj.neighbors_of(idx) {
+            let cell = board.grid.get(n);
+            if cell.placed_wildlife() == Some(Wildlife::Elk) { elk_n += 1; }
+            else if cell.is_present() && !cell.has_wildlife() && cell.can_place_wildlife(Wildlife::Elk) {
+                grow += 1;
+            }
+        }
+        // Singleton with growth potential → reward becoming a pair (5 vs 2 = +3).
+        if elk_n == 0 && grow > 0 { p += 15; }
+        // Pair-end (1 elk neighbor) with growth → could become triangle (9 vs 5 = +4).
+        // Highly valuable if the growth slot is also adjacent to the OTHER elk (forms triangle).
+        if elk_n == 1 && grow > 0 { p += 20; }
+        // 2-neighbor elk (already in a triad-like config) with growth → rhombus (13 vs 9 = +4).
+        if elk_n == 2 && grow > 0 { p += 20; }
+        // 3+ neighbor elk (already a tight cluster) — diminishing returns.
+        if elk_n >= 3 { p -= 5; }
+    }
+    p
+}
+
+/// Salmon potential (Card D): reward salmon ADJACENT to non-salmon wildlife,
+/// and runs of length ≥ 3. (Each adjacent non-salmon token = +1 pt under Card D.)
+fn salmon_potential_d(board: &Board) -> i32 {
+    let positions = &board.wildlife_positions[Wildlife::Salmon as usize];
+    if positions.is_empty() { return 0; }
+    let adj = &*ADJACENCY;
+    let mut p: i32 = 0;
+
+    // Component sizes (same as scorer)
+    let mut visited = [false; 441];
+    for &pos in positions.iter() {
+        let idx = pos as usize;
+        if visited[idx] { continue; }
+        let mut comp = arrayvec::ArrayVec::<u16, 32>::new();
+        let mut q = arrayvec::ArrayVec::<u16, 32>::new();
+        q.push(pos);
+        visited[idx] = true;
+        while let Some(c) = q.pop() {
+            let _ = comp.try_push(c);
+            for n in adj.neighbors_of(c as usize) {
+                if !visited[n] && board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon) {
+                    visited[n] = true;
+                    let _ = q.try_push(n as u16);
+                }
+            }
+        }
+        let len = comp.len();
+        // Validity check (≤ 2 salmon neighbors per cell)
+        let valid = comp.iter().all(|&p| {
+            adj.neighbors_of(p as usize)
+                .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon))
+                .count() <= 2
+        });
+        if !valid { p -= 30; continue; }
+
+        // Reward growth toward length 3 (the qualifying threshold).
+        // Runs at length 1 and 2 score 0 outright but are PROGRESS toward
+        // the 3+ payoff. Give a graded reward by distance to threshold,
+        // multiplied by the already-accumulated adjacent-animal bonus
+        // (which will cash in once len hits 3).
+        if len < 3 {
+            // Find an endpoint with extension room.
+            let mut can_extend = false;
+            for &c in &comp {
+                let salmon_n: usize = adj.neighbors_of(c as usize)
+                    .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon))
+                    .count();
+                if salmon_n > 1 { continue; }
+                if adj.neighbors_of(c as usize).any(|n| {
+                    let cell = board.grid.get(n);
+                    cell.is_present() && !cell.has_wildlife() && cell.can_place_wildlife(Wildlife::Salmon)
+                }) { can_extend = true; break; }
+            }
+            // Count unique non-salmon adjacent tokens already next to this seed run
+            // — they'll add 1 pt each as soon as the run qualifies.
+            let mut seen = [false; 441];
+            let mut adj_animals = 0i32;
+            for &c in &comp {
+                for n in adj.neighbors_of(c as usize) {
+                    if seen[n] { continue; }
+                    seen[n] = true;
+                    if let Some(w) = board.grid.get(n).placed_wildlife() {
+                        if w != Wildlife::Salmon { adj_animals += 1; }
+                    }
+                }
+            }
+            // Base seed reward: how far along the run is. Length 2 is half-credit
+            // toward length-3 qualification; length 1 is quarter-credit. Each is
+            // also worth 1 pt directly once qualified (per-salmon scoring).
+            let seed_value: i32 = match len {
+                1 => 10, // singletons: small nudge to plant a seed
+                2 => 25, // 1 step away — strong nudge to complete
+                _ => 0,
+            };
+            // If the run can be extended, the seed-value AND the staged adj-animal
+            // bonus (worth ~adj_animals pts at qualification) are realisable.
+            if can_extend {
+                p += seed_value;
+                // Discount: bonus only realised after one more salmon placement,
+                // which may not happen — half-credit.
+                p += adj_animals * 5;
+            } else {
+                // Trapped seed (no extension slot) — small consolation, since the
+                // adjacent animals at least set up future positioning. But mostly
+                // a wasted salmon: penalise modestly so greedy doesn't plant
+                // dead-end singletons.
+                p += seed_value / 4;
+                p -= 10;
+            }
+        } else {
+            // Run already qualifies — count unique non-salmon adjacent tokens (the actual D bonus).
+            let mut seen = [false; 441];
+            let mut bonus = 0i32;
+            for &c in &comp {
+                for n in adj.neighbors_of(c as usize) {
+                    if seen[n] { continue; }
+                    seen[n] = true;
+                    if let Some(w) = board.grid.get(n).placed_wildlife() {
+                        if w != Wildlife::Salmon { bonus += 10; }
+                    }
+                }
+            }
+            // Reward the existing bonus + a small add-one-more-salmon nudge.
+            p += bonus / 2; // already partially captured by current scoring
+            // Reward extension: each new salmon adds 1 pt + potentially adj-animal bonuses.
+            let mut endpoints_extendable = 0;
+            for &c in &comp {
+                let salmon_n: usize = adj.neighbors_of(c as usize)
+                    .filter(|&n| board.grid.get(n).placed_wildlife() == Some(Wildlife::Salmon))
+                    .count();
+                if salmon_n > 1 { continue; }
+                if adj.neighbors_of(c as usize).any(|n| {
+                    let cell = board.grid.get(n);
+                    cell.is_present() && !cell.has_wildlife() && cell.can_place_wildlife(Wildlife::Salmon)
+                }) {
+                    endpoints_extendable += 1;
+                }
+            }
+            p += (endpoints_extendable.min(2) as i32) * 15;
+        }
+    }
+    p
+}
+
+/// Hawk potential (Card D): reward hawks placed where they could form a non-adjacent
+/// LOS pair with another hawk WITH non-hawk wildlife in the cells between.
+/// (Per pair: 1 type=4, 2=7, 3+=9. Each hawk in ≤ 1 pair.)
+fn hawk_potential_d(board: &Board) -> i32 {
+    let positions = &board.wildlife_positions[Wildlife::Hawk as usize];
+    if positions.len() < 2 { return 0; }
+    let mut hawk_set = [false; 441];
+    for &p in positions.iter() { hawk_set[p as usize] = true; }
+    let mut p: i32 = 0;
+
+    // For each hawk, walk each direction. If we find another hawk at distance ≥ 2
+    // (non-adjacent) without an intervening hawk, count unique non-hawk wildlife
+    // types in between. Bigger crowd = bigger pair-score.
+    let mut paired = [false; 441];
+    for (i, &pos) in positions.iter().enumerate() {
+        if paired[pos as usize] { continue; }
+        let coord = HexCoord::from_index(pos as usize);
+        for &(dq, dr) in &cascadia_core::hex::HexCoord::DIRECTIONS {
+            let mut cur = HexCoord::new(coord.q + dq, coord.r + dr);
+            let mut steps = 1u16;
+            let mut types_mask = 0u8;
+            loop {
+                match cur.to_index() {
+                    Some(idx) => {
+                        if hawk_set[idx] {
+                            if steps >= 2 && !paired[idx] {
+                                let unique = (types_mask & !(1 << Wildlife::Hawk as u8)).count_ones();
+                                let pair_pts: i32 = match unique {
+                                    0 => 0,
+                                    1 => 40,
+                                    2 => 70,
+                                    _ => 90,
+                                };
+                                if pair_pts > 0 {
+                                    p += pair_pts / 2; // discount for partial credit
+                                    paired[pos as usize] = true;
+                                    paired[idx] = true;
+                                }
+                            }
+                            break;
+                        }
+                        if let Some(w) = board.grid.get(idx).placed_wildlife() {
+                            types_mask |= 1 << (w as u8);
+                        }
+                    }
+                    None => break,
+                }
+                cur = HexCoord::new(cur.q + dq, cur.r + dr);
+                steps += 1;
+            }
+        }
+        let _ = i;
+    }
+    p
+}
+
+/// Fox potential (Card B): reward foxes with ≥ 2 of the same non-fox type adjacent
+/// (a "pair-type"). Per fox: 1 pair-type=3, 2=5, 3=7.
+fn fox_potential_b(board: &Board) -> i32 {
+    let positions = &board.wildlife_positions[Wildlife::Fox as usize];
+    if positions.is_empty() { return 0; }
+    let adj = &*ADJACENCY;
+    let mut p: i32 = 0;
+
+    for &pos in positions.iter() {
+        let mut counts = [0u8; 5];
+        let mut empty_with_type: [u8; 5] = [0; 5]; // empties that could become this type
+        for n in adj.neighbors_of(pos as usize) {
+            let cell = board.grid.get(n);
+            if let Some(w) = cell.placed_wildlife() {
+                if w != Wildlife::Fox { counts[w as usize] += 1; }
+            } else if cell.is_present() && !cell.has_wildlife() {
+                for w in 0..5 {
+                    let wl = Wildlife::from_u8(w as u8).unwrap();
+                    if wl == Wildlife::Fox { continue; }
+                    if cell.can_place_wildlife(wl) { empty_with_type[w] += 1; }
+                }
+            }
+        }
+        let pair_types_now = counts.iter().filter(|&&c| c >= 2).count() as i32;
+        // Score the achieved state at half-credit (already in the live scoring).
+        p += match pair_types_now {
+            0 => 0, 1 => 15, 2 => 25, _ => 35,
+        };
+        // Reward types that are 1-away from being a pair (i.e., have count = 1
+        // AND have an empty neighbor that could host that type).
+        for w in 0..5 {
+            if counts[w] == 1 && empty_with_type[w] >= 1 {
+                p += 10; // could grow to a pair-type
+            }
+        }
+    }
+    p
 }
 
 /// Bonus for wildlife types that have very few remaining placement slots.
