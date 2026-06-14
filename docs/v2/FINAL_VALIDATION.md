@@ -5,6 +5,27 @@ the canonical four-player AAAAA rules engine. Habitat bonuses are excluded.
 Every game contributes four treatment seat scores and one correlated game
 block for confidence intervals.
 
+## Final Result
+
+The sealed run completed on 2026-06-14:
+
+- 1,000 held-out games and 4,000 treatment seat scores;
+- mean base score **95.744**;
+- game-block 95% CI `[95.652,95.837]`;
+- game-mean SD 1.494 and standard error 0.047;
+- P10/P50/P90 seat scores of 92/96/99;
+- paired canonical v2 baseline 92.118;
+- paired gain +3.627, 95% CI `[+3.496,+3.757]`;
+- record 944-10-46;
+- 100-point target **not reached**.
+
+All 1,000 indices, smoke gates, MLX shutdowns, source revisions, and
+executable/model/weight fingerprints passed strict aggregation. The generated
+human report is
+[`final-strength-validation.md`](reports/final-strength-validation.md), and
+the complete machine-readable evidence is
+[`final-strength-validation.json`](reports/final-strength-validation.json).
+
 ## Frozen Seed Domain
 
 Game indices `0-999` are transformed through `DatasetSplit::Final`. They are
@@ -54,6 +75,11 @@ stdout/stderr logs, host identity, source revision, command, environment, and
 input fingerprints. Restarting the same command validates and skips complete
 games. Partial or drifted evidence is rejected.
 
+On macOS, `run-shard` first forces a FullWake and then holds `caffeinate`
+system, idle, and disk assertions until the shard exits. This prevents a
+headless SSH-launched worker from computing only during DarkWake maintenance
+windows. Future shard manifests record the active sleep-guard mode.
+
 Example shard:
 
 ```bash
@@ -88,6 +114,11 @@ The final report contains the mean, game-block and seat-score standard
 deviations, standard error, 95% confidence interval, P10/P50/P90, score
 breakdown, decision latency, paired result, host distribution, provenance, and
 the explicit 100-point verdict.
+
+The final source revision was
+`cb7225e8d10167153fa681fef33d8e5ce491c0a2`. Host allocation was john1=334,
+john2=333, and john3=333. The strict aggregate found one shared source revision
+and one input fingerprint set.
 
 ## Infrastructure Rehearsal
 

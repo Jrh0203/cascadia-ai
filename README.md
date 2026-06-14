@@ -18,6 +18,12 @@ product are operational. The existing crates remain the v1 reference
 implementation under [`legacy/`](legacy/README.md); v2 does not depend on
 their internals.
 
+The sealed 1,000-game final validation is complete. The strongest qualified
+canonical-engine reference scored **95.744 mean base points** over 4,000 seats
+with a game-block 95% confidence interval of **95.652-95.837**. It beat the
+paired canonical v2 research control by **3.627 points**, but the 100-point
+target was not reached.
+
 - [Current status](docs/v2/STATUS.md)
 - [Local setup](docs/v2/SETUP.md)
 - [V1 audit](docs/v2/V1_AUDIT.md)
@@ -33,6 +39,7 @@ their internals.
 - [Measured performance](docs/v2/PERFORMANCE.md)
 - [Performance qualification](docs/v2/reports/v2-performance-qualification.md)
 - [Final strength validation](docs/v2/FINAL_VALIDATION.md)
+- [Generated final strength report](docs/v2/reports/final-strength-validation.md)
 - [Clean checkout rehearsal](docs/v2/reports/clean-checkout-2026-06-14.md)
 - [Search diagnostics](docs/v2/SEARCH_DIAGNOSTICS.md)
 - [Current score gap](docs/v2/SCORE_GAP.md)

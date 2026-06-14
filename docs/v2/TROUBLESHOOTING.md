@@ -47,6 +47,20 @@ Authentication failures require checking the worker user's
 Never resume a distributed shard until its source revision, executable hash,
 split, and index range match the owning manifest.
 
+If a CPU-bound process is alive but advances only when SSH probes arrive,
+inspect recent power transitions:
+
+```bash
+pmset -g log | egrep 'DarkWake to FullWake|Entering Sleep|DarkWake' | tail -n 30
+pmset -g assertions
+```
+
+`sleep 0` alone does not guarantee that a job launched while the worker is in
+DarkWake will transition to FullWake. The final-strength runner handles this
+by issuing a short user-activity wake and holding `caffeinate -ims` for its
+lifetime. Other long-running orchestration must provide an equivalent
+workload-owned assertion rather than relying on dashboard polling.
+
 ## Resumable Data And Training
 
 Dataset and checkpoint writers fail closed on source, schema, configuration,

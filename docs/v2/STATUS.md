@@ -4,11 +4,12 @@ Last updated: 2026-06-14
 
 ## Active Phase
 
-**Phase 7 and 8: the from-scratch strength campaign is closed for this
-release. ADR 0078's corrected R12 corpus completed, but its single frozen MLX
-ranker run failed six validation gates and left test/gameplay unopened. The
-strongest qualified canonical-engine strategy is now entering the sealed
-1,000-game final validation across john1, john2, and john3.**
+**Phase 8 is complete. The sealed 1,000-game final validation scored 95.744
+mean base points with 95% CI `[95.652,95.837]`. The strongest qualified
+canonical-engine reference beat the paired v2 research control by 3.627
+points, but did not reach the 100-point target. Cascadia v2 is closed as a
+coherent local product and research system with an explicit unmet-target
+verdict.**
 
 ADR 0070 is rejected. The identifiability audit showed that the historical
 independent-seed teacher usually does not produce a statistically unique
@@ -862,8 +863,23 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   independent; only the test-only differential boundary can import v1.
 - Re-ran the complete format, lint, and test gate after the dashboard,
   orchestration hardening, source decomposition, and setup hardening: 223 Rust
-  tests, 131 Python tests, 7 frontend unit tests, and 5 applicable Playwright
+  tests, 132 Python tests, 7 frontend unit tests, and 5 applicable Playwright
   flows passed with zero failures.
+- Completed the sealed final benchmark over final-domain indices 0-999:
+  1,000 game blocks and 4,000 treatment seat scores across john1, john2, and
+  john3. Exact MLX K32/R600 scored 95.744 with 95% CI
+  `[95.652,95.837]`, versus 92.118 for the paired canonical v2 research
+  control, a +3.627 delta with 95% CI `[+3.496,+3.757]` and a 944-10-46
+  record. Every smoke, shutdown, source, fingerprint, and seed-coverage gate
+  passed. The result is 4.256 points below the primary target and 0.151 below
+  the independently reproduced v1 reference on an explicitly non-paired,
+  cross-engine comparison.
+- Diagnosed repeated macOS maintenance sleep on john2 during the final run.
+  No game evidence was affected, but wall throughput was interrupted until
+  the node was forced from DarkWake to FullWake. Final-strength shards now
+  wake macOS and hold `caffeinate` system, idle, and disk assertions for the
+  runner lifetime; the behavior is covered by a focused Python test and
+  recorded in future shard manifests.
 - Added a single troubleshooting entrypoint covering uv/MLX, SSH workers,
   resumable artifacts, launchd services, ports, browser evidence, and
   reproducibility escalation. All local Markdown links resolve.
@@ -884,17 +900,16 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
 Those test results establish that the current tree is executable; they do not
 certify the v2 rules or benchmark contract.
 
-## Immediate Work
+## Release Verdict
 
-1. Freeze one clean source revision and input fingerprint set for final
-   validation.
-2. Run exact-MLX K32/R600 on final indices 0-999 across john1, john2, and
-   john3, paired against the canonical v2 research control.
-3. Aggregate all 1,000 game blocks and 4,000 treatment seat scores with score
-   breakdowns, confidence intervals, percentiles, latency, host, source,
-   executable, model, and shutdown evidence.
-4. Publish the strongest factual result, explicitly state whether 100 was
-   reached, complete the clean-checkout audit, and close the roadmap.
+The authoritative final report is
+[`final-strength-validation.md`](reports/final-strength-validation.md), backed
+by the machine-readable
+[`final-strength-validation.json`](reports/final-strength-validation.json).
+The 100-point target is not reached. No required v2 implementation, quality
+gate, documentation, clean-checkout, or final-validation work remains open.
+Further strength research should begin as a separately registered campaign
+rather than silently extending this release.
 
 ## Promotion State
 

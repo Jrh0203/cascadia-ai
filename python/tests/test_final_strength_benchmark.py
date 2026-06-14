@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -59,6 +60,12 @@ def game_report(seed: int, baseline: list[int], treatment: list[int]) -> dict[st
 def write_shard(path: Path, reports: list[dict[str, object]]) -> None:
     games = path / "games"
     games.mkdir(parents=True)
+    fingerprints = {
+        "binary_sha256": "frozen-binary",
+        "model_manifest_sha256": "frozen-manifest",
+        "model_safetensors_sha256": "frozen-model",
+        "weights_sha256": "frozen-weights",
+    }
     seeds = []
     for report in reports:
         seed = int(report["game_records"][0]["seed"])  # type: ignore[index]
@@ -69,7 +76,8 @@ def write_shard(path: Path, reports: list[dict[str, object]]) -> None:
             "seed": seed,
             "host": f"host-{seed % 2}",
             "source_revision": "abc123",
-            "fingerprints": {"binary_sha256": "frozen"},
+            "fingerprints": fingerprints,
+            "completed_at": f"2026-06-14T00:00:{seed % 60:02d}+00:00",
             "report_sha256": MODULE.sha256_file(report_path),
         }
         (games / f"{seed}.meta.json").write_text(json.dumps(metadata))
@@ -80,7 +88,7 @@ def write_shard(path: Path, reports: list[dict[str, object]]) -> None:
                 "experiment_id": MODULE.EXPERIMENT_ID,
                 "protocol_id": MODULE.PROTOCOL_ID,
                 "rollouts": 600,
-                "fingerprints": {"binary_sha256": "frozen"},
+                "fingerprints": fingerprints,
                 "completed_seeds": seeds,
             }
         )
@@ -93,6 +101,57 @@ def test_validate_game_report_requires_raw_four_seat_record() -> None:
     report["game_records"][0]["treatment_scores"].pop()  # type: ignore[index]
     with pytest.raises(ValueError, match="four seat"):
         MODULE.validate_game_report(report, 10, 600)
+
+
+def test_macos_sleep_guard_wakes_and_holds_until_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run_calls: list[list[str]] = []
+    popen_calls: list[list[str]] = []
+
+    class FakeGuard:
+        terminated = False
+        waited = False
+
+        def poll(self) -> None:
+            return None
+
+        def terminate(self) -> None:
+            self.terminated = True
+
+        def wait(self, timeout: int) -> int:
+            assert timeout == 5
+            self.waited = True
+            return 0
+
+        def kill(self) -> None:
+            raise AssertionError("healthy guard must not be killed")
+
+    guard = FakeGuard()
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        run_calls.append(command)
+        assert kwargs["check"] is True
+        return subprocess.CompletedProcess(command, 0)
+
+    def fake_popen(command: list[str], **kwargs: object) -> FakeGuard:
+        popen_calls.append(command)
+        return guard
+
+    monkeypatch.setattr(MODULE.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(MODULE.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(MODULE.subprocess, "run", fake_run)
+    monkeypatch.setattr(MODULE.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(MODULE.os, "getpid", lambda: 1234)
+
+    with MODULE.macos_sleep_guard() as mode:
+        assert mode == "macos-caffeinate-ims-v1"
+        assert guard.terminated is False
+
+    assert run_calls == [["/usr/bin/caffeinate", "-u", "-t", "5"]]
+    assert popen_calls == [["/usr/bin/caffeinate", "-ims", "-w", "1234"]]
+    assert guard.terminated is True
+    assert guard.waited is True
 
 
 def test_aggregate_computes_game_block_statistics_and_full_coverage(tmp_path: Path) -> None:
@@ -117,6 +176,8 @@ def test_aggregate_computes_game_block_statistics_and_full_coverage(tmp_path: Pa
     assert report["integrity"]["complete_seed_suite"] is True
     assert report["host_game_counts"] == {"host-0": 1, "host-1": 1}
     assert "Mean base score: **100.000**" in markdown.read_text()
+    assert "| Bear | 12.000 | 12.000 | +0.000 |" in markdown.read_text()
+    assert "| P90 decision | 1500.0 ms | 10.0 ms |" in markdown.read_text()
 
 
 def test_aggregate_rejects_missing_seed(tmp_path: Path) -> None:

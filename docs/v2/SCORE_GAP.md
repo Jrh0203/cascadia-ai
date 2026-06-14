@@ -1,5 +1,34 @@
 # Current Score Gap
 
+The sealed final-domain benchmark is complete. The strongest qualified
+canonical-engine reference,
+`canonical-action-legacy-exact-mlx-v1-k32-r600-lmr-no-paid-prelude`, scored
+**95.744** over 1,000 held-out games and 4,000 seats, with game-block 95% CI
+`[95.652,95.837]`. The remaining gap to the 100-point target is therefore
+**4.256 points**, not benchmark sampling noise.
+
+It scored 92.118 for the paired canonical v2 research control, a +3.627 delta
+with 95% CI `[+3.496,+3.757]` and a 944-10-46 game record. Against the
+independently reproduced v1 reference of 95.895, the absolute difference is
+-0.151. That v1 comparison is cross-engine and unpaired, so it is descriptive
+rather than a head-to-head claim.
+
+| Component | Final reference | Paired v2 control | Delta | V1 reference | Final - V1 |
+|---|---:|---:|---:|---:|---:|
+| Habitat | 30.878 | 28.919 | +1.960 | 30.985 | -0.107 |
+| Bear | 11.363 | 8.369 | +2.994 | 11.615 | -0.252 |
+| Elk | 10.547 | 11.808 | -1.262 | 11.050 | -0.504 |
+| Salmon | 12.775 | 12.315 | +0.459 | 12.580 | +0.195 |
+| Hawk | 11.380 | 12.195 | -0.815 | 11.110 | +0.270 |
+| Fox | 14.920 | 14.672 | +0.248 | 14.720 | +0.200 |
+| Nature Tokens | 3.883 | 3.840 | +0.043 | 3.835 | +0.048 |
+| Base total | 95.744 | 92.118 | +3.627 | 95.895 | -0.151 |
+
+The final reference nearly reproduces v1's total through a different category
+mix: it remains lower in Bear and Elk, while exceeding v1 in Salmon, Hawk,
+Fox, and Nature Tokens. Relative to the canonical v2 control, almost the
+entire gain comes from habitat and Bear, partly paid for by Elk and Hawk.
+
 The strongest promoted v2 product policy is
 `pattern-aware-v1-k8-h6-b8-m4`. It scored 91.525 on its original confirmation,
 91.890 in the direct K8 product control, and 91.580 on ADR 0068's fresh
@@ -654,9 +683,8 @@ not concentrate probability on the best action or beat the shallow H6 choice.
 This closes the complete four-candidate public-supply-aware set ranker as the
 final route for v2.
 
-The strongest qualified canonical-engine policy remains the exact MLX
-K32/R600 historical evaluator at roughly 95.8. It is below the 100 target and
-is a research reference rather than a newly trained v2 model. The final
-evidence step is therefore the sealed 1,000-game final-domain benchmark,
-distributed across all three local Macs, with an explicit unmet-target verdict
-unless that held-out mean reaches 100.
+The final evidence confirms the exact MLX K32/R600 historical evaluator at
+95.744. It remains a research reference rather than a promoted v2 model
+because its parameters are historical and its mean is below the 100 target.
+The from-scratch campaign is therefore closed with a precise unmet-target
+verdict rather than another underpowered experiment.

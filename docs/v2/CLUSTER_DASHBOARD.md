@@ -24,6 +24,11 @@ either worker. The john1 API process owns collection and history retention.
 The API invokes only a fixed metrics script. The HTTP request cannot select a
 host or provide a shell command.
 
+An SSH telemetry probe can wake a sleeping Mac only into DarkWake. That is
+enough to collect metrics but not a substitute for a workload-owned power
+assertion. Long Cascadia shard runners use `caffeinate` to force FullWake and
+prevent system, idle, and disk sleep for the job lifetime.
+
 ## Telemetry
 
 Each sample reports:

@@ -9,12 +9,14 @@ import json
 import math
 import os
 import platform
+import shutil
 import socket
 import statistics
 import subprocess
 import time
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -57,6 +59,40 @@ def timestamp() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
+@contextmanager
+def macos_sleep_guard() -> Iterator[str]:
+    if platform.system() != "Darwin":
+        yield "not-required"
+        return
+
+    caffeinate = shutil.which("caffeinate")
+    if caffeinate is None:
+        raise RuntimeError("macOS final-strength shards require /usr/bin/caffeinate")
+
+    subprocess.run(
+        [caffeinate, "-u", "-t", "5"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    guard = subprocess.Popen(
+        [caffeinate, "-ims", "-w", str(os.getpid())],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if guard.poll() is not None:
+        raise RuntimeError("caffeinate sleep guard exited during startup")
+    try:
+        yield "macos-caffeinate-ims-v1"
+    finally:
+        guard.terminate()
+        try:
+            guard.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            guard.kill()
+            guard.wait(timeout=5)
+
+
 def source_revision(root: Path) -> str:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -66,6 +102,14 @@ def source_revision(root: Path) -> str:
         text=True,
     )
     return result.stdout.strip() if result.returncode == 0 else "unknown"
+
+
+def repository_relative(path: Path) -> str:
+    root = Path(__file__).resolve().parents[1]
+    try:
+        return str(path.resolve().relative_to(root))
+    except ValueError:
+        return str(path.resolve())
 
 
 def run_fingerprints(config: RunConfig) -> dict[str, str]:
@@ -149,6 +193,7 @@ def shard_manifest(
     fingerprints: dict[str, str],
     completed: list[int],
     root: Path,
+    sleep_guard: str,
 ) -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -161,6 +206,7 @@ def shard_manifest(
         "games": config.games,
         "last_seed": config.first_seed + config.games - 1,
         "rollouts": config.rollouts,
+        "sleep_guard": sleep_guard,
         "fingerprints": fingerprints,
         "completed_seeds": completed,
         "complete": len(completed) == config.games,
@@ -168,7 +214,7 @@ def shard_manifest(
     }
 
 
-def run_shard(config: RunConfig) -> None:
+def _run_shard(config: RunConfig, sleep_guard: str) -> None:
     root = Path(__file__).resolve().parents[1]
     required = [
         config.binary,
@@ -270,7 +316,7 @@ def run_shard(config: RunConfig) -> None:
         completed.append(seed)
         write_json_atomic(
             config.output_dir / "shard.json",
-            shard_manifest(config, fingerprints, completed, root),
+            shard_manifest(config, fingerprints, completed, root, sleep_guard),
         )
         treatment_mean = report["comparison"]["treatment_mean"]
         print(
@@ -281,8 +327,13 @@ def run_shard(config: RunConfig) -> None:
 
     write_json_atomic(
         config.output_dir / "shard.json",
-        shard_manifest(config, fingerprints, completed, root),
+        shard_manifest(config, fingerprints, completed, root, sleep_guard),
     )
+
+
+def run_shard(config: RunConfig) -> None:
+    with macos_sleep_guard() as sleep_guard:
+        _run_shard(config, sleep_guard)
 
 
 def percentile(values: list[float], quantile: float) -> float:
@@ -416,6 +467,33 @@ def render_markdown(report: dict[str, Any]) -> str:
     treatment = report["treatment"]
     baseline = report["paired_baseline"]
     delta = report["paired_delta"]
+    treatment_breakdown = treatment["mean_breakdown"]
+    baseline_breakdown = baseline["mean_breakdown"]
+    breakdown_delta = report["mean_breakdown_delta"]
+    breakdown_rows = [
+        (
+            "Habitat",
+            sum(treatment_breakdown["habitat"]),
+            sum(baseline_breakdown["habitat"]),
+            sum(breakdown_delta["habitat"]),
+        ),
+        *[
+            (
+                name,
+                treatment_breakdown["wildlife"][index],
+                baseline_breakdown["wildlife"][index],
+                breakdown_delta["wildlife"][index],
+            )
+            for index, name in enumerate(("Bear", "Elk", "Salmon", "Hawk", "Fox"))
+        ],
+        (
+            "Nature Tokens",
+            treatment_breakdown["nature_tokens"],
+            baseline_breakdown["nature_tokens"],
+            breakdown_delta["nature_tokens"],
+        ),
+        ("Base total", treatment["mean_score"], baseline["mean_score"], delta["mean"]),
+    ]
     target = "reached" if report["target"]["reached"] else "not reached"
     lines = [
         "# Final Cascadia V2 Strength Validation",
@@ -430,6 +508,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{treatment['confidence_95'][1]:.3f}]"
         ),
         f"- 100-point target: **{target}**",
+        f"- Target shortfall: {report['target']['mean'] - treatment['mean_score']:.3f}",
         "",
         "## Paired Canonical V2 Control",
         "",
@@ -450,13 +529,55 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"| P50 | {treatment['percentiles']['p50']:.1f} |",
         f"| P90 | {treatment['percentiles']['p90']:.1f} |",
         "",
+        "## Mean Score Breakdown",
+        "",
+        "| Component | Treatment | Baseline | Delta |",
+        "|---|---:|---:|---:|",
+        *[
+            f"| {name} | {treatment_value:.3f} | {baseline_value:.3f} | {delta_value:+.3f} |"
+            for name, treatment_value, baseline_value, delta_value in breakdown_rows
+        ],
+        "",
+        "## Decision Latency",
+        "",
+        "| Metric | Treatment | Baseline |",
+        "|---|---:|---:|",
+        (
+            f"| Mean decision | {treatment['decision_latency']['mean_milliseconds']:.1f} ms | "
+            f"{baseline['decision_latency']['mean_milliseconds']:.1f} ms |"
+        ),
+        (
+            f"| P50 decision | {treatment['decision_latency']['p50_milliseconds']:.1f} ms | "
+            f"{baseline['decision_latency']['p50_milliseconds']:.1f} ms |"
+        ),
+        (
+            f"| P90 decision | {treatment['decision_latency']['p90_milliseconds']:.1f} ms | "
+            f"{baseline['decision_latency']['p90_milliseconds']:.1f} ms |"
+        ),
+        (
+            f"| P99 decision | {treatment['decision_latency']['p99_milliseconds']:.1f} ms | "
+            f"{baseline['decision_latency']['p99_milliseconds']:.1f} ms |"
+        ),
+        (
+            f"| Seconds per game | {treatment['elapsed_seconds'] / report['games']:.3f} | "
+            f"{baseline['elapsed_seconds'] / report['games']:.3f} |"
+        ),
+        "",
         "## Integrity",
         "",
         f"- Complete held-out suite: `{report['integrity']['complete_seed_suite']}`",
         f"- All one-game smoke gates passed: `{report['integrity']['all_smoke_gates_passed']}`",
         f"- All MLX services shut down cleanly: `{report['integrity']['all_clean_shutdown']}`",
-        f"- Distinct hosts: {', '.join(sorted(report['host_game_counts']))}",
+        (
+            "- Host allocation: "
+            + ", ".join(
+                f"{host}={count}" for host, count in sorted(report["host_game_counts"].items())
+            )
+        ),
         f"- Source revisions: {', '.join(report['source_revisions'])}",
+        f"- Binary SHA256: `{report['fingerprints']['binary_sha256']}`",
+        f"- MLX model SHA256: `{report['fingerprints']['model_safetensors_sha256']}`",
+        f"- Legacy weights SHA256: `{report['fingerprints']['weights_sha256']}`",
     ]
     if report.get("v1_reference"):
         v1 = report["v1_reference"]
@@ -466,6 +587,10 @@ def render_markdown(report: dict[str, Any]) -> str:
                 "## Independent V1 Reference",
                 "",
                 f"- Reproduced v1 mean: {v1['mean_score']:.3f} over {v1['games']} games",
+                (
+                    f"- V1 game-block 95% CI: [{v1['confidence_95'][0]:.3f}, "
+                    f"{v1['confidence_95'][1]:.3f}]"
+                ),
                 f"- Absolute treatment-minus-v1 difference: {v1['absolute_difference']:+.3f}",
                 "- This is an absolute cross-engine reference, not a paired canonical comparison.",
             ]
@@ -545,12 +670,16 @@ def aggregate(
         "source_revisions": source_revisions,
         "fingerprints": json.loads(next(iter(fingerprint_sets))),
         "shards": manifests,
-        "generated_at": timestamp(),
+        "generated_at": max(
+            (str(meta.get("completed_at", "")) for meta in metadata),
+            default="",
+        )
+        or timestamp(),
     }
     if v1_reference_path is not None:
         v1 = json.loads(v1_reference_path.read_text())
         report["v1_reference"] = {
-            "path": str(v1_reference_path),
+            "path": repository_relative(v1_reference_path),
             "games": v1["games"],
             "seat_games": v1["seat_games"],
             "mean_score": v1["mean_score"],

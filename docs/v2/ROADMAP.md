@@ -102,8 +102,9 @@
 - [x] Requalify the confidence-gated policy after canonical redetermination;
       demote it to explicit research after it failed the original non-Bear
       allocation guardrail.
-- [ ] Reach and validate the 100-point target or document the strongest factual
-      result with remaining uncertainty.
+- [x] Document the strongest factual result after the target was not reached:
+      95.744 mean over 1,000 held-out games, 95% CI `[95.652,95.837]`, leaving
+      a measured 4.256-point gap.
 
 ## Phase 7-8: Product Completion
 
@@ -118,4 +119,5 @@
       `legacy/` reference boundary.
 - [x] Rehearse a fresh clone on john3 through `make bootstrap`, `make setup`,
       and the complete `make check` gate with a clean final Git status.
-- [ ] Run 1,000-game held-out validation and publish final report.
+- [x] Run 1,000-game held-out validation across all three local Macs and
+      publish the final machine-readable and Markdown reports.
