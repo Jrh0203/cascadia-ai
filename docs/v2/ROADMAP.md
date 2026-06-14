@@ -109,5 +109,6 @@
       CLI reference freshness checks.
 - [x] Move v1 crates, historical scripts, and reports to the explicit
       `legacy/` reference boundary.
-- [ ] Rehearse clean checkout.
+- [x] Rehearse a fresh clone on john3 through `make bootstrap`, `make setup`,
+      and the complete `make check` gate with a clean final Git status.
 - [ ] Run 1,000-game held-out validation and publish final report.

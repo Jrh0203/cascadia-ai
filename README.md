@@ -32,6 +32,7 @@ their internals.
 - [Fresh baselines](docs/v2/BASELINES.md)
 - [Measured performance](docs/v2/PERFORMANCE.md)
 - [Performance qualification](docs/v2/reports/v2-performance-qualification.md)
+- [Clean checkout rehearsal](docs/v2/reports/clean-checkout-2026-06-14.md)
 - [Search diagnostics](docs/v2/SEARCH_DIAGNOSTICS.md)
 - [Current score gap](docs/v2/SCORE_GAP.md)
 - [Experiment methodology](experiments/README.md)

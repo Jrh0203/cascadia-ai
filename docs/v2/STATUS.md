@@ -68,6 +68,11 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   research, and batch-32 MLX execution. All 11 gates pass against checksummed
   canonical reports; the qualification is reproducible with
   `make performance-check`.
+- Rehearsed a fresh clone on john3 from commit `8610d1c`. The documented
+  bootstrap, setup, and complete check passed with 223 Rust tests, 125 Python
+  tests, 7 frontend unit tests, 5 applicable Playwright flows, generated CLI
+  freshness, and all performance gates; the final source status remained
+  clean.
 - Centralized Rust provenance in `cascadia-provenance` and made value/ranking
   collection resume reject source or executable drift before appending another
   shard.
@@ -831,8 +836,9 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   and historical reports under `legacy/`. Production v2 crates remain
   independent; only the test-only differential boundary can import v1.
 - Re-ran the complete format, lint, and test gate after the dashboard,
-  orchestration hardening, and source decomposition: 223 Rust tests, 119
-  Python tests, and 7 frontend tests passed with zero failures.
+  orchestration hardening, source decomposition, and setup hardening: 223 Rust
+  tests, 125 Python tests, 7 frontend unit tests, and 5 applicable Playwright
+  flows passed with zero failures.
 - Added a single troubleshooting entrypoint covering uv/MLX, SSH workers,
   resumable artifacts, launchd services, ports, browser evidence, and
   reproducibility escalation. All local Markdown links resolve.
