@@ -1,8 +1,8 @@
 # ADR 0080: R12 Set-Ranker Gameplay Qualification
 
-Status: conditionally preregistered on 2026-06-14 before ADR 0078 validation
-or ADR 0079 test metrics were known. Inference implementation, gameplay, and
-promotion remain closed unless both offline stages pass every frozen gate.
+Status: closed unopened on 2026-06-14. ADR 0078 failed validation, so ADR 0079
+never opened and no grouped inference service, parity fixture, gameplay seed,
+or promotion path was created.
 
 ## Context
 
@@ -112,11 +112,14 @@ A failed smoke, screen, or confirmation rejects the policy permanently. No
 retry, new seed, coefficient adjustment, candidate change, model change, or
 partial promotion is authorized.
 
+The prerequisite offline validation failed before inference implementation.
+All 121 reserved gameplay games, the 128-group parity qualification, and the
+final-domain policy-selection path remained unopened.
+
 ## Maximum Compute
 
-Conditional on complete ADR 0078 and ADR 0079 passes: one 128-group inference
-parity/throughput qualification, one runtime-smoke game, one 20-game paired
-screen, and only after both pass one 100-game paired confirmation. All compute
-is local on john1, john2, and john3. No external compute, extra training,
-additional test evaluation, gameplay sweep, or final-suite access is
+No inference or gameplay compute was consumed. The conditional parity,
+runtime-smoke, 20-game screen, and 100-game confirmation are permanently
+unauthorized after ADR 0078's failure. No external compute, extra training,
+test evaluation, gameplay sweep, or ranker access to the final suite is
 authorized.

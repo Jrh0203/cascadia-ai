@@ -4,12 +4,11 @@ Last updated: 2026-06-14
 
 ## Active Phase
 
-**Phase 5 and 6: fair hidden-state search, MLX ranking distillation,
-same-budget CRN, geometry-only value learning, absolute counterfactual state
-value, nearest-neighbor action advantage, and estimator qualification are
-closed. R12 rank-stratified contrast is qualified; its corrected corpus is
-actively collecting across john1 and john2, while john3 is qualified for the
-single frozen MLX complete-candidate-set ranker run.**
+**Phase 7 and 8: the from-scratch strength campaign is closed for this
+release. ADR 0078's corrected R12 corpus completed, but its single frozen MLX
+ranker run failed six validation gates and left test/gameplay unopened. The
+strongest qualified canonical-engine strategy is now entering the sealed
+1,000-game final validation across john1, john2, and john3.**
 
 ADR 0070 is rejected. The identifiability audit showed that the historical
 independent-seed teacher usually does not produce a statistically unique
@@ -798,8 +797,20 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   H6 rollouts and R12 continuations now deterministically rejection-sample
   only `WildlifeBagEmpty` trajectories, with the versioned contract bound into
   every new manifest. The exact failing game and the full MLX smoke both pass
-  under the correction. Corrected substantive collection is active; test and
-  gameplay remain closed.
+  under the correction.
+- Completed and rejected ADR 0078 on its one authorized corrected run. The
+  final corpus contains 128 train games and 32 validation games, with 122,880
+  complete continuations. The trained final epoch improved centered MAE,
+  correlation, and pairwise accuracy, but worsened the registered decision
+  objective, top-value recall, and mean regret. The untouched zero-output
+  checkpoint remained selected, and six gates failed. ADR 0079 test data,
+  authorization, inference, and gameplay all remained absent.
+- Detected and preserved an unintended 17-game john1 validation mirror during
+  handoff. All overlapping shards were byte-identical to john2, but john1 was
+  not the registered producer. The mirror is archived as invalid evidence,
+  and orchestration now rejects off-node collectors and permits automatic
+  recovery only for a byte-identical strict prefix with the same immutable
+  dataset contract.
 - Added a live local cluster dashboard for john1, john2, and john3 with
   read-only SSH telemetry, normalized utilization, health, uptime, and active
   Cascadia workload visibility.
@@ -811,11 +822,11 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   release server that serves the built frontend and API together at the
   stable Tailscale port 5187.
 - Provisioned john2 and john3 as reproducible local workers under the
-  distributed-compute goal contract. john1 is collecting ADR 0078 train
-  indices 69,000-69,127, john2 is collecting disjoint validation indices
-  70,000-70,031 with the exact collector binary, and john3 passed the locked
-  Python 3.12.13 / MLX 0.31.2 GPU device and six-test ADR 0078 model preflight.
-  The live execution record is
+  distributed-compute goal contract. john1 completed ADR 0078 train indices
+  69,000-69,127, john2 completed disjoint validation indices 70,000-70,031
+  with the exact collector binary, and john3 ran the frozen MLX job under
+  Python 3.12.13 / MLX 0.31.2 on `Device(gpu, 0)`. The completed execution
+  record is
   `docs/v2/reports/adr-0078-distributed-execution.md`.
 - Preregistered ADR 0079 before ADR 0078 validation completed. A complete
   validation pass conditionally opens only fresh test indices 71,000-71,031
@@ -826,13 +837,16 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   supervisor now records proof that test data was absent on all three nodes
   before authorization, collects only after a full pass, and uses a frozen
   external MLX evaluator that checks checkpoint identity and replays
-  validation bit-exactly. Seventeen focused tests pass, including transport,
+  validation bit-exactly. Eighteen focused tests pass, including transport,
   fail-closed recovery, evaluator, and module-size
   regression guard.
 - Preregistered ADR 0080 before validation or sealed-test metrics were known.
   If both offline stages pass, it permits exactly one grouped Rust/MLX parity
   qualification, seed-36099 runtime smoke, 20-game screen, and 100-game
   confirmation against unchanged H6. Any failed stage closes gameplay.
+- Closed ADR 0079 and ADR 0080 unopened after ADR 0078 failed validation.
+  Test indices 71,000-71,031, all 121 gameplay seeds, the grouped inference
+  service, and the parity fixture were never created.
 - Split the unattended cluster workflow into owned runtime, collection,
   transport, training, and sealed-test modules. john2 uses Tailscale first and
   an identity-pinned LAN route only after an SSH transport failure. The stable
@@ -848,7 +862,7 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   independent; only the test-only differential boundary can import v1.
 - Re-ran the complete format, lint, and test gate after the dashboard,
   orchestration hardening, source decomposition, and setup hardening: 223 Rust
-  tests, 125 Python tests, 7 frontend unit tests, and 5 applicable Playwright
+  tests, 131 Python tests, 7 frontend unit tests, and 5 applicable Playwright
   flows passed with zero failures.
 - Added a single troubleshooting entrypoint covering uv/MLX, SSH workers,
   resumable artifacts, launchd services, ports, browser evidence, and
@@ -872,21 +886,15 @@ certify the v2 rules or benchmark contract.
 
 ## Immediate Work
 
-1. Finish and independently validate the active distributed 128-game train
-   plus 32-game validation R12 rank-stratified corpus under ADR 0078's
-   explicit stable-market conditioning contract.
-2. Train the preregistered MLX complete-candidate-set ranker while
-   retaining the shared-seed sampler, post-prelude public state,
-   explicit public supply and opponent-board context, raw decomposed returns,
-   uncertainty, and exact immediate score.
-3. Apply the frozen validation branch: leave ADR 0079 unopened on any failed
-   gate, or execute its already sealed 32-game test and one validation replay
-   after a complete pass.
-4. Keep the independent exact-MLX K32/R600 teacher as the 95.775 local
-   research reference; do not collect CRN labels or reopen ADR 0073's test
-   domain.
-5. Continue toward the 100-point final gate; the historical MLX port remains a
-   research teacher, not a final solution.
+1. Freeze one clean source revision and input fingerprint set for final
+   validation.
+2. Run exact-MLX K32/R600 on final indices 0-999 across john1, john2, and
+   john3, paired against the canonical v2 research control.
+3. Aggregate all 1,000 game blocks and 4,000 treatment seat scores with score
+   breakdowns, confidence intervals, percentiles, latency, host, source,
+   executable, model, and shutdown evidence.
+4. Publish the strongest factual result, explicitly state whether 100 was
+   reached, complete the clean-checkout audit, and close the roadmap.
 
 ## Promotion State
 

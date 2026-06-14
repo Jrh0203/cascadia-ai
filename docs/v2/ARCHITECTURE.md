@@ -150,6 +150,9 @@ the frozen MLX model package. The ADR 0078/0079 handoff is split by ownership:
 - `tools/adr0078_cluster_transport.py`: identity-pinned SSH and rsync endpoint
   construction, with Tailscale primary routes and a verified john2 LAN
   fallback;
+- `tools/adr0078_artifact_handoff.py`: producer ownership checks,
+  byte-identical strict-prefix recovery, archival evidence, and atomic dataset
+  installation;
 - `tools/adr0078_collection.py`: train/validation monitoring, producer
   validation, aggregation, and john3 provisioning;
 - `tools/adr0078_training.py`: the single resumable MLX run, validation

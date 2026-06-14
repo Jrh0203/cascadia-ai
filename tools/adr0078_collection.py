@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
 import shlex
 import shutil
 import time
 from typing import Any
 
+import adr0078_artifact_handoff as handoff
 import adr0078_cluster_runtime as rt
 
 
@@ -190,14 +190,13 @@ def sync_validation_to_john1() -> None:
             str(incoming),
         ]
     )
-    if rt.VALIDATION_DATASET.exists():
-        if rt.sha256_file(rt.VALIDATION_DATASET / "dataset.json") != rt.sha256_file(
-            incoming / "dataset.json"
-        ):
-            raise ValueError("existing john1 validation dataset differs from john2")
-        shutil.rmtree(incoming)
-    else:
-        os.replace(incoming, rt.VALIDATION_DATASET)
+    archive = handoff.install_validated_dataset(
+        incoming,
+        rt.VALIDATION_DATASET,
+        rt.ROOT / "artifacts/datasets/invalidated",
+    )
+    if archive is not None:
+        rt.log(f"archived unregistered john1 validation prefix at {archive}")
     rt.run(
         [
             str(rt.LOCAL_BINARY),

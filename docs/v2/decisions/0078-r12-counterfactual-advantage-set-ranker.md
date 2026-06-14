@@ -1,10 +1,10 @@
 # ADR 0078: R12 Counterfactual-Advantage Set Ranker
 
-Status: preregistered on 2026-06-13. Implementation and the finite-market
-conditioning correction are complete. Corrected fresh train and validation
-collection is active across john1 and john2; john3 passed the frozen MLX
-environment and model preflight. One frozen MLX training run remains
-authorized. Test and gameplay remain closed.
+Status: rejected on validation on 2026-06-14. The corrected fresh train and
+validation corpora completed and passed all integrity checks. The single
+frozen MLX run stopped after five non-improving epochs, and the untouched
+zero-output checkpoint remained best. Six validation gates failed. Test,
+inference, gameplay, and promotion remained unopened.
 
 ## Context
 
@@ -215,8 +215,8 @@ because neither smoke game encountered an impossible branch.
 
 ## Distributed Local Execution
 
-The corrected substantive recollection is being executed in parallel without
-changing the frozen statistical protocol:
+The corrected substantive recollection executed in parallel without changing
+the frozen statistical protocol:
 
 - john1 owns train indices 69,000-69,127;
 - john2 owns disjoint validation indices 70,000-70,031;
@@ -225,19 +225,61 @@ changing the frozen statistical protocol:
 
 john2 uses the exact release collector checksum from john1. Both worker
 checkouts report Git revision `a9918946f66c237a803b23ea299c6a514785ae52`.
-john3 runs CPython 3.12.13 and MLX 0.31.2 on `Device(gpu, 0)` and passed all
+john3 ran CPython 3.12.13 and MLX 0.31.2 on `Device(gpu, 0)` and passed all
 six focused counterfactual decoder/model tests before receiving statistical
-data. The commands, source and executable identities, node allocation, and
-completion checklist are recorded in
+data. The commands, source and executable identities, node allocation,
+handoff incident, and completion checklist are recorded in
 `docs/v2/reports/adr-0078-distributed-execution.md`.
+
+## Validation Result
+
+The corrected corpus completed exactly as registered:
+
+- train: 128 games, 2,048 groups, 8,192 candidates, and 98,304 continuations;
+- validation: 32 games, 512 groups, 2,048 candidates, and 24,576
+  continuations;
+- train manifest BLAKE3:
+  `c4102f016feecb103d2924656a82404fbb27b9f54db39dda66e46ff8ba3737da`;
+- validation manifest BLAKE3:
+  `02d3603a8ac9e36cd03ba60c160b18296b722d687c72221b2df95d2467bfd392`.
+
+The one authorized MLX run completed 640 optimizer steps over five epochs in
+16.318 seconds on `Device(gpu, 0)`, then stopped at the frozen patience limit.
+The trained final epoch improved centered MAE from 0.6432 to 0.6002,
+correlation from 0.7496 to 0.7881, and pairwise accuracy from 52.48% to
+74.64%. It simultaneously worsened the checkpoint-selection objective from
+0.7035 to 0.7168, top-value recall from 44.92% to 45.70%, and mean regret from
+0.4927 to 0.5199.
+
+The untouched zero-output checkpoint therefore remained the exact selected
+checkpoint. It failed six frozen gates:
+
+- validation objective did not improve by at least 10%;
+- centered MAE did not improve by at least 10%;
+- top-value recall was below 50%;
+- top-value recall was not at least five points above H6's 48.24%;
+- mean regret exceeded 0.40;
+- mean regret was not at least 0.05 below H6's 0.4390.
+
+The selected checkpoint passed GPU, absolute MAE, correlation, source,
+checkpoint, and report-integrity gates. The complete machine-readable result
+is
+`docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.json`.
+Its BLAKE3 is
+`c74729dc03e714a2d8c889ec06b7d1ddbc0c6b10c60d4e0ee65439e37ed1cf77`.
+
+This rejects the model without retry. The target remains observable and the
+trained network learned broad ordering, but its corrections did not identify
+the best action reliably enough to improve the registered decision objective
+or H6-relative regret. ADR 0079 and ADR 0080 closed unopened.
 
 ## Maximum Compute
 
-Two one-game four-group R12 implementation datasets; one 128-game R12 train
-collection; one 32-game R12 validation collection; one frozen MLX run of at
-most twenty epochs with patience five. The invalidated pre-training collection
-is retained only as failure evidence; one complete corrected recollection from
-the same preregistered indices is authorized. No external compute, test
-access, gameplay, model retry, seed sweep, hyperparameter sweep, warm start,
-architecture change, threshold change, candidate change, or extra statistical
-game is authorized.
+The authorized compute is exhausted: two one-game four-group R12
+implementation datasets, one corrected 128-game R12 train collection, one
+corrected 32-game R12 validation collection, and one frozen MLX run stopped by
+patience after five epochs. The invalidated pre-training collection and the
+unregistered john1 strict-prefix mirror are retained only as failure evidence.
+No external compute, test access, gameplay, model retry, seed sweep,
+hyperparameter sweep, warm start, architecture change, threshold change,
+candidate change, or extra statistical game is authorized.

@@ -33,6 +33,12 @@ The generated report also includes the independently reproduced v1
 cross-engine reference. That comparison is explicitly absolute rather than
 paired.
 
+Policy selection closed on 2026-06-14 after ADR 0078's fresh R12 set ranker
+failed six validation gates. ADR 0079 test and ADR 0080 gameplay remained
+unopened. The exact-MLX K32/R600 reference is therefore the strongest
+qualified strategy eligible for the final suite; no validation or test metric
+was used to alter its configuration.
+
 ## Three-Node Layout
 
 Use one process per Apple GPU. The frozen 1,000-game layout is:

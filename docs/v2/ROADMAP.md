@@ -51,7 +51,7 @@
 ## Phase 5-6: Strength Campaign
 
 - [x] Quantify candidate recall and score-loss sources.
-- [ ] Run registered architecture, search, distillation, and self-play studies.
+- [x] Run registered architecture, search, distillation, and self-play studies.
 - [x] Audit R600 teacher winner identifiability before another distillation
       run; close exact-action imitation after only 18.4% of validation winners
       cleared a 95% difference test.
@@ -78,11 +78,12 @@
       failure; archive the unconditioned corpus, version deterministic
       rejection conditioning in the teacher manifest, and replay the exact
       failing game plus the full MLX smoke.
-- [ ] Complete the corrected ADR 0078 collection of the authorized 128-game
+- [x] Complete the corrected ADR 0078 collection of the authorized 128-game
       train and 32-game validation R12 corpus on the local john1/john2
-      cluster. Both disjoint splits are actively collecting.
-- [ ] Train the implemented MLX public-supply-aware complete-candidate-set
-      ranker and apply every frozen validation gate.
+      cluster.
+- [x] Train the implemented MLX public-supply-aware complete-candidate-set
+      ranker and apply every frozen validation gate; rejected after six gates
+      failed and the zero-output initialization remained selected.
 - [x] Preregister ADR 0079's fresh 32-game sealed test before ADR 0078
       validation is known; keep it unopened unless every validation gate
       passes.
@@ -92,6 +93,9 @@
 - [x] Preregister ADR 0080's grouped Rust/MLX parity, latency, 20-game screen,
       and 100-game confirmation gates before ADR 0078 validation or ADR 0079
       test metrics are known.
+- [x] Close ADR 0079 and ADR 0080 unopened after ADR 0078 validation failed;
+      no test record, inference service, parity fixture, or gameplay seed was
+      opened.
 - [x] Promote only confirmed paired improvements.
 - [x] Confirm positive late-terminal policy-improvement signal without
       weakening frozen mechanism guardrails.

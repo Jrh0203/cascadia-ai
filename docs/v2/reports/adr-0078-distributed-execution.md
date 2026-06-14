@@ -1,6 +1,6 @@
 # ADR 0078 Distributed Execution Record
 
-Status: active on 2026-06-13/14.
+Status: complete and rejected on validation on 2026-06-14.
 
 ## Allocation
 
@@ -8,7 +8,7 @@ Status: active on 2026-06-13/14.
 |---|---|---|---|
 | `john1` | R12 train collection | 69,000-69,127 | 2026-06-13T19:26:18Z |
 | `john2` | R12 validation collection | 70,000-70,031 | 2026-06-14T02:02:50Z |
-| `john3` | MLX training environment and model preflight | no statistical data | 2026-06-14 |
+| `john3` | frozen MLX training and validation | transferred train/validation only | 2026-06-14T05:20:16Z |
 
 The train and validation domains are disjoint and were preregistered in ADR
 0078 before either collection began. No statistical game is duplicated across
@@ -91,8 +91,33 @@ environment used on john1. Its device probe reported:
   `8e-8`.
 
 The focused ADR 0078 decoder/model suite passed on john3: six tests, zero
-failures. john3 will receive the checksummed train and validation datasets
-after both collections complete and will run the single frozen training job.
+failures. john3 received the checksummed train and validation datasets after
+both collections completed and ran the single frozen training job.
+
+## Ownership Collision And Recovery
+
+An unintended duplicate validation collector was discovered on john1 after
+john2 completed its registered 32-game corpus. It had produced 17 local shards
+under the same dataset ID with john1's current source provenance. Every one of
+those 17 shard files was byte-identical to the corresponding john2 shard, but
+john1 was not the registered validation producer.
+
+The supervisor correctly stopped before training because the destination
+manifest differed. PID 57917 was terminated, and the duplicate was archived
+without contributing a record under:
+
+`artifacts/datasets/invalidated/adr-0078-unregistered-john1-validation-afba36f8b1ce`
+
+Its manifest SHA-256 is
+`afba36f8b1ce8c3a0b47b64afcdd12ce22d7d85f18d9ba44cec35efc78b48a89`.
+The complete john2 manifest SHA-256 is
+`5fd3526aec30ce390b1767cb7bca7eb73496e1a16243cca38f0a15d058ecb990`.
+
+The permanent handoff rule now rejects any unregistered local validation
+collector before monitoring. During aggregation, only a byte-identical strict
+prefix with the same immutable dataset contract may be archived and replaced
+atomically by the complete registered producer corpus. Any changed contract,
+shard metadata, byte, or non-prefix collision still fails closed.
 
 ## Unattended Handoff
 
@@ -124,25 +149,48 @@ modules. The service:
   once on john3, and replays validation bit-exactly;
 - keeps gameplay and promotion closed in every branch.
 
-Seventeen focused orchestration, transport, evaluator, and structure tests
+Eighteen focused orchestration, transport, evaluator, and structure tests
 cover module size, manifest and command drift, process-lock ownership, durable
 exact resumption, unreachable-host progress preservation, identity-pinned LAN
 fallback, stalled training, sealed-test authorization ordering, checkpoint
 identity, and validation replay. Live state and logs are under
 `artifacts/logs/`.
 
+## Result
+
+The corrected train corpus completed 128 games, 2,048 groups, 8,192
+candidates, and 98,304 continuations. The corrected validation corpus
+completed 32 games, 512 groups, 2,048 candidates, and 24,576 continuations.
+Both validated on their producing hosts, john1, and john3.
+
+The frozen MLX run completed 640 optimizer steps over five epochs in 16.318
+seconds on `Device(gpu, 0)` and stopped at the registered patience limit. The
+zero-output initialization remained the selected checkpoint. Six validation
+gates failed, so the model was rejected and ADR 0079 remained unopened.
+
+Key identities:
+
+- train manifest SHA-256:
+  `ed6b64c90327b818dccddb2f7185404c5cd743b65bd5c963d1f19472dad1655c`;
+- validation manifest SHA-256:
+  `5fd3526aec30ce390b1767cb7bca7eb73496e1a16243cca38f0a15d058ecb990`;
+- run manifest SHA-256:
+  `2b8615d60f80ba8f6303464927f36e5aa1f140ed6e345c336452401353176ba8`;
+- selected checkpoint manifest SHA-256:
+  `314ac7fa77138b791f2092a0ef59e1a690fb2caf094f18218d0cab1dab803fd5`;
+- validation report SHA-256:
+  `6f0b9f87bac3532c1059f80156517b0eaf9e3feef1c0e2e67c81be3956d52629`.
+
 ## Completion Checklist
 
-- [ ] john1 train manifest reaches 128/128 and validates.
-- [ ] john2 validation manifest reaches 32/32 and validates.
-- [ ] validation dataset is copied to john1 and both manifests/checksums are
+- [x] john1 train manifest reaches 128/128 and validates.
+- [x] john2 validation manifest reaches 32/32 and validates.
+- [x] validation dataset is copied to john1 and both manifests/checksums are
       independently revalidated.
-- [ ] both datasets are copied to john3 and revalidated before training.
-- [ ] the one authorized MLX run completes or stops at frozen patience.
-- [ ] selected-checkpoint validation gates are evaluated once.
-- [ ] artifacts are copied back to john1 and checksummed.
-- [ ] if validation passes, ADR 0079 authorization precedes the first test
-      record and the exact 32-game test completes; otherwise test remains
-      unopened.
-- [ ] if test opens, selected-checkpoint evaluation and the single validation
-      replay complete on john3 without gameplay access.
+- [x] both datasets are copied to john3 and revalidated before training.
+- [x] the one authorized MLX run completes or stops at frozen patience.
+- [x] selected-checkpoint validation gates are evaluated once.
+- [x] artifacts are copied back to john1 and checksummed.
+- [x] validation fails, so ADR 0079 authorization and its first test record
+      remain absent.
+- [x] test, inference, gameplay, and promotion remain unopened.

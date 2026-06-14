@@ -72,6 +72,12 @@ therefore accepted only when it presents john2's already pinned host key.
 The same fallback applies to rsync. A remote command exit other than SSH's 255
 transport failure is never retried through another endpoint.
 
+Validation is owned exclusively by john2. If an unintended john1 collector
+creates the same dataset, stop that process before restarting the supervisor.
+The handoff can archive and replace only a byte-identical strict prefix with
+the same immutable contract. Any other collision remains a hard failure.
+Archived collision evidence lives under `artifacts/datasets/invalidated/`.
+
 ## Web And Dashboard
 
 Development:

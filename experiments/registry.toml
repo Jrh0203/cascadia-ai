@@ -4823,7 +4823,7 @@ gameplay_domain_opened = false
 
 [[experiment]]
 id = "r12-counterfactual-advantage-set-ranker-v1-20260613"
-status = "finite-market conditioning corrected; distributed substantive recollection active"
+status = "rejected on corrected validation; test and gameplay unopened"
 hypothesis = "A joint MLX ranker over four rank-stratified observable action afterstates plus exact public supply can learn the qualified R12 terminal advantage and materially improve on the H6-selected action."
 baseline = "unchanged H6-selected action within each selected/high/median/low group; exact immediate-score ranker is the zero-initialized neural baseline"
 treatment = "mlx-r12-counterfactual-advantage-set-ranker-v1 with public-supply encoding, complete-candidate attention, and bounded immediate-score residual"
@@ -4836,14 +4836,14 @@ promotion_threshold = "all integrity gates; GPU execution; validation objective 
 maximum_compute = "two one-game four-group R12 implementation datasets, one corrected 128-game R12 train corpus, one corrected 32-game R12 validation corpus, and one MLX run of at most 20 epochs with patience 5; one complete recollection from the same indices is authorized after the pre-training finite-market failure; no external compute, test, gameplay, model retry, sweep, warm start, threshold change, or extra statistical game"
 hardware = "local Apple M4 cluster: john1 train collection, john2 validation collection, john3 MLX training; each node has 10 CPU cores and 16 GB unified memory"
 distributed_execution_report = "docs/v2/reports/adr-0078-distributed-execution.md"
-distributed_execution_report_blake3 = "8041e429412d4ac78eea22e5dfa9307c163bca1fa8353a57911888a632b66bf9"
+distributed_execution_report_blake3 = "831c472cf8868a856011148d01affa3e800c1fc407f5aa74df1893f37ae71b23"
 train_host = "john1"
 validation_host = "john2"
 training_host = "john3"
 collector_executable_blake3 = "183192792323090bac31de9ba8e4327ae466cb066f844447ef6a8c696fc122d1"
 worker_source_blake3 = "2c761bb49bbc22fc84fbac437242025afe103322cfd5336f4f0950cf183426d4"
 adr = "docs/v2/decisions/0078-r12-counterfactual-advantage-set-ranker.md"
-adr_blake3 = "cd8df7bd0590321a2c387bdcf3a0c9daff2273a695d738b3d433ebff5fc76fbc"
+adr_blake3 = "55a892bb3f4b79c56045fac0082a93665a9f800c30ab416d1dd495a9b6d07c68"
 teacher = "habitat-candidate-lookahead-v1-k8-h6-r4-d4"
 candidate_selection = "selected-high-median-low-v1"
 stabilization_conditioning = "reject-unstable-market-trajectories-v1"
@@ -4914,12 +4914,67 @@ failure_reproduction_continuations = 768
 failure_reproduction_collection_seconds = 225.045
 substantive_metrics_opened_before_invalidation = false
 substantive_model_trained_before_invalidation = false
+unregistered_john1_validation_archive = "artifacts/datasets/invalidated/adr-0078-unregistered-john1-validation-afba36f8b1ce"
+unregistered_john1_validation_manifest_sha256 = "afba36f8b1ce8c3a0b47b64afcdd12ce22d7d85f18d9ba44cec35efc78b48a89"
+unregistered_john1_validation_manifest_blake3 = "77711ba89760016afdd5a75e16a95ac0b403640d2124373d6dd9253430e78477"
+unregistered_john1_validation_games = 17
+unregistered_john1_validation_overlap_byte_identical = true
+handoff_module = "tools/adr0078_artifact_handoff.py"
+handoff_module_blake3 = "6519f28c88d399e815121ae3218f3807e53e8b5c650b867c3dbf6314cbc2a263"
+train_manifest_sha256 = "ed6b64c90327b818dccddb2f7185404c5cd743b65bd5c963d1f19472dad1655c"
+train_manifest_blake3 = "c4102f016feecb103d2924656a82404fbb27b9f54db39dda66e46ff8ba3737da"
+train_groups = 2048
+train_candidates = 8192
+train_continuations = 98304
+validation_manifest_sha256 = "5fd3526aec30ce390b1767cb7bca7eb73496e1a16243cca38f0a15d058ecb990"
+validation_manifest_blake3 = "02d3603a8ac9e36cd03ba60c160b18296b722d687c72221b2df95d2467bfd392"
+validation_groups = 512
+validation_candidates = 2048
+validation_continuations = 24576
+training_device = "Device(gpu, 0)"
+training_epochs = 5
+training_steps = 640
+training_elapsed_seconds = 16.317901000000006
+training_stopped_reason = "validation futility after 5 non-improving epochs"
+selected_checkpoint = "step-000000000-epoch-0000-batch-000000"
+selected_checkpoint_manifest_blake3 = "807ea4f99330ddf0c049a8c1533fd91cbbc0b581fc2b5bfcb5277ca4b8980fcd"
+selected_checkpoint_manifest_sha256 = "314ac7fa77138b791f2092a0ef59e1a690fb2caf094f18218d0cab1dab803fd5"
+initial_validation_objective = 0.7035108523568852
+selected_validation_objective = 0.7035108523568852
+selected_centered_mae = 0.643168106675148
+selected_centered_correlation = 0.7496476252291451
+selected_pairwise_accuracy = 0.5248130523453433
+selected_top_value_recall = 0.44921875
+selected_mean_top_action_regret = 0.4926757514476776
+h6_top_value_recall = 0.482421875
+h6_mean_top_action_regret = 0.4389648735523224
+final_epoch_validation_objective = 0.7167966513255806
+final_epoch_centered_mae = 0.6002301890403032
+final_epoch_centered_correlation = 0.7880882070818406
+final_epoch_pairwise_accuracy = 0.7464309993201903
+final_epoch_top_value_recall = 0.45703125
+final_epoch_mean_top_action_regret = 0.5198567658662796
+failed_gates = [
+  "validation_objective_improves_at_least_10_percent",
+  "centered_mae_improves_at_least_10_percent",
+  "top_value_recall_at_least_0_50",
+  "top_value_recall_at_least_h6_plus_0_05",
+  "mean_regret_at_most_0_40",
+  "mean_regret_at_least_0_05_below_h6",
+]
+run_manifest_sha256 = "2b8615d60f80ba8f6303464927f36e5aa1f140ed6e345c336452401353176ba8"
+run_manifest_blake3 = "727c6f6fed4a5e77334a73f73fee9f2dfab9d847775df5878c3898fd9e9ec356"
+validation_report = "docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.json"
+validation_report_sha256 = "6f0b9f87bac3532c1059f80156517b0eaf9e3feef1c0e2e67c81be3956d52629"
+validation_report_blake3 = "c74729dc03e714a2d8c889ec06b7d1ddbc0c6b10c60d4e0ee65439e37ed1cf77"
+result = "corrected corpus and frozen MLX run completed; selected zero-output checkpoint failed six validation gates"
+conclusion = "The R12 target remained observable and the trained network improved broad pairwise geometry, but the frozen selector retained exact immediate score because trained corrections worsened decision objective, top recall, and regret. The model is rejected without retry. ADR 0079 and ADR 0080 remain unopened."
 test_domain_opened = false
 gameplay_domain_opened = false
 
 [[experiment]]
 id = "r12-counterfactual-advantage-set-ranker-v1-sealed-test-20260613"
-status = "conditionally preregistered and implemented; test sealed pending complete ADR 0078 validation pass"
+status = "closed unopened after ADR 0078 validation failure"
 hypothesis = "If the ADR 0078 selected checkpoint passes every frozen validation gate, its improvement over exact immediate score and the H6-selected action will generalize unchanged to a fresh 32-game R12 test corpus."
 baseline = "exact immediate-score ranker at untouched zero initialization and the unchanged H6-selected action within each selected/high/median/low test group"
 treatment = "the byte-identical ADR 0078 best-pointer checkpoint; no retraining, calibration, blending, or reselection"
@@ -4932,7 +4987,7 @@ promotion_threshold = "all integrity gates; MLX GPU; objective >=10% below initi
 maximum_compute = "conditional on all ADR 0078 validation gates: one 32-game R12 test collection, one selected-checkpoint test evaluation, and one bit-exact validation replay; no external compute, retraining, retry, duplicate corpus, extra statistical game, gameplay, or promotion"
 hardware = "one otherwise idle local Apple M4 worker for collection; john1 aggregation; john3 MLX Device(gpu, 0) evaluation"
 adr = "docs/v2/decisions/0079-r12-counterfactual-advantage-set-ranker-test.md"
-adr_blake3 = "87706a051bbcef5039dcd356739552661cbdf04fb685ff64e59b003013332338"
+adr_blake3 = "3529593675dd98757634d5a5161ef4f8c1e583e339fe7b9b52c2dbf9aecc626a"
 parent_experiment = "r12-counterfactual-advantage-set-ranker-v1-20260613"
 teacher = "habitat-candidate-lookahead-v1-k8-h6-r4-d4"
 candidate_selection = "selected-high-median-low-v1"
@@ -4949,13 +5004,21 @@ evaluator_blake3 = "409384795cffd4c9538cd9af498789e823a2832421bb1d10582710e733df
 authorization_artifact = "artifacts/runs/r12-counterfactual-advantage-set-ranker-v1/test-authorization.json"
 orchestration_tests = 17
 validation_pass_required_before_collection = true
+parent_validation_passed = false
+parent_failed_gates = 6
+authorization_written = false
+test_absent_on_john1 = true
+test_absent_on_john2 = true
+test_absent_on_john3 = true
+result = "closed without authorization, collection, or evaluation"
+conclusion = "ADR 0078 failed validation, so the conditional test was never opened and no test compute was consumed."
 test_domain_opened = false
 gameplay_domain_opened = false
 promotion_authorized = false
 
 [[experiment]]
 id = "r12-counterfactual-advantage-set-ranker-v1-gameplay-qualification-20260614"
-status = "conditionally preregistered; inference and gameplay sealed pending complete ADR 0078 validation and ADR 0079 test passes"
+status = "closed unopened after ADR 0078 validation failure"
 hypothesis = "The fresh R12 complete-candidate-set MLX ranker will convert its sealed offline advantage fidelity into a reproducible paired gain over unchanged H6 without category collapse or material runtime regression."
 baseline = "habitat-candidate-lookahead-v1-k8-h6-r4-d4"
 treatment = "unchanged H6 frontier with selected-high-median-low retention, jointly rescored by the byte-identical ADR 0078 best checkpoint"
@@ -4968,7 +5031,7 @@ promotion_threshold = "parity max error <=1e-5 and exact argmax/hash/supply iden
 maximum_compute = "conditional on both offline passes: one 128-group parity/throughput qualification, one runtime smoke, one 20-game screen, and only after complete pass one 100-game confirmation; no external compute, retraining, retry, sweep, threshold change, extra gameplay, or final-suite access"
 hardware = "local Apple M4 cluster only; MLX Device(gpu, 0)"
 adr = "docs/v2/decisions/0080-r12-set-ranker-gameplay-qualification.md"
-adr_blake3 = "706ba3c265516be4bec87b279da05d98e066641a8a86e180bc897e3d620cd3cc"
+adr_blake3 = "b423e985ce4f2f710159ce335f344cc695845ab64b4f0e0cf20f4f1a39bbd239"
 parent_experiment = "r12-counterfactual-advantage-set-ranker-v1-sealed-test-20260613"
 teacher = "habitat-candidate-lookahead-v1-k8-h6-r4-d4"
 candidate_selection = "selected-high-median-low-v1"
@@ -4981,6 +5044,13 @@ confirmation_first_seed = 36200
 confirmation_games = 100
 validation_pass_required = true
 test_pass_required = true
+validation_passed = false
+parity_groups_consumed = 0
+runtime_smoke_games_consumed = 0
+screen_games_consumed = 0
+confirmation_games_consumed = 0
+result = "closed before inference implementation or gameplay"
+conclusion = "The prerequisite ADR 0078 validation failed, so grouped service parity, latency qualification, all 121 gameplay games, and final policy selection remained unopened."
 inference_domain_opened = false
 gameplay_domain_opened = false
 final_domain_opened = false

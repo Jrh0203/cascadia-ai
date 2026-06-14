@@ -632,3 +632,31 @@ from selecting the confirmation corpus, threshold, or acceptance rule. The
 conditional handoff is already implemented: authorization must prove the test
 path was absent on all three nodes, and the external evaluator must preserve
 checkpoint identity and replay validation bit-exactly.
+
+ADR 0078 is now complete and rejected. Its corrected 128-game train and
+32-game validation corpora passed every schema, checksum, provenance,
+finite-market, public-supply, and shared-seed integrity check. The one frozen
+MLX run stopped after five non-improving epochs. The final trained epoch
+substantially improved broad ordering, moving pairwise accuracy from 52.48% to
+74.64% and centered correlation from 0.750 to 0.788, but it worsened the
+registered decision objective, mean regret, and exact top selection.
+
+Because the initial exact-immediate checkpoint remained best, substantive
+validation top-value recall was only 44.92% versus H6's 48.24%, and regret was
+0.493 versus H6's 0.439. Six frozen gates failed. No retry is authorized, and
+ADR 0079 and ADR 0080 closed without opening a test record, inference
+service, or gameplay seed.
+
+The result separates target quality from policy learnability. Shared R12
+returns are stable and decision-local, and the model can learn much of their
+pairwise geometry. That is still insufficient: the learned correction does
+not concentrate probability on the best action or beat the shallow H6 choice.
+This closes the complete four-candidate public-supply-aware set ranker as the
+final route for v2.
+
+The strongest qualified canonical-engine policy remains the exact MLX
+K32/R600 historical evaluator at roughly 95.8. It is below the 100 target and
+is a research reference rather than a newly trained v2 model. The final
+evidence step is therefore the sealed 1,000-game final-domain benchmark,
+distributed across all three local Macs, with an explicit unmet-target verdict
+unless that held-out mean reaches 100.

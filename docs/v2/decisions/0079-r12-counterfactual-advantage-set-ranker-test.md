@@ -1,10 +1,8 @@
 # ADR 0079: R12 Set-Ranker Sealed Test
 
-Status: conditionally preregistered on 2026-06-13 before ADR 0078 validation
-completed. The external evaluator and conditional cluster handoff are
-implemented and tested. The test corpus is sealed and may be collected only
-if ADR 0078 passes every frozen validation gate. Gameplay and promotion remain
-closed.
+Status: closed unopened on 2026-06-14. ADR 0078 failed six frozen validation
+gates, so no test authorization was written and test indices 71,000-71,031
+were never collected or evaluated. Gameplay and promotion remain closed.
 
 ## Context
 
@@ -137,11 +135,16 @@ qualification, and a fresh paired gameplay protocol. It does not itself
 authorize gameplay, product exposure, promotion, a 100-point claim, or final
 validation.
 
+ADR 0078 did not reach this stage. After its validation failure, the
+supervisor verified that the test dataset path was absent on john1, john2, and
+john3 and that `test-authorization.json` did not exist. This ADR therefore
+closed without spending a test record, loading the checkpoint against test
+data, or opening gameplay.
+
 ## Maximum Compute
 
-Conditional on an ADR 0078 validation pass: one 32-game R12 test collection,
-one integrity-checked evaluation of the already selected checkpoint, and one
-bit-exact validation-report replay. The collection may run on one otherwise
-idle local Apple M4 worker while john1 coordinates validation. No external
-compute, second model run, test retry, duplicate corpus, extra statistical
-game, gameplay seed, or promotion action is authorized.
+No test compute was consumed. The conditional 32-game collection, checkpoint
+evaluation, and validation replay are permanently unauthorized because ADR
+0078 failed validation. No external compute, second model run, test retry,
+duplicate corpus, extra statistical game, gameplay seed, or promotion action
+is authorized.

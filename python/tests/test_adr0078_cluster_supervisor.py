@@ -11,6 +11,7 @@ TOOLS = Path(__file__).resolve().parents[2] / "tools"
 sys.path.insert(0, str(TOOLS))
 runtime = importlib.import_module("adr0078_cluster_runtime")
 transport = importlib.import_module("adr0078_cluster_transport")
+handoff = importlib.import_module("adr0078_artifact_handoff")
 collection = importlib.import_module("adr0078_collection")
 training = importlib.import_module("adr0078_training")
 sealed_test = importlib.import_module("adr0079_cluster_handoff")
@@ -19,6 +20,7 @@ sealed_test = importlib.import_module("adr0079_cluster_handoff")
 def test_cluster_orchestration_modules_stay_focused() -> None:
     limits = {
         "adr0078_cluster_supervisor.py": 100,
+        "adr0078_artifact_handoff.py": 175,
         "adr0078_cluster_runtime.py": 500,
         "adr0078_cluster_transport.py": 150,
         "adr0078_collection.py": 300,
@@ -344,3 +346,89 @@ def test_state_update_removes_nullable_status_fields(
     monkeypatch.setattr(runtime, "STATE_PATH", state_path)
     runtime.update_state("collecting", unavailable_host=None)
     assert "unavailable_host" not in json.loads(state_path.read_text())
+
+
+def test_handoff_archives_only_a_byte_identical_strict_prefix(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "validation"
+    incoming = tmp_path / "validation.incoming"
+    invalidated = tmp_path / "invalidated"
+    destination.mkdir()
+    incoming.mkdir()
+    shard = b"registered shard"
+    (destination / "shard-00000.cfa").write_bytes(shard)
+    (incoming / "shard-00000.cfa").write_bytes(shard)
+    (incoming / "shard-00001.cfa").write_bytes(b"complete shard")
+    base = {field: f"value-{field}" for field in handoff.IMMUTABLE_MANIFEST_FIELDS}
+    base["requested_games"] = 2
+    existing = {
+        **base,
+        "completed_games": 1,
+        "shards": [{"file": "shard-00000.cfa", "blake3": "a"}],
+    }
+    complete = {
+        **base,
+        "completed_games": 2,
+        "shards": [
+            {"file": "shard-00000.cfa", "blake3": "a"},
+            {"file": "shard-00001.cfa", "blake3": "b"},
+        ],
+    }
+    (destination / "dataset.json").write_text(json.dumps(existing))
+    (incoming / "dataset.json").write_text(json.dumps(complete))
+
+    archive = handoff.install_validated_dataset(incoming, destination, invalidated)
+
+    assert archive is not None
+    assert json.loads((destination / "dataset.json").read_text()) == complete
+    assert json.loads((archive / "dataset.json").read_text()) == existing
+    incident = json.loads((archive / "invalidation.json").read_text())
+    assert incident["overlap_shards"] == 1
+    assert incident["registered_shards"] == 2
+
+
+def test_handoff_rejects_a_different_prefix_shard(tmp_path: Path) -> None:
+    destination = tmp_path / "validation"
+    incoming = tmp_path / "validation.incoming"
+    destination.mkdir()
+    incoming.mkdir()
+    (destination / "shard-00000.cfa").write_bytes(b"left")
+    (incoming / "shard-00000.cfa").write_bytes(b"right")
+    base = {field: f"value-{field}" for field in handoff.IMMUTABLE_MANIFEST_FIELDS}
+    base["requested_games"] = 2
+    existing = {
+        **base,
+        "completed_games": 1,
+        "shards": [{"file": "shard-00000.cfa", "blake3": "same"}],
+    }
+    complete = {
+        **base,
+        "completed_games": 2,
+        "shards": [
+            {"file": "shard-00000.cfa", "blake3": "same"},
+            {"file": "shard-00001.cfa", "blake3": "other"},
+        ],
+    }
+    (destination / "dataset.json").write_text(json.dumps(existing))
+    (incoming / "dataset.json").write_text(json.dumps(complete))
+
+    with pytest.raises(ValueError, match="prefix shard differs"):
+        handoff.install_validated_dataset(
+            incoming,
+            destination,
+            tmp_path / "invalidated",
+        )
+
+
+def test_handoff_rejects_an_unregistered_local_validation_collector(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    running = runtime.subprocess.CompletedProcess([], 0, "123\n", "")
+    monkeypatch.setattr(runtime, "run", lambda *_args, **_kwargs: running)
+    with pytest.raises(RuntimeError, match="exclusively to john2"):
+        handoff.assert_no_unregistered_local_validation_collector()
+
+    absent = runtime.subprocess.CompletedProcess([], 1, "", "")
+    monkeypatch.setattr(runtime, "run", lambda *_args, **_kwargs: absent)
+    handoff.assert_no_unregistered_local_validation_collector()

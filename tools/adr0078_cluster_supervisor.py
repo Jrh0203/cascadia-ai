@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+import adr0078_artifact_handoff as handoff
 import adr0078_cluster_runtime as rt
 import adr0078_collection as collection
 import adr0078_training as training
@@ -18,6 +19,7 @@ def supervise() -> None:
         rt.log("ADR 0078 cluster supervisor started")
         rt.update_state("starting", supervisor_pid=rt.os.getpid())
         collection.verify_binary_identity(require_remote=False)
+        handoff.assert_no_unregistered_local_validation_collector()
         collection.wait_for_collections()
         collection.verify_binary_identity()
         collection.validate_on_producer_hosts()
