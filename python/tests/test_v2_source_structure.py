@@ -56,3 +56,11 @@ def test_v1_remains_behind_the_explicit_legacy_boundary() -> None:
         assert "legacy/" not in manifest.read_text(), (
             f"{manifest.relative_to(ROOT)} imported the superseded v1 boundary"
         )
+
+
+def test_make_recipes_use_resolved_project_tools() -> None:
+    makefile = (ROOT / "Makefile").read_text().splitlines()
+    bare_tools = [line for line in makefile if line.startswith(("\tcargo ", "\tuv ", "\tnpm "))]
+    assert not bare_tools, (
+        "Make recipes must use $(CARGO), $(UV), or $(NPM) so they work over minimal SSH PATHs"
+    )
