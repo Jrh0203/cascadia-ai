@@ -91,6 +91,11 @@ final-domain index `999999`, outside the reserved final suite. It exercised all
 record, verified one input fingerprint set and source revision, shut down MLX
 cleanly, and passed aggregation.
 
+After `make setup`, the same checkout passed the complete `make check` gate:
+223 Rust tests, 128 Python tests, 7 frontend unit tests, 5 applicable
+Playwright flows, generated CLI freshness, strict lint, and all 11 performance
+budgets.
+
 The 94.5 one-game treatment score is not strength evidence. The machine-readable
 rehearsal is
 [`final-strength-infrastructure-smoke.json`](reports/final-strength-infrastructure-smoke.json).

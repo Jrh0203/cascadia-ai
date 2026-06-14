@@ -77,7 +77,9 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   seeds, atomic per-game evidence, exact all-seat score records, resumable
   shards, strict fingerprint/source checks, and multi-node aggregation. A clean
   john3 checkout at `6b4a43a` passed a complete R600 infrastructure rehearsal
-  on out-of-suite final index 999999; final indices 0-999 remain unopened.
+  on out-of-suite final index 999999 plus the full check gate with 223 Rust,
+  128 Python, 7 frontend unit, and 5 applicable browser tests; final indices
+  0-999 remain unopened.
 - Centralized Rust provenance in `cascadia-provenance` and made value/ranking
   collection resume reject source or executable drift before appending another
   shard.
