@@ -1,0 +1,299 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      5.6,
+      5.425,
+      5.625,
+      5.775,
+      6.15
+    ],
+    "nature_tokens": 4.125,
+    "wildlife": [
+      9.3,
+      12.5,
+      12.4,
+      11.625,
+      13.825
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 800,
+    "max_milliseconds": 480.908917,
+    "mean_milliseconds": 42.138216883750005,
+    "p50_milliseconds": 0.5283960000000001,
+    "p90_milliseconds": 172.59716700000004,
+    "p99_milliseconds": 432.55059709
+  },
+  "baseline_elapsed_seconds": 33.714650500999994,
+  "baseline_id": "late-conservative-base-policy-improvement-v1-t5-r8-k8-h6-b8-m4-c90",
+  "baseline_mean": 92.35,
+  "baseline_seconds_per_game": 3.3714650500999994,
+  "baseline_statistics": {
+    "confidence_95": [
+      91.39425572922924,
+      93.30574427077075
+    ],
+    "decision_latency": {
+      "decisions": 800,
+      "max_milliseconds": 480.908917,
+      "mean_milliseconds": 42.138216883750005,
+      "p50_milliseconds": 0.5283960000000001,
+      "p90_milliseconds": 172.59716700000004,
+      "p99_milliseconds": 432.55059709
+    },
+    "game_mean_stddev": 1.5420044674960502,
+    "max_score": 97.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.6,
+        5.425,
+        5.625,
+        5.775,
+        6.15
+      ],
+      "nature_tokens": 4.125,
+      "wildlife": [
+        9.3,
+        12.5,
+        12.4,
+        11.625,
+        13.825
+      ]
+    },
+    "mean_score": 92.35,
+    "min_score": 87.0,
+    "percentiles": {
+      "p10": 89.0,
+      "p50": 92.5,
+      "p90": 96.0
+    },
+    "seat_score_stddev": 2.6559077833852136,
+    "standard_error": 0.4876246279442597
+  },
+  "confidence_95": [
+    -0.8559407219305709,
+    0.905940721930571
+  ],
+  "configuration": {
+    "public-focal-tree-compare": {
+      "exploration_milli": 2000,
+      "first_seed": 34900,
+      "games": 10,
+      "output": "docs/v2/reports/public-focal-open-loop-tree-v1-pilot10.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "root_candidates": 16,
+      "sequential": true,
+      "simulations": 128,
+      "terminal_turns": 5,
+      "wildlife_candidates": 2
+    }
+  },
+  "elapsed_seconds": 181.534550583,
+  "first_seed": 34900,
+  "game_losses": 4,
+  "game_ties": 0,
+  "game_wins": 6,
+  "games": 10,
+  "mean_breakdown_delta": {
+    "habitat": [
+      0.0,
+      0.3250000000000002,
+      0.125,
+      0.0,
+      -0.25
+    ],
+    "nature_tokens": -0.04999999999999982,
+    "wildlife": [
+      -0.5500000000000007,
+      -0.4499999999999993,
+      -0.15000000000000036,
+      0.25,
+      0.7750000000000004
+    ]
+  },
+  "mean_paired_delta": 0.025,
+  "paired_delta_stddev": 1.4213159004559432,
+  "pairs": [
+    {
+      "baseline_mean": 93.5,
+      "delta": -0.25,
+      "seed": 34900,
+      "treatment_mean": 93.25
+    },
+    {
+      "baseline_mean": 93.75,
+      "delta": -0.75,
+      "seed": 34901,
+      "treatment_mean": 93.0
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 1.5,
+      "seed": 34902,
+      "treatment_mean": 93.25
+    },
+    {
+      "baseline_mean": 93.75,
+      "delta": 1.0,
+      "seed": 34903,
+      "treatment_mean": 94.75
+    },
+    {
+      "baseline_mean": 89.0,
+      "delta": 1.0,
+      "seed": 34904,
+      "treatment_mean": 90.0
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.5,
+      "seed": 34905,
+      "treatment_mean": 92.0
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": -1.5,
+      "seed": 34906,
+      "treatment_mean": 90.25
+    },
+    {
+      "baseline_mean": 93.25,
+      "delta": 1.25,
+      "seed": 34907,
+      "treatment_mean": 94.5
+    },
+    {
+      "baseline_mean": 93.75,
+      "delta": -3.0,
+      "seed": 34908,
+      "treatment_mean": 90.75
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.5,
+      "seed": 34909,
+      "treatment_mean": 92.0
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "public-focal-tree-compare",
+      "--games",
+      "10",
+      "--first-seed",
+      "34900",
+      "--terminal-turns",
+      "5",
+      "--simulations",
+      "128",
+      "--root-candidates",
+      "16",
+      "--exploration-milli",
+      "2000",
+      "--wildlife-candidates",
+      "2",
+      "--sequential",
+      "--output",
+      "docs/v2/reports/public-focal-open-loop-tree-v1-pilot10.json"
+    ],
+    "created_unix_seconds": 1781317602,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "f811b8a0faab4ebc6add631eea12e75203da0a98189bfefd7e88c0dd71d9d2c8",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "940109c03d88769406b6b1afb9867142e84e7c3c9defc19798699293d411def9",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "aa6e140bbdc8421ae8358d2a80b9da56ac23066e3249bff996ee2aaccd66afc5"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 40,
+  "standard_error": 0.44945955200539334,
+  "treatment_breakdown": {
+    "habitat": [
+      5.6,
+      5.75,
+      5.75,
+      5.775,
+      5.9
+    ],
+    "nature_tokens": 4.075,
+    "wildlife": [
+      8.75,
+      12.05,
+      12.25,
+      11.875,
+      14.6
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 800,
+    "max_milliseconds": 1952.691,
+    "mean_milliseconds": 184.7702795750001,
+    "p50_milliseconds": 0.525312,
+    "p90_milliseconds": 897.8523628000003,
+    "p99_milliseconds": 1734.4018232499998
+  },
+  "treatment_elapsed_seconds": 147.81985383300002,
+  "treatment_id": "public-focal-open-loop-tree-v1-t5-s128-r16-u2000-k8-h6-b8-w2-m4",
+  "treatment_mean": 92.375,
+  "treatment_seconds_per_game": 14.781985383300002,
+  "treatment_statistics": {
+    "confidence_95": [
+      91.33876616752995,
+      93.41123383247005
+    ],
+    "decision_latency": {
+      "decisions": 800,
+      "max_milliseconds": 1952.691,
+      "mean_milliseconds": 184.7702795750001,
+      "p50_milliseconds": 0.525312,
+      "p90_milliseconds": 897.8523628000003,
+      "p99_milliseconds": 1734.4018232499998
+    },
+    "game_mean_stddev": 1.6718668873115732,
+    "max_score": 97.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.6,
+        5.75,
+        5.75,
+        5.775,
+        5.9
+      ],
+      "nature_tokens": 4.075,
+      "wildlife": [
+        8.75,
+        12.05,
+        12.25,
+        11.875,
+        14.6
+      ]
+    },
+    "mean_score": 92.375,
+    "min_score": 86.0,
+    "percentiles": {
+      "p10": 88.0,
+      "p50": 92.0,
+      "p90": 96.0
+    },
+    "seat_score_stddev": 2.8972798914207045,
+    "standard_error": 0.5286907308520633
+  }
+}

@@ -1,0 +1,14 @@
+[package]
+name = "cascadia-data"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+blake3.workspace = true
+cascadia-game = { path = "../cascadia-game" }
+cascadia-provenance = { path = "../cascadia-provenance" }
+cascadia-sim = { path = "../cascadia-sim" }
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

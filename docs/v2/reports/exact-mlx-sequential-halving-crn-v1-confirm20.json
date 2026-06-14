@@ -1,0 +1,466 @@
+{
+  "schema_version": 2,
+  "experiment_id": "exact-mlx-sequential-halving-crn-confirm20-v1-20260613",
+  "status": "rejected",
+  "rollouts": 600,
+  "baseline_seed_coupling": "independent",
+  "treatment_seed_coupling": "common-within-round",
+  "baseline_diagnostics": {
+    "states_attempted": 1600,
+    "states_translated": 1600,
+    "checked_boards": 6400,
+    "expanded_candidates": 63729,
+    "expanded_candidates_legal": 61984,
+    "expanded_candidates_illegal": 1745,
+    "prefiltered_candidates": 47790,
+    "prefiltered_candidates_legal": 47790,
+    "prefiltered_candidates_illegal": 0,
+    "selected_actions": 1600,
+    "selected_actions_legal": 1600,
+    "fallbacks": 0,
+    "maximum_absolute_coordinate": 5,
+    "first_errors": [],
+    "malformed_expanded_examples": [
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Fox; legacy candidate=ScoredMove { market_index: 1, tile_q: 1, tile_r: 1, rotation: 0, wildlife_q: Some(1), wildlife_r: Some(0), score: 15, eval: 615, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Fox; legacy candidate=ScoredMove { market_index: 1, tile_q: 1, tile_r: 1, rotation: 1, wildlife_q: Some(1), wildlife_r: Some(0), score: 15, eval: 615, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Fox; legacy candidate=ScoredMove { market_index: 1, tile_q: 1, tile_r: 1, rotation: 2, wildlife_q: Some(1), wildlife_r: Some(0), score: 15, eval: 615, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 1 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 0, tile_q: 0, tile_r: -1, rotation: 2, wildlife_q: Some(1), wildlife_r: Some(1), score: 22, eval: 522, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 1 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 0, tile_q: 1, tile_r: -1, rotation: 5, wildlife_q: Some(1), wildlife_r: Some(1), score: 22, eval: 522, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: -1, r: 1 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 1, rotation: 0, wildlife_q: Some(-1), wildlife_r: Some(1), score: 23, eval: 523, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: -1, r: 1 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 1, rotation: 1, wildlife_q: Some(-1), wildlife_r: Some(1), score: 23, eval: 523, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: -1, r: 1 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 1, rotation: 2, wildlife_q: Some(-1), wildlife_r: Some(1), score: 23, eval: 523, wildlife_market_index: None }"
+    ],
+    "elk_score_mismatch_boards": 8,
+    "elk_v2_minus_v1_total": 8,
+    "elk_v2_minus_v1_max": 1,
+    "pattern_frontier_candidates": 0,
+    "selected_actions_in_pattern_frontier": 0,
+    "selected_independent_actions": 0,
+    "selected_independent_actions_in_pattern_frontier": 0,
+    "selected_actions_by_phase": [
+      0,
+      0,
+      0
+    ],
+    "selected_actions_in_pattern_frontier_by_phase": [
+      0,
+      0,
+      0
+    ],
+    "pattern_frontier_miss_examples": [],
+    "habitat_candidates_generated": 0,
+    "habitat_candidates_novel": 0,
+    "habitat_candidates_retained": 0,
+    "selected_novel_habitat_candidates": 0
+  },
+  "treatment_diagnostics": {
+    "states_attempted": 1600,
+    "states_translated": 1600,
+    "checked_boards": 6400,
+    "expanded_candidates": 62063,
+    "expanded_candidates_legal": 60468,
+    "expanded_candidates_illegal": 1595,
+    "prefiltered_candidates": 47275,
+    "prefiltered_candidates_legal": 47275,
+    "prefiltered_candidates_illegal": 0,
+    "selected_actions": 1600,
+    "selected_actions_legal": 1600,
+    "fallbacks": 0,
+    "maximum_absolute_coordinate": 5,
+    "first_errors": [],
+    "malformed_expanded_examples": [
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Fox; legacy candidate=ScoredMove { market_index: 1, tile_q: -1, tile_r: 1, rotation: 0, wildlife_q: Some(1), wildlife_r: Some(0), score: 11, eval: 711, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Fox; legacy candidate=ScoredMove { market_index: 1, tile_q: -1, tile_r: 1, rotation: 4, wildlife_q: Some(1), wildlife_r: Some(0), score: 11, eval: 711, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Fox; legacy candidate=ScoredMove { market_index: 1, tile_q: -1, tile_r: 1, rotation: 5, wildlife_q: Some(1), wildlife_r: Some(0), score: 11, eval: 711, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 1, tile_q: 1, tile_r: -1, rotation: 0, wildlife_q: Some(1), wildlife_r: Some(0), score: 15, eval: 715, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 1, tile_q: 1, tile_r: -1, rotation: 1, wildlife_q: Some(1), wildlife_r: Some(0), score: 15, eval: 715, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 1, tile_q: 1, tile_r: -1, rotation: 2, wildlife_q: Some(1), wildlife_r: Some(0), score: 15, eval: 715, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 1, tile_q: 1, tile_r: -1, rotation: 3, wildlife_q: Some(1), wildlife_r: Some(0), score: 15, eval: 715, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 1, tile_q: 1, tile_r: -1, rotation: 4, wildlife_q: Some(1), wildlife_r: Some(0), score: 15, eval: 715, wildlife_market_index: None }"
+    ],
+    "elk_score_mismatch_boards": 16,
+    "elk_v2_minus_v1_total": 16,
+    "elk_v2_minus_v1_max": 1,
+    "pattern_frontier_candidates": 0,
+    "selected_actions_in_pattern_frontier": 0,
+    "selected_independent_actions": 0,
+    "selected_independent_actions_in_pattern_frontier": 0,
+    "selected_actions_by_phase": [
+      0,
+      0,
+      0
+    ],
+    "selected_actions_in_pattern_frontier_by_phase": [
+      0,
+      0,
+      0
+    ],
+    "pattern_frontier_miss_examples": [],
+    "habitat_candidates_generated": 0,
+    "habitat_candidates_novel": 0,
+    "habitat_candidates_retained": 0,
+    "selected_novel_habitat_candidates": 0
+  },
+  "baseline_batch_diagnostics": {
+    "neural_batches": 79694,
+    "neural_rows": 125943892,
+    "minimum_batch_rows": 2,
+    "maximum_batch_rows": 4500,
+    "rollout_waves": 75444,
+    "rollout_samples": 923320,
+    "policy_fallbacks": 0
+  },
+  "treatment_batch_diagnostics": {
+    "neural_batches": 79424,
+    "neural_rows": 124638890,
+    "minimum_batch_rows": 2,
+    "maximum_batch_rows": 4500,
+    "rollout_waves": 75340,
+    "rollout_samples": 923646,
+    "policy_fallbacks": 0
+  },
+  "baseline_startup_milliseconds": 116.23425,
+  "treatment_startup_milliseconds": 102.936541,
+  "baseline_clean_shutdown": true,
+  "treatment_clean_shutdown": true,
+  "total_wildlife_delta": -0.09999999999999964,
+  "habitat_delta": -0.34999999999999964,
+  "gates": {
+    "baseline_integrity": true,
+    "treatment_integrity": true,
+    "baseline_runtime": true,
+    "treatment_runtime": true,
+    "clean_shutdown": true,
+    "smoke_passed": true,
+    "paired_gain": false,
+    "paired_confidence": false,
+    "treatment_mean": false,
+    "wildlife": true,
+    "habitat": true,
+    "nature_tokens": true,
+    "pilot_promising": false
+  },
+  "comparison": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "baseline_id": "canonical-action-legacy-exact-mlx-k32-r600-independent",
+    "treatment_id": "canonical-action-legacy-exact-mlx-k32-r600-crn",
+    "games": 20,
+    "seat_games_per_strategy": 80,
+    "first_seed": 35703,
+    "baseline_mean": 95.775,
+    "treatment_mean": 95.4125,
+    "baseline_statistics": {
+      "mean_score": 95.775,
+      "game_mean_stddev": 1.2510521887384907,
+      "seat_score_stddev": 2.9251203588782557,
+      "standard_error": 0.27974377374191617,
+      "confidence_95": [
+        95.22670220346585,
+        96.32329779653416
+      ],
+      "percentiles": {
+        "p10": 92.0,
+        "p50": 96.0,
+        "p90": 100.0
+      },
+      "min_score": 89.0,
+      "max_score": 101.0,
+      "mean_breakdown": {
+        "habitat": [
+          6.1125,
+          6.3875,
+          6.1875,
+          6.2375,
+          6.025
+        ],
+        "wildlife": [
+          11.55,
+          10.1375,
+          13.1875,
+          11.8125,
+          14.4625
+        ],
+        "nature_tokens": 3.675
+      },
+      "decision_latency": {
+        "decisions": 1600,
+        "mean_milliseconds": 1877.2104276343775,
+        "p50_milliseconds": 2018.339625,
+        "p90_milliseconds": 3114.8022210999998,
+        "p99_milliseconds": 3345.42155709,
+        "max_milliseconds": 3460.33825
+      }
+    },
+    "treatment_statistics": {
+      "mean_score": 95.4125,
+      "game_mean_stddev": 1.275464311741538,
+      "seat_score_stddev": 2.996596170256336,
+      "standard_error": 0.28520249039290624,
+      "confidence_95": [
+        94.85350311882989,
+        95.9714968811701
+      ],
+      "percentiles": {
+        "p10": 91.9,
+        "p50": 95.0,
+        "p90": 99.0
+      },
+      "min_score": 88.0,
+      "max_score": 102.0,
+      "mean_breakdown": {
+        "habitat": [
+          5.975,
+          6.0125,
+          6.2125,
+          6.2,
+          6.2
+        ],
+        "wildlife": [
+          11.8875,
+          10.2375,
+          12.7125,
+          11.2875,
+          14.925
+        ],
+        "nature_tokens": 3.7625
+      },
+      "decision_latency": {
+        "decisions": 1600,
+        "mean_milliseconds": 1854.302681796253,
+        "p50_milliseconds": 1994.6464164999998,
+        "p90_milliseconds": 3095.0776831000003,
+        "p99_milliseconds": 3309.1753654999993,
+        "max_milliseconds": 3490.780375
+      }
+    },
+    "mean_paired_delta": -0.3625,
+    "paired_delta_stddev": 1.748072246489649,
+    "standard_error": 0.3908808372731623,
+    "confidence_95": [
+      -1.128626441055398,
+      0.4036264410553981
+    ],
+    "game_wins": 8,
+    "game_ties": 1,
+    "game_losses": 11,
+    "baseline_breakdown": {
+      "habitat": [
+        6.1125,
+        6.3875,
+        6.1875,
+        6.2375,
+        6.025
+      ],
+      "wildlife": [
+        11.55,
+        10.1375,
+        13.1875,
+        11.8125,
+        14.4625
+      ],
+      "nature_tokens": 3.675
+    },
+    "treatment_breakdown": {
+      "habitat": [
+        5.975,
+        6.0125,
+        6.2125,
+        6.2,
+        6.2
+      ],
+      "wildlife": [
+        11.8875,
+        10.2375,
+        12.7125,
+        11.2875,
+        14.925
+      ],
+      "nature_tokens": 3.7625
+    },
+    "mean_breakdown_delta": {
+      "habitat": [
+        -0.13750000000000018,
+        -0.375,
+        0.025000000000000355,
+        -0.037499999999999645,
+        0.17499999999999982
+      ],
+      "wildlife": [
+        0.3374999999999986,
+        0.10000000000000142,
+        -0.47499999999999964,
+        -0.5250000000000004,
+        0.46250000000000036
+      ],
+      "nature_tokens": 0.08750000000000036
+    },
+    "baseline_decision_latency": {
+      "decisions": 1600,
+      "mean_milliseconds": 1877.2104276343775,
+      "p50_milliseconds": 2018.339625,
+      "p90_milliseconds": 3114.8022210999998,
+      "p99_milliseconds": 3345.42155709,
+      "max_milliseconds": 3460.33825
+    },
+    "treatment_decision_latency": {
+      "decisions": 1600,
+      "mean_milliseconds": 1854.302681796253,
+      "p50_milliseconds": 1994.6464164999998,
+      "p90_milliseconds": 3095.0776831000003,
+      "p99_milliseconds": 3309.1753654999993,
+      "max_milliseconds": 3490.780375
+    },
+    "baseline_elapsed_seconds": 3003.5447887929995,
+    "treatment_elapsed_seconds": 2966.8923408729997,
+    "baseline_seconds_per_game": 150.17723943964998,
+    "treatment_seconds_per_game": 148.34461704364998,
+    "elapsed_seconds": 5970.437339166,
+    "pairs": [
+      {
+        "seed": 35703,
+        "baseline_mean": 97.25,
+        "treatment_mean": 96.25,
+        "delta": -1.0
+      },
+      {
+        "seed": 35704,
+        "baseline_mean": 95.25,
+        "treatment_mean": 96.0,
+        "delta": 0.75
+      },
+      {
+        "seed": 35705,
+        "baseline_mean": 94.5,
+        "treatment_mean": 96.5,
+        "delta": 2.0
+      },
+      {
+        "seed": 35706,
+        "baseline_mean": 97.25,
+        "treatment_mean": 97.5,
+        "delta": 0.25
+      },
+      {
+        "seed": 35707,
+        "baseline_mean": 96.75,
+        "treatment_mean": 95.25,
+        "delta": -1.5
+      },
+      {
+        "seed": 35708,
+        "baseline_mean": 95.0,
+        "treatment_mean": 94.75,
+        "delta": -0.25
+      },
+      {
+        "seed": 35709,
+        "baseline_mean": 95.75,
+        "treatment_mean": 95.25,
+        "delta": -0.5
+      },
+      {
+        "seed": 35710,
+        "baseline_mean": 96.0,
+        "treatment_mean": 92.75,
+        "delta": -3.25
+      },
+      {
+        "seed": 35711,
+        "baseline_mean": 95.5,
+        "treatment_mean": 96.25,
+        "delta": 0.75
+      },
+      {
+        "seed": 35712,
+        "baseline_mean": 95.0,
+        "treatment_mean": 96.0,
+        "delta": 1.0
+      },
+      {
+        "seed": 35713,
+        "baseline_mean": 94.75,
+        "treatment_mean": 93.5,
+        "delta": -1.25
+      },
+      {
+        "seed": 35714,
+        "baseline_mean": 96.75,
+        "treatment_mean": 94.5,
+        "delta": -2.25
+      },
+      {
+        "seed": 35715,
+        "baseline_mean": 93.5,
+        "treatment_mean": 96.75,
+        "delta": 3.25
+      },
+      {
+        "seed": 35716,
+        "baseline_mean": 95.25,
+        "treatment_mean": 93.5,
+        "delta": -1.75
+      },
+      {
+        "seed": 35717,
+        "baseline_mean": 96.5,
+        "treatment_mean": 95.0,
+        "delta": -1.5
+      },
+      {
+        "seed": 35718,
+        "baseline_mean": 94.25,
+        "treatment_mean": 96.75,
+        "delta": 2.5
+      },
+      {
+        "seed": 35719,
+        "baseline_mean": 97.0,
+        "treatment_mean": 97.0,
+        "delta": 0.0
+      },
+      {
+        "seed": 35720,
+        "baseline_mean": 98.25,
+        "treatment_mean": 95.5,
+        "delta": -2.75
+      },
+      {
+        "seed": 35721,
+        "baseline_mean": 96.75,
+        "treatment_mean": 94.75,
+        "delta": -2.0
+      },
+      {
+        "seed": 35722,
+        "baseline_mean": 94.25,
+        "treatment_mean": 94.5,
+        "delta": 0.25
+      }
+    ]
+  },
+  "model_manifest_path": "/Users/johnherrick/cascadia/artifacts/models/legacy-nnue-v4opp-mlx-v1/model.json",
+  "model_manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+  "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65",
+  "provenance": {
+    "source": {
+      "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+      "git_dirty": true,
+      "git_status_blake3": "940109c03d88769406b6b1afb9867142e84e7c3c9defc19798699293d411def9",
+      "v2_source_blake3": "a53f3d1ae9d7c77022ce588e82193e2bcb5eb9d09ff0e65cc901a989f6f1c1b0"
+    },
+    "executable_path": "/Users/johnherrick/cascadia/target/release/legacy-teacher",
+    "executable_blake3": "deacfc39ff433e0d1f06de8d73852784e08755068bace639fd1fd299a51ab8b1",
+    "weights_path": "/Users/johnherrick/cascadia/nnue_weights_v4opp_modal_iter3.bin",
+    "weights_blake3": "9e1d568693274fc537ac4f6d6f729abb1ee8da8330a78d1f78a1f62b733de400",
+    "legacy_environment": [
+      [
+        "MCE_LMR",
+        "1"
+      ],
+      [
+        "MCE_DIVERSE_PREFILTER",
+        "1"
+      ]
+    ]
+  }
+}

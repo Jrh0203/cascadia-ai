@@ -1,0 +1,107 @@
+{
+  "confidence_95": [
+    89.0,
+    89.0
+  ],
+  "configuration": {
+    "ranking-model-benchmark": {
+      "bear_candidates": 1,
+      "candidates": 2,
+      "first_seed": 22999,
+      "games": 1,
+      "model_dir": "artifacts/models/entity-ranker-v1-h6",
+      "output": "docs/v2/reports/entity-ranker-v1-h6-implementation-smoke-1.json",
+      "run_dir": null,
+      "server": ".venv/bin/cascadia-mlx-ranking-serve"
+    }
+  },
+  "decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 216.123875,
+    "mean_milliseconds": 9.070654224999997,
+    "p50_milliseconds": 6.2296665,
+    "p90_milliseconds": 10.968017000000001,
+    "p99_milliseconds": 56.640518069998734
+  },
+  "elapsed_seconds": 0.726378083,
+  "first_seed": 22999,
+  "game_mean_stddev": 0.0,
+  "games": 1,
+  "games_per_second": 1.3766935200879402,
+  "max_score": 91.0,
+  "mean_breakdown": {
+    "habitat": [
+      4.75,
+      5.5,
+      7.25,
+      5.75,
+      5.25
+    ],
+    "nature_tokens": 4.25,
+    "wildlife": [
+      10.25,
+      12.0,
+      10.0,
+      11.25,
+      12.75
+    ]
+  },
+  "mean_score": 89.0,
+  "min_score": 86.0,
+  "percentiles": {
+    "p10": 86.9,
+    "p50": 89.5,
+    "p90": 90.7
+  },
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "ranking-model-benchmark",
+      "--model-dir",
+      "artifacts/models/entity-ranker-v1-h6",
+      "--games",
+      "1",
+      "--first-seed",
+      "22999",
+      "--candidates",
+      "2",
+      "--bear-candidates",
+      "1",
+      "--output",
+      "docs/v2/reports/entity-ranker-v1-h6-implementation-smoke-1.json"
+    ],
+    "created_unix_seconds": 1781160805,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "4f43419cc21ec4ecdec2e72d09339ff3090a988fbabd566a53cbc05d518a2706",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [
+      {
+        "manifest": "/Users/johnherrick/cascadia/artifacts/models/entity-ranker-v1-h6/model.json",
+        "manifest_blake3": "6fa654a6af96fa8cf137a5b57d808c311565bbf2d61a8ebee50c2f511218c723",
+        "path": "/Users/johnherrick/cascadia/artifacts/models/entity-ranker-v1-h6",
+        "role": "model_dir"
+      }
+    ],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "a0c1994e21baa15e14af4b8ba815bcfdbc455ee0fe4e5cb28812697961b4acaa"
+  },
+  "report_schema_version": 1,
+  "seat_games": 4,
+  "seat_score_stddev": 2.160246899469287,
+  "standard_error": 0.0,
+  "strategy_id": "mlx-ranking-v1-k2-b1"
+}

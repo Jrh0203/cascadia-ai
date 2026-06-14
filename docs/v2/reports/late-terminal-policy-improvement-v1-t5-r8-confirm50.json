@@ -1,0 +1,538 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      5.525,
+      5.985,
+      5.675,
+      5.81,
+      5.72
+    ],
+    "nature_tokens": 3.74,
+    "wildlife": [
+      8.28,
+      11.96,
+      12.06,
+      12.14,
+      14.815
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 4000,
+    "max_milliseconds": 10.765208,
+    "mean_milliseconds": 1.276570110250002,
+    "p50_milliseconds": 1.2130205,
+    "p90_milliseconds": 2.1193667,
+    "p99_milliseconds": 3.226213419999997
+  },
+  "baseline_elapsed_seconds": 5.146784834999998,
+  "baseline_id": "pattern-aware-v1-k8-h6-b8-m4",
+  "baseline_mean": 91.71,
+  "baseline_seconds_per_game": 0.10293569669999997,
+  "baseline_statistics": {
+    "confidence_95": [
+      91.30950210986822,
+      92.11049789013177
+    ],
+    "decision_latency": {
+      "decisions": 4000,
+      "max_milliseconds": 10.765208,
+      "mean_milliseconds": 1.276570110250002,
+      "p50_milliseconds": 1.2130205,
+      "p90_milliseconds": 2.1193667,
+      "p99_milliseconds": 3.226213419999997
+    },
+    "game_mean_stddev": 1.4448712957300005,
+    "max_score": 99.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.525,
+        5.985,
+        5.675,
+        5.81,
+        5.72
+      ],
+      "nature_tokens": 3.74,
+      "wildlife": [
+        8.28,
+        11.96,
+        12.06,
+        12.14,
+        14.815
+      ]
+    },
+    "mean_score": 91.71,
+    "min_score": 84.0,
+    "percentiles": {
+      "p10": 88.0,
+      "p50": 92.0,
+      "p90": 95.0
+    },
+    "seat_score_stddev": 2.884005450269802,
+    "standard_error": 0.20433565823049538
+  },
+  "confidence_95": [
+    0.1978502696457687,
+    0.6521497303542313
+  ],
+  "configuration": {
+    "late-terminal-policy-improvement-compare": {
+      "determinizations": 8,
+      "first_seed": 27000,
+      "games": 50,
+      "output": "docs/v2/reports/late-terminal-policy-improvement-v1-t5-r8-confirm50.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "sequential": true,
+      "terminal_turns": 5
+    }
+  },
+  "elapsed_seconds": 381.646196292,
+  "first_seed": 27000,
+  "game_losses": 9,
+  "game_ties": 6,
+  "game_wins": 35,
+  "games": 50,
+  "mean_breakdown_delta": {
+    "habitat": [
+      0.10499999999999954,
+      -0.03500000000000014,
+      0.10500000000000043,
+      0.025000000000000355,
+      0.14000000000000057
+    ],
+    "nature_tokens": -0.06000000000000005,
+    "wildlife": [
+      0.20000000000000107,
+      0.03999999999999915,
+      0.014999999999998792,
+      -0.08000000000000007,
+      -0.02999999999999936
+    ]
+  },
+  "mean_paired_delta": 0.425,
+  "paired_delta_stddev": 0.8194852789702689,
+  "pairs": [
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.25,
+      "seed": 27000,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 91.0,
+      "delta": 1.5,
+      "seed": 27001,
+      "treatment_mean": 92.5
+    },
+    {
+      "baseline_mean": 89.75,
+      "delta": 0.25,
+      "seed": 27002,
+      "treatment_mean": 90.0
+    },
+    {
+      "baseline_mean": 92.75,
+      "delta": 0.25,
+      "seed": 27003,
+      "treatment_mean": 93.0
+    },
+    {
+      "baseline_mean": 93.0,
+      "delta": -1.25,
+      "seed": 27004,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 92.0,
+      "delta": 0.75,
+      "seed": 27005,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 94.25,
+      "delta": -1.5,
+      "seed": 27006,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 1.5,
+      "seed": 27007,
+      "treatment_mean": 93.25
+    },
+    {
+      "baseline_mean": 88.25,
+      "delta": 0.75,
+      "seed": 27008,
+      "treatment_mean": 89.0
+    },
+    {
+      "baseline_mean": 91.0,
+      "delta": 1.5,
+      "seed": 27009,
+      "treatment_mean": 92.5
+    },
+    {
+      "baseline_mean": 92.25,
+      "delta": 1.0,
+      "seed": 27010,
+      "treatment_mean": 93.25
+    },
+    {
+      "baseline_mean": 92.25,
+      "delta": 0.75,
+      "seed": 27011,
+      "treatment_mean": 93.0
+    },
+    {
+      "baseline_mean": 88.5,
+      "delta": 0.25,
+      "seed": 27012,
+      "treatment_mean": 88.75
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.25,
+      "seed": 27013,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 1.5,
+      "seed": 27014,
+      "treatment_mean": 93.25
+    },
+    {
+      "baseline_mean": 90.75,
+      "delta": 1.0,
+      "seed": 27015,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.5,
+      "seed": 27016,
+      "treatment_mean": 92.0
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.0,
+      "seed": 27017,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 94.5,
+      "delta": -0.5,
+      "seed": 27018,
+      "treatment_mean": 94.0
+    },
+    {
+      "baseline_mean": 92.75,
+      "delta": -0.25,
+      "seed": 27019,
+      "treatment_mean": 92.5
+    },
+    {
+      "baseline_mean": 91.0,
+      "delta": 0.0,
+      "seed": 27020,
+      "treatment_mean": 91.0
+    },
+    {
+      "baseline_mean": 92.5,
+      "delta": 0.25,
+      "seed": 27021,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 91.0,
+      "delta": 0.5,
+      "seed": 27022,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 92.0,
+      "delta": 1.0,
+      "seed": 27023,
+      "treatment_mean": 93.0
+    },
+    {
+      "baseline_mean": 90.25,
+      "delta": -0.5,
+      "seed": 27024,
+      "treatment_mean": 89.75
+    },
+    {
+      "baseline_mean": 89.25,
+      "delta": 2.75,
+      "seed": 27025,
+      "treatment_mean": 92.0
+    },
+    {
+      "baseline_mean": 92.25,
+      "delta": 0.0,
+      "seed": 27026,
+      "treatment_mean": 92.25
+    },
+    {
+      "baseline_mean": 93.0,
+      "delta": 0.5,
+      "seed": 27027,
+      "treatment_mean": 93.5
+    },
+    {
+      "baseline_mean": 93.25,
+      "delta": 0.0,
+      "seed": 27028,
+      "treatment_mean": 93.25
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 1.5,
+      "seed": 27029,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 90.25,
+      "delta": 0.5,
+      "seed": 27030,
+      "treatment_mean": 90.75
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.5,
+      "seed": 27031,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 94.25,
+      "delta": -0.75,
+      "seed": 27032,
+      "treatment_mean": 93.5
+    },
+    {
+      "baseline_mean": 92.0,
+      "delta": 0.75,
+      "seed": 27033,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 1.0,
+      "seed": 27034,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.75,
+      "seed": 27035,
+      "treatment_mean": 92.25
+    },
+    {
+      "baseline_mean": 88.75,
+      "delta": 2.25,
+      "seed": 27036,
+      "treatment_mean": 91.0
+    },
+    {
+      "baseline_mean": 92.5,
+      "delta": -1.25,
+      "seed": 27037,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 93.5,
+      "delta": 0.0,
+      "seed": 27038,
+      "treatment_mean": 93.5
+    },
+    {
+      "baseline_mean": 92.75,
+      "delta": -0.75,
+      "seed": 27039,
+      "treatment_mean": 92.0
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.5,
+      "seed": 27040,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.5,
+      "seed": 27041,
+      "treatment_mean": 92.25
+    },
+    {
+      "baseline_mean": 92.0,
+      "delta": 0.25,
+      "seed": 27042,
+      "treatment_mean": 92.25
+    },
+    {
+      "baseline_mean": 89.5,
+      "delta": 0.0,
+      "seed": 27043,
+      "treatment_mean": 89.5
+    },
+    {
+      "baseline_mean": 91.0,
+      "delta": 0.25,
+      "seed": 27044,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.5,
+      "seed": 27045,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 92.5,
+      "delta": 1.0,
+      "seed": 27046,
+      "treatment_mean": 93.5
+    },
+    {
+      "baseline_mean": 93.25,
+      "delta": 0.25,
+      "seed": 27047,
+      "treatment_mean": 93.5
+    },
+    {
+      "baseline_mean": 94.75,
+      "delta": 0.75,
+      "seed": 27048,
+      "treatment_mean": 95.5
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": -0.25,
+      "seed": 27049,
+      "treatment_mean": 91.5
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "late-terminal-policy-improvement-compare",
+      "--games",
+      "50",
+      "--first-seed",
+      "27000",
+      "--terminal-turns",
+      "5",
+      "--determinizations",
+      "8",
+      "--policy-candidates",
+      "8",
+      "--policy-habitat-candidates",
+      "6",
+      "--policy-bear-candidates",
+      "8",
+      "--policy-market-draws",
+      "4",
+      "--sequential",
+      "--output",
+      "docs/v2/reports/late-terminal-policy-improvement-v1-t5-r8-confirm50.json"
+    ],
+    "created_unix_seconds": 1781210407,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "0ae12ec6d17ba44e64cc3968996b057ac0af77c862562028e604aa2479e1669b",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "2171c1c6d2a729f2854001e315035b8bd975ba5aa855db2699ed78e2bf504c30"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 200,
+  "standard_error": 0.11589271956848535,
+  "treatment_breakdown": {
+    "habitat": [
+      5.63,
+      5.95,
+      5.78,
+      5.835,
+      5.86
+    ],
+    "nature_tokens": 3.68,
+    "wildlife": [
+      8.48,
+      12.0,
+      12.075,
+      12.06,
+      14.785
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 4000,
+    "max_milliseconds": 2142.013291,
+    "mean_milliseconds": 94.1141348497502,
+    "p50_milliseconds": 1.2252085000000001,
+    "p90_milliseconds": 382.10661309999995,
+    "p99_milliseconds": 1023.0552499999992
+  },
+  "treatment_elapsed_seconds": 376.49911212800004,
+  "treatment_id": "late-terminal-policy-improvement-v1-t5-r8-k8-h6-b8-m4",
+  "treatment_mean": 92.135,
+  "treatment_seconds_per_game": 7.529982242560001,
+  "treatment_statistics": {
+    "confidence_95": [
+      91.77828560443963,
+      92.49171439556038
+    ],
+    "decision_latency": {
+      "decisions": 4000,
+      "max_milliseconds": 2142.013291,
+      "mean_milliseconds": 94.1141348497502,
+      "p50_milliseconds": 1.2252085000000001,
+      "p90_milliseconds": 382.10661309999995,
+      "p99_milliseconds": 1023.0552499999992
+    },
+    "game_mean_stddev": 1.2869141226918264,
+    "max_score": 101.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.63,
+        5.95,
+        5.78,
+        5.835,
+        5.86
+      ],
+      "nature_tokens": 3.68,
+      "wildlife": [
+        8.48,
+        12.0,
+        12.075,
+        12.06,
+        14.785
+      ]
+    },
+    "mean_score": 92.135,
+    "min_score": 86.0,
+    "percentiles": {
+      "p10": 89.0,
+      "p50": 92.0,
+      "p90": 96.0
+    },
+    "seat_score_stddev": 2.7117416384249884,
+    "standard_error": 0.1819971405920254
+  }
+}

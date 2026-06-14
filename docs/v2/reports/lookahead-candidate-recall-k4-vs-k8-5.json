@@ -1,0 +1,53 @@
+{
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "trajectory_strategy_id": "determinized-lookahead-v2-k4-r4-d4",
+  "expanded_strategy_id": "determinized-lookahead-v2-k8-r4-d4",
+  "games": 5,
+  "seat_games": 20,
+  "first_seed": 20600,
+  "decisions": 400,
+  "retained_candidates": 4,
+  "expanded_candidates": 8,
+  "expanded_best_outside_retained": 67,
+  "strict_value_misses": 67,
+  "selection_coverage": 0.8325,
+  "value_recall": 0.8325,
+  "mean_estimated_regret": 0.07625,
+  "mean_estimated_regret_when_missed": 0.4552238805970149,
+  "max_estimated_regret": 2.0,
+  "immediate_rank_histogram": [
+    260,
+    38,
+    20,
+    15,
+    16,
+    13,
+    24,
+    14
+  ],
+  "phase": [
+    {
+      "decisions": 135,
+      "expanded_best_outside_retained": 28,
+      "strict_value_misses": 28,
+      "value_recall": 0.7925925925925926,
+      "mean_estimated_regret": 0.08333333333333333
+    },
+    {
+      "decisions": 135,
+      "expanded_best_outside_retained": 21,
+      "strict_value_misses": 21,
+      "value_recall": 0.8444444444444444,
+      "mean_estimated_regret": 0.07592592592592592
+    },
+    {
+      "decisions": 130,
+      "expanded_best_outside_retained": 18,
+      "strict_value_misses": 18,
+      "value_recall": 0.8615384615384616,
+      "mean_estimated_regret": 0.06923076923076923
+    }
+  ],
+  "trajectory_mean_score": 89.2,
+  "elapsed_seconds": 39.255258917
+}

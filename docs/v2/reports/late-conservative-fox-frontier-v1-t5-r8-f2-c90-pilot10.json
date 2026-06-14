@@ -1,0 +1,304 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      5.6,
+      6.275,
+      5.475,
+      5.725,
+      5.425
+    ],
+    "nature_tokens": 4.35,
+    "wildlife": [
+      8.525,
+      11.225,
+      11.95,
+      12.575,
+      15.025
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 800,
+    "max_milliseconds": 1493.525875,
+    "mean_milliseconds": 68.58516957624992,
+    "p50_milliseconds": 1.1152085,
+    "p90_milliseconds": 322.6404417000001,
+    "p99_milliseconds": 688.0109657499999
+  },
+  "baseline_elapsed_seconds": 54.87493428999999,
+  "baseline_id": "late-conservative-base-policy-improvement-v1-t5-r8-k8-h6-b8-m4-c90",
+  "baseline_mean": 92.15,
+  "baseline_seconds_per_game": 5.487493428999999,
+  "baseline_statistics": {
+    "confidence_95": [
+      90.95598976367687,
+      93.34401023632314
+    ],
+    "decision_latency": {
+      "decisions": 800,
+      "max_milliseconds": 1493.525875,
+      "mean_milliseconds": 68.58516957624992,
+      "p50_milliseconds": 1.1152085,
+      "p90_milliseconds": 322.6404417000001,
+      "p99_milliseconds": 688.0109657499999
+    },
+    "game_mean_stddev": 1.9264244369066519,
+    "max_score": 100.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.6,
+        6.275,
+        5.475,
+        5.725,
+        5.425
+      ],
+      "nature_tokens": 4.35,
+      "wildlife": [
+        8.525,
+        11.225,
+        11.95,
+        12.575,
+        15.025
+      ]
+    },
+    "mean_score": 92.15,
+    "min_score": 83.0,
+    "percentiles": {
+      "p10": 89.89999999999999,
+      "p50": 92.0,
+      "p90": 95.1
+    },
+    "seat_score_stddev": 2.966047183953063,
+    "standard_error": 0.6091888960832355
+  },
+  "confidence_95": [
+    0.0,
+    0.0
+  ],
+  "configuration": {
+    "late-conservative-wildlife-focused-policy-improvement-compare": {
+      "determinizations": 8,
+      "first_seed": 29300,
+      "games": 10,
+      "output": "docs/v2/reports/late-conservative-fox-frontier-v1-t5-r8-f2-c90-pilot10.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "sequential": true,
+      "terminal_turns": 5,
+      "wildlife": "fox",
+      "wildlife_candidates": 2
+    }
+  },
+  "elapsed_seconds": 110.124971417,
+  "first_seed": 29300,
+  "game_losses": 0,
+  "game_ties": 10,
+  "game_wins": 0,
+  "games": 10,
+  "mean_breakdown_delta": {
+    "habitat": [
+      0.025000000000000355,
+      0.0,
+      0.0,
+      -0.024999999999999467,
+      0.0
+    ],
+    "nature_tokens": 0.025000000000000355,
+    "wildlife": [
+      -0.09999999999999964,
+      0.0,
+      0.10000000000000142,
+      -0.07499999999999929,
+      0.049999999999998934
+    ]
+  },
+  "mean_paired_delta": 0.0,
+  "paired_delta_stddev": 0.0,
+  "pairs": [
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.0,
+      "seed": 29300,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 90.75,
+      "delta": 0.0,
+      "seed": 29301,
+      "treatment_mean": 90.75
+    },
+    {
+      "baseline_mean": 93.0,
+      "delta": 0.0,
+      "seed": 29302,
+      "treatment_mean": 93.0
+    },
+    {
+      "baseline_mean": 89.5,
+      "delta": 0.0,
+      "seed": 29303,
+      "treatment_mean": 89.5
+    },
+    {
+      "baseline_mean": 92.0,
+      "delta": 0.0,
+      "seed": 29304,
+      "treatment_mean": 92.0
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.0,
+      "seed": 29305,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 95.0,
+      "delta": 0.0,
+      "seed": 29306,
+      "treatment_mean": 95.0
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.0,
+      "seed": 29307,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.0,
+      "seed": 29308,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 95.75,
+      "delta": 0.0,
+      "seed": 29309,
+      "treatment_mean": 95.75
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "late-conservative-wildlife-focused-policy-improvement-compare",
+      "--games",
+      "10",
+      "--first-seed",
+      "29300",
+      "--terminal-turns",
+      "5",
+      "--determinizations",
+      "8",
+      "--policy-candidates",
+      "8",
+      "--policy-habitat-candidates",
+      "6",
+      "--policy-bear-candidates",
+      "8",
+      "--wildlife",
+      "fox",
+      "--wildlife-candidates",
+      "2",
+      "--policy-market-draws",
+      "4",
+      "--sequential",
+      "--output",
+      "docs/v2/reports/late-conservative-fox-frontier-v1-t5-r8-f2-c90-pilot10.json"
+    ],
+    "created_unix_seconds": 1781225701,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "87fec46634824c7b9013accf9ea09d26b6891ff306c361a73da08a24fd423d38",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "50bad9aba206e7ecbe435d2ac0011e339a4c8ed6d4163bd08bde660b74983fae"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 40,
+  "standard_error": 0.0,
+  "treatment_breakdown": {
+    "habitat": [
+      5.625,
+      6.275,
+      5.475,
+      5.7,
+      5.425
+    ],
+    "nature_tokens": 4.375,
+    "wildlife": [
+      8.425,
+      11.225,
+      12.05,
+      12.5,
+      15.075
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 800,
+    "max_milliseconds": 782.540583,
+    "mean_milliseconds": 69.05388384875006,
+    "p50_milliseconds": 1.0780205,
+    "p90_milliseconds": 344.233125,
+    "p99_milliseconds": 601.2491200000001
+  },
+  "treatment_elapsed_seconds": 55.249950082000005,
+  "treatment_id": "late-conservative-wildlife-focused-policy-improvement-v1-t5-r8-k8-h6-b8-fox2-m4-c90",
+  "treatment_mean": 92.15,
+  "treatment_seconds_per_game": 5.5249950082,
+  "treatment_statistics": {
+    "confidence_95": [
+      90.95598976367687,
+      93.34401023632314
+    ],
+    "decision_latency": {
+      "decisions": 800,
+      "max_milliseconds": 782.540583,
+      "mean_milliseconds": 69.05388384875006,
+      "p50_milliseconds": 1.0780205,
+      "p90_milliseconds": 344.233125,
+      "p99_milliseconds": 601.2491200000001
+    },
+    "game_mean_stddev": 1.9264244369066519,
+    "max_score": 100.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.625,
+        6.275,
+        5.475,
+        5.7,
+        5.425
+      ],
+      "nature_tokens": 4.375,
+      "wildlife": [
+        8.425,
+        11.225,
+        12.05,
+        12.5,
+        15.075
+      ]
+    },
+    "mean_score": 92.15,
+    "min_score": 83.0,
+    "percentiles": {
+      "p10": 89.89999999999999,
+      "p50": 92.0,
+      "p90": 95.1
+    },
+    "seat_score_stddev": 3.084701706062453,
+    "standard_error": 0.6091888960832355
+  }
+}

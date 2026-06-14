@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "experiment_id": "retained-frontier-legacy-teacher-v1-r600-20260612",
+  "status": "rejected",
+  "games": 4,
+  "first_seed": 31800,
+  "last_seed": 31803,
+  "expected_states": 320,
+  "diagnostics": {
+    "states_attempted": 19,
+    "states_translated": 19,
+    "checked_boards": 76,
+    "expanded_candidates": 740,
+    "expanded_candidates_legal": 734,
+    "expanded_candidates_illegal": 6,
+    "prefiltered_candidates": 575,
+    "prefiltered_candidates_legal": 571,
+    "prefiltered_candidates_illegal": 1,
+    "selected_actions": 0,
+    "selected_actions_legal": 0,
+    "fallbacks": 0,
+    "maximum_absolute_coordinate": 2,
+    "first_errors": [
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 1 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 0, rotation: 0, wildlife_q: Some(0), wildlife_r: Some(1), score: 28, eval: 628, wildlife_market_index: None }"
+    ],
+    "malformed_expanded_examples": [
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 1 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 0, rotation: 0, wildlife_q: Some(0), wildlife_r: Some(1), score: 28, eval: 628, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 1 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 0, rotation: 1, wildlife_q: Some(0), wildlife_r: Some(1), score: 27, eval: 627, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 1 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 0, rotation: 2, wildlife_q: Some(0), wildlife_r: Some(1), score: 27, eval: 627, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 1 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 0, rotation: 3, wildlife_q: Some(0), wildlife_r: Some(1), score: 28, eval: 628, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 1 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 0, rotation: 4, wildlife_q: Some(0), wildlife_r: Some(1), score: 28, eval: 628, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 1 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 0, rotation: 5, wildlife_q: Some(0), wildlife_r: Some(1), score: 28, eval: 628, wildlife_market_index: None }"
+    ]
+  },
+  "expanded_malformed_rate": 0.008108108108108109,
+  "passed": false,
+  "failure": "seed 31800: mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 1 } cannot support Salmon; legacy candidate=ScoredMove { market_index: 2, tile_q: -1, tile_r: 0, rotation: 0, wildlife_q: Some(0), wildlife_r: Some(1), score: 28, eval: 628, wildlife_market_index: None }",
+  "elapsed_seconds": 0.055770041,
+  "provenance": {
+    "source": {
+      "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+      "git_dirty": true,
+      "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+      "v2_source_blake3": "73391db4df4b1673b545454c7d0a663b90f783e459650c11636605bf792cb336"
+    },
+    "executable_path": "/Users/johnherrick/cascadia/target/release/legacy-teacher",
+    "executable_blake3": "8ccabec3ddb6b5c2be780f6dc666a889f777543736c0dd2eaca234177d3a0734",
+    "weights_path": "/Users/johnherrick/cascadia/nnue_weights_v4opp_modal_iter3.bin",
+    "weights_blake3": "9e1d568693274fc537ac4f6d6f729abb1ee8da8330a78d1f78a1f62b733de400",
+    "legacy_environment": [
+      [
+        "MCE_LMR",
+        "1"
+      ],
+      [
+        "MCE_DIVERSE_PREFILTER",
+        "1"
+      ]
+    ]
+  }
+}

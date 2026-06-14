@@ -1,0 +1,80 @@
+{
+  "collection": {
+    "continuations_per_second": 2.908562079621887,
+    "projected_256_game_r8_hours": 15.647288888888887,
+    "projected_256_game_r8_seconds": 56330.24,
+    "seconds": 55.01
+  },
+  "dataset": "/private/tmp/cascadia-v2-counterfactual-value-smoke",
+  "dataset_id": "counterfactual-value-habitat-candidate-lookahead-v1-k8-h6-r4-d4-r2-train-9993",
+  "dataset_manifest_blake3": "a653b25b7d2fac35ddbef9062a552d29311427916d8de15b47ba534683f31652",
+  "factual_single_trajectory": {
+    "correlation_with_reference": 0.4567179520552433,
+    "mean_absolute_error_to_reference": 1.91875,
+    "p90_absolute_error_to_reference": 5.0
+  },
+  "games": 1,
+  "gates": null,
+  "passed": null,
+  "phase_bins": {
+    "turns-1-5": {
+      "mean_standard_error": 2.05,
+      "r8_mean_absolute_drift": null,
+      "states": 20
+    },
+    "turns-11-15": {
+      "mean_standard_error": 1.25,
+      "r8_mean_absolute_drift": null,
+      "states": 20
+    },
+    "turns-16-20": {
+      "mean_standard_error": 0.675,
+      "r8_mean_absolute_drift": null,
+      "states": 20
+    },
+    "turns-6-10": {
+      "mean_standard_error": 1.2,
+      "r8_mean_absolute_drift": null,
+      "states": 20
+    }
+  },
+  "prefixes": {
+    "1": {
+      "maximum_absolute_drift": 4.5,
+      "mean_absolute_drift": 1.29375,
+      "p90_absolute_drift": 2.5,
+      "within_round_pairwise": {
+        "accuracy": 0.8141592920353983,
+        "log_loss": 0.5605473632828207,
+        "ordered_pairs": 113,
+        "pairs": 120
+      }
+    },
+    "2": {
+      "maximum_absolute_drift": 0.0,
+      "mean_absolute_drift": 0.0,
+      "p90_absolute_drift": 0.0,
+      "within_round_pairwise": {
+        "accuracy": 1.0,
+        "log_loss": 0.4568443430600231,
+        "ordered_pairs": 113,
+        "pairs": 120
+      }
+    }
+  },
+  "return_distribution": {
+    "mean_reference_total": 90.64375,
+    "mean_standard_error": 1.29375,
+    "mean_within_state_standard_deviation": 1.8296387963201923,
+    "mean_within_state_variance": 5.456250000000001,
+    "p90_standard_error": 2.5,
+    "reference_samples": 2,
+    "state_mean_standard_deviation": 2.6697955997236558
+  },
+  "samples_per_state": 2,
+  "schema_version": 1,
+  "split": "train",
+  "states": 80,
+  "substantive": false,
+  "total_continuations": 160
+}

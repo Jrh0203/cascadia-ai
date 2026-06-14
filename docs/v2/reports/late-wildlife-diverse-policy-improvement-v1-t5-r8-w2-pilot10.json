@@ -1,0 +1,301 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      5.675,
+      5.7,
+      5.825,
+      5.825,
+      5.8
+    ],
+    "nature_tokens": 3.3,
+    "wildlife": [
+      7.35,
+      12.375,
+      12.475,
+      12.425,
+      14.45
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 800,
+    "max_milliseconds": 5.9259580000000005,
+    "mean_milliseconds": 1.574451555000001,
+    "p50_milliseconds": 1.420021,
+    "p90_milliseconds": 2.8061618999999998,
+    "p99_milliseconds": 5.0214259199999995
+  },
+  "baseline_elapsed_seconds": 1.2683244590000002,
+  "baseline_id": "pattern-aware-v1-k8-h6-b8-m4",
+  "baseline_mean": 91.2,
+  "baseline_seconds_per_game": 0.12683244590000003,
+  "baseline_statistics": {
+    "confidence_95": [
+      90.14957490086685,
+      92.25042509913315
+    ],
+    "decision_latency": {
+      "decisions": 800,
+      "max_milliseconds": 5.9259580000000005,
+      "mean_milliseconds": 1.574451555000001,
+      "p50_milliseconds": 1.420021,
+      "p90_milliseconds": 2.8061618999999998,
+      "p99_milliseconds": 5.0214259199999995
+    },
+    "game_mean_stddev": 1.6947631758514883,
+    "max_score": 97.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.675,
+        5.7,
+        5.825,
+        5.825,
+        5.8
+      ],
+      "nature_tokens": 3.3,
+      "wildlife": [
+        7.35,
+        12.375,
+        12.475,
+        12.425,
+        14.45
+      ]
+    },
+    "mean_score": 91.2,
+    "min_score": 82.0,
+    "percentiles": {
+      "p10": 87.9,
+      "p50": 91.0,
+      "p90": 95.0
+    },
+    "seat_score_stddev": 3.163898925417247,
+    "standard_error": 0.5359311730271176
+  },
+  "confidence_95": [
+    -0.12264783587781714,
+    1.2226478358778172
+  ],
+  "configuration": {
+    "late-wildlife-diverse-policy-improvement-compare": {
+      "determinizations": 8,
+      "first_seed": 27300,
+      "games": 10,
+      "output": "docs/v2/reports/late-wildlife-diverse-policy-improvement-v1-t5-r8-w2-pilot10.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "sequential": true,
+      "terminal_turns": 5,
+      "wildlife_candidates": 2
+    }
+  },
+  "elapsed_seconds": 111.028486666,
+  "first_seed": 27300,
+  "game_losses": 2,
+  "game_ties": 0,
+  "game_wins": 8,
+  "games": 10,
+  "mean_breakdown_delta": {
+    "habitat": [
+      0.04999999999999982,
+      0.2999999999999998,
+      0.07500000000000018,
+      -0.025000000000000355,
+      0.10000000000000053
+    ],
+    "nature_tokens": -0.04999999999999982,
+    "wildlife": [
+      1.625,
+      -0.47499999999999964,
+      -0.6500000000000004,
+      -0.20000000000000107,
+      -0.1999999999999993
+    ]
+  },
+  "mean_paired_delta": 0.55,
+  "paired_delta_stddev": 1.085254706406647,
+  "pairs": [
+    {
+      "baseline_mean": 93.25,
+      "delta": -1.75,
+      "seed": 27300,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 89.75,
+      "delta": 1.75,
+      "seed": 27301,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 88.5,
+      "delta": 1.0,
+      "seed": 27302,
+      "treatment_mean": 89.5
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.25,
+      "seed": 27303,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": -0.5,
+      "seed": 27304,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 1.0,
+      "seed": 27305,
+      "treatment_mean": 92.25
+    },
+    {
+      "baseline_mean": 89.5,
+      "delta": 2.0,
+      "seed": 27306,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 92.0,
+      "delta": 0.75,
+      "seed": 27307,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 90.5,
+      "delta": 0.75,
+      "seed": 27308,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 94.0,
+      "delta": 0.25,
+      "seed": 27309,
+      "treatment_mean": 94.25
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "late-wildlife-diverse-policy-improvement-compare",
+      "--games",
+      "10",
+      "--first-seed",
+      "27300",
+      "--terminal-turns",
+      "5",
+      "--determinizations",
+      "8",
+      "--policy-candidates",
+      "8",
+      "--policy-habitat-candidates",
+      "6",
+      "--policy-bear-candidates",
+      "8",
+      "--wildlife-candidates",
+      "2",
+      "--policy-market-draws",
+      "4",
+      "--sequential",
+      "--output",
+      "docs/v2/reports/late-wildlife-diverse-policy-improvement-v1-t5-r8-w2-pilot10.json"
+    ],
+    "created_unix_seconds": 1781211541,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "cf4f62c1ef6bc8d11d41b5216fb4a5cbeafc3c1ec4c54b278ad72aef6be20ca2",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "91d6a291b2bf8f350724f88c5f8ed3b1b304dcc300c0135a2d909ab5711aeede"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 40,
+  "standard_error": 0.34318767136623324,
+  "treatment_breakdown": {
+    "habitat": [
+      5.725,
+      6.0,
+      5.9,
+      5.8,
+      5.9
+    ],
+    "nature_tokens": 3.25,
+    "wildlife": [
+      8.975,
+      11.9,
+      11.825,
+      12.225,
+      14.25
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 800,
+    "max_milliseconds": 3524.7571249999996,
+    "mean_milliseconds": 137.18828733125008,
+    "p50_milliseconds": 1.5385624999999998,
+    "p90_milliseconds": 573.9770417000001,
+    "p99_milliseconds": 1446.0863956599997
+  },
+  "treatment_elapsed_seconds": 109.76009678800001,
+  "treatment_id": "late-wildlife-diverse-policy-improvement-v1-t5-r8-k8-h6-b8-w2-m4",
+  "treatment_mean": 91.75,
+  "treatment_seconds_per_game": 10.9760096788,
+  "treatment_statistics": {
+    "confidence_95": [
+      90.99795685702954,
+      92.50204314297046
+    ],
+    "decision_latency": {
+      "decisions": 800,
+      "max_milliseconds": 3524.7571249999996,
+      "mean_milliseconds": 137.18828733125008,
+      "p50_milliseconds": 1.5385624999999998,
+      "p90_milliseconds": 573.9770417000001,
+      "p99_milliseconds": 1446.0863956599997
+    },
+    "game_mean_stddev": 1.2133516482134197,
+    "max_score": 99.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.725,
+        6.0,
+        5.9,
+        5.8,
+        5.9
+      ],
+      "nature_tokens": 3.25,
+      "wildlife": [
+        8.975,
+        11.9,
+        11.825,
+        12.225,
+        14.25
+      ]
+    },
+    "mean_score": 91.75,
+    "min_score": 86.0,
+    "percentiles": {
+      "p10": 88.0,
+      "p50": 92.0,
+      "p90": 95.0
+    },
+    "seat_score_stddev": 2.8800819076671753,
+    "standard_error": 0.3836954811073779
+  }
+}

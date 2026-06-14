@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "experiment_id": "mlx-public-beam-set-ranker-v1-20260612",
+  "status": "rejected",
+  "selected_checkpoint": "step-000000320-epoch-0005-batch-000000",
+  "device": "Device(gpu, 0)",
+  "training_seconds": 89.92282362515107,
+  "epochs_completed": 10,
+  "stopped_reason": "validation futility after 5 non-improving epochs",
+  "validation": {
+    "centered_advantage_correlation": 0.7891159901168421,
+    "top_value_recall": 0.3515625,
+    "mean_top_action_regret": 0.373046875,
+    "top_action_agreement": 0.203125,
+    "centered_mean_squared_error": 0.5945053780302318,
+    "decision_objective": 0.5946067878030232
+  },
+  "baseline": {
+    "strategy": "immediate-score-argmax",
+    "top_value_recall": 0.296875,
+    "mean_top_action_regret": 0.4873046875
+  },
+  "gates": {
+    "centered_advantage_correlation": true,
+    "top_value_recall": false,
+    "mean_top_action_regret": false
+  },
+  "passed": false,
+  "sealed_test_accessed": false,
+  "test_evaluation_run": false,
+  "promotion_run": false,
+  "gameplay_run": false,
+  "best_manifest_blake3": "940abe2712d5c9223940b5d99d87e597016151d1f6245a60e05a5ffe569d3eaf",
+  "run_manifest_blake3": "54804fa0132e5e37fdf4093ee7236c08c678b0dd2e3c08cd23bd7a5e77fd923f"
+}

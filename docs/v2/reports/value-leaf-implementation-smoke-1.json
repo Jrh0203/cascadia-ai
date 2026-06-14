@@ -1,0 +1,248 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      6.25,
+      5.0,
+      5.75,
+      6.25,
+      5.25
+    ],
+    "nature_tokens": 4.0,
+    "wildlife": [
+      3.0,
+      12.25,
+      14.25,
+      11.0,
+      17.0
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 350.342875,
+    "mean_milliseconds": 71.94102608749999,
+    "p50_milliseconds": 25.163667000000004,
+    "p90_milliseconds": 182.7626709000001,
+    "p99_milliseconds": 344.24239624999996
+  },
+  "baseline_elapsed_seconds": 5.756429625,
+  "baseline_id": "habitat-candidate-lookahead-v1-k2-h1-r1-d1",
+  "baseline_mean": 90.0,
+  "baseline_seconds_per_game": 5.756429625,
+  "baseline_statistics": {
+    "confidence_95": [
+      90.0,
+      90.0
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 350.342875,
+      "mean_milliseconds": 71.94102608749999,
+      "p50_milliseconds": 25.163667000000004,
+      "p90_milliseconds": 182.7626709000001,
+      "p99_milliseconds": 344.24239624999996
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 94.0,
+    "mean_breakdown": {
+      "habitat": [
+        6.25,
+        5.0,
+        5.75,
+        6.25,
+        5.25
+      ],
+      "nature_tokens": 4.0,
+      "wildlife": [
+        3.0,
+        12.25,
+        14.25,
+        11.0,
+        17.0
+      ]
+    },
+    "mean_score": 90.0,
+    "min_score": 87.0,
+    "percentiles": {
+      "p10": 87.6,
+      "p50": 89.5,
+      "p90": 92.8
+    },
+    "seat_score_stddev": 2.943920288775949,
+    "standard_error": 0.0
+  },
+  "confidence_95": [
+    -4.5,
+    -4.5
+  ],
+  "configuration": {
+    "value-leaf-compare": {
+      "candidates": 2,
+      "determinizations": 1,
+      "first_seed": 22799,
+      "games": 1,
+      "greedy_plies": 1,
+      "habitat_candidates": 1,
+      "model_dir": "artifacts/models/entity-value-v1-greedy256",
+      "output": "docs/v2/reports/value-leaf-implementation-smoke-1.json",
+      "run_dir": null,
+      "server": ".venv/bin/cascadia-mlx-serve"
+    }
+  },
+  "elapsed_seconds": 11.195723375,
+  "first_seed": 22799,
+  "game_losses": 1,
+  "game_ties": 0,
+  "game_wins": 0,
+  "games": 1,
+  "mean_breakdown_delta": {
+    "habitat": [
+      -0.25,
+      1.75,
+      -0.25,
+      -1.0,
+      0.0
+    ],
+    "nature_tokens": -1.25,
+    "wildlife": [
+      2.5,
+      -0.75,
+      -4.75,
+      0.0,
+      -0.5
+    ]
+  },
+  "mean_paired_delta": -4.5,
+  "paired_delta_stddev": 0.0,
+  "pairs": [
+    {
+      "baseline_mean": 90.0,
+      "delta": -4.5,
+      "seed": 22799,
+      "treatment_mean": 85.5
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "value-leaf-compare",
+      "--model-dir",
+      "artifacts/models/entity-value-v1-greedy256",
+      "--games",
+      "1",
+      "--first-seed",
+      "22799",
+      "--candidates",
+      "2",
+      "--habitat-candidates",
+      "1",
+      "--determinizations",
+      "1",
+      "--greedy-plies",
+      "1",
+      "--output",
+      "docs/v2/reports/value-leaf-implementation-smoke-1.json"
+    ],
+    "created_unix_seconds": 1781157191,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "0d047eb747300617190f96bed15a5c1c6d832ab73f929f661328134225edee15",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [
+      {
+        "manifest": "/Users/johnherrick/cascadia/artifacts/models/entity-value-v1-greedy256/model.json",
+        "manifest_blake3": "cd08275b4e1bb5bf28ba15672b277377b3bc6051d2d95351398912b02f36e85f",
+        "path": "/Users/johnherrick/cascadia/artifacts/models/entity-value-v1-greedy256",
+        "role": "model_dir"
+      }
+    ],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "1a75a576c6daeb91b2c4ae7b8a53748b566a09d6f03acf4bf53ad77baed50235"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 4,
+  "standard_error": 0.0,
+  "treatment_breakdown": {
+    "habitat": [
+      6.0,
+      6.75,
+      5.5,
+      5.25,
+      5.25
+    ],
+    "nature_tokens": 2.75,
+    "wildlife": [
+      5.5,
+      11.5,
+      9.5,
+      11.0,
+      16.5
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 321.724541,
+    "mean_milliseconds": 67.97785105,
+    "p50_milliseconds": 30.8449165,
+    "p90_milliseconds": 170.08812920000003,
+    "p99_milliseconds": 242.09500974999935
+  },
+  "treatment_elapsed_seconds": 5.439272083,
+  "treatment_id": "mlx-value-leaf-lookahead-v1-k2-h1-r1-d1",
+  "treatment_mean": 85.5,
+  "treatment_seconds_per_game": 5.439272083,
+  "treatment_statistics": {
+    "confidence_95": [
+      85.5,
+      85.5
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 321.724541,
+      "mean_milliseconds": 67.97785105,
+      "p50_milliseconds": 30.8449165,
+      "p90_milliseconds": 170.08812920000003,
+      "p99_milliseconds": 242.09500974999935
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 88.0,
+    "mean_breakdown": {
+      "habitat": [
+        6.0,
+        6.75,
+        5.5,
+        5.25,
+        5.25
+      ],
+      "nature_tokens": 2.75,
+      "wildlife": [
+        5.5,
+        11.5,
+        9.5,
+        11.0,
+        16.5
+      ]
+    },
+    "mean_score": 85.5,
+    "min_score": 82.0,
+    "percentiles": {
+      "p10": 82.9,
+      "p50": 86.0,
+      "p90": 87.7
+    },
+    "seat_score_stddev": 2.6457513110645907,
+    "standard_error": 0.0
+  }
+}

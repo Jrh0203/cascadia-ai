@@ -1,0 +1,51 @@
+[package]
+name = "cascadia-differential"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Test-only trusted-fixture comparisons between Cascadia v1 and v2"
+
+[features]
+default = []
+legacy-teacher = [
+    "dep:blake3",
+    "dep:cascadia-ai",
+    "dep:cascadia-data",
+    "dep:cascadia-eval",
+    "dep:cascadia-model",
+    "dep:cascadia-provenance",
+    "dep:cascadia-search",
+    "dep:cascadia-sim",
+    "dep:clap",
+    "dep:rand",
+    "dep:rand_chacha",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:thiserror",
+]
+
+[dependencies]
+blake3 = { workspace = true, optional = true }
+cascadia-ai = { path = "../../legacy/crates/cascadia-ai", features = ["mid-features", "v4-opp"], optional = true }
+cascadia-core = { path = "../../legacy/crates/cascadia-core" }
+cascadia-data = { path = "../cascadia-data", optional = true }
+cascadia-eval = { path = "../cascadia-eval", optional = true }
+cascadia-game = { path = "../cascadia-game" }
+cascadia-model = { path = "../cascadia-model", optional = true }
+cascadia-provenance = { path = "../cascadia-provenance", optional = true }
+cascadia-search = { path = "../cascadia-search", optional = true }
+cascadia-sim = { path = "../cascadia-sim", optional = true }
+clap = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+rand_chacha = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+
+[dev-dependencies]
+
+[[bin]]
+name = "legacy-teacher"
+path = "src/bin/legacy_teacher.rs"
+required-features = ["legacy-teacher"]

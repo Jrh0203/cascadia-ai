@@ -1,0 +1,54 @@
+{
+  "device": "Device(gpu, 0)",
+  "gates": {
+    "artifact_integrity": true,
+    "deterministic_repeat": true,
+    "finite": true,
+    "fixture_contract": true,
+    "fixture_records": true,
+    "real_maximum_absolute_error": true,
+    "real_mean_absolute_error": true,
+    "real_p99_absolute_error": true,
+    "synthetic_maximum_absolute_error": true
+  },
+  "inputs": {
+    "fixture": {
+      "blake3": "1e1a89d4ca2a540587793a0fe681b11de80e661f6d419328c59f31e910797238",
+      "bytes": 295258,
+      "duplicate_feature_occurrences": 1170,
+      "executable_blake3": "d65038b2790f7b203378af096d7721e6fd38c58adafb97fe7adc90618cb02d44",
+      "maximum_feature_multiplicity": 5,
+      "path": "/Users/johnherrick/cascadia/artifacts/fixtures/legacy-nnue-v4opp-mlx-v1-rust.json",
+      "records_with_duplicate_features": 80,
+      "v2_source_blake3": "ecc837dd21804fada7d60ec4c115eece95e310335a0f2dd757a901cd1f45674f"
+    },
+    "model_manifest": {
+      "blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+      "path": "/Users/johnherrick/cascadia/artifacts/models/legacy-nnue-v4opp-mlx-v1/model.json"
+    },
+    "model_safetensors": {
+      "blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65",
+      "bytes": 23135528
+    },
+    "source": {
+      "blake3": "9e1d568693274fc537ac4f6d6f729abb1ee8da8330a78d1f78a1f62b733de400",
+      "bytes": 23134992,
+      "path": "/Users/johnherrick/cascadia/nnue_weights_v4opp_modal_iter3.bin"
+    }
+  },
+  "passed": true,
+  "real": {
+    "maximum_absolute_error": 4.1961669921875e-05,
+    "mean_absolute_error": 1.4892220497131347e-05,
+    "p99_absolute_error": 3.8948059082031226e-05
+  },
+  "real_records": 80,
+  "schema_version": 1,
+  "synthetic": {
+    "maximum_absolute_error": 1.049041748046875e-05,
+    "mean_absolute_error": 2.5134820204514725e-06,
+    "p99_absolute_error": 9.450912475585961e-06
+  },
+  "synthetic_records": 260,
+  "synthetic_seed": 20260619
+}

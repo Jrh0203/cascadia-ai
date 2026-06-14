@@ -1,0 +1,24 @@
+[package]
+name = "cascadia-cli-v2"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Cascadia AI v2 command-line interface"
+
+[[bin]]
+name = "cascadia-v2"
+path = "src/main.rs"
+
+[dependencies]
+blake3.workspace = true
+cascadia-data = { path = "../cascadia-data" }
+cascadia-eval = { path = "../cascadia-eval" }
+cascadia-game = { path = "../cascadia-game" }
+cascadia-model = { path = "../cascadia-model" }
+cascadia-provenance = { path = "../cascadia-provenance" }
+cascadia-search = { path = "../cascadia-search" }
+cascadia-sim = { path = "../cascadia-sim" }
+clap.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true

@@ -1,0 +1,76 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cascadia-mlx"
+version = "0.1.0"
+description = "MLX training and inference for Cascadia AI v2"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "blake3>=1.0,<2",
+    "mlx==0.31.2",
+    "numpy>=2.2,<3",
+]
+
+[project.scripts]
+cascadia-mlx-device = "cascadia_mlx.device:main"
+cascadia-mlx-imitation-evaluate = "cascadia_mlx.imitation_evaluate:main"
+cascadia-mlx-imitation-distribution-train = "cascadia_mlx.imitation_distribution_train:main"
+cascadia-mlx-imitation-identifiability = "cascadia_mlx.imitation_identifiability:main"
+cascadia-mlx-imitation-parent-residual-train = "cascadia_mlx.imitation_parent_residual_train:main"
+cascadia-mlx-imitation-parent-hidden-train = "cascadia_mlx.imitation_parent_hidden_train:main"
+cascadia-mlx-imitation-score-residual-train = "cascadia_mlx.imitation_score_residual_train:main"
+cascadia-mlx-legacy-nnue = "cascadia_mlx.legacy_nnue_tool:main"
+cascadia-mlx-legacy-nnue-serve = "cascadia_mlx.legacy_nnue_serve:main"
+cascadia-mlx-imitation-promote = "cascadia_mlx.imitation_promote:main"
+cascadia-mlx-imitation-serve = "cascadia_mlx.imitation_serve:main"
+cascadia-mlx-imitation-train = "cascadia_mlx.imitation_train:main"
+cascadia-mlx-action-ranking-evaluate = "cascadia_mlx.action_ranking_evaluate:main"
+cascadia-mlx-action-ranking-promote = "cascadia_mlx.action_ranking_promote:main"
+cascadia-mlx-action-ranking-serve = "cascadia_mlx.action_ranking_serve:main"
+cascadia-mlx-action-ranking-train = "cascadia_mlx.action_ranking_train:main"
+cascadia-mlx-conservative-advantage-evaluate = "cascadia_mlx.conservative_advantage_evaluate:main"
+cascadia-mlx-conservative-advantage-train = "cascadia_mlx.conservative_advantage_train:main"
+cascadia-mlx-counterfactual-advantage-evaluate = "cascadia_mlx.counterfactual_advantage_evaluate:main"
+cascadia-mlx-counterfactual-advantage-train = "cascadia_mlx.counterfactual_advantage_train:main"
+cascadia-mlx-conservative-policy-evaluate = "cascadia_mlx.conservative_policy_evaluate:main"
+cascadia-mlx-conservative-policy-train = "cascadia_mlx.conservative_policy_train:main"
+cascadia-mlx-promote = "cascadia_mlx.promote:main"
+cascadia-mlx-public-beam-value-evaluate = "cascadia_mlx.public_beam_value_evaluate:main"
+cascadia-mlx-public-beam-value-promote = "cascadia_mlx.public_beam_value_promote:main"
+cascadia-mlx-public-beam-value-serve = "cascadia_mlx.public_beam_value_serve:main"
+cascadia-mlx-public-beam-value-train = "cascadia_mlx.public_beam_value_train:main"
+cascadia-mlx-public-beam-set-evaluate = "cascadia_mlx.public_beam_set_evaluate:main"
+cascadia-mlx-public-beam-set-promote = "cascadia_mlx.public_beam_set_promote:main"
+cascadia-mlx-public-beam-set-serve = "cascadia_mlx.public_beam_set_serve:main"
+cascadia-mlx-public-beam-set-train = "cascadia_mlx.public_beam_set_train:main"
+cascadia-mlx-ranking-promote = "cascadia_mlx.ranking_promote:main"
+cascadia-mlx-ranking-serve = "cascadia_mlx.ranking_serve:main"
+cascadia-mlx-ranking-train = "cascadia_mlx.ranking_train:main"
+cascadia-mlx-rollout-joint-train = "cascadia_mlx.rollout_joint_train:main"
+cascadia-mlx-rollout-value-train = "cascadia_mlx.rollout_value_train:main"
+cascadia-mlx-score-to-go-benchmark = "cascadia_mlx.score_to_go_benchmark:main"
+cascadia-mlx-score-to-go-train = "cascadia_mlx.score_to_go_train:main"
+cascadia-mlx-serve = "cascadia_mlx.serve:main"
+cascadia-mlx-train = "cascadia_mlx.train:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<10",
+    "ruff>=0.11,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["python/cascadia_mlx"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+addopts = ["--strict-markers", "-ra"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

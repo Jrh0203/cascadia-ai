@@ -1,0 +1,254 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      7.5,
+      5.25,
+      5.25,
+      5.0,
+      6.25
+    ],
+    "nature_tokens": 4.0,
+    "wildlife": [
+      3.75,
+      14.75,
+      11.5,
+      12.0,
+      17.0
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 231.49125,
+    "mean_milliseconds": 93.37842809999998,
+    "p50_milliseconds": 86.5810835,
+    "p90_milliseconds": 152.34582880000002,
+    "p99_milliseconds": 229.28501067999997
+  },
+  "baseline_elapsed_seconds": 7.471614375,
+  "baseline_id": "habitat-candidate-lookahead-v1-k8-h6-r4-d4",
+  "baseline_mean": 92.25,
+  "baseline_seconds_per_game": 7.471614375,
+  "baseline_statistics": {
+    "confidence_95": [
+      92.25,
+      92.25
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 231.49125,
+      "mean_milliseconds": 93.37842809999998,
+      "p50_milliseconds": 86.5810835,
+      "p90_milliseconds": 152.34582880000002,
+      "p99_milliseconds": 229.28501067999997
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 95.0,
+    "mean_breakdown": {
+      "habitat": [
+        7.5,
+        5.25,
+        5.25,
+        5.0,
+        6.25
+      ],
+      "nature_tokens": 4.0,
+      "wildlife": [
+        3.75,
+        14.75,
+        11.5,
+        12.0,
+        17.0
+      ]
+    },
+    "mean_score": 92.25,
+    "min_score": 88.0,
+    "percentiles": {
+      "p10": 89.2,
+      "p50": 93.0,
+      "p90": 94.69999999999999
+    },
+    "seat_score_stddev": 3.095695936834452,
+    "standard_error": 0.0
+  },
+  "confidence_95": [
+    -3.5,
+    -3.5
+  ],
+  "configuration": {
+    "ranking-habitat-rollout-compare": {
+      "candidates": 8,
+      "determinizations": 4,
+      "first_seed": 22699,
+      "games": 1,
+      "habitat_candidates": 6,
+      "model_dir": "artifacts/models/entity-ranker-v1-h6",
+      "output": "docs/v2/reports/mlx-ranking-h6-rollout-policy-v1-runtime-smoke-1.json",
+      "rollout_candidates": 8,
+      "rollout_habitat_candidates": 6,
+      "rollout_plies": 4,
+      "run_dir": null,
+      "server": ".venv/bin/cascadia-mlx-ranking-serve"
+    }
+  },
+  "elapsed_seconds": 203.500533375,
+  "first_seed": 22699,
+  "game_losses": 1,
+  "game_ties": 0,
+  "game_wins": 0,
+  "games": 1,
+  "mean_breakdown_delta": {
+    "habitat": [
+      -2.75,
+      0.25,
+      0.0,
+      1.75,
+      -1.0
+    ],
+    "nature_tokens": -2.0,
+    "wildlife": [
+      2.0,
+      -1.0,
+      -2.25,
+      -0.75,
+      2.25
+    ]
+  },
+  "mean_paired_delta": -3.5,
+  "paired_delta_stddev": 0.0,
+  "pairs": [
+    {
+      "baseline_mean": 92.25,
+      "delta": -3.5,
+      "seed": 22699,
+      "treatment_mean": 88.75
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "ranking-habitat-rollout-compare",
+      "--model-dir",
+      "artifacts/models/entity-ranker-v1-h6",
+      "--games",
+      "1",
+      "--first-seed",
+      "22699",
+      "--candidates",
+      "8",
+      "--habitat-candidates",
+      "6",
+      "--determinizations",
+      "4",
+      "--rollout-plies",
+      "4",
+      "--rollout-candidates",
+      "8",
+      "--rollout-habitat-candidates",
+      "6",
+      "--output",
+      "docs/v2/reports/mlx-ranking-h6-rollout-policy-v1-runtime-smoke-1.json"
+    ],
+    "created_unix_seconds": 1781160990,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "4f43419cc21ec4ecdec2e72d09339ff3090a988fbabd566a53cbc05d518a2706",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [
+      {
+        "manifest": "/Users/johnherrick/cascadia/artifacts/models/entity-ranker-v1-h6/model.json",
+        "manifest_blake3": "6fa654a6af96fa8cf137a5b57d808c311565bbf2d61a8ebee50c2f511218c723",
+        "path": "/Users/johnherrick/cascadia/artifacts/models/entity-ranker-v1-h6",
+        "role": "model_dir"
+      }
+    ],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "a0c1994e21baa15e14af4b8ba815bcfdbc455ee0fe4e5cb28812697961b4acaa"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 4,
+  "standard_error": 0.0,
+  "treatment_breakdown": {
+    "habitat": [
+      4.75,
+      5.5,
+      5.25,
+      6.75,
+      5.25
+    ],
+    "nature_tokens": 2.0,
+    "wildlife": [
+      5.75,
+      13.75,
+      9.25,
+      11.25,
+      19.25
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 10405.069583999999,
+    "mean_milliseconds": 2423.290067162501,
+    "p50_milliseconds": 1939.9079795,
+    "p90_milliseconds": 4096.776687500001,
+    "p99_milliseconds": 8737.179615249986
+  },
+  "treatment_elapsed_seconds": 196.022021,
+  "treatment_id": "mlx-habitat-rollout-lookahead-v1-k8-h6-r4-d4-rk8-rh6",
+  "treatment_mean": 88.75,
+  "treatment_seconds_per_game": 196.022021,
+  "treatment_statistics": {
+    "confidence_95": [
+      88.75,
+      88.75
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 10405.069583999999,
+      "mean_milliseconds": 2423.290067162501,
+      "p50_milliseconds": 1939.9079795,
+      "p90_milliseconds": 4096.776687500001,
+      "p99_milliseconds": 8737.179615249986
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 94.0,
+    "mean_breakdown": {
+      "habitat": [
+        4.75,
+        5.5,
+        5.25,
+        6.75,
+        5.25
+      ],
+      "nature_tokens": 2.0,
+      "wildlife": [
+        5.75,
+        13.75,
+        9.25,
+        11.25,
+        19.25
+      ]
+    },
+    "mean_score": 88.75,
+    "min_score": 82.0,
+    "percentiles": {
+      "p10": 83.2,
+      "p50": 89.5,
+      "p90": 93.69999999999999
+    },
+    "seat_score_stddev": 5.737304826019502,
+    "standard_error": 0.0
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "strategy_id": "mlx-value-v1-greedy-top-8",
+  "games": 1,
+  "seat_games": 4,
+  "first_seed": 10000,
+  "mean_score": 88.25,
+  "game_mean_stddev": 0.0,
+  "seat_score_stddev": 4.716990566028302,
+  "standard_error": 0.0,
+  "confidence_95": [
+    88.25,
+    88.25
+  ],
+  "percentiles": {
+    "p10": 84.9,
+    "p50": 87.0,
+    "p90": 92.6
+  },
+  "min_score": 84.0,
+  "max_score": 95.0,
+  "mean_breakdown": {
+    "habitat": [
+      5.25,
+      5.0,
+      4.75,
+      6.5,
+      4.75
+    ],
+    "wildlife": [
+      3.75,
+      11.25,
+      14.25,
+      12.0,
+      16.25
+    ],
+    "nature_tokens": 4.5
+  },
+  "elapsed_seconds": 3.7914987079999998,
+  "games_per_second": 0.2637479469240004
+}

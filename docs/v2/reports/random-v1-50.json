@@ -1,0 +1,39 @@
+{
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "strategy_id": "random-v1",
+  "games": 50,
+  "seat_games": 200,
+  "first_seed": 0,
+  "mean_score": 33.62,
+  "game_mean_stddev": 2.850993382192622,
+  "seat_score_stddev": 6.199011106093241,
+  "standard_error": 0.40319135073327467,
+  "confidence_95": [
+    32.82974495256278,
+    34.41025504743722
+  ],
+  "percentiles": {
+    "p10": 26.0,
+    "p50": 33.0,
+    "p90": 40.099999999999994
+  },
+  "mean_breakdown": {
+    "habitat": [
+      1.945,
+      1.935,
+      2.025,
+      1.88,
+      1.92
+    ],
+    "wildlife": [
+      1.635,
+      6.115,
+      5.96,
+      4.555,
+      5.42
+    ],
+    "nature_tokens": 0.23
+  },
+  "elapsed_seconds": 1.0444295,
+  "games_per_second": 47.87302541722539
+}

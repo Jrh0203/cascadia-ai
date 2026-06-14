@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "experiment_id": "qualified-legacy-nnue-exact-mlx-gameplay-reproduction-v1-20260612",
+  "status": "smoke-passed",
+  "rollouts": 600,
+  "diagnostics": {
+    "states_attempted": 80,
+    "states_translated": 80,
+    "checked_boards": 320,
+    "expanded_candidates": 3205,
+    "expanded_candidates_legal": 3100,
+    "expanded_candidates_illegal": 105,
+    "prefiltered_candidates": 2413,
+    "prefiltered_candidates_legal": 2413,
+    "prefiltered_candidates_illegal": 0,
+    "selected_actions": 80,
+    "selected_actions_legal": 80,
+    "fallbacks": 0,
+    "maximum_absolute_coordinate": 4,
+    "first_errors": [],
+    "malformed_expanded_examples": [
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 0 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 0, tile_q: 1, tile_r: 1, rotation: 0, wildlife_q: Some(0), wildlife_r: Some(0), score: 14, eval: 514, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 0 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 0, tile_q: 1, tile_r: 1, rotation: 4, wildlife_q: Some(0), wildlife_r: Some(0), score: 14, eval: 514, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 0 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 0, tile_q: 1, tile_r: 1, rotation: 5, wildlife_q: Some(0), wildlife_r: Some(0), score: 14, eval: 514, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 0 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 0, tile_q: 2, tile_r: -1, rotation: 2, wildlife_q: Some(0), wildlife_r: Some(0), score: 14, eval: 514, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 0 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 0, tile_q: 2, tile_r: -1, rotation: 3, wildlife_q: Some(0), wildlife_r: Some(0), score: 14, eval: 514, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 0, r: 0 } cannot support Hawk; legacy candidate=ScoredMove { market_index: 0, tile_q: 2, tile_r: -1, rotation: 4, wildlife_q: Some(0), wildlife_r: Some(0), score: 14, eval: 514, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Elk; legacy candidate=ScoredMove { market_index: 1, tile_q: -1, tile_r: 0, rotation: 0, wildlife_q: Some(1), wildlife_r: Some(0), score: 19, eval: 619, wildlife_market_index: None }",
+      "mapped legacy action is illegal in v2: tile at HexCoord { q: 1, r: 0 } cannot support Elk; legacy candidate=ScoredMove { market_index: 1, tile_q: -1, tile_r: 0, rotation: 4, wildlife_q: Some(1), wildlife_r: Some(0), score: 19, eval: 619, wildlife_market_index: None }"
+    ],
+    "elk_score_mismatch_boards": 0,
+    "elk_v2_minus_v1_total": 0,
+    "elk_v2_minus_v1_max": 0,
+    "pattern_frontier_candidates": 0,
+    "selected_actions_in_pattern_frontier": 0,
+    "selected_independent_actions": 0,
+    "selected_independent_actions_in_pattern_frontier": 0,
+    "selected_actions_by_phase": [
+      0,
+      0,
+      0
+    ],
+    "selected_actions_in_pattern_frontier_by_phase": [
+      0,
+      0,
+      0
+    ],
+    "pattern_frontier_miss_examples": []
+  },
+  "batch_diagnostics": {
+    "neural_batches": 4000,
+    "neural_rows": 6299039,
+    "minimum_batch_rows": 3,
+    "maximum_batch_rows": 2250,
+    "rollout_waves": 3784,
+    "policy_fallbacks": 0
+  },
+  "fallback_rate": 0.0,
+  "expanded_malformed_rate": 0.0327613104524181,
+  "total_wildlife_delta": 0.75,
+  "habitat_delta": 0.5,
+  "non_token_score_delta": 1.25,
+  "token_spend": 0.0,
+  "board_points_per_token": null,
+  "service_startup_milliseconds": 102.95987500000001,
+  "clean_shutdown": true,
+  "gates": {
+    "bridge_integrity_passed": true,
+    "runtime_passed": true,
+    "smoke_passed": true,
+    "treatment_mean_passed": true,
+    "paired_gain_passed": true,
+    "paired_confidence_passed": true,
+    "wildlife_passed": true,
+    "habitat_passed": true,
+    "nature_tokens_passed": true,
+    "non_token_score_passed": false,
+    "token_efficiency_passed": true,
+    "frontier_recall_passed": true,
+    "qualification_passed": false
+  },
+  "comparison": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "baseline_id": "late-conservative-base-policy-improvement-v1-t5-r8-k8-h6-b8-m4-c90",
+    "treatment_id": "canonical-action-legacy-exact-mlx-v1-k32-r600-lmr-no-paid-prelude",
+    "games": 1,
+    "seat_games_per_strategy": 4,
+    "first_seed": 32599,
+    "baseline_mean": 94.0,
+    "treatment_mean": 95.5,
+    "baseline_statistics": {
+      "mean_score": 94.0,
+      "game_mean_stddev": 0.0,
+      "seat_score_stddev": 0.816496580927726,
+      "standard_error": 0.0,
+      "confidence_95": [
+        94.0,
+        94.0
+      ],
+      "percentiles": {
+        "p10": 93.3,
+        "p50": 94.0,
+        "p90": 94.69999999999999
+      },
+      "min_score": 93.0,
+      "max_score": 95.0,
+      "mean_breakdown": {
+        "habitat": [
+          4.75,
+          6.0,
+          6.25,
+          6.75,
+          6.75
+        ],
+        "wildlife": [
+          6.5,
+          11.0,
+          11.75,
+          12.5,
+          17.75
+        ],
+        "nature_tokens": 4.0
+      },
+      "decision_latency": {
+        "decisions": 80,
+        "mean_milliseconds": 31.46382085000001,
+        "p50_milliseconds": 0.6034795,
+        "p90_milliseconds": 143.52082850000016,
+        "p99_milliseconds": 255.33745549999952,
+        "max_milliseconds": 320.693958
+      }
+    },
+    "treatment_statistics": {
+      "mean_score": 95.5,
+      "game_mean_stddev": 0.0,
+      "seat_score_stddev": 3.696845502136472,
+      "standard_error": 0.0,
+      "confidence_95": [
+        95.5,
+        95.5
+      ],
+      "percentiles": {
+        "p10": 92.1,
+        "p50": 97.0,
+        "p90": 97.7
+      },
+      "min_score": 90.0,
+      "max_score": 98.0,
+      "mean_breakdown": {
+        "habitat": [
+          6.25,
+          6.0,
+          6.25,
+          6.25,
+          6.25
+        ],
+        "wildlife": [
+          11.0,
+          10.5,
+          12.0,
+          12.0,
+          14.75
+        ],
+        "nature_tokens": 4.25
+      },
+      "decision_latency": {
+        "decisions": 80,
+        "mean_milliseconds": 1828.0314755,
+        "p50_milliseconds": 1918.650583,
+        "p90_milliseconds": 3026.1001497,
+        "p99_milliseconds": 3425.85516857,
+        "max_milliseconds": 3453.9194580000003
+      }
+    },
+    "mean_paired_delta": 1.5,
+    "paired_delta_stddev": 0.0,
+    "standard_error": 0.0,
+    "confidence_95": [
+      1.5,
+      1.5
+    ],
+    "game_wins": 1,
+    "game_ties": 0,
+    "game_losses": 0,
+    "baseline_breakdown": {
+      "habitat": [
+        4.75,
+        6.0,
+        6.25,
+        6.75,
+        6.75
+      ],
+      "wildlife": [
+        6.5,
+        11.0,
+        11.75,
+        12.5,
+        17.75
+      ],
+      "nature_tokens": 4.0
+    },
+    "treatment_breakdown": {
+      "habitat": [
+        6.25,
+        6.0,
+        6.25,
+        6.25,
+        6.25
+      ],
+      "wildlife": [
+        11.0,
+        10.5,
+        12.0,
+        12.0,
+        14.75
+      ],
+      "nature_tokens": 4.25
+    },
+    "mean_breakdown_delta": {
+      "habitat": [
+        1.5,
+        0.0,
+        0.0,
+        -0.5,
+        -0.5
+      ],
+      "wildlife": [
+        4.5,
+        -0.5,
+        0.25,
+        -0.5,
+        -3.0
+      ],
+      "nature_tokens": 0.25
+    },
+    "baseline_decision_latency": {
+      "decisions": 80,
+      "mean_milliseconds": 31.46382085000001,
+      "p50_milliseconds": 0.6034795,
+      "p90_milliseconds": 143.52082850000016,
+      "p99_milliseconds": 255.33745549999952,
+      "max_milliseconds": 320.693958
+    },
+    "treatment_decision_latency": {
+      "decisions": 80,
+      "mean_milliseconds": 1828.0314755,
+      "p50_milliseconds": 1918.650583,
+      "p90_milliseconds": 3026.1001497,
+      "p99_milliseconds": 3425.85516857,
+      "max_milliseconds": 3453.9194580000003
+    },
+    "baseline_elapsed_seconds": 2.517541542,
+    "treatment_elapsed_seconds": 146.242940042,
+    "baseline_seconds_per_game": 2.517541542,
+    "treatment_seconds_per_game": 146.242940042,
+    "elapsed_seconds": 148.775753875,
+    "pairs": [
+      {
+        "seed": 32599,
+        "baseline_mean": 94.0,
+        "treatment_mean": 95.5,
+        "delta": 1.5
+      }
+    ]
+  },
+  "model_manifest_path": "/Users/johnherrick/cascadia/artifacts/models/legacy-nnue-v4opp-mlx-v1/model.json",
+  "model_manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+  "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65",
+  "provenance": {
+    "source": {
+      "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+      "git_dirty": true,
+      "git_status_blake3": "940109c03d88769406b6b1afb9867142e84e7c3c9defc19798699293d411def9",
+      "v2_source_blake3": "099599bed99afb1d424339a599484eb1c984e5495f83f643d077057d6f8f726f"
+    },
+    "executable_path": "/Users/johnherrick/cascadia/target/release/legacy-teacher",
+    "executable_blake3": "895eca05f7420ef8a610cd92657bca20d948542a21d22c3a4b0b0fa8b8dd3982",
+    "weights_path": "/Users/johnherrick/cascadia/nnue_weights_v4opp_modal_iter3.bin",
+    "weights_blake3": "9e1d568693274fc537ac4f6d6f729abb1ee8da8330a78d1f78a1f62b733de400",
+    "legacy_environment": [
+      [
+        "MCE_LMR",
+        "1"
+      ],
+      [
+        "MCE_DIVERSE_PREFILTER",
+        "1"
+      ]
+    ]
+  }
+}

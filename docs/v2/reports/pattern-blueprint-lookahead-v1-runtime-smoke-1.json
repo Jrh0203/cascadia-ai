@@ -1,0 +1,248 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      6.0,
+      6.75,
+      6.5,
+      4.75,
+      5.0
+    ],
+    "nature_tokens": 3.0,
+    "wildlife": [
+      5.5,
+      12.25,
+      10.75,
+      12.75,
+      17.25
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 282.188375,
+    "mean_milliseconds": 105.97140838749999,
+    "p50_milliseconds": 103.149271,
+    "p90_milliseconds": 176.71908750000023,
+    "p99_milliseconds": 275.93562375
+  },
+  "baseline_elapsed_seconds": 8.4790115,
+  "baseline_id": "habitat-candidate-lookahead-v1-k8-h6-r4-d4",
+  "baseline_mean": 90.5,
+  "baseline_seconds_per_game": 8.4790115,
+  "baseline_statistics": {
+    "confidence_95": [
+      90.5,
+      90.5
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 282.188375,
+      "mean_milliseconds": 105.97140838749999,
+      "p50_milliseconds": 103.149271,
+      "p90_milliseconds": 176.71908750000023,
+      "p99_milliseconds": 275.93562375
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 95.0,
+    "mean_breakdown": {
+      "habitat": [
+        6.0,
+        6.75,
+        6.5,
+        4.75,
+        5.0
+      ],
+      "nature_tokens": 3.0,
+      "wildlife": [
+        5.5,
+        12.25,
+        10.75,
+        12.75,
+        17.25
+      ]
+    },
+    "mean_score": 90.5,
+    "min_score": 87.0,
+    "percentiles": {
+      "p10": 87.6,
+      "p50": 90.0,
+      "p90": 93.8
+    },
+    "seat_score_stddev": 3.415650255319866,
+    "standard_error": 0.0
+  },
+  "confidence_95": [
+    0.25,
+    0.25
+  ],
+  "configuration": {
+    "pattern-blueprint-compare": {
+      "candidates": 8,
+      "determinizations": 4,
+      "first_seed": 23499,
+      "games": 1,
+      "habitat_candidates": 6,
+      "output": "docs/v2/reports/pattern-blueprint-lookahead-v1-runtime-smoke-1.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "rollout_plies": 4
+    }
+  },
+  "elapsed_seconds": 23.887547542,
+  "first_seed": 23499,
+  "game_losses": 0,
+  "game_ties": 0,
+  "game_wins": 1,
+  "games": 1,
+  "mean_breakdown_delta": {
+    "habitat": [
+      0.0,
+      -1.5,
+      0.0,
+      1.0,
+      0.25
+    ],
+    "nature_tokens": 1.0,
+    "wildlife": [
+      0.25,
+      -1.5,
+      1.0,
+      0.0,
+      -0.25
+    ]
+  },
+  "mean_paired_delta": 0.25,
+  "paired_delta_stddev": 0.0,
+  "pairs": [
+    {
+      "baseline_mean": 90.5,
+      "delta": 0.25,
+      "seed": 23499,
+      "treatment_mean": 90.75
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "pattern-blueprint-compare",
+      "--games",
+      "1",
+      "--first-seed",
+      "23499",
+      "--candidates",
+      "8",
+      "--habitat-candidates",
+      "6",
+      "--determinizations",
+      "4",
+      "--rollout-plies",
+      "4",
+      "--policy-candidates",
+      "8",
+      "--policy-habitat-candidates",
+      "6",
+      "--policy-bear-candidates",
+      "8",
+      "--policy-market-draws",
+      "4",
+      "--output",
+      "docs/v2/reports/pattern-blueprint-lookahead-v1-runtime-smoke-1.json"
+    ],
+    "created_unix_seconds": 1781164071,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "d55d93f9402fbb0202ea89de73961dd2304f1908c7000f2c81b8800512fab8c5",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "b944cab99acb2502eab0e8f652880e041d86a4cc7c35487d62b8398453f806c9"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 4,
+  "standard_error": 0.0,
+  "treatment_breakdown": {
+    "habitat": [
+      6.0,
+      5.25,
+      6.5,
+      5.75,
+      5.25
+    ],
+    "nature_tokens": 4.0,
+    "wildlife": [
+      5.75,
+      10.75,
+      11.75,
+      12.75,
+      17.0
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 503.58791700000006,
+    "mean_milliseconds": 192.58760626249995,
+    "p50_milliseconds": 179.058104,
+    "p90_milliseconds": 325.9090961000001,
+    "p99_milliseconds": 451.2767500699996
+  },
+  "treatment_elapsed_seconds": 15.408499375,
+  "treatment_id": "pattern-blueprint-lookahead-v1-k8-h6-r4-d4-pk8-ph6-pb8-pm4",
+  "treatment_mean": 90.75,
+  "treatment_seconds_per_game": 15.408499375,
+  "treatment_statistics": {
+    "confidence_95": [
+      90.75,
+      90.75
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 503.58791700000006,
+      "mean_milliseconds": 192.58760626249995,
+      "p50_milliseconds": 179.058104,
+      "p90_milliseconds": 325.9090961000001,
+      "p99_milliseconds": 451.2767500699996
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 92.0,
+    "mean_breakdown": {
+      "habitat": [
+        6.0,
+        5.25,
+        6.5,
+        5.75,
+        5.25
+      ],
+      "nature_tokens": 4.0,
+      "wildlife": [
+        5.75,
+        10.75,
+        11.75,
+        12.75,
+        17.0
+      ]
+    },
+    "mean_score": 90.75,
+    "min_score": 89.0,
+    "percentiles": {
+      "p10": 89.6,
+      "p50": 91.0,
+      "p90": 91.7
+    },
+    "seat_score_stddev": 1.2583057392117916,
+    "standard_error": 0.0
+  }
+}

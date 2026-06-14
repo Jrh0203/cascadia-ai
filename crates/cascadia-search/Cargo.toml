@@ -1,0 +1,15 @@
+[package]
+name = "cascadia-search"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+blake3.workspace = true
+cascadia-data = { path = "../cascadia-data" }
+cascadia-game = { path = "../cascadia-game" }
+cascadia-model = { path = "../cascadia-model" }
+cascadia-sim = { path = "../cascadia-sim" }
+rand.workspace = true
+rand_chacha.workspace = true
+rayon.workspace = true
+thiserror.workspace = true

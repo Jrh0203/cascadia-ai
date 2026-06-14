@@ -1,0 +1,22 @@
+[package]
+name = "cascadia-sim"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Deterministic Cascadia v2 simulation and baseline strategies"
+
+[dependencies]
+blake3.workspace = true
+cascadia-game = { path = "../cascadia-game" }
+rand.workspace = true
+rand_chacha.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+serde_json.workspace = true
+
+[[bench]]
+name = "matches"
+harness = false
