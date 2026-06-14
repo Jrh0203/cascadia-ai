@@ -4952,3 +4952,36 @@ validation_pass_required_before_collection = true
 test_domain_opened = false
 gameplay_domain_opened = false
 promotion_authorized = false
+
+[[experiment]]
+id = "r12-counterfactual-advantage-set-ranker-v1-gameplay-qualification-20260614"
+status = "conditionally preregistered; inference and gameplay sealed pending complete ADR 0078 validation and ADR 0079 test passes"
+hypothesis = "The fresh R12 complete-candidate-set MLX ranker will convert its sealed offline advantage fidelity into a reproducible paired gain over unchanged H6 without category collapse or material runtime regression."
+baseline = "habitat-candidate-lookahead-v1-k8-h6-r4-d4"
+treatment = "unchanged H6 frontier with selected-high-median-low retention, jointly rescored by the byte-identical ADR 0078 best checkpoint"
+protocol = "only after complete ADR 0078 validation and ADR 0079 test passes, qualify exact grouped Rust/MLX parity on 128 validation groups; run seed 36099 smoke; if it passes run seeds 36100-36119; only if that passes run seeds 36200-36299; compare paired symmetric AAAAA base scores and preserve all fixed balance, latency, legality, checkpoint, fallback, replay, and provenance gates"
+seed_suite = "conditional gameplay seed 36099 smoke, seeds 36100-36119 screen, and seeds 36200-36299 confirmation; final domain remains sealed"
+games = 121
+seat_games = 484
+primary_metric = "100-game paired treatment-minus-H6 base-score mean and game-block 95% confidence interval after mandatory inference, smoke, and screen gates"
+promotion_threshold = "parity max error <=1e-5 and exact argmax/hash/supply identity; batch-32 >=5000 scores/s and P99 <=5ms; smoke <=7s/game with zero fallback; screen delta >=+0.25 and balance gates; confirmation mean >=92, delta >=+0.20, CI lower >0, repeated balance/runtime/integrity gates"
+maximum_compute = "conditional on both offline passes: one 128-group parity/throughput qualification, one runtime smoke, one 20-game screen, and only after complete pass one 100-game confirmation; no external compute, retraining, retry, sweep, threshold change, extra gameplay, or final-suite access"
+hardware = "local Apple M4 cluster only; MLX Device(gpu, 0)"
+adr = "docs/v2/decisions/0080-r12-set-ranker-gameplay-qualification.md"
+adr_blake3 = "706ba3c265516be4bec87b279da05d98e066641a8a86e180bc897e3d620cd3cc"
+parent_experiment = "r12-counterfactual-advantage-set-ranker-v1-sealed-test-20260613"
+teacher = "habitat-candidate-lookahead-v1-k8-h6-r4-d4"
+candidate_selection = "selected-high-median-low-v1"
+candidate_count = 4
+inference_validation_groups = 128
+runtime_smoke_seed = 36099
+screen_first_seed = 36100
+screen_games = 20
+confirmation_first_seed = 36200
+confirmation_games = 100
+validation_pass_required = true
+test_pass_required = true
+inference_domain_opened = false
+gameplay_domain_opened = false
+final_domain_opened = false
+promotion_authorized = false

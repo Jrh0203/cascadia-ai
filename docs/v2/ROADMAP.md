@@ -89,6 +89,9 @@
 - [x] Implement ADR 0079's conditional authorization, exact collector
       handoff, frozen external MLX evaluator, and bit-exact validation replay
       before any validation metric or test record exists.
+- [x] Preregister ADR 0080's grouped Rust/MLX parity, latency, 20-game screen,
+      and 100-game confirmation gates before ADR 0078 validation or ADR 0079
+      test metrics are known.
 - [x] Promote only confirmed paired improvements.
 - [x] Confirm positive late-terminal policy-improvement signal without
       weakening frozen mechanism guardrails.

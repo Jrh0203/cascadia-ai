@@ -829,6 +829,10 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   validation bit-exactly. Seventeen focused tests pass, including transport,
   fail-closed recovery, evaluator, and module-size
   regression guard.
+- Preregistered ADR 0080 before validation or sealed-test metrics were known.
+  If both offline stages pass, it permits exactly one grouped Rust/MLX parity
+  qualification, seed-36099 runtime smoke, 20-game screen, and 100-game
+  confirmation against unchanged H6. Any failed stage closes gameplay.
 - Split the unattended cluster workflow into owned runtime, collection,
   transport, training, and sealed-test modules. john2 uses Tailscale first and
   an identity-pinned LAN route only after an SSH transport failure. The stable
