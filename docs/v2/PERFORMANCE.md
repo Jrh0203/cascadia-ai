@@ -54,11 +54,20 @@ behavior and materially higher throughput.
 
 ## Product Budgets
 
-| Tier | Policy | Budget |
-|---|---|---:|
-| Instant | Exact immediate-score greedy | Near-instant |
-| Interactive | Pattern-aware K8/H6/B8/M4 | 0.292 s/game direct control |
-| Research | Final-five R8 K8/H6/B8/M4 c90 and experiments | Unrestricted local |
+The versioned acceptance contract is
+[`config/performance-budgets-v1.json`](../../config/performance-budgets-v1.json).
+`make performance-check` verifies every budget against checksummed canonical
+reports, and `make performance-report` regenerates the machine-readable and
+Markdown qualification artifacts.
+
+| Tier | Complete game | P90 decision | P99 decision |
+|---|---:|---:|---:|
+| Instant, exact immediate-score greedy | <=0.50 s | <=25 ms | <=75 ms |
+| Interactive, pattern-aware K8/H6/B8/M4 | <=1.25 s | <=50 ms | <=100 ms |
+| Research, final-five R8 c90 | <=10 s | <=1,000 ms | <=3,000 ms |
+
+The Apple-GPU boundary additionally requires at least 50,000 evaluations per
+second and at most 1 ms P99 latency for batch 32.
 
 The API runs interactive and research evaluation on a blocking worker so CPU
 work cannot stall the async request executor. The product and research

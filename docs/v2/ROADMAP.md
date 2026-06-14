@@ -100,7 +100,8 @@
 
 ## Phase 7-8: Product Completion
 
-- [ ] Meet latency and throughput budgets.
+- [x] Meet versioned latency and throughput budgets for instant, interactive,
+      research, and batch-32 MLX execution.
 - [x] Eliminate warning/debt backlog in v2. Compiler/lint debt is clean, the
       CLI and research monoliths are split by ownership, and structural tests
       prevent regression.

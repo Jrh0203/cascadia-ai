@@ -1,6 +1,6 @@
 # Cascadia V2 Status
 
-Last updated: 2026-06-13
+Last updated: 2026-06-14
 
 ## Active Phase
 
@@ -64,6 +64,10 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   report provenance: typed command configuration, hardware/toolchain,
   executable checksum, Git status digest, complete v2 source digest, and input
   artifact manifest checksums.
+- Added a versioned, executable performance contract for instant, interactive,
+  research, and batch-32 MLX execution. All 11 gates pass against checksummed
+  canonical reports; the qualification is reproducible with
+  `make performance-check`.
 - Centralized Rust provenance in `cascadia-provenance` and made value/ranking
   collection resume reject source or executable drift before appending another
   shard.

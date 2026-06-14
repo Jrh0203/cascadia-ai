@@ -50,9 +50,7 @@ def test_v1_remains_behind_the_explicit_legacy_boundary() -> None:
         assert (ROOT / f"legacy/crates/{old_name}").is_dir()
 
     production_manifests = [
-        ROOT / f"crates/{name}/Cargo.toml"
-        for name in V2_CRATES
-        if name != "cascadia-differential"
+        ROOT / f"crates/{name}/Cargo.toml" for name in V2_CRATES if name != "cascadia-differential"
     ]
     for manifest in production_manifests:
         assert "legacy/" not in manifest.read_text(), (
