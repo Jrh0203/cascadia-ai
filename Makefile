@@ -5,8 +5,10 @@
 .PHONY: counterfactual-ranker-smoke collect-r12-counterfactual-corpus train-r12-counterfactual-ranker resume-r12-counterfactual-ranker evaluate-r12-counterfactual-ranker evaluate-r12-counterfactual-test
 
 V2_PACKAGES = -p cascadia-provenance -p cascadia-game -p cascadia-sim -p cascadia-eval -p cascadia-data -p cascadia-model -p cascadia-search -p cascadia-api -p cascadia-cli-v2
+HOST_TOOL_PATH := /opt/homebrew/bin:/usr/local/bin:/opt/homebrew/opt/rustup/bin:/usr/local/opt/rustup/bin:$(PATH)
 UV := $(or $(firstword $(wildcard /opt/homebrew/bin/uv /usr/local/bin/uv)),$(shell command -v uv 2>/dev/null),uv)
-NPM := $(or $(firstword $(wildcard /opt/homebrew/bin/npm /usr/local/bin/npm)),$(shell command -v npm 2>/dev/null),npm)
+NPM_BIN := $(or $(firstword $(wildcard /opt/homebrew/bin/npm /usr/local/bin/npm)),$(shell command -v npm 2>/dev/null),npm)
+NPM := /usr/bin/env PATH=$(HOST_TOOL_PATH) $(NPM_BIN)
 CARGO := $(or $(firstword $(wildcard /opt/homebrew/opt/rustup/bin/cargo /usr/local/opt/rustup/bin/cargo)),$(shell command -v cargo 2>/dev/null),cargo)
 RUN_DIR ?= artifacts/runs/entity-value-v1
 MODEL_DIR ?= artifacts/models/entity-value-v1
