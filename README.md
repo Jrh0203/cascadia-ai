@@ -19,6 +19,7 @@ implementation under [`legacy/`](legacy/README.md); v2 does not depend on
 their internals.
 
 - [Current status](docs/v2/STATUS.md)
+- [Local setup](docs/v2/SETUP.md)
 - [V1 audit](docs/v2/V1_AUDIT.md)
 - [V2 architecture](docs/v2/ARCHITECTURE.md)
 - [Generated CLI reference](docs/v2/CLI_REFERENCE.md)
@@ -42,6 +43,7 @@ their internals.
 ## V2 Quick Start
 
 ```bash
+make bootstrap
 make setup
 make mlx-device
 make check
