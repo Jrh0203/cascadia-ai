@@ -82,7 +82,6 @@ def main() -> None:
         import mlx.core as mx
         import mlx.nn as nn
         import mlx.optimizers as optim
-
         from train_alphazero_mlx_v2 import (
             CascadiaAzNetV2,
             load_azd_v2,

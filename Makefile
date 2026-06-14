@@ -163,7 +163,7 @@ format-check:
 
 lint:
 	$(CARGO) clippy $(V2_PACKAGES) --all-targets --no-deps -- -D warnings
-	$(UV) run ruff check python tests tools
+	$(UV) run ruff check --no-cache python tests tools
 	$(NPM) --prefix apps/web run lint
 
 test:
