@@ -73,6 +73,11 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   tests, 7 frontend unit tests, 5 applicable Playwright flows, generated CLI
   freshness, and all performance gates; the final source status remained
   clean.
+- Implemented the sealed final-strength runner with domain-separated final
+  seeds, atomic per-game evidence, exact all-seat score records, resumable
+  shards, strict fingerprint/source checks, and multi-node aggregation. A clean
+  john3 checkout at `6b4a43a` passed a complete R600 infrastructure rehearsal
+  on out-of-suite final index 999999; final indices 0-999 remain unopened.
 - Centralized Rust provenance in `cascadia-provenance` and made value/ranking
   collection resume reject source or executable drift before appending another
   shard.

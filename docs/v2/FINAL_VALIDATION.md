@@ -82,3 +82,15 @@ The final report contains the mean, game-block and seat-score standard
 deviations, standard error, 95% confidence interval, P10/P50/P90, score
 breakdown, decision latency, paired result, host distribution, provenance, and
 the explicit 100-point verdict.
+
+## Infrastructure Rehearsal
+
+A clean john3 checkout at revision `6b4a43a` completed one R600 game at
+final-domain index `999999`, outside the reserved final suite. It exercised all
+80 decisions for each paired strategy, wrote and recovered the raw four-seat
+record, verified one input fingerprint set and source revision, shut down MLX
+cleanly, and passed aggregation.
+
+The 94.5 one-game treatment score is not strength evidence. The machine-readable
+rehearsal is
+[`final-strength-infrastructure-smoke.json`](reports/final-strength-infrastructure-smoke.json).
