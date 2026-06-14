@@ -9,7 +9,8 @@ HOST_TOOL_PATH := /opt/homebrew/bin:/usr/local/bin:/opt/homebrew/opt/rustup/bin:
 UV := $(or $(firstword $(wildcard /opt/homebrew/bin/uv /usr/local/bin/uv)),$(shell command -v uv 2>/dev/null),uv)
 NPM_BIN := $(or $(firstword $(wildcard /opt/homebrew/bin/npm /usr/local/bin/npm)),$(shell command -v npm 2>/dev/null),npm)
 NPM := /usr/bin/env PATH=$(HOST_TOOL_PATH) $(NPM_BIN)
-CARGO := $(or $(firstword $(wildcard /opt/homebrew/opt/rustup/bin/cargo /usr/local/opt/rustup/bin/cargo)),$(shell command -v cargo 2>/dev/null),cargo)
+CARGO_BIN := $(or $(firstword $(wildcard /opt/homebrew/opt/rustup/bin/cargo /usr/local/opt/rustup/bin/cargo)),$(shell command -v cargo 2>/dev/null),cargo)
+CARGO := /usr/bin/env PATH=$(HOST_TOOL_PATH) $(CARGO_BIN)
 RUN_DIR ?= artifacts/runs/entity-value-v1
 MODEL_DIR ?= artifacts/models/entity-value-v1
 TRAIN_DATASET ?= artifacts/datasets/greedy-v1-train-256
