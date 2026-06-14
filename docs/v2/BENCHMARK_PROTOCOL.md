@@ -91,10 +91,16 @@ A claim of mean base score at least 100.0 requires:
 - a paired comparison against the independently reproduced strongest v1
   baseline.
 
+The executable distributed runbook, sealed final seed derivation, raw
+per-game evidence contract, and aggregation gates are documented in
+[`FINAL_VALIDATION.md`](FINAL_VALIDATION.md).
+
 ## V1 Reproduction
 
-V1 results are not imported from reports. The v2 runner will host a v1 adapter
-that invokes one complete v1 turn policy consistently for every seat. Until
-that adapter exists, current CLI and `mce_perf_bench` outputs are diagnostic
-only because their pre-move and opponent semantics differ.
-
+V1 results are not imported from historical reports. The resumable
+`tools/v1_champion_benchmark.py` adapter invokes the complete frozen v1 policy
+for every seat and independently aggregates all four seat scores. Because the
+legacy and v2 rules engines are not identical, that result remains an absolute
+cross-engine reference. The exact MLX bridge supplies the canonical-engine
+research comparison by running the historical policy through v2 rules,
+legality, scoring, and public information.

@@ -41,7 +41,7 @@ use cascadia_differential::legacy_teacher::{
     translate_public_state_allowing_legacy_elk_undercount, validate_legacy_environment,
 };
 use cascadia_eval::{ComparisonReport, summarize_paired_match_results};
-use cascadia_game::{GameConfig, GameSeed, GameState, TurnAction};
+use cascadia_game::{GameConfig, GameSeed, GameState, ScoreBreakdown, TurnAction};
 use cascadia_model::{ModelError, ModelProcess};
 use cascadia_provenance::{SourceProvenance, checksum_file, source_provenance};
 use cascadia_search::{
@@ -175,6 +175,8 @@ enum Command {
         games: usize,
         #[arg(long)]
         first_seed: u64,
+        #[arg(long, value_enum)]
+        split: Option<SplitArg>,
         #[arg(long, default_value_t = 600)]
         rollouts: usize,
         #[arg(long)]
@@ -501,6 +503,7 @@ enum SplitArg {
     Train,
     Validation,
     Test,
+    Final,
 }
 
 impl From<SplitArg> for DatasetSplit {
@@ -509,6 +512,7 @@ impl From<SplitArg> for DatasetSplit {
             SplitArg::Train => Self::Train,
             SplitArg::Validation => Self::Validation,
             SplitArg::Test => Self::Test,
+            SplitArg::Final => Self::Final,
         }
     }
 }
@@ -584,6 +588,7 @@ struct ExactMlxStrengthReport {
     schema_version: u16,
     experiment_id: &'static str,
     status: &'static str,
+    seed_domain: &'static str,
     rollouts: usize,
     diagnostics: BridgeDiagnostics,
     batch_diagnostics: SearchBatchDiagnostics,
@@ -598,10 +603,23 @@ struct ExactMlxStrengthReport {
     clean_shutdown: bool,
     gates: StrengthGates,
     comparison: ComparisonReport,
+    game_records: Vec<ExactMlxGameRecord>,
     model_manifest_path: PathBuf,
     model_manifest_blake3: String,
     model_safetensors_blake3: String,
     provenance: ArtifactProvenance,
+}
+
+#[derive(Debug, Serialize)]
+struct ExactMlxGameRecord {
+    seed: u64,
+    game_seed: GameSeed,
+    baseline_scores: Vec<ScoreBreakdown>,
+    treatment_scores: Vec<ScoreBreakdown>,
+    baseline_decision_seconds: Vec<f64>,
+    treatment_decision_seconds: Vec<f64>,
+    baseline_elapsed_seconds: f64,
+    treatment_elapsed_seconds: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -1157,6 +1175,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             model_dir,
             games,
             first_seed,
+            split,
             rollouts,
             weights,
             output,
@@ -1165,6 +1184,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             &model_dir,
             games,
             first_seed,
+            split.map(Into::into),
             rollouts,
             &weights,
             &output,
@@ -3746,6 +3766,7 @@ fn run_exact_mlx_comparison(
     model_dir: &Path,
     games: usize,
     first_seed: u64,
+    seed_split: Option<DatasetSplit>,
     rollouts: usize,
     weights: &Path,
     output: &Path,
@@ -3782,7 +3803,10 @@ fn run_exact_mlx_comparison(
     let mut results: Vec<(u64, MatchResult, MatchResult)> = Vec::with_capacity(games);
     for offset in 0..games {
         let seed_value = first_seed + offset as u64;
-        let seed = GameSeed::from_u64(seed_value);
+        let seed = seed_split.map_or_else(
+            || GameSeed::from_u64(seed_value),
+            |split| split.game_seed(seed_value),
+        );
         let baseline = strong.play_match(game, seed)?;
         let mut fallback_rngs = (0..4)
             .map(|seat| strategy_rng(seed, seat, PATTERN_AWARE_STRATEGY_ID))
@@ -3838,6 +3862,19 @@ fn run_exact_mlx_comparison(
         &results,
         elapsed_seconds,
     );
+    let game_records = results
+        .iter()
+        .map(|(game_index, baseline, treatment)| ExactMlxGameRecord {
+            seed: *game_index,
+            game_seed: baseline.seed,
+            baseline_scores: baseline.scores.clone(),
+            treatment_scores: treatment.scores.clone(),
+            baseline_decision_seconds: baseline.decision_seconds.clone(),
+            treatment_decision_seconds: treatment.decision_seconds.clone(),
+            baseline_elapsed_seconds: baseline.elapsed_seconds,
+            treatment_elapsed_seconds: treatment.elapsed_seconds,
+        })
+        .collect();
     let batch_diagnostics = SearchBatchDiagnostics {
         neural_batches: batch.neural_batches,
         neural_rows: batch.neural_rows,
@@ -3920,6 +3957,7 @@ fn run_exact_mlx_comparison(
         schema_version: 1,
         experiment_id: "qualified-legacy-nnue-exact-mlx-gameplay-reproduction-v1-20260612",
         status,
+        seed_domain: seed_split.map_or("raw-u64", DatasetSplit::id),
         rollouts,
         diagnostics,
         batch_diagnostics,
@@ -3934,6 +3972,7 @@ fn run_exact_mlx_comparison(
         clean_shutdown,
         gates,
         comparison,
+        game_records,
         model_manifest_path: model_manifest.canonicalize()?,
         model_manifest_blake3: checksum_file(&model_manifest)?,
         model_safetensors_blake3: checksum_file(&model_safetensors)?,
