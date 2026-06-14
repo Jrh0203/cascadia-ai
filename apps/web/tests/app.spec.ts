@@ -1,5 +1,13 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type TestInfo } from "@playwright/test";
 import path from "node:path";
+
+function screenshotPath(testInfo: TestInfo, name: string): string {
+  const reportDirectory = process.env.CASCADIA_VISUAL_REPORT_DIR;
+  if (reportDirectory) {
+    return path.resolve(process.cwd(), reportDirectory, name);
+  }
+  return testInfo.outputPath(name);
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -31,10 +39,7 @@ test("desktop renders the playable board and advances through draft selection", 
     page.getByRole("heading", { name: "Place the wildlife" }),
   ).toBeVisible();
   await page.screenshot({
-    path: path.resolve(
-      process.cwd(),
-      "../../docs/v2/reports/web-desktop-play.png",
-    ),
+    path: screenshotPath(testInfo, "web-desktop-play.png"),
     fullPage: true,
   });
 });
@@ -49,10 +54,7 @@ test("mobile navigation exposes board, market, scores, and analysis", async ({
   await page.getByRole("button", { name: "Market", exact: true }).click();
   await expect(page.getByLabel("Turn workbench")).toBeVisible();
   await page.screenshot({
-    path: path.resolve(
-      process.cwd(),
-      "../../docs/v2/reports/web-mobile-market.png",
-    ),
+    path: screenshotPath(testInfo, "web-mobile-market.png"),
     fullPage: true,
   });
 });
@@ -67,10 +69,7 @@ test("research analysis exposes terminal search values", async ({
   await expect(page.locator(".candidate-row")).toHaveCount(8);
   await expect(page.locator(".candidate-row").first()).toContainText(/\d+\.\d/);
   await page.screenshot({
-    path: path.resolve(
-      process.cwd(),
-      "../../docs/v2/reports/web-desktop-analysis.png",
-    ),
+    path: screenshotPath(testInfo, "web-desktop-analysis.png"),
     fullPage: true,
   });
 });
@@ -107,11 +106,11 @@ test("cluster dashboard reports all configured nodes and active work", async ({
   await oneDay.click();
   await expect(page.getByRole("img", { name: "CPU utilization over 24 hours" })).toBeVisible();
   await page.screenshot({
-    path: path.resolve(
-      process.cwd(),
+    path: screenshotPath(
+      testInfo,
       testInfo.project.name === "mobile"
-        ? "../../docs/v2/reports/web-cluster-dashboard-mobile.png"
-        : "../../docs/v2/reports/web-cluster-dashboard.png",
+        ? "web-cluster-dashboard-mobile.png"
+        : "web-cluster-dashboard.png",
     ),
     fullPage: true,
   });

@@ -3,6 +3,7 @@
 .PHONY: imitation-parent-hidden-smoke collect-imitation-parent-train-hidden collect-imitation-parent-hidden-validation collect-imitation-parent-validation-hidden train-imitation-parent-hidden resume-imitation-parent-hidden audit-imitation-identifiability
 .PHONY: exact-mlx-crn-qualification exact-mlx-crn-smoke exact-mlx-crn-pilot exact-mlx-crn-confirm
 .PHONY: counterfactual-ranker-smoke collect-r12-counterfactual-corpus train-r12-counterfactual-ranker resume-r12-counterfactual-ranker evaluate-r12-counterfactual-ranker evaluate-r12-counterfactual-test
+.PHONY: web-visual-report
 
 V2_PACKAGES = -p cascadia-provenance -p cascadia-game -p cascadia-sim -p cascadia-eval -p cascadia-data -p cascadia-model -p cascadia-search -p cascadia-api -p cascadia-cli-v2
 HOST_TOOL_PATH := /opt/homebrew/bin:/usr/local/bin:/opt/homebrew/opt/rustup/bin:/usr/local/opt/rustup/bin:$(PATH)
@@ -847,6 +848,9 @@ web-test:
 	$(NPM) --prefix apps/web run lint
 	$(NPM) --prefix apps/web test
 	$(NPM) --prefix apps/web run test:e2e
+
+web-visual-report:
+	CASCADIA_VISUAL_REPORT_DIR=../../docs/v2/reports $(NPM) --prefix apps/web run test:e2e
 
 build:
 	$(NPM) --prefix apps/web run build

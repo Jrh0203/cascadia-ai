@@ -105,7 +105,17 @@ make web-test
 ```
 
 The gate runs ESLint, Vitest, and Playwright against the real Rust API in
-desktop Chrome and a mobile Chrome viewport. Browser evidence is generated at:
+desktop Chromium and a mobile Chromium viewport. Normal test screenshots are
+written under the ignored Playwright output directory and do not mutate
+tracked documentation.
+
+Refresh the checked-in browser evidence intentionally with:
+
+```bash
+make web-visual-report
+```
+
+The visual report contains:
 
 - `docs/v2/reports/web-desktop-play.png`
 - `docs/v2/reports/web-desktop-analysis.png`
