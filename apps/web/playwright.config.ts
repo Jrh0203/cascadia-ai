@@ -35,7 +35,6 @@ export default defineConfig({
       name: "desktop",
       use: {
         ...devices["Desktop Chrome"],
-        channel: "chrome",
         viewport: { width: 1440, height: 960 },
       },
     },
@@ -44,7 +43,6 @@ export default defineConfig({
       use: {
         ...devices["iPhone 13"],
         browserName: "chromium",
-        channel: "chrome",
       },
     },
   ],

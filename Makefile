@@ -150,6 +150,7 @@ bootstrap:
 setup:
 	$(UV) sync --all-groups
 	$(NPM) --prefix apps/web ci
+	$(NPM) --prefix apps/web run test:e2e:install
 
 format:
 	$(CARGO) fmt --all

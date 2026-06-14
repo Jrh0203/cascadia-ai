@@ -31,8 +31,9 @@ idempotent and does not modify shell startup files. The Makefile includes both
 Apple Silicon and Intel Homebrew paths, including the keg-only `rustup`
 proxies, so the same commands work from Terminal and noninteractive SSH.
 
-`make setup` creates the locked uv environment from `uv.lock` and installs the
-web dependencies from `package-lock.json`.
+`make setup` creates the locked uv environment from `uv.lock`, installs the web
+dependencies from `package-lock.json`, and installs Playwright's pinned
+Chromium runtime. Browser tests do not depend on a separately installed Chrome.
 
 ## Daily Commands
 
