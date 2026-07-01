@@ -1,0 +1,56 @@
+NameProvider: hostname
+API:
+  Host: 100.110.109.6
+  Port: 1234
+Orchestrator:
+  Enabled: true
+  Host: 100.110.109.6
+  Port: 4222
+  Advertise: 100.110.109.6:4222
+  Cluster:
+    Name: cascadia
+    Host: 100.110.109.6
+    Port: 6222
+    Advertise: 100.110.109.6:6222
+  NodeManager:
+    DisconnectTimeout: 30s
+  Scheduler:
+    WorkerCount: 16
+    # Back off transient failed scheduling evaluations. Large logical maps use
+    # cascadia_cluster's topology-free capacity admission window; this setting
+    # does not expand Bacalhau v1.9's internal over-subscription queue.
+    QueueBackoff: 10s
+  EvaluationBroker:
+    VisibilityTimeout: 30s
+    # Broker delivery protection, not a per-job execution retry count.
+    MaxRetryCount: 1000
+Compute:
+  Enabled: true
+  Orchestrators:
+    - nats://100.110.109.6:4222
+  Heartbeat:
+    Interval: 5s
+    InfoUpdateInterval: 30s
+  AllocatedCapacity:
+    CPU: 9000m
+    Memory: 12Gi
+    Disk: 80Gi
+Publishers:
+  Types:
+    S3Managed:
+      Bucket: cascadia-results
+      Key: executions
+      Region: us-east-1
+      Endpoint: http://100.110.109.6:9000
+      PreSignedURLExpiration: 24h
+WebUI:
+  Enabled: true
+  Listen: 100.110.109.6:8438
+  Backend: 100.110.109.6:1234
+Labels:
+  cascadia_internal_node: john1
+  cascadia_internal_role: orchestrator-compute
+Logging:
+  Level: info
+UpdateConfig:
+  Interval: 24h

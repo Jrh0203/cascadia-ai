@@ -5,6 +5,9 @@
 .ruff_cache/
 __pycache__/
 *.py[cod]
+*.jsonl
+*.npz
+*.npy
 *.bin
 *.azd
 *.azr
@@ -19,3 +22,8 @@ artifacts/
 apps/web/node_modules/
 apps/web/dist/
 apps/web/*.tsbuildinfo
+cascadiav3/checkpoints/
+cascadiav3/fixtures/
+cascadiav3/logs/
+cascadiav3/reports/
+cascadiav3/real-root-exporter/target/
