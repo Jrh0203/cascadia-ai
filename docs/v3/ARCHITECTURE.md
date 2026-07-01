@@ -1,41 +1,136 @@
-# V3 Architecture
+# CascadiaFormer Architecture
 
-## Code boundaries
+## Recommendation
 
-- `crates/cascadia-v3-nnue`: exact feature schema, overflow/D6 handling, virtual opportunity catalog, accumulators, quantized inference, legal-action ranking, terminal search, and packed records.
-- `python/cascadia_v3_mlx`: native CSR streaming, deterministic sparse gradients, exact-QAT MLX graph, resumable training, profiling, quantized export, and cross-backend verification.
-- `crates/cascadia-differential/src/bin/v3_campaign_worker.rs`: immutable-container collection and validation worker using the proven V2 rules and qualified V1 policy loader.
-- `tools/v3_campaign.py`: checksum-chained two-part campaign state machine, storage guard, dashboard projection, readiness qualification, and authorization gate.
-- `tools/v3_promotion.py`: cycles 2–10 robust bounded paired promotion test.
-- `tools/v3_promotion_v1.py`: immutable Cycle-1 decision rule retained for exact reproduction.
-- `tools/v3_final_report.py`: protected and all-V3 final aggregation.
+Build CascadiaFormer-Zero: a sparse public-state transformer with legal-action
+queries, Cascadia-specific relation bias, score-to-go/value heads, policy heads,
+opponent/market auxiliary heads, and search-supervised expert iteration.
 
-## Hot path and overflow
+The core bet is narrow and testable: the remaining score gap is not raw local
+pattern recognition alone. It is cross-turn pattern realization, market timing,
+stochastic refill handling, and opponent-conditioned access. CascadiaFormer
+should model those public entities jointly, then use search to improve and
+verify action choice.
 
-Radius-7 rows are incrementally addressable through precomputed coordinate and D6 tables. Overflow is rebuilt only when a transition crosses the radius-7 boundary. Overflow slots are sorted by exact absolute coordinate, so replay, augmentation, and apply/undo have one canonical encoding. An outside-radius legal destination follows the same afterstate encoder and is never clipped or rejected.
+## Literature Basis
 
-## Opportunity virtual features
+The architecture is intentionally no-frills:
 
-Inference rows are exact catalog conjunctions. The native loader expands each active inference row into 3–7 train-only factor rows and consolidates counts. MLX learns both tables. At serving export, each inference vector becomes
+- AlphaZero supplies the self-play plus search-improved policy/value recipe.
+- ZeusAI for 7 Wonders Duel is the closest published board/card-game analogue:
+  heterogeneous component tokens, transformer value/policy model, stochastic
+  afterstates, and MCTS supervision.
+- Chessformer and Leela transformer work show that domain-aligned tokenization,
+  geometric bias, and action heads matter more than generic scale.
+- Searchless chess transformer results argue for per-action value targets, but
+  Cascadia lacks a Stockfish-grade oracle, so searchless distillation comes only
+  after a strong Cascadia search teacher exists.
+- Set Transformer, Graphormer/GraphGPS, Pointer Networks, Perceiver IO, Gumbel
+  AlphaZero, and multiplayer AlphaZero inform the variable entity set,
+  graph/geometry bias, dynamic action query, limited-budget search, and
+  multi-seat value design.
+
+## Public Input Schema
+
+All model inputs must be public-state legal. Hidden future stack order is never
+encoded.
+
+Token groups:
+
+- `game`: turn number, active seat, scoring card, cleanup state, phase bucket.
+- `players`: seat-relative player summaries, nature tokens, current scores,
+  remaining turns, and optional policy identity during self-play.
+- `board_cells`: placed tiles and wildlife on each board with q/r, terrain
+  edges, allowed wildlife, placed wildlife, keystone, rotation, owner, and age.
+- `frontier_cells`: legal adjacent empty cells, local geometry, and prospective
+  connectivity.
+- `market`: four tile slots, four wildlife slots, three-of-kind state, and wipe
+  affordances.
+- `supply`: observable tile/wildlife counts and uncertainty summaries allowed by
+  the engine boundary.
+- `score`: current and potential category signals per seat.
+- `history`: recent public actions only.
+- `actions`: one token per legal compound action enumerated by Rust.
+
+The action vocabulary is dynamic. Rust enumerates legal actions exactly; the
+model scores those action queries instead of emitting a fixed global action id.
+
+## Geometry And Relation Bias
+
+CascadiaFormer uses a Cascadia geometric attention bias over public entities:
+
+- axial hex distance and direction;
+- same board, same component, same frontier, and adjacency;
+- D6 orbit and transform identity;
+- action uses market tile slot or wildlife slot;
+- action touches a tile/wildlife/component already represented in state tokens;
+- seat relation and turns until each opponent can affect the market;
+- species, terrain, habitat, and scoring-category compatibility.
+
+The default board fast path is a radius-6 hex disk with 127 stable cells. Legal
+states outside the disk must remain exact through overflow entities. Overflow is
+not clipped or projected.
+
+## Model Shape
+
+The current model family is an entity transformer plus action-query decoder:
 
 ```text
-inference_row + sum(virtual_factor_rows_for_inference_row)
+public tokens -> state transformer -> state latents
+legal action tokens -> action encoder -> action queries
+action queries x state latents -> policy, score-to-go Q, value, auxiliary heads
 ```
 
-and the factor table is discarded. The schema checksum binds the complete row-to-factor map.
+Primary heads:
 
-## Deterministic training
+- legal-action policy logits;
+- per-action score-to-go Q;
+- root value and score distribution;
+- rank and score-differential summaries;
+- category score decomposition.
 
-The CSR forward kernel performs fused embedding-bag accumulation without materializing `[batch, active_features, 1024]`. Backward uses a stable feature-sorted reduction: one Metal workgroup lane deterministically sums all occurrences for a feature. Floating-point atomics are forbidden because their ordering breaks exact restart. Checkpoints bind model, optimizer, loader cursor, dataset checksums, binary checksum, seed, D6 schedule, and origin identity.
+Auxiliary heads:
 
-The run manifest also hashes every V3 MLX source module, the shared atomic-checkpoint implementation, `pyproject.toml`, `uv.lock`, and the Python/MLX runtime identity. Exported serving manifests carry that run-manifest checksum, so a numerically valid weight file cannot become detached from the code that produced it.
+- uncertainty for Q weighting and diagnostics;
+- opponent next-draft and market-survival signals;
+- pattern portfolio signals for Bear, Elk, Salmon, Hawk, and Fox;
+- greedy-retention diagnostics while bootstrapping.
 
-Sparse transformer sums are retained exactly as int32 values through incremental apply/undo. The activation boundary clips to `[0, feature_scale]` and narrows to int16 before product pooling, matching the QAT graph exactly. Training adds a deterministic headroom penalty above 64 float units so accumulator magnitude is controlled as an optimization objective rather than by lossy runtime saturation.
+Initial model sizes:
 
-## Search
+| Model | Layers | Width | Heads | Use |
+|---|---:|---:|---:|---|
+| CascadiaFormer-S | 10-12 | 384 | 8 | bootstrap, EI-0, ablations |
+| CascadiaFormer-M | 14-18 | 512 | 8 | main RTX 5090 target after S passes |
+| CascadiaFormer-L | 20-24 | 768 | 12 | only after data and gates justify it |
 
-Every legal action is enumerated before scoring. The optimized path reuses public-state, market-draft, opportunity-graph, and board-transition work, but a retained reference implementation reconstructs each afterstate independently. Fixed-corpus tests require identical legal sets, outputs, ordering, and selected moves.
+Use bf16 mixed precision on CUDA, gradient checkpointing when needed, and packed
+relation-tail batches rather than Python-built dense relation matrices.
 
-The network predicts score-to-go. Policy ranking therefore adds the exact current afterstate score in integer output units before sorting; truncated rollouts do the same. This keeps training labels and serving semantics identical, including positions where a later wildlife placement can reduce a previously scored motif.
+## Serving Semantics
 
-K32/R64 and K32/R600 use deterministic sequential halving over the direct top 32. Hidden futures are redeterminized only after applying the observed root action. Teacher packets retain eliminated-candidate statistics so training provenance does not silently collapse to the winner.
+The model's raw Q output is predicted score-to-go, not final score. Any Q-based
+serving path must rank actions by:
+
+```text
+derived_final_q = exact_afterstate_score_active + predicted_score_to_go
+```
+
+This is mandatory because exact immediate score can differ across legal
+afterstates. A synthetic rank-flip test must fail if serving ranks by raw
+score-to-go alone.
+
+## Promotion Philosophy
+
+Validation loss, imitation accuracy, and greedy top-1 retention are diagnostics.
+Promotion requires paired gameplay evidence with:
+
+- score mean and confidence intervals;
+- category and wildlife breakdowns;
+- search-retention/regret metrics;
+- timing/resource ratios;
+- clean provenance and dataset manifests.
+
+The expected first useful mode is search-integrated serving: CascadiaFormer as a
+K24/K32/K64 prefilter or value model inside sampled search. A direct no-search
+policy is useful only after it proves nonregression.

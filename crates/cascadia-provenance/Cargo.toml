@@ -3,7 +3,7 @@ name = "cascadia-provenance"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-description = "Shared source, executable, and working-tree provenance for Cascadia v2"
+description = "Shared source, executable, and working-tree provenance for Cascadia"
 
 [dependencies]
 blake3.workspace = true

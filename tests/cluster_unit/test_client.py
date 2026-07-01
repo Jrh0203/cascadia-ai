@@ -195,12 +195,7 @@ def test_accepted_artifact_persists_scheduler_provenance(tmp_path: Path) -> None
     )
     client._persist_result_receipt(result)
     client._persist_result_receipt(result)
-    receipt = json.loads(
-        (
-            tmp_path
-            / "artifacts/req-fixed/.receipts/pair-0007.json"
-        ).read_text()
-    )
+    receipt = json.loads((tmp_path / "artifacts/req-fixed/.receipts/pair-0007.json").read_text())
     assert receipt["request_id"] == "req-fixed"
     assert receipt["item_id"] == "pair-0007"
     assert receipt["bacalhau_job_id"] == "job-7"

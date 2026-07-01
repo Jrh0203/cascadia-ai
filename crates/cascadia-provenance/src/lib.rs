@@ -1,4 +1,4 @@
-//! Reproducible source and executable identity for Cascadia v2 artifacts.
+//! Reproducible source and executable identity for Cascadia artifacts.
 
 use std::{
     env,
@@ -18,17 +18,16 @@ const SOURCE_ROOTS: &[&str] = &[
     "Makefile",
     "pyproject.toml",
     "uv.lock",
-    "python/cascadia_mlx",
-    "apps/web/src",
+    "cascadiav3",
+    "infra",
+    "python/cascadia_cluster",
+    "tools",
     "crates/cascadia-game",
     "crates/cascadia-sim",
     "crates/cascadia-data",
     "crates/cascadia-model",
     "crates/cascadia-eval",
     "crates/cascadia-search",
-    "crates/cascadia-api",
-    "crates/cascadia-cli-v2",
-    "crates/cascadia-differential",
     "crates/cascadia-provenance",
 ];
 
@@ -37,6 +36,7 @@ pub struct SourceProvenance {
     pub git_revision: String,
     pub git_dirty: bool,
     pub git_status_blake3: String,
+    #[serde(alias = "v2_source_blake3")]
     pub v2_source_blake3: String,
 }
 
@@ -57,14 +57,14 @@ pub fn repository_root() -> io::Result<PathBuf> {
     let current = env::current_dir()?;
     if let Some(root) = current
         .ancestors()
-        .find(|path| path.join("docs/archive/v2/CASCADIA_V2_GOAL.txt").is_file())
+        .find(|path| path.join("Cargo.toml").is_file() && path.join("cascadiav3").is_dir())
     {
         return Ok(root.to_owned());
     }
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     manifest
         .ancestors()
-        .find(|path| path.join("docs/archive/v2/CASCADIA_V2_GOAL.txt").is_file())
+        .find(|path| path.join("Cargo.toml").is_file() && path.join("cascadiav3").is_dir())
         .map(Path::to_path_buf)
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "repository root not found"))
 }

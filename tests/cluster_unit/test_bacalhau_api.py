@@ -66,8 +66,7 @@ def test_job_listing_uses_recovery_timeout_without_relaxing_health_calls(monkeyp
     assert observed == [
         ("http://scheduler/api/v1/agent/alive", 3.0),
         (
-            "http://scheduler/api/v1/orchestrator/jobs?"
-            "labels=cascadia.request_id%3Drequest",
+            "http://scheduler/api/v1/orchestrator/jobs?labels=cascadia.request_id%3Drequest",
             45.0,
         ),
     ]

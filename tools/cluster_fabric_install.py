@@ -167,14 +167,14 @@ def _start_local_supervisor(root: Path) -> None:
             "CASCADIA_CLUSTER_ROOT": str(root),
             "CASCADIA_BACALHAU_ROLE": "orchestrator",
             "DOCKER_HOST": (
-                "unix:///Users/johnherrick/.local/share/cascadia-r2/colima/"
-                "cascadia-r2/docker.sock"
+                "unix:///Users/johnherrick/.local/share/cascadia-r2/colima/cascadia-r2/docker.sock"
             ),
         }
     )
-    with (root / "logs/bacalhau-supervisor.stdout.log").open("ab") as stdout, (
-        root / "logs/bacalhau-supervisor.stderr.log"
-    ).open("ab") as stderr:
+    with (
+        (root / "logs/bacalhau-supervisor.stdout.log").open("ab") as stdout,
+        (root / "logs/bacalhau-supervisor.stderr.log").open("ab") as stderr,
+    ):
         subprocess.Popen(
             [str(root / "bin/run-forever.zsh")],
             cwd=root,
@@ -256,11 +256,11 @@ def _install_compute(host: str, ip: str, root: str, secrets_value: bytes, *, sta
                 f"pid_file={shlex.quote(root + '/state/bacalhau-supervisor.pid')}; "
                 "if [[ -s $pid_file ]]; then "
                 "pid=$(<$pid_file); "
-                "if kill -0 \"$pid\" 2>/dev/null; then "
-                "pkill -TERM -P \"$pid\" 2>/dev/null || true; "
-                "kill -TERM \"$pid\" 2>/dev/null || true; "
+                'if kill -0 "$pid" 2>/dev/null; then '
+                'pkill -TERM -P "$pid" 2>/dev/null || true; '
+                'kill -TERM "$pid" 2>/dev/null || true; '
                 "for attempt in {1..50}; do "
-                "kill -0 \"$pid\" 2>/dev/null || break; sleep 0.1; done; "
+                'kill -0 "$pid" 2>/dev/null || break; sleep 0.1; done; '
                 "fi; rm -f $pid_file; fi"
             ),
         )

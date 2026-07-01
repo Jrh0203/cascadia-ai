@@ -2,17 +2,17 @@
 
 ## Active
 
-- `docs/v3/`: transformer architecture, runbooks, performance notes, and the
-  full v3 training pipeline.
+- `docs/v3/`: transformer architecture, training pipeline, operations, and
+  performance notes.
 - `docs/BACALHAU_USAGE.md`: Bacalhau worker and job scheduling reference.
 - `docs/cluster_orchestrator.md`: local cluster orchestration notes.
 - `docs/TECH_DEBT.md`: known debt that still matters.
 
 ## Historical
 
-- `docs/v2/`: closed v2 product and research handbooks.
-- `docs/archive/v2/`: v2 decision records, generated reports, and the original
-  v2 goal file.
+Historical v1/v2 docs were removed from `main` during the 2026-07-01 cleanup.
+Use `archive/pre-v3-repo-cleanup-2026-07-01` if a reproduction task explicitly
+requires them.
 
 Large generated run artifacts should stay out of Git unless they are small,
 curated evidence needed to understand a committed result.

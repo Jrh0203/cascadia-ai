@@ -1,20 +1,10 @@
 # Experiments
 
-Experiments are registered before execution in `registry.toml`.
+Historical v1/v2 experiment ledgers were removed from `main` during the
+2026-07-01 cleanup. Recover them from
+`archive/pre-v3-repo-cleanup-2026-07-01` only when a reproduction task
+explicitly needs them.
 
-The v2 experiment registry is historical. Its generated reports and decision
-records now live under `docs/archive/v2` so active docs stay focused on current
-v3 work.
+The active v3 transformer experiment ledger is:
 
-Each entry must define:
-
-- hypothesis,
-- baseline and treatment,
-- exact benchmark protocol and seed suite,
-- primary metric and promotion threshold,
-- maximum compute or stopping rule,
-- code/config/model/data artifact IDs,
-- final status and result artifacts.
-
-Smoke tests may be recorded but cannot promote production behavior. Historical
-v1 reports are not copied into this registry.
+- [cascadiav3/EXPERIMENT_LOG.md](../cascadiav3/EXPERIMENT_LOG.md)

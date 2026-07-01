@@ -41,9 +41,7 @@ def _state_type(job: Mapping[str, Any]) -> str:
     return str(state.get("StateType", "Unknown")) if isinstance(state, Mapping) else "Unknown"
 
 
-def _status(
-    job: Mapping[str, Any], *, pending_unschedulable_is_terminal: bool = True
-) -> JobStatus:
+def _status(job: Mapping[str, Any], *, pending_unschedulable_is_terminal: bool = True) -> JobStatus:
     state = _state_type(job)
     message = str((job.get("State") or {}).get("Message", "")).lower()
     if state in {"Pending", "Queued"}:
@@ -71,8 +69,7 @@ def _attempt_count(executions: Sequence[Mapping[str, Any]]) -> int:
     """Count real container attempts, excluding scheduler bid records."""
 
     return sum(
-        str((execution.get("ComputeState") or {}).get("StateType"))
-        in _ATTEMPT_TERMINAL
+        str((execution.get("ComputeState") or {}).get("StateType")) in _ATTEMPT_TERMINAL
         for execution in executions
     )
 
@@ -238,8 +235,7 @@ class MapHandle:
             (
                 execution
                 for execution in executions
-                if str((execution.get("ComputeState") or {}).get("StateType"))
-                in _ATTEMPT_TERMINAL
+                if str((execution.get("ComputeState") or {}).get("StateType")) in _ATTEMPT_TERMINAL
             ),
             key=lambda execution: (
                 int(execution.get("ModifyTime", execution.get("CreateTime", 0))),
@@ -444,12 +440,7 @@ class ClusterClient:
             "modified_unix_ns": result.modified_unix_ns,
         }
         receipt["receipt_sha256"] = canonical_sha256(receipt)
-        path = (
-            self.artifact_directory
-            / result.request_id
-            / ".receipts"
-            / f"{result.item_key}.json"
-        )
+        path = self.artifact_directory / result.request_id / ".receipts" / f"{result.item_key}.json"
         if path.exists():
             try:
                 existing = json.loads(path.read_text())
@@ -458,9 +449,7 @@ class ClusterClient:
                     f"cannot read accepted result receipt: {path}: {error}"
                 ) from error
             if existing != receipt:
-                raise ArtifactValidationError(
-                    f"accepted result receipt already differs: {path}"
-                )
+                raise ArtifactValidationError(f"accepted result receipt already differs: {path}")
             return
         _write_atomic(path, receipt)
 
@@ -716,14 +705,8 @@ class ClusterClient:
             try:
                 slots = [
                     math.floor(float(maximum["CPU"]) / float(resources.cpu)),
-                    math.floor(
-                        float(maximum["Memory"])
-                        / (float(resources.memory_gib) * 1024**3)
-                    ),
-                    math.floor(
-                        float(maximum["Disk"])
-                        / (float(resources.disk_gib) * 1024**3)
-                    ),
+                    math.floor(float(maximum["Memory"]) / (float(resources.memory_gib) * 1024**3)),
+                    math.floor(float(maximum["Disk"]) / (float(resources.disk_gib) * 1024**3)),
                 ]
                 if resources.gpu:
                     slots.append(math.floor(float(maximum.get("GPU", 0)) / resources.gpu))

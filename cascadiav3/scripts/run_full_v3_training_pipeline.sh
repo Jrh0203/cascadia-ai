@@ -344,7 +344,7 @@ rollout_evals = root_count * float('$MAX_ACTIONS') * float('$ROLLOUTS_PER_ACTION
 report = {
     "status": "pass",
     "profile": "$PROFILE",
-    "runbook": "docs/v3/FULL_V3_TRAINING_PIPELINE.md",
+    "runbook": "docs/v3/TRAINING_PIPELINE.md",
     "scale_note": "phase0 bootstrap uses packed expert_tensor_shard.v1 NPZ; JSONL is used only for tiny audit gates",
     "train_roots": train_manifest,
     "val_roots": val_manifest,

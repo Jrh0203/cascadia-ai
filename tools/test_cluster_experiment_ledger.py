@@ -34,7 +34,7 @@ def _experiment(experiment_id: str = "experiment-v1") -> dict[str, object]:
         "artifacts": [
             {
                 "label": "Preregistration",
-                "path": "docs/archive/v2/reports/preregistration.md",
+                "path": "docs/v3/TRAINING_PIPELINE.md",
             }
         ],
     }

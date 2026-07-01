@@ -105,12 +105,16 @@ class ObjectStoreClient:
             f"AWS4-HMAC-SHA256 Credential={self.config.access_key}/{scope}, "
             f"SignedHeaders={signed_headers}, Signature={signature}"
         )
-        return endpoint, canonical_uri, {
-            "Authorization": authorization,
-            "Host": host,
-            "X-Amz-Content-Sha256": payload_hash,
-            "X-Amz-Date": timestamp,
-        }
+        return (
+            endpoint,
+            canonical_uri,
+            {
+                "Authorization": authorization,
+                "Host": host,
+                "X-Amz-Content-Sha256": payload_hash,
+                "X-Amz-Date": timestamp,
+            },
+        )
 
     def _signed_request(
         self,

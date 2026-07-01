@@ -3,7 +3,7 @@ name = "cascadia-sim"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-description = "Deterministic Cascadia v2 simulation and baseline strategies"
+description = "Deterministic Cascadia simulation and baseline strategies"
 
 [dependencies]
 blake3.workspace = true

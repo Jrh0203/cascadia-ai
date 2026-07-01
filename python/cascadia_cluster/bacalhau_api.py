@@ -98,20 +98,14 @@ class BacalhauAPI:
                 with urllib.request.urlopen(
                     request,
                     timeout=(
-                        self.request_timeout_seconds
-                        if timeout_seconds is None
-                        else timeout_seconds
+                        self.request_timeout_seconds if timeout_seconds is None else timeout_seconds
                     ),
                 ) as response:
                     raw = response.read()
             except urllib.error.HTTPError as error:
                 last_error = error
                 last_error_detail = error.read().decode(errors="replace")
-                if (
-                    method == "PUT"
-                    and path == "/api/v1/orchestrator/jobs"
-                    and error.code == 500
-                ):
+                if method == "PUT" and path == "/api/v1/orchestrator/jobs" and error.code == 500:
                     # Bacalhau v1.9 reports an idempotent replay as HTTP 500
                     # "no changes detected" but includes the already-created
                     # Job ID. Normalize that transport quirk into the same

@@ -41,10 +41,7 @@ def compare_identities(
         "identity_kind": IDENTITY_KIND,
         "bundle_sha256": bundle,
         "expected_bundle_sha256": expected_bundle_sha256,
-        "matches_expected": (
-            expected_bundle_sha256 is None
-            or bundle == expected_bundle_sha256
-        ),
+        "matches_expected": (expected_bundle_sha256 is None or bundle == expected_bundle_sha256),
         "hosts": [str(report.get("host", "unknown")) for report in reports],
         "inputs": [str(path) for path in paths],
         "all_identities_match": True,

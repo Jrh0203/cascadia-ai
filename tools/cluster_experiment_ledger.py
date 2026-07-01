@@ -64,18 +64,12 @@ def validate_experiment(value: Any) -> dict[str, Any]:
         raise LedgerError(f"experiment {experiment_id} has an invalid outcome")
     updated = value.get("updated_unix_ms")
     if not isinstance(updated, int) or updated < 0:
-        raise LedgerError(
-            f"experiment {experiment_id} updated_unix_ms must be nonnegative"
-        )
+        raise LedgerError(f"experiment {experiment_id} updated_unix_ms must be nonnegative")
     started = value.get("started_unix_ms")
     completed = value.get("completed_unix_ms")
     if started is not None and (not isinstance(started, int) or started < 0):
-        raise LedgerError(
-            f"experiment {experiment_id} started_unix_ms must be nonnegative or null"
-        )
-    if completed is not None and (
-        not isinstance(completed, int) or completed < 0
-    ):
+        raise LedgerError(f"experiment {experiment_id} started_unix_ms must be nonnegative or null")
+    if completed is not None and (not isinstance(completed, int) or completed < 0):
         raise LedgerError(
             f"experiment {experiment_id} completed_unix_ms must be nonnegative or null"
         )
@@ -83,13 +77,9 @@ def validate_experiment(value: Any) -> dict[str, Any]:
         raise LedgerError(f"running experiment {experiment_id} requires a start time")
     if value["status"] == "completed":
         if completed is None or value["outcome"] == "pending":
-            raise LedgerError(
-                f"completed experiment {experiment_id} requires time and outcome"
-            )
+            raise LedgerError(f"completed experiment {experiment_id} requires time and outcome")
     elif completed is not None:
-        raise LedgerError(
-            f"non-completed experiment {experiment_id} cannot have a completion time"
-        )
+        raise LedgerError(f"non-completed experiment {experiment_id} cannot have a completion time")
     if started is not None and completed is not None and completed < started:
         raise LedgerError(f"experiment {experiment_id} completes before it starts")
     for field in ("hosts", "tags", "task_ids", "notes"):
@@ -103,17 +93,13 @@ def validate_experiment(value: Any) -> dict[str, Any]:
         _nonempty(metric.get("label"), f"experiment {experiment_id} metric label")
         _nonempty(metric.get("value"), f"experiment {experiment_id} metric value")
         if metric.get("tone") not in TONES:
-            raise LedgerError(
-                f"experiment {experiment_id} metric has an invalid tone"
-            )
+            raise LedgerError(f"experiment {experiment_id} metric has an invalid tone")
     criteria = value.get("criteria", [])
     if not isinstance(criteria, list):
         raise LedgerError(f"experiment {experiment_id} criteria must be a list")
     for criterion in criteria:
         if not isinstance(criterion, dict):
-            raise LedgerError(
-                f"experiment {experiment_id} criterion must be an object"
-            )
+            raise LedgerError(f"experiment {experiment_id} criterion must be an object")
         _nonempty(
             criterion.get("label"),
             f"experiment {experiment_id} criterion label",
@@ -133,9 +119,7 @@ def validate_experiment(value: Any) -> dict[str, Any]:
         raise LedgerError(f"experiment {experiment_id} artifacts must be a list")
     for artifact in artifacts:
         if not isinstance(artifact, dict):
-            raise LedgerError(
-                f"experiment {experiment_id} artifact must be an object"
-            )
+            raise LedgerError(f"experiment {experiment_id} artifact must be an object")
         _nonempty(
             artifact.get("label"),
             f"experiment {experiment_id} artifact label",

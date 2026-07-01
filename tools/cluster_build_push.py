@@ -123,9 +123,7 @@ def main() -> int:
     parser.add_argument("--tag", required=True)
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--build-arg", action="append", default=[])
-    parser.add_argument(
-        "--docker-host", default=os.environ.get("DOCKER_HOST", DEFAULT_DOCKER_HOST)
-    )
+    parser.add_argument("--docker-host", default=os.environ.get("DOCKER_HOST", DEFAULT_DOCKER_HOST))
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", args.name):
         raise SystemExit("image name must be a portable lowercase registry component")

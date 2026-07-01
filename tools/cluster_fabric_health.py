@@ -93,10 +93,7 @@ def main() -> int:
                 f"expected {expected_cpu}, observed {node['cpu_capacity']}"
             )
         expected_memory = EXPECTED_MEMORY_CAPACITY_BYTES.get(node["name"])
-        if (
-            expected_memory is not None
-            and node["memory_capacity_bytes"] != expected_memory
-        ):
+        if expected_memory is not None and node["memory_capacity_bytes"] != expected_memory:
             errors.append(
                 f"compute memory capacity differs for {node['name']}: "
                 f"expected {expected_memory}, observed {node['memory_capacity_bytes']}"

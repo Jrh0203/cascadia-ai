@@ -189,9 +189,7 @@ def _validate_gate_inputs(
         or field.get("manifest_id") != contract.get("opponent_field_manifest_id")
         or not isinstance(execution, dict)
         or set(execution) != expected_execution_keys
-        or re.fullmatch(
-            r"[^\s@]+@sha256:[0-9a-f]{64}", str(execution.get("image_digest", ""))
-        )
+        or re.fullmatch(r"[^\s@]+@sha256:[0-9a-f]{64}", str(execution.get("image_digest", "")))
         is None
     ):
         raise GateFabricError("gate inputs differ from the registered topology-free stage")
@@ -211,9 +209,7 @@ def _validate_gate_inputs(
         indices.add(pair_index)
     if indices != set(range(expected_pairs)):
         raise GateFabricError("opponent field pair indices are not contiguous")
-    if execution["opponent_field_sha256"] != _sha256_file(
-        gate_directory / "opponent-field.json"
-    ):
+    if execution["opponent_field_sha256"] != _sha256_file(gate_directory / "opponent-field.json"):
         raise GateFabricError("opponent field content differs from its execution binding")
     admission = gate_directory / "smoke-admission-receipt.json"
     if stage == "development" and (
@@ -258,11 +254,9 @@ def build_gate_archive(
     if freeze.get("checkpoint_id") != contract.get("candidate_checkpoint_id"):
         raise GateFabricError("candidate freeze and gate contract checkpoint differ")
     execution = contract["execution_binding"]
-    if (
-        execution["candidate_freeze_receipt_sha256"]
-        != _sha256_file(candidate_freeze / "freeze-receipt.json")
-        or execution["exact_weights_sha256"] != _sha256_file(exact_weights)
-    ):
+    if execution["candidate_freeze_receipt_sha256"] != _sha256_file(
+        candidate_freeze / "freeze-receipt.json"
+    ) or execution["exact_weights_sha256"] != _sha256_file(exact_weights):
         raise GateFabricError("gate execution binding differs from candidate or exact weights")
     required = (
         candidate_freeze / "r2-run" / "bundle.json",
@@ -277,9 +271,7 @@ def build_gate_archive(
         for relative in ("work-item-summaries", "reports", "projections"):
             (campaign / relative).mkdir(parents=True)
         for pair_index in range(contract["pair_count"]):
-            (campaign / "receipts" / f"pair-{pair_index:04}").mkdir(
-                parents=True
-            )
+            (campaign / "receipts" / f"pair-{pair_index:04}").mkdir(parents=True)
         shutil.copyfile(gate_directory / "contract.json", campaign / "contract.json")
         shutil.copyfile(gate_directory / "opponent-field.json", campaign / "opponent-field.json")
         admission = gate_directory / "smoke-admission-receipt.json"
@@ -472,9 +464,7 @@ def _merge_work_items(
     for work_item in work_items:
         (destination / "receipts" / work_item).mkdir(parents=True, exist_ok=True)
         source = result_root / request_id / work_item / "campaign"
-        contract_matches = _same_file(
-            source / "contract.json", destination / "contract.json"
-        )
+        contract_matches = _same_file(source / "contract.json", destination / "contract.json")
         field_matches = _same_file(
             source / "opponent-field.json", destination / "opponent-field.json"
         )
@@ -492,9 +482,7 @@ def _merge_work_items(
         _copy_exact(summary, destination / "work-item-summaries" / summary.name)
         for receipt in sorted(receipts.glob("pair-*.json")):
             _copy_exact(receipt, destination / "receipts" / work_item / receipt.name)
-        scheduler_receipt = (
-            result_root / request_id / ".receipts" / f"{work_item}.json"
-        )
+        scheduler_receipt = result_root / request_id / ".receipts" / f"{work_item}.json"
         _validate_scheduler_receipt(
             scheduler_receipt,
             request_id=request_id,
@@ -681,9 +669,7 @@ def _scheduler_utilization(samples: list[dict[str, Any]]) -> dict[str, Any]:
     total_weight = sum(weights)
 
     def weighted(values: list[float]) -> float:
-        numerator = sum(
-            value * weight for value, weight in zip(values, weights, strict=True)
-        )
+        numerator = sum(value * weight for value, weight in zip(values, weights, strict=True))
         return numerator / total_weight
 
     nodes = {}
@@ -836,9 +822,7 @@ def _write_completion_artifacts(
         "combined_markdown_sha256": _sha256_file(combined_path),
     }
     completion["completion_sha256"] = _canonical_sha256(completion)
-    _write_json_once(
-        campaign_directory / "reports/campaign-completion.json", completion
-    )
+    _write_json_once(campaign_directory / "reports/campaign-completion.json", completion)
 
 
 def collect_and_aggregate(
@@ -893,9 +877,7 @@ def collect_and_aggregate(
         # Bind reducer identity to the exact assembled campaign. Besides making
         # retries explicit, this prevents any failed/obsolete reducer request
         # from being reused for different campaign bytes.
-        aggregate_request_id = _aggregate_request_id(
-            request_id, campaign_archive_sha256
-        )
+        aggregate_request_id = _aggregate_request_id(request_id, campaign_archive_sha256)
         reference = _store().stage_file(archive, target="/inputs/r2-campaign")
         aggregate = client.submit_map(
             image=image,
@@ -937,10 +919,7 @@ def collect_and_aggregate(
         if path.is_file():
             _copy_exact(path, campaign_directory / path.relative_to(final_campaign))
     aggregate_receipt_path = (
-        artifact_directory
-        / aggregate_request_id
-        / ".receipts"
-        / "aggregate.json"
+        artifact_directory / aggregate_request_id / ".receipts" / "aggregate.json"
     )
     aggregate_receipt = _read_json(aggregate_receipt_path)
     aggregate_payload = dict(aggregate_receipt)

@@ -54,9 +54,7 @@ def remote_sha256(host: str, path: str) -> str:
         text=True,
     )
     if completed.returncode != 0:
-        raise CollectError(
-            f"remote checksum failed on {host}: {completed.stderr.strip()}"
-        )
+        raise CollectError(f"remote checksum failed on {host}: {completed.stderr.strip()}")
     fields = completed.stdout.strip().split()
     if len(fields) < 2 or len(fields[0]) != 64:
         raise CollectError(f"invalid remote checksum output on {host}")
@@ -122,9 +120,7 @@ def main() -> int:
     )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    report = collect(
-        [(source, Path(destination)) for source, destination in args.artifact]
-    )
+    report = collect([(source, Path(destination)) for source, destination in args.artifact])
     _write_json(args.output, report)
     print(json.dumps(report, sort_keys=True))
     return 0
