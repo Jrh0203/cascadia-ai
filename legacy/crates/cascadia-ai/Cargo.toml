@@ -64,8 +64,8 @@ matmul-portable = ["dep:matrixmultiply"]
 
 [dependencies]
 cascadia-core = { path = "../cascadia-core" }
-arrayvec = { workspace = true }
-rand = { workspace = true }
+arrayvec = "0.7"
+rand = "0.8"
 # Phase 0.8.B SGEMM backends (all optional; gated by `accelerate` /
 # `matmul-portable` features). Versions match the plan's recommendation.
 matrixmultiply = { version = "0.3", optional = true }

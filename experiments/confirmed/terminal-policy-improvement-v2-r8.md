@@ -41,5 +41,5 @@ distillation under a new experiment ID.
 
 Artifacts:
 
-- `docs/v2/reports/terminal-policy-improvement-v2-r8-runtime-smoke-1.json`
-- `docs/v2/reports/terminal-policy-improvement-v2-r8-pilot3.json`
+- `docs/archive/v2/reports/terminal-policy-improvement-v2-r8-runtime-smoke-1.json`
+- `docs/archive/v2/reports/terminal-policy-improvement-v2-r8-pilot3.json`

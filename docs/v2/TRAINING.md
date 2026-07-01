@@ -478,7 +478,7 @@ and 0.444333 scored value-difference correlation, but only 13.750% top-one,
 38.438% top-five, 0.269223 MRR, 71.406% predicted teacher coverage, and
 67.975% scored pairwise accuracy. No test or gameplay domain was opened.
 The complete result is in
-`docs/v2/reports/canonical-action-mce-distribution-v1-validation.md`.
+`docs/archive/v2/reports/canonical-action-mce-distribution-v1-validation.md`.
 
 ## Point-Scale Continuation Residual
 
@@ -608,14 +608,14 @@ within-turn residual correlation, but root pairwise accuracy and
 selected-action top-one both regressed slightly. The candidate is preserved as
 reproducible evidence at `artifacts/models/exact-mlx-rollout-return-v1`; it is
 not a promoted gameplay model. See ADR 0065 and
-`docs/v2/reports/exact-mlx-rollout-return-finetune-validation.md`.
+`docs/archive/v2/reports/exact-mlx-rollout-return-finetune-validation.md`.
 
 ADR 0066 added one complete root-group pass per epoch with group-centered
 Huber, selected-action listwise, and soft teacher listwise losses. On a fresh
 validation split it improved selected-action top-one from 27.50% to 29.38%,
 but pairwise accuracy and conditional regret regressed. It was also rejected
 before gameplay. See
-`docs/v2/reports/exact-mlx-joint-return-ranking-validation.md`.
+`docs/archive/v2/reports/exact-mlx-joint-return-ranking-validation.md`.
 
 ## Exact-Parent Candidate-Set Residual
 
@@ -657,7 +657,7 @@ from 49.453% to 54.688%, but top-one rose only 1.875 points, MRR rose only
 correlation regressed 0.01559, and regret improved only 0.01011. Train top-one
 rose 2.695 points versus the required five. No test or gameplay domain was
 opened. See
-`docs/v2/reports/exact-parent-candidate-set-residual-validation.md`.
+`docs/archive/v2/reports/exact-parent-candidate-set-residual-validation.md`.
 
 ## Exact-Parent Hidden-State Residual
 
@@ -698,7 +698,7 @@ selected-action top-one improved only 0.078 percentage point, top-five only
 0.703 point, MRR only 0.002335, and regret only 0.001245 point. Train top-one
 was exactly unchanged. Six gates failed, so test and gameplay were not opened.
 See
-`docs/v2/reports/exact-parent-hidden-state-residual-validation.md`.
+`docs/archive/v2/reports/exact-parent-hidden-state-residual-validation.md`.
 
 This result closes residual learning on the fixed historical parent. The next
 research step is to measure whether the R600 teacher evidence contains
@@ -718,7 +718,7 @@ clear a 95% normal difference test, only 6.953% have non-overlapping 95%
 intervals, and the mean 95% confidence set contains 10.140 actions. Opening
 turns are least identifiable at 6.563% and 16.309 actions respectively.
 
-See `docs/v2/reports/mce-teacher-identifiability.md`. Exact-action imitation
+See `docs/archive/v2/reports/mce-teacher-identifiability.md`. Exact-action imitation
 from this independent-seed teacher is closed. ADR 0071 first tests whether
 same-budget common random numbers improve the teacher policy itself.
 

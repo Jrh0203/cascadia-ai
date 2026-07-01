@@ -22,9 +22,9 @@ The sealed run completed on 2026-06-14:
 All 1,000 indices, smoke gates, MLX shutdowns, source revisions, and
 executable/model/weight fingerprints passed strict aggregation. The generated
 human report is
-[`final-strength-validation.md`](reports/final-strength-validation.md), and
+[`final-strength-validation.md`](../archive/v2/reports/final-strength-validation.md), and
 the complete machine-readable evidence is
-[`final-strength-validation.json`](reports/final-strength-validation.json).
+[`final-strength-validation.json`](../archive/v2/reports/final-strength-validation.json).
 
 ## Frozen Seed Domain
 
@@ -135,4 +135,4 @@ budgets.
 
 The 94.5 one-game treatment score is not strength evidence. The machine-readable
 rehearsal is
-[`final-strength-infrastructure-smoke.json`](reports/final-strength-infrastructure-smoke.json).
+[`final-strength-infrastructure-smoke.json`](../archive/v2/reports/final-strength-infrastructure-smoke.json).

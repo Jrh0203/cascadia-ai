@@ -12,5 +12,5 @@ Doubling beam capacity changed only one seed block and failed the frozen
 
 Artifacts:
 
-- `docs/v2/reports/perfect-information-beam-capacity-v1-t5-b32-w2-runtime-smoke-1.json`
-- `docs/v2/reports/perfect-information-beam-capacity-v1-t5-b32-w2-pilot10.json`
+- `docs/archive/v2/reports/perfect-information-beam-capacity-v1-t5-b32-w2-runtime-smoke-1.json`
+- `docs/archive/v2/reports/perfect-information-beam-capacity-v1-t5-b32-w2-pilot10.json`

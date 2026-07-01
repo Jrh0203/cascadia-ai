@@ -55,9 +55,9 @@ run.
 
 Artifacts:
 
-- `docs/v2/reports/pattern-competition-v1-runtime-smoke-1-initial-failed.json`
+- `docs/archive/v2/reports/pattern-competition-v1-runtime-smoke-1-initial-failed.json`
   (`7829cf6bdfc6b38fac29730429fe166ac03f034f5e07be716a2c07d0f16d636f`)
-- `docs/v2/reports/pattern-competition-v1-runtime-smoke-1.json`
+- `docs/archive/v2/reports/pattern-competition-v1-runtime-smoke-1.json`
   (`a833414b40a6a9e112564b472a82a75aa60592ab97e61d6f380702d38878f04e`)
-- `docs/v2/reports/pattern-competition-v1-pilot10.json`
+- `docs/archive/v2/reports/pattern-competition-v1-pilot10.json`
   (`77412b5bdb8c37ba3aa0d9ab13100c8307e3bc5ce8faecf5f7ec001d34f69127`)

@@ -46,5 +46,5 @@ targets.
 
 Artifacts:
 
-- `docs/v2/reports/perfect-information-focal-beam-v1-t5-b16-w2-runtime-smoke-1.json`
-- `docs/v2/reports/perfect-information-focal-beam-v1-t5-b16-w2-pilot10.json`
+- `docs/archive/v2/reports/perfect-information-focal-beam-v1-t5-b16-w2-runtime-smoke-1.json`
+- `docs/archive/v2/reports/perfect-information-focal-beam-v1-t5-b16-w2-pilot10.json`

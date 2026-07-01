@@ -47,5 +47,5 @@ value creation.
 
 Artifacts:
 
-- `docs/v2/reports/pattern-commitment-v2-phase-capped-runtime-smoke-1.json`
-- `docs/v2/reports/pattern-commitment-v2-phase-capped-pilot10.json`
+- `docs/archive/v2/reports/pattern-commitment-v2-phase-capped-runtime-smoke-1.json`
+- `docs/archive/v2/reports/pattern-commitment-v2-phase-capped-pilot10.json`

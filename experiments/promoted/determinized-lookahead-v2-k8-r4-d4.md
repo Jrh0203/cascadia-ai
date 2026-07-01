@@ -55,7 +55,7 @@ target/release/cascadia-v2 lookahead-ablate \
   --treatment-candidates 8 \
   --treatment-determinizations 4 \
   --treatment-greedy-plies 4 \
-  --output docs/v2/reports/lookahead-candidate-breadth-k8-confirm50.json
+  --output docs/archive/v2/reports/lookahead-candidate-breadth-k8-confirm50.json
 ```
 
 The confirmed mean is 9.730 points below the primary 100-point target.

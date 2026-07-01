@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-arrayvec = { workspace = true }
-rand = { workspace = true }
+arrayvec = "0.7"
+rand = "0.8"
 
 [dev-dependencies]
 criterion = "0.5"

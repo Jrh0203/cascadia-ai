@@ -24,7 +24,7 @@ matmul-portable = ["cascadia-ai/matmul-portable"]
 [dependencies]
 cascadia-core = { path = "../cascadia-core" }
 cascadia-ai = { path = "../cascadia-ai" }
-crossterm = { workspace = true }
-clap = { workspace = true }
-rand = { workspace = true }
+crossterm = "0.28"
+clap = { version = "4", features = ["derive"] }
+rand = "0.8"
 rayon = "1.10"

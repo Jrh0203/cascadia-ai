@@ -59,4 +59,4 @@ make check
 ```
 
 The rehearsal report records the source revision, host, tool versions, and
-results under `docs/v2/reports/`.
+results under `docs/archive/v2/reports/`.

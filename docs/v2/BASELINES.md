@@ -72,14 +72,14 @@ Mean habitat corridor sizes are 5.410 mountain, 5.585 forest, 5.485 prairie,
 
 Raw reports:
 
-- `reports/random-v1-50.json`
-- `reports/greedy-v1-50.json`
-- `reports/determinized-lookahead-v2-k4-r4-d4-vs-greedy-50.json`
-- `reports/lookahead-candidate-breadth-k8-confirm50.json`
-- `reports/determinized-lookahead-v2-k8-r4-d4-benchmark-10.json`
-- `reports/pattern-aware-v1-confirm50.json`
-- `reports/pattern-aware-v1-vs-promoted-k8-confirm50.json`
-- `reports/v1-champion-reference-50.json`
+- `../archive/v2/reports/random-v1-50.json`
+- `../archive/v2/reports/greedy-v1-50.json`
+- `../archive/v2/reports/determinized-lookahead-v2-k4-r4-d4-vs-greedy-50.json`
+- `../archive/v2/reports/lookahead-candidate-breadth-k8-confirm50.json`
+- `../archive/v2/reports/determinized-lookahead-v2-k8-r4-d4-benchmark-10.json`
+- `../archive/v2/reports/pattern-aware-v1-confirm50.json`
+- `../archive/v2/reports/pattern-aware-v1-vs-promoted-k8-confirm50.json`
+- `../archive/v2/reports/v1-champion-reference-50.json`
 
 Reproduce:
 

@@ -34,7 +34,7 @@ target/release/cascadia-v2 nature-wipe-compare \
   --candidates 8 --determinizations 4 --greedy-plies 4 \
   --prelude-candidates 4 --prelude-determinizations 2 \
   --prelude-greedy-plies 4 \
-  --output docs/v2/reports/nature-wipe-lookahead-v1-pilot5.json
+  --output docs/archive/v2/reports/nature-wipe-lookahead-v1-pilot5.json
 ```
 
 - baseline mean: 89.850

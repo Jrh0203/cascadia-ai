@@ -36,7 +36,7 @@ target/release/cascadia-v2 model-benchmark \
   --games 1 \
   --first-seed 10000 \
   --model-dir artifacts/models/entity-value-v1-greedy256 \
-  --output docs/v2/reports/mlx-value-v1-true-afterstate-smoke-1.json
+  --output docs/archive/v2/reports/mlx-value-v1-true-afterstate-smoke-1.json
 ```
 
 Result:

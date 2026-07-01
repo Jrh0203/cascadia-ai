@@ -32,16 +32,16 @@ LOG_DIR = ROOT / "artifacts/logs"
 STATE_PATH = LOG_DIR / "adr0078-cluster-supervisor-state.json"
 SUPERVISOR_LOG = LOG_DIR / "adr0078-cluster-supervisor.log"
 CANONICAL_JSON_REPORT = (
-    ROOT / "docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.json"
+    ROOT / "docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.json"
 )
 CANONICAL_MARKDOWN_REPORT = (
-    ROOT / "docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.md"
+    ROOT / "docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.md"
 )
 CANONICAL_TEST_JSON_REPORT = (
-    ROOT / "docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-test.json"
+    ROOT / "docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-test.json"
 )
 CANONICAL_TEST_MARKDOWN_REPORT = (
-    ROOT / "docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-test.md"
+    ROOT / "docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-test.md"
 )
 TEST_EVALUATOR = ROOT / "tools/adr0079_counterfactual_advantage_test.py"
 TEST_AUTHORIZATION = RUN_DIR / "test-authorization.json"

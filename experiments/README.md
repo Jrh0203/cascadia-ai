@@ -2,6 +2,10 @@
 
 Experiments are registered before execution in `registry.toml`.
 
+The v2 experiment registry is historical. Its generated reports and decision
+records now live under `docs/archive/v2` so active docs stay focused on current
+v3 work.
+
 Each entry must define:
 
 - hypothesis,
@@ -14,4 +18,3 @@ Each entry must define:
 
 Smoke tests may be recorded but cannot promote production behavior. Historical
 v1 reports are not copied into this registry.
-

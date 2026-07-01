@@ -35,7 +35,7 @@ run.
 
 Artifacts:
 
-- `docs/v2/reports/pattern-portfolio-v1-runtime-smoke-1.json`
+- `docs/archive/v2/reports/pattern-portfolio-v1-runtime-smoke-1.json`
   (`85cec0e6372eb28913bcab90c4fb07db670a2cc6122b3d45a29868d6b265e440`)
-- `docs/v2/reports/pattern-portfolio-v1-pilot10.json`
+- `docs/archive/v2/reports/pattern-portfolio-v1-pilot10.json`
   (`d01fb9c65391fe58da183a1b158a9829a6107e05f5d6c70506437ef41dc49e8c`)

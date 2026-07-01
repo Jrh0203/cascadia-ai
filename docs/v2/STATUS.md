@@ -33,7 +33,7 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
 
 ## Completed
 
-- Read and adopted `CASCADIA_V2_GOAL.txt` as the authoritative objective.
+- Read and adopted `docs/archive/v2/CASCADIA_V2_GOAL.txt` as the authoritative objective.
 - Created branch `codex/cascadia-v2` without discarding the existing dirty
   worktree.
 - Inspected running processes. No benchmark or training process was active.
@@ -828,7 +828,7 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
   with the exact collector binary, and john3 ran the frozen MLX job under
   Python 3.12.13 / MLX 0.31.2 on `Device(gpu, 0)`. The completed execution
   record is
-  `docs/v2/reports/adr-0078-distributed-execution.md`.
+  `docs/archive/v2/reports/adr-0078-distributed-execution.md`.
 - Preregistered ADR 0079 before ADR 0078 validation completed. A complete
   validation pass conditionally opens only fresh test indices 71,000-71,031
   under the unchanged R12 contract and exact selected checkpoint. Failure
@@ -903,9 +903,9 @@ certify the v2 rules or benchmark contract.
 ## Release Verdict
 
 The authoritative final report is
-[`final-strength-validation.md`](reports/final-strength-validation.md), backed
+[`final-strength-validation.md`](../archive/v2/reports/final-strength-validation.md), backed
 by the machine-readable
-[`final-strength-validation.json`](reports/final-strength-validation.json).
+[`final-strength-validation.json`](../archive/v2/reports/final-strength-validation.json).
 The 100-point target is not reached. No required v2 implementation, quality
 gate, documentation, clean-checkout, or final-validation work remains open.
 Further strength research should begin as a separately registered campaign

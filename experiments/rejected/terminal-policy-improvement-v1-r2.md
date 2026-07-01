@@ -42,5 +42,5 @@ ID and compute budget.
 
 Artifacts:
 
-- `docs/v2/reports/terminal-policy-improvement-v1-r2-runtime-smoke-1.json`
-- `docs/v2/reports/terminal-policy-improvement-v1-r2-pilot3.json`
+- `docs/archive/v2/reports/terminal-policy-improvement-v1-r2-runtime-smoke-1.json`
+- `docs/archive/v2/reports/terminal-policy-improvement-v1-r2-pilot3.json`

@@ -97,4 +97,4 @@ external-volume execution must not be reintroduced.
   model resource acceptance remain `pending-host-recovery`. The deterministic
   protocol fixture is evidence only and cannot substitute for those panels.
   Full evidence and recovery gates are in
-  `docs/v2/reports/r2-map-w4-external-macho-gatekeeper-incident-v1.md`.
+  `docs/archive/v2/reports/r2-map-w4-external-macho-gatekeeper-incident-v1.md`.

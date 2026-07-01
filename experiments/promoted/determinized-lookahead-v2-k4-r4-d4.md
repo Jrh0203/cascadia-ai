@@ -66,7 +66,7 @@ target/release/cascadia-v2 lookahead-compare \
   --candidates 4 \
   --determinizations 4 \
   --greedy-plies 4 \
-  --output docs/v2/reports/determinized-lookahead-v2-k4-r4-d4-vs-greedy-50.json
+  --output docs/archive/v2/reports/determinized-lookahead-v2-k4-r4-d4-vs-greedy-50.json
 ```
 
 The confirmed mean remains 10.565 points below the primary target. Bear,

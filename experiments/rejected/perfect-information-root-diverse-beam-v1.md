@@ -12,5 +12,5 @@ tied exactly. W4 root recall is not material when future layers remain W2.
 
 Artifacts:
 
-- `docs/v2/reports/perfect-information-root-diverse-beam-v1-t5-b16-rootw4-futurew2-runtime-smoke-1.json`
-- `docs/v2/reports/perfect-information-root-diverse-beam-v1-t5-b16-rootw4-futurew2-pilot10.json`
+- `docs/archive/v2/reports/perfect-information-root-diverse-beam-v1-t5-b16-rootw4-futurew2-runtime-smoke-1.json`
+- `docs/archive/v2/reports/perfect-information-root-diverse-beam-v1-t5-b16-rootw4-futurew2-pilot10.json`

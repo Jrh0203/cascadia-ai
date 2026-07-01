@@ -1,22 +1,20 @@
-# Cascadia AI V2
+# Cascadia AI
 
-Follow [`AGENTS.md`](AGENTS.md) and the authoritative
-[`CASCADIA_V2_GOAL.txt`](CASCADIA_V2_GOAL.txt).
+Follow [`AGENTS.md`](AGENTS.md).
 
-Active production code lives in `crates/cascadia-*`, `python/cascadia_mlx`,
-and `apps/web`. Superseded v1 source and historical research live under
-[`legacy/`](legacy/README.md) and must not drive v2 conclusions without fresh
-reproduction.
+The active workstream is Cascadia v3: transformer training, packed expert tensor
+generation, GPU serving experiments, and Bacalhau CPU-worker orchestration. Use
+`docs/v3/README.md`, `docs/v3/FULL_V3_TRAINING_PIPELINE.md`, and
+`cascadiav3/README.md` as the starting points.
+
+Closed v2 research remains available for reproduction, but it should not drive
+new v3 architecture decisions without fresh validation. Historical v2 goals,
+decision records, and generated reports live in `docs/archive/v2`.
 
 Use:
 
 ```bash
-make setup
-make check
-make benchmark-smoke
-make web-dev
+cargo check --workspace
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=cascadiav3/src python3 -m unittest discover -s cascadiav3/tests -v
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=python:tools uv run pytest -q tests/cluster_unit tools/test_cluster_*.py
 ```
-
-All neural training and Apple-specific inference use MLX. Substantive
-experiments require a preregistered protocol, disjoint deterministic splits,
-checksummed artifacts, and registry updates.

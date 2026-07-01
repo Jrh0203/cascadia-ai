@@ -57,14 +57,14 @@ pub fn repository_root() -> io::Result<PathBuf> {
     let current = env::current_dir()?;
     if let Some(root) = current
         .ancestors()
-        .find(|path| path.join("CASCADIA_V2_GOAL.txt").is_file())
+        .find(|path| path.join("docs/archive/v2/CASCADIA_V2_GOAL.txt").is_file())
     {
         return Ok(root.to_owned());
     }
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     manifest
         .ancestors()
-        .find(|path| path.join("CASCADIA_V2_GOAL.txt").is_file())
+        .find(|path| path.join("docs/archive/v2/CASCADIA_V2_GOAL.txt").is_file())
         .map(Path::to_path_buf)
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "repository root not found"))
 }

@@ -41,5 +41,5 @@ identification improves.
 
 Artifacts:
 
-- `docs/v2/reports/late-conservative-fox-frontier-v1-t5-r8-f2-c90-runtime-smoke-1.json`
-- `docs/v2/reports/late-conservative-fox-frontier-v1-t5-r8-f2-c90-pilot10.json`
+- `docs/archive/v2/reports/late-conservative-fox-frontier-v1-t5-r8-f2-c90-runtime-smoke-1.json`
+- `docs/archive/v2/reports/late-conservative-fox-frontier-v1-t5-r8-f2-c90-pilot10.json`

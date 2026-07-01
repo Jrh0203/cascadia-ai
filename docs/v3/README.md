@@ -6,7 +6,6 @@
 - [Operations](OPERATIONS.md)
 - [Full v3 training pipeline](FULL_V3_TRAINING_PIPELINE.md)
 - `PERFORMANCE.md` records the two optimization passes and measured readiness rates.
-- `READINESS.md` is generated from the sealed Part 1 manifest.
 
 The live campaign state and large artifacts are intentionally outside the repository at `/Users/johnherrick/cascadia-bench/v3-nnue`.
 

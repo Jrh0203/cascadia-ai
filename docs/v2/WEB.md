@@ -117,11 +117,11 @@ make web-visual-report
 
 The visual report contains:
 
-- `docs/v2/reports/web-desktop-play.png`
-- `docs/v2/reports/web-desktop-analysis.png`
-- `docs/v2/reports/web-mobile-market.png`
-- `docs/v2/reports/web-cluster-dashboard.png`
-- `docs/v2/reports/web-cluster-dashboard-mobile.png`
+- `docs/archive/v2/reports/web-desktop-play.png`
+- `docs/archive/v2/reports/web-desktop-analysis.png`
+- `docs/archive/v2/reports/web-mobile-market.png`
+- `docs/archive/v2/reports/web-cluster-dashboard.png`
+- `docs/archive/v2/reports/web-cluster-dashboard-mobile.png`
 
 The dependency lockfile is audited with:
 

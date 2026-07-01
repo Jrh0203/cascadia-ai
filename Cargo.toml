@@ -1,9 +1,5 @@
 [workspace]
 members = [
-    "legacy/crates/cascadia-core",
-    "legacy/crates/cascadia-ai",
-    "legacy/crates/cascadia-cli",
-    "legacy/crates/cascadia-web",
     "crates/cascadia-game",
     "crates/cascadia-sim",
     "crates/cascadia-eval",
@@ -14,6 +10,13 @@ members = [
     "crates/cascadia-cli-v2",
     "crates/cascadia-differential",
     "crates/cascadia-provenance",
+]
+exclude = [
+    "cascadiav3/real-root-exporter",
+    "legacy/crates/cascadia-ai",
+    "legacy/crates/cascadia-cli",
+    "legacy/crates/cascadia-core",
+    "legacy/crates/cascadia-web",
 ]
 resolver = "2"
 

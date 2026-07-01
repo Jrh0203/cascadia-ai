@@ -36,5 +36,5 @@ does not recover the exact beam's continuation gain.
 
 Artifacts:
 
-- `docs/v2/reports/public-focal-beam-teacher-v1-t5-r4-b4-w2-c90-runtime-smoke-1.json`
-- `docs/v2/reports/public-focal-beam-teacher-v1-t5-r4-b4-w2-c90-pilot10.json`
+- `docs/archive/v2/reports/public-focal-beam-teacher-v1-t5-r4-b4-w2-c90-runtime-smoke-1.json`
+- `docs/archive/v2/reports/public-focal-beam-teacher-v1-t5-r4-b4-w2-c90-pilot10.json`

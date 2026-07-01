@@ -43,5 +43,5 @@ substituting this heuristic wholesale inside shallow rollouts.
 
 Artifacts:
 
-- `docs/v2/reports/pattern-blueprint-lookahead-v1-runtime-smoke-1.json`
-- `docs/v2/reports/pattern-blueprint-lookahead-v1-pilot10.json`
+- `docs/archive/v2/reports/pattern-blueprint-lookahead-v1-runtime-smoke-1.json`
+- `docs/archive/v2/reports/pattern-blueprint-lookahead-v1-pilot10.json`

@@ -131,19 +131,19 @@ PUBLIC_BEAM_SET_RUN_DIR ?= artifacts/runs/public-beam-set-ranker-v1
 PUBLIC_BEAM_SET_MODEL_DIR ?= artifacts/models/public-beam-set-ranker-v1
 LEGACY_NNUE_MLX_MODEL_DIR ?= artifacts/models/legacy-nnue-v4opp-mlx-v1
 LEGACY_NNUE_MLX_FIXTURE ?= artifacts/fixtures/legacy-nnue-v4opp-mlx-v1-rust.json
-LEGACY_NNUE_MLX_PARITY_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-v1-parity.json
-LEGACY_NNUE_MLX_BENCHMARK_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-v1-benchmark.json
-LEGACY_NNUE_MLX_SERVICE_DIRECT_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-service-v1-direct.json
-LEGACY_NNUE_MLX_SERVICE_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-service-v1.json
-LEGACY_NNUE_MLX_EXACT_SERVICE_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-exact-csr-service-v1.json
-LEGACY_NNUE_MLX_ROLLOUT_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-exact-rollout-wave-v1.json
+LEGACY_NNUE_MLX_PARITY_REPORT ?= docs/archive/v2/reports/legacy-nnue-v4opp-mlx-v1-parity.json
+LEGACY_NNUE_MLX_BENCHMARK_REPORT ?= docs/archive/v2/reports/legacy-nnue-v4opp-mlx-v1-benchmark.json
+LEGACY_NNUE_MLX_SERVICE_DIRECT_REPORT ?= docs/archive/v2/reports/legacy-nnue-v4opp-mlx-service-v1-direct.json
+LEGACY_NNUE_MLX_SERVICE_REPORT ?= docs/archive/v2/reports/legacy-nnue-v4opp-mlx-service-v1.json
+LEGACY_NNUE_MLX_EXACT_SERVICE_REPORT ?= docs/archive/v2/reports/legacy-nnue-v4opp-mlx-exact-csr-service-v1.json
+LEGACY_NNUE_MLX_ROLLOUT_REPORT ?= docs/archive/v2/reports/legacy-nnue-v4opp-mlx-exact-rollout-wave-v1.json
 FINAL_STRENGTH_OUTPUT_DIR ?= artifacts/final-strength/local
 FINAL_STRENGTH_FIRST_GAME_INDEX ?= 0
 FINAL_STRENGTH_GAMES ?= 1
 FINAL_STRENGTH_ROLLOUTS ?= 600
 FINAL_STRENGTH_SHARDS ?= artifacts/final-strength/local
-FINAL_STRENGTH_REPORT ?= docs/v2/reports/final-strength-validation.json
-FINAL_STRENGTH_MARKDOWN ?= docs/v2/reports/final-strength-validation.md
+FINAL_STRENGTH_REPORT ?= docs/archive/v2/reports/final-strength-validation.json
+FINAL_STRENGTH_MARKDOWN ?= docs/archive/v2/reports/final-strength-validation.md
 ROLLOUT_VALUE_SMOKE_DATASET ?= artifacts/datasets/exact-mlx-rollout-value-smoke-r32
 ROLLOUT_VALUE_TRAIN_DATASET ?= artifacts/datasets/exact-mlx-rollout-value-r600-train
 ROLLOUT_VALUE_VALIDATION_DATASET ?= artifacts/datasets/exact-mlx-rollout-value-r600-validation
@@ -192,8 +192,8 @@ performance-check:
 
 performance-report:
 	$(UV) run python tools/verify_performance_budgets.py \
-		--output-json docs/v2/reports/v2-performance-qualification.json \
-		--output-markdown docs/v2/reports/v2-performance-qualification.md
+		--output-json docs/archive/v2/reports/v2-performance-qualification.json \
+		--output-markdown docs/archive/v2/reports/v2-performance-qualification.md
 
 mlx-device:
 	$(UV) run cascadia-mlx-device
@@ -228,34 +228,34 @@ legacy-nnue-mlx-rollout-parity:
 
 exact-mlx-crn-qualification:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
-	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-crn-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 1 --first-seed 93012 --rollouts 32 --weights $(IMITATION_WEIGHTS) --output docs/v2/reports/exact-mlx-sequential-halving-crn-v1-r32-qualification.json
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-crn-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 1 --first-seed 93012 --rollouts 32 --weights $(IMITATION_WEIGHTS) --output docs/archive/v2/reports/exact-mlx-sequential-halving-crn-v1-r32-qualification.json
 
 exact-mlx-crn-smoke:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
-	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-crn-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 1 --first-seed 35699 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/v2/reports/exact-mlx-sequential-halving-crn-v1-runtime-smoke-1.json
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-crn-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 1 --first-seed 35699 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/archive/v2/reports/exact-mlx-sequential-halving-crn-v1-runtime-smoke-1.json
 
 exact-mlx-crn-pilot:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
-	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-crn-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 3 --first-seed 35700 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/v2/reports/exact-mlx-sequential-halving-crn-v1-pilot3.json
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-crn-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 3 --first-seed 35700 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/archive/v2/reports/exact-mlx-sequential-halving-crn-v1-pilot3.json
 
 exact-mlx-crn-confirm:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
-	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-crn-confirm --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 20 --first-seed 35703 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/v2/reports/exact-mlx-sequential-halving-crn-v1-confirm20.json
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-crn-confirm --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 20 --first-seed 35703 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/archive/v2/reports/exact-mlx-sequential-halving-crn-v1-confirm20.json
 
 legacy-nnue-mlx-gameplay-smoke:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
-	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-productive-token-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 1 --first-seed 32599 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/v2/reports/legacy-nnue-v4opp-exact-mlx-gameplay-smoke-1.json
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-productive-token-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 1 --first-seed 32599 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/archive/v2/reports/legacy-nnue-v4opp-exact-mlx-gameplay-smoke-1.json
 
 legacy-nnue-mlx-gameplay-confirm:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
-	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-productive-token-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 10 --first-seed 32600 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/v2/reports/legacy-nnue-v4opp-exact-mlx-gameplay-confirm10.json
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-productive-token-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 10 --first-seed 32600 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/archive/v2/reports/legacy-nnue-v4opp-exact-mlx-gameplay-confirm10.json
 
 final-strength-shard:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
 	$(UV) run python tools/final_strength_benchmark.py run-shard --binary target/release/legacy-teacher --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --weights $(IMITATION_WEIGHTS) --output-dir $(FINAL_STRENGTH_OUTPUT_DIR) --first-seed $(FINAL_STRENGTH_FIRST_GAME_INDEX) --games $(FINAL_STRENGTH_GAMES) --rollouts $(FINAL_STRENGTH_ROLLOUTS) --uv $(UV)
 
 final-strength-aggregate:
-	$(UV) run python tools/final_strength_benchmark.py aggregate $(foreach shard,$(FINAL_STRENGTH_SHARDS),--input $(shard)) --first-seed $(FINAL_STRENGTH_FIRST_GAME_INDEX) --games $(FINAL_STRENGTH_GAMES) --output $(FINAL_STRENGTH_REPORT) --markdown-output $(FINAL_STRENGTH_MARKDOWN) --v1-reference docs/v2/reports/v1-champion-reference-50.json
+	$(UV) run python tools/final_strength_benchmark.py aggregate $(foreach shard,$(FINAL_STRENGTH_SHARDS),--input $(shard)) --first-seed $(FINAL_STRENGTH_FIRST_GAME_INDEX) --games $(FINAL_STRENGTH_GAMES) --output $(FINAL_STRENGTH_REPORT) --markdown-output $(FINAL_STRENGTH_MARKDOWN) --v1-reference docs/archive/v2/reports/v1-champion-reference-50.json
 
 rollout-value-smoke:
 	rm -rf $(ROLLOUT_VALUE_SMOKE_DATASET)
@@ -305,27 +305,27 @@ benchmark-smoke:
 
 pattern-competition-smoke:
 	$(CARGO) build --release -p cascadia-cli-v2
-	target/release/cascadia-v2 compare --games 1 --first-seed 25999 --baseline pattern-aware --treatment pattern-competition --output docs/v2/reports/pattern-competition-v1-runtime-smoke-1.json
+	target/release/cascadia-v2 compare --games 1 --first-seed 25999 --baseline pattern-aware --treatment pattern-competition --output docs/archive/v2/reports/pattern-competition-v1-runtime-smoke-1.json
 
 evaluate-pattern-competition:
 	$(CARGO) build --release -p cascadia-cli-v2
-	target/release/cascadia-v2 compare --games 10 --first-seed 26000 --baseline pattern-aware --treatment pattern-competition --output docs/v2/reports/pattern-competition-v1-pilot10.json
+	target/release/cascadia-v2 compare --games 10 --first-seed 26000 --baseline pattern-aware --treatment pattern-competition --output docs/archive/v2/reports/pattern-competition-v1-pilot10.json
 
 pattern-portfolio-smoke:
 	$(CARGO) build --release -p cascadia-cli-v2
-	target/release/cascadia-v2 compare --games 1 --first-seed 26299 --baseline pattern-aware --treatment pattern-portfolio --sequential --output docs/v2/reports/pattern-portfolio-v1-runtime-smoke-1.json
+	target/release/cascadia-v2 compare --games 1 --first-seed 26299 --baseline pattern-aware --treatment pattern-portfolio --sequential --output docs/archive/v2/reports/pattern-portfolio-v1-runtime-smoke-1.json
 
 evaluate-pattern-portfolio:
 	$(CARGO) build --release -p cascadia-cli-v2
-	target/release/cascadia-v2 compare --games 10 --first-seed 26300 --baseline pattern-aware --treatment pattern-portfolio --sequential --output docs/v2/reports/pattern-portfolio-v1-pilot10.json
+	target/release/cascadia-v2 compare --games 10 --first-seed 26300 --baseline pattern-aware --treatment pattern-portfolio --sequential --output docs/archive/v2/reports/pattern-portfolio-v1-pilot10.json
 
 late-terminal-smoke:
 	$(CARGO) build --release -p cascadia-cli-v2
-	target/release/cascadia-v2 late-terminal-policy-improvement-compare --games 1 --first-seed 26899 --terminal-turns 5 --determinizations 8 --policy-candidates 8 --policy-habitat-candidates 6 --policy-bear-candidates 8 --policy-market-draws 4 --sequential --output docs/v2/reports/late-terminal-policy-improvement-v1-t5-r8-runtime-smoke-1.json
+	target/release/cascadia-v2 late-terminal-policy-improvement-compare --games 1 --first-seed 26899 --terminal-turns 5 --determinizations 8 --policy-candidates 8 --policy-habitat-candidates 6 --policy-bear-candidates 8 --policy-market-draws 4 --sequential --output docs/archive/v2/reports/late-terminal-policy-improvement-v1-t5-r8-runtime-smoke-1.json
 
 late-terminal-confirm:
 	$(CARGO) build --release -p cascadia-cli-v2
-	target/release/cascadia-v2 late-terminal-policy-improvement-compare --games 50 --first-seed 27000 --terminal-turns 5 --determinizations 8 --policy-candidates 8 --policy-habitat-candidates 6 --policy-bear-candidates 8 --policy-market-draws 4 --sequential --output docs/v2/reports/late-terminal-policy-improvement-v1-t5-r8-confirm50.json
+	target/release/cascadia-v2 late-terminal-policy-improvement-compare --games 50 --first-seed 27000 --terminal-turns 5 --determinizations 8 --policy-candidates 8 --policy-habitat-candidates 6 --policy-bear-candidates 8 --policy-market-draws 4 --sequential --output docs/archive/v2/reports/late-terminal-policy-improvement-v1-t5-r8-confirm50.json
 
 lookahead-benchmark:
 	$(CARGO) run --release -p cascadia-cli-v2 -- lookahead-benchmark --games $(LOOKAHEAD_GAMES) --first-seed $(LOOKAHEAD_FIRST_SEED) --candidates 8 --determinizations 4 --greedy-plies 4
@@ -417,7 +417,7 @@ imitation-parent-hidden-smoke:
 
 imitation-evidence-parity:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
-	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher teacher-estimate-parity --games 1 --first-game-index 90000 --split train --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/v2/reports/canonical-action-teacher-estimate-parity-r600.json
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher teacher-estimate-parity --games 1 --first-game-index 90000 --split train --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/archive/v2/reports/canonical-action-teacher-estimate-parity-r600.json
 
 conservative-advantage-smoke:
 	rm -rf /tmp/cascadia-v2-conservative-advantage-smoke
@@ -453,21 +453,21 @@ counterfactual-value-smoke:
 	$(CARGO) build --release -p cascadia-cli-v2
 	target/release/cascadia-v2 collect-counterfactual-value --output /tmp/cascadia-v2-counterfactual-value-smoke --games 1 --first-game-index 9993 --split train --samples-per-state 2
 	target/release/cascadia-v2 validate-counterfactual-value-dataset --dataset /tmp/cascadia-v2-counterfactual-value-smoke
-	target/release/cascadia-v2 audit-counterfactual-value-dataset --dataset /tmp/cascadia-v2-counterfactual-value-smoke --output docs/v2/reports/counterfactual-public-value-target-audit-v1-implementation-smoke.json
+	target/release/cascadia-v2 audit-counterfactual-value-dataset --dataset /tmp/cascadia-v2-counterfactual-value-smoke --output docs/archive/v2/reports/counterfactual-public-value-target-audit-v1-implementation-smoke.json
 
 counterfactual-advantage-smoke:
 	rm -rf /tmp/cascadia-v2-counterfactual-advantage-smoke
 	$(CARGO) build --release -p cascadia-cli-v2
 	target/release/cascadia-v2 collect-counterfactual-advantage --output /tmp/cascadia-v2-counterfactual-advantage-smoke --games 1 --first-game-index 9994 --split train --groups-per-game 4 --samples-per-candidate 2
 	target/release/cascadia-v2 validate-counterfactual-advantage-dataset --dataset /tmp/cascadia-v2-counterfactual-advantage-smoke
-	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset /tmp/cascadia-v2-counterfactual-advantage-smoke --output docs/v2/reports/same-decision-counterfactual-advantage-target-audit-v1-implementation-smoke.json --markdown-output docs/v2/reports/same-decision-counterfactual-advantage-target-audit-v1-implementation-smoke.md
+	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset /tmp/cascadia-v2-counterfactual-advantage-smoke --output docs/archive/v2/reports/same-decision-counterfactual-advantage-target-audit-v1-implementation-smoke.json --markdown-output docs/archive/v2/reports/same-decision-counterfactual-advantage-target-audit-v1-implementation-smoke.md
 
 counterfactual-contrast-smoke:
 	rm -rf /tmp/cascadia-v2-counterfactual-contrast-smoke
 	$(CARGO) build --release -p cascadia-cli-v2
 	target/release/cascadia-v2 collect-counterfactual-advantage --output /tmp/cascadia-v2-counterfactual-contrast-smoke --games 1 --first-game-index 9995 --split train --groups-per-game 4 --samples-per-candidate 2 --candidate-selection stratified
 	target/release/cascadia-v2 validate-counterfactual-advantage-dataset --dataset /tmp/cascadia-v2-counterfactual-contrast-smoke
-	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset /tmp/cascadia-v2-counterfactual-contrast-smoke --output docs/v2/reports/rank-stratified-counterfactual-contrast-audit-v1-implementation-smoke.json --markdown-output docs/v2/reports/rank-stratified-counterfactual-contrast-audit-v1-implementation-smoke.md
+	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset /tmp/cascadia-v2-counterfactual-contrast-smoke --output docs/archive/v2/reports/rank-stratified-counterfactual-contrast-audit-v1-implementation-smoke.json --markdown-output docs/archive/v2/reports/rank-stratified-counterfactual-contrast-audit-v1-implementation-smoke.md
 
 counterfactual-ranker-smoke:
 	rm -rf /tmp/cascadia-v2-counterfactual-ranker-smoke
@@ -478,7 +478,7 @@ counterfactual-ranker-smoke:
 	target/release/cascadia-v2 validate-counterfactual-advantage-dataset --dataset /tmp/cascadia-v2-counterfactual-ranker-smoke/validation
 	$(UV) run cascadia-mlx-counterfactual-advantage-train --train-dataset /tmp/cascadia-v2-counterfactual-ranker-smoke/train --validation-dataset /tmp/cascadia-v2-counterfactual-ranker-smoke/validation --run-dir /tmp/cascadia-v2-counterfactual-ranker-smoke/run --epochs 1 --group-batch-size 4 --checkpoint-steps 1 --validation-patience 2
 	$(UV) run cascadia-mlx-counterfactual-advantage-train --train-dataset /tmp/cascadia-v2-counterfactual-ranker-smoke/train --validation-dataset /tmp/cascadia-v2-counterfactual-ranker-smoke/validation --run-dir /tmp/cascadia-v2-counterfactual-ranker-smoke/run --epochs 2 --group-batch-size 4 --checkpoint-steps 1 --validation-patience 2 --resume
-	$(UV) run cascadia-mlx-counterfactual-advantage-evaluate --run-dir /tmp/cascadia-v2-counterfactual-ranker-smoke/run --dataset /tmp/cascadia-v2-counterfactual-ranker-smoke/validation --output docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-implementation-smoke.json --markdown-output docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-implementation-smoke.md --group-batch-size 4
+	$(UV) run cascadia-mlx-counterfactual-advantage-evaluate --run-dir /tmp/cascadia-v2-counterfactual-ranker-smoke/run --dataset /tmp/cascadia-v2-counterfactual-ranker-smoke/validation --output docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-implementation-smoke.json --markdown-output docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-implementation-smoke.md --group-batch-size 4
 
 collect-ranking:
 	$(CARGO) run --release -p cascadia-cli-v2 -- collect-ranking --teacher $(RANKING_TEACHER) --output $(RANKING_TRAIN_DATASET) --games 128 --split train --shard-games 8 --resume --candidates $(RANKING_CANDIDATES) --bear-candidates $(RANKING_BEAR_CANDIDATES) --habitat-candidates $(RANKING_HABITAT_CANDIDATES) --determinizations 4 --greedy-plies 4
@@ -578,7 +578,7 @@ collect-conservative-advantage:
 
 public-beam-value-probe:
 	$(CARGO) build --release -p cascadia-cli-v2
-	target/release/cascadia-v2 public-beam-value-probe --output $(PUBLIC_BEAM_VALUE_PROBE_DATASET) --first-game-index 40000 --games 2 --resume --report docs/v2/reports/public-beam-state-value-observability-v1-r8x2-b16-w2.json
+	target/release/cascadia-v2 public-beam-value-probe --output $(PUBLIC_BEAM_VALUE_PROBE_DATASET) --first-game-index 40000 --games 2 --resume --report docs/archive/v2/reports/public-beam-state-value-observability-v1-r8x2-b16-w2.json
 	target/release/cascadia-v2 validate-public-beam-value-dataset --dataset $(PUBLIC_BEAM_VALUE_PROBE_DATASET)
 
 collect-public-beam-value:
@@ -614,7 +614,7 @@ collect-counterfactual-value-audit:
 	target/release/cascadia-v2 validate-counterfactual-value-dataset --dataset $(COUNTERFACTUAL_VALUE_AUDIT_DATASET)
 
 audit-counterfactual-value:
-	target/release/cascadia-v2 audit-counterfactual-value-dataset --dataset $(COUNTERFACTUAL_VALUE_AUDIT_DATASET) --output docs/v2/reports/counterfactual-public-value-target-audit-v1.json
+	target/release/cascadia-v2 audit-counterfactual-value-dataset --dataset $(COUNTERFACTUAL_VALUE_AUDIT_DATASET) --output docs/archive/v2/reports/counterfactual-public-value-target-audit-v1.json
 
 collect-counterfactual-advantage-audit:
 	$(CARGO) build --release -p cascadia-cli-v2
@@ -622,7 +622,7 @@ collect-counterfactual-advantage-audit:
 	target/release/cascadia-v2 validate-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_ADVANTAGE_AUDIT_DATASET)
 
 audit-counterfactual-advantage:
-	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_ADVANTAGE_AUDIT_DATASET) --output docs/v2/reports/same-decision-counterfactual-advantage-target-audit-v1.json --markdown-output docs/v2/reports/same-decision-counterfactual-advantage-target-audit-v1.md
+	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_ADVANTAGE_AUDIT_DATASET) --output docs/archive/v2/reports/same-decision-counterfactual-advantage-target-audit-v1.json --markdown-output docs/archive/v2/reports/same-decision-counterfactual-advantage-target-audit-v1.md
 
 collect-counterfactual-contrast-audit:
 	$(CARGO) build --release -p cascadia-cli-v2
@@ -630,7 +630,7 @@ collect-counterfactual-contrast-audit:
 	target/release/cascadia-v2 validate-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_CONTRAST_AUDIT_DATASET)
 
 audit-counterfactual-contrast:
-	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_CONTRAST_AUDIT_DATASET) --output docs/v2/reports/rank-stratified-counterfactual-contrast-audit-v1.json --markdown-output docs/v2/reports/rank-stratified-counterfactual-contrast-audit-v1.md
+	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_CONTRAST_AUDIT_DATASET) --output docs/archive/v2/reports/rank-stratified-counterfactual-contrast-audit-v1.json --markdown-output docs/archive/v2/reports/rank-stratified-counterfactual-contrast-audit-v1.md
 
 collect-r12-counterfactual-audit:
 	$(CARGO) build --release -p cascadia-cli-v2
@@ -638,7 +638,7 @@ collect-r12-counterfactual-audit:
 	target/release/cascadia-v2 validate-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_R12_AUDIT_DATASET)
 
 audit-r12-counterfactual:
-	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_R12_AUDIT_DATASET) --output docs/v2/reports/r12-rank-stratified-estimator-audit-v1.json --markdown-output docs/v2/reports/r12-rank-stratified-estimator-audit-v1.md --estimator-samples 12
+	target/release/cascadia-v2 audit-counterfactual-advantage-dataset --dataset $(COUNTERFACTUAL_R12_AUDIT_DATASET) --output docs/archive/v2/reports/r12-rank-stratified-estimator-audit-v1.json --markdown-output docs/archive/v2/reports/r12-rank-stratified-estimator-audit-v1.md --estimator-samples 12
 
 collect-r12-counterfactual-corpus:
 	$(CARGO) build --release -p cascadia-cli-v2
@@ -654,10 +654,10 @@ resume-r12-counterfactual-ranker:
 	$(UV) run cascadia-mlx-counterfactual-advantage-train --train-dataset $(COUNTERFACTUAL_R12_TRAIN_DATASET) --validation-dataset $(COUNTERFACTUAL_R12_VALIDATION_DATASET) --run-dir $(COUNTERFACTUAL_R12_RUN_DIR) --epochs 20 --group-batch-size 32 --learning-rate 0.0001 --weight-decay 0.0001 --seed 20260614 --checkpoint-steps 100 --validation-patience 5 --resume
 
 evaluate-r12-counterfactual-ranker:
-	$(UV) run cascadia-mlx-counterfactual-advantage-evaluate --run-dir $(COUNTERFACTUAL_R12_RUN_DIR) --dataset $(COUNTERFACTUAL_R12_VALIDATION_DATASET) --output docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.json --markdown-output docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.md --group-batch-size 32
+	$(UV) run cascadia-mlx-counterfactual-advantage-evaluate --run-dir $(COUNTERFACTUAL_R12_RUN_DIR) --dataset $(COUNTERFACTUAL_R12_VALIDATION_DATASET) --output docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.json --markdown-output docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-validation.md --group-batch-size 32
 
 evaluate-r12-counterfactual-test:
-	PYTHONPATH=python uv run python tools/adr0079_counterfactual_advantage_test.py --run-dir $(COUNTERFACTUAL_R12_RUN_DIR) --dataset $(COUNTERFACTUAL_R12_TEST_DATASET) --validation-report $(COUNTERFACTUAL_R12_RUN_DIR)/validation-report.json --authorization $(COUNTERFACTUAL_R12_TEST_AUTHORIZATION) --output docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-test.json --markdown-output docs/v2/reports/r12-counterfactual-advantage-set-ranker-v1-test.md --group-batch-size 32
+	PYTHONPATH=python uv run python tools/adr0079_counterfactual_advantage_test.py --run-dir $(COUNTERFACTUAL_R12_RUN_DIR) --dataset $(COUNTERFACTUAL_R12_TEST_DATASET) --validation-report $(COUNTERFACTUAL_R12_RUN_DIR)/validation-report.json --authorization $(COUNTERFACTUAL_R12_TEST_AUTHORIZATION) --output docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-test.json --markdown-output docs/archive/v2/reports/r12-counterfactual-advantage-set-ranker-v1-test.md --group-batch-size 32
 
 train-model:
 	$(UV) run cascadia-mlx-train --train-dataset $(TRAIN_DATASET) --validation-dataset $(VALIDATION_DATASET) --run-dir $(RUN_DIR) --epochs $(EPOCHS) --batch-size 256
@@ -672,7 +672,7 @@ train-score-to-go-hexgraph:
 	$(UV) run cascadia-mlx-score-to-go-train --train-dataset $(SCORE_TO_GO_TRAIN_DATASET) --validation-dataset $(HEXGRAPH_SCORE_TO_GO_VALIDATION_DATASET) --run-dir $(HEXGRAPH_SCORE_TO_GO_RUN_DIR) --epochs 30 --batch-size 256 --learning-rate 0.0003 --weight-decay 0.0001 --seed 20260624 --checkpoint-steps 500 --validation-patience 6 --baseline-run-dir $(SCORE_TO_GO_RUN_DIR) --architecture edge-aware-hex-score-to-go-v2 --hidden-dim 96 --attention-heads 4 --board-blocks 0 --graph-blocks 4 --market-blocks 1 --hex-rotation-augmentation
 
 benchmark-score-to-go-hexgraph:
-	$(UV) run cascadia-mlx-score-to-go-benchmark --run-dir $(HEXGRAPH_SCORE_TO_GO_RUN_DIR) --dataset $(HEXGRAPH_SCORE_TO_GO_VALIDATION_DATASET) --output docs/v2/reports/edge-aware-hex-score-to-go-v2-inference.json --batch-size 256 --warmup-iterations 10 --iterations 100
+	$(UV) run cascadia-mlx-score-to-go-benchmark --run-dir $(HEXGRAPH_SCORE_TO_GO_RUN_DIR) --dataset $(HEXGRAPH_SCORE_TO_GO_VALIDATION_DATASET) --output docs/archive/v2/reports/edge-aware-hex-score-to-go-v2-inference.json --batch-size 256 --warmup-iterations 10 --iterations 100
 
 resume-score-to-go-hexgraph:
 	$(UV) run cascadia-mlx-score-to-go-train --train-dataset $(SCORE_TO_GO_TRAIN_DATASET) --validation-dataset $(HEXGRAPH_SCORE_TO_GO_VALIDATION_DATASET) --run-dir $(HEXGRAPH_SCORE_TO_GO_RUN_DIR) --epochs 30 --batch-size 256 --learning-rate 0.0003 --weight-decay 0.0001 --seed 20260624 --checkpoint-steps 500 --validation-patience 6 --baseline-run-dir $(SCORE_TO_GO_RUN_DIR) --architecture edge-aware-hex-score-to-go-v2 --hidden-dim 96 --attention-heads 4 --board-blocks 0 --graph-blocks 4 --market-blocks 1 --hex-rotation-augmentation --resume
@@ -747,8 +747,8 @@ resume-imitation-parent-hidden:
 	$(UV) run cascadia-mlx-imitation-parent-hidden-train --train-dataset $(IMITATION_PARENT_HIDDEN_TRAIN) --validation-dataset $(IMITATION_PARENT_HIDDEN_VALIDATION) --run-dir $(IMITATION_PARENT_HIDDEN_RUN_DIR) --resume
 
 audit-imitation-identifiability:
-	$(UV) run cascadia-mlx-imitation-identifiability --dataset $(IMITATION_PARENT_HIDDEN_TRAIN) --output docs/v2/reports/mce-teacher-identifiability-train.json
-	$(UV) run cascadia-mlx-imitation-identifiability --dataset $(IMITATION_PARENT_HIDDEN_VALIDATION) --output docs/v2/reports/mce-teacher-identifiability-validation.json
+	$(UV) run cascadia-mlx-imitation-identifiability --dataset $(IMITATION_PARENT_HIDDEN_TRAIN) --output docs/archive/v2/reports/mce-teacher-identifiability-train.json
+	$(UV) run cascadia-mlx-imitation-identifiability --dataset $(IMITATION_PARENT_HIDDEN_VALIDATION) --output docs/archive/v2/reports/mce-teacher-identifiability-validation.json
 
 train-smoke: data-smoke
 	rm -rf /tmp/cascadia-v2-train-smoke
@@ -815,7 +815,7 @@ evaluate-ranking-iteration:
 	target/release/cascadia-v2 habitat-ranking-model-h2h --baseline-model-dir $(RANKING_MODEL_DIR) --treatment-model-dir $(RANKING_ITERATION_MODEL_DIR) --games $(RANKING_GAMES) --first-seed 23700 --candidates 8 --habitat-candidates 6
 
 evaluate-terminal-ranking:
-	target/release/cascadia-v2 pattern-ranking-model-compare --model-dir $(TERMINAL_RANKING_MODEL_DIR) --games $(RANKING_GAMES) --first-seed 25400 --policy-candidates 8 --policy-habitat-candidates 6 --policy-bear-candidates 8 --policy-market-draws 4 --output docs/v2/reports/entity-ranker-v2-terminal-r8-observable-pilot.json
+	target/release/cascadia-v2 pattern-ranking-model-compare --model-dir $(TERMINAL_RANKING_MODEL_DIR) --games $(RANKING_GAMES) --first-seed 25400 --policy-candidates 8 --policy-habitat-candidates 6 --policy-bear-candidates 8 --policy-market-draws 4 --output docs/archive/v2/reports/entity-ranker-v2-terminal-r8-observable-pilot.json
 
 evaluate-action-ranking-test:
 	$(UV) run cascadia-mlx-action-ranking-evaluate --run-dir $(ACTION_RANKING_RUN_DIR) --test-dataset $(ACTION_RANKING_TEST_DATASET) --group-batch-size 16
@@ -833,20 +833,20 @@ evaluate-public-beam-value-test:
 	$(UV) run cascadia-mlx-public-beam-value-evaluate --run-dir $(PUBLIC_BEAM_VALUE_RUN_DIR) --test-dataset $(PUBLIC_BEAM_VALUE_TEST_DATASET) --group-batch-size 8
 
 evaluate-public-beam-value:
-	target/release/cascadia-v2 public-beam-value-model-compare --model-dir $(PUBLIC_BEAM_VALUE_MODEL_DIR) --games 10 --first-seed 31000 --output docs/v2/reports/mlx-public-beam-value-v1-vs-strong-pilot10.json
+	target/release/cascadia-v2 public-beam-value-model-compare --model-dir $(PUBLIC_BEAM_VALUE_MODEL_DIR) --games 10 --first-seed 31000 --output docs/archive/v2/reports/mlx-public-beam-value-v1-vs-strong-pilot10.json
 
 evaluate-public-beam-set-test:
 	$(UV) run cascadia-mlx-public-beam-set-evaluate --run-dir $(PUBLIC_BEAM_SET_RUN_DIR) --test-dataset $(PUBLIC_BEAM_VALUE_TEST_DATASET) --group-batch-size 8
 
 evaluate-public-beam-set:
-	target/release/cascadia-v2 public-beam-value-model-compare --model-dir $(PUBLIC_BEAM_SET_MODEL_DIR) --server .venv/bin/cascadia-mlx-public-beam-set-serve --games 10 --first-seed 31000 --output docs/v2/reports/mlx-public-beam-set-ranker-v1-vs-strong-pilot10.json
+	target/release/cascadia-v2 public-beam-value-model-compare --model-dir $(PUBLIC_BEAM_SET_MODEL_DIR) --server .venv/bin/cascadia-mlx-public-beam-set-serve --games 10 --first-seed 31000 --output docs/archive/v2/reports/mlx-public-beam-set-ranker-v1-vs-strong-pilot10.json
 
 evaluate-action-ranking:
-	target/release/cascadia-v2 action-ranking-model-compare --model-dir $(ACTION_RANKING_MODEL_DIR) --games $(ACTION_RANKING_GAMES) --first-seed 25700 --policy-candidates 8 --policy-habitat-candidates 6 --policy-bear-candidates 8 --policy-market-draws 4 --output docs/v2/reports/action-delta-ranker-v1-terminal-r8-pilot.json
+	target/release/cascadia-v2 action-ranking-model-compare --model-dir $(ACTION_RANKING_MODEL_DIR) --games $(ACTION_RANKING_GAMES) --first-seed 25700 --policy-candidates 8 --policy-habitat-candidates 6 --policy-bear-candidates 8 --policy-market-draws 4 --output docs/archive/v2/reports/action-delta-ranker-v1-terminal-r8-pilot.json
 
 evaluate-imitation:
 	$(CARGO) build --release -p cascadia-cli-v2
-	target/release/cascadia-v2 full-action-imitation-compare --model-dir $(IMITATION_MODEL_DIR) --games $(IMITATION_GAMES) --first-seed 32700 --output docs/v2/reports/canonical-action-imitation-v1-pilot10.json
+	target/release/cascadia-v2 full-action-imitation-compare --model-dir $(IMITATION_MODEL_DIR) --games $(IMITATION_GAMES) --first-seed 32700 --output docs/archive/v2/reports/canonical-action-imitation-v1-pilot10.json
 
 evaluate-value-leaf:
 	target/release/cascadia-v2 value-leaf-compare --model-dir $(SEARCH_VALUE_MODEL_DIR) --games $(MODEL_GAMES) --first-seed 22700 --candidates 8 --habitat-candidates 6 --determinizations 4 --greedy-plies 4
@@ -864,7 +864,7 @@ web-test:
 	$(NPM) --prefix apps/web run test:e2e
 
 web-visual-report:
-	CASCADIA_VISUAL_REPORT_DIR=../../docs/v2/reports $(NPM) --prefix apps/web run test:e2e
+	CASCADIA_VISUAL_REPORT_DIR=../../docs/archive/v2/reports $(NPM) --prefix apps/web run test:e2e
 
 build:
 	$(NPM) --prefix apps/web run build

@@ -29,7 +29,7 @@ target/release/cascadia-v2 model-compare \
   --baseline greedy \
   --model-dir artifacts/models/entity-value-v1-greedy256 \
   --prefilter-k 8 \
-  --output docs/v2/reports/mlx-value-v1-greedy-top8-vs-greedy-20.json
+  --output docs/archive/v2/reports/mlx-value-v1-greedy-top8-vs-greedy-20.json
 ```
 
 ## Result

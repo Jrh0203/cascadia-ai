@@ -119,5 +119,5 @@ npm --prefix apps/web run test:e2e
 ```
 
 The Playwright flow exercises the real Rust endpoint and writes the dashboard
-evidence images to `docs/v2/reports/web-cluster-dashboard.png` and
-`docs/v2/reports/web-cluster-dashboard-mobile.png`.
+evidence images to `docs/archive/v2/reports/web-cluster-dashboard.png` and
+`docs/archive/v2/reports/web-cluster-dashboard-mobile.png`.

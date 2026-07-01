@@ -50,5 +50,5 @@ under the promoted confidence-gated terminal operator.
 
 Artifacts:
 
-- `docs/v2/reports/perfect-information-diverse-frontier-v1-runtime-smoke-1.json`
-- `docs/v2/reports/perfect-information-diverse-frontier-v1-pilot10.json`
+- `docs/archive/v2/reports/perfect-information-diverse-frontier-v1-runtime-smoke-1.json`
+- `docs/archive/v2/reports/perfect-information-diverse-frontier-v1-pilot10.json`

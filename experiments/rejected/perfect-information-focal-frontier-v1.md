@@ -40,6 +40,6 @@ branching must be separated before action breadth is tested again.
 
 Artifacts:
 
-- `docs/v2/reports/perfect-information-focal-frontier-v1-t5-b16-w4-runtime-smoke-1.json`
-- `docs/v2/reports/perfect-information-focal-frontier-v1-t5-b16-w4-runtime-smoke-2-optimized.json`
-- `docs/v2/reports/perfect-information-focal-frontier-v1-t5-b16-w4-pilot10.json`
+- `docs/archive/v2/reports/perfect-information-focal-frontier-v1-t5-b16-w4-runtime-smoke-1.json`
+- `docs/archive/v2/reports/perfect-information-focal-frontier-v1-t5-b16-w4-runtime-smoke-2-optimized.json`
+- `docs/archive/v2/reports/perfect-information-focal-frontier-v1-t5-b16-w4-pilot10.json`
