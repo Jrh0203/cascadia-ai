@@ -51,6 +51,7 @@ OBJECTIVE="${OBJECTIVE:-expert}"
 SELECTION_METRIC="${SELECTION_METRIC:-locked_val_total}"
 SELECTION_MODE="${SELECTION_MODE:-min}"
 INIT_MANIFEST="${INIT_MANIFEST:-}"
+RESUME_MANIFEST="${RESUME_MANIFEST:-}"
 TRAIN_SOURCE_WEIGHTS="${TRAIN_SOURCE_WEIGHTS:-}"
 EXTRA_TRAIN_TAIL_TENSORS="${EXTRA_TRAIN_TAIL_TENSORS:-}"
 
@@ -117,6 +118,7 @@ echo "[full-v3] profile=$PROFILE train_seeds=$TRAIN_SEED_COUNT val_seeds=$VAL_SE
 echo "[full-v3] model_size=$MODEL_SIZE steps=$TRAIN_STEPS batch_size=$BATCH_SIZE grad_accum=$GRAD_ACCUM lr=$LR val_max_batches=$VAL_MAX_BATCHES eval_every_steps=$EVAL_EVERY_STEPS min_selection_greedy_top1=$MIN_SELECTION_GREEDY_TOP1 early_stop_guard_failures=$EARLY_STOP_SELECTION_GUARD_FAILURES early_stop_after_step=$EARLY_STOP_AFTER_STEP filter_top_k=$FILTER_TOP_K filter_mode=$FILTER_MODE objective=$OBJECTIVE selection=$SELECTION_MODE:$SELECTION_METRIC"
 echo "[full-v3] note: phase0 writes packed expert_tensor_shard.v1 NPZ directly, filters to top-K, then materializes fixed relation-tail tensors for GPU training"
 echo "[full-v3] init_manifest=$INIT_MANIFEST"
+echo "[full-v3] resume_manifest=$RESUME_MANIFEST"
 echo "[full-v3] train_source_weights=$TRAIN_SOURCE_WEIGHTS"
 echo "[full-v3] extra_train_tail_tensors=$EXTRA_TRAIN_TAIL_TENSORS"
 
@@ -276,7 +278,9 @@ for train_input_path in "\${TRAIN_INPUT_PATHS[@]}"; do
 done
 echo "[full-v3] trainer_train=\$TRAIN_INPUT"
 TRAINER_INIT_ARGS=()
-if [ -n '$INIT_MANIFEST' ]; then
+if [ -n '$RESUME_MANIFEST' ]; then
+  TRAINER_INIT_ARGS=(--resume '$RESUME_MANIFEST')
+elif [ -n '$INIT_MANIFEST' ]; then
   TRAINER_INIT_ARGS=(--init-manifest '$INIT_MANIFEST')
 fi
 TRAINER_MIX_ARGS=()
@@ -353,6 +357,7 @@ report = {
     "expert_tensor_mode": "$EXPERT_TENSOR_MODE",
     "objective": "$OBJECTIVE",
     "init_manifest": "$INIT_MANIFEST",
+    "resume_manifest": "$RESUME_MANIFEST",
     "train_source_weights": "$TRAIN_SOURCE_WEIGHTS",
     "extra_train_tail_tensors": "$EXTRA_TRAIN_TAIL_TENSORS",
     "selection_metric": "$SELECTION_METRIC",

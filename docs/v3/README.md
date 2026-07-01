@@ -13,6 +13,8 @@ packed expert tensors with search-supervised action values.
   expert iteration, checkpointing, and promotion gates.
 - [Operations](OPERATIONS.md): local, john0 GPU, and Bacalhau worker workflows.
 - [Performance](PERFORMANCE.md): measured loader/training/gameplay facts.
+- [EI-0 Runbook](EI0_GREEDY_SEARCH_BOOTSTRAP_RUNBOOK.md): next experiment
+  checklist, resume path, timeline, and success gates.
 
 The implementation package lives in
 [cascadiav3/README.md](../../cascadiav3/README.md).
