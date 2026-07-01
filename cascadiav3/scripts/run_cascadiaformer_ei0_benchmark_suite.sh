@@ -32,6 +32,8 @@ SEARCH_ROLLOUTS_PER_ACTION="${SEARCH_ROLLOUTS_PER_ACTION:-16}"
 SEARCH_ROLLOUT_TOP_K="${SEARCH_ROLLOUT_TOP_K:-4}"
 SEARCH_CANDIDATE_WORKERS="${SEARCH_CANDIDATE_WORKERS:-4}"
 SEARCH_BASELINE_WORKERS="${SEARCH_BASELINE_WORKERS:-4}"
+SEARCH_SHADOW_FULL_SEARCH="${SEARCH_SHADOW_FULL_SEARCH:-1}"
+SEARCH_INCLUDE_FULL_SEARCH_BASELINE="${SEARCH_INCLUDE_FULL_SEARCH_BASELINE:-1}"
 MAX_TREATMENT_CONTROL_TIME_RATIO="${MAX_TREATMENT_CONTROL_TIME_RATIO:-1.20}"
 RUN_NO_SEARCH="${RUN_NO_SEARCH:-1}"
 RUN_SEARCH="${RUN_SEARCH:-1}"
@@ -99,7 +101,14 @@ else
 fi
 
 if [ '$RUN_SEARCH' = '1' ]; then
-  echo "[ei0-bench] running search-integrated benchmark games=$SEARCH_GAMES candidate_workers=$SEARCH_CANDIDATE_WORKERS"
+  search_extra_flags=()
+  if [ '$SEARCH_SHADOW_FULL_SEARCH' = '1' ]; then
+    search_extra_flags+=(--shadow-full-search)
+  fi
+  if [ '$SEARCH_INCLUDE_FULL_SEARCH_BASELINE' = '1' ]; then
+    search_extra_flags+=(--include-full-search-baseline)
+  fi
+  echo "[ei0-bench] running search-integrated benchmark games=$SEARCH_GAMES candidate_workers=$SEARCH_CANDIDATE_WORKERS shadow=$SEARCH_SHADOW_FULL_SEARCH full_baseline=$SEARCH_INCLUDE_FULL_SEARCH_BASELINE"
   python -m cascadiav3.torch_cascadiaformer_search_benchmark \
     --binary '$BINARY' \
     --manifest '$MANIFEST' \
@@ -110,19 +119,22 @@ if [ '$RUN_SEARCH' = '1' ]; then
     --max-actions '$SEARCH_MAX_ACTIONS' \
     --rollouts-per-action '$SEARCH_ROLLOUTS_PER_ACTION' \
     --rollout-top-k '$SEARCH_ROLLOUT_TOP_K' \
-    --shadow-full-search \
-    --include-full-search-baseline \
     --candidate-workers '$SEARCH_CANDIDATE_WORKERS' \
     --full-baseline-workers '$SEARCH_BASELINE_WORKERS' \
+    "\${search_extra_flags[@]}" \
     --device cuda \
     --experiment-id '$SEARCH_EXPERIMENT_ID' \
     --out '$SEARCH_REPORT' \
     --decisions-out '$SEARCH_DECISIONS' \
     --summary-out '$SEARCH_SUMMARY'
 
-  python -m cascadiav3.validate_runbook_performance \
-    --benchmark '$SEARCH_REPORT' \
-    --max-treatment-control-time-ratio '$MAX_TREATMENT_CONTROL_TIME_RATIO'
+  if [ '$SEARCH_INCLUDE_FULL_SEARCH_BASELINE' = '1' ]; then
+    python -m cascadiav3.validate_runbook_performance \
+      --benchmark '$SEARCH_REPORT' \
+      --max-treatment-control-time-ratio '$MAX_TREATMENT_CONTROL_TIME_RATIO'
+  else
+    echo "[ei0-bench] skipping treatment/control ratio validation because full baseline is disabled"
+  fi
 else
   echo "[ei0-bench] skipping search-integrated benchmark"
 fi

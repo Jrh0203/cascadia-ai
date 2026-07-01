@@ -128,10 +128,22 @@ Search-gate diagnostics:
 - model score time/root: `0.0170s`;
 - search time/root: `8.8088s`.
 
+EI-0 decision-trace forensics:
+
+| Retained K | Full-Search Winner Recall | Non-Shadow Rollout Fraction |
+|---:|---:|---:|
+| 32 | 79.1875% | 50.0% |
+| 40 | 86.6250% | 62.5% |
+| 48 | 91.6875% | 75.0% |
+| 56 | 96.8750% | 87.5% |
+| 64 | 100.0000% | 100.0% |
+
 Interpretation: the q serving head is now the useful no-search policy, and it
 beats greedy by about two points on the first 100-game EI-0 gate. Search
 integration reaches a strong absolute mean above `95` and passes the timing
 gate, but the K32 retained set trails the matched K64 full-search control by
 `1.175` points. This is real bootstrap merit, not promotion proof for K32
 retained search. The benchmark is CPU rollout-bound rather than GPU-bound:
-model inference is tiny compared with terminal rollout search.
+model inference is tiny compared with terminal rollout search. K56 is the next
+measured serving point because it keeps `96.875%` of full-search winners while
+still saving `12.5%` of non-shadow rollout work.

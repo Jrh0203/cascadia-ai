@@ -4,6 +4,66 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-01 - `cascadiaformer-ei0-search-trace-forensics-v1`
+
+Status: completed; K56 non-shadow follow-up launched.
+
+Purpose: mine the completed EI-0 K32 shadow-search decision trace to choose the
+next retained-search width on evidence rather than guessing.
+
+Implementation:
+
+- Added `cascadiav3.analyze_search_decision_trace`.
+- Added runner support for non-shadow retained-search benchmarks:
+  `SEARCH_SHADOW_FULL_SEARCH=0`.
+- The default benchmark wrapper behavior remains unchanged:
+  `SEARCH_SHADOW_FULL_SEARCH=1` and
+  `SEARCH_INCLUDE_FULL_SEARCH_BASELINE=1`.
+
+Evidence:
+
+- Input decision trace:
+  `reports/cascadiaformer_ei0_search_game20_decisions.jsonl`.
+- Forensics JSON:
+  `reports/cascadiaformer_ei0_search_game20_trace_forensics.json`.
+- Forensics summary:
+  `reports/cascadiaformer_ei0_search_game20_trace_forensics_summary.md`.
+- Follow-up K56 non-shadow benchmark:
+  `reports/cascadiaformer_ei0_k56_nonshadow_game20.json` once complete.
+
+Result:
+
+- Candidate decisions analyzed: `1,600`.
+- Full-search winner model-rank:
+  - mean `17.1088`;
+  - p50 `10`;
+  - p90 `46`;
+  - p95 `53`;
+  - p99 `61`;
+  - max `64`.
+- Full-search winner retention by model top-K:
+  - K32: `79.1875%`;
+  - K40: `86.6250%`;
+  - K48: `91.6875%`;
+  - K56: `96.8750%`;
+  - K64: `100%`.
+- Phase recall at K56:
+  - opening `95.25%`;
+  - early-mid `96.25%`;
+  - late-mid `97.25%`;
+  - endgame `98.75%`.
+
+Decision:
+
+- K48 is the minimum width that clears `90%` overall retention, but opening
+  retention is only `88.5%`.
+- K56 is the next serious 100-point-path experiment because it clears `95%`
+  retention in every phase while still reducing non-shadow rollout work to
+  `87.5%` of K64.
+- Launched `cascadiaformer-ei0-k56-nonshadow-game20` on john0 with K56
+  non-shadow treatment and matched K64 full-search control. This tests actual
+  score and runtime, not just shadow retention.
+
 ## 2026-07-01 - `cascadiaformer-ei0-greedy-search-bootstrap-v1`
 
 Status: completed, infrastructure pass, no-search gameplay pass,

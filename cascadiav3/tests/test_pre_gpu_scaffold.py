@@ -282,6 +282,64 @@ class CascadiaFormerBenchmarkContractTest(unittest.TestCase):
         self.assertEqual(validate_time_ratio(report, 1.20), 1.0)
         self.assertEqual(paired_score_deltas(candidate, control)[0]["delta_candidate_minus_full_search"], 2.0)
 
+    def test_search_decision_trace_analyzer_reports_retention_by_k(self) -> None:
+        from cascadiav3.analyze_search_decision_trace import build_report
+
+        rows = [
+            {
+                "strategy": "cascadiaformer-search",
+                "selection_head": "q",
+                "seed_u64": 1,
+                "ply_index": 0,
+                "active_seat": 0,
+                "candidate_count": 4,
+                "retained_count": 2,
+                "model_ranked_action_ids": ["a", "b", "c", "d"],
+                "full_best_action_id": "b",
+                "search_regret": 0.0,
+                "selected_active_score": 90.0,
+                "full_best_active_score": 90.0,
+            },
+            {
+                "strategy": "cascadiaformer-search",
+                "selection_head": "q",
+                "seed_u64": 1,
+                "ply_index": 40,
+                "active_seat": 1,
+                "candidate_count": 4,
+                "retained_count": 2,
+                "model_ranked_action_ids": ["a", "b", "c", "d"],
+                "full_best_action_id": "d",
+                "search_regret": 2.5,
+                "selected_active_score": 88.0,
+                "full_best_active_score": 90.5,
+            },
+            {
+                "strategy": "full-search",
+                "selection_head": "full-search",
+                "seed_u64": 1,
+                "ply_index": 0,
+                "candidate_count": 4,
+                "retained_count": 4,
+            },
+        ]
+        report = build_report(
+            rows,
+            source_path="synthetic.jsonl",
+            k_values=[1, 2, 4],
+            target_recall=1.0,
+            miss_example_k=2,
+            miss_example_limit=10,
+        )
+        self.assertEqual(report["candidate_rows"], 2)
+        self.assertEqual(report["retention_by_k"]["1"]["full_best_retained_rate"], 0.0)
+        self.assertEqual(report["retention_by_k"]["2"]["full_best_retained_rate"], 0.5)
+        self.assertEqual(report["retention_by_k"]["4"]["full_best_retained_rate"], 1.0)
+        self.assertEqual(report["recommended_min_k_for_target_recall"], 4)
+        self.assertEqual(report["phase_summary"]["opening"]["retention_by_k"]["2"]["full_best_retained_rate"], 1.0)
+        self.assertEqual(report["phase_summary"]["late_mid"]["retention_by_k"]["2"]["full_best_retained_rate"], 0.0)
+        self.assertEqual(report["largest_k_misses"][0]["full_best_model_rank"], 4)
+
 
 class ReplayContractTest(unittest.TestCase):
     def test_tiny_replay_records_have_variable_action_counts(self) -> None:
@@ -1260,6 +1318,16 @@ class ModelSmokeTest(unittest.TestCase):
         self.assertIn('TRAIN_INPUT="\\$TRAIN_INPUT,$EXTRA_TRAIN_TAIL_TENSORS"', text)
         self.assertIn('--train "\\$TRAIN_INPUT"', text)
         self.assertIn('"extra_train_tail_tensors": "$EXTRA_TRAIN_TAIL_TENSORS"', text)
+
+    def test_ei0_benchmark_runner_can_disable_shadow_full_search(self) -> None:
+        script = Path(__file__).resolve().parents[1] / "scripts" / "run_cascadiaformer_ei0_benchmark_suite.sh"
+        text = script.read_text(encoding="utf-8")
+        self.assertIn('SEARCH_SHADOW_FULL_SEARCH="${SEARCH_SHADOW_FULL_SEARCH:-1}"', text)
+        self.assertIn('SEARCH_INCLUDE_FULL_SEARCH_BASELINE="${SEARCH_INCLUDE_FULL_SEARCH_BASELINE:-1}"', text)
+        self.assertIn("search_extra_flags+=(--shadow-full-search)", text)
+        self.assertIn("search_extra_flags+=(--include-full-search-baseline)", text)
+        self.assertIn('"\\${search_extra_flags[@]}"', text)
+        self.assertIn("skipping treatment/control ratio validation because full baseline is disabled", text)
 
     def test_mock_model_shapes_match_legal_actions(self) -> None:
         root = tiny_search_root_record()
