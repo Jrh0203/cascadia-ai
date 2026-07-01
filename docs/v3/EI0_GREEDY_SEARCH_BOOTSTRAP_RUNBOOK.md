@@ -5,6 +5,37 @@ Created: 2026-07-01
 This is the next v3 strength experiment. It is designed to be resumable after a
 lost SSH session, Codex restart, or interrupted run.
 
+## One-Screen Resume Index
+
+If context is lost, start here.
+
+- Source-of-truth doc:
+  `docs/v3/EI0_GREEDY_SEARCH_BOOTSTRAP_RUNBOOK.md`.
+- Source-of-truth runner:
+  `cascadiav3/scripts/run_cascadiaformer_ei0_greedy_search_bootstrap.sh`.
+- Benchmark runner:
+  `cascadiav3/scripts/run_cascadiaformer_ei0_benchmark_suite.sh`.
+- GPU host: `john0` over SSH port `2222`.
+- Remote repo root: `/home/john0/cascadia`.
+- Remote Python environment: `/home/john0/venvs/torch`.
+- Warm start:
+  `cascadiav3/checkpoints/full_v3_greedy_k32_retention/best_locked_val.manifest.json`.
+- Promotion checkpoint, if training succeeds:
+  `cascadiav3/checkpoints/full_v3_ei0_greedy_search_bootstrap/guarded_retention_safe_best.manifest.json`.
+- Generated tensors, checkpoints, logs, and decision traces are intentionally
+  ignored by Git. Persist only source/docs and small summaries.
+
+First command after resuming:
+
+```bash
+SSH_PORT=2222 bash cascadiav3/scripts/run_cascadiaformer_ei0_greedy_search_bootstrap.sh status
+SSH_PORT=2222 bash cascadiav3/scripts/run_cascadiaformer_ei0_benchmark_suite.sh status
+git status -sb --untracked-files=all
+```
+
+Then follow the checklist below from the first unchecked item. If a prior step
+already produced valid artifacts, fetch and audit them rather than recomputing.
+
 ## Purpose
 
 The prior corrected greedy-state K32 retention run proved that CascadiaFormer-S
@@ -65,6 +96,45 @@ BATCH_SIZE=192
 LR=0.0001
 INIT_MANIFEST=cascadiav3/checkpoints/full_v3_greedy_k32_retention/best_locked_val.manifest.json
 ```
+
+## Implementation Checklist
+
+Use this as the durable recovery checklist. Mark items in a local note or in the
+final handoff, not necessarily by editing this doc during every run.
+
+- [ ] Verify local source state:
+  `git status -sb --untracked-files=all`.
+- [ ] Verify john0 GPU and warm-start checkpoint are available.
+- [ ] Run schema and expert-contract preflight on the synced john0 source.
+- [ ] Run tiny EI-0 calibration if machine state, code state, or tensor
+  contracts have changed since the last known-good run.
+- [ ] Fetch calibration artifacts.
+- [ ] Audit calibration tensor invariants:
+  selected-action drops must be `0`, max Q invariant error must be `0`, and
+  relation-tail tensors must materialize.
+- [ ] Launch or resume the full EI-0 greedy search bootstrap run.
+- [ ] During generation, confirm CPU exporter processes are active and
+  runbook throughput fields eventually become positive.
+- [ ] During training, confirm the trainer reaches `25,000` steps or exact
+  resume continues from a valid checkpoint manifest.
+- [ ] Fetch full EI-0 reports, metrics, logs, checkpoint manifests, and tensor
+  summaries.
+- [ ] Audit full EI-0 tensor invariants for train and validation shards.
+- [ ] Select the promotion checkpoint from
+  `guarded_retention_safe_best.manifest.json`, not from the final or SWA
+  manifest unless the guard metrics justify that change.
+- [ ] Run the no-search complete-game benchmark.
+- [ ] Run the search-integrated complete-game benchmark.
+- [ ] Fetch benchmark reports, summaries, decision traces, and logs.
+- [ ] Update `cascadiav3/EXPERIMENT_LOG.md` with the measured results.
+- [ ] Update `docs/v3/PERFORMANCE.md` with changed throughput or gameplay
+  facts.
+- [ ] Commit only durable source/docs changes. Keep generated `.npz`,
+  checkpoints, logs, and decision traces out of Git.
+
+Completion means the run is either promoted, rejected with evidence, or blocked
+with exact failing artifacts and next commands. A lower loss alone is not
+completion.
 
 ## Scale
 
