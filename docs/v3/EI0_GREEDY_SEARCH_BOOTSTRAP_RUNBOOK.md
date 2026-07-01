@@ -24,6 +24,9 @@ If context is lost, start here.
   `cascadiav3/checkpoints/full_v3_ei0_greedy_search_bootstrap/guarded_retention_safe_best.manifest.json`.
 - Generated tensors, checkpoints, logs, and decision traces are intentionally
   ignored by Git. Persist only source/docs and small summaries.
+- Training corpora are packed `.npz` tensors. JSONL is retained only for
+  appendable evidence trails such as metrics logs and benchmark decision traces;
+  it is not the EI-0 GPU training input.
 
 First command after resuming:
 
