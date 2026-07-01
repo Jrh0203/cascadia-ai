@@ -432,6 +432,24 @@ def decode_action_positions(records: np.ndarray) -> tuple[Batch, mx.array]:
     if board_entities.shape[-1] != ACTION_BOARD_ENTITY_DIM:
         raise AssertionError("action-ranking board feature dimension drifted")
 
+    return (
+        Batch(
+            board_entities=board_entities,
+            board_mask=decoded.board_mask,
+            market_entities=decoded.market_entities,
+            market_mask=decoded.market_mask,
+            global_features=decoded.global_features,
+            targets=decoded.targets,
+            game_index=decoded.game_index,
+            turn=decoded.turn,
+        ),
+        decode_action_features(actions),
+    )
+
+
+def decode_action_features(actions: np.ndarray) -> mx.array:
+    """Decode the stable 52-byte explicit-action feature record."""
+    actions = np.asarray(actions)
     presence = actions["wildlife_present"].astype(np.float32)[:, None]
     action_features = np.concatenate(
         [
@@ -461,20 +479,7 @@ def decode_action_positions(records: np.ndarray) -> tuple[Batch, mx.array]:
     )
     if action_features.shape[-1] != ACTION_DIM:
         raise AssertionError("decoded action feature dimension drifted")
-
-    return (
-        Batch(
-            board_entities=board_entities,
-            board_mask=decoded.board_mask,
-            market_entities=decoded.market_entities,
-            market_mask=decoded.market_mask,
-            global_features=decoded.global_features,
-            targets=decoded.targets,
-            game_index=decoded.game_index,
-            turn=decoded.turn,
-        ),
-        mx.array(action_features),
-    )
+    return mx.array(action_features)
 
 
 def decode_action_position_bytes(

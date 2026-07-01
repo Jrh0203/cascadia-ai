@@ -1,0 +1,62 @@
+# syntax=docker/dockerfile:1.7
+
+FROM --platform=linux/arm64 rust:1.94-bookworm AS builder
+WORKDIR /src
+COPY . .
+ENV CARGO_BUILD_JOBS=2
+RUN cargo build --locked --release -p cascadia-differential \
+      --features legacy-teacher --bin v3-campaign-worker \
+    && cargo build --locked --release -p cascadia-v3-nnue \
+      --bin v3-engineering-smoke --bin v3-feature-manifest --bin v3-batch-stream \
+      --bin teacher_labels_to_training
+
+FROM builder AS test
+RUN cargo test --locked --release -p cascadia-v3-nnue --lib \
+    && cargo test --locked --release -p cascadia-differential \
+      --features legacy-teacher --bin v3-campaign-worker \
+    && MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 \
+      target/release/v3-campaign-worker health --output /tmp/v3-worker-health.json \
+    && test -s /tmp/v3-worker-health.json
+
+FROM scratch AS provenance-source
+COPY Cargo.toml Cargo.lock Makefile pyproject.toml uv.lock /repo/
+COPY crates /repo/crates
+COPY legacy/crates /repo/legacy/crates
+COPY python/cascadia_cluster /repo/python/cascadia_cluster
+COPY python/cascadia_v3_mlx /repo/python/cascadia_v3_mlx
+COPY tools/v3_*.py /repo/tools/
+COPY docs /repo/docs
+
+FROM --platform=linux/arm64 debian:bookworm-slim AS runtime
+ARG SOURCE_REVISION=unknown
+ARG SOURCE_BLAKE3=unknown
+ARG IMAGE_TAG=local
+LABEL org.opencontainers.image.title="Cascadia V3 NNUE CPU worker" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      org.opencontainers.image.version="${IMAGE_TAG}" \
+      org.opencontainers.image.source-blake3="${SOURCE_BLAKE3}"
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends python3 python3-pip ca-certificates \
+    && python3 -m pip install --break-system-packages --no-cache-dir blake3==1.0.8 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 cascadia \
+    && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin cascadia \
+    && install -d -o cascadia -g cascadia -m 0750 /inputs /outputs
+COPY --from=test /src/target/release/v3-campaign-worker /usr/local/bin/v3-campaign-worker
+COPY --from=builder /src/target/release/v3-engineering-smoke /usr/local/bin/v3-engineering-smoke
+COPY --from=builder /src/target/release/v3-feature-manifest /usr/local/bin/v3-feature-manifest
+COPY --from=builder /src/target/release/v3-batch-stream /usr/local/bin/v3-batch-stream
+COPY --from=builder /src/target/release/teacher_labels_to_training /usr/local/bin/teacher_labels_to_training
+COPY infra/bacalhau/cluster-job-entrypoint.sh /usr/local/bin/cascadia-cluster-job
+COPY --from=provenance-source /repo /opt/cascadia/repo
+RUN chmod 0755 /usr/local/bin/cascadia-cluster-job \
+    && chmod -R a=rX /opt/cascadia/repo
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/opt/cascadia/repo/python \
+    MCE_LMR=1 \
+    MCE_DIVERSE_PREFILTER=1 \
+    RAYON_NUM_THREADS=10
+USER 10001:10001
+WORKDIR /opt/cascadia/repo
+ENTRYPOINT ["/usr/local/bin/cascadia-cluster-job"]
+CMD ["v3-campaign-worker", "health", "--output", "/outputs/health.json"]

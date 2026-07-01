@@ -41,7 +41,7 @@ restart commands.
 - promoted pattern-aware and explicitly experimental terminal suggestions
 - ranked candidate analysis with exact score and future opportunity value
 - responsive desktop and mobile workspaces
-- live john1/john2/john3 utilization, health, readiness, and workload telemetry
+- live john1/john2/john3/john4 utilization, health, readiness, and workload telemetry
 - persistent one-day and seven-day CPU and memory history
 
 The local save document contains a schema version, the human-readable numeric
@@ -70,10 +70,10 @@ complete turn is still committed as one canonical `TurnAction`. The browser
 never receives hidden bag order.
 
 The cluster endpoint runs a fixed, read-only macOS probe locally and through
-the `john2` and `john3` SSH aliases. Hostnames and commands are not supplied by
-the browser. Nodes are sampled in parallel with bounded SSH connection and
-keepalive settings, and an unreachable worker is returned as an offline node
-instead of failing the whole response. A john1 background task records one
+the `john2`, `john3`, and `john4` SSH aliases. Hostnames and commands are not
+supplied by the browser. Nodes are sampled in parallel with bounded SSH
+connection and keepalive settings, and an unreachable worker is returned as
+an offline node instead of failing the whole response. A john1 background task records one
 sample every 30 seconds under `artifacts/cluster/`, including while the
 dashboard is closed. History responses are bounded and server-downsampled for
 the 1D and 7D charts. See

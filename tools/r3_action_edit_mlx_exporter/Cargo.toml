@@ -1,0 +1,22 @@
+[package]
+name = "r3-action-edit-mlx-exporter"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+blake3 = "1.8"
+cascadia-data = { path = "../../crates/cascadia-data" }
+cascadia-game = { path = "../../crates/cascadia-game" }
+cascadia-provenance = { path = "../../crates/cascadia-provenance" }
+clap = { version = "4", features = ["derive"] }
+r2-sparse-entity-census = { package = "cascadia-r2", path = "../../crates/cascadia-r2" }
+r3-action-edit-census = { path = "../r3_action_edit_census" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3"
+
+[workspace]

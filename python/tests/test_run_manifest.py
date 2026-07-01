@@ -91,3 +91,18 @@ def test_source_provenance_digest_tracks_v2_source_content(tmp_path: Path) -> No
     after = source_provenance(tmp_path)["v2_source_blake3"]
 
     assert before != after
+
+
+def test_source_provenance_covers_linked_legacy_teacher_crates(
+    tmp_path: Path,
+) -> None:
+    legacy = tmp_path / "legacy" / "crates" / "cascadia-ai" / "src"
+    legacy.mkdir(parents=True)
+    source_file = legacy / "eval.rs"
+    source_file.write_text("pub const VALUE: u8 = 1;\n")
+
+    before = source_provenance(tmp_path)["v2_source_blake3"]
+    source_file.write_text("pub const VALUE: u8 = 2;\n")
+    after = source_provenance(tmp_path)["v2_source_blake3"]
+
+    assert before != after

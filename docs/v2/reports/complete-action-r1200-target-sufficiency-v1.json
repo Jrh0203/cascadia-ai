@@ -1,0 +1,3412 @@
+{
+  "classification": "target_insufficient_for_set_valued_proposer",
+  "cross_host_validation": {
+    "execution": {
+      "john1": {
+        "elapsed_seconds": 11.554877624846995,
+        "groups_per_second": 20.770449310853518,
+        "test_split_opened": false
+      },
+      "john2": {
+        "elapsed_seconds": 10.87462216601125,
+        "groups_per_second": 22.06973229379156,
+        "test_split_opened": false
+      },
+      "john3": {
+        "elapsed_seconds": 10.8986152500147,
+        "groups_per_second": 22.021146218523153,
+        "test_split_opened": false
+      }
+    },
+    "hosts": [
+      "john1",
+      "john2",
+      "john3"
+    ],
+    "scientific_blake3": "b2c5f142aa4d4a9b2ed00a721647efc694e2229caf9f404b1057aed84326e6a3",
+    "scientific_metrics_identical": true
+  },
+  "experiment_id": "complete-action-r1200-target-sufficiency-v1",
+  "input_sha256": {
+    "artifacts/experiments/complete-action-r1200-target-sufficiency-v1/train-john1.json": "cff69fdcec04da40a73f0c6b523583fe09820aafc4c7224847a438ecd8557015",
+    "artifacts/experiments/complete-action-r1200-target-sufficiency-v1/validation-john1.json": "48855d5a6ca68275dcd2732611f8e0b86124b78e2caa4f6bf8bf6d1be2063214",
+    "artifacts/experiments/complete-action-r1200-target-sufficiency-v1/validation-john2.json": "ed848ea5ba4a2c777556c668310fca451d899dd514ecc39be83d687806a907db",
+    "artifacts/experiments/complete-action-r1200-target-sufficiency-v1/validation-john3.json": "eb6a39a88574d55a6d9d61b75b5a3ec806a6149a6282761766d4ea9e4c1bef9a"
+  },
+  "next_action": "Do not train the proposed cohort ranker; revise teacher allocation or observable representation.",
+  "passed": true,
+  "schema_version": 1,
+  "sealed_test": {
+    "authorized": false,
+    "opened": false
+  },
+  "status": "complete",
+  "train": {
+    "classification": "target_insufficient_for_set_valued_proposer",
+    "dataset": {
+      "candidates": 2135111,
+      "dataset_id": "graded-oracle-train-93c7385b769a4bf9",
+      "games": 7,
+      "groups": 560,
+      "manifest_blake3": "7ed12c943d75a786ccd4ccbe11a6b0146aad4fe5ed40f0cbaf1d652f5ac0bb99",
+      "seeds": [
+        61000,
+        61001,
+        61002,
+        61005,
+        61006,
+        61009,
+        61010
+      ],
+      "split": "train"
+    },
+    "experiment_id": "complete-action-r1200-target-sufficiency-v1",
+    "games": {
+      "61000": {
+        "candidates": 334106,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.975,
+        "groups": 80,
+        "mean_candidates": 4176.325,
+        "mean_r1200_candidates": 1009.15,
+        "mean_r4800_candidates": 8.675,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 403,
+            "fraction": 0.0787109375,
+            "mean_per_group": 5.0375
+          },
+          "r600": {
+            "count": 708,
+            "fraction": 0.13828125,
+            "mean_per_group": 8.85
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 80732,
+        "r1200_confidence_set_size_95": {
+          "max": 750.0,
+          "mean": 150.525,
+          "p10": 3.9000000000000004,
+          "p25": 25.0,
+          "p50": 106.5,
+          "p75": 195.0,
+          "p90": 408.3,
+          "p95": 436.0999999999997
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9,
+        "r4800_candidates": 694,
+        "r4800_confidence_set_size_95": {
+          "max": 9.0,
+          "mean": 3.4125,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 5.0,
+          "p90": 7.1000000000000085,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.3125,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.2916666666666667,
+              "exact_winner_recall": 0.175,
+              "mean_retained_r4800_regret": 1.0575296401977539
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8125,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.75,
+              "exact_winner_recall": 0.6375,
+              "mean_retained_r4800_regret": 0.18841552734375
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8875,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.875,
+              "exact_winner_recall": 0.7875,
+              "mean_retained_r4800_regret": 0.11927061080932617
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5625,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.5416666666666666,
+              "exact_winner_recall": 0.3625,
+              "mean_retained_r4800_regret": 0.5898406982421875
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.875,
+              "exact_winner_recall": 0.5875,
+              "mean_retained_r4800_regret": 0.21556034088134765
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9625,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.875,
+              "exact_winner_recall": 0.925,
+              "mean_retained_r4800_regret": 0.04787578582763672
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9625,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.875,
+              "exact_winner_recall": 0.9375,
+              "mean_retained_r4800_regret": 0.024517822265625
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9625,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.875,
+              "exact_winner_recall": 0.9125,
+              "mean_retained_r4800_regret": 0.08352537155151367
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.3,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.2916666666666667,
+              "exact_winner_recall": 0.175,
+              "mean_retained_r4800_regret": 1.007246208190918
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7125,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.625,
+              "exact_winner_recall": 0.5125,
+              "mean_retained_r4800_regret": 0.36708507537841795
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.7875,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.6666666666666666,
+              "exact_winner_recall": 0.5875,
+              "mean_retained_r4800_regret": 0.2629534721374512
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.525,
+              "distinguishable_groups": 24,
+              "distinguishable_winner_recall": 0.5,
+              "exact_winner_recall": 0.35,
+              "mean_retained_r4800_regret": 0.6707599639892579
+            }
+          }
+        }
+      },
+      "61001": {
+        "candidates": 280118,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.975,
+        "groups": 80,
+        "mean_candidates": 3501.475,
+        "mean_r1200_candidates": 971.45,
+        "mean_r4800_candidates": 8.7125,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 427,
+            "fraction": 0.0833984375,
+            "mean_per_group": 5.3375
+          },
+          "r600": {
+            "count": 734,
+            "fraction": 0.143359375,
+            "mean_per_group": 9.175
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 77716,
+        "r1200_confidence_set_size_95": {
+          "max": 457.0,
+          "mean": 147.85,
+          "p10": 4.800000000000001,
+          "p25": 33.75,
+          "p50": 96.5,
+          "p75": 259.0,
+          "p90": 357.3,
+          "p95": 367.54999999999995
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.875,
+        "r4800_candidates": 697,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.425,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 3.0,
+          "p75": 5.25,
+          "p90": 7.0,
+          "p95": 8.049999999999997
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.14814814814814814,
+              "exact_winner_recall": 0.1625,
+              "mean_retained_r4800_regret": 1.0204721450805665
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.625,
+              "mean_retained_r4800_regret": 0.28324575424194337
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8148148148148148,
+              "exact_winner_recall": 0.7625,
+              "mean_retained_r4800_regret": 0.11696443557739258
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.6125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.5185185185185185,
+              "exact_winner_recall": 0.4875,
+              "mean_retained_r4800_regret": 0.4895543098449707
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.875,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7407407407407407,
+              "exact_winner_recall": 0.6625,
+              "mean_retained_r4800_regret": 0.14506311416625978
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.95,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8148148148148148,
+              "exact_winner_recall": 0.9125,
+              "mean_retained_r4800_regret": 0.03608417510986328
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.95,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8148148148148148,
+              "exact_winner_recall": 0.9125,
+              "mean_retained_r4800_regret": 0.03608417510986328
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9375,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8148148148148148,
+              "exact_winner_recall": 0.9,
+              "mean_retained_r4800_regret": 0.06879959106445313
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2375,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.1111111111111111,
+              "exact_winner_recall": 0.1125,
+              "mean_retained_r4800_regret": 1.014272975921631
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7375,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.5185185185185185,
+              "exact_winner_recall": 0.575,
+              "mean_retained_r4800_regret": 0.2705181121826172
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.825,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.6875,
+              "mean_retained_r4800_regret": 0.1518930435180664
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.37037037037037035,
+              "exact_winner_recall": 0.425,
+              "mean_retained_r4800_regret": 0.6223090171813965
+            }
+          }
+        }
+      },
+      "61002": {
+        "candidates": 251570,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.975,
+        "groups": 80,
+        "mean_candidates": 3144.625,
+        "mean_r1200_candidates": 927.0125,
+        "mean_r4800_candidates": 8.675,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 437,
+            "fraction": 0.0853515625,
+            "mean_per_group": 5.4625
+          },
+          "r600": {
+            "count": 761,
+            "fraction": 0.1486328125,
+            "mean_per_group": 9.5125
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 74161,
+        "r1200_confidence_set_size_95": {
+          "max": 466.0,
+          "mean": 119.875,
+          "p10": 3.9000000000000004,
+          "p25": 24.75,
+          "p50": 94.5,
+          "p75": 187.75,
+          "p90": 261.20000000000005,
+          "p95": 320.9999999999997
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.8625,
+        "r4800_candidates": 694,
+        "r4800_confidence_set_size_95": {
+          "max": 9.0,
+          "mean": 3.175,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 5.0,
+          "p90": 6.1000000000000085,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.175,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.14814814814814814,
+              "exact_winner_recall": 0.0875,
+              "mean_retained_r4800_regret": 1.0379786491394043
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.825,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.6875,
+              "mean_retained_r4800_regret": 0.14480056762695312
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7777777777777778,
+              "exact_winner_recall": 0.8125,
+              "mean_retained_r4800_regret": 0.06449327468872071
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.6,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.5185185185185185,
+              "exact_winner_recall": 0.4625,
+              "mean_retained_r4800_regret": 0.4121670722961426
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.8625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8148148148148148,
+              "exact_winner_recall": 0.6,
+              "mean_retained_r4800_regret": 0.17302160263061522
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8888888888888888,
+              "exact_winner_recall": 0.9625,
+              "mean_retained_r4800_regret": 0.019605636596679688
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8888888888888888,
+              "exact_winner_recall": 0.9625,
+              "mean_retained_r4800_regret": 0.019605636596679688
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.95,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8888888888888888,
+              "exact_winner_recall": 0.9375,
+              "mean_retained_r4800_regret": 0.030222988128662108
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.1111111111111111,
+              "exact_winner_recall": 0.075,
+              "mean_retained_r4800_regret": 1.0220643997192382
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.6666666666666666,
+              "exact_winner_recall": 0.6625,
+              "mean_retained_r4800_regret": 0.1609198570251465
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8875,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7777777777777778,
+              "exact_winner_recall": 0.75,
+              "mean_retained_r4800_regret": 0.0926783561706543
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5875,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.4074074074074074,
+              "exact_winner_recall": 0.4125,
+              "mean_retained_r4800_regret": 0.5561967849731445
+            }
+          }
+        }
+      },
+      "61005": {
+        "candidates": 321057,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9875,
+        "groups": 80,
+        "mean_candidates": 4013.2125,
+        "mean_r1200_candidates": 967.05,
+        "mean_r4800_candidates": 8.8375,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 403,
+            "fraction": 0.0787109375,
+            "mean_per_group": 5.0375
+          },
+          "r600": {
+            "count": 688,
+            "fraction": 0.134375,
+            "mean_per_group": 8.6
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 77364,
+        "r1200_confidence_set_size_95": {
+          "max": 652.0,
+          "mean": 148.425,
+          "p10": 4.0,
+          "p25": 60.25,
+          "p50": 129.0,
+          "p75": 206.0,
+          "p90": 287.1000000000001,
+          "p95": 378.0999999999998
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.825,
+        "r4800_candidates": 707,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.025,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 4.0,
+          "p90": 7.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.275,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.23076923076923078,
+              "exact_winner_recall": 0.15,
+              "mean_retained_r4800_regret": 1.0891357421875
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8125,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.7307692307692307,
+              "exact_winner_recall": 0.65,
+              "mean_retained_r4800_regret": 0.205230712890625
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8875,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.7692307692307693,
+              "exact_winner_recall": 0.775,
+              "mean_retained_r4800_regret": 0.09180784225463867
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.65,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.6923076923076923,
+              "exact_winner_recall": 0.4875,
+              "mean_retained_r4800_regret": 0.44270477294921873
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.825,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.6923076923076923,
+              "exact_winner_recall": 0.5625,
+              "mean_retained_r4800_regret": 0.2599151611328125
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.95,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8461538461538461,
+              "exact_winner_recall": 0.925,
+              "mean_retained_r4800_regret": 0.03831748962402344
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.95,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8461538461538461,
+              "exact_winner_recall": 0.9375,
+              "mean_retained_r4800_regret": 0.036434364318847653
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9375,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8461538461538461,
+              "exact_winner_recall": 0.9125,
+              "mean_retained_r4800_regret": 0.0900634765625
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2875,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.15384615384615385,
+              "exact_winner_recall": 0.125,
+              "mean_retained_r4800_regret": 1.0145758628845214
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.75,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.5769230769230769,
+              "exact_winner_recall": 0.5625,
+              "mean_retained_r4800_regret": 0.2410797119140625
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.85,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.6923076923076923,
+              "exact_winner_recall": 0.7125,
+              "mean_retained_r4800_regret": 0.17945165634155275
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5375,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.46153846153846156,
+              "exact_winner_recall": 0.3625,
+              "mean_retained_r4800_regret": 0.5492612838745117
+            }
+          }
+        }
+      },
+      "61006": {
+        "candidates": 308735,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 1.0,
+        "groups": 80,
+        "mean_candidates": 3859.1875,
+        "mean_r1200_candidates": 948.425,
+        "mean_r4800_candidates": 8.75,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 456,
+            "fraction": 0.0890625,
+            "mean_per_group": 5.7
+          },
+          "r600": {
+            "count": 755,
+            "fraction": 0.1474609375,
+            "mean_per_group": 9.4375
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 75874,
+        "r1200_confidence_set_size_95": {
+          "max": 419.0,
+          "mean": 96.8875,
+          "p10": 2.0,
+          "p25": 18.0,
+          "p50": 64.5,
+          "p75": 162.5,
+          "p90": 211.70000000000016,
+          "p95": 275.4499999999997
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9,
+        "r4800_candidates": 700,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.225,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 5.0,
+          "p90": 7.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2375,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.2692307692307692,
+              "exact_winner_recall": 0.1625,
+              "mean_retained_r4800_regret": 0.9962914466857911
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8125,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8076923076923077,
+              "exact_winner_recall": 0.7,
+              "mean_retained_r4800_regret": 0.11180686950683594
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.875,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8461538461538461,
+              "exact_winner_recall": 0.8125,
+              "mean_retained_r4800_regret": 0.06209716796875
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5875,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.7307692307692307,
+              "exact_winner_recall": 0.4375,
+              "mean_retained_r4800_regret": 0.31421794891357424
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.9230769230769231,
+              "exact_winner_recall": 0.625,
+              "mean_retained_r4800_regret": 0.15658988952636718
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9875,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.9615384615384616,
+              "exact_winner_recall": 0.9625,
+              "mean_retained_r4800_regret": 0.014428806304931641
+            },
+            "top64": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.975,
+              "mean_retained_r4800_regret": 0.0009953498840332032
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9875,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.9615384615384616,
+              "exact_winner_recall": 0.95,
+              "mean_retained_r4800_regret": 0.01489849090576172
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2375,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.3076923076923077,
+              "exact_winner_recall": 0.15,
+              "mean_retained_r4800_regret": 0.9628396034240723
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7125,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.6538461538461539,
+              "exact_winner_recall": 0.65,
+              "mean_retained_r4800_regret": 0.187945556640625
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.825,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.7307692307692307,
+              "exact_winner_recall": 0.75,
+              "mean_retained_r4800_regret": 0.121905517578125
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.55,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.5769230769230769,
+              "exact_winner_recall": 0.4125,
+              "mean_retained_r4800_regret": 0.47736597061157227
+            }
+          }
+        }
+      },
+      "61009": {
+        "candidates": 328239,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 1.0,
+        "groups": 80,
+        "mean_candidates": 4102.9875,
+        "mean_r1200_candidates": 968.2375,
+        "mean_r4800_candidates": 8.6625,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 444,
+            "fraction": 0.08671875,
+            "mean_per_group": 5.55
+          },
+          "r600": {
+            "count": 705,
+            "fraction": 0.1376953125,
+            "mean_per_group": 8.8125
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 77459,
+        "r1200_confidence_set_size_95": {
+          "max": 696.0,
+          "mean": 129.125,
+          "p10": 4.0,
+          "p25": 18.25,
+          "p50": 80.5,
+          "p75": 174.25,
+          "p90": 338.3000000000003,
+          "p95": 377.6499999999999
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9125,
+        "r4800_candidates": 693,
+        "r4800_confidence_set_size_95": {
+          "max": 9.0,
+          "mean": 3.1125,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.5,
+          "p75": 4.0,
+          "p90": 6.1000000000000085,
+          "p95": 7.049999999999997
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.3375,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.34782608695652173,
+              "exact_winner_recall": 0.175,
+              "mean_retained_r4800_regret": 0.8382658958435059
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.85,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.782608695652174,
+              "exact_winner_recall": 0.75,
+              "mean_retained_r4800_regret": 0.12112493515014648
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.925,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.8695652173913043,
+              "exact_winner_recall": 0.825,
+              "mean_retained_r4800_regret": 0.06576652526855468
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.6125,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.6086956521739131,
+              "exact_winner_recall": 0.5,
+              "mean_retained_r4800_regret": 0.3910712242126465
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9125,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.6375,
+              "mean_retained_r4800_regret": 0.11664342880249023
+            },
+            "top32": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.9625,
+              "mean_retained_r4800_regret": 0.005957698822021485
+            },
+            "top64": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.9625,
+              "mean_retained_r4800_regret": 0.005957698822021485
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9875,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.95,
+              "mean_retained_r4800_regret": 0.02091493606567383
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.3625,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.34782608695652173,
+              "exact_winner_recall": 0.175,
+              "mean_retained_r4800_regret": 0.8980353355407715
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7375,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.6086956521739131,
+              "exact_winner_recall": 0.6375,
+              "mean_retained_r4800_regret": 0.22422895431518555
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8625,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.8260869565217391,
+              "exact_winner_recall": 0.775,
+              "mean_retained_r4800_regret": 0.10318174362182617
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5375,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.5217391304347826,
+              "exact_winner_recall": 0.425,
+              "mean_retained_r4800_regret": 0.4998157501220703
+            }
+          }
+        }
+      },
+      "61010": {
+        "candidates": 311286,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 1.0,
+        "groups": 80,
+        "mean_candidates": 3891.075,
+        "mean_r1200_candidates": 938.25,
+        "mean_r4800_candidates": 8.675,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 425,
+            "fraction": 0.0830078125,
+            "mean_per_group": 5.3125
+          },
+          "r600": {
+            "count": 807,
+            "fraction": 0.1576171875,
+            "mean_per_group": 10.0875
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 75060,
+        "r1200_confidence_set_size_95": {
+          "max": 450.0,
+          "mean": 119.95,
+          "p10": 2.0,
+          "p25": 27.5,
+          "p50": 96.5,
+          "p75": 181.5,
+          "p90": 283.80000000000007,
+          "p95": 320.0999999999999
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9125,
+        "r4800_candidates": 694,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 2.975,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 4.0,
+          "p90": 6.1000000000000085,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.25925925925925924,
+              "exact_winner_recall": 0.125,
+              "mean_retained_r4800_regret": 1.0208325386047363
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.7,
+              "mean_retained_r4800_regret": 0.1605365753173828
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.85,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7777777777777778,
+              "exact_winner_recall": 0.7625,
+              "mean_retained_r4800_regret": 0.12421493530273438
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5875,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.6296296296296297,
+              "exact_winner_recall": 0.4625,
+              "mean_retained_r4800_regret": 0.35616483688354494
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.9259259259259259,
+              "exact_winner_recall": 0.675,
+              "mean_retained_r4800_regret": 0.14069995880126954
+            },
+            "top32": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 1.0,
+              "mean_retained_r4800_regret": 0.0
+            },
+            "top64": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 1.0,
+              "mean_retained_r4800_regret": 0.0
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.975,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.9259259259259259,
+              "exact_winner_recall": 0.9375,
+              "mean_retained_r4800_regret": 0.05364294052124023
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.2962962962962963,
+              "exact_winner_recall": 0.1375,
+              "mean_retained_r4800_regret": 1.038813018798828
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.725,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.6125,
+              "mean_retained_r4800_regret": 0.24086360931396483
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7407407407407407,
+              "exact_winner_recall": 0.7,
+              "mean_retained_r4800_regret": 0.16499509811401367
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.4625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.5185185185185185,
+              "exact_winner_recall": 0.3375,
+              "mean_retained_r4800_regret": 0.5790915489196777
+            }
+          }
+        }
+      }
+    },
+    "integrity": {
+      "all_candidates_seen_once": true,
+      "all_groups_seen_once": true,
+      "all_model_scores_finite": true,
+      "all_teacher_values_finite": true,
+      "candidates_seen": 2135111,
+      "checkpoint_identity_passed": true,
+      "dataset_identity_passed": true,
+      "expected_candidates": 2135111,
+      "expected_groups": 560,
+      "groups_seen": 560,
+      "model_identity_passed": true,
+      "nonfinite_model_scores": 0,
+      "nonfinite_teacher_values": 0,
+      "source_identity_passed": true,
+      "split_allowed": true,
+      "test_split_opened": false
+    },
+    "interpretation_gates": {
+      "confidence_set_intersection_fraction_at_least_0_95": true,
+      "every_group_has_top64_cohort_capacity": true,
+      "every_phase_oracle_top64_confidence_coverage_at_least_0_98": false,
+      "integrity_passed": true,
+      "oracle_top64_confidence_set_coverage_at_least_0_99": false,
+      "oracle_top64_distinguishable_winner_recall_at_least_0_98": false,
+      "oracle_top64_exact_winner_recall_at_least_0_95": true,
+      "oracle_top64_retained_regret_below_0_03": true,
+      "target_sufficient_for_set_valued_proposer": false
+    },
+    "method": {
+      "caveat": "The R1200 cohort oracle is an information upper bound, not a deployable player or score claim. Confidence sets use the same normal independence approximation as ADR 0086.",
+      "cohort_oracle": "R1200-labeled actions by descending R1200 mean and action hash, then unlabeled actions by descending screen value and action hash",
+      "implementation_blake3": "dbb44d796444552c4eec3a25423ef13c11d5e3df71e90a8f06834470aede4249",
+      "normal_95": 1.959963984540054
+    },
+    "model": {
+      "checkpoint": "step-000003592-epoch-0008-batch-000000",
+      "model_blake3": "6d2a7bb57fd905e50636a20da012f40017cc3a59c1ebde06eff20f8f974940e8",
+      "prior_feature_schema": "observable-screen-priors-v1",
+      "source_v2_blake3": "4247caaf01dbb60fd158fea1e3f0caa08431ada0683347204aff359639af3bad"
+    },
+    "overall": {
+      "candidates": 2135111,
+      "cohort_top64_capacity_fraction": 1.0,
+      "confidence_set_intersection_fraction": 0.9875,
+      "groups": 560,
+      "mean_candidates": 3812.698214285714,
+      "mean_r1200_candidates": 961.3678571428571,
+      "mean_r4800_candidates": 8.7125,
+      "model_top64_label_composition": {
+        "r1200": {
+          "count": 35840,
+          "fraction": 1.0,
+          "mean_per_group": 64.0
+        },
+        "r4800": {
+          "count": 2995,
+          "fraction": 0.08356584821428571,
+          "mean_per_group": 5.348214285714286
+        },
+        "r600": {
+          "count": 5158,
+          "fraction": 0.1439174107142857,
+          "mean_per_group": 9.210714285714285
+        },
+        "screen_only": {
+          "count": 0,
+          "fraction": 0.0,
+          "mean_per_group": 0.0
+        }
+      },
+      "model_top64_slots": 35840,
+      "r1200_candidates": 538366,
+      "r1200_confidence_set_size_95": {
+        "max": 750.0,
+        "mean": 130.37678571428572,
+        "p10": 3.0,
+        "p25": 24.75,
+        "p50": 97.0,
+        "p75": 192.0,
+        "p90": 316.30000000000007,
+        "p95": 389.8499999999992
+      },
+      "r1200_winner_in_r4800_confidence_set_95_fraction": 0.8839285714285714,
+      "r4800_candidates": 4879,
+      "r4800_confidence_set_size_95": {
+        "max": 10.0,
+        "mean": 3.192857142857143,
+        "p10": 1.0,
+        "p25": 1.0,
+        "p50": 2.0,
+        "p75": 4.25,
+        "p90": 7.0,
+        "p95": 8.0
+      },
+      "ranking": {
+        "model": {
+          "top1": {
+            "confidence_set_coverage_95": 0.26607142857142857,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.2388888888888889,
+            "exact_winner_recall": 0.14821428571428572,
+            "mean_retained_r4800_regret": 1.0086437225341798
+          },
+          "top32": {
+            "confidence_set_coverage_95": 0.8125,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.7388888888888889,
+            "exact_winner_recall": 0.6785714285714286,
+            "mean_retained_r4800_regret": 0.17359442029680525
+          },
+          "top64": {
+            "confidence_set_coverage_95": 0.8857142857142857,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.8166666666666667,
+            "exact_winner_recall": 0.7910714285714285,
+            "mean_retained_r4800_regret": 0.09208782741001674
+          },
+          "top8": {
+            "confidence_set_coverage_95": 0.6017857142857143,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.6055555555555555,
+            "exact_winner_recall": 0.45714285714285713,
+            "mean_retained_r4800_regret": 0.42796012333461214
+          }
+        },
+        "r1200_cohort_oracle": {
+          "top1": {
+            "confidence_set_coverage_95": 0.8839285714285714,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.85,
+            "exact_winner_recall": 0.6214285714285714,
+            "mean_retained_r4800_regret": 0.17249907084873745
+          },
+          "top32": {
+            "confidence_set_coverage_95": 0.9732142857142857,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.9111111111111111,
+            "exact_winner_recall": 0.95,
+            "mean_retained_r4800_regret": 0.023181370326450894
+          },
+          "top64": {
+            "confidence_set_coverage_95": 0.975,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.9166666666666666,
+            "exact_winner_recall": 0.9553571428571429,
+            "mean_retained_r4800_regret": 0.017656435285295757
+          },
+          "top8": {
+            "confidence_set_coverage_95": 0.9625,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.9,
+            "exact_winner_recall": 0.9285714285714286,
+            "mean_retained_r4800_regret": 0.051723970685686384
+          }
+        },
+        "screen": {
+          "top1": {
+            "confidence_set_coverage_95": 0.2714285714285714,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.22777777777777777,
+            "exact_winner_recall": 0.1357142857142857,
+            "mean_retained_r4800_regret": 0.9939782006399972
+          },
+          "top32": {
+            "confidence_set_coverage_95": 0.7410714285714286,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.6222222222222222,
+            "exact_winner_recall": 0.6017857142857143,
+            "mean_retained_r4800_regret": 0.2418058395385742
+          },
+          "top64": {
+            "confidence_set_coverage_95": 0.8339285714285715,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.7333333333333333,
+            "exact_winner_recall": 0.7089285714285715,
+            "mean_retained_r4800_regret": 0.15386555535452706
+          },
+          "top8": {
+            "confidence_set_coverage_95": 0.5375,
+            "distinguishable_groups": 180,
+            "distinguishable_winner_recall": 0.4777777777777778,
+            "exact_winner_recall": 0.3892857142857143,
+            "mean_retained_r4800_regret": 0.5649714742388044
+          }
+        }
+      }
+    },
+    "phases": {
+      "early": {
+        "candidates": 425480,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9846938775510204,
+        "groups": 196,
+        "mean_candidates": 2170.816326530612,
+        "mean_r1200_candidates": 822.7244897959183,
+        "mean_r4800_candidates": 8.923469387755102,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 12544,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 947,
+            "fraction": 0.07549426020408163,
+            "mean_per_group": 4.831632653061225
+          },
+          "r600": {
+            "count": 2219,
+            "fraction": 0.17689732142857142,
+            "mean_per_group": 11.321428571428571
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 12544,
+        "r1200_candidates": 161254,
+        "r1200_confidence_set_size_95": {
+          "max": 652.0,
+          "mean": 207.56632653061226,
+          "p10": 68.0,
+          "p25": 112.75,
+          "p50": 172.0,
+          "p75": 283.75,
+          "p90": 407.0,
+          "p95": 432.25
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.8163265306122449,
+        "r4800_candidates": 1749,
+        "r4800_confidence_set_size_95": {
+          "max": 9.0,
+          "mean": 2.954081632653061,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 4.0,
+          "p90": 6.0,
+          "p95": 7.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.24489795918367346,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.19402985074626866,
+              "exact_winner_recall": 0.1683673469387755,
+              "mean_retained_r4800_regret": 1.626995359148298
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8418367346938775,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.746268656716418,
+              "exact_winner_recall": 0.6938775510204082,
+              "mean_retained_r4800_regret": 0.20222107244997609
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9030612244897959,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.8059701492537313,
+              "exact_winner_recall": 0.8163265306122449,
+              "mean_retained_r4800_regret": 0.08850019805285396
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.6479591836734694,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.6417910447761194,
+              "exact_winner_recall": 0.49489795918367346,
+              "mean_retained_r4800_regret": 0.5608786758111448
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.8163265306122449,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.7014925373134329,
+              "exact_winner_recall": 0.5306122448979592,
+              "mean_retained_r4800_regret": 0.3525824644127671
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9489795918367347,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.835820895522388,
+              "exact_winner_recall": 0.9081632653061225,
+              "mean_retained_r4800_regret": 0.039925594719088804
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9540816326530612,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.8507462686567164,
+              "exact_winner_recall": 0.923469387755102,
+              "mean_retained_r4800_regret": 0.03264551746601961
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9285714285714286,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.8208955223880597,
+              "exact_winner_recall": 0.8673469387755102,
+              "mean_retained_r4800_regret": 0.08928010901626275
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2193877551020408,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.16417910447761194,
+              "exact_winner_recall": 0.14795918367346939,
+              "mean_retained_r4800_regret": 1.5951816792390785
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7448979591836735,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.582089552238806,
+              "exact_winner_recall": 0.5969387755102041,
+              "mean_retained_r4800_regret": 0.29374449593680246
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8469387755102041,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.7313432835820896,
+              "exact_winner_recall": 0.7091836734693877,
+              "mean_retained_r4800_regret": 0.1865099692831234
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5306122448979592,
+              "distinguishable_groups": 67,
+              "distinguishable_winner_recall": 0.43283582089552236,
+              "exact_winner_recall": 0.3622448979591837,
+              "mean_retained_r4800_regret": 0.8265821106579839
+            }
+          }
+        }
+      },
+      "late": {
+        "candidates": 872423,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9880952380952381,
+        "groups": 168,
+        "mean_candidates": 5192.994047619048,
+        "mean_r1200_candidates": 1044.4940476190477,
+        "mean_r4800_candidates": 8.44047619047619,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 10752,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 1012,
+            "fraction": 0.09412202380952381,
+            "mean_per_group": 6.023809523809524
+          },
+          "r600": {
+            "count": 1417,
+            "fraction": 0.13178943452380953,
+            "mean_per_group": 8.43452380952381
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 10752,
+        "r1200_candidates": 175475,
+        "r1200_confidence_set_size_95": {
+          "max": 450.0,
+          "mean": 42.36309523809524,
+          "p10": 1.0,
+          "p25": 2.75,
+          "p50": 11.5,
+          "p75": 40.0,
+          "p90": 117.20000000000005,
+          "p95": 183.65
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.875,
+        "r4800_candidates": 1418,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.2976190476190474,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 4.25,
+          "p90": 8.0,
+          "p95": 9.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.4107142857142857,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.3898305084745763,
+              "exact_winner_recall": 0.20833333333333334,
+              "mean_retained_r4800_regret": 0.46108155023484004
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8333333333333334,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.7796610169491526,
+              "exact_winner_recall": 0.7559523809523809,
+              "mean_retained_r4800_regret": 0.09556202661423456
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8928571428571429,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.8813559322033898,
+              "exact_winner_recall": 0.8392857142857143,
+              "mean_retained_r4800_regret": 0.05736727941603888
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.6785714285714286,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.6779661016949152,
+              "exact_winner_recall": 0.5714285714285714,
+              "mean_retained_r4800_regret": 0.1848128182547433
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.875,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.9322033898305084,
+              "exact_winner_recall": 0.6547619047619048,
+              "mean_retained_r4800_regret": 0.06699916294642858
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9821428571428571,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.9491525423728814,
+              "exact_winner_recall": 0.9702380952380952,
+              "mean_retained_r4800_regret": 0.016985348292759488
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9821428571428571,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.9491525423728814,
+              "exact_winner_recall": 0.9702380952380952,
+              "mean_retained_r4800_regret": 0.016295205979120164
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9761904761904762,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.9322033898305084,
+              "exact_winner_recall": 0.9523809523809523,
+              "mean_retained_r4800_regret": 0.03464984893798828
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.43452380952380953,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.3728813559322034,
+              "exact_winner_recall": 0.19047619047619047,
+              "mean_retained_r4800_regret": 0.4369591304234096
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8154761904761905,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.7457627118644068,
+              "exact_winner_recall": 0.7321428571428571,
+              "mean_retained_r4800_regret": 0.1187208720615932
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8690476190476191,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.8305084745762712,
+              "exact_winner_recall": 0.8095238095238095,
+              "mean_retained_r4800_regret": 0.07370208558582124
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.6488095238095238,
+              "distinguishable_groups": 59,
+              "distinguishable_winner_recall": 0.6271186440677966,
+              "exact_winner_recall": 0.5773809523809523,
+              "mean_retained_r4800_regret": 0.2510370526994978
+            }
+          }
+        }
+      },
+      "middle": {
+        "candidates": 837208,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9897959183673469,
+        "groups": 196,
+        "mean_candidates": 4271.469387755102,
+        "mean_r1200_candidates": 1028.7602040816328,
+        "mean_r4800_candidates": 8.73469387755102,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 12544,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 1036,
+            "fraction": 0.08258928571428571,
+            "mean_per_group": 5.285714285714286
+          },
+          "r600": {
+            "count": 1522,
+            "fraction": 0.12133290816326531,
+            "mean_per_group": 7.76530612244898
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 12544,
+        "r1200_candidates": 201637,
+        "r1200_confidence_set_size_95": {
+          "max": 750.0,
+          "mean": 128.62755102040816,
+          "p10": 19.5,
+          "p25": 53.75,
+          "p50": 100.5,
+          "p75": 170.25,
+          "p90": 266.0,
+          "p95": 343.75
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9591836734693877,
+        "r4800_candidates": 1712,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.3418367346938775,
+          "p10": 1.0,
+          "p25": 2.0,
+          "p50": 3.0,
+          "p75": 5.0,
+          "p90": 7.0,
+          "p95": 7.25
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.16326530612244897,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.12962962962962962,
+              "exact_winner_recall": 0.07653061224489796,
+              "mean_retained_r4800_regret": 0.8596310907480668
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7653061224489796,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.6851851851851852,
+              "exact_winner_recall": 0.5969387755102041,
+              "mean_retained_r4800_regret": 0.21185267701440927
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8622448979591837,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.7592592592592593,
+              "exact_winner_recall": 0.7244897959183674,
+              "mean_retained_r4800_regret": 0.12543592647630342
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.4897959183673469,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.48148148148148145,
+              "exact_winner_recall": 0.32142857142857145,
+              "mean_retained_r4800_regret": 0.5034535466408243
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9591836734693877,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.9444444444444444,
+              "exact_winner_recall": 0.6836734693877551,
+              "mean_retained_r4800_regret": 0.08284416977240115
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9897959183673469,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.9629629629629629,
+              "exact_winner_recall": 0.9744897959183674,
+              "mean_retained_r4800_regret": 0.011748021962691327
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9897959183673469,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.9629629629629629,
+              "exact_winner_recall": 0.9744897959183674,
+              "mean_retained_r4800_regret": 0.0038341210812938456
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9846938775510204,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.9629629629629629,
+              "exact_winner_recall": 0.9693877551020408,
+              "mean_retained_r4800_regret": 0.028802793853136957
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.1836734693877551,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.14814814814814814,
+              "exact_winner_recall": 0.07653061224489796,
+              "mean_retained_r4800_regret": 0.8702196393694196
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.673469387755102,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.5370370370370371,
+              "exact_winner_recall": 0.49489795918367346,
+              "mean_retained_r4800_regret": 0.29536858383490117
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.7908163265306123,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.6296296296296297,
+              "exact_winner_recall": 0.6224489795918368,
+              "mean_retained_r4800_regret": 0.18993268694196427
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.4489795918367347,
+              "distinguishable_groups": 54,
+              "distinguishable_winner_recall": 0.37037037037037035,
+              "exact_winner_recall": 0.25510204081632654,
+              "mean_retained_r4800_regret": 0.5724474848533163
+            }
+          }
+        }
+      }
+    },
+    "schema_version": 1,
+    "subsets": {
+      "independent_draft_winner": {
+        "candidates": 222570,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9818181818181818,
+        "groups": 55,
+        "mean_candidates": 4046.7272727272725,
+        "mean_r1200_candidates": 1044.9636363636364,
+        "mean_r4800_candidates": 8.818181818181818,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 3520,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 274,
+            "fraction": 0.07784090909090909,
+            "mean_per_group": 4.9818181818181815
+          },
+          "r600": {
+            "count": 511,
+            "fraction": 0.14517045454545455,
+            "mean_per_group": 9.290909090909091
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 3520,
+        "r1200_candidates": 57473,
+        "r1200_confidence_set_size_95": {
+          "max": 533.0,
+          "mean": 122.98181818181818,
+          "p10": 3.4000000000000004,
+          "p25": 16.0,
+          "p50": 82.0,
+          "p75": 190.0,
+          "p90": 318.40000000000003,
+          "p95": 384.79999999999984
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9090909090909091,
+        "r4800_candidates": 485,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.7636363636363637,
+          "p10": 1.0,
+          "p25": 2.0,
+          "p50": 3.0,
+          "p75": 6.0,
+          "p90": 8.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.21818181818181817,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.2857142857142857,
+              "exact_winner_recall": 0.09090909090909091,
+              "mean_retained_r4800_regret": 0.8301857688210227
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.6,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.5714285714285714,
+              "exact_winner_recall": 0.43636363636363634,
+              "mean_retained_r4800_regret": 0.38724171031605115
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.7454545454545455,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.5714285714285714,
+              "exact_winner_recall": 0.5454545454545454,
+              "mean_retained_r4800_regret": 0.22922848788174716
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.3090909090909091,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.35714285714285715,
+              "exact_winner_recall": 0.2,
+              "mean_retained_r4800_regret": 0.5830599698153409
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9090909090909091,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.8571428571428571,
+              "exact_winner_recall": 0.6181818181818182,
+              "mean_retained_r4800_regret": 0.09438115900213068
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9818181818181818,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.9285714285714286,
+              "exact_winner_recall": 0.9272727272727272,
+              "mean_retained_r4800_regret": 0.018993447043678977
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9818181818181818,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.9285714285714286,
+              "exact_winner_recall": 0.9454545454545454,
+              "mean_retained_r4800_regret": 0.013220492276278408
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9818181818181818,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.9285714285714286,
+              "exact_winner_recall": 0.9272727272727272,
+              "mean_retained_r4800_regret": 0.018993447043678977
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.2857142857142857,
+              "exact_winner_recall": 0.09090909090909091,
+              "mean_retained_r4800_regret": 0.8177290482954546
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.5818181818181818,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.5,
+              "exact_winner_recall": 0.34545454545454546,
+              "mean_retained_r4800_regret": 0.3294170032848011
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.7090909090909091,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.6428571428571429,
+              "exact_winner_recall": 0.4909090909090909,
+              "mean_retained_r4800_regret": 0.24686834161931817
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.3090909090909091,
+              "distinguishable_groups": 14,
+              "distinguishable_winner_recall": 0.42857142857142855,
+              "exact_winner_recall": 0.21818181818181817,
+              "mean_retained_r4800_regret": 0.6294333718039773
+            }
+          }
+        }
+      },
+      "nature_token_available": {
+        "candidates": 2091048,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9873150105708245,
+        "groups": 473,
+        "mean_candidates": 4420.820295983087,
+        "mean_r1200_candidates": 1045.53911205074,
+        "mean_r4800_candidates": 8.684989429175475,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 30272,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 2484,
+            "fraction": 0.08205602536997886,
+            "mean_per_group": 5.251585623678647
+          },
+          "r600": {
+            "count": 4107,
+            "fraction": 0.13566992600422834,
+            "mean_per_group": 8.682875264270614
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 30272,
+        "r1200_candidates": 494540,
+        "r1200_confidence_set_size_95": {
+          "max": 750.0,
+          "mean": 130.99577167019027,
+          "p10": 3.0,
+          "p25": 20.0,
+          "p50": 93.0,
+          "p75": 200.0,
+          "p90": 328.40000000000003,
+          "p95": 409.0
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.904862579281184,
+        "r4800_candidates": 4108,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.2135306553911205,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 5.0,
+          "p90": 7.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.27061310782241016,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.2679738562091503,
+              "exact_winner_recall": 0.1522198731501057,
+              "mean_retained_r4800_regret": 0.872899222827613
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7885835095137421,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.7124183006535948,
+              "exact_winner_recall": 0.6448202959830867,
+              "mean_retained_r4800_regret": 0.19330922745751025
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8731501057082452,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.803921568627451,
+              "exact_winner_recall": 0.7695560253699789,
+              "mean_retained_r4800_regret": 0.10309886327505616
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5623678646934461,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.5751633986928104,
+              "exact_winner_recall": 0.4143763213530655,
+              "mean_retained_r4800_regret": 0.44995286550380714
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.904862579281184,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.8823529411764706,
+              "exact_winner_recall": 0.6596194503171248,
+              "mean_retained_r4800_regret": 0.12038473246213498
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9767441860465116,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.9215686274509803,
+              "exact_winner_recall": 0.9534883720930233,
+              "mean_retained_r4800_regret": 0.02269148070514832
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9788583509513742,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.9281045751633987,
+              "exact_winner_recall": 0.959830866807611,
+              "mean_retained_r4800_regret": 0.016150331396381144
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9704016913319239,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.9150326797385621,
+              "exact_winner_recall": 0.945031712473573,
+              "mean_retained_r4800_regret": 0.04277174064523322
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2727272727272727,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.23529411764705882,
+              "exact_winner_recall": 0.1331923890063425,
+              "mean_retained_r4800_regret": 0.8595529439333377
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7230443974630021,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.6143790849673203,
+              "exact_winner_recall": 0.5771670190274841,
+              "mean_retained_r4800_regret": 0.25895358644126587
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8181818181818182,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.7189542483660131,
+              "exact_winner_recall": 0.6849894291754757,
+              "mean_retained_r4800_regret": 0.16921892226624438
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5179704016913319,
+              "distinguishable_groups": 153,
+              "distinguishable_winner_recall": 0.46405228758169936,
+              "exact_winner_recall": 0.3699788583509514,
+              "mean_retained_r4800_regret": 0.538385080736737
+            }
+          }
+        }
+      }
+    }
+  },
+  "validation": {
+    "classification": "target_insufficient_for_set_valued_proposer",
+    "dataset": {
+      "candidates": 860203,
+      "dataset_id": "graded-oracle-validation-11e6bc9647c68df7",
+      "games": 3,
+      "groups": 240,
+      "manifest_blake3": "302ceb7a57482b0fb5fb12963521be35aafc121a36f572e6b9f47def1b820a31",
+      "seeds": [
+        61003,
+        61007,
+        61011
+      ],
+      "split": "validation"
+    },
+    "experiment_id": "complete-action-r1200-target-sufficiency-v1",
+    "games": {
+      "61003": {
+        "candidates": 277389,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9625,
+        "groups": 80,
+        "mean_candidates": 3467.3625,
+        "mean_r1200_candidates": 972.575,
+        "mean_r4800_candidates": 8.65,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 409,
+            "fraction": 0.0798828125,
+            "mean_per_group": 5.1125
+          },
+          "r600": {
+            "count": 740,
+            "fraction": 0.14453125,
+            "mean_per_group": 9.25
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 77806,
+        "r1200_confidence_set_size_95": {
+          "max": 689.0,
+          "mean": 123.3875,
+          "p10": 4.0,
+          "p25": 17.0,
+          "p50": 101.0,
+          "p75": 188.0,
+          "p90": 260.10000000000025,
+          "p95": 313.3999999999999
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9125,
+        "r4800_candidates": 692,
+        "r4800_confidence_set_size_95": {
+          "max": 9.0,
+          "mean": 3.2,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 4.0,
+          "p90": 7.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.225,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.1111111111111111,
+              "exact_winner_recall": 0.1125,
+              "mean_retained_r4800_regret": 0.8242647171020507
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.6125,
+              "mean_retained_r4800_regret": 0.1685257911682129
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.7875,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7777777777777778,
+              "exact_winner_recall": 0.6875,
+              "mean_retained_r4800_regret": 0.10698900222778321
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5375,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.48148148148148145,
+              "exact_winner_recall": 0.4625,
+              "mean_retained_r4800_regret": 0.4338024139404297
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8518518518518519,
+              "exact_winner_recall": 0.7,
+              "mean_retained_r4800_regret": 0.09025907516479492
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8888888888888888,
+              "exact_winner_recall": 0.95,
+              "mean_retained_r4800_regret": 0.01806488037109375
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8888888888888888,
+              "exact_winner_recall": 0.95,
+              "mean_retained_r4800_regret": 0.017962169647216798
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8888888888888888,
+              "exact_winner_recall": 0.95,
+              "mean_retained_r4800_regret": 0.01806488037109375
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.18518518518518517,
+              "exact_winner_recall": 0.1125,
+              "mean_retained_r4800_regret": 0.8267087936401367
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.6666666666666666,
+              "exact_winner_recall": 0.6,
+              "mean_retained_r4800_regret": 0.21644306182861328
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.7875,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.6625,
+              "mean_retained_r4800_regret": 0.10841426849365235
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.475,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.4444444444444444,
+              "exact_winner_recall": 0.425,
+              "mean_retained_r4800_regret": 0.441041088104248
+            }
+          }
+        }
+      },
+      "61007": {
+        "candidates": 321495,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.95,
+        "groups": 80,
+        "mean_candidates": 4018.6875,
+        "mean_r1200_candidates": 1013.0625,
+        "mean_r4800_candidates": 8.7375,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 372,
+            "fraction": 0.07265625,
+            "mean_per_group": 4.65
+          },
+          "r600": {
+            "count": 662,
+            "fraction": 0.129296875,
+            "mean_per_group": 8.275
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 81045,
+        "r1200_confidence_set_size_95": {
+          "max": 642.0,
+          "mean": 173.525,
+          "p10": 3.0,
+          "p25": 33.75,
+          "p50": 144.5,
+          "p75": 294.75,
+          "p90": 361.6,
+          "p95": 414.89999999999986
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.825,
+        "r4800_candidates": 699,
+        "r4800_confidence_set_size_95": {
+          "max": 9.0,
+          "mean": 3.3,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 5.0,
+          "p90": 7.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.275,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.3333333333333333,
+              "exact_winner_recall": 0.1625,
+              "mean_retained_r4800_regret": 0.8941612243652344
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.75,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.6,
+              "mean_retained_r4800_regret": 0.3391119003295898
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8875,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8888888888888888,
+              "exact_winner_recall": 0.75,
+              "mean_retained_r4800_regret": 0.10275297164916992
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5125,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.5925925925925926,
+              "exact_winner_recall": 0.4,
+              "mean_retained_r4800_regret": 0.5500147819519043
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.825,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.5925925925925926,
+              "exact_winner_recall": 0.5625,
+              "mean_retained_r4800_regret": 0.2875115394592285
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7777777777777778,
+              "exact_winner_recall": 0.8625,
+              "mean_retained_r4800_regret": 0.09248085021972656
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.95,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8518518518518519,
+              "exact_winner_recall": 0.925,
+              "mean_retained_r4800_regret": 0.04406862258911133
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.875,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.8375,
+              "mean_retained_r4800_regret": 0.18321399688720702
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2625,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.2962962962962963,
+              "exact_winner_recall": 0.1625,
+              "mean_retained_r4800_regret": 0.8985537528991699
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.75,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7037037037037037,
+              "exact_winner_recall": 0.6,
+              "mean_retained_r4800_regret": 0.32935104370117185
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8148148148148148,
+              "exact_winner_recall": 0.7625,
+              "mean_retained_r4800_regret": 0.1523723602294922
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.475,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.37037037037037035,
+              "exact_winner_recall": 0.325,
+              "mean_retained_r4800_regret": 0.6366053581237793
+            }
+          }
+        }
+      },
+      "61011": {
+        "candidates": 261319,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 1.0,
+        "groups": 80,
+        "mean_candidates": 3266.4875,
+        "mean_r1200_candidates": 893.9375,
+        "mean_r4800_candidates": 8.675,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5120,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 430,
+            "fraction": 0.083984375,
+            "mean_per_group": 5.375
+          },
+          "r600": {
+            "count": 733,
+            "fraction": 0.1431640625,
+            "mean_per_group": 9.1625
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5120,
+        "r1200_candidates": 71515,
+        "r1200_confidence_set_size_95": {
+          "max": 386.0,
+          "mean": 99.1125,
+          "p10": 3.0,
+          "p25": 8.0,
+          "p50": 74.5,
+          "p75": 166.25,
+          "p90": 245.20000000000002,
+          "p95": 279.9499999999998
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9375,
+        "r4800_candidates": 694,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.1875,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 4.0,
+          "p90": 7.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.25,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.36363636363636365,
+              "exact_winner_recall": 0.1875,
+              "mean_retained_r4800_regret": 0.8275300979614257
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7875,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.7727272727272727,
+              "exact_winner_recall": 0.5625,
+              "mean_retained_r4800_regret": 0.14184942245483398
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9125,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.9090909090909091,
+              "exact_winner_recall": 0.7625,
+              "mean_retained_r4800_regret": 0.060808658599853516
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.525,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.5454545454545454,
+              "exact_winner_recall": 0.35,
+              "mean_retained_r4800_regret": 0.398565673828125
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9375,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.9545454545454546,
+              "exact_winner_recall": 0.7125,
+              "mean_retained_r4800_regret": 0.0825730323791504
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9875,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.9545454545454546,
+              "exact_winner_recall": 0.975,
+              "mean_retained_r4800_regret": 0.004484653472900391
+            },
+            "top64": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.9875,
+              "mean_retained_r4800_regret": 0.000194549560546875
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.975,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.9545454545454546,
+              "exact_winner_recall": 0.975,
+              "mean_retained_r4800_regret": 0.010592842102050781
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.275,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.4090909090909091,
+              "exact_winner_recall": 0.1875,
+              "mean_retained_r4800_regret": 0.7373868942260742
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.775,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.6818181818181818,
+              "exact_winner_recall": 0.55,
+              "mean_retained_r4800_regret": 0.17550897598266602
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8625,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.8181818181818182,
+              "exact_winner_recall": 0.725,
+              "mean_retained_r4800_regret": 0.0782867431640625
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5625,
+              "distinguishable_groups": 22,
+              "distinguishable_winner_recall": 0.5909090909090909,
+              "exact_winner_recall": 0.3625,
+              "mean_retained_r4800_regret": 0.3335373878479004
+            }
+          }
+        }
+      }
+    },
+    "integrity": {
+      "all_candidates_seen_once": true,
+      "all_groups_seen_once": true,
+      "all_model_scores_finite": true,
+      "all_teacher_values_finite": true,
+      "candidates_seen": 860203,
+      "checkpoint_identity_passed": true,
+      "dataset_identity_passed": true,
+      "expected_candidates": 860203,
+      "expected_groups": 240,
+      "groups_seen": 240,
+      "model_identity_passed": true,
+      "nonfinite_model_scores": 0,
+      "nonfinite_teacher_values": 0,
+      "source_identity_passed": true,
+      "split_allowed": true,
+      "test_split_opened": false
+    },
+    "interpretation_gates": {
+      "confidence_set_intersection_fraction_at_least_0_95": true,
+      "every_group_has_top64_cohort_capacity": true,
+      "every_phase_oracle_top64_confidence_coverage_at_least_0_98": false,
+      "integrity_passed": true,
+      "oracle_top64_confidence_set_coverage_at_least_0_99": false,
+      "oracle_top64_distinguishable_winner_recall_at_least_0_98": false,
+      "oracle_top64_exact_winner_recall_at_least_0_95": true,
+      "oracle_top64_retained_regret_below_0_03": true,
+      "target_sufficient_for_set_valued_proposer": false
+    },
+    "method": {
+      "caveat": "The R1200 cohort oracle is an information upper bound, not a deployable player or score claim. Confidence sets use the same normal independence approximation as ADR 0086.",
+      "cohort_oracle": "R1200-labeled actions by descending R1200 mean and action hash, then unlabeled actions by descending screen value and action hash",
+      "implementation_blake3": "dbb44d796444552c4eec3a25423ef13c11d5e3df71e90a8f06834470aede4249",
+      "normal_95": 1.959963984540054
+    },
+    "model": {
+      "checkpoint": "step-000003592-epoch-0008-batch-000000",
+      "model_blake3": "6d2a7bb57fd905e50636a20da012f40017cc3a59c1ebde06eff20f8f974940e8",
+      "prior_feature_schema": "observable-screen-priors-v1",
+      "source_v2_blake3": "4247caaf01dbb60fd158fea1e3f0caa08431ada0683347204aff359639af3bad"
+    },
+    "overall": {
+      "candidates": 860203,
+      "cohort_top64_capacity_fraction": 1.0,
+      "confidence_set_intersection_fraction": 0.9708333333333333,
+      "groups": 240,
+      "mean_candidates": 3584.179166666667,
+      "mean_r1200_candidates": 959.8583333333333,
+      "mean_r4800_candidates": 8.6875,
+      "model_top64_label_composition": {
+        "r1200": {
+          "count": 15360,
+          "fraction": 1.0,
+          "mean_per_group": 64.0
+        },
+        "r4800": {
+          "count": 1211,
+          "fraction": 0.07884114583333333,
+          "mean_per_group": 5.045833333333333
+        },
+        "r600": {
+          "count": 2135,
+          "fraction": 0.13899739583333334,
+          "mean_per_group": 8.895833333333334
+        },
+        "screen_only": {
+          "count": 0,
+          "fraction": 0.0,
+          "mean_per_group": 0.0
+        }
+      },
+      "model_top64_slots": 15360,
+      "r1200_candidates": 230366,
+      "r1200_confidence_set_size_95": {
+        "max": 689.0,
+        "mean": 132.00833333333333,
+        "p10": 3.0,
+        "p25": 17.0,
+        "p50": 103.0,
+        "p75": 200.5,
+        "p90": 320.5,
+        "p95": 360.04999999999995
+      },
+      "r1200_winner_in_r4800_confidence_set_95_fraction": 0.8916666666666667,
+      "r4800_candidates": 2085,
+      "r4800_confidence_set_size_95": {
+        "max": 10.0,
+        "mean": 3.2291666666666665,
+        "p10": 1.0,
+        "p25": 1.0,
+        "p50": 2.0,
+        "p75": 4.0,
+        "p90": 7.0,
+        "p95": 8.0
+      },
+      "ranking": {
+        "model": {
+          "top1": {
+            "confidence_set_coverage_95": 0.25,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.2631578947368421,
+            "exact_winner_recall": 0.15416666666666667,
+            "mean_retained_r4800_regret": 0.8486520131429036
+          },
+          "top32": {
+            "confidence_set_coverage_95": 0.75,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.7236842105263158,
+            "exact_winner_recall": 0.5916666666666667,
+            "mean_retained_r4800_regret": 0.21649570465087892
+          },
+          "top64": {
+            "confidence_set_coverage_95": 0.8625,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.8552631578947368,
+            "exact_winner_recall": 0.7333333333333333,
+            "mean_retained_r4800_regret": 0.09018354415893555
+          },
+          "top8": {
+            "confidence_set_coverage_95": 0.525,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.5394736842105263,
+            "exact_winner_recall": 0.4041666666666667,
+            "mean_retained_r4800_regret": 0.46079428990681964
+          }
+        },
+        "r1200_cohort_oracle": {
+          "top1": {
+            "confidence_set_coverage_95": 0.8916666666666667,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.7894736842105263,
+            "exact_winner_recall": 0.6583333333333333,
+            "mean_retained_r4800_regret": 0.15344788233439127
+          },
+          "top32": {
+            "confidence_set_coverage_95": 0.95,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.868421052631579,
+            "exact_winner_recall": 0.9291666666666667,
+            "mean_retained_r4800_regret": 0.03834346135457357
+          },
+          "top64": {
+            "confidence_set_coverage_95": 0.9708333333333333,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.9078947368421053,
+            "exact_winner_recall": 0.9541666666666667,
+            "mean_retained_r4800_regret": 0.020741780598958332
+          },
+          "top8": {
+            "confidence_set_coverage_95": 0.9375,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.8421052631578947,
+            "exact_winner_recall": 0.9208333333333333,
+            "mean_retained_r4800_regret": 0.07062390645345053
+          }
+        },
+        "screen": {
+          "top1": {
+            "confidence_set_coverage_95": 0.24583333333333332,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.2894736842105263,
+            "exact_winner_recall": 0.15416666666666667,
+            "mean_retained_r4800_regret": 0.8208831469217936
+          },
+          "top32": {
+            "confidence_set_coverage_95": 0.7416666666666667,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.6842105263157895,
+            "exact_winner_recall": 0.5833333333333334,
+            "mean_retained_r4800_regret": 0.2404343605041504
+          },
+          "top64": {
+            "confidence_set_coverage_95": 0.85,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.7763157894736842,
+            "exact_winner_recall": 0.7166666666666667,
+            "mean_retained_r4800_regret": 0.11302445729573568
+          },
+          "top8": {
+            "confidence_set_coverage_95": 0.5041666666666667,
+            "distinguishable_groups": 76,
+            "distinguishable_winner_recall": 0.4605263157894737,
+            "exact_winner_recall": 0.37083333333333335,
+            "mean_retained_r4800_regret": 0.4703946113586426
+          }
+        }
+      }
+    },
+    "phases": {
+      "early": {
+        "candidates": 184430,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9642857142857143,
+        "groups": 84,
+        "mean_candidates": 2195.595238095238,
+        "mean_r1200_candidates": 822.0952380952381,
+        "mean_r4800_candidates": 8.964285714285714,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5376,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 389,
+            "fraction": 0.07235863095238096,
+            "mean_per_group": 4.630952380952381
+          },
+          "r600": {
+            "count": 931,
+            "fraction": 0.17317708333333334,
+            "mean_per_group": 11.083333333333334
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5376,
+        "r1200_candidates": 69056,
+        "r1200_confidence_set_size_95": {
+          "max": 461.0,
+          "mean": 207.88095238095238,
+          "p10": 89.9,
+          "p25": 129.0,
+          "p50": 190.5,
+          "p75": 290.25,
+          "p90": 348.70000000000005,
+          "p95": 366.85
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.8452380952380952,
+        "r4800_candidates": 753,
+        "r4800_confidence_set_size_95": {
+          "max": 9.0,
+          "mean": 3.7142857142857144,
+          "p10": 1.0,
+          "p25": 1.75,
+          "p50": 3.0,
+          "p75": 5.0,
+          "p90": 7.700000000000003,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.13095238095238096,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.19230769230769232,
+              "exact_winner_recall": 0.07142857142857142,
+              "mean_retained_r4800_regret": 1.2898015521821522
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7380952380952381,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.7307692307692307,
+              "exact_winner_recall": 0.47619047619047616,
+              "mean_retained_r4800_regret": 0.27821277436755953
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8809523809523809,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8846153846153846,
+              "exact_winner_recall": 0.6904761904761905,
+              "mean_retained_r4800_regret": 0.0933786119733538
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.42857142857142855,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.4230769230769231,
+              "exact_winner_recall": 0.2619047619047619,
+              "mean_retained_r4800_regret": 0.704471678960891
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.8452380952380952,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.6538461538461539,
+              "exact_winner_recall": 0.5476190476190477,
+              "mean_retained_r4800_regret": 0.23957933698381698
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9523809523809523,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8461538461538461,
+              "exact_winner_recall": 0.9047619047619048,
+              "mean_retained_r4800_regret": 0.04160336085728237
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9642857142857143,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8846153846153846,
+              "exact_winner_recall": 0.9285714285714286,
+              "mean_retained_r4800_regret": 0.03573708307175409
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9404761904761905,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.8076923076923077,
+              "exact_winner_recall": 0.8928571428571429,
+              "mean_retained_r4800_regret": 0.06891532171340216
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.11904761904761904,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.19230769230769232,
+              "exact_winner_recall": 0.05952380952380952,
+              "mean_retained_r4800_regret": 1.2616503579275948
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7380952380952381,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.7307692307692307,
+              "exact_winner_recall": 0.5,
+              "mean_retained_r4800_regret": 0.3402247655959356
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8452380952380952,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.7307692307692307,
+              "exact_winner_recall": 0.6309523809523809,
+              "mean_retained_r4800_regret": 0.1627164568219866
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.44047619047619047,
+              "distinguishable_groups": 26,
+              "distinguishable_winner_recall": 0.3076923076923077,
+              "exact_winner_recall": 0.20238095238095238,
+              "mean_retained_r4800_regret": 0.6974190303257534
+            }
+          }
+        }
+      },
+      "late": {
+        "candidates": 338847,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 1.0,
+        "groups": 72,
+        "mean_candidates": 4706.208333333333,
+        "mean_r1200_candidates": 1041.1805555555557,
+        "mean_r4800_candidates": 8.36111111111111,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 4608,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 436,
+            "fraction": 0.09461805555555555,
+            "mean_per_group": 6.055555555555555
+          },
+          "r600": {
+            "count": 558,
+            "fraction": 0.12109375,
+            "mean_per_group": 7.75
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 4608,
+        "r1200_candidates": 74965,
+        "r1200_confidence_set_size_95": {
+          "max": 642.0,
+          "mean": 52.166666666666664,
+          "p10": 1.0,
+          "p25": 2.0,
+          "p50": 8.0,
+          "p75": 46.25,
+          "p90": 169.19999999999993,
+          "p95": 268.20000000000005
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9166666666666666,
+        "r4800_candidates": 602,
+        "r4800_confidence_set_size_95": {
+          "max": 9.0,
+          "mean": 2.9583333333333335,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 3.0,
+          "p90": 8.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.4305555555555556,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.43478260869565216,
+              "exact_winner_recall": 0.2777777777777778,
+              "mean_retained_r4800_regret": 0.32202911376953125
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8333333333333334,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.8695652173913043,
+              "exact_winner_recall": 0.75,
+              "mean_retained_r4800_regret": 0.06744278801812066
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9444444444444444,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.9130434782608695,
+              "exact_winner_recall": 0.875,
+              "mean_retained_r4800_regret": 0.02467611100938585
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.6666666666666666,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.782608695652174,
+              "exact_winner_recall": 0.5972222222222222,
+              "mean_retained_r4800_regret": 0.14681900872124565
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9166666666666666,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.9130434782608695,
+              "exact_winner_recall": 0.7361111111111112,
+              "mean_retained_r4800_regret": 0.07078721788194445
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9583333333333334,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.9130434782608695,
+              "exact_winner_recall": 0.9444444444444444,
+              "mean_retained_r4800_regret": 0.04256619347466363
+            },
+            "top64": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.9861111111111112,
+              "mean_retained_r4800_regret": 0.00021616617838541666
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9444444444444444,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.9130434782608695,
+              "exact_winner_recall": 0.9444444444444444,
+              "mean_retained_r4800_regret": 0.058128674825032554
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.4444444444444444,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.5217391304347826,
+              "exact_winner_recall": 0.3055555555555556,
+              "mean_retained_r4800_regret": 0.3266364203559028
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8333333333333334,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.8260869565217391,
+              "exact_winner_recall": 0.75,
+              "mean_retained_r4800_regret": 0.06835524241129558
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9305555555555556,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.8695652173913043,
+              "exact_winner_recall": 0.8611111111111112,
+              "mean_retained_r4800_regret": 0.02606752183702257
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.6388888888888888,
+              "distinguishable_groups": 23,
+              "distinguishable_winner_recall": 0.7391304347826086,
+              "exact_winner_recall": 0.5833333333333334,
+              "mean_retained_r4800_regret": 0.1786118613349067
+            }
+          }
+        }
+      },
+      "middle": {
+        "candidates": 336926,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9523809523809523,
+        "groups": 84,
+        "mean_candidates": 4011.0238095238096,
+        "mean_r1200_candidates": 1027.9166666666667,
+        "mean_r4800_candidates": 8.69047619047619,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 5376,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 386,
+            "fraction": 0.07180059523809523,
+            "mean_per_group": 4.595238095238095
+          },
+          "r600": {
+            "count": 646,
+            "fraction": 0.12016369047619048,
+            "mean_per_group": 7.690476190476191
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 5376,
+        "r1200_candidates": 86345,
+        "r1200_confidence_set_size_95": {
+          "max": 689.0,
+          "mean": 124.57142857142857,
+          "p10": 8.900000000000002,
+          "p25": 26.75,
+          "p50": 95.0,
+          "p75": 169.25,
+          "p90": 263.7,
+          "p95": 356.39999999999986
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.9166666666666666,
+        "r4800_candidates": 730,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 2.9761904761904763,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 4.0,
+          "p90": 6.0,
+          "p95": 6.849999999999994
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.21428571428571427,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.18518518518518517,
+              "exact_winner_recall": 0.13095238095238096,
+              "mean_retained_r4800_regret": 0.8588935307094029
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.6904761904761905,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.5925925925925926,
+              "exact_winner_recall": 0.5714285714285714,
+              "mean_retained_r4800_regret": 0.2825382777622768
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.7738095238095238,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7777777777777778,
+              "exact_winner_recall": 0.6547619047619048,
+              "mean_retained_r4800_regret": 0.14313770475841703
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.4444444444444444,
+              "exact_winner_recall": 0.38095238095238093,
+              "mean_retained_r4800_regret": 0.4862385704403832
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.9166666666666666,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8148148148148148,
+              "exact_winner_recall": 0.7023809523809523,
+              "mean_retained_r4800_regret": 0.13816842578706287
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9404761904761905,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8518518518518519,
+              "exact_winner_recall": 0.9404761904761905,
+              "mean_retained_r4800_regret": 0.03146407717750186
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9523809523809523,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8518518518518519,
+              "exact_winner_recall": 0.9523809523809523,
+              "mean_retained_r4800_regret": 0.023339861915225073
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9285714285714286,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.8148148148148148,
+              "exact_winner_recall": 0.9285714285714286,
+              "mean_retained_r4800_regret": 0.08304268973214286
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.20238095238095238,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.18518518518518517,
+              "exact_winner_recall": 0.11904761904761904,
+              "mean_retained_r4800_regret": 0.8037559872581845
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.6666666666666666,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.5185185185185185,
+              "exact_winner_recall": 0.5238095238095238,
+              "mean_retained_r4800_regret": 0.28814034234909786
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.7857142857142857,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.7407407407407407,
+              "exact_winner_recall": 0.6785714285714286,
+              "mean_retained_r4800_regret": 0.13786697387695312
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.4523809523809524,
+              "distinguishable_groups": 27,
+              "distinguishable_winner_recall": 0.37037037037037035,
+              "exact_winner_recall": 0.35714285714285715,
+              "mean_retained_r4800_regret": 0.4934696924118769
+            }
+          }
+        }
+      }
+    },
+    "schema_version": 1,
+    "subsets": {
+      "independent_draft_winner": {
+        "candidates": 78371,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9523809523809523,
+        "groups": 21,
+        "mean_candidates": 3731.9523809523807,
+        "mean_r1200_candidates": 1029.2380952380952,
+        "mean_r4800_candidates": 8.523809523809524,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 1344,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 116,
+            "fraction": 0.08630952380952381,
+            "mean_per_group": 5.523809523809524
+          },
+          "r600": {
+            "count": 193,
+            "fraction": 0.14360119047619047,
+            "mean_per_group": 9.19047619047619
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 1344,
+        "r1200_candidates": 21614,
+        "r1200_confidence_set_size_95": {
+          "max": 386.0,
+          "mean": 105.52380952380952,
+          "p10": 2.0,
+          "p25": 4.0,
+          "p50": 17.0,
+          "p75": 136.0,
+          "p90": 356.0,
+          "p95": 360.0
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.8571428571428571,
+        "r4800_candidates": 179,
+        "r4800_confidence_set_size_95": {
+          "max": 8.0,
+          "mean": 3.238095238095238,
+          "p10": 1.0,
+          "p25": 2.0,
+          "p50": 2.0,
+          "p75": 4.0,
+          "p90": 8.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2857142857142857,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 0.25,
+              "exact_winner_recall": 0.09523809523809523,
+              "mean_retained_r4800_regret": 0.7820456368582589
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.6666666666666666,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 0.5,
+              "exact_winner_recall": 0.47619047619047616,
+              "mean_retained_r4800_regret": 0.37609790620349703
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8571428571428571,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.7142857142857143,
+              "mean_retained_r4800_regret": 0.07002984909784227
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.47619047619047616,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 0.5,
+              "exact_winner_recall": 0.38095238095238093,
+              "mean_retained_r4800_regret": 0.5568611508324033
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.8571428571428571,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 0.5,
+              "exact_winner_recall": 0.6190476190476191,
+              "mean_retained_r4800_regret": 0.24993387858072916
+            },
+            "top32": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 1.0,
+              "mean_retained_r4800_regret": 0.0
+            },
+            "top64": {
+              "confidence_set_coverage_95": 1.0,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 1.0,
+              "mean_retained_r4800_regret": 0.0
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9523809523809523,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 0.75,
+              "exact_winner_recall": 0.9523809523809523,
+              "mean_retained_r4800_regret": 0.12395259312220983
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.38095238095238093,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 0.25,
+              "exact_winner_recall": 0.19047619047619047,
+              "mean_retained_r4800_regret": 0.7274769374302456
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.8095238095238095,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.7142857142857143,
+              "mean_retained_r4800_regret": 0.16376023065476192
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8571428571428571,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 1.0,
+              "exact_winner_recall": 0.8095238095238095,
+              "mean_retained_r4800_regret": 0.08283415294828869
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5714285714285714,
+              "distinguishable_groups": 4,
+              "distinguishable_winner_recall": 0.5,
+              "exact_winner_recall": 0.42857142857142855,
+              "mean_retained_r4800_regret": 0.45953369140625
+            }
+          }
+        }
+      },
+      "nature_token_available": {
+        "candidates": 828897,
+        "cohort_top64_capacity_fraction": 1.0,
+        "confidence_set_intersection_fraction": 0.9685863874345549,
+        "groups": 191,
+        "mean_candidates": 4339.774869109948,
+        "mean_r1200_candidates": 1044.193717277487,
+        "mean_r4800_candidates": 8.638743455497382,
+        "model_top64_label_composition": {
+          "r1200": {
+            "count": 12224,
+            "fraction": 1.0,
+            "mean_per_group": 64.0
+          },
+          "r4800": {
+            "count": 961,
+            "fraction": 0.07861583769633508,
+            "mean_per_group": 5.031413612565445
+          },
+          "r600": {
+            "count": 1559,
+            "fraction": 0.1275359947643979,
+            "mean_per_group": 8.162303664921465
+          },
+          "screen_only": {
+            "count": 0,
+            "fraction": 0.0,
+            "mean_per_group": 0.0
+          }
+        },
+        "model_top64_slots": 12224,
+        "r1200_candidates": 199441,
+        "r1200_confidence_set_size_95": {
+          "max": 689.0,
+          "mean": 131.61780104712042,
+          "p10": 3.0,
+          "p25": 13.0,
+          "p50": 90.0,
+          "p75": 207.5,
+          "p90": 336.0,
+          "p95": 366.5
+        },
+        "r1200_winner_in_r4800_confidence_set_95_fraction": 0.8952879581151832,
+        "r4800_candidates": 1650,
+        "r4800_confidence_set_size_95": {
+          "max": 10.0,
+          "mean": 3.1780104712041886,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 2.0,
+          "p75": 4.0,
+          "p90": 7.0,
+          "p95": 8.0
+        },
+        "ranking": {
+          "model": {
+            "top1": {
+              "confidence_set_coverage_95": 0.2670157068062827,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.2413793103448276,
+              "exact_winner_recall": 0.15706806282722513,
+              "mean_retained_r4800_regret": 0.7447349588284318
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.743455497382199,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.6896551724137931,
+              "exact_winner_recall": 0.6073298429319371,
+              "mean_retained_r4800_regret": 0.21868517011872138
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.8586387434554974,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.8448275862068966,
+              "exact_winner_recall": 0.743455497382199,
+              "mean_retained_r4800_regret": 0.0881616482559923
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5549738219895288,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.5517241379310345,
+              "exact_winner_recall": 0.43455497382198954,
+              "mean_retained_r4800_regret": 0.4149010143979058
+            }
+          },
+          "r1200_cohort_oracle": {
+            "top1": {
+              "confidence_set_coverage_95": 0.8952879581151832,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.7758620689655172,
+              "exact_winner_recall": 0.6701570680628273,
+              "mean_retained_r4800_regret": 0.145299701790535
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.9424083769633508,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.8448275862068966,
+              "exact_winner_recall": 0.9267015706806283,
+              "mean_retained_r4800_regret": 0.045329268690179156
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.9633507853403142,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.8793103448275862,
+              "exact_winner_recall": 0.9476439790575916,
+              "mean_retained_r4800_regret": 0.02579190718565936
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.9319371727748691,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.8275862068965517,
+              "exact_winner_recall": 0.9214659685863874,
+              "mean_retained_r4800_regret": 0.08041006357882036
+            }
+          },
+          "screen": {
+            "top1": {
+              "confidence_set_coverage_95": 0.27225130890052357,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.27586206896551724,
+              "exact_winner_recall": 0.16230366492146597,
+              "mean_retained_r4800_regret": 0.7190792622990633
+            },
+            "top32": {
+              "confidence_set_coverage_95": 0.7329842931937173,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.6724137931034483,
+              "exact_winner_recall": 0.6020942408376964,
+              "mean_retained_r4800_regret": 0.21962078953288613
+            },
+            "top64": {
+              "confidence_set_coverage_95": 0.837696335078534,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.7931034482758621,
+              "exact_winner_recall": 0.7329842931937173,
+              "mean_retained_r4800_regret": 0.11942822521269633
+            },
+            "top8": {
+              "confidence_set_coverage_95": 0.5340314136125655,
+              "distinguishable_groups": 58,
+              "distinguishable_winner_recall": 0.46551724137931033,
+              "exact_winner_recall": 0.4031413612565445,
+              "mean_retained_r4800_regret": 0.42007386372351524
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -44,7 +44,7 @@ impl ImitationDatasetConfig {
         if self.games == 0 {
             return Err(DataError::InvalidConfig("imitation games must be positive"));
         }
-        self.teacher.validate()?;
+        self.teacher.validate_weights()?;
         self.candidates.validate()
     }
 }
@@ -77,7 +77,7 @@ impl ImitationTeacherConfig {
         })
     }
 
-    fn validate(&self) -> Result<(), DataError> {
+    fn validate_metadata(&self) -> Result<(), DataError> {
         if self.strategy_id.trim().is_empty()
             || self.rollouts == 0
             || self.prefilter_candidates == 0
@@ -89,6 +89,11 @@ impl ImitationTeacherConfig {
                 "imitation teacher metadata is incomplete",
             ));
         }
+        Ok(())
+    }
+
+    fn validate_weights(&self) -> Result<(), DataError> {
+        self.validate_metadata()?;
         let weights = Path::new(&self.weights_path);
         if fs::metadata(weights)?.len() != self.weights_bytes
             || checksum_file(weights)? != self.weights_blake3
@@ -555,7 +560,7 @@ pub fn validate_imitation_dataset(
     root: &Path,
     manifest: &ImitationDatasetManifest,
 ) -> Result<(), DataError> {
-    manifest.teacher.validate()?;
+    manifest.teacher.validate_metadata()?;
     manifest.candidates.validate()?;
     if manifest.schema_version != IMITATION_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != IMITATION_FEATURE_SCHEMA
@@ -1011,5 +1016,85 @@ mod tests {
             config.validate(),
             Err(DataError::InvalidConfig(_))
         ));
+    }
+
+    #[test]
+    fn immutable_dataset_validation_does_not_require_collector_local_weights() {
+        let root = std::env::temp_dir().join(format!(
+            "cascadia-portable-imitation-dataset-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let records = [sample_record(0, true), sample_record(1, false)];
+        let shard_path = root.join("shard-00000.cim");
+        write_shard(&shard_path, DatasetSplit::Train, 90_000, 1, 1, &records).unwrap();
+        let shard = RankingShardManifest {
+            file: "shard-00000.cim".to_owned(),
+            first_game_index: 90_000,
+            game_count: 1,
+            group_count: 1,
+            record_count: records.len(),
+            byte_count: fs::metadata(&shard_path).unwrap().len(),
+            blake3: checksum_file(&shard_path).unwrap(),
+        };
+        let teacher = ImitationTeacherConfig {
+            strategy_id: "portable-test".to_owned(),
+            rollouts: 2,
+            prefilter_candidates: 2,
+            weights_path: root
+                .join("collector-only-weights.bin")
+                .display()
+                .to_string(),
+            weights_bytes: 16,
+            weights_blake3: "a".repeat(64),
+        };
+        let candidates = ImitationCandidateConfig {
+            group_limit: 64,
+            immediate_limit: 16,
+            pattern_immediate_limit: 8,
+            pattern_habitat_limit: 6,
+            pattern_bear_limit: 8,
+            pattern_market_draws: 4,
+            deterministic_sampler: "portable-test".to_owned(),
+        };
+        let manifest = ImitationDatasetManifest {
+            schema_version: IMITATION_DATASET_SCHEMA_VERSION,
+            dataset_id: "portable-test".to_owned(),
+            feature_schema: IMITATION_FEATURE_SCHEMA.to_owned(),
+            position_feature_schema: FEATURE_SCHEMA.to_owned(),
+            target_schema: IMITATION_TARGET_SCHEMA.to_owned(),
+            group_header_size: IMITATION_GROUP_HEADER_SIZE,
+            candidate_record_size: IMITATION_CANDIDATE_RECORD_SIZE,
+            action_feature_size: PROPOSAL_ACTION_FEATURE_SIZE,
+            game: GameConfig::research_aaaaa(4).unwrap(),
+            split: DatasetSplit::Train,
+            teacher: teacher.clone(),
+            candidates: candidates.clone(),
+            first_game_index: 90_000,
+            requested_games: 1,
+            completed_games: 1,
+            total_groups: 1,
+            total_records: records.len(),
+            created_unix_seconds: 1,
+            updated_unix_seconds: 1,
+            provenance: collection_provenance().unwrap(),
+            shards: vec![shard],
+        };
+
+        validate_imitation_dataset(&root, &manifest).unwrap();
+        assert!(
+            ImitationDatasetConfig {
+                output: root.clone(),
+                split: DatasetSplit::Train,
+                first_game_index: 90_000,
+                games: 1,
+                teacher,
+                candidates,
+                resume: true,
+            }
+            .validate()
+            .is_err()
+        );
+        fs::remove_dir_all(root).unwrap();
     }
 }

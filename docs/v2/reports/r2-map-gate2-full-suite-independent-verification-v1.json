@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "schema_id": "cascadia.r2-map.gate-2-independent-verification.v1",
+  "campaign_id": "r2-map-expert-iteration-v1",
+  "verifier": "john3_owner",
+  "verified_unix_ms": 1781794690356,
+  "status": "green",
+  "candidate": {
+    "relative": "control/storage-cutover/gate-2-full-suite-validation-v3.json",
+    "sha256": "86e5ebcad64fefe75aaed4eae28ffd11f84cd53e14fd70212a9b7dcdab4d652d",
+    "internal_document_sha256": "51f768a9008a8c6246dae999d0c052f9927839dbb2a4b88b38d96e5e84045ce8",
+    "publication_receipt_relative": "control/receipts/req-4c2e2bbbb7a440278fe8a0888b503448.json",
+    "publication_receipt_sha256": "c5f97dc43fb353425b3ef80829320abf56a87f1f84cd0c96f11ea0f90dd7bcd5",
+    "original_reopen_receipt_relative": "control/receipts/req-79a7bee9f52d4a00b635a5e18fdffb2b.json",
+    "original_reopen_receipt_sha256": "8c9a354b8a501b45367770b40befcb1e68eb74f3f181a2e90fdefdb38d0d1cee",
+    "original_read_receipt_relative": "control/receipts/req-829ee89630164512bce6fa7c1182b06c.json",
+    "original_read_receipt_sha256": "9342a5e3c4a8bc1ca40624a319c45fd5e8a2a9bf6a01628af7805e54e4b6c7bc"
+  },
+  "source": {
+    "relative": "source/gate2-full-suite-fc5abcc97110807e-v3",
+    "identity_sha256": "fc5abcc97110807e5a1989cae7440b204c52cec9fc4fc707a7fbfded51e9ff28",
+    "transaction_manifest_object_sha256": "991962e8c9bdaa738b47a679047f0bc9779bb66502439c25624ff99a998204bd",
+    "transaction_manifest_sha256": "2c59cf094f7c57aa3cc2a4b47d1f1e40a523242a2ff271c84ad5532c271e1687",
+    "transaction_object_count": 3,
+    "transaction_commit_receipt_relative": "control/receipts/req-d63e8e4dad05493eb0e5c043275c27be.json",
+    "transaction_commit_receipt_sha256": "9d36f510797b6333eb33e4bd948f72bfbe60c88d63f56bbfa991cf474fc99cb3",
+    "source_manifest_relative": "source/gate2-full-suite-fc5abcc97110807e-v3/source-manifest.json",
+    "source_manifest_object_sha256": "e96a9591f58b94204d659103cf3b167007e993c036526447cc89642ec285fa4f",
+    "source_manifest_document_sha256": "0e4ab7963a324610fae8cdf6c38ce5689b486b37aab2b57896c8679be13e7117",
+    "source_tar_relative": "source/gate2-full-suite-fc5abcc97110807e-v3/source.tar",
+    "source_tar_sha256": "68000759eee8bfdfd7f6699ee48d314a8b4c1f0cb1efbd78009475a0754cb14d",
+    "source_tar_bytes": 4874240,
+    "manifest_file_count": 231,
+    "verified_tar_file_count": 231,
+    "all_tar_paths_hashes_sizes_and_modes_exact": true,
+    "tar_has_no_links_special_files_or_path_escapes": true,
+    "trainer_sha256": "39a6a0a472437a9aedb6af303e065aa083724755361f5d8b59a9ebc10f94e963"
+  },
+  "run": {
+    "run_id": "gate2-full-suite-fc5abcc97110807e-v3",
+    "run_receipt_relative": "control/receipts/req-462beb707062468d9a64858b50ad3e09.json",
+    "run_receipt_sha256": "5d3339b2346e5b490a22d158dfb67889541423f17a745b3b093a57ef9fb45bdc",
+    "exit_code": 0,
+    "timed_out": false,
+    "temporary_cleaned": true,
+    "pytest": "165 passed in 8.10s",
+    "pytest_modules": [
+      "python/tests/test_r2_map_contracts.py",
+      "python/tests/test_r2_map_campaign_controller.py",
+      "python/tests/test_r2_map_remote_storage.py",
+      "python/tests/test_r2_map_dashboard_status.py",
+      "python/tests/test_r2_map_dataset.py",
+      "python/tests/test_r2_map_checkpoint_train.py",
+      "python/tests/test_r2_map_training_resources.py",
+      "python/tests/test_r2_map_remote_training.py"
+    ],
+    "ruff": "all checks passed",
+    "help_gates": [
+      "tools/r2_map_john1_train.py",
+      "tools/r2_map_compact_dataset.py",
+      "tools/r2_map_expert_iteration.py"
+    ],
+    "full_model_in_memory_checkpoint_resume": true,
+    "verification_bound_remote_checkpoint_resume": true,
+    "current_and_best_bundle_retention_is_bounded": true,
+    "stdout_relative": "reports/gate2-full-suite-fc5abcc97110807e-v3/stdout.log",
+    "stdout_sha256": "6ae5f76c0dda133c0237a4825b035ab7466e30362ab247f784d297cbfc6842ad",
+    "stdout_bytes": 11172,
+    "stderr_relative": "reports/gate2-full-suite-fc5abcc97110807e-v3/stderr.log",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_bytes": 0,
+    "workspace_removed": true,
+    "pytest_basetemp_removed": true
+  },
+  "cleanup": {
+    "prepare_receipt_relative": "control/receipts/req-6162cd2062114717a0007471e4d472b2.json",
+    "prepare_receipt_sha256": "4b836f56a2fbb59da289f5a024d8ebab4b44bdf29e1d3b191a29f3911f1c27d6",
+    "commit_receipt_relative": "control/receipts/req-f555e903038f4501b9d3ed4483ecca7c.json",
+    "commit_receipt_sha256": "a667bf34ebe281c68bb1c71604e2292455777ff9c38ad167b5903be0c58122e0",
+    "build_absent": true,
+    "cache_absent": true,
+    "tmp_absent": true,
+    "removed_bytes": 0,
+    "superseded_failed_run_cleanup_receipt_relative": "control/receipts/req-7fc9ec10ff6d4d72bdc14539de423898.json",
+    "superseded_failed_run_cleanup_receipt_sha256": "4a62d16ab10ee1e2572128a6eb1c0067a29ba94d2ddc668c5e861c5f918569eb"
+  },
+  "independent_reads": [
+    {
+      "relative": "control/storage-cutover/gate-2-full-suite-validation-v3.json",
+      "open_receipt_relative": "control/receipts/req-9c85378c575c4a0b8a6fa8b65ad203ef.json",
+      "open_receipt_sha256": "38a49c7492870c8549aaeec3028472334e187630f6956c6b985c12d0752f3c2a",
+      "read_receipt_relative": "control/receipts/req-7995fb0f62ab4c1b8b065708d840b1fd.json",
+      "read_receipt_sha256": "8e9c1977127e6a7b298aeb0ad9233b9a5ec8a523bd05d95607aa407aa1913a9e"
+    },
+    {
+      "relative": "source/gate2-full-suite-fc5abcc97110807e-v3/.r2-map-transaction.json",
+      "open_receipt_relative": "control/receipts/req-56284ef3d0674df8afed146b4fd447a5.json",
+      "open_receipt_sha256": "2893265881e71ed1fa1a8472e546d2ae6509f3c27fecb7d7d2b7b981e3b65fd3",
+      "read_receipt_relative": "control/receipts/req-46ae8bbf47db437db62d95160e371a40.json",
+      "read_receipt_sha256": "a0a6d618ec0572d6cfd18215390afb2433475ea349a96e4cc3ec9243f11e0676"
+    },
+    {
+      "relative": "source/gate2-full-suite-fc5abcc97110807e-v3/source-manifest.json",
+      "open_receipt_relative": "control/receipts/req-0396355462f34aef84076f20a29b4b55.json",
+      "open_receipt_sha256": "af2476808d1956fdde313734d1ff6975488df6999cbfa9f25c893b27eddbe3c9",
+      "read_receipt_relative": "control/receipts/req-be140c1d33b24735bd7fba29d14daa52.json",
+      "read_receipt_sha256": "66a1173c464aa4b60e67bd7346c4d4104f045008aced816022f8487c31503372"
+    },
+    {
+      "relative": "source/gate2-full-suite-fc5abcc97110807e-v3/source.tar",
+      "open_receipt_relative": "control/receipts/req-4d2640ca356549bf957f0a58db4366ee.json",
+      "open_receipt_sha256": "7eaff64c61ddbd409eebcb2579990b39b95ddfa54cafb0220556d06f242cd3f4",
+      "read_receipt_relative": "control/receipts/req-7419977a6311475f86b17ffcb76bf2ba.json",
+      "read_receipt_sha256": "8f5f72533d98f054499f8d10c54e8645c3e37ad26f7c1704555647c6e0c67641"
+    },
+    {
+      "relative": "reports/gate2-full-suite-fc5abcc97110807e-v3/stdout.log",
+      "open_receipt_relative": "control/receipts/req-2147692a030746d88e1784689c9fa51a.json",
+      "open_receipt_sha256": "11a7aad745038e12df7b3da23169436a0ba744350b944c534de4b7f07605fb31",
+      "read_receipt_relative": "control/receipts/req-1a81298bdade4d058ef0c0282183bc33.json",
+      "read_receipt_sha256": "3c33e16a24638f85fe337aafe88a09276cc6712f6b94baaa94e750afe3c815e3"
+    },
+    {
+      "relative": "reports/gate2-full-suite-fc5abcc97110807e-v3/stderr.log",
+      "open_receipt_relative": "control/receipts/req-fb814e6d5be24fb78e2aa4e3eb720f2b.json",
+      "open_receipt_sha256": "4e2ca0ded08e326b6ac0572690a8a5393cecdb9d5ed0894894def6a043b92194",
+      "read_receipt_relative": "control/receipts/req-524ebb128a8d4aec9d75fa33185386cc.json",
+      "read_receipt_sha256": "19212b1cb148c7b322ee06139e74f46661a9b060c6293980fce3a4c4b3e6a22c"
+    }
+  ],
+  "receipt_validation": {
+    "original_receipts_reopened": 16,
+    "all_receipt_document_hashes_valid": true,
+    "all_receipt_roots_are_canonical_john2": true,
+    "all_source_run_read_cleanup_and_publication_results_match_candidate": true
+  },
+  "boundary_assertions": {
+    "all_source_bulk_reports_and_cleanup_on_john2": true,
+    "no_john1_durable_run_files": true,
+    "no_legacy_ssd_reads_or_writes": true,
+    "john4_unused": true,
+    "protected_or_final_seed_values_opened": false,
+    "w7_launched": false
+  },
+  "decision": {
+    "migration_gate_2": "green",
+    "gate_7": "red",
+    "w0_through_w6_scientific_readmission": "incomplete",
+    "w7_authorized": false,
+    "terminal_sentinel_authorized": false,
+    "reason": "The complete current-source John2 controller, storage, dashboard, compact-dataset, checkpoint, resource, and remote-training closure is receipt-bound and independently reproducible. This closes migration Gate 2 only."
+  },
+  "document_sha256": "a7c9f28ef14730d804bfc3437ac3e1f18007107ddc758c9a05a1eb95f476c3bc"
+}

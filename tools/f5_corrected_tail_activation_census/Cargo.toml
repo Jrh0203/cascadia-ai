@@ -1,0 +1,23 @@
+[package]
+name = "f5-corrected-tail-activation-census"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+build = "build.rs"
+
+[workspace]
+
+[dependencies]
+blake3 = "1.8"
+cascadia-ai = { path = "../../legacy/crates/cascadia-ai", features = ["legacy-mid-v4-fixed-v1"] }
+cascadia-core = { path = "../../legacy/crates/cascadia-core" }
+clap = { version = "4", features = ["derive"] }
+rand = "0.8"
+rayon = "1.11"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3"

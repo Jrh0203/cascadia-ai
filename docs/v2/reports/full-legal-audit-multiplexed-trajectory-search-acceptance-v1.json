@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-legal-audit-multiplexed-trajectory-search-acceptance-v1-20260615",
+  "status": "accepted",
+  "phase": 1,
+  "hypothesis": "Eight exact realized-hidden finalist searches can advance in deterministic lockstep and share one MLX evaluator without changing any independent K32/R600 result.",
+  "contract": {
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "raw_seed": 60999,
+    "audited_completed_turns": [
+      12,
+      39,
+      66
+    ],
+    "realized_hidden_completed_turns": [
+      12,
+      39,
+      66
+    ],
+    "champion_rollouts": 600,
+    "substantial_rollouts": 1200,
+    "high_confidence_rollouts": 4800,
+    "screen_limit": 64,
+    "high_confidence_limit": 8,
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "implementation": {
+    "scope": "realized-hidden finalist terminal continuations",
+    "scheduler": "deterministic one-request-per-search lockstep barriers",
+    "searches_per_diagnostic": 8,
+    "shared_rayon_pool": true,
+    "shared_mlx_evaluator": true,
+    "stable_request_order": "search index",
+    "exact_range_split": true,
+    "cross_request_sparse_row_deduplication": false,
+    "treatment_binary_sha256": "9663bbf33ac3c93c24ab616669aa34b1abe1098493cbff7ac40e111bd52a75f1",
+    "treatment_binary_blake3": "9fe30d0b41a9253f9ae43dc11e38acc692c10f16b5561f7fd62fa85c0d8a6691",
+    "production_binary_sha256": "f19f30a16c0c0dc870176dadd568c585a49479639ccc895b6d8966ff8640cc18",
+    "production_binary_blake3": "6639d060edd1c9faa83acf17addc2230c979440bdf49204ab9b8a5cabeb2e19f",
+    "production_binary_bytes": 2784448,
+    "production_v2_source_blake3": "d0174e72b2149479d402206dd4b6ecc667bf936dc11712a808cc489558274f23",
+    "runtime_experiment_switch_retained": false,
+    "serial_production_branch_retained": false
+  },
+  "correctness": {
+    "semantic_report_blake3": "f46ae73349d53d1baa3c69c0f8a3efab5766ed68ef91b6636ad65a3dea340c75",
+    "terminal_base_scores": [
+      96,
+      99,
+      92,
+      102
+    ],
+    "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+    "actions_screened": 11594,
+    "logical_neural_batches": 33260,
+    "logical_neural_rows": 55710626,
+    "physical_neural_rows": 44903952,
+    "rollout_waves": 29151,
+    "rollout_samples": 549517,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "selected_actions": 922,
+    "selected_actions_legal": 922,
+    "differential_library_tests_passed": 23,
+    "nnue_batch_tests_passed": 10,
+    "owned_request_range_test_passed": true,
+    "serial_multiplex_equivalence_test_passed": true,
+    "crossover_reports_validated": 8,
+    "production_report_validation_passed": true,
+    "semantic_digest_matches": 9,
+    "clean_shutdown": true
+  },
+  "mechanism": {
+    "multiplex_search_cohorts": 120,
+    "multiplex_searches": 907,
+    "evaluator_requests": 58157,
+    "evaluator_batches": 7588,
+    "evaluator_coalesced_batches": 7586,
+    "coalesced_batch_percent": 99.97364259356878,
+    "service_batch_reduction_percent": 86.95255945114087,
+    "evaluator_rows": 39065421,
+    "maximum_evaluator_requests_per_batch": 8,
+    "maximum_evaluator_rows_per_batch": 10148,
+    "minimum_search_gate": 700,
+    "minimum_coalescing_percent_gate": 90.0,
+    "minimum_service_reduction_percent_gate": 50.0
+  },
+  "balanced_confirmation": {
+    "john2_order": [
+      "control",
+      "treatment",
+      "treatment",
+      "control"
+    ],
+    "john3_order": [
+      "treatment",
+      "control",
+      "control",
+      "treatment"
+    ],
+    "john2_control_runs_seconds": [
+      153.880510083,
+      153.719332542
+    ],
+    "john2_treatment_runs_seconds": [
+      128.686639375,
+      128.857522625
+    ],
+    "john2_control_mean_seconds": 153.7999213125,
+    "john2_treatment_mean_seconds": 128.772081,
+    "john2_improvement_percent": 16.2729864222,
+    "john3_control_runs_seconds": [
+      151.565209041,
+      151.193346542
+    ],
+    "john3_treatment_runs_seconds": [
+      129.326801125,
+      129.548683916
+    ],
+    "john3_control_mean_seconds": 151.3792777915,
+    "john3_treatment_mean_seconds": 129.4377425205,
+    "john3_improvement_percent": 14.4944113825,
+    "combined_control_mean_seconds": 152.589599552,
+    "combined_treatment_mean_seconds": 129.10491176025,
+    "combined_improvement_percent": 15.390752620559045,
+    "john2_control_hidden_mean_seconds": 115.2465623955,
+    "john2_treatment_hidden_mean_seconds": 90.4399397085,
+    "john2_hidden_improvement_percent": 21.524826573,
+    "john3_control_hidden_mean_seconds": 113.3110965835,
+    "john3_treatment_hidden_mean_seconds": 91.2950860625,
+    "john3_hidden_improvement_percent": 19.4297038726,
+    "combined_control_hidden_mean_seconds": 114.2788294895,
+    "combined_treatment_hidden_mean_seconds": 90.8675128855,
+    "combined_hidden_improvement_percent": 20.486136153635567,
+    "control_mean_maximum_rss_bytes": 262889472,
+    "treatment_mean_maximum_rss_bytes": 958062592,
+    "maximum_treatment_rss_bytes": 970457088,
+    "control_mean_allocator_peak_bytes": 160846364,
+    "treatment_mean_allocator_peak_bytes": 177140270,
+    "maximum_treatment_allocator_peak_bytes": 252297840,
+    "memory_ceiling_bytes": 1610612736,
+    "zero_swap_runs": 8
+  },
+  "full_contract": {
+    "parent_seconds": 162.04530875,
+    "production_seconds": 143.775461333,
+    "seconds_saved": 18.269847416999994,
+    "improvement_percent": 11.274530289047934,
+    "parent_realized_hidden_seconds": 121.252029542,
+    "production_realized_hidden_seconds": 103.119388541,
+    "realized_hidden_reduction_percent": 14.954505148896594,
+    "parent_paid_wipe_seconds": 30.970524791,
+    "production_paid_wipe_seconds": 30.726966792,
+    "paid_wipe_change_percent": -0.7864187017934476,
+    "parent_maximum_rss_bytes": 249987072,
+    "production_maximum_rss_bytes": 907378688,
+    "maximum_rss_change_percent": 262.9702451173155,
+    "parent_allocator_peak_bytes": 149373408,
+    "production_allocator_peak_bytes": 152093200,
+    "allocator_peak_change_percent": 1.8208006608512275,
+    "production_report_bytes": 12704171,
+    "production_report_blake3": "98c554753d42904877db44d473389068022e6160afe45a5658f8c56ab31514bc",
+    "production_report_sha256": "40a1602768a90ab77b25bdcfb1ac97687d3c2db3fda17da2c33f2db3faa76788",
+    "production_zero_swaps": true
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/full-legal-audit-multiplexed-trajectory-search-v1",
+    "archive_ignored_by_git": true,
+    "sha256_manifest": "artifacts/performance/full-legal-audit-multiplexed-trajectory-search-v1/SHA256SUMS"
+  },
+  "verdict": {
+    "accepted": true,
+    "reason": "Deterministic lockstep search multiplexing exceeded every correctness, mechanism, cross-host wall-time, hidden-time, memory, and final production gate.",
+    "phase1_reference_seconds": 242.43305,
+    "accepted_seconds": 143.775461333,
+    "total_speedup": 1.6861921203542378,
+    "phase1_ten_x_threshold_seconds": 24.243305,
+    "remaining_factor": 5.930522316697332,
+    "phase1_ten_x_gate_passed": false
+  }
+}

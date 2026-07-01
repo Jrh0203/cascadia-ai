@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-legal-audit-multiplexed-stage-profile-v1-20260615",
+  "status": "completed",
+  "phase": 1,
+  "contract": {
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "raw_seed": 60999,
+    "audited_completed_turns": [12, 39, 66],
+    "realized_hidden_completed_turns": [12, 39, 66],
+    "champion_rollouts": 600,
+    "substantial_rollouts": 1200,
+    "high_confidence_rollouts": 4800,
+    "model_json_sha256": "9dff120f4238497f0c9440f5d353ef00cf6cb8fdef513cc8c4fe5bbdfc490d3a",
+    "model_safetensors_sha256": "9fd11f704a5feb427aab324c19dc819213dda08f8a4b90331999df3726b11f89"
+  },
+  "correctness": {
+    "semantic_report_blake3": "f46ae73349d53d1baa3c69c0f8a3efab5766ed68ef91b6636ad65a3dea340c75",
+    "semantic_matches": 3,
+    "terminal_base_scores": [96, 99, 92, 102],
+    "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+    "logical_neural_batches": 33260,
+    "logical_neural_rows": 55710626,
+    "physical_neural_rows": 44903952,
+    "rollout_waves": 29151,
+    "rollout_samples": 549517,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "bridge_fallbacks": 0,
+    "validated_reports": 3,
+    "clean_shutdowns": 3
+  },
+  "nodes": {
+    "john1": {
+      "report_wall_seconds": 145.692899459,
+      "process_wall_seconds": 146.25,
+      "realized_hidden_seconds": 104.623439209,
+      "paid_wipe_seconds": 31.08319454,
+      "rust_stage_total_ms": 989924.308335,
+      "rust_stage_ms": {
+        "rollout_state_initialization": 20152.992753,
+        "opponent_advance": 209099.833604,
+        "candidate_keying": 0.798076,
+        "template_preparation": 197681.015351,
+        "candidate_preparation": 0.0,
+        "row_assembly": 456.417885,
+        "row_deduplication": 7396.084459,
+        "row_materialization": 2895.817859,
+        "neural_evaluation": 546964.278837,
+        "prediction_postprocess": 248.056374,
+        "action_selection": 2632.706733,
+        "terminal_collection": 2396.306404
+      },
+      "mlx_eval_ms": 49407.805002,
+      "mlx_non_eval_accounted_ms": 2801.647655,
+      "maximum_rss_bytes": 702660608,
+      "peak_memory_footprint_bytes": 189907520,
+      "process_swaps": 0,
+      "system_swap_delta_bytes": 0
+    },
+    "john2": {
+      "report_wall_seconds": 128.645103125,
+      "process_wall_seconds": 128.97,
+      "realized_hidden_seconds": 90.289087333,
+      "paid_wipe_seconds": 28.601299001,
+      "rust_stage_total_ms": 860459.450712,
+      "rust_stage_ms": {
+        "rollout_state_initialization": 15537.11745,
+        "opponent_advance": 183440.673528,
+        "candidate_keying": 0.848065,
+        "template_preparation": 161292.647316,
+        "candidate_preparation": 0.0,
+        "row_assembly": 345.203089,
+        "row_deduplication": 5979.094605,
+        "row_materialization": 2164.928072,
+        "neural_evaluation": 487899.311836,
+        "prediction_postprocess": 253.705423,
+        "action_selection": 2378.128189,
+        "terminal_collection": 1167.793139
+      },
+      "mlx_eval_ms": 47981.680747,
+      "mlx_non_eval_accounted_ms": 2435.218889,
+      "maximum_rss_bytes": 1038712832,
+      "peak_memory_footprint_bytes": 146162192,
+      "process_swaps": 0,
+      "system_swap_delta_bytes": 0
+    },
+    "john3": {
+      "report_wall_seconds": 128.942579459,
+      "process_wall_seconds": 129.99,
+      "realized_hidden_seconds": 90.793238375,
+      "paid_wipe_seconds": 28.474014917,
+      "rust_stage_total_ms": 865416.412461,
+      "rust_stage_ms": {
+        "rollout_state_initialization": 15507.793793,
+        "opponent_advance": 183437.89807,
+        "candidate_keying": 0.789832,
+        "template_preparation": 164330.083217,
+        "candidate_preparation": 0.0,
+        "row_assembly": 352.980032,
+        "row_deduplication": 6426.849732,
+        "row_materialization": 2245.975177,
+        "neural_evaluation": 489365.690405,
+        "prediction_postprocess": 269.793446,
+        "action_selection": 2380.067295,
+        "terminal_collection": 1098.491462
+      },
+      "mlx_eval_ms": 47643.709085,
+      "mlx_non_eval_accounted_ms": 2501.885463,
+      "maximum_rss_bytes": 1038548992,
+      "peak_memory_footprint_bytes": 147161592,
+      "process_swaps": 0,
+      "system_swap_delta_bytes": 0,
+      "largest_batch_h1_density": 0.6533051078414466,
+      "largest_batch_h2_density": 0.49828476054394955
+    }
+  },
+  "remote_mean": {
+    "report_wall_seconds": 128.793841292,
+    "realized_hidden_seconds": 90.541162854,
+    "mlx_eval_ms": 47812.694916,
+    "mlx_non_eval_accounted_ms": 2468.552176,
+    "mlx_request_total_ms": 50320.90307,
+    "wall_outside_mlx_service_seconds": 78.472938222,
+    "observed_user_cpu_concurrency": 4.53309391411801,
+    "rust_stage_total_ms": 862937.9315865,
+    "rust_stage_ms": {
+      "neural_evaluation": 488632.5011205,
+      "opponent_advance": 183439.285799,
+      "template_preparation": 162811.3652665,
+      "rollout_state_initialization": 15522.4556215,
+      "row_deduplication": 6202.9721685,
+      "action_selection": 2379.097742,
+      "row_materialization": 2205.4516245,
+      "terminal_collection": 1133.1423005,
+      "row_assembly": 349.0915605,
+      "prediction_postprocess": 261.7494345,
+      "candidate_keying": 0.8189485,
+      "candidate_preparation": 0.0
+    }
+  },
+  "mlx_workload": {
+    "requests": 13437,
+    "rows_including_warmup": 44903953,
+    "feature_occurrences": 13082538612,
+    "remote_rows_per_second": 939175.5474783224,
+    "remote_features_per_second": 273624025.1126976,
+    "over_1024_rows": 43438871,
+    "over_1024_row_percent": 96.73729838439836,
+    "over_1024_eval_ms": 44443.614768,
+    "over_1024_eval_percent": 92.95358658632611,
+    "largest_batch_rows": 10148,
+    "largest_batch_features": 2185421,
+    "largest_batch_contiguous_trie_reduction": 0.06067709608354632,
+    "largest_batch_sorted_trie_reduction": 0.3826361145060837,
+    "largest_batch_contiguous_prefix_128_reduction": 0.0
+  },
+  "ranked_targets": [
+    {
+      "rank": 1,
+      "stage": "mlx_exact_neural_evaluation",
+      "critical_wall_seconds": 47.812694916,
+      "wall_share_percent": 37.12343263960858,
+      "perfect_elimination_speedup": 1.590417610217605
+    },
+    {
+      "rank": 2,
+      "stage": "opponent_advance",
+      "cumulative_worker_seconds": 183.439285799,
+      "stage_share_percent": 21.25752954928627,
+      "capacity_equivalent_wall_seconds": 40.466685507593596,
+      "estimated_perfect_elimination_speedup": 1.458145461021827
+    },
+    {
+      "rank": 3,
+      "stage": "template_preparation",
+      "cumulative_worker_seconds": 162.8113652665,
+      "stage_share_percent": 18.867100321708357,
+      "capacity_equivalent_wall_seconds": 35.91616859280924,
+      "estimated_perfect_elimination_speedup": 1.3867040112981015
+    }
+  ],
+  "implementation": {
+    "profile_binary_sha256": "157ba6c0607f8a2cad3e0ecba9ab6d04cd327175efe01732edb043402d57a5ce",
+    "profile_binary_blake3": "10a6b45585f99aeee1efc7121de786a2164a0d8fc99f14ce3029ae82d647c5f6",
+    "profile_binary_bytes": 2802176,
+    "diagnostic_only": true,
+    "next_target": "exact MLX H1 execution geometry with unchanged per-output arithmetic order"
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/full-legal-audit-multiplexed-stage-profile-v1",
+    "run_script": "artifacts/performance/full-legal-audit-multiplexed-stage-profile-v1/run_profile.zsh",
+    "sha256_manifest": "artifacts/performance/full-legal-audit-multiplexed-stage-profile-v1/SHA256SUMS"
+  }
+}

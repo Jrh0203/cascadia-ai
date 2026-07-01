@@ -1,14 +1,17 @@
 import type {
   ApiErrorBody,
   Capabilities,
+  ClusterExperimentsResponse,
   ClusterHistoryRange,
   ClusterHistoryResponse,
+  ClusterQueueResponse,
   ClusterResponse,
   DraftChoice,
   GameConfig,
   GameDocument,
   MarketPrelude,
   PlacementOptions,
+  R2MapStatusResponse,
   SavedGame,
   StrengthCapability,
   SuggestionResponse,
@@ -47,6 +50,10 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 export const api = {
   capabilities: () => request<Capabilities>("/api/v1/capabilities"),
   cluster: () => request<ClusterResponse>("/api/v1/cluster"),
+  clusterQueue: () => request<ClusterQueueResponse>("/api/v1/cluster/queue"),
+  clusterExperiments: () =>
+    request<ClusterExperimentsResponse>("/api/v1/cluster/experiments"),
+  r2MapStatus: () => request<R2MapStatusResponse>("/api/v1/cluster/r2-map"),
   clusterHistory: (range: ClusterHistoryRange) =>
     request<ClusterHistoryResponse>(
       `/api/v1/cluster/history?range=${encodeURIComponent(range)}`,

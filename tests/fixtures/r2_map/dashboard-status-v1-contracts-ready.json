@@ -1,0 +1,79 @@
+{
+  "benchmark": {
+    "active": false,
+    "classification": "pending",
+    "eta_seconds": null,
+    "focal": null,
+    "paired_delta": null,
+    "pairs_completed": 0,
+    "pairs_total": null,
+    "peak_rss_bytes": null,
+    "stage": null,
+    "swap_delta_bytes": null,
+    "throughput_games_per_second": null
+  },
+  "campaign_id": "r2-map-expert-iteration-v1",
+  "hosts": {
+    "john1": {
+      "benchmark_pairs_completed": 0,
+      "benchmark_pairs_total": null,
+      "detail": null,
+      "eta_seconds": null,
+      "generation_games_completed": 0,
+      "generation_games_target": null,
+      "generation_seed_prefix": null,
+      "intent": "control",
+      "rss_bytes": null,
+      "swap_delta_bytes": null,
+      "throughput_games_per_second": null
+    },
+    "john2": {
+      "benchmark_pairs_completed": 0,
+      "benchmark_pairs_total": null,
+      "detail": null,
+      "eta_seconds": null,
+      "generation_games_completed": 0,
+      "generation_games_target": null,
+      "generation_seed_prefix": null,
+      "intent": "idle",
+      "rss_bytes": null,
+      "swap_delta_bytes": null,
+      "throughput_games_per_second": null
+    },
+    "john3": {
+      "benchmark_pairs_completed": 0,
+      "benchmark_pairs_total": null,
+      "detail": null,
+      "eta_seconds": null,
+      "generation_games_completed": 0,
+      "generation_games_target": null,
+      "generation_seed_prefix": null,
+      "intent": "idle",
+      "rss_bytes": null,
+      "swap_delta_bytes": null,
+      "throughput_games_per_second": null
+    }
+  },
+  "legal_next_transitions": [
+    "bootstrap-generating"
+  ],
+  "models": {
+    "candidate": null,
+    "incumbent": null,
+    "opponent_pool": []
+  },
+  "phase": "contracts-ready",
+  "round_index": null,
+  "schema_id": "cascadia.r2-map.dashboard-status.v1",
+  "schema_version": 1,
+  "stale_after_seconds": 30,
+  "training": {
+    "active": false,
+    "current_step": null,
+    "examples_per_second": null,
+    "latest_verified_checkpoint": null,
+    "loss_samples": [],
+    "total_steps": null
+  },
+  "updated_unix_ms": 1781755200000
+}

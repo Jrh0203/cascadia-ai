@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-shared-csr-validation-ownership-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "Assigning canonical shared-memory CSR validation to the sole Rust producer can remove duplicate Python offset, width, and feature-range scans without changing exact inference.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "pipeline_chunk_states": 96,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1",
+    "rust_binary_sha256": "0023c3d8bea978082b835fd933281b97d6800047afc32fcb3a33112fc1586cdd",
+    "treatment_capable_service_sha256": "8cc8754b3e37630e3bbaba25493418369eb9881f383c0faca0c8343f5a876418",
+    "restored_service_sha256": "3e9d62ee5d1f38b0b2ae1fe8ac32d312b3c1dcb25b4fa5b4cc668b7212b457a1"
+  },
+  "correctness": {
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true,
+    "diagnostic_runs_matching": 4,
+    "source_runs_matching": 8,
+    "treatment_capable_python_tests_passed": 18,
+    "post_removal_python_tests_passed": 15
+  },
+  "mechanism": {
+    "john2": {
+      "control_decode_validate_ms": 313.86738,
+      "treatment_decode_validate_ms": 139.295181,
+      "decode_validate_reduction_percent": 55.6197330859932,
+      "control_request_total_ms": 8063.932684,
+      "treatment_request_total_ms": 7984.318999,
+      "request_total_reduction_ms": 79.613685,
+      "control_mlx_eval_ms": 7481.754272,
+      "treatment_mlx_eval_ms": 7565.048602
+    },
+    "john3": {
+      "control_decode_validate_ms": 322.401333,
+      "treatment_decode_validate_ms": 138.482135,
+      "decode_validate_reduction_percent": 57.046661776674476,
+      "control_request_total_ms": 7813.397416,
+      "treatment_request_total_ms": 7768.616769,
+      "request_total_reduction_ms": 44.780647,
+      "control_mlx_eval_ms": 7227.239677,
+      "treatment_mlx_eval_ms": 7339.20858
+    },
+    "diagnostic_combined_control_seconds": 14.180473999999999,
+    "diagnostic_combined_treatment_seconds": 14.1640435835,
+    "diagnostic_combined_improvement_percent": 0.11586648302446491
+  },
+  "source_screen": {
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.249202958,
+        "peak_rss_bytes": 103055360,
+        "peak_footprint_bytes": 64995784
+      },
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.5197375,
+        "peak_rss_bytes": 102957056,
+        "peak_footprint_bytes": 64471472
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.312623583,
+        "peak_rss_bytes": 102137856,
+        "peak_footprint_bytes": 64389576
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.337047708,
+        "peak_rss_bytes": 101990400,
+        "peak_footprint_bytes": 58868144
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.044614875,
+        "peak_rss_bytes": 103022592,
+        "peak_footprint_bytes": 66044336
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 13.911270792,
+        "peak_rss_bytes": 103071744,
+        "peak_footprint_bytes": 66257352
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.105899875,
+        "peak_rss_bytes": 102350848,
+        "peak_footprint_bytes": 64651720
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.298491958,
+        "peak_rss_bytes": 102334464,
+        "peak_footprint_bytes": 58196400
+      }
+    ],
+    "john2_control_mean_seconds": 14.384470229,
+    "john2_treatment_mean_seconds": 14.3248356455,
+    "john2_improvement_percent": 0.41457615435688633,
+    "john3_control_mean_seconds": 13.9779428335,
+    "john3_treatment_mean_seconds": 14.2021959165,
+    "john3_improvement_percent": -1.6043353851937823,
+    "combined_control_mean_seconds": 14.18120653125,
+    "combined_treatment_mean_seconds": 14.263515781,
+    "combined_improvement_percent": -0.5804107680726889,
+    "peak_rss_delta_percent": -0.7991094501649902,
+    "peak_footprint_delta_percent": -5.983560830653769
+  },
+  "removal": {
+    "environment_switch_retained": false,
+    "treatment_branch_retained": false,
+    "temporary_tests_retained": false,
+    "focused_python_tests_passed": 15,
+    "focused_python_tests_failed": 0
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "Duplicate validation time fell materially, but the treatment regressed john3 and the decisive combined timer-off wall time, so the isolated saving did not survive end-to-end scheduling.",
+    "accepted_phase0_seconds_unchanged": 14.16305453125,
+    "accepted_total_speedup_unchanged": 9.957406835427417,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_gap_seconds": 0.06032493125
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-shared-csr-validation-ownership-v1",
+    "archive_ignored_by_git": true
+  }
+}

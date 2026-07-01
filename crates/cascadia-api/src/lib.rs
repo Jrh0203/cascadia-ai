@@ -1,7 +1,10 @@
 //! Stateless local application services over the canonical v2 rules engine.
 
 mod cluster;
+mod cluster_experiments;
 mod cluster_history;
+mod cluster_queue;
+mod cluster_r2_map;
 
 use std::{
     collections::BTreeMap,
@@ -36,11 +39,14 @@ use tower_http::{
 
 const API_SCHEMA_VERSION: u16 = 2;
 const SAVED_GAME_SCHEMA_VERSION: u16 = 1;
+const DEFAULT_R2_MAP_STATUS_PATH: &str =
+    "artifacts/cluster/r2-map-dashboard-serving-projection-v2.json";
 
 pub fn router(static_dir: Option<PathBuf>) -> Router {
-    router_with_cluster_history(
+    router_with_cluster_paths(
         static_dir,
         Path::new("artifacts/cluster/telemetry-v1.jsonl"),
+        Path::new("artifacts/cluster/research-queue-v1.json"),
     )
     .expect("cluster history store should initialize")
 }
@@ -49,17 +55,67 @@ pub fn router_with_cluster_history(
     static_dir: Option<PathBuf>,
     history_path: impl Into<PathBuf>,
 ) -> std::io::Result<Router> {
+    router_with_cluster_paths(
+        static_dir,
+        history_path,
+        Path::new("artifacts/cluster/research-queue-v1.json"),
+    )
+}
+
+pub fn router_with_cluster_paths(
+    static_dir: Option<PathBuf>,
+    history_path: impl Into<PathBuf>,
+    queue_path: impl Into<PathBuf>,
+) -> std::io::Result<Router> {
+    router_with_cluster_paths_and_experiments(
+        static_dir,
+        history_path,
+        queue_path,
+        Path::new("artifacts/cluster/research-experiments-v1.json"),
+    )
+}
+
+pub fn router_with_cluster_paths_and_experiments(
+    static_dir: Option<PathBuf>,
+    history_path: impl Into<PathBuf>,
+    queue_path: impl Into<PathBuf>,
+    experiments_path: impl Into<PathBuf>,
+) -> std::io::Result<Router> {
+    router_with_cluster_paths_and_experiments_and_r2_map(
+        static_dir,
+        history_path,
+        queue_path,
+        experiments_path,
+        Path::new(DEFAULT_R2_MAP_STATUS_PATH),
+    )
+}
+
+pub fn router_with_cluster_paths_and_experiments_and_r2_map(
+    static_dir: Option<PathBuf>,
+    history_path: impl Into<PathBuf>,
+    queue_path: impl Into<PathBuf>,
+    experiments_path: impl Into<PathBuf>,
+    r2_map_status_path: impl Into<PathBuf>,
+) -> std::io::Result<Router> {
     let history = Arc::new(cluster_history::ClusterHistoryStore::open(
         history_path,
         unix_time_millis(),
     )?);
     cluster_history::spawn_sampler(Arc::clone(&history));
-    let state = AppState { history };
+    let state = AppState {
+        history,
+        queue_path: Arc::new(queue_path.into()),
+        experiments_path: Arc::new(experiments_path.into()),
+        r2_map_status_path: Arc::new(r2_map_status_path.into()),
+    };
 
     let app = Router::new()
         .route("/api/v1/health", get(health))
         .route("/api/v1/cluster", get(cluster_health))
         .route("/api/v1/cluster/history", get(cluster_history))
+        .route("/api/v1/cluster/queue", get(cluster_queue))
+        .route("/api/v1/cluster/experiments", get(cluster_experiments))
+        .route("/api/v1/cluster/r2-map", get(cluster_r2_map))
         .route("/api/v1/capabilities", get(capabilities))
         .route("/api/v1/games/new", post(new_game_handler))
         .route("/api/v1/games/view", post(view_game_handler))
@@ -90,6 +146,9 @@ pub fn router_with_cluster_history(
 #[derive(Clone)]
 struct AppState {
     history: Arc<cluster_history::ClusterHistoryStore>,
+    queue_path: Arc<PathBuf>,
+    experiments_path: Arc<PathBuf>,
+    r2_map_status_path: Arc<PathBuf>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -348,6 +407,37 @@ async fn cluster_history(
         .query(query.range, unix_time_millis())
         .map(Json)
         .map_err(|error| ApiError::internal("cluster-history-read-failed", error.to_string()))
+}
+
+async fn cluster_queue(
+    State(state): State<AppState>,
+) -> Result<Json<cluster_queue::QueueResponse>, ApiError> {
+    let path = Arc::clone(&state.queue_path);
+    tokio::task::spawn_blocking(move || cluster_queue::load(path.as_ref()))
+        .await
+        .map(Json)
+        .map_err(|error| ApiError::internal("cluster-queue-read-failed", error.to_string()))
+}
+
+async fn cluster_experiments(
+    State(state): State<AppState>,
+) -> Result<Json<cluster_experiments::ExperimentResponse>, ApiError> {
+    let path = Arc::clone(&state.experiments_path);
+    tokio::task::spawn_blocking(move || cluster_experiments::load(path.as_ref()))
+        .await
+        .map(Json)
+        .map_err(|error| ApiError::internal("cluster-experiments-read-failed", error.to_string()))
+}
+
+async fn cluster_r2_map(
+    State(state): State<AppState>,
+) -> Result<Json<cluster_r2_map::CampaignStatusResponse>, ApiError> {
+    let path = Arc::clone(&state.r2_map_status_path);
+    let observed_unix_ms = u64::try_from(unix_time_millis()).unwrap_or(u64::MAX);
+    tokio::task::spawn_blocking(move || cluster_r2_map::load(path.as_ref(), observed_unix_ms))
+        .await
+        .map(Json)
+        .map_err(|error| ApiError::internal("cluster-r2-map-read-failed", error.to_string()))
 }
 
 fn unix_time_millis() -> u128 {

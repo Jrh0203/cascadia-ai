@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-mid-v4-bag-feature-template-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "Compute the qualified mid-v4 bag and opponent feature segments once per rollout state and append the exact indices to every candidate afterstate.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false
+  },
+  "exactness": {
+    "reference_games": 8,
+    "reference_decisions": 640,
+    "all_candidate_feature_vectors_compared_byte_for_byte": true,
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true
+  },
+  "source_screen": {
+    "control_binary_sha256": "53e62599c9fb9d8c6f232a850d3f7247f668662913297f4ebc36440a21107487",
+    "treatment_binary_sha256": "4ef42e54bf42837628a72559151e79ee1aa32d6e2a0ae8dac800141c3d2f759a",
+    "advancement_floor_percent": 0.25,
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.583622042
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.483650167
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.839321875
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 15.70218125
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 15.42290075
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 15.398448416
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 15.460095834
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.437022208
+      }
+    ],
+    "john2_control_mean_seconds": 15.661486021,
+    "john2_treatment_mean_seconds": 15.642901646,
+    "john3_control_mean_seconds": 15.429961479,
+    "john3_treatment_mean_seconds": 15.429272125,
+    "combined_control_mean_seconds": 15.54572375,
+    "combined_treatment_mean_seconds": 15.536086885500001,
+    "combined_treatment_delta_seconds": -0.00963686449999912,
+    "combined_speedup": 1.0006202890451774,
+    "combined_improvement_percent": 0.062028904517741346,
+    "advanced_to_pgo": false
+  },
+  "pgo": {
+    "performed": false,
+    "reason": "The treatment failed the preregistered 0.25% non-PGO advancement floor."
+  },
+  "implementation": {
+    "production_runtime_switch_retained": false,
+    "test_oracle_retained": false,
+    "treatment_source_retained": false
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The exact optimization improved crossed non-PGO wall time by only 0.062%, below the 0.25% advancement floor.",
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_passed": false
+  }
+}

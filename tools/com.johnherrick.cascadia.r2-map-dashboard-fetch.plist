@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.johnherrick.cascadia.r2-map-dashboard-fetch</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/johnherrick/cascadia/.venv/bin/python</string>
+    <string>tools/r2_map_dashboard_fetch.py</string>
+    <string>--watch</string>
+    <string>--interval-seconds</string>
+    <string>10</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/johnherrick/cascadia</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONDONTWRITEBYTECODE</key>
+    <string>1</string>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>/dev/null</string>
+  <key>StandardErrorPath</key>
+  <string>/dev/null</string>
+</dict>
+</plist>

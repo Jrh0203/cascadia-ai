@@ -10,8 +10,9 @@ use cascadia_ai::{
     mce::{MceMoveEstimate, nnue_prefilter_candidates, score_nnue_rollout_mce_seq_halving},
     nnue::{BagInfo, HIDDEN1, HIDDEN2, NUM_FEATURES, extract_features_with_bag},
     nnue_batch::{
-        BatchedNnueDiagnostics, RolloutSeedCoupling, SparseNnueEvaluator,
-        nnue_prefilter_candidates_batched, score_nnue_rollout_mce_seq_halving_batched,
+        BatchedNnueDiagnostics, BatchedNnueStageTimings, BatchedRolloutLeafTiming,
+        RolloutSeedCoupling, SparseNnueEvaluator, nnue_prefilter_candidates_batched,
+        score_nnue_rollout_mce_seq_halving_batched,
     },
 };
 use cascadia_data::{
@@ -36,13 +37,13 @@ use cascadia_differential::legacy_teacher::{
     FILTERED_LEGACY_TEACHER_STRATEGY_ID, HEURISTIC_LEGACY_TEACHER_STRATEGY_ID,
     LEGACY_TEACHER_STRATEGY_ID, LegacyTeacher, audit_filtered_pattern_trajectory,
     audit_heuristic_pattern_trajectory, audit_pattern_trajectory,
-    audit_retained_pattern_trajectory, canonical_prelude, legacy_search_rng, load_legacy_weights,
-    map_legacy_action, pattern_fallback, simulation_error,
+    audit_retained_pattern_trajectory, canonical_prelude, exact_mlx_pipeline_chunk_states,
+    legacy_search_rng, load_legacy_weights, map_legacy_action, pattern_fallback, simulation_error,
     translate_public_state_allowing_legacy_elk_undercount, validate_legacy_environment,
 };
 use cascadia_eval::{ComparisonReport, summarize_paired_match_results};
 use cascadia_game::{GameConfig, GameSeed, GameState, ScoreBreakdown, TurnAction};
-use cascadia_model::{ModelError, ModelProcess};
+use cascadia_model::{DEFAULT_SPARSE_NNUE_SHARED_MEMORY_BYTES, ModelError, ModelProcess};
 use cascadia_provenance::{SourceProvenance, checksum_file, source_provenance};
 use cascadia_search::{
     LateConservativeBasePolicyImprovementConfig, LateConservativeBasePolicyImprovementStrategy,
@@ -171,6 +172,11 @@ enum Command {
         server_program: String,
         #[arg(long)]
         model_dir: PathBuf,
+        /// Optional specialized MLX model used only for truncated rollout
+        /// leaf evaluation. Root priors and rollout actions keep using
+        /// `--model-dir`.
+        #[arg(long)]
+        leaf_model_dir: Option<PathBuf>,
         #[arg(long)]
         games: usize,
         #[arg(long)]
@@ -179,6 +185,14 @@ enum Command {
         split: Option<SplitArg>,
         #[arg(long, default_value_t = 600)]
         rollouts: usize,
+        /// Cap each rollout after this many focal-player moves, including the
+        /// root candidate, then bootstrap the remaining score with MLX.
+        #[arg(long)]
+        rollout_turns: Option<usize>,
+        /// Choose whether a truncated rollout evaluates the focal afterstate
+        /// immediately or after the opponents complete the round.
+        #[arg(long, value_enum, default_value_t = RolloutLeafTimingArg::AfterOpponentRound)]
+        rollout_leaf_timing: RolloutLeafTimingArg,
         #[arg(long)]
         weights: PathBuf,
         #[arg(long)]
@@ -506,6 +520,13 @@ enum SplitArg {
     Final,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum RolloutLeafTimingArg {
+    AfterOpponentRound,
+    AfterFocalMove,
+}
+
 impl From<SplitArg> for DatasetSplit {
     fn from(value: SplitArg) -> Self {
         match value {
@@ -590,6 +611,8 @@ struct ExactMlxStrengthReport {
     status: &'static str,
     seed_domain: &'static str,
     rollouts: usize,
+    rollout_turn_limit: Option<usize>,
+    rollout_leaf_timing: Option<RolloutLeafTimingArg>,
     diagnostics: BridgeDiagnostics,
     batch_diagnostics: SearchBatchDiagnostics,
     fallback_rate: f64,
@@ -607,6 +630,9 @@ struct ExactMlxStrengthReport {
     model_manifest_path: PathBuf,
     model_manifest_blake3: String,
     model_safetensors_blake3: String,
+    leaf_model_manifest_path: Option<PathBuf>,
+    leaf_model_manifest_blake3: Option<String>,
+    leaf_model_safetensors_blake3: Option<String>,
     provenance: ArtifactProvenance,
 }
 
@@ -867,11 +893,37 @@ struct RolloutParityMetrics {
 struct SearchBatchDiagnostics {
     neural_batches: u64,
     neural_rows: u64,
+    physical_neural_rows: u64,
+    reuse_observed_physical_rows: u64,
+    reuse_repeated_physical_rows: u64,
     minimum_batch_rows: usize,
     maximum_batch_rows: usize,
     rollout_waves: u64,
     rollout_samples: u64,
+    bootstrapped_samples: u64,
     policy_fallbacks: u64,
+    template_state_requests: u64,
+    unique_public_template_states: u64,
+    unique_board_template_states: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stage_timings: Option<SearchStageTimings>,
+}
+
+#[derive(Debug, Default, Serialize)]
+struct SearchStageTimings {
+    rollout_state_initialization_ms: f64,
+    opponent_advance_ms: f64,
+    candidate_keying_ms: f64,
+    template_preparation_ms: f64,
+    candidate_preparation_ms: f64,
+    row_assembly_ms: f64,
+    row_deduplication_ms: f64,
+    row_materialization_ms: f64,
+    neural_evaluation_ms: f64,
+    prediction_postprocess_ms: f64,
+    action_selection_ms: f64,
+    terminal_collection_ms: f64,
+    total_ms: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -1173,19 +1225,25 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         Command::ExactMlxProductiveTokenCompare {
             server_program,
             model_dir,
+            leaf_model_dir,
             games,
             first_seed,
             split,
             rollouts,
+            rollout_turns,
+            rollout_leaf_timing,
             weights,
             output,
         } => run_exact_mlx_comparison(
             &server_program,
             &model_dir,
+            leaf_model_dir.as_deref(),
             games,
             first_seed,
             split.map(Into::into),
             rollouts,
+            rollout_turns,
+            rollout_leaf_timing,
             &weights,
             &output,
         ),
@@ -1572,6 +1630,28 @@ struct MlxSparseEvaluator {
     exact: bool,
 }
 
+fn spawn_legacy_nnue_service(
+    server_program: &str,
+    model_dir: &Path,
+    exact_shared_transport: bool,
+) -> Result<ModelProcess, ModelError> {
+    let args = [
+        std::ffi::OsString::from("run"),
+        std::ffi::OsString::from("cascadia-mlx-legacy-nnue-serve"),
+        std::ffi::OsString::from("--model-dir"),
+        model_dir.as_os_str().to_owned(),
+    ];
+    if exact_shared_transport {
+        ModelProcess::spawn_with_sparse_nnue_shared_memory(
+            server_program,
+            args,
+            DEFAULT_SPARSE_NNUE_SHARED_MEMORY_BYTES,
+        )
+    } else {
+        ModelProcess::spawn(server_program, args)
+    }
+}
+
 impl SparseNnueEvaluator for MlxSparseEvaluator {
     type Error = ModelError;
 
@@ -1581,6 +1661,10 @@ impl SparseNnueEvaluator for MlxSparseEvaluator {
         } else {
             self.process.predict_sparse_nnue(feature_sets)
         }
+    }
+
+    fn rollout_pipeline_chunk_states(&self) -> Option<usize> {
+        self.exact.then(exact_mlx_pipeline_chunk_states)
     }
 }
 
@@ -1671,6 +1755,9 @@ fn compare_estimates(
 fn merge_diagnostics(target: &mut SearchBatchDiagnostics, source: BatchedNnueDiagnostics) {
     target.neural_batches += source.neural_batches;
     target.neural_rows += source.neural_rows;
+    target.physical_neural_rows += source.physical_neural_rows;
+    target.reuse_observed_physical_rows += source.reuse_observed_physical_rows;
+    target.reuse_repeated_physical_rows += source.reuse_repeated_physical_rows;
     if source.minimum_batch_rows > 0 {
         target.minimum_batch_rows = if target.minimum_batch_rows == 0 {
             source.minimum_batch_rows
@@ -1681,7 +1768,50 @@ fn merge_diagnostics(target: &mut SearchBatchDiagnostics, source: BatchedNnueDia
     target.maximum_batch_rows = target.maximum_batch_rows.max(source.maximum_batch_rows);
     target.rollout_waves += source.rollout_waves;
     target.rollout_samples += source.rollout_samples;
+    target.bootstrapped_samples += source.bootstrapped_samples;
     target.policy_fallbacks += source.policy_fallbacks;
+    target.template_state_requests += source.template_state_requests;
+    target.unique_public_template_states += source.unique_public_template_states;
+    target.unique_board_template_states += source.unique_board_template_states;
+    if let Some(source_timings) = search_stage_timings(source.stage_timings) {
+        let target_timings = target.stage_timings.get_or_insert_default();
+        target_timings.rollout_state_initialization_ms +=
+            source_timings.rollout_state_initialization_ms;
+        target_timings.opponent_advance_ms += source_timings.opponent_advance_ms;
+        target_timings.candidate_keying_ms += source_timings.candidate_keying_ms;
+        target_timings.template_preparation_ms += source_timings.template_preparation_ms;
+        target_timings.candidate_preparation_ms += source_timings.candidate_preparation_ms;
+        target_timings.row_assembly_ms += source_timings.row_assembly_ms;
+        target_timings.row_deduplication_ms += source_timings.row_deduplication_ms;
+        target_timings.row_materialization_ms += source_timings.row_materialization_ms;
+        target_timings.neural_evaluation_ms += source_timings.neural_evaluation_ms;
+        target_timings.prediction_postprocess_ms += source_timings.prediction_postprocess_ms;
+        target_timings.action_selection_ms += source_timings.action_selection_ms;
+        target_timings.terminal_collection_ms += source_timings.terminal_collection_ms;
+        target_timings.total_ms += source_timings.total_ms;
+    }
+}
+
+fn search_stage_timings(timings: BatchedNnueStageTimings) -> Option<SearchStageTimings> {
+    if timings.total_ns() == 0 {
+        return None;
+    }
+    let milliseconds = |nanoseconds: u64| nanoseconds as f64 / 1_000_000.0;
+    Some(SearchStageTimings {
+        rollout_state_initialization_ms: milliseconds(timings.rollout_state_initialization_ns),
+        opponent_advance_ms: milliseconds(timings.opponent_advance_ns),
+        candidate_keying_ms: milliseconds(timings.candidate_keying_ns),
+        template_preparation_ms: milliseconds(timings.template_preparation_ns),
+        candidate_preparation_ms: milliseconds(timings.candidate_preparation_ns),
+        row_assembly_ms: milliseconds(timings.row_assembly_ns),
+        row_deduplication_ms: milliseconds(timings.row_deduplication_ns),
+        row_materialization_ms: milliseconds(timings.row_materialization_ns),
+        neural_evaluation_ms: milliseconds(timings.neural_evaluation_ns),
+        prediction_postprocess_ms: milliseconds(timings.prediction_postprocess_ns),
+        action_selection_ms: milliseconds(timings.action_selection_ns),
+        terminal_collection_ms: milliseconds(timings.terminal_collection_ns),
+        total_ms: milliseconds(timings.total_ns()),
+    })
 }
 
 fn canonical_root_candidates(
@@ -1712,14 +1842,10 @@ fn run_nnue_rollout_wave_parity(
         .features
         .clone();
     let mut mlx = MlxSparseEvaluator {
-        process: ModelProcess::spawn(
+        process: spawn_legacy_nnue_service(
             &config.server_program,
-            [
-                std::ffi::OsString::from("run"),
-                std::ffi::OsString::from("cascadia-mlx-legacy-nnue-serve"),
-                std::ffi::OsString::from("--model-dir"),
-                config.model_dir.as_os_str().to_owned(),
-            ],
+            &config.model_dir,
+            config.exact,
         )?,
         exact: config.exact,
     };
@@ -2031,17 +2157,8 @@ fn run_nnue_service_parity(
         .collect::<Vec<_>>();
     let model_manifest = model_dir.join("model.json");
     let model_safetensors = model_dir.join("model.safetensors");
-    let model_arg = model_dir.as_os_str().to_owned();
     let started = Instant::now();
-    let mut service = ModelProcess::spawn(
-        server_program,
-        [
-            std::ffi::OsString::from("run"),
-            std::ffi::OsString::from("cascadia-mlx-legacy-nnue-serve"),
-            std::ffi::OsString::from("--model-dir"),
-            model_arg,
-        ],
-    )?;
+    let mut service = spawn_legacy_nnue_service(server_program, model_dir, exact)?;
     let predict = |service: &mut ModelProcess, batch: &[Vec<u16>]| {
         if exact {
             service.predict_sparse_nnue_csr_exact(batch)
@@ -3764,41 +3881,97 @@ fn run_comparison(run: StrengthComparisonConfig<'_>) -> Result<(), Box<dyn std::
 fn run_exact_mlx_comparison(
     server_program: &str,
     model_dir: &Path,
+    leaf_model_dir: Option<&Path>,
     games: usize,
     first_seed: u64,
     seed_split: Option<DatasetSplit>,
     rollouts: usize,
+    rollout_turn_limit: Option<usize>,
+    rollout_leaf_timing: RolloutLeafTimingArg,
     weights: &Path,
     output: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if games == 0 || rollouts == 0 {
         return Err("exact MLX strength comparison requires positive games and rollouts".into());
     }
+    if leaf_model_dir.is_some() && rollout_turn_limit.is_none() {
+        return Err("a leaf model requires --rollout-turns".into());
+    }
     validate_legacy_environment()?;
     let provenance = provenance(weights)?;
     let model_manifest = model_dir.join("model.json");
     let model_safetensors = model_dir.join("model.safetensors");
+    let leaf_model_manifest = leaf_model_dir.map(|directory| directory.join("model.json"));
+    let leaf_model_safetensors =
+        leaf_model_dir.map(|directory| directory.join("model.safetensors"));
     let service_started = Instant::now();
-    let mut process = ModelProcess::spawn(
-        server_program,
-        [
-            std::ffi::OsString::from("run"),
-            std::ffi::OsString::from("cascadia-mlx-legacy-nnue-serve"),
-            std::ffi::OsString::from("--model-dir"),
-            model_dir.as_os_str().to_owned(),
-        ],
-    )?;
+    let mut process = spawn_legacy_nnue_service(server_program, model_dir, true)?;
     let warmup = process.predict_sparse_nnue_csr_exact(&[Vec::new()])?;
     if warmup.len() != 1 || !warmup[0].is_finite() {
         return Err("exact MLX service warmup returned an invalid value".into());
     }
+    let leaf_process = if let Some(leaf_model_dir) = leaf_model_dir {
+        let mut leaf_process = spawn_legacy_nnue_service(server_program, leaf_model_dir, true)?;
+        let warmup = leaf_process.predict_sparse_nnue_csr_exact(&[Vec::new()])?;
+        if warmup.len() != 1 || !warmup[0].is_finite() {
+            return Err("leaf MLX service warmup returned an invalid value".into());
+        }
+        Some(leaf_process)
+    } else {
+        None
+    };
     let service_startup_milliseconds = service_started.elapsed().as_secs_f64() * 1000.0;
 
     let game = GameConfig::research_aaaaa(4)?;
     let strong = LateConservativeBasePolicyImprovementStrategy::new(
         LateConservativeBasePolicyImprovementConfig::default(),
     )?;
-    let mut teacher = ExactMlxLegacyTeacher::new(process, rollouts)?;
+    let mut teacher = if let Some(max_focal_turns) = rollout_turn_limit {
+        match (leaf_process, rollout_leaf_timing) {
+            (Some(leaf_process), leaf_timing) => {
+                let leaf_timing = match leaf_timing {
+                    RolloutLeafTimingArg::AfterOpponentRound => {
+                        BatchedRolloutLeafTiming::AfterOpponentRound
+                    }
+                    RolloutLeafTimingArg::AfterFocalMove => {
+                        BatchedRolloutLeafTiming::AfterFocalMove
+                    }
+                };
+                ExactMlxLegacyTeacher::new_with_leaf_rollout_turn_limit(
+                    process,
+                    leaf_process,
+                    rollouts,
+                    max_focal_turns,
+                    leaf_timing,
+                )?
+            }
+            (None, RolloutLeafTimingArg::AfterOpponentRound) => {
+                ExactMlxLegacyTeacher::new_with_rollout_turn_limit(
+                    process,
+                    rollouts,
+                    max_focal_turns,
+                )?
+            }
+            (None, RolloutLeafTimingArg::AfterFocalMove) => {
+                ExactMlxLegacyTeacher::new_with_afterstate_rollout_turn_limit(
+                    process,
+                    rollouts,
+                    max_focal_turns,
+                )?
+            }
+        }
+    } else {
+        ExactMlxLegacyTeacher::new(process, rollouts)?
+    };
+    let treatment_strategy_id = match (rollout_turn_limit, rollout_leaf_timing) {
+        (Some(_), RolloutLeafTimingArg::AfterOpponentRound) => {
+            "canonical-action-legacy-exact-mlx-v1-k32-r600-truncated-after-opponents"
+        }
+        (Some(_), RolloutLeafTimingArg::AfterFocalMove) => {
+            "canonical-action-legacy-exact-mlx-v1-k32-r600-truncated-afterstate"
+        }
+        (None, _) => EXACT_MLX_LEGACY_TEACHER_STRATEGY_ID,
+    };
     let started = Instant::now();
     let mut results: Vec<(u64, MatchResult, MatchResult)> = Vec::with_capacity(games);
     for offset in 0..games {
@@ -3815,7 +3988,7 @@ fn run_exact_mlx_comparison(
         let treatment = play_match_with_selector(
             game,
             seed,
-            EXACT_MLX_LEGACY_TEACHER_STRATEGY_ID,
+            treatment_strategy_id,
             |player, game| {
                 let action = match teacher.select_action(game) {
                     Ok(action) => Ok(action),
@@ -3857,7 +4030,7 @@ fn run_exact_mlx_comparison(
     let elapsed_seconds = started.elapsed().as_secs_f64();
     let comparison = summarize_paired_match_results(
         strong.strategy_id(),
-        EXACT_MLX_LEGACY_TEACHER_STRATEGY_ID,
+        treatment_strategy_id,
         first_seed,
         &results,
         elapsed_seconds,
@@ -3878,11 +4051,19 @@ fn run_exact_mlx_comparison(
     let batch_diagnostics = SearchBatchDiagnostics {
         neural_batches: batch.neural_batches,
         neural_rows: batch.neural_rows,
+        physical_neural_rows: batch.physical_neural_rows,
+        reuse_observed_physical_rows: batch.reuse_observed_physical_rows,
+        reuse_repeated_physical_rows: batch.reuse_repeated_physical_rows,
         minimum_batch_rows: batch.minimum_batch_rows,
         maximum_batch_rows: batch.maximum_batch_rows,
         rollout_waves: batch.rollout_waves,
         rollout_samples: batch.rollout_samples,
+        bootstrapped_samples: batch.bootstrapped_samples,
         policy_fallbacks: batch.policy_fallbacks,
+        template_state_requests: batch.template_state_requests,
+        unique_public_template_states: batch.unique_public_template_states,
+        unique_board_template_states: batch.unique_board_template_states,
+        stage_timings: search_stage_timings(batch.stage_timings),
     };
     let fallback_rate = diagnostics.fallback_rate();
     let expanded_malformed_rate = if diagnostics.expanded_candidates == 0 {
@@ -3942,7 +4123,13 @@ fn run_exact_mlx_comparison(
         frontier_recall_passed: true,
         qualification_passed,
     };
-    let status = if games == 1 {
+    let status = if rollout_turn_limit.is_some() {
+        if smoke_passed {
+            "screen-complete"
+        } else {
+            "rejected"
+        }
+    } else if games == 1 {
         if smoke_passed {
             "smoke-passed"
         } else {
@@ -3955,10 +4142,16 @@ fn run_exact_mlx_comparison(
     };
     let report = ExactMlxStrengthReport {
         schema_version: 1,
-        experiment_id: "qualified-legacy-nnue-exact-mlx-gameplay-reproduction-v1-20260612",
+        experiment_id: if rollout_turn_limit.is_some() {
+            "legacy-nnue-exact-mlx-truncated-rollout-performance-v1-20260614"
+        } else {
+            "qualified-legacy-nnue-exact-mlx-gameplay-reproduction-v1-20260612"
+        },
         status,
         seed_domain: seed_split.map_or("raw-u64", DatasetSplit::id),
         rollouts,
+        rollout_turn_limit,
+        rollout_leaf_timing: rollout_turn_limit.map(|_| rollout_leaf_timing),
         diagnostics,
         batch_diagnostics,
         fallback_rate,
@@ -3976,6 +4169,18 @@ fn run_exact_mlx_comparison(
         model_manifest_path: model_manifest.canonicalize()?,
         model_manifest_blake3: checksum_file(&model_manifest)?,
         model_safetensors_blake3: checksum_file(&model_safetensors)?,
+        leaf_model_manifest_path: leaf_model_manifest
+            .as_deref()
+            .map(Path::canonicalize)
+            .transpose()?,
+        leaf_model_manifest_blake3: leaf_model_manifest
+            .as_deref()
+            .map(checksum_file)
+            .transpose()?,
+        leaf_model_safetensors_blake3: leaf_model_safetensors
+            .as_deref()
+            .map(checksum_file)
+            .transpose()?,
         provenance,
     };
     write_json_atomic(output, &report)?;
@@ -4034,15 +4239,7 @@ fn spawn_exact_mlx_process(
     model_dir: &Path,
 ) -> Result<(ModelProcess, f64), Box<dyn std::error::Error>> {
     let started = Instant::now();
-    let mut process = ModelProcess::spawn(
-        server_program,
-        [
-            std::ffi::OsString::from("run"),
-            std::ffi::OsString::from("cascadia-mlx-legacy-nnue-serve"),
-            std::ffi::OsString::from("--model-dir"),
-            model_dir.as_os_str().to_owned(),
-        ],
-    )?;
+    let mut process = spawn_legacy_nnue_service(server_program, model_dir, true)?;
     let warmup = process.predict_sparse_nnue_csr_exact(&[Vec::new()])?;
     if warmup.len() != 1 || !warmup[0].is_finite() {
         return Err("exact MLX service warmup returned an invalid value".into());
@@ -4137,11 +4334,19 @@ fn search_batch_diagnostics(batch: BatchedNnueDiagnostics) -> SearchBatchDiagnos
     SearchBatchDiagnostics {
         neural_batches: batch.neural_batches,
         neural_rows: batch.neural_rows,
+        physical_neural_rows: batch.physical_neural_rows,
+        reuse_observed_physical_rows: batch.reuse_observed_physical_rows,
+        reuse_repeated_physical_rows: batch.reuse_repeated_physical_rows,
         minimum_batch_rows: batch.minimum_batch_rows,
         maximum_batch_rows: batch.maximum_batch_rows,
         rollout_waves: batch.rollout_waves,
         rollout_samples: batch.rollout_samples,
+        bootstrapped_samples: batch.bootstrapped_samples,
         policy_fallbacks: batch.policy_fallbacks,
+        template_state_requests: batch.template_state_requests,
+        unique_public_template_states: batch.unique_public_template_states,
+        unique_board_template_states: batch.unique_board_template_states,
+        stage_timings: search_stage_timings(batch.stage_timings),
     }
 }
 
@@ -4739,16 +4944,17 @@ fn run_exact_mlx_habitat_candidate_comparison(
 
 fn provenance(weights: &Path) -> Result<ArtifactProvenance, Box<dyn std::error::Error>> {
     let executable_path = std::env::current_exe()?;
+    let mut legacy_environment = std::env::vars()
+        .filter(|(key, _)| key.starts_with("MCE_") || key.starts_with("CASCADIA_"))
+        .collect::<Vec<_>>();
+    legacy_environment.sort();
     Ok(ArtifactProvenance {
         source: source_provenance()?,
         executable_blake3: checksum_file(&executable_path)?,
         executable_path,
         weights_blake3: checksum_file(weights)?,
         weights_path: weights.canonicalize()?,
-        legacy_environment: vec![
-            ("MCE_LMR".to_owned(), "1".to_owned()),
-            ("MCE_DIVERSE_PREFILTER".to_owned(), "1".to_owned()),
-        ],
+        legacy_environment,
     })
 }
 

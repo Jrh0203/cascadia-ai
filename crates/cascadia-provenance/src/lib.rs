@@ -20,6 +20,8 @@ const SOURCE_ROOTS: &[&str] = &[
     "uv.lock",
     "python/cascadia_mlx",
     "apps/web/src",
+    "legacy/crates/cascadia-core",
+    "legacy/crates/cascadia-ai",
     "crates/cascadia-game",
     "crates/cascadia-sim",
     "crates/cascadia-data",
@@ -153,5 +155,11 @@ mod tests {
         let right = source_provenance().unwrap();
         assert_eq!(left.v2_source_blake3, right.v2_source_blake3);
         assert_eq!(left.git_status_blake3, right.git_status_blake3);
+    }
+
+    #[test]
+    fn source_digest_covers_linked_legacy_teacher_crates() {
+        assert!(SOURCE_ROOTS.contains(&"legacy/crates/cascadia-core"));
+        assert!(SOURCE_ROOTS.contains(&"legacy/crates/cascadia-ai"));
     }
 }

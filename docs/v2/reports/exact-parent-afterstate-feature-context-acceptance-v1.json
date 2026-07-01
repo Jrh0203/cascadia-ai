@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-parent-afterstate-feature-context-acceptance-v1-20260615",
+  "status": "accepted",
+  "phase": 0,
+  "hypothesis": "Build one exact mid-features,v4-opp parent feature context per rollout policy state and derive each candidate afterstate without rescanning invariant board, bag, market, opponent, and unaffected wildlife-pattern state.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "implementation": {
+    "specialized_configuration": "mid-features,v4-opp",
+    "parent_context": "MidV4AfterstateFeatureContext",
+    "parent_pattern_snapshot": "MidV4PatternSnapshot",
+    "general_extractor_retained_as_oracle": true,
+    "release_runtime_switch_retained": false,
+    "source_retained": true
+  },
+  "correctness": {
+    "oracle_games": 8,
+    "oracle_turns": 640,
+    "ordered_sparse_rows_byte_identical": true,
+    "coverage": {
+      "ordinary_drafts": true,
+      "independent_drafts": true,
+      "same_cell_wildlife": true,
+      "different_cell_wildlife": true,
+      "no_wildlife": true,
+      "keystones": true,
+      "all_six_rotations": true
+    },
+    "default_library_tests": {
+      "passed": 84,
+      "failed": 0
+    },
+    "mid_v4_library_tests": {
+      "passed": 85,
+      "failed": 0
+    },
+    "format_check": true,
+    "diff_check": true,
+    "report_json_parse_check": true,
+    "frozen_diagnostics": {
+      "scores": [
+        102,
+        96,
+        92,
+        95
+      ],
+      "mean_score": 96.25,
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "physical_neural_rows": 5062305,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "bootstrapped_samples": 0,
+      "policy_fallbacks": 0,
+      "clean_shutdown": true,
+      "source_runs_matching": 8,
+      "pgo_runs_matching": 8,
+      "profile_training_runs_matching": 2
+    }
+  },
+  "mechanism": {
+    "john2_candidate_preparation_control_milliseconds": 1528.31884,
+    "john2_candidate_preparation_treatment_milliseconds": 1252.633045,
+    "john2_reduction_percent": 18.038500068480467,
+    "john3_candidate_preparation_control_milliseconds": 1537.515084,
+    "john3_candidate_preparation_treatment_milliseconds": 1268.27285,
+    "john3_reduction_percent": 17.511518215453155
+  },
+  "source_screen": {
+    "control_binary_sha256": "52881887639f5a7940f0efed3baf0892fb2e44b824518a50b7bf2da9d8aa6ce7",
+    "treatment_binary_sha256": "786351ea84e4b2674e81f2ade87d0596e47a8a3b21be2f336dc9e6ff62c4cd94",
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.431875667,
+        "peak_rss_bytes": 103006208
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.683846291,
+        "peak_rss_bytes": 102694912
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.839457208,
+        "peak_rss_bytes": 102776832
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 15.21420825,
+        "peak_rss_bytes": 102891520
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 15.516257042,
+        "peak_rss_bytes": 103022592
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 15.1887195,
+        "peak_rss_bytes": 102678528
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 15.1341865,
+        "peak_rss_bytes": 102776832
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.502306541,
+        "peak_rss_bytes": 103006208
+      }
+    ],
+    "john2_control_mean_seconds": 15.7616517495,
+    "john2_treatment_mean_seconds": 15.3230419585,
+    "john2_improvement_percent": 2.7827653977567097,
+    "john3_control_mean_seconds": 15.5092817915,
+    "john3_treatment_mean_seconds": 15.161453,
+    "john3_improvement_percent": 2.2427137257292613,
+    "combined_control_mean_seconds": 15.635466770499999,
+    "combined_treatment_mean_seconds": 15.242247479249999,
+    "combined_treatment_delta_seconds": -0.3932192912500003,
+    "combined_speedup": 1.0257979862736981,
+    "combined_speedup_percent": 2.514918787022728,
+    "control_mean_peak_rss_bytes": 102875136,
+    "treatment_mean_peak_rss_bytes": 102838272,
+    "peak_rss_delta_percent": -0.0358337314859054,
+    "control_global_peak_rss_bytes": 103022592,
+    "treatment_global_peak_rss_bytes": 103006208
+  },
+  "pgo": {
+    "instrumented_binary_sha256": "d471d095243bb9fa797f81e181eed273a86c8bb6b0b7cccfc9677f57275d5224",
+    "john2_training_seconds": 51.866597542,
+    "john3_training_seconds": 51.069625584,
+    "john2_profraw_sha256": "4592a817879aa28861fe58b45f4dfb144410ad1574b6b4295d68ebc8d27487cb",
+    "john3_profraw_sha256": "7109ca9c10567467d30a150cb4b7ac58c828636f0fc74b8eb758b6d5ff288b6a",
+    "merged_profdata_sha256": "3e8bd7bdc6f14de82ea42465f66c698f592c710644d4403eccc1bdca98d1deeb",
+    "profile_functions": 5476,
+    "profile_blocks": 120121,
+    "john2_total_profile_count": 116382066962,
+    "john3_total_profile_count": 116382180399,
+    "absolute_profile_count_difference": 113437,
+    "production_binary_sha256": "f5c544b610eb9c77607b6cb818587c2ea43906ff6cdb3040722fae761a3117bd",
+    "accepted_control_binary_sha256": "0b08b33d298d0bca5a0d09f1f5633d449d6984abb200053410bd731b0342f976",
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.258243875,
+        "peak_rss_bytes": 102760448
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.377531458,
+        "peak_rss_bytes": 102825984
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.289190208,
+        "peak_rss_bytes": 102793216
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 15.16478425,
+        "peak_rss_bytes": 103006208
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 15.124798292,
+        "peak_rss_bytes": 102842368
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 14.823608708,
+        "peak_rss_bytes": 103186432
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 14.82884625,
+        "peak_rss_bytes": 103006208
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.167661917,
+        "peak_rss_bytes": 103006208
+      }
+    ],
+    "john2_control_mean_seconds": 15.333360833,
+    "john2_treatment_mean_seconds": 15.211514062500001,
+    "john2_improvement_percent": 0.7946514259141708,
+    "john3_control_mean_seconds": 15.146230104499999,
+    "john3_treatment_mean_seconds": 14.826227479,
+    "john3_improvement_percent": 2.1127542846779086,
+    "combined_control_mean_seconds": 15.23979546875,
+    "combined_treatment_mean_seconds": 15.01887077075,
+    "combined_treatment_delta_seconds": -0.22092469799999925,
+    "combined_speedup": 1.0147098075063181,
+    "combined_speedup_percent": 1.449656581369592,
+    "control_mean_peak_rss_bytes": 102866944,
+    "treatment_mean_peak_rss_bytes": 102989824,
+    "peak_rss_delta_percent": 0.11945528390539142,
+    "control_global_peak_rss_bytes": 103006208,
+    "treatment_global_peak_rss_bytes": 103186432,
+    "memory_interpretation": "The 0.12% mean and 180224-byte global-peak differences are within the observed run-to-run RSS spread and do not constitute a material operational regression."
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-parent-afterstate-feature-context-v1",
+    "archive_ignored_by_git": true,
+    "worker_binary": "/tmp/cascadia-phase0/legacy-teacher-parent-context-pgo",
+    "worker_profile_directory": "/tmp/cascadia-phase0/pgo-parent-context-data"
+  },
+  "verdict": {
+    "accepted": true,
+    "reason": "The exact parent context materially reduced candidate preparation, passed the source gate on both workers, and remained faster on both workers after fresh race-free PGO.",
+    "initial_reference_seconds": 141.027296,
+    "accepted_seconds": 15.01887077075,
+    "total_speedup": 9.390006622512372,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_gap_seconds": 0.9161411707500005,
+    "additional_reduction_required_percent": 6.099933774876278,
+    "threshold_passed": false
+  }
+}

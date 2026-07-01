@@ -124,7 +124,12 @@ def _read_exact_or_eof(stream: BinaryIO, size: int) -> bytes | None:
 
 
 def _read_exact(stream: BinaryIO, size: int) -> bytes:
-    chunks = bytearray()
+    first = stream.read(size)
+    if len(first) == size:
+        return first
+    if not first:
+        raise EOFError("inference stream ended inside a frame")
+    chunks = bytearray(first)
     while len(chunks) < size:
         chunk = stream.read(size - len(chunks))
         if not chunk:

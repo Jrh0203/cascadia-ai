@@ -1,0 +1,58 @@
+{
+  "schema_id": "cascadia.r2-map.d0-source-race-incident.v1",
+  "schema_version": 1,
+  "campaign_id": "r2-map-expert-iteration-v1",
+  "run_id": "d0-runtime-bootstrap-20260618-v1",
+  "detected_unix_context": "2026-06-19T00:25:17Z",
+  "events": [
+    {"mtime_local":"2026-06-18T20:22:35-0400","path":"tools/r2_d0/remote_protocol.py","sha256":"01845bbd53b03b7eb1ecd0c2991fafdde2a2cf9b72191933cea90f2812274171","size":2374},
+    {"mtime_local":"2026-06-18T20:23:22-0400","path":"tools/r2_d0/canonical.py","sha256":"e71eaa78a2ab3aee9521d7ffab6a0e639b2ff1b385cb3e3405a89ba31918aaed","size":58074},
+    {"mtime_local":"2026-06-18T20:23:25-0400","path":"tools/r2_d0_test_support.py","sha256":"bbcf647f1187c82b860abf9a2943f1d252b45ca457471c7ed3661db8f5bccacc","size":14233},
+    {"mtime_local":"2026-06-18T20:25:05-0400","path":"tools/r2_d0/transport.py","sha256":"7f30831c5a73edb8cae55f5cd6f5895688a86363a94efa943a810b5d6efc9d3b","size":73708}
+  ],
+  "later_race_observation": {
+    "window_local": "2026-06-18T21:08:29-0400/2026-06-18T21:59:59-0400",
+    "paths": [
+      "tools/r2_d0/SOURCE_OWNERSHIP.json",
+      "tools/r2_d0/bootstrap.py",
+      "tools/r2_d0/bundle.py",
+      "tools/r2_d0/canonical.py",
+      "tools/r2_d0/cli.py",
+      "tools/r2_d0/closure.py",
+      "tools/r2_d0/transport.py",
+      "tools/r2_d0_test_support.py",
+      "tools/test_r2_d0_runtime_transport.py",
+      "python/cascadia_mlx/r2_map_remote_worker.py",
+      "python/tests/test_r2_map_remote_storage.py"
+    ],
+    "finding": "Writes continued while the advisory owner lock was held and after explicit freeze requests. Actor identity is not inferred. Colliding bytes were integrated, compiled, linted, and tested rather than reverted."
+  },
+  "candidate_boundary": {
+    "created_local": "2026-06-18T22:04:38-0400",
+    "files": [
+      {"path":"tools/r2_d0/canonical.py","sha256":"74762bff5ab346bd884a7edf1c66e7c17852d6efd6a7b1503478beb011978e10","size":64511},
+      {"path":"tools/r2_d0/cli.py","sha256":"64877611de2e07a574c628d80ec9cbe710b8f1247d0aa1dfb81dded90beb8031","size":80099},
+      {"path":"tools/r2_d0/transport.py","sha256":"196fb1273d9c66860c5981872e3ca51b250d0b8cc72cc431f7895569c4653260","size":163887},
+      {"path":"tools/r2_d0/bootstrap.py","sha256":"aa217764a8bdb4db84940acd705a930987c33c63a2a07508c55501e9319a55be","size":17490},
+      {"path":"tools/r2_d0_test_support.py","sha256":"88d62af450cda1c4e3fc0dc3dc2dd8207f701921d1a128db6ef71a30815718f1","size":14239},
+      {"path":"tools/test_r2_d0_runtime_transport.py","sha256":"c961f4d0b1921a21053500c360a2e55e3aa180e02a9fe058e70ba76d898224db","size":97658},
+      {"path":"python/cascadia_mlx/r2_map_remote_worker.py","sha256":"37fc2e4698830777a4f78dc6628393140ec142c7bc17d450395a87a2436f41a1","size":264025},
+      {"path":"python/tests/test_r2_map_remote_storage.py","sha256":"312510b91e9d74ee5e2b45b5253cdb9ee10c03d1e75b0d7ea51de808f25220cf","size":100915}
+    ],
+    "verification": {
+      "d0_pytest": "134 passed",
+      "remote_storage_pytest": "69 passed",
+      "ruff": "pass",
+      "compileall": "pass"
+    }
+  },
+  "finding": "The source race is contained but remains open until a final stable-hash independent audit accepts or rejects the candidate boundary.",
+  "protected_seed_values_opened": false,
+  "response": {
+    "advisory_lock": "/Users/johnherrick/cascadia/tools/r2_d0/.source-owner.lock",
+    "designated_writer": "/root/john1_d0_owner",
+    "independent_auditor": "/root/john3_d0_auditor",
+    "source_freeze_blocked": true
+  },
+  "status": "open-awaiting-final-independent-audit"
+}

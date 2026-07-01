@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-local-elk-extension-delta-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "For non-elk moves, update Card-A elk potential from exact before and after contributions at only the newly placed and newly occupied cells.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false
+  },
+  "exactness": {
+    "reference_games": 6,
+    "all_exercised_tile_rotations_and_wildlife_afterstates_compared": true,
+    "default_library_tests_passed": 85,
+    "exact_feature_library_tests_passed": 85,
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true
+  },
+  "source_screen": {
+    "control_binary_sha256": "53e62599c9fb9d8c6f232a850d3f7247f668662913297f4ebc36440a21107487",
+    "treatment_binary_sha256": "40707aad4cd65a9995b52d0245af26054864ae72c2390f4962d4d8da3681ab2e",
+    "advancement_floor_percent": 0.25,
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.761218334
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.810674167
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.576840625
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 15.784540458
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 16.078644375
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 16.163053459
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 16.029633416
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 16.124317917
+      }
+    ],
+    "john2_control_mean_seconds": 15.693757396,
+    "john2_treatment_mean_seconds": 15.772879396,
+    "john3_control_mean_seconds": 16.101481146,
+    "john3_treatment_mean_seconds": 16.0963434375,
+    "combined_control_mean_seconds": 15.897619271,
+    "combined_treatment_mean_seconds": 15.93461141675,
+    "combined_treatment_delta_seconds": 0.03699214575,
+    "combined_speedup": 0.9976785034298913,
+    "combined_improvement_percent": -0.23214965701087165,
+    "advanced_to_pgo": false
+  },
+  "pgo": {
+    "performed": false,
+    "reason": "The treatment regressed crossed non-PGO wall time and failed the preregistered 0.25% advancement floor."
+  },
+  "implementation": {
+    "production_runtime_switch_retained": false,
+    "test_oracle_retained": false,
+    "treatment_source_retained": false,
+    "accepted_complete_adjacency_rule_retained": true
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The exact local delta was 0.232% slower than the complete adjacency scan across the crossed two-host source screen.",
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_passed": false
+  }
+}

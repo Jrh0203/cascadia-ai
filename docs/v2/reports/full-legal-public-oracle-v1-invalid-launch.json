@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-legal-public-oracle-v1",
+  "status": "invalid",
+  "generated_at": "2026-06-15",
+  "reserved_domain": {
+    "first_seed": 62000,
+    "games": 12,
+    "last_seed": 62011
+  },
+  "cause": {
+    "class": "implementation_invariant",
+    "message": "high-confidence set contains no retained screen action",
+    "selection_contract_changed_by_fix": false
+  },
+  "identity": {
+    "v2_source_blake3": "46a98e935a2b72e76ee152b9f62ed30ec804d22ddee79d4bd1aa4ada9af3ae4b",
+    "executable_sha256": "f2bb5f3100469b32bf83a27bd47e8b7e724641726506c5a8c37a77a34f812e47",
+    "model_json_sha256": "9dff120f4238497f0c9440f5d353ef00cf6cb8fdef513cc8c4fe5bbdfc490d3a",
+    "model_safetensors_sha256": "9fd11f704a5feb427aab324c19dc819213dda08f8a4b90331999df3726b11f89"
+  },
+  "hosts": {
+    "john1": {
+      "first_seed": 62000,
+      "games_reserved": 4,
+      "result_artifact": false,
+      "observed_progress_games": 0,
+      "elapsed_seconds": 25.13,
+      "time_sha256": "5c1ba34d5c66b5c89ec24fcaab87761d225050bba334b5be206f46f4f12af17f"
+    },
+    "john2": {
+      "first_seed": 62004,
+      "games_reserved": 4,
+      "result_artifact": true,
+      "observed_progress_games": 4,
+      "baseline_mean": 95.0625,
+      "treatment_mean": 99.8125,
+      "paired_delta": 4.75,
+      "json_sha256": "ba4486137aa7e271371a1dd6f4c3644d7365764ed7710c5a8b42c2a09b37d60a",
+      "time_sha256": "50d60d0aac04c844306f3f01686972b95ec2f5fe731a64e71efc8f31eb229ee2"
+    },
+    "john3": {
+      "first_seed": 62008,
+      "games_reserved": 4,
+      "result_artifact": false,
+      "observed_progress_games": 1,
+      "time_sha256": "75ed8e4e5d140e611582e582afeef047eb9fca63602eb9daeffa311d2a92d78e"
+    }
+  },
+  "substantive_gate_use": false,
+  "replacement_domain": {
+    "first_seed": 62020,
+    "games": 12,
+    "last_seed": 62031
+  },
+  "raw_artifacts": "artifacts/experiments/full-legal-public-oracle-v1/invalid-pre-fix",
+  "markdown_report": "docs/v2/reports/full-legal-public-oracle-v1-invalid-launch.md"
+}

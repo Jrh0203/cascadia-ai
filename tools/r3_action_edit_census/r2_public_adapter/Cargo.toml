@@ -1,0 +1,17 @@
+[package]
+name = "r2-public-token-adapter"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+blake3 = "1.8"
+cascadia-data = { path = "../../../crates/cascadia-data" }
+cascadia-game = { path = "../../../crates/cascadia-game" }
+cascadia-r2 = { path = "../../../crates/cascadia-r2" }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2.0"
+
+[dev-dependencies]
+proptest = "1.7"

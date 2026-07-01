@@ -38,6 +38,25 @@ use cascadia_core::board::Board;
 use cascadia_core::hex::{HexCoord, ADJACENCY, GRID_SIZE};
 use cascadia_core::types::{Terrain, Wildlife};
 
+#[cfg(all(
+    feature = "legacy-mid-v4-fixed-v1",
+    any(
+        feature = "legacy-features",
+        feature = "v5-feat",
+        feature = "czero-feat",
+        feature = "v6-peak",
+        feature = "cards-alt",
+        feature = "cards-alt-v2",
+        feature = "oppmarket-feat",
+        feature = "az-v2"
+    )
+))]
+compile_error!(
+    "`legacy-mid-v4-fixed-v1` is a complete versioned schema and cannot be combined with \
+     legacy-features, v5-feat, czero-feat, v6-peak, cards-alt, cards-alt-v2, \
+     oppmarket-feat, or az-v2"
+);
+
 // ─────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────
@@ -221,6 +240,37 @@ pub const NUM_FEATURES_MID: usize =
 pub const NUM_FEATURES_V3_V4: usize = NUM_FEATURES_V3 + OPP_DETAILED_FEATURES; // 45629
 pub const NUM_FEATURES_MID_V4: usize = NUM_FEATURES_MID + OPP_DETAILED_FEATURES; // 11231
 pub const NUM_FEATURES_MID_V4_OPM: usize = NUM_FEATURES_MID_V4 + OPPMARKET_FEATURES; // 11256
+
+// ── legacy-mid-v4-fixed-v1 ───────────────────────────────────────────
+//
+// This is a new semantic schema, not a reinterpretation of the historical
+// `mid-features,v4-opp` columns:
+//
+//   [0 .. 10561)       Frozen v2 base columns (copied byte-for-byte)
+//   [10561 .. 10930)   Frozen v4 opponent-detail rows, explicitly migrated
+//   [10930 .. 11080)   Live extended tile-bag terrain counts
+//   [11080 .. 11230)   Live extended tile-bag wildlife-capacity counts
+//   [11230 .. 11231)   Live overflow-used bit
+//
+// The historical 301-column range at [10561 .. 10862) is deliberately absent.
+// It was an accidental full-v3 adjacency prefix and was zero over the frozen
+// 200,000-state F1 census. Legacy champion files are remapped by schema-aware
+// loading; the corrected 301 rows are always zero-initialized.
+pub const LEGACY_MID_V4_FIXED_V1_SCHEMA_ID: &str = "legacy-mid-v4-fixed-v1";
+#[cfg(feature = "legacy-mid-v4-fixed-v1")]
+const LEGACY_MID_V4_FIXED_V1_SCHEMA_TAG: [u8; 16] = *b"MIDTAIL-CORR-V1\0";
+pub const LEGACY_MID_V4_FIXED_V1_OPP_BASE: usize = NUM_FEATURES_V2; // 10561
+pub const LEGACY_MID_V4_FIXED_V1_OPP_END: usize =
+    LEGACY_MID_V4_FIXED_V1_OPP_BASE + OPP_DETAILED_FEATURES; // 10930
+pub const LEGACY_MID_V4_FIXED_V1_TBAG_TERRAIN_BASE: usize = LEGACY_MID_V4_FIXED_V1_OPP_END; // 10930
+pub const LEGACY_MID_V4_FIXED_V1_TBAG_WL_BASE: usize =
+    LEGACY_MID_V4_FIXED_V1_TBAG_TERRAIN_BASE + TBAG_TERRAIN_EXT_FEATURES; // 11080
+pub const LEGACY_MID_V4_FIXED_V1_OVERFLOW_BASE: usize =
+    LEGACY_MID_V4_FIXED_V1_TBAG_WL_BASE + TBAG_WL_EXT_FEATURES; // 11230
+pub const LEGACY_MID_V4_FIXED_V1_TAIL_FEATURES: usize =
+    TBAG_TERRAIN_EXT_FEATURES + TBAG_WL_EXT_FEATURES + OVERFLOW_FEATURES; // 301
+pub const NUM_FEATURES_LEGACY_MID_V4_FIXED_V1: usize =
+    LEGACY_MID_V4_FIXED_V1_OVERFLOW_BASE + OVERFLOW_FEATURES; // 11231
 
 // ── v5-feat: frontier + richer opp patterns + bonus distance + habitat structure
 //             + tile-bag joint distribution ──────────────────────────────
@@ -476,6 +526,8 @@ pub const CZERO_FEAT_BASE: usize = if cfg!(feature = "v5-feat") {
 /// by zero-padding the v4 block on load.
 pub const OPP_DETAILED_BASE: usize = if cfg!(feature = "legacy-features") {
     NUM_FEATURES_LEGACY
+} else if cfg!(feature = "legacy-mid-v4-fixed-v1") {
+    LEGACY_MID_V4_FIXED_V1_OPP_BASE
 } else if cfg!(feature = "mid-features") {
     NUM_FEATURES_MID
 } else {
@@ -585,7 +637,9 @@ pub const NUM_FEATURES_V6_PEAK: usize = V6_CELL_FEATURES                  // 139
     + V6_HAB_BUCKET_FEATURES; // 1905
                               // = 17608
 
-pub const NUM_FEATURES: usize = if cfg!(feature = "v6-peak") {
+pub const NUM_FEATURES: usize = if cfg!(feature = "legacy-mid-v4-fixed-v1") {
+    NUM_FEATURES_LEGACY_MID_V4_FIXED_V1
+} else if cfg!(feature = "v6-peak") {
     NUM_FEATURES_V6_PEAK
 } else if cfg!(feature = "czero-feat") {
     CZERO_FEAT_BASE + CZERO_FEAT_FEATURES
@@ -2074,7 +2128,9 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
         // with the smaller first-layer weight matrix.
         // Note: the retain filter uses the "no-v4" boundary so that v4-opp
         // features (emitted AFTER this retain) survive.
-        let non_v4_cap = if cfg!(feature = "legacy-features") {
+        let non_v4_cap = if cfg!(feature = "legacy-mid-v4-fixed-v1") {
+            NUM_FEATURES_V2
+        } else if cfg!(feature = "legacy-features") {
             NUM_FEATURES_LEGACY
         } else if cfg!(feature = "mid-features") {
             NUM_FEATURES_MID
@@ -2091,6 +2147,17 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
         #[cfg(feature = "v4-opp")]
         if let Some(b) = bag {
             extract_opp_detailed_features(b, &mut features, OPP_DETAILED_BASE);
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // Corrected historical mid tail. This is emitted only under the new,
+        // schema-tagged `legacy-mid-v4-fixed-v1` contract. The frozen
+        // `mid-features,v4-opp` extractor above remains byte-for-byte semantic
+        // compatible with its historical checkpoints.
+        // ─────────────────────────────────────────────────────────────────
+        #[cfg(feature = "legacy-mid-v4-fixed-v1")]
+        if let Some(b) = bag {
+            extract_legacy_mid_v4_fixed_tail(b, &mut features);
         }
 
         // ─────────────────────────────────────────────────────────────────
@@ -2192,6 +2259,915 @@ pub fn extract_features_with_bag(board: &Board, bag: Option<&BagInfo>) -> Vec<u1
 
         features
     } // end allow(unreachable_code) block (v6-peak returns earlier)
+}
+
+/// Exact feature context for the production `mid-features,v4-opp` rollout
+/// policy. Candidate preparation evaluates up to 15 children that differ from
+/// one parent board by exactly one tile and at most one wildlife placement.
+/// The general extractor remains the oracle; this context reuses only blocks
+/// that are invariant across those children.
+#[cfg(all(
+    feature = "mid-features",
+    feature = "v4-opp",
+    not(any(
+        feature = "legacy-features",
+        feature = "v5-feat",
+        feature = "czero-feat",
+        feature = "v6-peak",
+        feature = "cards-alt",
+        feature = "cards-alt-v2",
+        feature = "oppmarket-feat"
+    ))
+))]
+pub(crate) struct MidV4AfterstateFeatureContext {
+    parent_core: Vec<u16>,
+    parent_allowed: Vec<u16>,
+    parent_secondary: Vec<u16>,
+    legacy_bag_and_opponents: Vec<u16>,
+    v2_bag_market: Vec<u16>,
+    v4_opponents: Vec<u16>,
+    post_opponent_tail: Vec<u16>,
+    parent_patterns: MidV4PatternSnapshot,
+    parent_order_by_cell: [u8; GRID_SIZE],
+    parent_tile_count: usize,
+    child_capacity: usize,
+}
+
+#[cfg(all(
+    feature = "mid-features",
+    feature = "v4-opp",
+    not(any(
+        feature = "legacy-features",
+        feature = "v5-feat",
+        feature = "czero-feat",
+        feature = "v6-peak",
+        feature = "cards-alt",
+        feature = "cards-alt-v2",
+        feature = "oppmarket-feat"
+    ))
+))]
+impl MidV4AfterstateFeatureContext {
+    pub(crate) fn new(board: &Board, bag: &BagInfo) -> Self {
+        debug_assert_eq!(NUM_FEATURES, NUM_FEATURES_MID_V4);
+
+        let legacy_static_start = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES + PATTERN_FEATURES;
+        let allowed_start = legacy_static_start + BAG_FEATURES + OPP_HAB_FEATURES;
+        let secondary_start = NUM_FEATURES_V1;
+        let v2_static_start = secondary_start
+            + SEC_TERRAIN_FEATURES
+            + HAB_EXT_FEATURES
+            + WL_COUNT_EXT2_FEATURES
+            + EXT_CAP_FEATURES
+            + PATTERN_V2_FEATURES;
+
+        let parent_features = extract_features_with_bag(board, Some(bag));
+        let child_capacity = parent_features.len() + 24;
+        let mut parent_core = Vec::with_capacity(board.placed_tiles.len() * 2);
+        let mut parent_allowed = Vec::new();
+        let mut parent_secondary = Vec::new();
+        let mut legacy_bag_and_opponents = Vec::new();
+        let mut v2_bag_market = Vec::new();
+        let mut v4_opponents = Vec::new();
+        let mut post_opponent_tail = Vec::new();
+        let opponent_end = OPP_DETAILED_BASE + OPP_DETAILED_FEATURES;
+
+        for feature in parent_features {
+            let index = feature as usize;
+            if index < CELL_FEATURES {
+                parent_core.push(feature);
+            } else if (legacy_static_start..allowed_start).contains(&index) {
+                legacy_bag_and_opponents.push(feature);
+            } else if (allowed_start..allowed_start + ALLOWED_WL_FEATURES).contains(&index) {
+                parent_allowed.push(feature);
+            } else if (secondary_start..secondary_start + SEC_TERRAIN_FEATURES).contains(&index) {
+                parent_secondary.push(feature);
+            } else if (v2_static_start..NUM_FEATURES_V2).contains(&index) {
+                v2_bag_market.push(feature);
+            } else if (OPP_DETAILED_BASE..opponent_end).contains(&index) {
+                v4_opponents.push(feature);
+            } else if cfg!(feature = "legacy-mid-v4-fixed-v1")
+                && (LEGACY_MID_V4_FIXED_V1_TBAG_TERRAIN_BASE..NUM_FEATURES_LEGACY_MID_V4_FIXED_V1)
+                    .contains(&index)
+            {
+                post_opponent_tail.push(feature);
+            }
+        }
+
+        let mut parent_order_by_cell = [u8::MAX; GRID_SIZE];
+        for (order, &tile_idx) in board.placed_tiles.iter().enumerate() {
+            parent_order_by_cell[tile_idx as usize] = order as u8;
+        }
+        debug_assert_eq!(parent_core.len(), board.placed_tiles.len() * 2);
+
+        Self {
+            parent_core,
+            parent_allowed,
+            parent_secondary,
+            legacy_bag_and_opponents,
+            v2_bag_market,
+            v4_opponents,
+            post_opponent_tail,
+            parent_patterns: MidV4PatternSnapshot::from_board(board),
+            parent_order_by_cell,
+            parent_tile_count: board.placed_tiles.len(),
+            child_capacity,
+        }
+    }
+
+    /// Extract the exact ordered sparse row for a board after one candidate
+    /// tile placement and an optional successful wildlife placement.
+    pub(crate) fn after_single_move_features(
+        &self,
+        board: &Board,
+        placed_tile_index: usize,
+        placed_wildlife_index: Option<usize>,
+    ) -> Vec<u16> {
+        debug_assert_eq!(board.placed_tiles.len(), self.parent_tile_count + 1);
+        debug_assert_eq!(
+            board.placed_tiles.last().copied(),
+            Some(placed_tile_index as u16)
+        );
+
+        let mut features = Vec::with_capacity(self.child_capacity);
+
+        // Per-cell core. Existing entries retain placed-tile order. A wildlife
+        // placed on an older tile changes only that tile's first core feature.
+        features.extend_from_slice(&self.parent_core);
+        if let Some(wildlife_index) =
+            placed_wildlife_index.filter(|&index| index != placed_tile_index)
+        {
+            let order = self.parent_order_by_cell[wildlife_index];
+            debug_assert_ne!(order, u8::MAX);
+            let wildlife = board
+                .grid
+                .get(wildlife_index)
+                .placed_wildlife()
+                .expect("successful wildlife placement must be present");
+            features[order as usize * 2] =
+                (wildlife_index * FEATURES_PER_CELL + wildlife as usize) as u16;
+        }
+        let placed_cell = board.grid.get(placed_tile_index);
+        let placed_base = placed_tile_index * FEATURES_PER_CELL;
+        if let Some(wildlife) = placed_cell.placed_wildlife() {
+            features.push((placed_base + wildlife as usize) as u16);
+        } else {
+            features.push((placed_base + 5) as u16);
+        }
+        if let Some(terrain) = placed_cell.primary_terrain() {
+            features.push((placed_base + 6 + terrain as usize) as u16);
+        }
+        let patterns =
+            self.parent_patterns
+                .after_single_move(board, placed_tile_index, placed_wildlife_index);
+
+        // Game phase.
+        let phase_base = CELL_FEATURES;
+        let turn = (board.tile_count as usize).saturating_sub(3).min(20);
+        features.push((phase_base + turn) as u16);
+        let tokens = (board.nature_tokens as usize).min(8);
+        features.push((phase_base + TURN_FEATURES + tokens) as u16);
+        let wl_base = phase_base + TURN_FEATURES + TOKEN_FEATURES;
+        for wildlife in 0..5 {
+            let count = board.wildlife_positions[wildlife].len().min(5);
+            features.push((wl_base + wildlife * 6 + count) as u16);
+        }
+        let hab_base = wl_base + WL_COUNT_FEATURES;
+        for terrain in 0..5 {
+            let size = (board.largest_group[terrain] as usize).min(9);
+            features.push((hab_base + terrain * 10 + size) as u16);
+        }
+
+        // Pairwise wildlife adjacency.
+        let pair_base = CELL_FEATURES + PHASE_FEATURES;
+        for &tile_idx in board.placed_tiles.iter() {
+            let start = HexCoord::from_index(tile_idx as usize);
+            let my_wildlife = wildlife_code(board, tile_idx as usize);
+            for (direction, &(dq, dr)) in HexCoord::LINE_DIRECTIONS.iter().enumerate() {
+                let neighbor = HexCoord::new(start.q + dq, start.r + dr);
+                if let Some(neighbor_index) = neighbor.to_index() {
+                    let neighbor_wildlife = wildlife_code(board, neighbor_index);
+                    if my_wildlife > 0 || neighbor_wildlife > 0 {
+                        let pair_index = direction * PAIR_STATES
+                            + my_wildlife as usize * 7
+                            + neighbor_wildlife as usize;
+                        features.push((pair_base + pair_index) as u16);
+                    }
+                }
+            }
+        }
+
+        let pattern_base = CELL_FEATURES + PHASE_FEATURES + PAIR_FEATURES;
+        patterns.append_legacy_features(&mut features, pattern_base);
+        features.extend_from_slice(&self.legacy_bag_and_opponents);
+
+        // Allowed-wildlife rows for the parent can be copied wholesale except
+        // when wildlife was placed on an existing open tile.
+        let allowed_base = pattern_base + PATTERN_FEATURES + BAG_FEATURES + OPP_HAB_FEATURES;
+        if let Some(wildlife_index) =
+            placed_wildlife_index.filter(|&index| index != placed_tile_index)
+        {
+            let removed_start = allowed_base + wildlife_index * ALLOWED_WL_PER_CELL;
+            let removed_end = removed_start + ALLOWED_WL_PER_CELL;
+            features.extend(self.parent_allowed.iter().copied().filter(|&feature| {
+                let index = feature as usize;
+                index < removed_start || index >= removed_end
+            }));
+        } else {
+            features.extend_from_slice(&self.parent_allowed);
+        }
+        if placed_cell.is_present() && !placed_cell.has_wildlife() {
+            let mask = placed_cell.allowed_wildlife();
+            for wildlife in Wildlife::ALL {
+                if mask.contains(wildlife) {
+                    features.push(
+                        (allowed_base + placed_tile_index * ALLOWED_WL_PER_CELL + wildlife as usize)
+                            as u16,
+                    );
+                }
+            }
+        }
+
+        let ext_wl_base = allowed_base + ALLOWED_WL_FEATURES;
+        for wildlife in 0..5 {
+            let count = board.wildlife_positions[wildlife].len().min(9);
+            features.push((ext_wl_base + wildlife * WL_COUNT_EXT_BINS + count) as u16);
+        }
+
+        // Terrain pairwise adjacency.
+        let terrain_pair_base = ext_wl_base + WL_COUNT_EXT_FEATURES;
+        for &tile_idx in board.placed_tiles.iter() {
+            let index = tile_idx as usize;
+            let coordinate = HexCoord::from_index(index);
+            for (direction, &(dq, dr)) in HexCoord::LINE_DIRECTIONS.iter().enumerate() {
+                let neighbor = HexCoord::new(coordinate.q + dq, coordinate.r + dr);
+                if let Some(neighbor_index) = neighbor.to_index() {
+                    if !board.grid.get(neighbor_index).is_present() {
+                        continue;
+                    }
+                    let my_terrain = terrain_code_on_edge(board, index, direction);
+                    let neighbor_terrain =
+                        terrain_code_on_edge(board, neighbor_index, (direction + 3) % 6);
+                    if my_terrain > 0 && neighbor_terrain > 0 {
+                        let pair_index = direction * TERRAIN_PAIR_STATES
+                            + my_terrain as usize * 6
+                            + neighbor_terrain as usize;
+                        features.push((terrain_pair_base + pair_index) as u16);
+                    }
+                }
+            }
+        }
+
+        // v2 move-sensitive blocks.
+        features.extend_from_slice(&self.parent_secondary);
+        if let Some(terrain) = placed_cell.secondary_terrain() {
+            features.push((NUM_FEATURES_V1 + placed_tile_index * 5 + terrain as usize) as u16);
+        }
+
+        let hab_ext_base = NUM_FEATURES_V1 + SEC_TERRAIN_FEATURES;
+        for terrain in 0..5 {
+            let size = (board.largest_group[terrain] as usize).min(HAB_EXT_BINS - 1);
+            features.push((hab_ext_base + terrain * HAB_EXT_BINS + size) as u16);
+        }
+
+        let wl_ext2_base = hab_ext_base + HAB_EXT_FEATURES;
+        for wildlife in 0..5 {
+            let count = board.wildlife_positions[wildlife]
+                .len()
+                .min(WL_COUNT_EXT2_BINS - 1);
+            features.push((wl_ext2_base + wildlife * WL_COUNT_EXT2_BINS + count) as u16);
+        }
+
+        let ext_cap_base = wl_ext2_base + WL_COUNT_EXT2_FEATURES;
+        patterns.append_extension_capacity_features(&mut features, ext_cap_base);
+
+        let pattern_v2_base = ext_cap_base + EXT_CAP_FEATURES;
+        patterns.append_v2_features(&mut features, pattern_v2_base);
+        features.extend_from_slice(&self.v2_bag_market);
+
+        #[cfg(not(feature = "legacy-mid-v4-fixed-v1"))]
+        {
+            // Preserve the historical mid-feature layout exactly: only the
+            // tiny in-range prefix of the full-v3 adjacency block may fire.
+            let adjacency = &*ADJACENCY;
+            let adjacency_base = NUM_FEATURES_V2;
+            for &tile_idx in board.placed_tiles.iter() {
+                let index = tile_idx as usize;
+                let cell_base = adjacency_base + index * ADJ_FEATURES_PER_CELL;
+                if cell_base >= NUM_FEATURES_MID {
+                    continue;
+                }
+                for direction in 0..6 {
+                    let direction_base = cell_base + direction * ADJ_STATES_PER_DIR;
+                    if direction_base >= NUM_FEATURES_MID {
+                        break;
+                    }
+                    let neighbor_value = adjacency.neighbors[index][direction];
+                    if neighbor_value == u16::MAX {
+                        features.push(direction_base as u16);
+                        let terrain_feature = direction_base + ADJ_WILDLIFE_STATES;
+                        if terrain_feature < NUM_FEATURES_MID {
+                            features.push(terrain_feature as u16);
+                        }
+                    } else {
+                        let neighbor_index = neighbor_value as usize;
+                        let wildlife_feature =
+                            direction_base + wildlife_code(board, neighbor_index) as usize;
+                        if wildlife_feature < NUM_FEATURES_MID {
+                            features.push(wildlife_feature as u16);
+                        }
+                        let terrain_feature = direction_base
+                            + ADJ_WILDLIFE_STATES
+                            + terrain_code_on_edge(board, neighbor_index, (direction + 3) % 6)
+                                as usize;
+                        if terrain_feature < NUM_FEATURES_MID {
+                            features.push(terrain_feature as u16);
+                        }
+                    }
+                }
+            }
+        }
+
+        features.extend_from_slice(&self.v4_opponents);
+        features.extend_from_slice(&self.post_opponent_tail);
+        debug_assert!(features
+            .iter()
+            .all(|&feature| (feature as usize) < NUM_FEATURES));
+        features
+    }
+}
+
+#[cfg(all(
+    feature = "mid-features",
+    feature = "v4-opp",
+    not(any(
+        feature = "legacy-features",
+        feature = "v5-feat",
+        feature = "czero-feat",
+        feature = "v6-peak",
+        feature = "cards-alt",
+        feature = "cards-alt-v2",
+        feature = "oppmarket-feat"
+    ))
+))]
+#[derive(Clone)]
+struct MidV4PatternSnapshot {
+    bear_pairs: usize,
+    bear_extendable_singles: usize,
+    bear_waste: usize,
+    bear_extension_capacity: usize,
+    elk_lines: [usize; 4],
+    elk_extendable_components: usize,
+    elk_extension_capacity: usize,
+    salmon_runs: [usize; 3],
+    salmon_extendable_components: usize,
+    salmon_extension_capacity: usize,
+    isolated_hawks: usize,
+    hawks_at_risk: usize,
+    hawk_extension_capacity: usize,
+    fox_average_diversity: usize,
+    max_diversity_foxes: usize,
+    fox_extension_capacity: usize,
+    empty_slots: [usize; 5],
+    forced_slots: [usize; 5],
+    open_keystone_slots: usize,
+}
+
+#[cfg(all(
+    feature = "mid-features",
+    feature = "v4-opp",
+    not(any(
+        feature = "legacy-features",
+        feature = "v5-feat",
+        feature = "czero-feat",
+        feature = "v6-peak",
+        feature = "cards-alt",
+        feature = "cards-alt-v2",
+        feature = "oppmarket-feat"
+    ))
+))]
+impl MidV4PatternSnapshot {
+    fn from_board(board: &Board) -> Self {
+        let (bear_pairs, bear_extendable_singles, bear_waste, bear_extension_capacity) =
+            Self::bear_metrics(board);
+        let (elk_lines, elk_extendable_components, elk_extension_capacity) =
+            Self::elk_metrics(board);
+        let (salmon_runs, salmon_extendable_components, salmon_extension_capacity) =
+            Self::salmon_metrics(board);
+        let (isolated_hawks, hawks_at_risk, hawk_extension_capacity) = Self::hawk_metrics(board);
+        let (fox_average_diversity, max_diversity_foxes, fox_extension_capacity) =
+            Self::fox_metrics(board);
+        let (empty_slots, forced_slots, open_keystone_slots) = Self::open_slot_metrics(board);
+
+        Self {
+            bear_pairs,
+            bear_extendable_singles,
+            bear_waste,
+            bear_extension_capacity,
+            elk_lines,
+            elk_extendable_components,
+            elk_extension_capacity,
+            salmon_runs,
+            salmon_extendable_components,
+            salmon_extension_capacity,
+            isolated_hawks,
+            hawks_at_risk,
+            hawk_extension_capacity,
+            fox_average_diversity,
+            max_diversity_foxes,
+            fox_extension_capacity,
+            empty_slots,
+            forced_slots,
+            open_keystone_slots,
+        }
+    }
+
+    fn after_single_move(
+        &self,
+        board: &Board,
+        placed_tile_index: usize,
+        placed_wildlife_index: Option<usize>,
+    ) -> Self {
+        let mut child = self.clone();
+        let placed_cell = board.grid.get(placed_tile_index);
+        let mut affected_wildlife = 0u8;
+
+        if let Some(existing_index) =
+            placed_wildlife_index.filter(|&index| index != placed_tile_index)
+        {
+            let existing_cell = board.grid.get(existing_index);
+            affected_wildlife |= existing_cell.allowed_wildlife().0;
+            child.adjust_open_slot(existing_cell, false);
+        }
+        if !placed_cell.has_wildlife() {
+            affected_wildlife |= placed_cell.allowed_wildlife().0;
+            child.adjust_open_slot(placed_cell, true);
+        }
+        if let Some(wildlife_index) = placed_wildlife_index {
+            let wildlife = board
+                .grid
+                .get(wildlife_index)
+                .placed_wildlife()
+                .expect("successful wildlife placement must be present");
+            affected_wildlife |= 1 << wildlife as u8;
+            // Any placed wildlife can change the diversity of adjacent foxes.
+            affected_wildlife |= 1 << Wildlife::Fox as u8;
+        }
+
+        if affected_wildlife & (1 << Wildlife::Bear as u8) != 0 {
+            (
+                child.bear_pairs,
+                child.bear_extendable_singles,
+                child.bear_waste,
+                child.bear_extension_capacity,
+            ) = Self::bear_metrics(board);
+        }
+        if affected_wildlife & (1 << Wildlife::Elk as u8) != 0 {
+            (
+                child.elk_lines,
+                child.elk_extendable_components,
+                child.elk_extension_capacity,
+            ) = Self::elk_metrics(board);
+        }
+        if affected_wildlife & (1 << Wildlife::Salmon as u8) != 0 {
+            (
+                child.salmon_runs,
+                child.salmon_extendable_components,
+                child.salmon_extension_capacity,
+            ) = Self::salmon_metrics(board);
+        }
+        if affected_wildlife & (1 << Wildlife::Hawk as u8) != 0 {
+            (
+                child.isolated_hawks,
+                child.hawks_at_risk,
+                child.hawk_extension_capacity,
+            ) = Self::hawk_metrics(board);
+        }
+        if affected_wildlife & (1 << Wildlife::Fox as u8) != 0 {
+            (
+                child.fox_average_diversity,
+                child.max_diversity_foxes,
+                child.fox_extension_capacity,
+            ) = Self::fox_metrics(board);
+        }
+
+        child
+    }
+
+    fn adjust_open_slot(&mut self, cell: cascadia_core::types::Cell, add: bool) {
+        let mask = cell.allowed_wildlife();
+        for wildlife in Wildlife::ALL {
+            if mask.contains(wildlife) {
+                if add {
+                    self.empty_slots[wildlife as usize] += 1;
+                } else {
+                    debug_assert!(self.empty_slots[wildlife as usize] > 0);
+                    self.empty_slots[wildlife as usize] -= 1;
+                }
+            }
+        }
+
+        if mask.0.count_ones() == 1 {
+            let wildlife = mask.0.trailing_zeros() as usize;
+            if add {
+                self.forced_slots[wildlife] += 1;
+            } else {
+                debug_assert!(self.forced_slots[wildlife] > 0);
+                self.forced_slots[wildlife] -= 1;
+            }
+        }
+        if cell.secondary_terrain().is_none() {
+            if add {
+                self.open_keystone_slots += 1;
+            } else {
+                debug_assert!(self.open_keystone_slots > 0);
+                self.open_keystone_slots -= 1;
+            }
+        }
+    }
+
+    fn bear_metrics(board: &Board) -> (usize, usize, usize, usize) {
+        let adjacency = &*ADJACENCY;
+        let positions = &board.wildlife_positions[Wildlife::Bear as usize];
+        let mut visited = CellBitSet::default();
+        let mut pairs = 0usize;
+        let mut extendable_singles = 0usize;
+        let mut waste = 0usize;
+        let mut extension_capacity = 0usize;
+
+        for &position in positions.iter() {
+            let index = position as usize;
+            if visited.contains(index) {
+                continue;
+            }
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(position);
+            visited.insert(index);
+            let mut component_size = 0usize;
+            let mut singleton_has_extension = false;
+            while let Some(current) = queue.pop() {
+                component_size += 1;
+                let mut has_extension = false;
+                for neighbor_index in adjacency.neighbors_of(current as usize) {
+                    let cell = board.grid.get(neighbor_index);
+                    if cell.placed_wildlife() == Some(Wildlife::Bear) {
+                        if !visited.contains(neighbor_index) {
+                            visited.insert(neighbor_index);
+                            queue.push(neighbor_index as u16);
+                        }
+                    } else if cell.is_present()
+                        && !cell.has_wildlife()
+                        && cell.allowed_wildlife().contains(Wildlife::Bear)
+                    {
+                        has_extension = true;
+                    }
+                }
+                if has_extension {
+                    extension_capacity += 1;
+                    singleton_has_extension = true;
+                }
+            }
+            if component_size == 2 {
+                pairs += 1;
+            } else if component_size >= 3 {
+                waste += component_size;
+            }
+            if component_size == 1 && singleton_has_extension {
+                extendable_singles += 1;
+            }
+        }
+
+        (pairs, extendable_singles, waste, extension_capacity)
+    }
+
+    fn elk_metrics(board: &Board) -> ([usize; 4], usize, usize) {
+        let adjacency = &*ADJACENCY;
+        let positions = &board.wildlife_positions[Wildlife::Elk as usize];
+        let mut is_elk = CellBitSet::default();
+        for &position in positions.iter() {
+            is_elk.insert(position as usize);
+        }
+
+        let mut all_lines = arrayvec::ArrayVec::<usize, 64>::new();
+        let mut used = CellBitSet::default();
+        let mut in_line = [CellBitSet::default(); 3];
+        for direction in 0..3 {
+            let (dq, dr) = HexCoord::LINE_DIRECTIONS[direction];
+            let mut direction_lines =
+                arrayvec::ArrayVec::<(usize, arrayvec::ArrayVec<u16, 24>), 24>::new();
+            for &position in positions.iter() {
+                if in_line[direction].contains(position as usize) {
+                    continue;
+                }
+                let mut start = HexCoord::from_index(position as usize);
+                loop {
+                    let previous = HexCoord::new(start.q - dq, start.r - dr);
+                    if previous
+                        .to_index()
+                        .is_some_and(|index| is_elk.contains(index))
+                    {
+                        start = previous;
+                    } else {
+                        break;
+                    }
+                }
+                let mut line = arrayvec::ArrayVec::<u16, 24>::new();
+                let mut current = start;
+                loop {
+                    if let Some(index) = current.to_index() {
+                        if is_elk.contains(index) {
+                            line.push(index as u16);
+                            in_line[direction].insert(index);
+                            current = HexCoord::new(current.q + dq, current.r + dr);
+                            continue;
+                        }
+                    }
+                    break;
+                }
+                if line.len() >= 2 {
+                    direction_lines.push((line.len(), line));
+                }
+            }
+            direction_lines.sort_by(|a, b| b.0.cmp(&a.0));
+            for (_, line) in direction_lines {
+                let mut best_run = 0usize;
+                let mut run = 0usize;
+                for &position in &line {
+                    if !used.contains(position as usize) {
+                        run += 1;
+                        best_run = best_run.max(run);
+                    } else {
+                        run = 0;
+                    }
+                }
+                if best_run > 0 {
+                    let mut count = 0usize;
+                    for &position in &line {
+                        if !used.contains(position as usize) && count < best_run {
+                            used.insert(position as usize);
+                            count += 1;
+                        }
+                        if count >= best_run {
+                            break;
+                        }
+                    }
+                    all_lines.push(best_run);
+                }
+            }
+        }
+        for &position in positions.iter() {
+            if !used.contains(position as usize) {
+                all_lines.push(1);
+            }
+        }
+        all_lines.sort_by(|a, b| b.cmp(a));
+        let lines = std::array::from_fn(|index| all_lines.get(index).copied().unwrap_or(0));
+
+        let mut visited = CellBitSet::default();
+        let mut extendable_components = 0usize;
+        let mut extension_capacity = 0usize;
+        for &position in positions.iter() {
+            let index = position as usize;
+            if visited.contains(index) {
+                continue;
+            }
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(position);
+            visited.insert(index);
+            let mut component_has_extension = false;
+            while let Some(current) = queue.pop() {
+                let mut position_has_extension = false;
+                for neighbor_index in adjacency.neighbors_of(current as usize) {
+                    let cell = board.grid.get(neighbor_index);
+                    if cell.placed_wildlife() == Some(Wildlife::Elk) {
+                        if !visited.contains(neighbor_index) {
+                            visited.insert(neighbor_index);
+                            queue.push(neighbor_index as u16);
+                        }
+                    } else if cell.is_present()
+                        && !cell.has_wildlife()
+                        && cell.allowed_wildlife().contains(Wildlife::Elk)
+                    {
+                        position_has_extension = true;
+                    }
+                }
+                if position_has_extension {
+                    extension_capacity += 1;
+                    component_has_extension = true;
+                }
+            }
+            if component_has_extension {
+                extendable_components += 1;
+            }
+        }
+
+        (lines, extendable_components, extension_capacity)
+    }
+
+    fn salmon_metrics(board: &Board) -> ([usize; 3], usize, usize) {
+        let adjacency = &*ADJACENCY;
+        let positions = &board.wildlife_positions[Wildlife::Salmon as usize];
+        let mut visited = CellBitSet::default();
+        let mut run_lengths = arrayvec::ArrayVec::<usize, 24>::new();
+        let mut extendable_components = 0usize;
+        let mut extension_capacity = 0usize;
+
+        for &position in positions.iter() {
+            let index = position as usize;
+            if visited.contains(index) {
+                continue;
+            }
+            let mut component = arrayvec::ArrayVec::<u16, 24>::new();
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(position);
+            visited.insert(index);
+            let mut component_has_extension = false;
+            while let Some(current) = queue.pop() {
+                component.push(current);
+                let mut position_has_extension = false;
+                for neighbor_index in adjacency.neighbors_of(current as usize) {
+                    let cell = board.grid.get(neighbor_index);
+                    if cell.placed_wildlife() == Some(Wildlife::Salmon) {
+                        if !visited.contains(neighbor_index) {
+                            visited.insert(neighbor_index);
+                            queue.push(neighbor_index as u16);
+                        }
+                    } else if cell.is_present()
+                        && !cell.has_wildlife()
+                        && cell.allowed_wildlife().contains(Wildlife::Salmon)
+                    {
+                        position_has_extension = true;
+                    }
+                }
+                if position_has_extension {
+                    extension_capacity += 1;
+                    component_has_extension = true;
+                }
+            }
+            if component_has_extension {
+                extendable_components += 1;
+            }
+            let valid = component.iter().all(|&current| {
+                adjacency
+                    .neighbors_of(current as usize)
+                    .filter(|&neighbor_index| {
+                        board.grid.get(neighbor_index).placed_wildlife() == Some(Wildlife::Salmon)
+                    })
+                    .count()
+                    <= 2
+            });
+            if valid {
+                run_lengths.push(component.len());
+            }
+        }
+        run_lengths.sort_by(|a, b| b.cmp(a));
+        let runs = std::array::from_fn(|index| run_lengths.get(index).copied().unwrap_or(0));
+        (runs, extendable_components, extension_capacity)
+    }
+
+    fn hawk_metrics(board: &Board) -> (usize, usize, usize) {
+        let adjacency = &*ADJACENCY;
+        let positions = &board.wildlife_positions[Wildlife::Hawk as usize];
+        let mut isolated = 0usize;
+        let mut at_risk = 0usize;
+        let mut extension_capacity = 0usize;
+        for &position in positions.iter() {
+            let mut has_hawk_neighbor = false;
+            let mut has_hawk_slot = false;
+            for neighbor_index in adjacency.neighbors_of(position as usize) {
+                let cell = board.grid.get(neighbor_index);
+                if cell.placed_wildlife() == Some(Wildlife::Hawk) {
+                    has_hawk_neighbor = true;
+                } else if cell.is_present()
+                    && !cell.has_wildlife()
+                    && cell.allowed_wildlife().contains(Wildlife::Hawk)
+                {
+                    has_hawk_slot = true;
+                }
+            }
+            if !has_hawk_neighbor {
+                isolated += 1;
+                if has_hawk_slot {
+                    at_risk += 1;
+                }
+            }
+            if has_hawk_slot {
+                extension_capacity += 1;
+            }
+        }
+        (isolated, at_risk, extension_capacity)
+    }
+
+    fn fox_metrics(board: &Board) -> (usize, usize, usize) {
+        let adjacency = &*ADJACENCY;
+        let positions = &board.wildlife_positions[Wildlife::Fox as usize];
+        let mut total_diversity = 0usize;
+        let mut max_diversity = 0usize;
+        let mut extension_capacity = 0usize;
+        for &position in positions.iter() {
+            let mut mask = 0u8;
+            let mut has_extension = false;
+            for neighbor_index in adjacency.neighbors_of(position as usize) {
+                let cell = board.grid.get(neighbor_index);
+                if let Some(wildlife) = cell.placed_wildlife() {
+                    mask |= 1 << wildlife as u8;
+                } else if cell.is_present() && cell.allowed_wildlife().contains(Wildlife::Fox) {
+                    has_extension = true;
+                }
+            }
+            let diversity = mask.count_ones() as usize;
+            total_diversity += diversity;
+            if diversity >= 4 {
+                max_diversity += 1;
+            }
+            if has_extension {
+                extension_capacity += 1;
+            }
+        }
+        let average = if positions.is_empty() {
+            0
+        } else {
+            (total_diversity + positions.len() / 2) / positions.len()
+        };
+        (average, max_diversity, extension_capacity)
+    }
+
+    fn open_slot_metrics(board: &Board) -> ([usize; 5], [usize; 5], usize) {
+        let mut empty_slots = [0usize; 5];
+        let mut forced_slots = [0usize; 5];
+        let mut open_keystones = 0usize;
+        for &tile_index in board.placed_tiles.iter() {
+            let cell = board.grid.get(tile_index as usize);
+            if !cell.is_present() || cell.has_wildlife() {
+                continue;
+            }
+            let mask = cell.allowed_wildlife();
+            for wildlife in Wildlife::ALL {
+                if mask.contains(wildlife) {
+                    empty_slots[wildlife as usize] += 1;
+                }
+            }
+            if mask.0.count_ones() == 1 {
+                forced_slots[mask.0.trailing_zeros() as usize] += 1;
+            }
+            if cell.secondary_terrain().is_none() {
+                open_keystones += 1;
+            }
+        }
+        (empty_slots, forced_slots, open_keystones)
+    }
+
+    fn append_legacy_features(&self, features: &mut Vec<u16>, base: usize) {
+        features.push((base + self.bear_pairs.min(4)) as u16);
+        let elk_base = base + BEAR_PAIR_FEATURES;
+        for (slot, &length) in self.elk_lines.iter().enumerate() {
+            features.push((elk_base + slot * 5 + length.min(4)) as u16);
+        }
+        let salmon_base = elk_base + ELK_LINE_FEATURES;
+        for (slot, &length) in self.salmon_runs.iter().enumerate() {
+            features.push((salmon_base + slot * 8 + length.min(7)) as u16);
+        }
+        let hawk_base = salmon_base + SALMON_RUN_FEATURES;
+        features.push((hawk_base + self.isolated_hawks.min(8)) as u16);
+        let fox_base = hawk_base + HAWK_ISO_FEATURES;
+        features.push((fox_base + self.fox_average_diversity.min(5)) as u16);
+        let slot_base = fox_base + FOX_DIV_FEATURES;
+        for wildlife in 0..5 {
+            features.push((slot_base + wildlife * 5 + self.empty_slots[wildlife].min(4)) as u16);
+        }
+    }
+
+    fn append_extension_capacity_features(&self, features: &mut Vec<u16>, base: usize) {
+        let counts = [
+            self.bear_extension_capacity,
+            self.elk_extension_capacity,
+            self.salmon_extension_capacity,
+            self.hawk_extension_capacity,
+            self.fox_extension_capacity,
+        ];
+        for (wildlife, count) in counts.into_iter().enumerate() {
+            features.push((base + wildlife * 8 + count.min(7)) as u16);
+        }
+    }
+
+    fn append_v2_features(&self, features: &mut Vec<u16>, base: usize) {
+        features.push((base + self.elk_extendable_components.min(3)) as u16);
+        let salmon_base = base + PAT_EXT_ELK_LINES;
+        features.push((salmon_base + self.salmon_extendable_components.min(3)) as u16);
+        let bear_single_base = salmon_base + PAT_EXT_SALMON_RUNS;
+        features.push((bear_single_base + self.bear_extendable_singles.min(3)) as u16);
+        let bear_waste_base = bear_single_base + PAT_BEAR_EXT_SINGLES;
+        features.push((bear_waste_base + self.bear_waste.min(3)) as u16);
+        let hawk_base = bear_waste_base + PAT_BEAR_WASTE;
+        features.push((hawk_base + self.hawks_at_risk.min(3)) as u16);
+        let forced_base = hawk_base + PAT_HAWK_AT_RISK;
+        for wildlife in 0..5 {
+            features.push((forced_base + wildlife * 4 + self.forced_slots[wildlife].min(3)) as u16);
+        }
+        let fox_base = forced_base + PAT_FORCED_ALLOC;
+        features.push((fox_base + self.max_diversity_foxes.min(3)) as u16);
+        let keystone_base = fox_base + PAT_MAX_DIV_FOX;
+        features.push((keystone_base + self.open_keystone_slots.min(3)) as u16);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -2660,10 +3636,44 @@ fn extract_opp_detailed_features(bag: &BagInfo, features: &mut Vec<u16>, base: u
     }
 }
 
+#[cfg(feature = "legacy-mid-v4-fixed-v1")]
+fn extract_legacy_mid_v4_fixed_tail(bag: &BagInfo, features: &mut Vec<u16>) {
+    for terrain in 0..5 {
+        let count = (bag.tbag_terrain[terrain] as usize).min(TBAG_EXT_BINS - 1);
+        features.push(
+            (LEGACY_MID_V4_FIXED_V1_TBAG_TERRAIN_BASE + terrain * TBAG_EXT_BINS + count) as u16,
+        );
+    }
+    for wildlife in 0..5 {
+        let count = (bag.tbag_wildlife[wildlife] as usize).min(TBAG_EXT_BINS - 1);
+        features
+            .push((LEGACY_MID_V4_FIXED_V1_TBAG_WL_BASE + wildlife * TBAG_EXT_BINS + count) as u16);
+    }
+    if bag.overflow_used {
+        features.push(LEGACY_MID_V4_FIXED_V1_OVERFLOW_BASE as u16);
+    }
+}
+
 /// Extract all v2 feature blocks, appending to `features`.
 /// All v2 indices are relative to NUM_FEATURES_V1 = 7670.
 fn extract_v2_features(board: &Board, bag: Option<&BagInfo>, features: &mut Vec<u16>) {
     let v2_base = NUM_FEATURES_V1;
+    let non_v4_cap = if cfg!(feature = "legacy-mid-v4-fixed-v1") {
+        NUM_FEATURES_V2
+    } else if cfg!(feature = "legacy-features") {
+        NUM_FEATURES_LEGACY
+    } else if cfg!(feature = "mid-features") {
+        NUM_FEATURES_MID
+    } else {
+        NUM_FEATURES_V3
+    };
+
+    // The legacy feature set ends before every v2/v3 block. Returning here is
+    // exactly equivalent to emitting those indices and retaining only values
+    // below NUM_FEATURES_LEGACY, without paying to construct discarded work.
+    if non_v4_cap <= v2_base {
+        return;
+    }
 
     // ── Block A: per-cell SECONDARY terrain (441 × 5 = 2205) ──
     // Fires only on dual-terrain placed tiles.
@@ -2799,50 +3809,93 @@ fn extract_v2_features(board: &Board, bag: Option<&BagInfo>, features: &mut Vec<
     // ── Block K: per-cell adjacency (441 × 6 × 13 = 34398) ──
     // For each placed tile, encode each of 6 neighbors' wildlife + terrain state.
     let adj_base = NUM_FEATURES_V2;
-    let adj = &*ADJACENCY;
-    for &tile_idx in board.placed_tiles.iter() {
-        let idx = tile_idx as usize;
-        let cell_base = adj_base + idx * ADJ_FEATURES_PER_CELL;
-        for dir in 0..6 {
-            let dir_base = cell_base + dir * ADJ_STATES_PER_DIR;
-            let nidx_val = adj.neighbors[idx][dir];
-            if nidx_val == u16::MAX {
-                // Out of bounds: fire state 0 for both wildlife and terrain
-                features.push(dir_base as u16);
-                features.push((dir_base + ADJ_WILDLIFE_STATES) as u16);
-            } else {
-                let nidx = nidx_val as usize;
-                // Wildlife state of neighbor
-                let wl_state = wildlife_code(board, nidx) as usize;
-                features.push((dir_base + wl_state) as u16);
-                // Terrain state: neighbor's terrain on the edge facing back toward us
-                let terr_state = terrain_code_on_edge(board, nidx, (dir + 3) % 6) as usize;
-                features.push((dir_base + ADJ_WILDLIFE_STATES + terr_state) as u16);
+    if non_v4_cap > adj_base {
+        let adj = &*ADJACENCY;
+        for &tile_idx in board.placed_tiles.iter() {
+            let idx = tile_idx as usize;
+            let cell_base = adj_base + idx * ADJ_FEATURES_PER_CELL;
+            if cell_base >= non_v4_cap {
+                continue;
+            }
+            for dir in 0..6 {
+                let dir_base = cell_base + dir * ADJ_STATES_PER_DIR;
+                if dir_base >= non_v4_cap {
+                    break;
+                }
+                let nidx_val = adj.neighbors[idx][dir];
+                if nidx_val == u16::MAX {
+                    // Out of bounds: fire state 0 for both wildlife and terrain.
+                    if dir_base < non_v4_cap {
+                        features.push(dir_base as u16);
+                    }
+                    let terrain_feature = dir_base + ADJ_WILDLIFE_STATES;
+                    if terrain_feature < non_v4_cap {
+                        features.push(terrain_feature as u16);
+                    }
+                } else {
+                    let nidx = nidx_val as usize;
+                    // Wildlife state of neighbor.
+                    let wildlife_feature = dir_base + wildlife_code(board, nidx) as usize;
+                    if wildlife_feature < non_v4_cap {
+                        features.push(wildlife_feature as u16);
+                    }
+                    // Terrain state: neighbor's terrain on the edge facing back toward us.
+                    let terrain_feature = dir_base
+                        + ADJ_WILDLIFE_STATES
+                        + terrain_code_on_edge(board, nidx, (dir + 3) % 6) as usize;
+                    if terrain_feature < non_v4_cap {
+                        features.push(terrain_feature as u16);
+                    }
+                }
             }
         }
     }
 
     // Bag-dependent v3 blocks
-    if let Some(b) = bag {
+    let tbag_terr_ext_base = adj_base + CELL_ADJ_FEATURES;
+    if non_v4_cap > tbag_terr_ext_base {
+        let Some(b) = bag else {
+            return;
+        };
         // ── Block L: tile bag terrain extended 0-29 (5 × 30 = 150) ──
-        let tbag_terr_ext_base = adj_base + CELL_ADJ_FEATURES;
         for t in 0..5 {
             let count = (b.tbag_terrain[t] as usize).min(TBAG_EXT_BINS - 1);
-            features.push((tbag_terr_ext_base + t * TBAG_EXT_BINS + count) as u16);
+            let feature = tbag_terr_ext_base + t * TBAG_EXT_BINS + count;
+            if feature < non_v4_cap {
+                features.push(feature as u16);
+            }
         }
 
         // ── Block M: tile bag wildlife extended 0-29 (5 × 30 = 150) ──
         let tbag_wl_ext_base = tbag_terr_ext_base + TBAG_TERRAIN_EXT_FEATURES;
         for w in 0..5 {
             let count = (b.tbag_wildlife[w] as usize).min(TBAG_EXT_BINS - 1);
-            features.push((tbag_wl_ext_base + w * TBAG_EXT_BINS + count) as u16);
+            let feature = tbag_wl_ext_base + w * TBAG_EXT_BINS + count;
+            if feature < non_v4_cap {
+                features.push(feature as u16);
+            }
         }
 
         // ── Block N: overflow refresh used (1 bit) ──
         let overflow_base = tbag_wl_ext_base + TBAG_WL_EXT_FEATURES;
-        if b.overflow_used {
+        if b.overflow_used && overflow_base < non_v4_cap {
             features.push(overflow_base as u16);
         }
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+struct CellBitSet([u64; GRID_SIZE.div_ceil(64)]);
+
+impl CellBitSet {
+    #[inline(always)]
+    fn contains(&self, index: usize) -> bool {
+        self.0[index >> 6] & (1u64 << (index & 63)) != 0
+    }
+
+    #[inline(always)]
+    fn insert(&mut self, index: usize) {
+        self.0[index >> 6] |= 1u64 << (index & 63);
     }
 }
 
@@ -2856,23 +3909,23 @@ fn extract_pattern_v2_features(board: &Board, features: &mut Vec<u16>, base: usi
     let elk_positions = &board.wildlife_positions[Wildlife::Elk as usize];
     let mut elk_extendable_components = 0usize;
     {
-        let mut visited = [false; 441];
+        let mut visited = CellBitSet::default();
         for &pos in elk_positions.iter() {
             let idx = pos as usize;
-            if visited[idx] {
+            if visited.contains(idx) {
                 continue;
             }
             // BFS the elk component
             let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
             queue.push(pos);
-            visited[idx] = true;
+            visited.insert(idx);
             let mut has_extension = false;
             while let Some(cur) = queue.pop() {
                 for nidx in adj.neighbors_of(cur as usize) {
                     let cell = board.grid.get(nidx);
                     if cell.placed_wildlife() == Some(Wildlife::Elk) {
-                        if !visited[nidx] {
-                            visited[nidx] = true;
+                        if !visited.contains(nidx) {
+                            visited.insert(nidx);
                             queue.push(nidx as u16);
                         }
                     } else if cell.is_present()
@@ -2895,22 +3948,22 @@ fn extract_pattern_v2_features(board: &Board, features: &mut Vec<u16>, base: usi
     let salmon_positions = &board.wildlife_positions[Wildlife::Salmon as usize];
     let mut salmon_extendable_components = 0usize;
     {
-        let mut visited = [false; 441];
+        let mut visited = CellBitSet::default();
         for &pos in salmon_positions.iter() {
             let idx = pos as usize;
-            if visited[idx] {
+            if visited.contains(idx) {
                 continue;
             }
             let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
             queue.push(pos);
-            visited[idx] = true;
+            visited.insert(idx);
             let mut has_extension = false;
             while let Some(cur) = queue.pop() {
                 for nidx in adj.neighbors_of(cur as usize) {
                     let cell = board.grid.get(nidx);
                     if cell.placed_wildlife() == Some(Wildlife::Salmon) {
-                        if !visited[nidx] {
-                            visited[nidx] = true;
+                        if !visited.contains(nidx) {
+                            visited.insert(nidx);
                             queue.push(nidx as u16);
                         }
                     } else if cell.is_present()
@@ -2935,32 +3988,29 @@ fn extract_pattern_v2_features(board: &Board, features: &mut Vec<u16>, base: usi
     let mut bear_extendable_singles = 0usize;
     {
         // Count component sizes per bear
-        let mut visited = [false; 441];
+        let mut visited = CellBitSet::default();
         for &pos in bear_positions.iter() {
             let idx = pos as usize;
-            if visited[idx] {
+            if visited.contains(idx) {
                 continue;
             }
             let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
             queue.push(pos);
-            visited[idx] = true;
+            visited.insert(idx);
             let mut size = 0usize;
-            let mut roots = arrayvec::ArrayVec::<u16, 24>::new();
             while let Some(cur) = queue.pop() {
                 size += 1;
-                roots.push(cur);
                 for nidx in adj.neighbors_of(cur as usize) {
-                    if !visited[nidx]
+                    if !visited.contains(nidx)
                         && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear)
                     {
-                        visited[nidx] = true;
+                        visited.insert(nidx);
                         queue.push(nidx as u16);
                     }
                 }
             }
             if size == 1 {
-                let r = roots[0] as usize;
-                let extends = adj.neighbors_of(r).any(|nidx| {
+                let extends = adj.neighbors_of(idx).any(|nidx| {
                     let c = board.grid.get(nidx);
                     c.is_present()
                         && !c.has_wildlife()
@@ -2984,23 +4034,23 @@ fn extract_pattern_v2_features(board: &Board, features: &mut Vec<u16>, base: usi
     {
         let mut bear_waste = 0usize;
         {
-            let mut visited = [false; 441];
+            let mut visited = CellBitSet::default();
             for &pos in bear_positions.iter() {
                 let idx = pos as usize;
-                if visited[idx] {
+                if visited.contains(idx) {
                     continue;
                 }
                 let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
                 queue.push(pos);
-                visited[idx] = true;
+                visited.insert(idx);
                 let mut size = 0usize;
                 while let Some(cur) = queue.pop() {
                     size += 1;
                     for nidx in adj.neighbors_of(cur as usize) {
-                        if !visited[nidx]
+                        if !visited.contains(nidx)
                             && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear)
                         {
-                            visited[nidx] = true;
+                            visited.insert(nidx);
                             queue.push(nidx as u16);
                         }
                     }
@@ -3119,28 +4169,29 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
 
     // ── Bear pairs (connected components of exactly size 2, isolated) ──
     let bear_positions = &board.wildlife_positions[Wildlife::Bear as usize];
-    let mut visited = [false; 441];
+    let mut visited = CellBitSet::default();
     let mut bear_pairs = 0usize;
     for &pos in bear_positions.iter() {
         let idx = pos as usize;
-        if visited[idx] {
+        if visited.contains(idx) {
             continue;
         }
-        let mut component = arrayvec::ArrayVec::<u16, 24>::new();
         let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
         queue.push(pos);
-        visited[idx] = true;
+        visited.insert(idx);
+        let mut component_size = 0usize;
         while let Some(current) = queue.pop() {
-            component.push(current);
+            component_size += 1;
             for nidx in adj.neighbors_of(current as usize) {
-                if !visited[nidx] && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear)
+                if !visited.contains(nidx)
+                    && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Bear)
                 {
-                    visited[nidx] = true;
+                    visited.insert(nidx);
                     queue.push(nidx as u16);
                 }
             }
         }
-        if component.len() == 2 {
+        if component_size == 2 {
             bear_pairs += 1;
         }
     }
@@ -3149,22 +4200,22 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
     // ── Elk lines (find all maximal lines, greedily assign, count by length) ──
     let elk_base = base + BEAR_PAIR_FEATURES;
     let elk_positions = &board.wildlife_positions[Wildlife::Elk as usize];
-    let mut is_elk = [false; 441];
+    let mut is_elk = CellBitSet::default();
     for &pos in elk_positions.iter() {
-        is_elk[pos as usize] = true;
+        is_elk.insert(pos as usize);
     }
 
     // Find all maximal lines in 3 directions
-    let mut all_lines: Vec<usize> = Vec::new(); // lengths of assigned lines
-    let mut used = [false; 441];
-    let mut in_line = [[false; 441]; 3];
+    let mut all_lines = arrayvec::ArrayVec::<usize, 64>::new(); // lengths of assigned lines
+    let mut used = CellBitSet::default();
+    let mut in_line = [CellBitSet::default(); 3];
 
     for dir in 0..3 {
         let (dq, dr) = HexCoord::LINE_DIRECTIONS[dir];
         // Collect maximal lines for this direction
-        let mut dir_lines: Vec<(usize, Vec<u16>)> = Vec::new(); // (length, positions)
+        let mut dir_lines = arrayvec::ArrayVec::<(usize, arrayvec::ArrayVec<u16, 24>), 24>::new();
         for &pos in elk_positions.iter() {
-            if in_line[dir][pos as usize] {
+            if in_line[dir].contains(pos as usize) {
                 continue;
             }
             let coord = HexCoord::from_index(pos as usize);
@@ -3173,7 +4224,7 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
             loop {
                 let prev = HexCoord::new(start.q - dq, start.r - dr);
                 if let Some(pidx) = prev.to_index() {
-                    if is_elk[pidx] {
+                    if is_elk.contains(pidx) {
                         start = prev;
                         continue;
                     }
@@ -3181,13 +4232,13 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
                 break;
             }
             // Walk forward to build line
-            let mut line = Vec::new();
+            let mut line = arrayvec::ArrayVec::<u16, 24>::new();
             let mut current = start;
             loop {
                 if let Some(cidx) = current.to_index() {
-                    if is_elk[cidx] {
+                    if is_elk.contains(cidx) {
                         line.push(cidx as u16);
-                        in_line[dir][cidx] = true;
+                        in_line[dir].insert(cidx);
                         current = HexCoord::new(current.q + dq, current.r + dr);
                         continue;
                     }
@@ -3204,7 +4255,7 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
             let mut best_run = 0;
             let mut run = 0;
             for &p in &line {
-                if !used[p as usize] {
+                if !used.contains(p as usize) {
                     run += 1;
                     best_run = best_run.max(run);
                 } else {
@@ -3212,26 +4263,11 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
                 }
             }
             if best_run >= 1 {
-                // Mark used
-                run = 0;
-                let mut marking = false;
-                let mut marked = 0;
-                for &p in &line {
-                    if !used[p as usize] {
-                        run += 1;
-                        if run >= best_run && !marking {
-                            // Go back and mark
-                            marking = true;
-                        }
-                    } else {
-                        run = 0;
-                    }
-                }
                 // Simpler: just mark the first best_run unused elk
                 let mut count = 0;
                 for &p in &line {
-                    if !used[p as usize] && count < best_run {
-                        used[p as usize] = true;
+                    if !used.contains(p as usize) && count < best_run {
+                        used.insert(p as usize);
                         count += 1;
                     }
                     if count >= best_run {
@@ -3244,7 +4280,7 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
     }
     // Remaining unused elk count as lines of 1
     for &pos in elk_positions.iter() {
-        if !used[pos as usize] {
+        if !used.contains(pos as usize) {
             all_lines.push(1);
         }
     }
@@ -3259,24 +4295,24 @@ fn extract_pattern_features(board: &Board, features: &mut Vec<u16>, base: usize)
     // ── Salmon runs (connected components with degree ≤ 2) ──
     let salmon_base = elk_base + ELK_LINE_FEATURES;
     let salmon_positions = &board.wildlife_positions[Wildlife::Salmon as usize];
-    let mut visited = [false; 441];
-    let mut run_lengths: Vec<usize> = Vec::new();
+    let mut visited = CellBitSet::default();
+    let mut run_lengths = arrayvec::ArrayVec::<usize, 24>::new();
     for &pos in salmon_positions.iter() {
         let idx = pos as usize;
-        if visited[idx] {
+        if visited.contains(idx) {
             continue;
         }
         let mut component = arrayvec::ArrayVec::<u16, 24>::new();
         let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
         queue.push(pos);
-        visited[idx] = true;
+        visited.insert(idx);
         while let Some(current) = queue.pop() {
             component.push(current);
             for nidx in adj.neighbors_of(current as usize) {
-                if !visited[nidx]
+                if !visited.contains(nidx)
                     && board.grid.get(nidx).placed_wildlife() == Some(Wildlife::Salmon)
                 {
-                    visited[nidx] = true;
+                    visited.insert(nidx);
                     queue.push(nidx as u16);
                 }
             }
@@ -3407,6 +4443,160 @@ pub struct NNUENetwork {
     pub has_heteroscedastic: bool,
     pub w3_var: Vec<f32>, // [HIDDEN2]
     pub b3_var: f32,
+}
+
+#[derive(Clone, Copy)]
+enum FirstLayerReadLayout {
+    Prefix,
+    #[cfg(feature = "legacy-mid-v4-fixed-v1")]
+    LegacyMidV4(FixedLegacyFirstLayerLayout),
+}
+
+#[cfg(feature = "legacy-mid-v4-fixed-v1")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FixedLegacyFirstLayerLayout {
+    Prefix {
+        copied_features: usize,
+    },
+    WithOpponentDetail {
+        base_features: usize,
+        opponent_source_base: usize,
+    },
+}
+
+#[cfg(feature = "legacy-mid-v4-fixed-v1")]
+impl FixedLegacyFirstLayerLayout {
+    fn from_stored_features(stored_features: usize) -> std::io::Result<Self> {
+        match stored_features {
+            NUM_FEATURES_LEGACY | NUM_FEATURES_V1 | NUM_FEATURES_V2 => Ok(Self::Prefix {
+                copied_features: stored_features,
+            }),
+            NUM_FEATURES_MID => Ok(Self::Prefix {
+                copied_features: NUM_FEATURES_V2,
+            }),
+            features if features == NUM_FEATURES_LEGACY + OPP_DETAILED_FEATURES => {
+                Ok(Self::WithOpponentDetail {
+                    base_features: NUM_FEATURES_LEGACY,
+                    opponent_source_base: NUM_FEATURES_LEGACY,
+                })
+            }
+            NUM_FEATURES_MID_V4 => Ok(Self::WithOpponentDetail {
+                base_features: NUM_FEATURES_V2,
+                opponent_source_base: NUM_FEATURES_MID,
+            }),
+            _ => Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "legacy NNUE has {stored_features} first-layer rows; \
+                     `{LEGACY_MID_V4_FIXED_V1_SCHEMA_ID}` accepts only known prefix, \
+                     legacy+v4, mid, or mid+v4 layouts"
+                ),
+            )),
+        }
+    }
+
+    fn destination(self, source: usize) -> Option<usize> {
+        match self {
+            Self::Prefix { copied_features } => (source < copied_features).then_some(source),
+            Self::WithOpponentDetail {
+                base_features,
+                opponent_source_base,
+            } => {
+                if source < base_features {
+                    Some(source)
+                } else if (opponent_source_base..opponent_source_base + OPP_DETAILED_FEATURES)
+                    .contains(&source)
+                {
+                    Some(LEGACY_MID_V4_FIXED_V1_OPP_BASE + source - opponent_source_base)
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+impl FirstLayerReadLayout {
+    fn destination(self, source: usize) -> Option<usize> {
+        match self {
+            Self::Prefix => (source < NUM_FEATURES).then_some(source),
+            #[cfg(feature = "legacy-mid-v4-fixed-v1")]
+            Self::LegacyMidV4(layout) => layout.destination(source),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct WeightReadPlan {
+    stored_features: usize,
+    has_policy: bool,
+    has_split: bool,
+    has_split11: bool,
+    has_heteroscedastic: bool,
+    first_layer_layout: FirstLayerReadLayout,
+}
+
+fn weight_payload_sizes(version: u32) -> std::io::Result<(u64, u64)> {
+    if !(1..=4).contains(&version) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("unsupported NNUE weight version {version}"),
+        ));
+    }
+    let fixed_after_w1 = ((HIDDEN1 + HIDDEN1 * HIDDEN2 + HIDDEN2 + HIDDEN2 + 1) as u64) * 4;
+    let policy_head_size = (HIDDEN2 + 1) as u64 * 4;
+    let split_head_size = (2 * (HIDDEN2 + 1)) as u64 * 4;
+    let split11_head_size = ((NUM_HEADS * HIDDEN2 + NUM_HEADS) as u64) * 4;
+    let heteroscedastic_head_size = ((HIDDEN2 + 1) as u64) * 4;
+    let trailing_size = policy_head_size
+        + if version >= 2 { split_head_size } else { 0 }
+        + if version >= 3 { split11_head_size } else { 0 }
+        + if version >= 4 {
+            heteroscedastic_head_size
+        } else {
+            0
+        };
+    Ok((fixed_after_w1, trailing_size))
+}
+
+fn legacy_weight_read_plan(file_size: u64, version: u32) -> std::io::Result<WeightReadPlan> {
+    let header_size = 8u64;
+    let (fixed_after_w1, trailing_size) = weight_payload_sizes(version)?;
+    let row_bytes = HIDDEN1 as u64 * 4;
+
+    let with_trailing = file_size
+        .checked_sub(header_size + fixed_after_w1 + trailing_size)
+        .filter(|bytes| *bytes > 0 && *bytes % row_bytes == 0);
+    let (stored_features, has_policy, has_split, has_split11, has_heteroscedastic) =
+        if let Some(w1_bytes) = with_trailing {
+            (
+                (w1_bytes / row_bytes) as usize,
+                true,
+                version >= 2,
+                version >= 3,
+                version >= 4,
+            )
+        } else {
+            let w1_bytes = file_size
+                .checked_sub(header_size + fixed_after_w1)
+                .filter(|bytes| *bytes > 0 && *bytes % row_bytes == 0)
+                .ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "NNUE file size does not match a supported legacy payload",
+                    )
+                })?;
+            ((w1_bytes / row_bytes) as usize, false, false, false, false)
+        };
+
+    Ok(WeightReadPlan {
+        stored_features,
+        has_policy,
+        has_split,
+        has_split11,
+        has_heteroscedastic,
+        first_layer_layout: FirstLayerReadLayout::Prefix,
+    })
 }
 
 impl NNUENetwork {
@@ -4507,10 +5697,7 @@ impl NNUENetwork {
         (avg_loss, agree_pct)
     }
 
-    pub fn save(&self, path: &std::path::Path) -> std::io::Result<()> {
-        use std::io::Write;
-        let mut file = std::fs::File::create(path)?;
-
+    fn weight_format_version(&self) -> u32 {
         // version=1: legacy single value head + policy head
         // version=2: adds split value heads (wildlife + habitat) appended at end
         // version=3: adds 11-head split block appended at very end
@@ -4519,7 +5706,7 @@ impl NNUENetwork {
         //            (HIDDEN2 + 1 floats). Implies v3 11-head block precedes
         //            (we always write split + 11-head sections when v3+; if
         //            those heads aren't trained, zeros are written).
-        let version: u32 = if self.has_heteroscedastic {
+        if self.has_heteroscedastic {
             4
         } else if self.has_split11_heads {
             3
@@ -4527,9 +5714,29 @@ impl NNUENetwork {
             2
         } else {
             1
-        };
-        file.write_all(b"NNUE")?;
-        file.write_all(&version.to_le_bytes())?;
+        }
+    }
+
+    fn write_weight_payload(&self, file: &mut std::fs::File) -> std::io::Result<()> {
+        use std::io::Write;
+
+        if self.w1.len() != NUM_FEATURES * HIDDEN1
+            || self.b1.len() != HIDDEN1
+            || self.w2.len() != HIDDEN1 * HIDDEN2
+            || self.b2.len() != HIDDEN2
+            || self.w3.len() != HIDDEN2
+            || self.w3_policy.len() != HIDDEN2
+            || self.w3_wildlife.len() != HIDDEN2
+            || self.w3_habitat.len() != HIDDEN2
+            || self.w3_heads.len() != NUM_HEADS * HIDDEN2
+            || self.b3_heads.len() != NUM_HEADS
+            || self.w3_var.len() != HIDDEN2
+        {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "NNUE tensor dimensions do not match the compiled architecture",
+            ));
+        }
 
         // W1: flat [NUM_FEATURES * HIDDEN1]
         for &v in &self.w1 {
@@ -4594,77 +5801,189 @@ impl NNUENetwork {
         Ok(())
     }
 
-    /// Load weights from a binary file. Supports version 1 (single value head)
-    /// and version 2 (split value heads appended after policy head).
-    pub fn load(path: &std::path::Path) -> std::io::Result<Self> {
+    pub fn save(&self, path: &std::path::Path) -> std::io::Result<()> {
+        use std::io::Write;
+        let mut file = std::fs::File::create(path)?;
+        let version = self.weight_format_version();
+
+        #[cfg(feature = "legacy-mid-v4-fixed-v1")]
+        {
+            // The corrected schema has the same row count as the historical
+            // champion but different semantics. A distinct magic plus explicit
+            // schema, feature-count, and architecture fields makes accidental
+            // cross-loading impossible.
+            file.write_all(b"NNUC")?;
+            file.write_all(&1u32.to_le_bytes())?;
+            file.write_all(&version.to_le_bytes())?;
+            file.write_all(&LEGACY_MID_V4_FIXED_V1_SCHEMA_TAG)?;
+            file.write_all(&(NUM_FEATURES as u32).to_le_bytes())?;
+            file.write_all(&(HIDDEN1 as u32).to_le_bytes())?;
+            file.write_all(&(HIDDEN2 as u32).to_le_bytes())?;
+        }
+        #[cfg(not(feature = "legacy-mid-v4-fixed-v1"))]
+        {
+            // Preserve the historical container byte-for-byte for every
+            // existing default and champion build.
+            file.write_all(b"NNUE")?;
+            file.write_all(&version.to_le_bytes())?;
+        }
+
+        self.write_weight_payload(&mut file)
+    }
+
+    /// Convert a supported historical NNUE checkpoint into the explicit
+    /// `legacy-mid-v4-fixed-v1` container. The first 10,561 base rows and live
+    /// opponent-detail rows are copied deterministically; the corrected
+    /// 301-row supply tail is zero-initialized.
+    #[cfg(feature = "legacy-mid-v4-fixed-v1")]
+    pub fn migrate_legacy_mid_v4_weights(
+        input: &std::path::Path,
+        output: &std::path::Path,
+    ) -> std::io::Result<()> {
         use std::io::Read;
-        let mut file = std::fs::File::open(path)?;
+        let mut source = std::fs::File::open(input)?;
+        let mut magic = [0u8; 4];
+        source.read_exact(&mut magic)?;
+        if &magic != b"NNUE" {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "migration input must use the historical NNUE container",
+            ));
+        }
+        drop(source);
+
+        let network = Self::load(input)?;
+        network.save(output)
+    }
+
+    /// Load weights from either the historical NNUE container or, when
+    /// compiled with `legacy-mid-v4-fixed-v1`, its schema-tagged corrected
+    /// successor. Historical rows are migrated only for explicitly recognized
+    /// layouts; unknown same-width or partial layouts are rejected.
+    pub fn load(path: &std::path::Path) -> std::io::Result<Self> {
+        use std::io::{BufReader, Read, Seek};
+        let source = std::fs::File::open(path)?;
+        let file_size = source.metadata()?.len();
+        let mut file = BufReader::new(source);
 
         let mut magic = [0u8; 4];
         file.read_exact(&mut magic)?;
-        if &magic != b"NNUE" {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "bad magic",
-            ));
-        }
-        let mut ver_buf = [0u8; 4];
-        file.read_exact(&mut ver_buf)?;
-        let version = u32::from_le_bytes(ver_buf);
+        let plan = if &magic == b"NNUE" {
+            let mut version_bytes = [0u8; 4];
+            file.read_exact(&mut version_bytes)?;
+            let version = u32::from_le_bytes(version_bytes);
+            let plan = legacy_weight_read_plan(file_size, version)?;
+            #[cfg(feature = "legacy-mid-v4-fixed-v1")]
+            {
+                WeightReadPlan {
+                    first_layer_layout: FirstLayerReadLayout::LegacyMidV4(
+                        FixedLegacyFirstLayerLayout::from_stored_features(plan.stored_features)?,
+                    ),
+                    ..plan
+                }
+            }
+            #[cfg(not(feature = "legacy-mid-v4-fixed-v1"))]
+            plan
+        } else {
+            #[cfg(feature = "legacy-mid-v4-fixed-v1")]
+            {
+                if &magic != b"NNUC" {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "bad NNUE weight magic",
+                    ));
+                }
+
+                let mut u32_bytes = [0u8; 4];
+                file.read_exact(&mut u32_bytes)?;
+                let container_version = u32::from_le_bytes(u32_bytes);
+                if container_version != 1 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!("unsupported corrected NNUE container version {container_version}"),
+                    ));
+                }
+                file.read_exact(&mut u32_bytes)?;
+                let version = u32::from_le_bytes(u32_bytes);
+                let (fixed_after_w1, trailing_size) = weight_payload_sizes(version)?;
+
+                let mut schema_tag = [0u8; 16];
+                file.read_exact(&mut schema_tag)?;
+                if schema_tag != LEGACY_MID_V4_FIXED_V1_SCHEMA_TAG {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "corrected NNUE schema tag does not match legacy-mid-v4-fixed-v1",
+                    ));
+                }
+
+                file.read_exact(&mut u32_bytes)?;
+                let stored_features = u32::from_le_bytes(u32_bytes) as usize;
+                file.read_exact(&mut u32_bytes)?;
+                let stored_hidden1 = u32::from_le_bytes(u32_bytes) as usize;
+                file.read_exact(&mut u32_bytes)?;
+                let stored_hidden2 = u32::from_le_bytes(u32_bytes) as usize;
+                if stored_features != NUM_FEATURES
+                    || stored_hidden1 != HIDDEN1
+                    || stored_hidden2 != HIDDEN2
+                {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!(
+                            "corrected NNUE architecture mismatch: file={stored_features}x\
+                             {stored_hidden1}x{stored_hidden2}, compiled={NUM_FEATURES}x\
+                             {HIDDEN1}x{HIDDEN2}"
+                        ),
+                    ));
+                }
+
+                let expected_size = 40u64
+                    + stored_features as u64 * HIDDEN1 as u64 * 4
+                    + fixed_after_w1
+                    + trailing_size;
+                if file_size != expected_size {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!(
+                            "corrected NNUE file size mismatch: expected {expected_size}, \
+                             found {file_size}"
+                        ),
+                    ));
+                }
+
+                WeightReadPlan {
+                    stored_features,
+                    has_policy: true,
+                    has_split: version >= 2,
+                    has_split11: version >= 3,
+                    has_heteroscedastic: version >= 4,
+                    first_layer_layout: FirstLayerReadLayout::Prefix,
+                }
+            }
+            #[cfg(not(feature = "legacy-mid-v4-fixed-v1"))]
+            {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "bad NNUE weight magic",
+                ));
+            }
+        };
 
         let mut buf = [0u8; 4];
-        let mut read_f32 = |f: &mut std::fs::File| -> std::io::Result<f32> {
+        let mut read_f32 = |f: &mut BufReader<std::fs::File>| -> std::io::Result<f32> {
             f.read_exact(&mut buf)?;
             Ok(f32::from_le_bytes(buf))
         };
 
-        // Layout (from start): header(8) + w1 + b1 + w2 + b2 + w3 + b3 + w3_policy + b3_policy + [split heads (v2+)] + [11-head block (v3)]
-        // We don't know w1_features upfront (legacy files had smaller NUM_FEATURES). Compute it by
-        // subtracting everything else from the file size.
-        let file_size = file.metadata()?.len();
-        let header_size = 8u64;
-        let fixed_after_w1 = ((HIDDEN1 + HIDDEN1 * HIDDEN2 + HIDDEN2 + HIDDEN2 + 1) as u64) * 4;
-        let policy_head_size = (HIDDEN2 + 1) as u64 * 4;
-        let split_head_size = (2 * (HIDDEN2 + 1)) as u64 * 4; // w3_wildlife + b + w3_habitat + b
-        let split11_head_size = ((NUM_HEADS * HIDDEN2 + NUM_HEADS) as u64) * 4;
-        let het_head_size = ((HIDDEN2 + 1) as u64) * 4; // w3_var + b3_var
-                                                        // The v1 file has no split heads appended, v2 has 2-head, v3 has both 2-head + 11-head,
-                                                        // v4 adds heteroscedastic head at the very end.
-        let trailing_size = policy_head_size
-            + if version >= 2 { split_head_size } else { 0 }
-            + if version >= 3 { split11_head_size } else { 0 }
-            + if version >= 4 { het_head_size } else { 0 };
-        // Compute w1 features from remaining bytes. If the file is v1 without a policy head
-        // (truly legacy), fall back by assuming zero trailing. That's best-effort.
-        let mut w1_bytes = file_size.saturating_sub(header_size + fixed_after_w1 + trailing_size);
-        let mut trailing_has_policy = true;
-        let mut trailing_has_split = version >= 2;
-        let mut trailing_has_11 = version >= 3;
-        let trailing_has_het = version >= 4;
-        let mut computed_features = w1_bytes / (HIDDEN1 as u64 * 4);
-        if computed_features > NUM_FEATURES as u64 {
-            // Stored in a newer file with more features than we know — cap and warn.
-            computed_features = NUM_FEATURES as u64;
-        }
-        // If this arithmetic looks insane (e.g. v1 file without policy head), retry without policy.
-        if w1_bytes == 0 || (w1_bytes % (HIDDEN1 as u64 * 4)) != 0 {
-            let w1_bytes_no_trailing = file_size.saturating_sub(header_size + fixed_after_w1);
-            if w1_bytes_no_trailing > 0 && (w1_bytes_no_trailing % (HIDDEN1 as u64 * 4)) == 0 {
-                w1_bytes = w1_bytes_no_trailing;
-                trailing_has_policy = false;
-                trailing_has_split = false;
-                trailing_has_11 = false;
-                computed_features = (w1_bytes / (HIDDEN1 as u64 * 4)).min(NUM_FEATURES as u64);
+        let mut w1 = vec![0.0; NUM_FEATURES * HIDDEN1];
+        for source_feature in 0..plan.stored_features {
+            let destination = plan.first_layer_layout.destination(source_feature);
+            for neuron in 0..HIDDEN1 {
+                let value = read_f32(&mut file)?;
+                if let Some(destination_feature) = destination {
+                    w1[destination_feature * HIDDEN1 + neuron] = value;
+                }
             }
         }
-        let w1_features = computed_features as usize;
-        let w1_features = w1_features.min(NUM_FEATURES);
-
-        let mut w1 = Vec::with_capacity(NUM_FEATURES * HIDDEN1);
-        for _ in 0..w1_features * HIDDEN1 {
-            w1.push(read_f32(&mut file)?);
-        }
-        w1.resize(NUM_FEATURES * HIDDEN1, 0.0);
         let mut b1 = Vec::with_capacity(HIDDEN1);
         for _ in 0..HIDDEN1 {
             b1.push(read_f32(&mut file)?);
@@ -4686,7 +6005,7 @@ impl NNUENetwork {
         let b3 = read_f32(&mut file)?;
 
         // Policy head (optional — backward compatible with pre-policy-head files)
-        let (w3_policy, b3_policy) = if trailing_has_policy {
+        let (w3_policy, b3_policy) = if plan.has_policy {
             let mut wp = Vec::with_capacity(HIDDEN2);
             for _ in 0..HIDDEN2 {
                 wp.push(read_f32(&mut file)?);
@@ -4698,7 +6017,7 @@ impl NNUENetwork {
         };
 
         // Split value heads (v2 and v3 both write this block)
-        let (has_split, w3_wildlife, b3_wildlife, w3_habitat, b3_habitat) = if trailing_has_split {
+        let (has_split, w3_wildlife, b3_wildlife, w3_habitat, b3_habitat) = if plan.has_split {
             let mut ww = Vec::with_capacity(HIDDEN2);
             for _ in 0..HIDDEN2 {
                 ww.push(read_f32(&mut file)?);
@@ -4715,7 +6034,7 @@ impl NNUENetwork {
         };
 
         // 11-head split (v3 and v4): NUM_HEADS × HIDDEN2 weights + NUM_HEADS biases
-        let (has_split11, w3_heads, b3_heads) = if trailing_has_11 {
+        let (has_split11, w3_heads, b3_heads) = if plan.has_split11 {
             let mut wh = Vec::with_capacity(NUM_HEADS * HIDDEN2);
             for _ in 0..NUM_HEADS * HIDDEN2 {
                 wh.push(read_f32(&mut file)?);
@@ -4730,7 +6049,7 @@ impl NNUENetwork {
         };
 
         // Heteroscedastic head (v4): w3_var [HIDDEN2] + b3_var
-        let (has_het, w3_var, b3_var) = if trailing_has_het {
+        let (has_het, w3_var, b3_var) = if plan.has_heteroscedastic {
             let mut wv = Vec::with_capacity(HIDDEN2);
             for _ in 0..HIDDEN2 {
                 wv.push(read_f32(&mut file)?);
@@ -4740,6 +6059,17 @@ impl NNUENetwork {
         } else {
             (false, vec![0.0; HIDDEN2], 0.0)
         };
+
+        let consumed = file.stream_position()?;
+        if consumed != file_size {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "NNUE payload has {} unread bytes",
+                    file_size.saturating_sub(consumed)
+                ),
+            ));
+        }
 
         Ok(NNUENetwork {
             w1,
@@ -6372,8 +7702,280 @@ fn extract_alt2_elk_features(board: &Board, features: &mut Vec<u16>, base: usize
     }
 }
 
-#[cfg(test)]
-#[cfg(feature = "oppmarket-feat")]
+#[cfg(all(test, feature = "legacy-mid-v4-fixed-v1"))]
+mod legacy_mid_v4_fixed_v1_tests {
+    use super::*;
+    use cascadia_core::game::GameState;
+    use cascadia_core::types::ScoringCards;
+    use rand::{rngs::StdRng, SeedableRng};
+    use std::io::{BufWriter, Write};
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
+
+    fn temp_path(label: &str) -> std::path::PathBuf {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "cascadia_{label}_{}_{}.bin",
+            std::process::id(),
+            id
+        ))
+    }
+
+    fn zero_network() -> NNUENetwork {
+        NNUENetwork {
+            w1: vec![0.0; NUM_FEATURES * HIDDEN1],
+            b1: vec![0.0; HIDDEN1],
+            w2: vec![0.0; HIDDEN1 * HIDDEN2],
+            b2: vec![0.0; HIDDEN2],
+            w3: vec![0.0; HIDDEN2],
+            b3: 0.0,
+            w3_policy: vec![0.0; HIDDEN2],
+            b3_policy: 0.0,
+            has_split_value_heads: false,
+            w3_wildlife: vec![0.0; HIDDEN2],
+            b3_wildlife: 0.0,
+            w3_habitat: vec![0.0; HIDDEN2],
+            b3_habitat: 0.0,
+            has_split11_heads: false,
+            w3_heads: vec![0.0; NUM_HEADS * HIDDEN2],
+            b3_heads: vec![0.0; NUM_HEADS],
+            has_heteroscedastic: false,
+            w3_var: vec![0.0; HIDDEN2],
+            b3_var: 0.0,
+        }
+    }
+
+    fn assert_network_eq(left: &NNUENetwork, right: &NNUENetwork) {
+        assert_eq!(left.w1, right.w1);
+        assert_eq!(left.b1, right.b1);
+        assert_eq!(left.w2, right.w2);
+        assert_eq!(left.b2, right.b2);
+        assert_eq!(left.w3, right.w3);
+        assert_eq!(left.b3, right.b3);
+        assert_eq!(left.w3_policy, right.w3_policy);
+        assert_eq!(left.b3_policy, right.b3_policy);
+        assert_eq!(left.has_split_value_heads, right.has_split_value_heads);
+        assert_eq!(left.w3_wildlife, right.w3_wildlife);
+        assert_eq!(left.b3_wildlife, right.b3_wildlife);
+        assert_eq!(left.w3_habitat, right.w3_habitat);
+        assert_eq!(left.b3_habitat, right.b3_habitat);
+        assert_eq!(left.has_split11_heads, right.has_split11_heads);
+        assert_eq!(left.w3_heads, right.w3_heads);
+        assert_eq!(left.b3_heads, right.b3_heads);
+        assert_eq!(left.has_heteroscedastic, right.has_heteroscedastic);
+        assert_eq!(left.w3_var, right.w3_var);
+        assert_eq!(left.b3_var, right.b3_var);
+    }
+
+    fn write_zero_bytes(writer: &mut impl Write, mut byte_count: usize) {
+        const ZEROES: [u8; 8192] = [0; 8192];
+        while byte_count > 0 {
+            let chunk = byte_count.min(ZEROES.len());
+            writer.write_all(&ZEROES[..chunk]).unwrap();
+            byte_count -= chunk;
+        }
+    }
+
+    fn write_historical_v1_weights(path: &std::path::Path, stored_features: usize) {
+        let file = std::fs::File::create(path).unwrap();
+        let mut writer = BufWriter::new(file);
+        writer.write_all(b"NNUE").unwrap();
+        writer.write_all(&1u32.to_le_bytes()).unwrap();
+
+        let row_zero_bytes = (HIDDEN1 - 1) * std::mem::size_of::<f32>();
+        for source_feature in 0..stored_features {
+            writer
+                .write_all(&(source_feature as f32 + 0.5).to_le_bytes())
+                .unwrap();
+            write_zero_bytes(&mut writer, row_zero_bytes);
+        }
+
+        let (fixed_after_w1, trailing_size) = weight_payload_sizes(1).unwrap();
+        write_zero_bytes(&mut writer, (fixed_after_w1 + trailing_size) as usize);
+        writer.flush().unwrap();
+    }
+
+    #[test]
+    fn corrected_schema_layout_is_dense_and_exact() {
+        assert_eq!(LEGACY_MID_V4_FIXED_V1_SCHEMA_ID, "legacy-mid-v4-fixed-v1");
+        assert_eq!(NUM_FEATURES_V2, 10_561);
+        assert_eq!(LEGACY_MID_V4_FIXED_V1_OPP_BASE, 10_561);
+        assert_eq!(LEGACY_MID_V4_FIXED_V1_OPP_END, 10_930);
+        assert_eq!(LEGACY_MID_V4_FIXED_V1_TBAG_TERRAIN_BASE, 10_930);
+        assert_eq!(LEGACY_MID_V4_FIXED_V1_TBAG_WL_BASE, 11_080);
+        assert_eq!(LEGACY_MID_V4_FIXED_V1_OVERFLOW_BASE, 11_230);
+        assert_eq!(LEGACY_MID_V4_FIXED_V1_TAIL_FEATURES, 301);
+        assert_eq!(NUM_FEATURES_LEGACY_MID_V4_FIXED_V1, 11_231);
+        assert_eq!(NUM_FEATURES, NUM_FEATURES_LEGACY_MID_V4_FIXED_V1);
+        assert_eq!(OPP_DETAILED_BASE, LEGACY_MID_V4_FIXED_V1_OPP_BASE);
+        assert_eq!(
+            LEGACY_MID_V4_FIXED_V1_OPP_END + LEGACY_MID_V4_FIXED_V1_TAIL_FEATURES,
+            NUM_FEATURES
+        );
+    }
+
+    #[test]
+    fn corrected_tail_activates_every_block_and_never_exceeds_bounds() {
+        let mut rng = StdRng::seed_from_u64(0xF5C0_22EC_7ED0_0001);
+        let game = GameState::new(4, ScoringCards::all_a(), &mut rng);
+        let board = &game.boards[0];
+
+        for raw_count in 0..=u8::MAX {
+            let mut bag = BagInfo::from_game_for_player(&game, 0);
+            bag.tbag_terrain = [raw_count; 5];
+            bag.tbag_wildlife = [u8::MAX - raw_count; 5];
+            bag.overflow_used = raw_count % 2 == 1;
+            let features = extract_features_with_bag(board, Some(&bag));
+            assert!(features
+                .iter()
+                .all(|&feature| (feature as usize) < NUM_FEATURES));
+
+            let opponent_features = features
+                .iter()
+                .filter(|&&feature| {
+                    (LEGACY_MID_V4_FIXED_V1_OPP_BASE..LEGACY_MID_V4_FIXED_V1_OPP_END)
+                        .contains(&(feature as usize))
+                })
+                .count();
+            assert!(opponent_features >= NUM_OPP_SLOTS * 11);
+
+            let terrain_features: Vec<_> = features
+                .iter()
+                .copied()
+                .filter(|&feature| {
+                    (LEGACY_MID_V4_FIXED_V1_TBAG_TERRAIN_BASE..LEGACY_MID_V4_FIXED_V1_TBAG_WL_BASE)
+                        .contains(&(feature as usize))
+                })
+                .collect();
+            let wildlife_features: Vec<_> = features
+                .iter()
+                .copied()
+                .filter(|&feature| {
+                    (LEGACY_MID_V4_FIXED_V1_TBAG_WL_BASE..LEGACY_MID_V4_FIXED_V1_OVERFLOW_BASE)
+                        .contains(&(feature as usize))
+                })
+                .collect();
+            assert_eq!(terrain_features.len(), 5);
+            assert_eq!(wildlife_features.len(), 5);
+            assert_eq!(
+                features.contains(&(LEGACY_MID_V4_FIXED_V1_OVERFLOW_BASE as u16)),
+                bag.overflow_used
+            );
+
+            let first_tail_position = features
+                .iter()
+                .position(|&feature| (feature as usize) >= LEGACY_MID_V4_FIXED_V1_TBAG_TERRAIN_BASE)
+                .unwrap();
+            let last_opponent_position = features
+                .iter()
+                .rposition(|&feature| {
+                    (LEGACY_MID_V4_FIXED_V1_OPP_BASE..LEGACY_MID_V4_FIXED_V1_OPP_END)
+                        .contains(&(feature as usize))
+                })
+                .unwrap();
+            assert!(last_opponent_position < first_tail_position);
+        }
+    }
+
+    #[test]
+    fn corrected_container_roundtrips_all_heads_and_rejects_wrong_schema() {
+        let path = temp_path("fixed_roundtrip");
+        let corrupt_path = temp_path("fixed_wrong_schema");
+        let mut network = zero_network();
+        network.w1[0] = 1.25;
+        network.w1[(NUM_FEATURES - 1) * HIDDEN1 + HIDDEN1 - 1] = -2.5;
+        network.b1[3] = 3.75;
+        network.w2[7] = -4.25;
+        network.b2[5] = 5.5;
+        network.w3[2] = 6.25;
+        network.b3 = -7.0;
+        network.w3_policy[4] = 8.5;
+        network.b3_policy = -9.25;
+        network.has_split_value_heads = true;
+        network.w3_wildlife[6] = 10.0;
+        network.b3_wildlife = -11.0;
+        network.w3_habitat[8] = 12.0;
+        network.b3_habitat = -13.0;
+        network.has_split11_heads = true;
+        network.w3_heads[10] = 14.0;
+        network.b3_heads[3] = -15.0;
+        network.has_heteroscedastic = true;
+        network.w3_var[12] = 16.0;
+        network.b3_var = -17.0;
+
+        network.save(&path).unwrap();
+        let bytes = std::fs::read(&path).unwrap();
+        assert_eq!(&bytes[..4], b"NNUC");
+        assert_eq!(&bytes[12..28], &LEGACY_MID_V4_FIXED_V1_SCHEMA_TAG);
+        let loaded = NNUENetwork::load(&path).unwrap();
+        assert_network_eq(&network, &loaded);
+
+        let mut corrupt = bytes;
+        corrupt[12] ^= 0xFF;
+        std::fs::write(&corrupt_path, corrupt).unwrap();
+        let error = NNUENetwork::load(&corrupt_path).err().unwrap();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+
+        std::fs::remove_file(path).unwrap();
+        std::fs::remove_file(corrupt_path).unwrap();
+    }
+
+    #[test]
+    fn historical_champion_rows_migrate_and_corrected_tail_zero_initializes() {
+        let historical_path = temp_path("historical_mid_v4");
+        let migrated_path = temp_path("migrated_mid_v4");
+        write_historical_v1_weights(&historical_path, NUM_FEATURES_MID_V4);
+
+        let loaded = NNUENetwork::load(&historical_path).unwrap();
+        for feature in 0..NUM_FEATURES_V2 {
+            assert_eq!(loaded.w1[feature * HIDDEN1], feature as f32 + 0.5);
+        }
+        for opponent_offset in 0..OPP_DETAILED_FEATURES {
+            assert_eq!(
+                loaded.w1[(LEGACY_MID_V4_FIXED_V1_OPP_BASE + opponent_offset) * HIDDEN1],
+                (NUM_FEATURES_MID + opponent_offset) as f32 + 0.5
+            );
+        }
+        assert!(
+            loaded.w1[LEGACY_MID_V4_FIXED_V1_TBAG_TERRAIN_BASE * HIDDEN1..]
+                .iter()
+                .all(|&weight| weight == 0.0)
+        );
+
+        NNUENetwork::migrate_legacy_mid_v4_weights(&historical_path, &migrated_path).unwrap();
+        let migrated_bytes = std::fs::read(&migrated_path).unwrap();
+        assert_eq!(&migrated_bytes[..4], b"NNUC");
+        let migrated = NNUENetwork::load(&migrated_path).unwrap();
+        assert_network_eq(&loaded, &migrated);
+
+        assert!(
+            FixedLegacyFirstLayerLayout::from_stored_features(NUM_FEATURES_MID_V4 - 1).is_err()
+        );
+        std::fs::remove_file(historical_path).unwrap();
+        std::fs::remove_file(migrated_path).unwrap();
+    }
+}
+
+#[cfg(all(
+    test,
+    feature = "mid-features",
+    feature = "v4-opp",
+    not(feature = "legacy-mid-v4-fixed-v1")
+))]
+mod frozen_historical_mid_v4_layout_tests {
+    use super::*;
+
+    #[test]
+    fn historical_champion_layout_remains_frozen() {
+        assert_eq!(NUM_FEATURES, 11_231);
+        assert_eq!(NUM_FEATURES_MID, 10_862);
+        assert_eq!(OPP_DETAILED_BASE, 10_862);
+        assert_eq!(NUM_FEATURES_MID_V4, 11_231);
+    }
+}
+
+#[cfg(all(test, feature = "oppmarket-feat"))]
 mod oppmarket_tests {
     use super::*;
     use cascadia_core::board::Board;

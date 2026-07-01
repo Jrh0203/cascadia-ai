@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-legal-audit-static-row-dedup-acceptance-v1-20260615",
+  "status": "accepted",
+  "phase": 1,
+  "hypothesis": "Byte-identical complete-screen sparse rows can be evaluated once and scattered exactly, reducing physical MLX work without changing logical actions or values.",
+  "contract": {
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "raw_seed": 60999,
+    "audited_completed_turns": [
+      12,
+      39,
+      66
+    ],
+    "champion_rollouts": 600,
+    "static_screen_chunk_rows": 4096,
+    "pipeline_chunk_states": 96,
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "implementation": {
+    "dedup_scope": "each complete-prior static cohort",
+    "fingerprint_collision_full_equality_check": true,
+    "scatter_preserves_logical_order": true,
+    "rollout_pipeline_changed": false,
+    "hidden_vector_screen_changed": false,
+    "runtime_experiment_switch_retained": false,
+    "treatment_capable_binary_sha256": "3f950b15a7afb695078143cedc57dd435c13cf176892c09057a30983002d51e9",
+    "production_binary_sha256": "87add1107e87f7b524a0f448718563fd69606d191a9aaac618feff2aa8558450",
+    "production_binary_blake3": "d9b9eb318c7a5ee6120b2072012053139ae843c2806709b59dc50d4b7ce20b3a",
+    "production_v2_source_blake3": "47a297025f5f3645252a273a71802bffd7db4873da7d420023dfdb3b3259759b"
+  },
+  "correctness": {
+    "root_qualification_sha256": "e3210d624f8da22c1a4fb0c61ec15478aec03ab2b079b75bf4e46207aa7bd6be",
+    "paid_wipe_qualification_sha256": "dc866e7fa52fbfc09701bc2a78bbd74e5064f88ac676fece39f27e1c8ed2e348",
+    "semantic_report_blake3": "100e8959ad71086bb5986e8004abc8f78229e690e6e80062c957d5a4b01f9a60",
+    "terminal_base_scores": [
+      96,
+      99,
+      92,
+      102
+    ],
+    "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+    "actions_screened": 11594,
+    "neural_rows": 66274677,
+    "rollout_waves": 32701,
+    "rollout_samples": 617722,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "differential_tests_passed": 19,
+    "dedup_collision_tests_passed": 1,
+    "report_validation_passed": true,
+    "clean_shutdown": true
+  },
+  "mechanism": {
+    "qualification_control_rows": 3664806,
+    "qualification_treatment_rows": 2822718,
+    "qualification_rows_removed": 842088,
+    "qualification_row_reduction_percent": 22.97769650016945,
+    "qualification_control_features": 855088343,
+    "qualification_treatment_features": 680599071,
+    "qualification_features_removed": 174489272,
+    "qualification_feature_reduction_percent": 20.40599353603865,
+    "service_requests_unchanged": 4519,
+    "john2_mlx_reduction_percent": 8.077378351837064,
+    "john2_service_reduction_percent": 7.831501809994794,
+    "john3_mlx_reduction_percent": 11.075311907010578,
+    "john3_service_reduction_percent": 10.740859530218927
+  },
+  "balanced_confirmation": {
+    "john2_order": [
+      "control",
+      "treatment",
+      "treatment",
+      "control"
+    ],
+    "john3_order": [
+      "treatment",
+      "control",
+      "control",
+      "treatment"
+    ],
+    "john2_control_mean_seconds": 18.665,
+    "john2_treatment_mean_seconds": 17.855,
+    "john2_improvement_percent": 4.339673185105807,
+    "john3_control_mean_seconds": 18.145,
+    "john3_treatment_mean_seconds": 17.91,
+    "john3_improvement_percent": 1.2951226233122235,
+    "combined_control_mean_seconds": 18.405,
+    "combined_treatment_mean_seconds": 17.8825,
+    "combined_improvement_percent": 2.8389024721543104,
+    "john2_rss_reduction_percent": 18.942673488128033,
+    "john3_rss_reduction_percent": 19.07040776189852
+  },
+  "full_contract": {
+    "reference_seconds": 217.302693625,
+    "production_seconds": 212.191376166,
+    "improvement_percent": 2.352164795444556,
+    "seconds_saved": 5.1113174589999915,
+    "reference_paid_wipe_seconds": 70.168686293,
+    "production_paid_wipe_seconds": 64.7364145,
+    "paid_wipe_improvement_percent": 7.7417322170130465,
+    "reference_realized_hidden_seconds": 126.341883918,
+    "production_realized_hidden_seconds": 126.461304458,
+    "reference_physical_neural_rows": 56095463,
+    "production_physical_neural_rows": 52512624,
+    "physical_row_reduction_percent": 6.387038823442816,
+    "production_report_bytes": 12703800,
+    "production_report_blake3": "6ba95947e56002ece6a9f551a43f33872a83db52d6355e7589488ee5a8112149"
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/full-legal-audit-static-row-dedup-v1",
+    "archive_ignored_by_git": true,
+    "sha256_manifest": "artifacts/performance/full-legal-audit-static-row-dedup-v1/SHA256SUMS"
+  },
+  "verdict": {
+    "accepted": true,
+    "reason": "Exact static-row deduplication reduced physical inference work, improved both workers and the complete frozen contract, and preserved every semantic output.",
+    "phase1_reference_seconds": 242.43305,
+    "accepted_seconds": 212.191376166,
+    "total_speedup": 1.1425207488655975,
+    "phase1_ten_x_threshold_seconds": 24.243305,
+    "remaining_factor": 8.752576274810716,
+    "phase1_ten_x_gate_passed": false
+  }
+}

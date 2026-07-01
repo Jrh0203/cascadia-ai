@@ -1,0 +1,29 @@
+{
+  "experiment_id": "full-legal-audit-post-draft-context-grouping-v1-20260615",
+  "status": "rejected",
+  "workload": "seed-60999-turn16-r600-paid-wipe-d8-f2-w3-hidden-invariance",
+  "binary_sha256": "0fabe0eef80f886f87491b28995e132fa107af6beb2a7a85fc98a859c8c583dd",
+  "diagnostic_sha256": "dc866e7fa52fbfc09701bc2a78bbd74e5064f88ac676fece39f27e1c8ed2e348",
+  "hosts": {
+    "john2": {
+      "control_seconds": 22.81,
+      "treatment_seconds": 22.72,
+      "improvement_fraction": 0.003945638
+    },
+    "john3": {
+      "control_seconds": 22.26,
+      "treatment_seconds": 22.18,
+      "improvement_fraction": 0.003593891
+    }
+  },
+  "combined": {
+    "control_seconds": 22.535,
+    "treatment_seconds": 22.45,
+    "improvement_fraction": 0.00377191
+  },
+  "exactness": {
+    "byte_identical_reports_on_both_hosts": true,
+    "hidden_invariant": true
+  },
+  "verdict": "reject_and_remove"
+}

@@ -16,9 +16,11 @@ cascadia-eval = { path = "../cascadia-eval" }
 cascadia-game = { path = "../cascadia-game" }
 cascadia-model = { path = "../cascadia-model" }
 cascadia-provenance = { path = "../cascadia-provenance" }
+cascadia-r2 = { path = "../cascadia-r2" }
 cascadia-search = { path = "../cascadia-search" }
 cascadia-sim = { path = "../cascadia-sim" }
 clap.workspace = true
 rayon.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true

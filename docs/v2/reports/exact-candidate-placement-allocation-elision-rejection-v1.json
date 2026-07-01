@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-candidate-placement-allocation-elision-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "Reserve exact candidate-placement vector capacity and replace stable habitat sorting with an explicit total-order unstable sort.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "pipeline_chunk_states": 96,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "implementation": {
+    "treatment_capable_binary_sha256": "ccef531c7ed941c64255f9d75bef126cf8905b4079ae0e0d7be93aefa2ab5376",
+    "source_screen_snapshot_sha256": "a7e3a12c6efae5528deb5743d785f42b7d3985e815f79c20043eee9ae6ee18cf",
+    "template_requests": 440239,
+    "exact_capacity_reservation": true,
+    "explicit_total_order_unstable_sort": true,
+    "placement_order_preserved": true,
+    "treatment_removed": true
+  },
+  "correctness": {
+    "ordered_placement_oracle_passed": true,
+    "lists_above_and_below_cutoff_checked": true,
+    "dense_habitat_ties_checked": true,
+    "complete_candidate_set_games_checked": 3,
+    "nature_token_variants_checked": true,
+    "shared_outcome_oracle_passed": true,
+    "default_library_tests": {
+      "cascadia_ai_passed": 87,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "mid_v4_library_tests": {
+      "cascadia_ai_passed": 88,
+      "failed": 0
+    },
+    "python_exact_tests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "frozen_diagnostics": {
+      "scores": [
+        102,
+        96,
+        92,
+        95
+      ],
+      "mean_score": 96.25,
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "physical_neural_rows": 5062305,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "bootstrapped_samples": 0,
+      "policy_fallbacks": 0,
+      "clean_shutdown": true,
+      "diagnostic_runs_matching": 4
+    }
+  },
+  "mechanism": {
+    "targeted_stage": "template_preparation_ms",
+    "john2_control_milliseconds": 4538.553993,
+    "john2_treatment_milliseconds": 4662.611924,
+    "john2_regression_milliseconds": 124.057931,
+    "john2_regression_percent": 2.7334241520832196,
+    "john2_control_instructions": 1087649260857,
+    "john2_treatment_instructions": 1106636497486,
+    "john2_instruction_regression_percent": 1.7457131919566826,
+    "john3_control_milliseconds": 4510.817963,
+    "john3_treatment_milliseconds": 4670.930404,
+    "john3_regression_milliseconds": 160.112441,
+    "john3_regression_percent": 3.5495212246054293,
+    "john3_control_instructions": 1087272057731,
+    "john3_treatment_instructions": 1106624185257,
+    "john3_instruction_regression_percent": 1.779879045763896
+  },
+  "source_screen": {
+    "attempted": false,
+    "reason": "The treatment failed the preregistered targeted-stage mechanism gate on both workers."
+  },
+  "pgo": {
+    "attempted": false,
+    "reason": "The treatment failed before the source performance gate."
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "Template preparation regressed 2.733% on john2 and 3.550% on john3 because explicit tie comparisons added about 1.8% more retired instructions.",
+    "accepted_baseline_seconds": 14.16305453125,
+    "initial_reference_seconds": 141.027296,
+    "total_speedup_unchanged": 9.957406835427417,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_gap_seconds": 0.06032493125
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-candidate-placement-allocation-elision-v1"
+  }
+}

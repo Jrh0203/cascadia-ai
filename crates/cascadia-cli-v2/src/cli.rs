@@ -89,6 +89,238 @@ pub(crate) enum Command {
         #[arg(long)]
         resume: bool,
     },
+    /// Collect replay-authoritative all-greedy bootstrap games for R2-MAP.
+    CollectR2MapBootstrap {
+        #[arg(long)]
+        output: PathBuf,
+        #[arg(long, default_value = "r2-map-expert-iteration-v1")]
+        campaign_id: String,
+        #[arg(long, default_value_t = 0)]
+        iteration: u32,
+        #[arg(long)]
+        host: String,
+        #[arg(long)]
+        first_game_index: u64,
+        #[arg(long)]
+        games: u64,
+        #[arg(long, default_value_t = 256)]
+        shard_games: usize,
+        #[arg(long)]
+        collector_hash: String,
+        #[arg(long)]
+        source_hash: String,
+        #[arg(long)]
+        serving_protocol_hash: String,
+        #[arg(long)]
+        resume: bool,
+    },
+    /// Collect one newest-seat expert-iteration shard against a frozen local field.
+    CollectR2MapIteration {
+        #[arg(long)]
+        output: PathBuf,
+        #[arg(long, default_value = "r2-map-expert-iteration-v1")]
+        campaign_id: String,
+        #[arg(long)]
+        iteration: u32,
+        #[arg(long)]
+        host: String,
+        #[arg(long)]
+        first_game_index: u64,
+        #[arg(long)]
+        games: u64,
+        #[arg(long, default_value_t = 64)]
+        shard_games: usize,
+        #[arg(long, default_value_t = 1_000_000)]
+        temperature_parts_per_million: u32,
+        #[arg(long)]
+        collector_hash: String,
+        #[arg(long)]
+        source_hash: String,
+        #[arg(long)]
+        serving_protocol_hash: String,
+        #[arg(long)]
+        bundle: Option<PathBuf>,
+        #[arg(long)]
+        newest_manifest_identity: Option<String>,
+        #[arg(long = "historical-manifest-identity")]
+        historical_manifest_identities: Vec<String>,
+        /// Use the deterministic immediate-score predictor for pipeline smoke tests only.
+        #[arg(long)]
+        exact_score_reference: bool,
+        #[arg(long, default_value = ".venv/bin/python")]
+        python: PathBuf,
+        #[arg(long, default_value = "python")]
+        python_path: PathBuf,
+        #[arg(long)]
+        resume: bool,
+    },
+    /// Validate an R2-MAP collector manifest and every replay shard.
+    ValidateR2MapCollector {
+        #[arg(long)]
+        dataset: PathBuf,
+    },
+    /// Extract compact-index identities and candidate widths from validated replay shards.
+    InspectR2MapIndexMetadata {
+        #[arg(long = "shard", required = true)]
+        shards: Vec<PathBuf>,
+    },
+    /// Stream exact-R2 R2-MAP groups without a persistent padded tensor cache.
+    ExportR2MapDataset {
+        #[arg(long = "shard", required = true)]
+        shards: Vec<PathBuf>,
+        #[arg(long)]
+        manifest: PathBuf,
+        #[arg(long)]
+        stream: PathBuf,
+        #[arg(long, value_enum)]
+        mode: R2MapDatasetModeArg,
+        #[arg(long, default_value_t = 0)]
+        epoch: u64,
+        #[arg(long, default_value_t = 0)]
+        sampler_seed: u64,
+        #[arg(long, default_value_t = 0)]
+        fixed_panel_games: usize,
+        /// Restrict this disposable stream to whole games at these global indices.
+        #[arg(long = "game-index")]
+        game_indices: Vec<u64>,
+        /// Aggregate receipt proving the replay shards passed full semantic validation.
+        #[arg(long, requires_all = ["validated_compact_index", "validated_packing_receipt"])]
+        validated_aggregate_receipt: Option<PathBuf>,
+        /// Full compact index whose SHA-256 is bound by the packing receipt.
+        #[arg(long, requires_all = ["validated_aggregate_receipt", "validated_packing_receipt"])]
+        validated_compact_index: Option<PathBuf>,
+        /// Packing receipt binding the aggregate receipt, compact index, and dataset.
+        #[arg(long, requires_all = ["validated_aggregate_receipt", "validated_compact_index"])]
+        validated_packing_receipt: Option<PathBuf>,
+    },
+    /// Serve exact focal-seat packed batches over a backpressured binary pipe.
+    ServeR2MapPackedBatches {
+        #[arg(long)]
+        shard: PathBuf,
+        #[arg(long, value_enum)]
+        mode: R2MapDatasetModeArg,
+        #[arg(long, default_value_t = 0)]
+        epoch: u64,
+        #[arg(long)]
+        sampler_seed: u64,
+        #[arg(long, default_value_t = 128)]
+        group_batch_size: usize,
+        #[arg(long, default_value_t = 16_384)]
+        maximum_candidates_per_batch: usize,
+        /// Retain all focal value targets but omit mediocre greedy-policy CE screens.
+        #[arg(long)]
+        bootstrap_value_only: bool,
+        #[arg(long = "game-index", required = true)]
+        ordered_game_indices: Vec<u64>,
+        #[arg(long, default_value_t = 0)]
+        start_game_offset: usize,
+        #[arg(long, default_value_t = 0)]
+        start_turn_offset: usize,
+        #[arg(long, default_value_t = 0)]
+        start_batch_index: u64,
+        #[arg(long)]
+        validated_aggregate_receipt: PathBuf,
+        #[arg(long)]
+        validated_compact_index: PathBuf,
+        #[arg(long)]
+        validated_packing_receipt: PathBuf,
+    },
+    /// Build and verify a compact local multi-checkpoint R2-MAP serving bundle.
+    PrepareR2MapServingBundle {
+        #[arg(long)]
+        host: String,
+        #[arg(long)]
+        output: PathBuf,
+        #[arg(long)]
+        collector_hash: String,
+        #[arg(long)]
+        source_hash: String,
+        #[arg(long)]
+        serving_protocol_hash: String,
+        #[arg(long = "checkpoint", required = true)]
+        checkpoints: Vec<PathBuf>,
+    },
+    /// Initialize the open fixed-100 longitudinal panel from the frozen W0 manifest.
+    InitR2MapLongitudinalOpenPanel {
+        #[arg(long)]
+        root: PathBuf,
+        #[arg(long)]
+        reference_panel_manifest: PathBuf,
+        #[arg(long)]
+        reference_panel_registration: PathBuf,
+        #[arg(long, default_value = "r2-map-expert-iteration-v1")]
+        campaign_id: String,
+        #[arg(long)]
+        benchmark_id: String,
+        #[arg(long, default_value_t = 0)]
+        iteration: u32,
+        #[arg(long)]
+        focal_checkpoint_id: String,
+        #[arg(long)]
+        field_manifest_id: String,
+        #[arg(long = "historical-checkpoint", required = true)]
+        historical_checkpoints: Vec<String>,
+        #[arg(long, default_value = "r2-map-reference-argmax-v1")]
+        inference_settings_id: String,
+    },
+    /// Initialize a controller-provisioned fixed-100 longitudinal campaign.
+    InitR2MapLongitudinalCampaign {
+        #[arg(long)]
+        root: PathBuf,
+        #[arg(long)]
+        contract: PathBuf,
+        #[arg(long)]
+        historical_field: PathBuf,
+    },
+    /// Initialize a pre-provisioned 20-pair smoke or fixed-250 focal campaign.
+    InitR2MapFocalCampaign {
+        #[arg(long)]
+        root: PathBuf,
+        #[arg(long)]
+        contract: PathBuf,
+        #[arg(long)]
+        opponent_field: PathBuf,
+    },
+    /// Run one restart-safe scheduler-managed longitudinal R2-MAP game.
+    RunR2MapLongitudinalWorkItem {
+        #[arg(long)]
+        root: PathBuf,
+        #[arg(long = "work-item")]
+        work_item: String,
+        #[arg(long)]
+        bundle: PathBuf,
+        #[arg(long, default_value = ".venv/bin/python")]
+        python: PathBuf,
+        #[arg(long, default_value = "python")]
+        python_path: PathBuf,
+    },
+    /// Aggregate the complete fixed-100 longitudinal benchmark and projections.
+    AggregateR2MapLongitudinal {
+        #[arg(long)]
+        root: PathBuf,
+        #[arg(long)]
+        wall_seconds: f64,
+    },
+    /// Run one restart-safe scheduler-managed focal benchmark pair.
+    RunR2MapFocalWorkItem {
+        #[arg(long)]
+        root: PathBuf,
+        #[arg(long = "work-item")]
+        work_item: String,
+        #[arg(long)]
+        bundle: PathBuf,
+        #[arg(long, default_value = ".venv/bin/python")]
+        python: PathBuf,
+        #[arg(long, default_value = "python")]
+        python_path: PathBuf,
+    },
+    /// Aggregate a complete paired focal campaign and emit promotion/dashboard feeds.
+    AggregateR2MapFocal {
+        #[arg(long)]
+        root: PathBuf,
+        #[arg(long)]
+        wall_seconds: f64,
+    },
     /// Collect final-score value targets from the confirmed H6 search teacher.
     CollectSearch {
         #[arg(long)]
@@ -1336,6 +1568,14 @@ pub(crate) enum SplitArg {
     Validation,
     Test,
     Final,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, ValueEnum)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum R2MapDatasetModeArg {
+    Train,
+    Validation,
+    FixedPanel,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, ValueEnum)]

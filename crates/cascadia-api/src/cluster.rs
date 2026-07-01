@@ -7,8 +7,13 @@ use std::{
 };
 
 use serde::Serialize;
+use serde_json::Value;
 
-const CLUSTER_SCHEMA_VERSION: u16 = 1;
+const CLUSTER_SCHEMA_VERSION: u16 = 3;
+const BACALHAU_API: &str = "http://100.110.109.6:1234";
+const BACALHAU_WEB_UI: &str = "http://100.110.109.6:8438";
+const BACALHAU_JOBS_QUERY: &str =
+    "/api/v1/orchestrator/jobs?limit=100&order_by=created_at&reverse=true";
 
 const METRICS_SCRIPT: &str = r#"
 emit() {
@@ -18,7 +23,10 @@ emit() {
 hostname_value="$(scutil --get ComputerName 2>/dev/null || hostname)"
 cores="$(sysctl -n hw.ncpu 2>/dev/null || printf '0')"
 memory_total="$(sysctl -n hw.memsize 2>/dev/null || printf '0')"
-cpu_sum="$(ps -A -o %cpu= 2>/dev/null | awk '{ total += $1 } END { printf "%.2f", total }')"
+ps_snapshot="$(mktemp -t cascadia-cluster-ps)"
+trap 'rm -f "$ps_snapshot"' EXIT
+ps -axo pid=,etime=,%cpu=,%mem=,comm=,args= > "$ps_snapshot" 2>/dev/null
+cpu_sum="$(awk '{ total += $3 } END { printf "%.2f", total }' "$ps_snapshot")"
 memory_free_pct="$(memory_pressure -Q 2>/dev/null | awk '/free percentage/ { gsub(/%/, "", $NF); print $NF; exit }')"
 load_average="$(sysctl -n vm.loadavg 2>/dev/null | tr -d '{}')"
 boot_epoch="$(sysctl -n kern.boottime 2>/dev/null | sed -E 's/^\{ sec = ([0-9]+),.*/\1/')"
@@ -71,19 +79,24 @@ else
   emit mlx_runtime_present false
 fi
 
-ps -axo pid=,etime=,%cpu=,%mem=,comm=,args= 2>/dev/null | awk '
+awk '
   $5 !~ /(^|\/)awk$/ &&
+  index($0, "SkyComputerUseClient") == 0 &&
+  index($0, "Codex Computer Use.app") == 0 &&
   (index($0, "target/release/cascadia-v2") ||
    index($0, "target/release/cascadia-cli") ||
    index($0, "cascadia-mlx") ||
-   index($0, "cascadia_mlx")) {
+   index($0, "cascadia_mlx") ||
+   index($0, "cascadia_v3_mlx") ||
+   index($0, "v3-campaign-worker") ||
+   index($0, "v3-engineering")) {
     printf "job\t%s %s %s %s", $1, $2, $3, $4
     for (field = 6; field <= NF; field++) {
       printf " %s", $field
     }
     printf "\n"
   }
-'
+' "$ps_snapshot"
 "#;
 
 #[derive(Debug, Clone, Copy)]
@@ -95,7 +108,7 @@ struct NodeSpec {
     ssh_host: Option<&'static str>,
 }
 
-const NODES: [NodeSpec; 3] = [
+const NODES: [NodeSpec; 4] = [
     NodeSpec {
         id: "john1",
         label: "John 1",
@@ -117,9 +130,16 @@ const NODES: [NodeSpec; 3] = [
         address: "100.71.97.55",
         ssh_host: Some("john3"),
     },
+    NodeSpec {
+        id: "john4",
+        label: "John 4",
+        role: "Simulation worker",
+        address: "100.118.7.103",
+        ssh_host: Some("john4"),
+    },
 ];
 
-pub(crate) fn node_id_labels() -> [(&'static str, &'static str); 3] {
+pub(crate) fn node_id_labels() -> [(&'static str, &'static str); 4] {
     NODES.map(|node| (node.id, node.label))
 }
 
@@ -139,6 +159,64 @@ pub struct ClusterResponse {
     pub collection_duration_ms: u128,
     pub summary: ClusterSummary,
     pub nodes: Vec<ClusterNode>,
+    pub scheduler: SchedulerStatus,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SchedulerStatus {
+    pub configured: bool,
+    pub reachable: bool,
+    pub version: &'static str,
+    pub web_ui_url: &'static str,
+    pub error: Option<String>,
+    pub summary: SchedulerSummary,
+    pub nodes: Vec<SchedulerNode>,
+    pub jobs: Vec<SchedulerJob>,
+    pub services: SchedulerServices,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct SchedulerSummary {
+    pub queued: usize,
+    pub running: usize,
+    pub successful: usize,
+    pub retrying: usize,
+    pub failed: usize,
+    pub cancelled: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SchedulerNode {
+    pub node_id: String,
+    pub label: String,
+    pub connected: bool,
+    pub running_executions: u64,
+    pub enqueued_executions: u64,
+    pub cpu_allocated: f64,
+    pub cpu_capacity: f64,
+    pub memory_allocated_bytes: u64,
+    pub memory_capacity_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SchedulerJob {
+    pub id: String,
+    pub name: String,
+    pub request_id: Option<String>,
+    pub item_id: Option<String>,
+    pub experiment_id: Option<String>,
+    pub state: String,
+    pub attempts: usize,
+    pub failure_reason: Option<String>,
+    pub created_unix_ns: u64,
+    pub modified_unix_ns: u64,
+    pub detail_url: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SchedulerServices {
+    pub registry_healthy: bool,
+    pub object_store_healthy: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -149,7 +227,8 @@ pub struct ClusterSummary {
     pub degraded_nodes: usize,
     pub total_cores: u32,
     pub active_jobs: usize,
-    pub average_cpu_percent: f64,
+    pub cpu_used_cores: f64,
+    pub cpu_used_percent: f64,
     pub memory_used_bytes: u64,
     pub memory_total_bytes: u64,
 }
@@ -216,31 +295,231 @@ pub fn collect_cluster() -> ClusterResponse {
         .unwrap_or_default()
         .as_millis();
 
-    let nodes = thread::scope(|scope| {
+    let (nodes, scheduler) = thread::scope(|scope| {
+        let scheduler_handle = scope.spawn(collect_scheduler);
         let handles: Vec<_> = NODES
             .iter()
             .map(|spec| scope.spawn(move || collect_node(*spec)))
             .collect();
-        handles
+        let nodes = handles
             .into_iter()
             .map(|handle| {
                 handle
                     .join()
                     .expect("cluster metrics worker should not panic")
             })
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+        let scheduler = scheduler_handle
+            .join()
+            .expect("scheduler metrics worker should not panic");
+        (nodes, scheduler)
     });
 
+    let summary = summarize_nodes(&nodes);
+
+    ClusterResponse {
+        schema_version: CLUSTER_SCHEMA_VERSION,
+        collected_at_unix_ms,
+        collection_duration_ms: started.elapsed().as_millis(),
+        summary,
+        nodes,
+        scheduler,
+    }
+}
+
+fn collect_scheduler() -> SchedulerStatus {
+    let jobs_value = match curl_json(&format!("{BACALHAU_API}{BACALHAU_JOBS_QUERY}")) {
+        Ok(value) => value,
+        Err(error) => return scheduler_unavailable(error),
+    };
+    let nodes_value = match curl_json(&format!(
+        "{BACALHAU_API}/api/v1/orchestrator/nodes?limit=100"
+    )) {
+        Ok(value) => value,
+        Err(error) => return scheduler_unavailable(error),
+    };
+    let mut job_values = jobs_value
+        .get("Items")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    job_values.sort_by_key(|value| {
+        std::cmp::Reverse(value.get("ModifyTime").and_then(Value::as_u64).unwrap_or(0))
+    });
+    let node_values = nodes_value
+        .get("Nodes")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let mut summary = SchedulerSummary::default();
+    let mut jobs = Vec::new();
+    for value in &job_values {
+        let state = value
+            .pointer("/State/StateType")
+            .and_then(Value::as_str)
+            .unwrap_or("Unknown");
+        let message = value
+            .pointer("/State/Message")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let attempts = value
+            .get("Executions")
+            .and_then(Value::as_array)
+            .map_or(0, Vec::len);
+        match state {
+            "Pending" | "Queued" => summary.queued += 1,
+            "Running" | "Starting" => summary.running += 1,
+            "Completed" => summary.successful += 1,
+            "Stopped" => summary.cancelled += 1,
+            "Failed" => summary.failed += 1,
+            _ => {}
+        }
+        if message.to_ascii_lowercase().contains("retry") || (attempts > 1 && state == "Running") {
+            summary.retrying += 1;
+        }
+        if !matches!(state, "Completed") || jobs.len() < 6 {
+            let id = value
+                .get("ID")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let labels = value.get("Labels").and_then(Value::as_object);
+            jobs.push(SchedulerJob {
+                detail_url: format!("{BACALHAU_WEB_UI}/jobs/{id}"),
+                id,
+                name: value
+                    .get("Name")
+                    .and_then(Value::as_str)
+                    .unwrap_or("Unnamed job")
+                    .to_string(),
+                request_id: label(labels, "cascadia.request_id"),
+                item_id: label(labels, "cascadia.item_id"),
+                experiment_id: label(labels, "cascadia.experiment_id"),
+                state: state.to_ascii_lowercase(),
+                attempts,
+                failure_reason: (!message.is_empty()).then(|| truncate(message, 180)),
+                created_unix_ns: value.get("CreateTime").and_then(Value::as_u64).unwrap_or(0),
+                modified_unix_ns: value.get("ModifyTime").and_then(Value::as_u64).unwrap_or(0),
+            });
+        }
+    }
+    jobs.truncate(12);
+    let mut nodes = node_values
+        .iter()
+        .map(parse_scheduler_node)
+        .collect::<Vec<_>>();
+    nodes.sort_by(|left, right| left.label.cmp(&right.label));
+    SchedulerStatus {
+        configured: true,
+        reachable: true,
+        version: "v1.9.0",
+        web_ui_url: BACALHAU_WEB_UI,
+        error: None,
+        summary,
+        nodes,
+        jobs,
+        services: SchedulerServices {
+            registry_healthy: curl_health("http://100.110.109.6:5000/v2/"),
+            object_store_healthy: curl_health("http://100.110.109.6:9000/minio/health/live"),
+        },
+    }
+}
+
+fn scheduler_unavailable(error: String) -> SchedulerStatus {
+    SchedulerStatus {
+        configured: true,
+        reachable: false,
+        version: "v1.9.0",
+        web_ui_url: BACALHAU_WEB_UI,
+        error: Some(error),
+        summary: SchedulerSummary::default(),
+        nodes: Vec::new(),
+        jobs: Vec::new(),
+        services: SchedulerServices {
+            registry_healthy: false,
+            object_store_healthy: false,
+        },
+    }
+}
+
+fn parse_scheduler_node(value: &Value) -> SchedulerNode {
+    let info = value.get("Info").unwrap_or(&Value::Null);
+    let compute = info.get("ComputeNodeInfo").unwrap_or(&Value::Null);
+    let capacity = compute.get("MaxCapacity").unwrap_or(&Value::Null);
+    let available = compute.get("AvailableCapacity").unwrap_or(&Value::Null);
+    let cpu_capacity = number(capacity.get("CPU"));
+    let memory_capacity = capacity.get("Memory").and_then(Value::as_u64).unwrap_or(0);
+    let labels = info.get("Labels").and_then(Value::as_object);
+    SchedulerNode {
+        node_id: info
+            .get("NodeID")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown")
+            .to_string(),
+        label: label(labels, "cascadia_internal_node").unwrap_or_else(|| "unknown".to_string()),
+        connected: value.get("Connection").and_then(Value::as_str) == Some("CONNECTED"),
+        running_executions: compute
+            .get("RunningExecutions")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        enqueued_executions: compute
+            .get("EnqueuedExecutions")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        cpu_allocated: (cpu_capacity - number(available.get("CPU"))).max(0.0),
+        cpu_capacity,
+        memory_allocated_bytes: memory_capacity
+            .saturating_sub(available.get("Memory").and_then(Value::as_u64).unwrap_or(0)),
+        memory_capacity_bytes: memory_capacity,
+    }
+}
+
+fn number(value: Option<&Value>) -> f64 {
+    value.and_then(Value::as_f64).unwrap_or_default()
+}
+
+fn label(labels: Option<&serde_json::Map<String, Value>>, name: &str) -> Option<String> {
+    labels?.get(name)?.as_str().map(ToString::to_string)
+}
+
+fn curl_json(url: &str) -> Result<Value, String> {
+    let output = Command::new("/usr/bin/curl")
+        .args(["-fsS", "--connect-timeout", "1", "--max-time", "2", url])
+        .output()
+        .map_err(|error| format!("could not start Bacalhau probe: {error}"))?;
+    if !output.status.success() {
+        return Err(truncate(
+            String::from_utf8_lossy(&output.stderr).trim(),
+            180,
+        ));
+    }
+    serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("Bacalhau returned invalid JSON: {error}"))
+}
+
+fn curl_health(url: &str) -> bool {
+    Command::new("/usr/bin/curl")
+        .args(["-fsS", "--connect-timeout", "1", "--max-time", "2", url])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
+fn summarize_nodes(nodes: &[ClusterNode]) -> ClusterSummary {
     let online: Vec<_> = nodes.iter().filter(|node| node.reachable).collect();
     let total_cores = online.iter().map(|node| node.cores).sum();
-    let active_jobs = online.iter().map(|node| node.jobs.len()).sum();
-    let average_cpu_percent = if online.is_empty() {
+    let cpu_used_cores = online
+        .iter()
+        .map(|node| node.cpu_percent / 100.0 * f64::from(node.cores))
+        .sum::<f64>();
+    let cpu_used_percent = if total_cores == 0 {
         0.0
     } else {
-        online.iter().map(|node| node.cpu_percent).sum::<f64>() / online.len() as f64
+        cpu_used_cores / f64::from(total_cores) * 100.0
     };
 
-    let summary = ClusterSummary {
+    ClusterSummary {
         total_nodes: nodes.len(),
         online_nodes: online.len(),
         busy_nodes: nodes
@@ -252,18 +531,11 @@ pub fn collect_cluster() -> ClusterResponse {
             .filter(|node| matches!(node.health, NodeHealth::Warning | NodeHealth::Offline))
             .count(),
         total_cores,
-        active_jobs,
-        average_cpu_percent: round_one(average_cpu_percent),
+        active_jobs: online.iter().map(|node| node.jobs.len()).sum(),
+        cpu_used_cores: round_one(cpu_used_cores),
+        cpu_used_percent: round_one(cpu_used_percent),
         memory_used_bytes: online.iter().map(|node| node.memory_used_bytes).sum(),
         memory_total_bytes: online.iter().map(|node| node.memory_total_bytes).sum(),
-    };
-
-    ClusterResponse {
-        schema_version: CLUSTER_SCHEMA_VERSION,
-        collected_at_unix_ms,
-        collection_duration_ms: started.elapsed().as_millis(),
-        summary,
-        nodes,
     }
 }
 
@@ -464,12 +736,18 @@ fn parse_job(line: &str) -> Option<ClusterJob> {
     let cpu_percent = fields.next()?.parse().ok()?;
     let memory_percent = fields.next()?.parse().ok()?;
     let command = fields.collect::<Vec<_>>().join(" ");
-    if command.is_empty() {
+    if command.is_empty()
+        || command.contains("SkyComputerUseClient")
+        || command.contains("Codex Computer Use.app")
+    {
         return None;
     }
     let workload = if command.contains("collect-counterfactual") {
         "Counterfactual collection"
-    } else if command.contains("cascadia-mlx") {
+    } else if command.contains("cascadia-mlx")
+        || command.contains("cascadia_mlx")
+        || command.contains("cascadia_v3_mlx")
+    {
         "MLX training"
     } else if command.contains("cascadia-cli") {
         "Legacy simulation"
@@ -568,7 +846,7 @@ pub(crate) fn test_cluster_response(
     cpu_percent: f64,
     memory_percent: f64,
 ) -> ClusterResponse {
-    let nodes = NODES
+    let nodes: Vec<_> = NODES
         .into_iter()
         .map(|spec| {
             let mut node = offline_node(spec, Duration::ZERO, "test fixture".to_string());
@@ -584,22 +862,14 @@ pub(crate) fn test_cluster_response(
             node
         })
         .collect();
+    let summary = summarize_nodes(&nodes);
     ClusterResponse {
         schema_version: CLUSTER_SCHEMA_VERSION,
         collected_at_unix_ms: timestamp_unix_ms,
         collection_duration_ms: 0,
-        summary: ClusterSummary {
-            total_nodes: 3,
-            online_nodes: 3,
-            busy_nodes: 0,
-            degraded_nodes: 0,
-            total_cores: 30,
-            active_jobs: 0,
-            average_cpu_percent: cpu_percent,
-            memory_used_bytes: 0,
-            memory_total_bytes: 0,
-        },
+        summary,
         nodes,
+        scheduler: scheduler_unavailable("test fixture".to_string()),
     }
 }
 
@@ -648,6 +918,12 @@ job\t 73935 01:12:13 842.0 12.5 /tmp/cascadia-v2 collect-counterfactual --games 
     }
 
     #[test]
+    fn codex_transcript_processes_are_not_reported_as_mlx_training() {
+        let line = "62850 04:15:45 0.0 0.1 /Applications/Codex Computer Use.app/SkyComputerUseClient turn-ended cascadia_v3_mlx train";
+        assert!(parse_job(line).is_none());
+    }
+
+    #[test]
     fn power_and_capacity_problems_are_warnings() {
         let power = NodePower {
             source: Some("AC Power".to_string()),
@@ -687,5 +963,37 @@ job\t 73935 01:12:13 842.0 12.5 /tmp/cascadia-v2 collect-counterfactual --games 
         assert_eq!(node.health, NodeHealth::Offline);
         assert!(!node.reachable);
         assert_eq!(node.error.as_deref(), Some("operation timed out"));
+    }
+
+    #[test]
+    fn cluster_cpu_is_weighted_by_online_core_capacity() {
+        let mut small = offline_node(NODES[0], Duration::ZERO, String::new());
+        small.reachable = true;
+        small.cores = 4;
+        small.cpu_percent = 100.0;
+
+        let mut large = offline_node(NODES[1], Duration::ZERO, String::new());
+        large.reachable = true;
+        large.cores = 12;
+        large.cpu_percent = 0.0;
+
+        let summary = summarize_nodes(&[small, large]);
+        assert_eq!(summary.total_cores, 16);
+        assert_eq!(summary.cpu_used_cores, 4.0);
+        assert_eq!(summary.cpu_used_percent, 25.0);
+    }
+
+    #[test]
+    fn node_inventory_includes_john4() {
+        assert_eq!(NODES[3].id, "john4");
+        assert_eq!(NODES[3].address, "100.118.7.103");
+        assert_eq!(NODES[3].ssh_host, Some("john4"));
+    }
+
+    #[test]
+    fn scheduler_query_requests_the_newest_jobs() {
+        assert!(BACALHAU_JOBS_QUERY.contains("order_by=created_at"));
+        assert!(BACALHAU_JOBS_QUERY.contains("reverse=true"));
+        assert!(!BACALHAU_JOBS_QUERY.contains("order_reversed"));
     }
 }

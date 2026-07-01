@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-mlx-pair-prefix-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "Rows with an identical first 128 sparse NNUE features can share the exact H1 prefix accumulation on Metal without changing numerical results.",
+  "benchmark": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games": 1,
+    "seat_games": 4,
+    "rollouts": 600,
+    "initial_reference_seconds": 141.027296,
+    "ten_x_threshold_seconds": 14.1027296,
+    "binary_sha256": "0c95c1127299118a43236f93c5014217c4ea237ebae2d461785597cd7805410d",
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "batch_diagnostics": {
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "physical_neural_rows": 5062305,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "policy_fallbacks": 0
+    },
+    "hosts": [
+      {
+        "host": "john2",
+        "pair_prefix_seconds": 15.419411334,
+        "same_binary_control_seconds": 15.472646,
+        "difference_seconds": -0.053234666,
+        "relative_change": -0.003440527
+      },
+      {
+        "host": "john3",
+        "pair_prefix_seconds": 15.780847167,
+        "same_binary_control_seconds": 15.771729166,
+        "difference_seconds": 0.009118001,
+        "relative_change": 0.000578127
+      }
+    ]
+  },
+  "supporting_measurements": {
+    "captured_batch_rows": 1298,
+    "captured_batch_features": 271588,
+    "control_median_milliseconds": 1.084229,
+    "pair_prefix_median_milliseconds": 0.859688,
+    "kernel_median_speedup": 1.2612,
+    "observed_full_game_planner_and_metadata_overhead_seconds": 0.28
+  },
+  "parity": {
+    "exact_service_iterations": 200,
+    "maximum_absolute_error": 0.0,
+    "action_trace_scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "diagnostics_identical": true
+  },
+  "decision": {
+    "accepted": false,
+    "reason": "The kernel-only win was consumed by host-side grouping and metadata overhead. The matched end-to-end result was effectively neutral across two Macs and remained above the Phase 0 10x threshold.",
+    "production_code_retained": false
+  }
+}

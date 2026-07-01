@@ -1,3 +1,6 @@
+#[cfg(test)]
+use std::collections::HashMap;
+
 use blake3::Hasher;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
@@ -6,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    Board, BoardError, HexCoord, Market, MarketSlot, Rotation, STANDARD_TILES, STARTER_CLUSTERS,
-    ScoringCards, Terrain, Tile, Wildlife,
+    Board, BoardError, D6Error, D6Transform, HexCoord, Market, MarketSlot, Rotation,
+    STANDARD_TILES, STARTER_CLUSTERS, ScoringCards, Terrain, Tile, Wildlife,
 };
 
 const STATE_SCHEMA_VERSION: u16 = 1;
@@ -100,7 +103,7 @@ impl GameSeed {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DraftChoice {
     Paired {
         slot: MarketSlot,
@@ -111,24 +114,260 @@ pub enum DraftChoice {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TilePlacement {
     pub coord: HexCoord,
     pub rotation: Rotation,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct WildlifeWipe {
     pub slots: Vec<MarketSlot>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct MarketPrelude {
     pub replace_three_of_a_kind: bool,
     pub wildlife_wipes: Vec<WildlifeWipe>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BoardUndoAudit {
+    pub complete_action_checks: u64,
+    pub parent_blake3: [u8; 32],
+}
+
+/// Restore proof emitted by the canonical legal-action enumerator itself.
+///
+/// Each counter corresponds to one production apply/undo boundary: optional
+/// wildlife siblings restore their tile parent, tile placements restore their
+/// draft parent, and draft completion (including an independent-draft token
+/// refund) restores the original active-board root.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BoardRestoreAudit {
+    pub emitted_actions: u64,
+    pub wildlife_sibling_restores: u64,
+    pub tile_parent_restores: u64,
+    pub draft_root_restores: u64,
+    pub root_blake3: [u8; 32],
+}
+
+/// One public choice in the market prelude of a turn.
+///
+/// A paid wipe is deliberately one choice, not a vector of future choices:
+/// its replacement wildlife is revealed before another decision is offered.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MarketDecision {
+    KeepThreeOfAKind,
+    ReplaceThreeOfAKind,
+    StopWiping,
+    PaidWipe(WildlifeWipe),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum MarketDecisionStage {
+    FreeThreeOfAKind = 0,
+    PaidWipes = 1,
+    Draft = 2,
+}
+
+pub const PUBLIC_MARKET_ACTION_WIRE_VERSION: u8 = 1;
+pub const PUBLIC_MARKET_ACTION_WIRE_SIZE: usize = 8;
+
+impl MarketDecision {
+    /// Canonical public-only wire record for one staged market choice.
+    ///
+    /// Layout is little-endian `<BBBBI>`: schema version, stage, action kind,
+    /// four-slot wipe mask, and a zero reserved word. It cannot represent a
+    /// refill outcome, hidden bag order, seed, policy, or host identity.
+    pub fn public_wire_bytes(
+        &self,
+        stage: MarketDecisionStage,
+    ) -> Result<[u8; PUBLIC_MARKET_ACTION_WIRE_SIZE], RuleError> {
+        let (action_kind, slot_mask) = match (stage, self) {
+            (MarketDecisionStage::FreeThreeOfAKind, Self::KeepThreeOfAKind) => (0, 0),
+            (MarketDecisionStage::FreeThreeOfAKind, Self::ReplaceThreeOfAKind) => (1, 0),
+            (MarketDecisionStage::PaidWipes, Self::StopWiping) => (2, 0),
+            (MarketDecisionStage::PaidWipes, Self::PaidWipe(wipe)) => {
+                validate_wipe_slots(&wipe.slots)?;
+                let mut mask = 0u8;
+                for slot in &wipe.slots {
+                    mask |= 1u8 << slot.index();
+                }
+                (3, mask)
+            }
+            _ => return Err(RuleError::IllegalMarketDecision),
+        };
+        Ok([
+            PUBLIC_MARKET_ACTION_WIRE_VERSION,
+            stage as u8,
+            action_kind,
+            slot_mask,
+            0,
+            0,
+            0,
+            0,
+        ])
+    }
+}
+
+/// Stable identity of one public market decision point. The parent is hashed
+/// before the choice, so a revealed refill can influence only later choices.
+pub fn public_market_decision_identity(
+    parent_public_hash: [u8; 32],
+    turn_index: u16,
+    ordinal: u8,
+    stage: MarketDecisionStage,
+) -> [u8; 32] {
+    let mut hasher = Hasher::new();
+    hasher.update(b"r2-map-market-decision-identity-v1");
+    hasher.update(&parent_public_hash);
+    hasher.update(&turn_index.to_le_bytes());
+    hasher.update(&[ordinal, stage as u8]);
+    *hasher.finalize().as_bytes()
+}
+
+pub fn public_market_action_identity(
+    decision_id: [u8; 32],
+    action_bytes: [u8; PUBLIC_MARKET_ACTION_WIRE_SIZE],
+) -> [u8; 32] {
+    let mut hasher = Hasher::new();
+    hasher.update(b"r2-map-market-action-identity-v1");
+    hasher.update(&decision_id);
+    hasher.update(&action_bytes);
+    *hasher.finalize().as_bytes()
+}
+
+/// Returns whether replacing the selected public market slots is guaranteed to
+/// reach a stable four-token market for every hidden ordering of the public
+/// wildlife multiset.
+///
+/// A rejected automatic four-of-a-kind cohort remains set aside until the
+/// market stabilizes.  Therefore a replacement is legal at the public
+/// information set only when every reachable monochrome refill chain can draw
+/// its next complete cohort.  The proof uses species counts, never hidden bag
+/// order, and is shared by the simulator and serving-protocol validator.
+pub fn public_market_replacement_is_universally_safe(
+    wildlife_bag: [u8; 5],
+    market_wildlife: [Wildlife; 4],
+    slot_mask: u8,
+) -> bool {
+    if slot_mask == 0 || slot_mask & !0x0f != 0 {
+        return false;
+    }
+    let mut retained = [0u8; 5];
+    for (slot, wildlife) in market_wildlife.into_iter().enumerate() {
+        if slot_mask & (1 << slot) == 0 {
+            retained[wildlife as usize] += 1;
+        }
+    }
+    refill_is_universally_stabilizing(wildlife_bag, retained)
+}
+
+/// Canonical ascending paid-wipe masks that are safe across the complete
+/// public information set.  Nature-token availability is checked by the
+/// caller because it changes after every committed wipe.
+pub fn public_market_universally_safe_wipe_masks(
+    wildlife_bag: [u8; 5],
+    market_wildlife: [Wildlife; 4],
+) -> Vec<u8> {
+    (1u8..16)
+        .filter(|mask| {
+            let mut retained = [0u8; 5];
+            for (slot, wildlife) in market_wildlife.into_iter().enumerate() {
+                if mask & (1 << slot) == 0 {
+                    retained[wildlife as usize] += 1;
+                }
+            }
+            refill_is_universally_stabilizing(wildlife_bag, retained)
+        })
+        .collect()
+}
+
+fn refill_is_universally_stabilizing(wildlife_bag: [u8; 5], retained_market: [u8; 5]) -> bool {
+    let retained_total = retained_market
+        .iter()
+        .map(|count| usize::from(*count))
+        .sum::<usize>();
+    if retained_total > 4 {
+        return false;
+    }
+    let needed = 4 - retained_total;
+    let bag_total = wildlife_bag
+        .iter()
+        .map(|count| usize::from(*count))
+        .sum::<usize>();
+    if bag_total < needed {
+        return false;
+    }
+
+    let mut retained_species = None;
+    for (wildlife, count) in retained_market.into_iter().enumerate() {
+        if count == 0 {
+            continue;
+        }
+        if retained_species.is_some() {
+            // Two retained species make a four-of-a-kind impossible, so
+            // every feasible refill stabilizes immediately.
+            return true;
+        }
+        retained_species = Some(wildlife);
+    }
+
+    let Some(wildlife) = retained_species else {
+        return empty_refill_is_universally_stabilizing(wildlife_bag);
+    };
+
+    // Only the all-matching completion can trigger another automatic cohort.
+    // If that completion is reachable, remove it and apply the exact empty-
+    // market theorem. Every other draw is already stable.
+    if usize::from(wildlife_bag[wildlife]) < needed {
+        return true;
+    }
+    let mut remaining = wildlife_bag;
+    remaining[wildlife] -= u8::try_from(needed).expect("market refill is at most four");
+    empty_refill_is_universally_stabilizing(remaining)
+}
+
+/// Exact constant-space theorem for an empty four-token market.
+///
+/// A hidden order can exhaust the bag through automatic monochrome rejections
+/// exactly when its available disjoint four-of-a-kind cohorts can fill every
+/// complete four-token draw remaining in the bag.  Any deficit forces a
+/// non-monochrome (and therefore stable) market before fewer than four tokens
+/// remain.  This is O(5), does not enumerate hidden orders, and prunes no legal
+/// action relative to the recursive public-universal definition.
+fn empty_refill_is_universally_stabilizing(wildlife_bag: [u8; 5]) -> bool {
+    let bag_total = wildlife_bag
+        .iter()
+        .map(|count| usize::from(*count))
+        .sum::<usize>();
+    bag_total >= 4
+        && wildlife_bag
+            .iter()
+            .map(|count| usize::from(*count) / 4)
+            .sum::<usize>()
+            < bag_total / 4
+}
+
+fn complete_market_wildlife(market: &Market) -> Option<[Wildlife; 4]> {
+    let [Some(zero), Some(one), Some(two), Some(three)] = market.wildlife else {
+        return None;
+    };
+    Some([zero, one, two, three])
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MarketDecisionTransition {
+    pub ordinal: u8,
+    pub stage: MarketDecisionStage,
+    pub parent: PublicGameState,
+    pub decision: MarketDecision,
+    pub resulting_state: PublicGameState,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TurnAction {
     pub replace_three_of_a_kind: bool,
     pub wildlife_wipes: Vec<WildlifeWipe>,
@@ -154,6 +393,10 @@ impl TurnAction {
             wildlife_wipes: self.wildlife_wipes.clone(),
         }
     }
+
+    pub fn transformed(&self, state: &GameState, transform: D6Transform) -> Result<Self, D6Error> {
+        state.transform_turn_action(self, transform)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -171,6 +414,198 @@ pub struct GameState {
     current_player: u8,
     completed_turns: u16,
     wildlife_return_counter: u64,
+}
+
+/// Sequential, public-information-only market-decision state for one turn.
+///
+/// The session owns a staged clone. Callers choose from `legal_decisions`,
+/// commit exactly one choice (and therefore one chance reveal), then inspect
+/// the new public state before making another choice. Once wiping stops,
+/// `legal_draft_actions` exposes the deterministic complete draft surface and
+/// `bundle_action` reconstructs the exact atomic `TurnAction` accepted by the
+/// canonical simulator.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MarketDecisionSession {
+    staged: GameState,
+    stage: MarketDecisionStage,
+    prelude: MarketPrelude,
+}
+
+impl MarketDecisionSession {
+    pub fn begin(game: &GameState) -> Result<Self, RuleError> {
+        if game.is_game_over() {
+            return Err(RuleError::GameOver);
+        }
+        Ok(Self {
+            staged: game.clone(),
+            stage: if game.market.three_of_a_kind().is_some() {
+                MarketDecisionStage::FreeThreeOfAKind
+            } else {
+                MarketDecisionStage::PaidWipes
+            },
+            prelude: MarketPrelude::default(),
+        })
+    }
+
+    pub fn stage(&self) -> MarketDecisionStage {
+        self.stage
+    }
+
+    pub fn public_state(&self) -> PublicGameState {
+        self.staged.public_state()
+    }
+
+    pub fn staged_game(&self) -> &GameState {
+        &self.staged
+    }
+
+    pub fn prelude(&self) -> &MarketPrelude {
+        &self.prelude
+    }
+
+    pub fn legal_decisions(&self) -> Vec<MarketDecision> {
+        match self.stage {
+            MarketDecisionStage::FreeThreeOfAKind => {
+                let mut decisions = vec![MarketDecision::KeepThreeOfAKind];
+                let wildlife = self
+                    .staged
+                    .market
+                    .three_of_a_kind()
+                    .expect("free-replacement stage has three matching wildlife");
+                let slot_mask = self
+                    .staged
+                    .market
+                    .wildlife_slots(wildlife)
+                    .into_iter()
+                    .fold(0u8, |mask, slot| mask | (1 << slot.index()));
+                if public_market_replacement_is_universally_safe(
+                    self.staged.public_supply().wildlife_bag,
+                    complete_market_wildlife(&self.staged.market)
+                        .expect("active market is complete"),
+                    slot_mask,
+                ) {
+                    decisions.push(MarketDecision::ReplaceThreeOfAKind);
+                }
+                decisions
+            }
+            MarketDecisionStage::PaidWipes => std::iter::once(MarketDecision::StopWiping)
+                .chain(
+                    self.staged
+                        .legal_wildlife_wipes()
+                        .into_iter()
+                        .map(MarketDecision::PaidWipe),
+                )
+                .collect(),
+            MarketDecisionStage::Draft => Vec::new(),
+        }
+    }
+
+    pub fn commit(&mut self, decision: &MarketDecision) -> Result<(), RuleError> {
+        if !self.legal_decisions().contains(decision) {
+            return Err(RuleError::IllegalMarketDecision);
+        }
+        match (self.stage, decision) {
+            (MarketDecisionStage::FreeThreeOfAKind, MarketDecision::KeepThreeOfAKind) => {
+                self.stage = MarketDecisionStage::PaidWipes;
+            }
+            (MarketDecisionStage::FreeThreeOfAKind, MarketDecision::ReplaceThreeOfAKind) => {
+                self.staged.apply_market_prelude(&MarketPrelude {
+                    replace_three_of_a_kind: true,
+                    wildlife_wipes: Vec::new(),
+                })?;
+                self.prelude.replace_three_of_a_kind = true;
+                self.stage = MarketDecisionStage::PaidWipes;
+            }
+            (MarketDecisionStage::PaidWipes, MarketDecision::StopWiping) => {
+                self.stage = MarketDecisionStage::Draft;
+            }
+            (MarketDecisionStage::PaidWipes, MarketDecision::PaidWipe(wipe)) => {
+                self.staged.apply_market_prelude(&MarketPrelude {
+                    replace_three_of_a_kind: false,
+                    wildlife_wipes: vec![wipe.clone()],
+                })?;
+                self.prelude.wildlife_wipes.push(wipe.clone());
+            }
+            _ => return Err(RuleError::IllegalMarketDecision),
+        }
+        self.staged.validate().map_err(RuleError::Invariant)
+    }
+
+    pub fn legal_draft_actions(&self) -> Result<Vec<TurnAction>, RuleError> {
+        if self.stage != MarketDecisionStage::Draft {
+            return Err(RuleError::MarketDecisionNotComplete);
+        }
+        self.staged.legal_turn_actions(&MarketPrelude::default())
+    }
+
+    pub fn bundle_action(&self, draft_action: &TurnAction) -> Result<TurnAction, RuleError> {
+        if self.stage != MarketDecisionStage::Draft
+            || draft_action.replace_three_of_a_kind
+            || !draft_action.wildlife_wipes.is_empty()
+        {
+            return Err(RuleError::MarketDecisionNotComplete);
+        }
+        self.staged.preview_public_afterstate(draft_action)?;
+        let mut bundled = draft_action.clone();
+        bundled.replace_three_of_a_kind = self.prelude.replace_three_of_a_kind;
+        bundled.wildlife_wipes = self.prelude.wildlife_wipes.clone();
+        Ok(bundled)
+    }
+
+    /// Reconstruct the public subdecision sequence represented by one atomic
+    /// replay action. Each paid wipe is committed before the next parent is
+    /// observed, so this path cannot expose a later refill to an earlier
+    /// choice. The returned draft action has an empty prelude and is legal in
+    /// the returned session's post-stop staged state.
+    pub fn replay_bundled_action(
+        game: &GameState,
+        bundled: &TurnAction,
+    ) -> Result<(Self, Vec<MarketDecisionTransition>, TurnAction), RuleError> {
+        let mut session = Self::begin(game)?;
+        let mut transitions = Vec::new();
+        if session.stage == MarketDecisionStage::FreeThreeOfAKind {
+            let decision = if bundled.replace_three_of_a_kind {
+                MarketDecision::ReplaceThreeOfAKind
+            } else {
+                MarketDecision::KeepThreeOfAKind
+            };
+            session.commit_recorded(decision, &mut transitions)?;
+        } else if bundled.replace_three_of_a_kind {
+            return Err(RuleError::IllegalMarketDecision);
+        }
+        for wipe in &bundled.wildlife_wipes {
+            session.commit_recorded(MarketDecision::PaidWipe(wipe.clone()), &mut transitions)?;
+        }
+        session.commit_recorded(MarketDecision::StopWiping, &mut transitions)?;
+
+        let mut draft = bundled.clone();
+        draft.replace_three_of_a_kind = false;
+        draft.wildlife_wipes.clear();
+        if session.bundle_action(&draft)? != *bundled {
+            return Err(RuleError::IllegalMarketDecision);
+        }
+        Ok((session, transitions, draft))
+    }
+
+    fn commit_recorded(
+        &mut self,
+        decision: MarketDecision,
+        transitions: &mut Vec<MarketDecisionTransition>,
+    ) -> Result<(), RuleError> {
+        let ordinal =
+            u8::try_from(transitions.len()).map_err(|_| RuleError::TooManyMarketDecisions)?;
+        let stage = self.stage;
+        let parent = self.public_state();
+        self.commit(&decision)?;
+        transitions.push(MarketDecisionTransition {
+            ordinal,
+            stage,
+            parent,
+            decision,
+            resulting_state: self.public_state(),
+        });
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -234,6 +669,35 @@ impl PublicGameState {
 
     pub fn canonical_hash(&self) -> blake3::Hash {
         blake3::hash(&self.canonical_bytes())
+    }
+
+    pub fn transformed(&self, transform: D6Transform) -> Result<Self, D6Error> {
+        Ok(Self {
+            config: self.config,
+            boards: self
+                .boards
+                .iter()
+                .map(|board| board.transformed(transform))
+                .collect::<Result<_, _>>()?,
+            market: self.market.clone(),
+            current_player: self.current_player,
+            completed_turns: self.completed_turns,
+        })
+    }
+
+    /// Return an otherwise identical public state with one exact board
+    /// replaced. Search uses this to combine the canonical in-place
+    /// place/undo enumerator with draft-level market templates, avoiding a
+    /// full hidden game clone for every legal placement.
+    pub fn with_replaced_board(&self, seat: usize, board: Board) -> Result<Self, RuleError> {
+        if seat >= self.boards.len() {
+            return Err(RuleError::Invariant(
+                "public board replacement seat is out of range",
+            ));
+        }
+        let mut state = self.clone();
+        state.boards[seat] = board;
+        Ok(state)
     }
 }
 
@@ -392,6 +856,48 @@ impl GameState {
         blake3::hash(&self.canonical_bytes())
     }
 
+    /// Transforms only public board geometry. Player order, market slots,
+    /// hidden supply order, counters, seed, and rules configuration are exact.
+    pub fn transformed(&self, transform: D6Transform) -> Result<Self, D6Error> {
+        let mut transformed = self.clone();
+        transformed.boards = self
+            .boards
+            .iter()
+            .map(|board| board.transformed(transform))
+            .collect::<Result<_, _>>()?;
+        transformed.validate().map_err(D6Error::Invariant)?;
+        Ok(transformed)
+    }
+
+    /// Resolves the staged draft before transforming placement orientation.
+    ///
+    /// This is intentionally state-aware: a bare `TurnAction` does not carry
+    /// the drafted tile identity needed to distinguish dual-terrain orientation
+    /// from canonical single-terrain orientation.
+    pub fn transform_turn_action(
+        &self,
+        action: &TurnAction,
+        transform: D6Transform,
+    ) -> Result<TurnAction, D6Error> {
+        let mut staged = self.clone();
+        staged.apply_market_prelude(&action.prelude())?;
+        let (tile, _) = staged.preview_draft(action.draft)?;
+
+        Ok(TurnAction {
+            replace_three_of_a_kind: action.replace_three_of_a_kind,
+            wildlife_wipes: action.wildlife_wipes.clone(),
+            draft: action.draft,
+            tile: TilePlacement {
+                coord: transform.transform_coord(action.tile.coord)?,
+                rotation: transform.transform_tile_rotation(tile, action.tile.rotation),
+            },
+            wildlife: action
+                .wildlife
+                .map(|coord| transform.transform_coord(coord))
+                .transpose()?,
+        })
+    }
+
     pub fn redeterminize_hidden(&mut self, determinization_seed: GameSeed) {
         let tile_stack_len = self.tile_stack.len();
         let mut unseen_tiles = std::mem::take(&mut self.tile_stack);
@@ -409,14 +915,21 @@ impl GameState {
         if self.is_game_over() || self.boards[self.current_player()].nature_tokens() == 0 {
             return Vec::new();
         }
-        (1u8..16)
-            .map(|mask| WildlifeWipe {
-                slots: MarketSlot::ALL
-                    .into_iter()
-                    .filter(|slot| mask & (1 << slot.index()) != 0)
-                    .collect(),
-            })
-            .collect()
+        let Some(market_wildlife) = complete_market_wildlife(&self.market) else {
+            return Vec::new();
+        };
+        public_market_universally_safe_wipe_masks(
+            self.public_supply().wildlife_bag,
+            market_wildlife,
+        )
+        .into_iter()
+        .map(|mask| WildlifeWipe {
+            slots: MarketSlot::ALL
+                .into_iter()
+                .filter(|slot| mask & (1 << slot.index()) != 0)
+                .collect(),
+        })
+        .collect()
     }
 
     pub fn legal_turn_actions(
@@ -440,6 +953,58 @@ impl GameState {
             .into_iter()
             .map(|(action, ())| action)
             .collect())
+    }
+
+    /// Independently apply and undo every staged draft action on one mutable
+    /// active board, requiring the complete parent digest after each action.
+    ///
+    /// This is a diagnostic boundary for exhaustive serving audits. Actions
+    /// must come from the post-market-prelude staged game and therefore carry
+    /// no bundled prelude of their own.
+    pub fn audit_staged_draft_action_board_undo(
+        &self,
+        actions: &[TurnAction],
+    ) -> Result<BoardUndoAudit, RuleError> {
+        if self.is_game_over() {
+            return Err(RuleError::GameOver);
+        }
+        let mut board = self.boards[self.current_player()].clone();
+        let parent_blake3 = *board.canonical_hash().as_bytes();
+        let mut complete_action_checks = 0u64;
+        for action in actions {
+            if action.replace_three_of_a_kind || !action.wildlife_wipes.is_empty() {
+                return Err(RuleError::MarketDecisionNotComplete);
+            }
+            let (tile, wildlife) = self.preview_draft(action.draft)?;
+            let independent = matches!(action.draft, DraftChoice::Independent { .. });
+            if independent && !board.spend_nature_token() {
+                return Err(RuleError::NoNatureTokens);
+            }
+            let tile_delta = board.place_tile(action.tile.coord, tile, action.tile.rotation)?;
+            let wildlife_delta = action
+                .wildlife
+                .map(|coord| board.place_wildlife(coord, wildlife))
+                .transpose()?;
+            if let Some(delta) = wildlife_delta {
+                board.undo(delta)?;
+            }
+            board.undo(tile_delta)?;
+            if independent {
+                board.refund_nature_token();
+            }
+            if board.canonical_hash().as_bytes() != &parent_blake3 {
+                return Err(RuleError::Invariant(
+                    "complete draft-action undo changed the parent board digest",
+                ));
+            }
+            complete_action_checks = complete_action_checks
+                .checked_add(1)
+                .ok_or(RuleError::Invariant("board undo audit count overflow"))?;
+        }
+        Ok(BoardUndoAudit {
+            complete_action_checks,
+            parent_blake3,
+        })
     }
 
     pub fn evaluate_legal_turn_actions<T>(
@@ -475,6 +1040,42 @@ impl GameState {
         mut prepare_tile: impl FnMut(&Board, TilePlacement, Tile) -> C,
         mut evaluate: impl FnMut(&Board, &C, Option<(Wildlife, HexCoord)>) -> T,
     ) -> Result<Vec<(TurnAction, T)>, RuleError> {
+        self.evaluate_legal_turn_actions_with_tile_context_audited(
+            prelude,
+            &mut prepare_tile,
+            &mut evaluate,
+            None,
+        )
+    }
+
+    /// Exercise the exact canonical production enumerator while proving every
+    /// sibling, tile, and draft restore boundary against the complete board
+    /// digest. The returned actions are the actions emitted by that audited
+    /// traversal, in production order.
+    pub fn audit_legal_turn_action_enumerator_restores(
+        &self,
+        prelude: &MarketPrelude,
+    ) -> Result<(Vec<TurnAction>, BoardRestoreAudit), RuleError> {
+        let mut audit = BoardRestoreAudit::default();
+        let evaluated = self.evaluate_legal_turn_actions_with_tile_context_audited(
+            prelude,
+            &mut |_, _, _| (),
+            &mut |_, &(), _| (),
+            Some(&mut audit),
+        )?;
+        Ok((
+            evaluated.into_iter().map(|(action, ())| action).collect(),
+            audit,
+        ))
+    }
+
+    fn evaluate_legal_turn_actions_with_tile_context_audited<C, T>(
+        &self,
+        prelude: &MarketPrelude,
+        prepare_tile: &mut impl FnMut(&Board, TilePlacement, Tile) -> C,
+        evaluate: &mut impl FnMut(&Board, &C, Option<(Wildlife, HexCoord)>) -> T,
+        audit: Option<&mut BoardRestoreAudit>,
+    ) -> Result<Vec<(TurnAction, T)>, RuleError> {
         if self.is_game_over() {
             return Ok(Vec::new());
         }
@@ -504,8 +1105,9 @@ impl GameState {
         staged.evaluate_staged_drafts_with_tile_context(
             prelude,
             &drafts,
-            &mut prepare_tile,
-            &mut evaluate,
+            prepare_tile,
+            evaluate,
+            audit,
         )
     }
 
@@ -527,6 +1129,7 @@ impl GameState {
             &[draft],
             &mut |_, _, _| (),
             &mut |board, &(), _| evaluate(board),
+            None,
         )
     }
 
@@ -543,18 +1146,28 @@ impl GameState {
     pub fn preview_free_three_of_a_kind_if_feasible(
         &self,
     ) -> Result<(MarketPrelude, Self), RuleError> {
+        let replace_three_of_a_kind = self.market.three_of_a_kind().is_some_and(|wildlife| {
+            let slot_mask = self
+                .market
+                .wildlife_slots(wildlife)
+                .into_iter()
+                .fold(0u8, |mask, slot| mask | (1 << slot.index()));
+            complete_market_wildlife(&self.market).is_some_and(|market_wildlife| {
+                public_market_replacement_is_universally_safe(
+                    self.public_supply().wildlife_bag,
+                    market_wildlife,
+                    slot_mask,
+                )
+            })
+        });
         let prelude = MarketPrelude {
-            replace_three_of_a_kind: self.market.three_of_a_kind().is_some(),
+            replace_three_of_a_kind,
             wildlife_wipes: Vec::new(),
         };
         if !prelude.replace_three_of_a_kind {
             return Ok((prelude, self.clone()));
         }
-        match self.preview_market_prelude(&prelude) {
-            Ok(staged) => Ok((prelude, staged)),
-            Err(RuleError::WildlifeBagEmpty) => Ok((MarketPrelude::default(), self.clone())),
-            Err(error) => Err(error),
-        }
+        Ok((prelude.clone(), self.preview_market_prelude(&prelude)?))
     }
 
     fn evaluate_staged_drafts_with_tile_context<C, T>(
@@ -563,19 +1176,28 @@ impl GameState {
         drafts: &[DraftChoice],
         prepare_tile: &mut impl FnMut(&Board, TilePlacement, Tile) -> C,
         evaluate: &mut impl FnMut(&Board, &C, Option<(Wildlife, HexCoord)>) -> T,
+        mut audit: Option<&mut BoardRestoreAudit>,
     ) -> Result<Vec<(TurnAction, T)>, RuleError> {
         let player = self.current_player();
         let mut board = self.boards[player].clone();
+        if let Some(audit) = audit.as_deref_mut() {
+            *audit = BoardRestoreAudit {
+                root_blake3: *board.canonical_hash().as_bytes(),
+                ..BoardRestoreAudit::default()
+            };
+        }
         let frontier = board.frontier();
         let wildlife_placements: [_; 5] =
             std::array::from_fn(|index| board.wildlife_placements(Wildlife::ALL[index]));
         let mut evaluated = Vec::new();
         for &draft in drafts {
+            let draft_root_blake3 = audit.as_ref().map(|_| *board.canonical_hash().as_bytes());
             let (tile, wildlife) = self.preview_draft(draft)?;
             let independent = matches!(draft, DraftChoice::Independent { .. });
             if independent && !board.spend_nature_token() {
                 return Err(RuleError::NoNatureTokens);
             }
+            let draft_parent_blake3 = audit.as_ref().map(|_| *board.canonical_hash().as_bytes());
             let rotations = if tile.terrain_b.is_some() {
                 &Rotation::ALL[..]
             } else {
@@ -584,6 +1206,8 @@ impl GameState {
             for coord in &frontier {
                 for rotation in rotations {
                     let tile_delta = board.place_tile(*coord, tile, *rotation)?;
+                    let tile_parent_blake3 =
+                        audit.as_ref().map(|_| *board.canonical_hash().as_bytes());
                     let mut valid_wildlife_placements =
                         wildlife_placements[wildlife as usize].clone();
                     if tile.wildlife.contains(wildlife) {
@@ -608,6 +1232,15 @@ impl GameState {
                         },
                         evaluate(&board, &tile_context, None),
                     ));
+                    if let Some(audit) = audit.as_deref_mut() {
+                        audit.emitted_actions =
+                            audit
+                                .emitted_actions
+                                .checked_add(1)
+                                .ok_or(RuleError::Invariant(
+                                    "board restore audit action count overflow",
+                                ))?;
+                    }
                     for wildlife_coord in valid_wildlife_placements {
                         let wildlife_delta = board.place_wildlife(wildlife_coord, wildlife)?;
                         evaluated.push((
@@ -621,12 +1254,81 @@ impl GameState {
                             evaluate(&board, &tile_context, Some((wildlife, wildlife_coord))),
                         ));
                         board.undo(wildlife_delta)?;
+                        if let Some(expected) = tile_parent_blake3 {
+                            if board.canonical_hash().as_bytes() != &expected {
+                                return Err(RuleError::Invariant(
+                                    "production wildlife undo changed its tile parent digest",
+                                ));
+                            }
+                            let audit = audit
+                                .as_deref_mut()
+                                .expect("audited wildlife sibling counter exists");
+                            audit.emitted_actions = audit.emitted_actions.checked_add(1).ok_or(
+                                RuleError::Invariant("board restore audit action count overflow"),
+                            )?;
+                            audit.wildlife_sibling_restores = audit
+                                .wildlife_sibling_restores
+                                .checked_add(1)
+                                .ok_or(RuleError::Invariant(
+                                    "board restore audit wildlife count overflow",
+                                ))?;
+                        }
                     }
                     board.undo(tile_delta)?;
+                    if let Some(expected) = draft_parent_blake3 {
+                        if board.canonical_hash().as_bytes() != &expected {
+                            return Err(RuleError::Invariant(
+                                "production tile undo changed its draft parent digest",
+                            ));
+                        }
+                        let audit = audit
+                            .as_deref_mut()
+                            .expect("audited tile parent counter exists");
+                        audit.tile_parent_restores =
+                            audit.tile_parent_restores.checked_add(1).ok_or(
+                                RuleError::Invariant("board restore audit tile count overflow"),
+                            )?;
+                    }
                 }
             }
             if independent {
                 board.refund_nature_token();
+            }
+            if let Some(expected) = draft_root_blake3 {
+                if board.canonical_hash().as_bytes() != &expected {
+                    return Err(RuleError::Invariant(
+                        "production draft completion changed its root board digest",
+                    ));
+                }
+                let audit = audit
+                    .as_deref_mut()
+                    .expect("audited draft root counter exists");
+                audit.draft_root_restores =
+                    audit
+                        .draft_root_restores
+                        .checked_add(1)
+                        .ok_or(RuleError::Invariant(
+                            "board restore audit draft count overflow",
+                        ))?;
+            }
+        }
+        if let Some(audit) = audit {
+            if board.canonical_hash().as_bytes() != &audit.root_blake3 {
+                return Err(RuleError::Invariant(
+                    "production legal-action enumeration changed its root board digest",
+                ));
+            }
+            if audit.emitted_actions
+                != audit
+                    .wildlife_sibling_restores
+                    .checked_add(audit.tile_parent_restores)
+                    .ok_or(RuleError::Invariant(
+                        "board restore audit aggregate count overflow",
+                    ))?
+            {
+                return Err(RuleError::Invariant(
+                    "production restore counts do not cover every emitted action",
+                ));
             }
         }
         Ok(evaluated)
@@ -871,7 +1573,6 @@ impl GameState {
             }
             self.fill_empty_wildlife()?;
         }
-
         for wildlife in set_aside {
             self.return_wildlife(wildlife);
         }
@@ -1046,6 +1747,12 @@ pub enum RuleError {
     },
     #[error("the active player does not have enough nature tokens")]
     NoNatureTokens,
+    #[error("the market decision is not legal at the current public stage")]
+    IllegalMarketDecision,
+    #[error("the market prelude must stop before a draft action is requested")]
+    MarketDecisionNotComplete,
+    #[error("a turn exceeds the representable public market-decision count")]
+    TooManyMarketDecisions,
     #[error("the habitat tile stack is unexpectedly empty")]
     TileStackEmpty,
     #[error("the wildlife bag is unexpectedly empty")]
@@ -1093,6 +1800,99 @@ mod tests {
                 .unwrap();
             game.market.wildlife[slot.index()] = Some(game.wildlife_bag.swap_remove(index));
         }
+    }
+
+    fn force_wildlife_bag(game: &mut GameState, counts: [u8; 5]) {
+        game.discarded_wildlife.append(&mut game.wildlife_bag);
+        for wildlife in Wildlife::ALL {
+            for _ in 0..counts[wildlife as usize] {
+                let index = game
+                    .discarded_wildlife
+                    .iter()
+                    .position(|candidate| *candidate == wildlife)
+                    .expect("test bag request respects wildlife conservation");
+                game.wildlife_bag
+                    .push(game.discarded_wildlife.swap_remove(index));
+            }
+        }
+        game.validate().unwrap();
+    }
+
+    fn brute_refill_is_universally_stabilizing(
+        wildlife_bag: [u8; 5],
+        retained_market: [u8; 5],
+        memo: &mut HashMap<([u8; 5], [u8; 5]), bool>,
+    ) -> bool {
+        let key = (wildlife_bag, retained_market);
+        if let Some(result) = memo.get(&key) {
+            return *result;
+        }
+        let retained = retained_market.iter().sum::<u8>();
+        let needed = 4usize.saturating_sub(usize::from(retained));
+        if retained > 4
+            || wildlife_bag
+                .iter()
+                .map(|count| usize::from(*count))
+                .sum::<usize>()
+                < needed
+        {
+            memo.insert(key, false);
+            return false;
+        }
+        fn enumerate_draws(
+            wildlife: usize,
+            remaining: usize,
+            bag: [u8; 5],
+            draw: &mut [u8; 5],
+            output: &mut Vec<[u8; 5]>,
+        ) {
+            if wildlife == 4 {
+                if remaining <= usize::from(bag[wildlife]) {
+                    draw[wildlife] = u8::try_from(remaining).unwrap();
+                    output.push(*draw);
+                }
+                return;
+            }
+            for count in 0..=remaining.min(usize::from(bag[wildlife])) {
+                draw[wildlife] = u8::try_from(count).unwrap();
+                enumerate_draws(wildlife + 1, remaining - count, bag, draw, output);
+            }
+        }
+        let mut draws = Vec::new();
+        enumerate_draws(0, needed, wildlife_bag, &mut [0; 5], &mut draws);
+        let result = !draws.is_empty()
+            && draws.into_iter().all(|draw| {
+                let mut resulting_market = retained_market;
+                let mut remaining_bag = wildlife_bag;
+                for wildlife in 0..5 {
+                    resulting_market[wildlife] += draw[wildlife];
+                    remaining_bag[wildlife] -= draw[wildlife];
+                }
+                if resulting_market.contains(&4) {
+                    brute_refill_is_universally_stabilizing(remaining_bag, [0; 5], memo)
+                } else {
+                    true
+                }
+            });
+        memo.insert(key, result);
+        result
+    }
+
+    fn brute_public_replacement_is_universally_safe(
+        wildlife_bag: [u8; 5],
+        market_wildlife: [Wildlife; 4],
+        slot_mask: u8,
+    ) -> bool {
+        if slot_mask == 0 || slot_mask & !0x0f != 0 {
+            return false;
+        }
+        let mut retained = [0; 5];
+        for (slot, wildlife) in market_wildlife.into_iter().enumerate() {
+            if slot_mask & (1 << slot) == 0 {
+                retained[wildlife as usize] += 1;
+            }
+        }
+        brute_refill_is_universally_stabilizing(wildlife_bag, retained, &mut HashMap::new())
     }
 
     #[test]
@@ -1462,6 +2262,30 @@ mod tests {
     }
 
     #[test]
+    fn canonical_enumerator_audits_every_production_restore_boundary() {
+        let mut game = game(2, 10_103);
+        game.boards[0].grant_nature_tokens(1);
+        let actions = game.legal_turn_actions(&MarketPrelude::default()).unwrap();
+        let (audited_actions, audit) = game
+            .audit_legal_turn_action_enumerator_restores(&MarketPrelude::default())
+            .unwrap();
+
+        assert_eq!(audited_actions, actions);
+        assert_eq!(audit.emitted_actions as usize, actions.len());
+        assert_eq!(
+            audit.emitted_actions,
+            audit.wildlife_sibling_restores + audit.tile_parent_restores
+        );
+        assert!(audit.wildlife_sibling_restores > 0);
+        assert!(audit.tile_parent_restores > 0);
+        assert_eq!(audit.draft_root_restores, 20);
+        assert_eq!(
+            audit.root_blake3,
+            *game.boards[0].canonical_hash().as_bytes()
+        );
+    }
+
+    #[test]
     fn tile_context_is_prepared_once_per_draft_and_tile_placement() {
         let game = game(2, 106);
         let prepared = std::cell::Cell::new(0usize);
@@ -1511,6 +2335,405 @@ mod tests {
         let wipes = game.legal_wildlife_wipes();
         assert_eq!(wipes.len(), 15);
         assert!(wipes.iter().all(|wipe| !wipe.slots.is_empty()));
+    }
+
+    #[test]
+    fn market_session_exposes_every_single_wipe_then_requires_explicit_stop() {
+        let mut game = game(2, 10_104);
+        game.boards[0].grant_nature_tokens(2);
+        let mut session = MarketDecisionSession::begin(&game).unwrap();
+        assert_eq!(session.stage(), MarketDecisionStage::PaidWipes);
+        let choices = session.legal_decisions();
+        assert_eq!(choices.first(), Some(&MarketDecision::StopWiping));
+        assert_eq!(choices.len(), 16);
+
+        let selected = choices
+            .iter()
+            .find(|choice| {
+                matches!(choice, MarketDecision::PaidWipe(wipe) if wipe.slots == vec![MarketSlot::ZERO, MarketSlot::TWO])
+            })
+            .unwrap()
+            .clone();
+        let before = session.public_state();
+        session.commit(&selected).unwrap();
+        assert_eq!(session.stage(), MarketDecisionStage::PaidWipes);
+        assert_eq!(session.prelude().wildlife_wipes.len(), 1);
+        assert_eq!(session.staged_game().boards[0].nature_tokens(), 1);
+        assert_ne!(
+            session.public_state().canonical_hash(),
+            before.canonical_hash()
+        );
+        assert_eq!(session.legal_decisions().len(), 16);
+
+        session.commit(&MarketDecision::StopWiping).unwrap();
+        assert_eq!(session.stage(), MarketDecisionStage::Draft);
+        assert!(session.legal_decisions().is_empty());
+        assert!(!session.legal_draft_actions().unwrap().is_empty());
+    }
+
+    #[test]
+    fn every_advertised_paid_wipe_subset_is_independently_executable() {
+        let mut game = game(2, 101_041);
+        game.boards[0].grant_nature_tokens(1);
+        let session = MarketDecisionSession::begin(&game).unwrap();
+        let decisions = session.legal_decisions();
+        assert_eq!(decisions.len(), 16);
+        for (expected_mask, decision) in (1u8..16).zip(decisions.iter().skip(1)) {
+            let MarketDecision::PaidWipe(wipe) = decision else {
+                panic!("paid-wipe legal screen contains a non-wipe continuation");
+            };
+            let observed_mask = wipe
+                .slots
+                .iter()
+                .fold(0u8, |mask, slot| mask | (1u8 << slot.index()));
+            assert_eq!(observed_mask, expected_mask);
+            let mut branch = session.clone();
+            branch.commit(decision).unwrap();
+            assert_eq!(branch.staged_game().boards[0].nature_tokens(), 0);
+            assert_eq!(branch.legal_decisions(), vec![MarketDecision::StopWiping]);
+            branch.commit(&MarketDecision::StopWiping).unwrap();
+            let draft = branch.legal_draft_actions().unwrap().remove(0);
+            let bundled = branch.bundle_action(&draft).unwrap();
+            assert_eq!(
+                game.transition(&bundled).unwrap(),
+                branch.staged_game().transition(&draft).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn repeated_paid_wipes_rebuild_the_legal_screen_only_after_each_public_reveal() {
+        let mut game = game(2, 101_042);
+        game.boards[0].grant_nature_tokens(3);
+        let mut session = MarketDecisionSession::begin(&game).unwrap();
+        let mut parent_hashes = Vec::new();
+        for expected_remaining in [2, 1, 0] {
+            parent_hashes.push(session.public_state().canonical_hash());
+            let decision = session
+                .legal_decisions()
+                .into_iter()
+                .find(|choice| {
+                    matches!(choice, MarketDecision::PaidWipe(wipe) if wipe.slots == vec![MarketSlot::ZERO])
+                })
+                .unwrap();
+            session.commit(&decision).unwrap();
+            assert_eq!(
+                session.staged_game().boards[0].nature_tokens(),
+                expected_remaining
+            );
+        }
+        assert_eq!(parent_hashes.len(), 3);
+        assert_eq!(session.legal_decisions(), vec![MarketDecision::StopWiping]);
+        session.commit(&MarketDecision::StopWiping).unwrap();
+        assert_eq!(session.prelude().wildlife_wipes.len(), 3);
+    }
+
+    #[test]
+    fn market_choices_before_commit_are_independent_of_hidden_refill_order() {
+        let mut left = game(2, 10_105);
+        left.boards[0].grant_nature_tokens(1);
+        let mut right = left.clone();
+        right.redeterminize_hidden(GameSeed::from_u64(0xfeed_face));
+        assert_eq!(left.public_state(), right.public_state());
+
+        let left_session = MarketDecisionSession::begin(&left).unwrap();
+        let right_session = MarketDecisionSession::begin(&right).unwrap();
+        assert_eq!(
+            left_session.legal_decisions(),
+            right_session.legal_decisions()
+        );
+        assert_eq!(left_session.public_state(), right_session.public_state());
+    }
+
+    #[test]
+    fn empty_public_bag_advertises_no_refill_choice() {
+        let mut game = game(2, 101_051);
+        game.boards[0].grant_nature_tokens(1);
+        force_market_wildlife(
+            &mut game,
+            [
+                Wildlife::Bear,
+                Wildlife::Elk,
+                Wildlife::Salmon,
+                Wildlife::Hawk,
+            ],
+        );
+        game.discarded_wildlife.append(&mut game.wildlife_bag);
+        game.validate().unwrap();
+        let session = MarketDecisionSession::begin(&game).unwrap();
+        assert_eq!(session.stage(), MarketDecisionStage::PaidWipes);
+        assert_eq!(session.legal_decisions(), vec![MarketDecision::StopWiping]);
+    }
+
+    #[test]
+    fn short_bag_keeps_stable_subsets_and_rejects_only_unsafe_masks() {
+        let mut game = game(2, 101_052);
+        game.boards[0].grant_nature_tokens(1);
+        force_market_wildlife(
+            &mut game,
+            [
+                Wildlife::Bear,
+                Wildlife::Elk,
+                Wildlife::Salmon,
+                Wildlife::Hawk,
+            ],
+        );
+        force_wildlife_bag(&mut game, [0, 3, 0, 0, 0]);
+
+        let masks = game
+            .legal_wildlife_wipes()
+            .into_iter()
+            .map(|wipe| {
+                wipe.slots
+                    .into_iter()
+                    .fold(0u8, |mask, slot| mask | (1 << slot.index()))
+            })
+            .collect::<Vec<_>>();
+        assert!(masks.contains(&1));
+        assert!(masks.contains(&3));
+        assert!(!masks.contains(&13));
+        assert!(!masks.contains(&15));
+    }
+
+    #[test]
+    fn universal_refill_dp_matches_exhaustive_draw_multisets() {
+        let markets = [
+            [
+                Wildlife::Bear,
+                Wildlife::Elk,
+                Wildlife::Salmon,
+                Wildlife::Hawk,
+            ],
+            [
+                Wildlife::Bear,
+                Wildlife::Bear,
+                Wildlife::Bear,
+                Wildlife::Elk,
+            ],
+        ];
+        for bear in 0..=3 {
+            for elk in 0..=3 {
+                for salmon in 0..=3 {
+                    for hawk in 0..=3 {
+                        for fox in 0..=3 {
+                            let bag = [bear, elk, salmon, hawk, fox];
+                            for market in markets {
+                                for mask in 1..16 {
+                                    assert_eq!(
+                                        public_market_replacement_is_universally_safe(
+                                            bag, market, mask,
+                                        ),
+                                        brute_public_replacement_is_universally_safe(
+                                            bag, market, mask,
+                                        ),
+                                        "bag={bag:?} market={market:?} mask={mask}",
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn constant_space_refill_theorem_matches_recursive_oracle_over_full_legal_space() {
+        // Species permutations are equivalent.  Sorting all five counts covers
+        // every empty-market multiset once; fixing the retained species at
+        // index zero and sorting the other four covers every one-species
+        // retained state once. Counts are bounded by Cascadia's 20 tokens per
+        // species and 96-token post-market public bag.
+        let mut oracle_memo = HashMap::new();
+        let mut empty_cases = 0u64;
+        for first in 0u8..=20 {
+            for second in first..=20 {
+                for third in second..=20 {
+                    for fourth in third..=20 {
+                        for fifth in fourth..=20 {
+                            let bag = [first, second, third, fourth, fifth];
+                            if bag.iter().map(|count| usize::from(*count)).sum::<usize>() > 96 {
+                                continue;
+                            }
+                            assert_eq!(
+                                refill_is_universally_stabilizing(bag, [0; 5]),
+                                brute_refill_is_universally_stabilizing(
+                                    bag,
+                                    [0; 5],
+                                    &mut oracle_memo,
+                                ),
+                                "empty bag={bag:?}",
+                            );
+                            empty_cases += 1;
+                        }
+                    }
+                }
+            }
+        }
+        assert_eq!(empty_cases, 53_123);
+
+        let mut one_retained_cases = 0u64;
+        for retained_count in 1u8..=3 {
+            for distinguished in 0u8..=20 - retained_count {
+                for first in 0u8..=20 {
+                    for second in first..=20 {
+                        for third in second..=20 {
+                            for fourth in third..=20 {
+                                let bag = [distinguished, first, second, third, fourth];
+                                if bag.iter().map(|count| usize::from(*count)).sum::<usize>() > 96 {
+                                    continue;
+                                }
+                                let retained = [retained_count, 0, 0, 0, 0];
+                                assert_eq!(
+                                    refill_is_universally_stabilizing(bag, retained),
+                                    brute_refill_is_universally_stabilizing(
+                                        bag,
+                                        retained,
+                                        &mut oracle_memo,
+                                    ),
+                                    "bag={bag:?} retained={retained:?}",
+                                );
+                                one_retained_cases += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert_eq!(one_retained_cases, 605_671);
+    }
+
+    #[test]
+    fn public_screen_is_hidden_order_invariant_and_every_advertised_wipe_executes() {
+        let mut game = game(2, 101_053);
+        game.boards[0].grant_nature_tokens(1);
+        force_market_wildlife(
+            &mut game,
+            [
+                Wildlife::Bear,
+                Wildlife::Elk,
+                Wildlife::Salmon,
+                Wildlife::Hawk,
+            ],
+        );
+        force_wildlife_bag(&mut game, [1, 3, 0, 0, 0]);
+        let reference = MarketDecisionSession::begin(&game)
+            .unwrap()
+            .legal_decisions();
+        assert!(!reference.iter().any(|decision| {
+            matches!(decision, MarketDecision::PaidWipe(wipe) if wipe.slots == vec![MarketSlot::ZERO, MarketSlot::TWO, MarketSlot::THREE])
+        }));
+        assert!(reference.iter().any(|decision| {
+            matches!(decision, MarketDecision::PaidWipe(wipe) if wipe.slots == MarketSlot::ALL)
+        }));
+
+        for seed in 0..32 {
+            let mut redetermined = game.clone();
+            redetermined.redeterminize_hidden(GameSeed::from_u64(seed));
+            let session = MarketDecisionSession::begin(&redetermined).unwrap();
+            assert_eq!(session.legal_decisions(), reference);
+            for decision in session.legal_decisions().into_iter().skip(1) {
+                let mut branch = session.clone();
+                branch.commit(&decision).unwrap();
+                branch.staged_game().validate().unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn repeated_four_kind_exhaustion_removes_free_replace_from_every_hidden_state() {
+        let mut game = game(2, 101_054);
+        force_market_wildlife(
+            &mut game,
+            [
+                Wildlife::Bear,
+                Wildlife::Bear,
+                Wildlife::Bear,
+                Wildlife::Elk,
+            ],
+        );
+        force_wildlife_bag(&mut game, [0, 3, 4, 0, 0]);
+        for seed in 0..32 {
+            let mut redetermined = game.clone();
+            redetermined.redeterminize_hidden(GameSeed::from_u64(seed));
+            let session = MarketDecisionSession::begin(&redetermined).unwrap();
+            assert_eq!(
+                session.legal_decisions(),
+                vec![MarketDecision::KeepThreeOfAKind]
+            );
+            let (prelude, staged) = redetermined
+                .preview_free_three_of_a_kind_if_feasible()
+                .unwrap();
+            assert_eq!(prelude, MarketPrelude::default());
+            assert_eq!(staged, redetermined);
+        }
+    }
+
+    #[test]
+    fn free_replacement_is_an_explicit_public_choice_made_before_its_reveal() {
+        let mut game = game(2, 10_106);
+        force_market_wildlife(
+            &mut game,
+            [
+                Wildlife::Bear,
+                Wildlife::Bear,
+                Wildlife::Bear,
+                Wildlife::Elk,
+            ],
+        );
+        // Retaining the visible Elk needs three refill tokens. With only two
+        // Elk public in the bag, no hidden permutation can complete another
+        // four-of-a-kind, so replacement is universally safe.
+        force_wildlife_bag(&mut game, [2, 2, 2, 2, 2]);
+        game.validate().unwrap();
+        let mut keep = MarketDecisionSession::begin(&game).unwrap();
+        let mut replace = keep.clone();
+        assert_eq!(keep.stage(), MarketDecisionStage::FreeThreeOfAKind);
+        assert_eq!(
+            keep.legal_decisions(),
+            vec![
+                MarketDecision::KeepThreeOfAKind,
+                MarketDecision::ReplaceThreeOfAKind,
+            ]
+        );
+        keep.commit(&MarketDecision::KeepThreeOfAKind).unwrap();
+        replace
+            .commit(&MarketDecision::ReplaceThreeOfAKind)
+            .unwrap();
+        assert_eq!(keep.public_state(), game.public_state());
+        assert_ne!(replace.public_state(), game.public_state());
+        assert!(!keep.prelude().replace_three_of_a_kind);
+        assert!(replace.prelude().replace_three_of_a_kind);
+    }
+
+    #[test]
+    fn bundled_action_matches_the_same_sequentially_revealed_transition() {
+        let mut game = game(2, 10_107);
+        game.boards[0].grant_nature_tokens(2);
+        let mut session = MarketDecisionSession::begin(&game).unwrap();
+        let first_wipe = session
+            .legal_decisions()
+            .into_iter()
+            .find(|choice| matches!(choice, MarketDecision::PaidWipe(_)))
+            .unwrap();
+        session.commit(&first_wipe).unwrap();
+        session.commit(&MarketDecision::StopWiping).unwrap();
+        let draft = session.legal_draft_actions().unwrap().remove(0);
+        let bundled = session.bundle_action(&draft).unwrap();
+        let staged_transition = session.staged_game().transition(&draft).unwrap();
+        let atomic_transition = game.transition(&bundled).unwrap();
+        assert_eq!(atomic_transition, staged_transition);
+
+        let (replayed, transitions, replayed_draft) =
+            MarketDecisionSession::replay_bundled_action(&game, &bundled).unwrap();
+        assert_eq!(transitions.len(), 2);
+        assert!(matches!(
+            transitions[0].decision,
+            MarketDecision::PaidWipe(_)
+        ));
+        assert_eq!(transitions[1].decision, MarketDecision::StopWiping);
+        assert_eq!(replayed_draft, draft);
+        assert_eq!(replayed.staged_game(), session.staged_game());
     }
 
     #[test]
@@ -1603,6 +2826,17 @@ mod tests {
         assert_eq!(prelude, MarketPrelude::default());
         assert_eq!(staged.canonical_hash(), before);
         staged.validate().unwrap();
+        let session = MarketDecisionSession::begin(&game).unwrap();
+        assert_eq!(session.stage(), MarketDecisionStage::FreeThreeOfAKind);
+        assert_eq!(
+            session.legal_decisions(),
+            vec![MarketDecision::KeepThreeOfAKind]
+        );
+        let mut rejected = session.clone();
+        assert_eq!(
+            rejected.commit(&MarketDecision::ReplaceThreeOfAKind),
+            Err(RuleError::IllegalMarketDecision)
+        );
     }
 
     #[test]

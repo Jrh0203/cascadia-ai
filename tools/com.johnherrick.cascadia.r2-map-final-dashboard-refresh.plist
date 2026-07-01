@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.johnherrick.cascadia.r2-map-final-dashboard-refresh</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>PYTHONPATH=/Users/johnherrick/cascadia/python:/Users/johnherrick/cascadia/tools</string>
+    <string>/Users/johnherrick/cascadia/.venv/bin/python</string>
+    <string>/Users/johnherrick/cascadia/tools/r2_map_focal_dashboard_watch.py</string>
+    <string>--benchmark-root</string>
+    <string>/Users/johnherrick/cascadia-bench/r2-map-v1/gates/development-v8</string>
+    <string>--stage</string>
+    <string>development</string>
+    <string>--request-id</string>
+    <string>r2-development-bootstrap-7235-v8</string>
+    <string>--cluster-state-directory</string>
+    <string>/Users/johnherrick/cascadia-bench/orchestrator/client-state</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartInterval</key>
+  <integer>1800</integer>
+  <key>WorkingDirectory</key>
+  <string>/Users/johnherrick/cascadia</string>
+  <key>StandardOutPath</key>
+  <string>/Users/johnherrick/cascadia-bench/r2-map-v1/control/final-dashboard-refresh.stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/johnherrick/cascadia-bench/r2-map-v1/control/final-dashboard-refresh.stderr.log</string>
+</dict>
+</plist>

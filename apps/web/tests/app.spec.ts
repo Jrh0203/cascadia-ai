@@ -79,17 +79,56 @@ test("cluster dashboard reports all configured nodes and active work", async ({
 }, testInfo) => {
   await page.goto("/cluster");
   await expect(page.getByText("Cascadia Compute", { exact: true })).toBeVisible();
-  await expect(page.locator(".cluster-node")).toHaveCount(3, { timeout: 15_000 });
+  await expect(
+    page.locator(".r2map-command-heading h2"),
+  ).toBeVisible();
+  const fleet = page.locator(".cluster-main > .cluster-fleet-overview");
+  await expect(fleet).toHaveCount(1);
+  expect(await fleet.evaluate((element) => element.previousElementSibling)).toBeNull();
+  await expect(page.locator(".cluster-fleet-strip article")).toHaveCount(4);
+  await expect(page.getByRole("progressbar", { name: /CPU utilization/ })).toHaveCount(4);
+  await expect(page.getByRole("progressbar", { name: /Memory utilization/ })).toHaveCount(4);
+  await expect(page.getByRole("progressbar", { name: /Disk utilization/ })).toHaveCount(4);
+  await expect(page.locator(".cluster-resource-ring-value")).toHaveCount(12);
+  await expect(page.getByText(/29 CPU allocated/i)).toBeVisible();
+  await expect(page.locator(".scheduler-node-strip")).toContainText("0.0/9 CPU");
+  await expect(page.locator(".scheduler-node-strip")).toContainText("0.0/10 CPU");
+  await expect(page.getByRole("tab", { name: "Training" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("heading", { name: "Utilization history" })).toBeVisible();
+  await expect(page.locator(".history-chart")).toHaveCount(2);
+
+  await page.getByRole("tab", { name: "Research" }).click();
+  await expect(page.getByRole("heading", { name: "Research queue" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Research experiments" })).toBeVisible();
+  const qualifiedBaseline = page.getByRole("button", {
+    name: /Qualified v2 player baseline/i,
+  });
+  await expect(qualifiedBaseline).toBeVisible();
+  await qualifiedBaseline.click();
+  await expect(page.getByText(/95\.744 mean/).first()).toBeVisible();
+  await expect(page.getByText("Success criteria").first()).toBeVisible();
+  await page.locator(".experiment-section").scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: screenshotPath(
+      testInfo,
+      testInfo.project.name === "mobile"
+        ? "web-cluster-experiments-mobile.png"
+        : "web-cluster-experiments.png",
+    ),
+    fullPage: false,
+  });
+
+  await page.getByRole("tab", { name: "Fleet" }).click();
+  await expect(page.locator(".cluster-node")).toHaveCount(4, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: "John 1" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "John 2" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "John 3" })).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Active workloads" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Utilization history" }),
-  ).toBeVisible();
-  await expect(page.locator(".history-chart")).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "John 4" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Active workloads" })).toBeVisible();
+
   await expect(page.getByRole("img", { name: "CPU utilization over 24 hours" })).toBeVisible();
   await expect(
     page.getByRole("img", { name: "Memory utilization over 24 hours" }),

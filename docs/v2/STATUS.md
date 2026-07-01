@@ -1,38 +1,758 @@
 # Cascadia V2 Status
 
-Last updated: 2026-06-14
+Last updated: 2026-06-20
 
 ## Active Phase
 
-**Phase 8 is complete. The sealed 1,000-game final validation scored 95.744
-mean base points with 95% CI `[95.652,95.837]`. The strongest qualified
-canonical-engine reference beat the paired v2 research control by 3.627
-points, but did not reach the 100-point target. Cascadia v2 is closed as a
-coherent local product and research system with an explicit unmet-target
-verdict.**
+**The protected R2-MAP bootstrap comparison is complete and decisively
+negative. R2-MAP scored 91.604 versus 97.468 for qualified exact NNUE K32/R600
+in 250 paired focal-seat comparisons; paired delta -5.864, SE 0.281, 95% CI
+[-6.414, -5.314], with 19/9/222 wins/ties/losses. R2 is not promoted and no
+expert iteration begins. Primary research returns to NNUE.**
 
-ADR 0070 is rejected. The identifiability audit showed that the historical
-independent-seed teacher usually does not produce a statistically unique
-winner. ADR 0071's three-game CRN pilot was positive, but ADR 0072 rejected it
-on 20 fresh pairs at -0.363 with 95% CI `[-1.129,+0.404]`. No new apprentice
-will be trained from CRN labels. ADR 0073 then tested exact hex adjacency and
-oriented terrain-edge message passing on fresh H6 validation. It improved
-pairwise log loss but regressed final correlation from 0.393 to 0.342 and MAE
-from 2.541 to 2.798, so the sealed test remained unopened. ADR 0074 qualified
-an R8 public-redetermination sampler at 0.487-point drift and 91.1% pairwise
-accuracy, but rejected absolute state value because R16 expected totals had
-only 1.945 points of standard deviation. ADR 0075 then qualified shared R8
-same-decision returns, but the selected action and its three nearest H6
-alternatives spanned only 1.367 points versus 1.50 required.
-ADR 0076 widened the mean R16 contrast to 2.803 points and passed every
-fidelity, regret, uncertainty, integrity, and cost gate except exact R8 winner
-agreement, which reached 20 of 32 groups or 62.50% versus 65% required.
-ADR 0077 then passed every frozen gate on fresh games: R12 reached 0.204 MAE,
-0.968 correlation, 92.19% pairwise accuracy, 78.13% exact winner agreement,
-and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
+The topology-free Bacalhau upgrade is complete: john1/john2/john3 advertise
+9/10/10 CPUs, John1 publishes one immutable arm64 image, and large maps use a
+durable scheduler-capacity admission window without host assignment. The
+protected run completed all 250 jobs in one attempt, with zero retries, zero
+positive swap, clean shutdown, Pinecone conservation, and a passing independent
+receipt audit. The terminal report is
+`/Users/johnherrick/cascadia-bench/r2-map-v1/gates/development-v8/reports/focal-benchmark-complete.md`.
+
+The June 17 restart has closed the first representation foundations:
+
+- F1 proved that 4,258 of 4,851 historical cell-core channels never activate
+  and that the historical 301-row mid-tail defect is dead.
+- F2 measured regular hex supports of 61, 91, and 127 cells. Radius 6 was
+  lossless on the measured corpus, but legal adversarial overflow exists.
+- F3 established exact D6 state, action, legal-row, policy, and transition
+  transforms.
+- F4 retained all 14 required distinctions at the exact public boundary and
+  proved seven compressed boundaries lossy. Exact overflow is mandatory.
+- R0 Stage 1 completed 60,000 rows, four shards, and twelve independent
+  process reports. All five arms round-tripped exactly. The extraction
+  hypothesis failed: radius 4 reached only 0.640x exact occupied-entity
+  throughput, radius 6 reached 0.597x, and historical 441 reached 0.825x.
+  R0 Stage 2 then completed five matched 74,635-parameter MLX arms. Every
+  compact arm was value-noninferior, but the best reached only 0.291x exact
+  inference and 0.297x exact training throughput. No dense candidate was
+  selected. The 114-row treatment was still 8.67x faster than historical 441,
+  confirming that the old square was costly while exact entities remain the
+  better answer.
+- F5 foundation gates 1 through 13 pass. The production champion has an
+  independently audited immutable corrected checkpoint, and corrected MLX
+  inference is bit-identical to Rust. The full 200,000-state C0/T1 campaign
+  completed with 200,000 exact parity matches, zero mismatches, and no
+  corrected-tail activations. No fine-tuning treatment was opened.
+- ADR 0124 completed and was rejected as
+  `local_geometry_dropout_tile_insufficient`.
+- S1 exact semantic supply completed over 40,000 positions and 75 canonical
+  archetypes. Its exact foundation passed and the learned comparison is next.
+- R2's exact sparse occupied, frontier, component, and motif foundation passed
+  over 60,000 positions. Median/P99/max total tokens are 199/323/340, with
+  exact codecs, D6 transforms, and target independence.
+- R2's matched MLX tournament selected the fixed-latent Perceiver as the only
+  arm to pass every frozen R0 value gate. Set Transformer and directional
+  graph trunks are closed under the value-only protocol.
+- S1's learned comparison completed. Candidate-relational exact supply
+  improved aggregate R4800 MAE, recall, and regret, but regressed low-supply
+  and independent-draft slices and was not promoted.
+- F5's corrected-tail activation census passed across 81,920 public states:
+  all 150 terrain rows, all 150 wildlife-capacity rows, and the overflow row
+  activated naturally.
+- R3's matched four-arm MLX comparison is complete and classified
+  `r3_action_edit_mlx_all_treatments_degraded`. The exact sparse full-R2
+  afterstate control reached MAE 1.32023, 72.50% top-64 recall, 0.09812
+  regret, and 86,208 scores/s. Radius one improved recall to 74.58% but
+  worsened value error and protected slices; no compact arm advanced. The
+  classifier-ineligible four-arm mechanism merge found that radius one ranked
+  the winner better than radius three in 113 decisions versus 82 in the
+  reverse direction, while all compact arms missed together in 50 decisions.
+- S4's corrected exact candidate-relation foundation completed on
+  john2-john4 while john1 trained the R3 control. Launch one was invalidated
+  because non-semantic structured-action padding entered two exact keys; the
+  repaired bundle and rerun passed every integrity check. The 256-anchor
+  surface reached 100% confidence coverage, 0.02874 regret, 100% winner
+  linkage, and 98.37% complete-candidate linkage. The classification remains
+  `s4_anchor_256_authorized`.
+- S4's content-addressed candidate-context cache is complete. The
+  166.9 MB memory-mapped sidecar covers 280,012 train and 860,203 validation
+  candidates, is byte-identical across merge order, and independently matches
+  every R3 group ID, offset, selected index, and action hash. Its
+  classification is `context_cache_ready`. The merged production cache is now
+  whole-tree identical at its canonical path on john2, john3, and john4, so
+  all four S4 arms can begin from the same local sidecar without transfer
+  latency in the launch window.
+- S4's four-arm failed-substrate rescue is complete and classified
+  `s4_candidate_context_mlx_all_treatments_degraded`. Exact relations produced
+  a real but insufficient signal: +2.08 points top-64 recall, +5.26 points
+  low-supply recall, and +4.94 points middle-phase recall versus the matched
+  compact control, while independent-draft recall regressed 4.76 points.
+  Every treatment missed 99% confidence coverage and the full-R2 quality,
+  latency, active-memory, and RSS rescue envelopes. The independent control
+  itself degraded from the R3 radius-one warm start after another 3,000
+  jointly fine-tuned steps. No S4 arm advances.
+- R4's four-host adaptive multi-resolution foundation is complete and
+  classified `r4_adaptive_multires_compactness_failed`. Both the 61- and
+  91-cell exact envelopes passed all 120,000 codec/R2 checks, 1,440,000 D6
+  inverse checks, 120,000 target-independence checks, all registered
+  adversarial distinctions, packed P99 765 bytes, and byte-identical aggregate
+  order. The complete HWF view missed its frozen compactness gates: radius
+  four reached P99 271 against 256 and radius five reached 298 against 288.
+  No R4 MLX run is authorized. Radius four is the preferred basis for a newly
+  preregistered bounded quotient because it retained exact overflow while
+  using the smaller model-visible support.
+- R4's bounded far-quotient successor is complete and classified
+  `r4_bounded_quotient_foundation_passed`. Q1 seat-marginal, Q2 directional,
+  and Q3 habitat-affordance passed every gate at P99 166, 186, and 182 tokens,
+  with paired construction throughput of 1.209x, 1.163x, and 1.121x the full
+  HWF view. Q4 selective-exact retained every registered distinction but
+  failed the frozen P99 gate at 206 against 192. Q1 is the minimal successor,
+  Q2 is the richest passing successor, and exact R2 versus Q1/Q2/Q3 is now
+  authorized as one matched MLX comparison.
+
+ADR 0120 is complete and rejected: its tile model reached 100% train recall
+but only 68.0% validation recall. ADRs 0121-0123 isolated late-fit
+specialization, identified local geometry as the dominant block, and selected
+one frozen 50% deterministic local-geometry corruption treatment. ADR 0124
+then completed its origin, cross-host replay, mixed ceiling, integrated
+proposal, and mechanical classification. It did not repair validation
+retrieval and is closed.
+
+Current implementation lanes are:
+
+- implement and run ADR 0156's preregistered exact-R2/Q1/Q2/Q3 parent-state
+  MLX comparison with one representation per Mac and same-host control
+  serving replays;
+- run R5 quotient-state and R6 hybrid sparse studies as nonduplicative cluster
+  lanes, using R4's accepted exact codec and topology extractors; and
+- retain F5 corrected-tail fine-tuning as lower-priority backfill.
+
+The dashboard at `http://100.110.109.6:5187/cluster` is the live source for
+queue state, host utilization, experiment criteria, and success/failure
+classification.
+
+ADR 0118 completed all 200 epochs, selected epoch 197 by the frozen train-only
+rule, replayed bit-identically across john2 and john3, stayed below 4 GiB with
+zero swaps, and passed every integrity gate. Its mixed ceiling retained only
+64.95% of validation targets and 83.75% of winners; the integrated proposal
+retained 64.42% and 83.75%. The classification is
+`extended_exposure_tile_insufficient`. The cluster closeout now records the
+artifact-derived 6,511.432 seconds of john2 training rather than crediting the
+later orchestration pause as productive compute.
+
+ADR 0119 used john1, john3, and john4 for three independent open-data
+decisions while john2 continued that sole origin. Uniform query sampling did
+not pass the frozen mismatch gate, so an insufficient ADR 0118 result selects
+one optimizer-schedule treatment. Cross-stage score dispersion differed by
+5.64x on train and 9.42x on validation. Even oracle factor ranks retained only
+74.72% of validation targets at top 64, so a sufficient ADR 0118 result selects
+a normalized complete-action selector. The portfolio completed in 31.91
+seconds with zero duplicate discovery compute.
+
+ADR 0121 used the three nontraining hosts during the ADR 0120 origin. Exact
+deployed tile inputs had zero label contradictions and zero train/validation
+overlap. Input covariate shift missed every frozen threshold: width JSD was
+0.024838, at most 4.55% of active dimensions exceeded absolute SMD 0.50, and
+at most 0.0072% of validation cells were outside train support. The decisive
+signal was late-fit margin specialization: train median boundary margin moved
+`+1.7033`, validation moved `-1.1260`, and the gap expanded `+2.8293`.
+If ADR 0120 fails, the mechanical successor is structural regularization, not
+another exposure, sampling, or learning-rate schedule treatment.
+
+ADR 0122 then attributed that specialization across three independent
+two-checkpoint replays. Local geometry contributed 0.2446, descendant
+summaries 0.1056, and tile-factor identity 0.0457. The local-geometry arm beat
+the runner-up by 0.1390 and passed both frozen identification gates. Permuting
+local geometry reduced the extended model's train recall by 32.08 points but
+validation by only 1.08. If ADR 0120 fails, the structural pilot must target
+local-geometry dropout or corruption.
+
+ADR 0123 calibrated that treatment with three independent corruption rates.
+The 10% arm removed 11.06% of the extended train-validation gap. The 25% arm
+removed 24.9948% and correctly missed the frozen 25% gate. The 50% arm removed
+48.39% while damaging validation recall by only 0.74 points on the source and
+0.72 on the extended model. If ADR 0120 fails, the local-geometry dropout
+probability is frozen at 0.50.
+
+ADR 0114 audited four distinct factor-retrieval budgets concurrently over all
+800 open groups. Every replay was bit-identical and zero queued-work idle was
+recorded. Independent-wide reached only 94.66% validation recall, proving
+prefix conditioning is material. The mechanical classification is
+`hierarchical_factor_oracle_sufficient`.
+
+ADR 0113 passed every pipeline and replay gate with zero queued-work idle.
+Balanced target supervision did not rescue the large candidate groups, so
+expected-rank gradient dilution is not the primary blocker. The mechanical
+classification is `shared_adapter_capacity_insufficient`.
+
+ADR 0112 used frozen inference and exact interval arithmetic only. All four
+cross-host replays were bit-identical, source and resource gates passed, and
+the campaign averaged 3.32 active processes with zero queued-work idle. The
+mechanical classification is `parameterized_fit_or_optimizer_insufficient`.
+
+ADR 0111 ran four distinct origins across john1-john4 and cross-host replayed
+every group. All payloads were bit-identical, source identity matched, and
+zero queued-work idle was recorded. Group 2 fit exactly, but groups 0, 1, and
+3 converged at 24.32%, 78.12%, and 81.25% recall. The mechanical
+classification is `calibrated_local_geometry_insufficient`.
+
+ADR 0110 enumerated all six rate histories consistent with the frozen
+bookkeeping and used no MLX model execution or training. Every path produced
+the same failed-step rate schedule and the classification
+`public_observable_representation_insufficient`.
+
+ADR 0090 completed in 71.31 seconds of cluster wall. Train target-positive
+recall was only 29.36% and exact target-set recovery 0.18%, versus 26.21% and
+0% on validation, so the 3.15-point gap rules out generalization as primary.
+The collision audit found zero exact contradictions across 2,995,314 actions.
+The objective audit measured a strongly opposed `-0.908` target/listwise
+gradient cosine, but target pressure remained 4.57 times combined weighted
+auxiliary pressure and did not pass the frozen primary-conflict gate. Error
+misses were broad. One capacity/optimization pilot is now authorized.
+
+ADR 0091 is now rejected on open validation. Target-only fine-tuning selected
+epoch 1 at 26.29% validation target recall and 30.97% train target recall,
+with no validation target set and only 0.18% exact train sets. Five
+substantive gates failed, including a 74.58% winner recall below the 75%
+floor. Training loss continued falling while target recall deteriorated to
+24.41% by epoch 7. john3 independently proved that ±6 residual range can
+recover every target set, and john4 confirmed the original objective never
+exceeded 26.03% target recall. Uniform set cross entropy is therefore closed;
+the active successor must optimize the exact target/nontarget top-K boundary.
+
+ADR 0092 is rejected on open validation. Its launch evidence was unusually
+clean: john3 passed a finite full-model update on 10,854 actions, and john4
+raised all 12 widest validation groups from 0% to 100% exact recovery by
+optimizing the objective directly inside ±12. The neural run nevertheless
+selected the untouched warm start at 29.36% train and 26.21% validation target
+recall, with no exact validation set. Boundary loss fell from 3.2696 to 3.0191
+while validation recall collapsed to 18.76% by epoch 6. This closes
+log-sum-exp extreme-value boundary training. The next objective must pair all
+ordered target slots with corresponding hard nontarget ranks so learning
+pressure is distributed across the full deployed boundary.
+
+ADR 0093 tested that exact treatment. It paired every target from
+weakest to strongest with the same number of hardest nontargets from strongest
+to weakest, applying a temperature-1.0, margin-0.5 soft pairwise loss to every
+occupied rank. john2 owns the sole training trajectory; john3 and john4 own
+independent rank-gradient and bounded score-space audits. All representation,
+data, selector, width, score-range, and open gates remained unchanged.
+
+ADR 0093 is now rejected. Both independent launch audits passed, but no
+trained epoch beat the warm start. Rank loss fell from 1.1915 to 1.0667 while
+validation target recall ended at 19.47%, winner recall at 55.00%, confidence
+coverage at 77.92%, and regret at 0.163564. Three materially different target
+objectives have now failed despite reachable free-score ceilings. The active
+successor is a frozen-embedding separability audit, not another full-network
+loss swap.
+
+ADR 0094 is preregistered. john2 and john3 will split exact float32 train and
+validation embedding extraction, then train independent linear and shallow
+nonlinear probes. john4 will cross-replay both probes. The audit will select
+head/optimizer scope, nonlinear head capacity, train-only separability, or
+representation insufficiency from frozen gates before any new full-network
+experiment.
+
+ADR 0089's deterministic frontier-anchored target ceiling passed at 99.58%
+exact recall, 100% confidence coverage, 100% distinguishable recall, and
+0.000526 retained regret. The learned treatment did not approach that ceiling.
+The selected john2 checkpoint reached only 76.67% exact recall, 90.42%
+confidence coverage, 92.11% distinguishable recall, and 26.21% target-positive
+recall, with no complete target set recovered. Eleven quality gates failed.
+All four origin/cross scientific payloads were bit-identical and all eight
+performance replays passed at 96,547-98,806 action scores/s. The 85-file MLX
+runtime source bundle and both datasets were identical across hosts. Sealed
+test and gameplay stayed closed.
+
+The cluster policy is now throughput-first. New MLX treatments default to one
+training host; the other Macs run independent hypotheses, data work, or
+diagnostics. Duplicate seeds and host replicas are used only for explicit
+variance, portability, or confirmation questions after a pilot earns them.
+That policy now has a permanent implementation:
+`tools/cluster_research_queue.py` provides an atomic manifest-backed queue with
+dependency gates, compatible-host claims, expiring leases, retries, work
+stealing, host intent, and deterministic decision-value scheduling. The API
+and cluster dashboard expose task counts, open work, host reservations, and
+duplicate replica count without exposing claim tokens or command arguments.
+ADR 0118 is the first live campaign represented by this queue.
+
+The corrected `complete-action-graded-oracle-ranker-v1` experiment completed
+three frozen MLX replicas and the preregistered cross-host validation matrix.
+The john2 replica won selection at 0.090184 retained mean R4800 regret, a 20.2%
+reduction from the historical screen, but top-64 exact-winner recall moved
+only from 71.67% to 73.33%. Early, middle, late, Nature-Token, and independent
+draft recall all missed their frozen gates. Selected-model inference was
+bit-identical across hosts and sustained 101,888-102,405 action scores/s with
+P99 decision scoring below 80 ms. The model is rejected before sealed test or
+gameplay; ADRs 0082 and 0083 are closed unopened.
+
+ADR 0086 then audited the stability of the R4800 target without training or
+opening a new domain. Only 31.67% of validation winners were statistically
+distinguishable at the frozen 95% normal diagnostic, and the mean confidence
+set contained 3.23 actions. However, the selected model's top 64 covered that
+set in only 86.25% of decisions, recalled only 85.53% of distinguishable
+winners, and retained a confidence-equivalent action on only 48.44% of exact
+misses. Middle-game confidence-set coverage was worst at 77.38%. The frozen
+classification is therefore `representation_or_optimization_material`, not
+target ambiguity alone. Train/validation identity passed, all three validation
+replays were scientifically identical, and the sealed test and gameplay
+remain unopened.
+
+ADR 0087 is closed rejected before training. The non-deployable R1200 cohort
+oracle reached 97.08% R4800 confidence-set coverage, 90.79%
+distinguishable-winner recall, 95.42% exact-winner recall, and 0.020742
+retained regret. Overall coverage missed 99%, distinguishable recall missed
+98%, and early/middle coverage was only 96.43%/95.24%. Every selected-model
+top-64 action was already R1200-labeled, disproving weakly supervised outsider
+displacement as the immediate mechanism. The next experiment must improve
+teacher allocation or observable representation; training on the same R1200
+target is not authorized. No sealed-test, gameplay, or K2048 work opened.
+
+ADR 0088 is closed rejected on validation. The selected john2 local-geometry
+replica improved retained regret from 0.113024 to 0.093757 and exact recall
+from 71.67% to 74.17%, but confidence-set coverage reached only 87.92% and
+distinguishable-winner recall only 88.16%. Every phase recall/coverage gate
+and both subset recall gates failed. All three replicas completed, every
+origin/cross scientific payload was bit-identical, and all six performance
+replays passed. Sealed test, gameplay, new teacher compute, and K2048 stayed
+closed.
+
+ADR 0089 is closed rejected on validation. Its hard frontier anchors improved
+the baseline but the unchanged ranker failed to learn the nonfrontier fill.
+The result rules out simply repeating the same set objective or spending four
+machines on duplicate discovery replicas.
+
+The frozen 13-game audit completed all 1,040 decisions and screened 3,872,079
+canonical actions. The champion corpus scored 95.346 mean. Mean local
+decision regret was 0.350 with a 95% game-block interval of
+`[0.316, 0.386]`, implying 6.995 points of first-order 20-turn diagnostic
+headroom. Proposal/frontier regret was the clearly dominant component at
+0.254 `[0.222, 0.288]`; within-frontier selection was 0.095 and K64
+truncation only 0.047.
+
+The locked K1024 recovery completed the same 13 games and all 1,040 decisions.
+K1024 recalled 99.423% `[98.942%, 99.808%]` of measured winners and retained
+only 0.002 `[0.000, 0.004]` mean regret. It therefore passes the 98% recall and
+0.15 regret gates without opening K2048. The stronger screen raises measured
+champion regret to 0.436 and first-order 20-turn diagnostic headroom to 8.723
+points; proposal/frontier regret remains dominant at 0.329.
+
+The corrected top-64 plus champion-frontier online oracle completed 12 fresh
+paired games with exact identity, clean shutdowns, zero fallbacks, zero
+bootstraps, and zero process swaps. It improved 11 of 12 games and achieved a
+positive +2.375 `[1.375, 3.333]` paired interval, but treatment mean was only
+98.583 `[97.812, 99.312]`. It therefore failed both the 100 mean and +3
+paired-point gates; its 40-game confirmation remains unopened.
+
+The K1024 successor completed 12 fresh paired games across all three Macs with
+exact identity and every integrity gate. It reached 99.375% online top-screen
+recall and improved 10 of 12 games, but treatment mean was only 98.417
+`[97.104, 99.625]` and paired improvement was +2.854
+`[1.583, 4.188]`. Both the 100 mean and +3 paired-point gates failed, so its
+40-game confirmation is not authorized. Every host was positive. Mean local
+champion regret was 0.313, concentrated early at 0.490 and middle at 0.313.
+
+This closes brute-force screen width as the immediate route. K2048 remains
+unauthorized because it added only 0.289 percentage point of audit recall over
+K1024. The active successor must improve the complete-action learner's
+observable ranking objective or representation while explicitly accounting
+for finite-sample R4800 near-ties. Winner-only imitation, wider brute-force
+screens, and a large self-play launch remain closed.
+
+The online implementation smoke completed seed `61999` at 98.50 versus 94.75
+for the champion, a paired +3.75. It completed all 80 decisions with clean
+service shutdowns, zero fallbacks, zero bootstraps, and zero process swaps.
+This is integrity and runtime evidence only, not a substantive score claim.
+
+All 13 K1024 recovery artifacts now checksum locally. The corrected shared
+ladder reproduced the frozen three-decision reference exactly after excluding
+provenance, timestamps, and timing fields. A targeted unit regression proves
+that online selection accepts a high-confidence cohort with no retained screen
+action, while offline audit materialization remains strict. The rebuilt binary
+then completed all 80 decisions on the old failure seed `62000` with exact
+identity, clean shutdown, zero fallbacks, zero bootstraps, and zero process
+swaps. That corrected smoke scored 101.00 versus 94.50 for the champion, a
+paired +6.50; it is integrity evidence only. The final replay preserved the
+complete semantic and action payload, scores `[96,99,92,102]`, and terminal
+state hash. All 28 feature-enabled differential tests passed.
+
+The frozen exact full-terminal seed-34400 reference is 141.027296 seconds, so
+the 10x threshold is 14.102730 seconds. The accepted production binary
+uses exact shared-memory MLX transport, pipelined rollout preparation,
+prepared habitat replay, adjacency-based Card-A elk potential, exact
+parent-afterstate feature contexts, direct rollout-template preparation, and
+bounded pipeline state slices under fresh PGO. It now also elides a provably
+dead local rotation-invariant outcome buffer from the shared candidate path.
+It remains bit-exact at scores `[102,96,92,95]` and measures
+14.096346521 seconds across john2 and john3, or 10.004528x versus the original
+reference. The gate is cleared by 0.006383079 seconds.
+
+The accepted direct-template path removed exact public-state grouping and
+cache work after a full audit found only 12 reusable requests among 440,239
+template requests. Combined key/template/candidate preparation fell 11.752%
+on john2 and 11.656% on john3. Its crossed source result improved 3.620%, and
+the fresh race-free PGO binary remained faster on both workers: 3.536% on
+john2, 4.727% on john3, and 4.128% combined. Maximum RSS remained flat and
+peak footprint fell.
+
+The newly accepted bounded-slice path removes full-population masks, maps, and
+scans around each 96-state cohort. It improved crossed source time by 1.004%
+and fresh PGO time by 1.167%, with gains on both workers and exact diagnostics
+throughout. Maximum RSS remained flat. The allocator footprint high-water
+mean rose 3.29 MB, but the maximum treatment observation exceeded control by
+only 1.52 MB and produced no operational regression.
+
+A subsequent single-owner shared-CSR validation experiment removed duplicate
+Python offset, width, and feature-range scans. Decode/validation fell by
+55.6-57.0%, but the timer-off result improved john2 by only 0.415%, regressed
+john3 by 1.604%, and regressed combined wall time by 0.580%. The treatment and
+switch were removed.
+
+Two exact qualified-greedy allocation experiments also failed their registered
+source gates. Filtering best-existing-wildlife scans to market-represented
+categories improved 0.648% combined but regressed john3 by 0.102% and raised
+allocator footprint 4.216%. Direct indexed traversal of `placed_tiles`
+reduced opponent-advance time on both workers, but improved only 0.066%
+combined, regressed john3 by 0.330%, and raised allocator footprint 4.021%.
+Both treatments and their experiment switches were removed before PGO.
+
+Two candidate-placement allocation experiments were then isolated. Combining
+exact capacity reservation with an explicit total-order unstable sort
+regressed template preparation by 2.733-3.550% and retired instructions by
+about 1.8%, so the sort treatment stopped at mechanism diagnostics. Capacity
+reservation alone reduced template preparation by 0.958% on john2 and 1.954%
+on john3, but the balanced source screen regressed john2 by 0.941% and the
+combined mean by 0.235%. Both treatments and their switches were removed;
+neither advanced to PGO.
+
+A persistent evaluator-worker experiment then removed about 80% of sampled
+thread identities and passed its source screen with a 0.574% combined gain.
+Fresh production PGO did not preserve the cross-host result: john2 improved
+1.590%, john3 regressed 0.714%, and the 14.162576-second combined mean remained
+59.847 ms above the absolute 10x threshold. The worker-lifetime refactor,
+switch, dual monomorphization, and temporary tests were removed in full.
+
+Packing candidate-placement metadata from eight bytes to four then reduced
+template preparation by 1.792% on john2 and 1.075% on john3 while lowering
+retired instructions on both. The balanced source screen reversed that local
+gain: john2 regressed 0.631%, john3 regressed 0.116%, and the combined mean
+regressed 0.375%. The packed representation, switch, dual monomorphization,
+and temporary oracle were removed before PGO.
+
+The final accepted experiment removed an unused local outcome vector from
+each shared-cache candidate combination. Template preparation fell 1.987% on
+john2 and 0.480% on john3, with retired instructions down on both. The crossed
+source result improved 1.164%. After production promotion and fresh two-host
+PGO, john2 improved 1.242%, john3 improved 0.781%, and the combined mean
+improved 1.014%. Mean RSS fell 0.107% and allocator footprint fell 4.026%.
+
+Phase 1 now starts from a fresh full-legal audit rather than historical
+research conclusions. The audit will enumerate every canonical legal action
+at roughly 1,000 balanced champion decisions, compare the champion frontier
+with progressively stronger public-information evaluation, and separate
+proposal, value, and continuation error.
+
+That teacher gate has a 242.433050-second frozen reference and a
+24.243305-second threshold. Exact 4,096-row static-screen cohorts,
+collision-checked sparse-row deduplication, bounded public-state caches, and
+game-scoped decision reuse first reduced the workload to 162.045309 seconds.
+The newly accepted deterministic multi-trajectory scheduler now advances all
+eight realized-hidden finalists through one Rayon pool and one MLX evaluator.
+Opposite-order confirmation improved john2 by 16.273%, john3 by 14.494%, and
+the combined mean by 15.391%; combined realized-hidden time improved 20.486%.
+Switch-free production measures 143.775461 seconds with exact semantic parity,
+zero fallback or bootstrap, and bounded 907 MB maximum RSS. The accepted path
+is 1.686192x faster than the reference. By owner direction, that result is the
+accepted performance win and the remaining aspirational target is retired as
+a strength-campaign blocker. Realized-hidden terminal continuations remain
+the dominant measured cost at 103.119 seconds, but no standalone performance
+experiment may delay the active strength campaign.
+
+A mirrored one-, two-, and four-process ceiling test rejected
+independent same-Mac process fan-out for those continuations. Two processes
+reached only 1.162x throughput on john2 and 1.165x on john3; four reached
+1.399x and 1.401x, below the explicit 1.50x rejection boundary and far below
+the 2.50x gate. All 14 jobs remained exact, clean, zero-fallback, zero-swap,
+and below 0.66 GB aggregate maximum RSS. The accepted coordinated scheduler
+has now captured the batching portion of that direction. The next teacher
+optimization must reduce inference or simulation work inside the shared
+trajectory cohort.
+
+The first post-scheduler diagnostic has already closed per-search cross-wave
+prediction caching. A collision-checked tracker observed 6,116,501 physical
+rows across 104 exact searches and found zero rows repeated in a later wave or
+halving round. The report remained exact and below the memory ceiling, but the
+0.000% reuse rate failed the 5% advance gate. The next bounded measurement is
+cross-request duplication inside each already-coalesced evaluator batch.
+That measurement is now also closed: only 247 of 891,486 coalesced rows were
+exact duplicates from another request, a `0.027707%` reuse rate. Both row
+cache directions are rejected. Work returns to direct neural evaluation,
+template preparation, opponent advancement, and search-work reduction.
+
+The subsequent frozen stage profile completed on john1, john2, and john3 with
+the exact semantic digest on every node. On john2/john3, serialized MLX
+evaluation averages 47.813 seconds, or 37.123% of complete wall. Requests over
+1,024 rows contain 96.737% of rows and 92.954% of evaluation time, so launch
+overhead and tiny-batch fusion are not the bottleneck. Cumulative Rust
+intervals rank opponent advancement at 21.258% and rollout-template
+preparation at 18.867%. The next treatment targets exact first-layer Metal
+execution geometry without host sorting, prefix planning, or arithmetic-order
+changes.
+
+The first post-profile treatment is also closed. A preregistered three-node
+Latin square compared exact H1 vector widths 4, 8, and 16. Width 8 regressed
+combined complete wall 1.360% and MLX evaluation 4.720%; width 16 regressed
+wall 4.696% and MLX evaluation 15.210%. Every run remained bit-exact, but
+wider per-thread accumulators reduced effective occupancy. The treatment
+kernels and selector were removed, restoring the stage-profile binary and
+Python evaluator byte for byte.
+
+The retained-width SIMD index-broadcast treatment is now closed too. Twelve
+same-binary crossover runs remained exact, but combined wall improved only
+0.180% and MLX evaluation only 0.711%; john1 regressed in both metrics. The
+alternate kernel and selector were removed, again restoring the profile
+evaluator and binary byte for byte.
+
+The replicated layer diagnostic is complete and removed. H1 accounted for
+78.900% of corrected layer time on john1, 76.410% on john2, and 76.491% on
+john3. Every exact request and row was covered, and john2/john3 H1 shares
+differed by only 0.081 percentage point. The complete workload writes and
+reads 183,926,591,488 bytes at the H1 boundary.
+
+The first exact H1-to-H2 fusion is also closed. It removed that global
+intermediate but changed H2 from the production eight-thread `float8` mapping
+to 64 scalar threads per row. Combined complete wall regressed 1.223% and MLX
+evaluation regressed 4.193%; every Mac regressed in both metrics. The kernel,
+selector, sanitizer allowance, and tests were removed, restoring the
+evaluator and binary byte for byte.
+
+The project owner has now closed the standalone performance campaign and
+declared the 143.775461-second exact teacher baseline a win. The
+production-H2-geometry fusion passed direct parity but was closed before an
+authorized timed screen. An inadvertently launched post-closure screen is
+retained only as invalid provenance. Phase 1 strength research is active.
+The frozen audit completed on all three Macs with zero per-process swaps and
+one exact executable/model/source identity. Its full report is
+`docs/v2/reports/full-legal-decision-regret-audit-v1.md`; the locked recovery
+contract is
+`docs/v2/reports/full-legal-screen-width-recovery-preregistration-v1.md`.
 
 ## Completed
 
+- Completed ADR 0110 as `public_observable_representation_insufficient`.
+  Every consistent rate history proved ADR 0109 group 2 was blocked by a
+  below-floor diagnostic improvement, so the corrected pipeline passes
+  without a rerun. Terminal recall remains 32.39% with zero exact sets.
+
+- Completed ADR 0109 as `calibrated_optimizer_pipeline_invalid`. Groups 0, 1,
+  and 3 numerically converged after 49, 6, and 1 updates; group 2 reproducibly
+  failed the frozen completion rule after 8. All four replays were
+  bit-identical. No full trainer or representation treatment is authorized.
+
+- Completed ADR 0108 as `free_stage_passed`. All five saturated groups met
+  the preregistered finite numerical-convergence rule, all five cross-host
+  replays were bit-identical, and the recombined 24 groups retained 96.59%
+  recall and 79.17% exact sets. ADR 0107 neural Stage 2 is authorized.
+
+- Completed ADR 0107 Stage 1 as
+  `calibrated_optimizer_pipeline_invalid`. Its terminal strength gate passed
+  at 96.59% recall and 79.17% exact sets, but five groups exhausted finite
+  backtracking before the frozen 1,200 accepted updates. ADR 0108 repaired
+  that stop condition without changing the optimizer or rerunning the other
+  19 groups.
+
+- Completed ADR 0106 as `frozen_optimizer_hyperparameters_insufficient`.
+  Exact float64 rank preservation produced 100% target recall and exact sets,
+  `1.65e-94` normalization residual, and `9e-96` KKT violation. All 24
+  cross-host replays were bit-identical. One calibrated local optimizer
+  mechanism is authorized next.
+
+- Completed ADR 0105 as `arbitrary_precision_control_invalid`. The
+  preregistered integer conversion was incompatible with fractional frozen
+  expected ranks, changing 23 of 24 objectives. Its dynamic queue completed
+  all 48 tasks in 5.97 seconds with zero queued-work idle and bit-identical
+  cross-host replays. Only a corrected exact-float Decimal replay is
+  authorized.
+
+- Completed ADR 0104 as `projected_control_repair_invalid`. Its maximum KKT
+  violation (`9.194e-9`) and objective gap (`8.566e-8`) passed the frozen
+  decision tolerances, but only 12 of 24 groups met the stricter convergence
+  rule and groups 4, 15, and 16 disagreed with the analytic selector. All four
+  ring replays were bit-identical. Only an independent arbitrary-precision
+  reconstruction is authorized next.
+
+- Completed ADR 0103 as `free_residual_pipeline_invalid`. The analytic
+  box-constrained objective recovered 100% of 64 target sets, free-parameter
+  AdamW recovered only 59.22% recall after 1,200 updates, and four neural
+  groups reached 58.45% with zero exact sets. The projected control missed its
+  KKT and objective-gap gates by small but real margins, so only that control
+  may be repaired next.
+
+- Completed ADR 0102's four-host fit-scaling and interference audit. Local
+  recovery failed at one group, four groups, and independent 24-group
+  adaptation; width 96/192/288 changed recall only from 36.93% to 38.78%.
+  Gradient conflict passed its geometric gate, but independent adaptation
+  exceeded shared adaptation by only 2.23 recall points. The classification is
+  `local_optimization_or_representation_insufficient`; all four cross-host
+  replays were bit-identical.
+
+- Completed and rejected ADR 0101's scale-16 expected-rank pilot. Two
+  independently generated cache pairs were byte-identical to each other and
+  ADR 0100; deployed-set target mass reached 93.76% on train and 93.75% on
+  validation. The selected epoch-10 model reached 30.23% train and 27.21%
+  validation target recall, replayed bit-identically, and classified
+  `scale16_alignment_insufficient`. One trainer plus three distinct
+  diagnostics completed in 2,292.16 seconds with zero duplicate training.
+
+- Closed the standalone performance campaign by owner direction. The accepted
+  exact full-legal teacher is 1.686192x faster than its frozen reference;
+  further optimization is no longer a prerequisite for strength research.
+- Closed the production-H2-geometry fusion after direct parity and before an
+  authorized timed screen. A stale-context post-closure run is marked invalid;
+  no strength domain was opened, and all temporary production code was
+  removed.
+- Rejected and removed scalar-consumer H1-to-H2 threadgroup fusion. Twelve
+  exact three-node crossover runs showed 1.223% combined complete-wall and
+  4.193% MLX regressions, with all three nodes slower in both metrics. The
+  restored evaluator, Rust boundary, and release binary are byte-identical to
+  the accepted production build.
+- Completed and removed exact per-layer MLX timing. H1 dominates on all three
+  nodes at 76.410-78.900% of corrected layer time; every report retained the
+  frozen semantic digest and work vector. The restored service and audit
+  binary are byte-identical to the accepted production build.
+- Rejected and removed exact H1 SIMD index broadcasting. Twelve same-binary
+  crossover runs preserved the frozen semantic report, but combined wall
+  improved only 0.180% and MLX evaluation only 0.711%, below both advance
+  gates. The restored evaluator and binary are byte-identical to the accepted
+  profile build.
+- Rejected and removed exact H1 vector-width expansion. Nine Latin-square
+  runs across all Macs showed width 8 slower in MLX and end-to-end wall on
+  every host, with width 16 substantially worse. The restored evaluator and
+  audit binary are byte-identical to the pre-experiment profile build.
+- Completed the replicated multiplexed stage profile on all three Macs.
+  Every report retained scores `[96,99,92,102]`, the frozen terminal and
+  semantic hashes, zero process swaps, and RSS below 1.5 GiB. MLX evaluation
+  is the largest directly measured critical-path stage at 47.813 remote
+  seconds; opponent advancement and template preparation are the next two
+  cumulative worker-time targets.
+- Measured and rejected cross-request sparse-row deduplication. All 891,486
+  rows in 189 coalesced late-turn evaluator batches produced only 247 exact
+  duplicates, or 0.027707%. The report remained exact and effectively
+  timing-neutral; no global row map or prediction-scatter path is authorized.
+- Measured and rejected per-search cross-wave sparse-row prediction caching.
+  Exact collision-checked trackers observed 6,116,501 physical rows across
+  4,355 rollout waves and found zero repeats. The report preserved the frozen
+  turn-66 contract with zero swaps and fallbacks; no full-contract diagnostic
+  or cache implementation is authorized.
+- Accepted deterministic multiplexed realized-hidden trajectory search. It
+  coordinates 907 exact searches through 120 lockstep cohorts, coalesces
+  99.974% of evaluator batches, and reduces service calls 86.953%.
+  Opposite-order wall time improved 16.273% on john2, 14.494% on john3, and
+  15.391% combined. Switch-free production fell from 162.045309 to
+  143.775461 seconds with the frozen semantic digest, zero swaps, and memory
+  below the 1.5 GiB gate.
+- Accepted exact game-scoped public-decision reuse. It preserves the complete
+  frozen report, records 118 hits while retaining only 80 exact states,
+  reduces policy evaluations 11.346%, and improves opposite-order wall time
+  8.592% on john2 and 8.559% on john3. Switch-free production fell from
+  177.686057 to 162.045309 seconds with bounded memory and no fallback,
+  bootstrap, or score change.
+- Measured and rejected independent same-Mac process parallelism for exact
+  realized-hidden continuations. Two-process throughput was 1.162-1.165x and
+  four-process throughput was 1.399-1.401x across john2 and john3, with exact
+  repeated-seed contracts, zero fallbacks, zero swaps, and low memory use.
+  The result directs the next optimization toward shared multi-trajectory
+  scheduling and MLX computation.
+- Accepted a bounded exact-public-state cache for paid-wipe complete screens.
+  It reproduced all frozen qualification and full-report semantics, cut
+  complete-screen evaluations 52.257%, improved both workers by more than
+  34%, and reduced complete audit wall time from 212.191376 to 177.686057
+  seconds. The compact representation restored qualification footprint from
+  about 80 MB to 44 MB before the switch and uncached branch were removed.
+- Cleared the mandatory Phase 0 10x gate with exact dead local outcome-buffer
+  elision. Production IR proves that only the live shared allocation remains.
+  The crossed source screen improved 1.164%, and the fresh PGO result improved
+  both workers and measured 14.096346521 seconds combined. That is
+  10.004528x versus the frozen reference with no score or diagnostic change.
+- Measured and rejected exact candidate-placement metadata packing. The
+  treatment halved transient stable-sort records and reduced the target stage
+  on both workers, but both end-to-end source means regressed and the combined
+  result was 0.375% slower. The treatment was removed before PGO; complete
+  post-removal Rust, feature-gated, and Python suites pass.
+- Measured and rejected one persistent exact evaluator worker per search.
+  Native worker identities fell 79.8-80.4%, and the crossed source screen
+  improved both hosts by 0.574% combined. Fresh PGO nevertheless regressed
+  john3 by 0.714% and missed the absolute 10x threshold by 59.847 ms. The
+  complete treatment and experiment-only tests were removed; the accepted
+  bounded-slice PGO champion remains unchanged.
+- Isolated exact placement-vector capacity reservation from sort behavior.
+  The intended mechanism reduced template-preparation time by 0.958% on john2
+  and 1.954% on john3 and retired instructions by about 0.76%, but john2
+  regressed 0.941% end to end and the combined source mean regressed 0.235%.
+  The reservation, switch, dual monomorphization, and temporary oracle were
+  removed before PGO.
+- Measured and rejected combined candidate-placement allocation elision. Exact
+  capacity reservation plus an explicit unstable total-order sort preserved
+  every candidate and frozen diagnostic, but the added tie comparisons raised
+  retired instructions about 1.8% and regressed template preparation
+  2.733-3.550% on both workers. The experiment stopped before source timing.
+- Measured and rejected direct indexed traversal of the rollout-opponent
+  greedy evaluator's placed-tile vector. It preserved the complete frozen
+  contract and reduced opponent-advance time by 0.772% on john2 and 0.227% on
+  john3, but the crossed source result improved only 0.066%, regressed john3
+  by 0.330%, and increased allocator peak footprint 4.021%. The treatment was
+  removed before PGO.
+- Measured and rejected market-represented wildlife filtering in the qualified
+  greedy evaluator. The source treatment improved 0.648% combined, but john3
+  regressed 0.102% and allocator footprint increased 4.216%. The filter,
+  switch, dual monomorphizations, and temporary oracle were removed before
+  PGO.
+- Measured and rejected single-owner validation for the private exact
+  shared-memory CSR transport. The treatment removed 175-184 ms of duplicate
+  Python validation, but end-to-end time regressed 0.580% combined and 1.604%
+  on john3. All treatment code was removed; the accepted baseline is
+  unchanged.
+- Replaced full-population preparation masks and opponent-advance maps with
+  exact bounded state slices for each ordered 96-state rollout cohort.
+  Complete source, production, test, parity, and fresh PGO gates remained
+  bit-exact. The crossed source screen improved 1.004%; fresh PGO improved
+  1.167%, with positive results on john2 and john3. At that intermediate
+  checkpoint, the production path was 9.957x faster than the frozen reference
+  with 0.060325 seconds left to the mandatory 10x gate.
+- Removed ineffective exact-public-state grouping from the qualified rollout
+  pipeline after measuring only 0.002726% reusable template requests.
+  Direct uncached template preparation passed complete parity and test gates,
+  improved crossed non-PGO time by 3.620%, and improved the accepted PGO
+  champion by 4.128% in a fresh two-host comparison. That intermediate
+  champion was 9.839x faster than the frozen reference and left 0.230422
+  seconds to the mandatory 10x gate.
+- Completed semantics-preserving acceleration of the full-terminal exact MLX
+  K32/R600 champion. Exact public-state wave deduplication, in-place
+  candidate extraction, habitat previews, local potential deltas, shared
+  placement work, one-pass fallback generation, and rotation-invariant reuse
+  reduced seed 34400 treatment time from 141.027 to 37.457 seconds. A fresh
+  50-game full R600 run then averaged 36.335 treatment seconds and 96.345
+  points with 95% CI `[95.892,96.798]`, above the historical 95.94 champion
+  estimate. All 2,306,322 rollout samples were terminal, with zero bootstrap
+  samples and zero policy fallbacks. The local projected speedup is 3.88x;
+  concurrent john1/john2/john3 treatment throughput is 10.74x. Including 50
+  paired control games and service lifecycle, the complete harness is 9.99x.
+- Profiled the exact MLX K32/R600 champion and confirmed that native candidate
+  generation and board potential, not MLX inference or IPC, dominate runtime.
+  Added an exact rotation-aware candidate cache and reused post-placement
+  frontiers during potential evaluation. The same-seed R600 treatment tied out
+  in every score and search diagnostic while falling from 147.217 to 137.910
+  seconds, a 6.32% wall-time reduction. Documented an R32/R100/R300/R600
+  cluster funnel so weak ideas are rejected before paying full promotion cost.
+- Added an opt-in two-focal-turn MLX bootstrap tier for rapid R600 screening.
+  A fresh 30-game, three-node confirmation averaged 93.775, beat its paired
+  control by +1.433 with 95% CI `[+0.720,+2.147]`, and required 12.237
+  treatment seconds per game: 11.27x faster than full terminal search and
+  about 671 games/hour across the cluster. Four directly matched seeds showed
+  a -3.688 point gap versus full search, so the tier sacrifices score and is
+  explicitly restricted to screening; promotion still requires terminal
+  rollouts. Root/policy and
+  leaf MLX evaluators can now be supplied independently with full provenance.
 - Read and adopted `CASCADIA_V2_GOAL.txt` as the authoritative objective.
 - Created branch `codex/cascadia-v2` without discarding the existing dirty
   worktree.
@@ -883,6 +1603,95 @@ and 0.037 mean regret while projecting to 10.33 local hours for 160 games.
 - Added a single troubleshooting entrypoint covering uv/MLX, SSH workers,
   resumable artifacts, launchd services, ports, browser evidence, and
   reproducibility escalation. All local Markdown links resolve.
+- Completed ADR 0094's frozen-embedding separability audit across all four
+  Macs. john2 and john3 exported every open candidate exactly once, linear and
+  nonlinear probes reached only 22.48% and 24.67% train target recall with
+  zero exact sets, and john4 reproduced both reports exactly. The final
+  192-dimensional representation is classified insufficient; head-only and
+  optimizer-scope treatments are closed. The next authorized mechanism is a
+  frozen-trunk raw-observable bypass audit that reuses the 2.26 GiB caches.
+- Completed ADR 0095's observable-bypass audit with three distinct concurrent
+  MLX probes. Raw linear, raw nonlinear, and embedding-plus-raw models reached
+  only 26.31%, 28.35%, and 30.50% train target recall; each recovered one of
+  560 train target sets and no validation set exactly. Four-host source and
+  sidecar identities matched, john4 replayed every probe exactly, maximum RSS
+  was 3.07 GB, and no process swapped. Candidate-wise bypasses are closed; the
+  next fork must add candidate-relative set context.
+- Completed and rejected ADR 0096's four-way pre-pool context fork. Candidate
+  only, exact legacy context, rich global moments, and observable screen-top64
+  context reached only 28.61%-29.07% train target recall and each recovered
+  one of 560 train target sets. All four ring replays were bit-identical,
+  maximum RSS was 2.11 GB, and no process swapped. The experiment resolved
+  four independent hypotheses in 1,111.89 seconds, or 12.95 hypotheses per
+  probe-phase wall-clock hour. The 192-dimensional candidate projection is
+  classified insufficient; the next fork must compare distinct integration
+  architectures before that compression.
+- Completed and rejected ADR 0097's four-way pre-compression factor
+  integration fork. Wide concatenation, screen-relative context, factor-token
+  attention, and pairwise-gated factors reached only 29.39%-30.88% train
+  target recall and at most one exact train set; no validation set was
+  recovered exactly. All four ring replays were bit-identical, maximum active
+  MLX memory was 3.92 GB, and no process swapped. The corrected run resolved
+  four hypotheses in 3,944.72 seconds after a permanent 512 MiB MLX cache
+  policy made john1 more than ten times faster than the invalid default-cache
+  launch. The seven upstream factor representations are classified
+  insufficient; further heads and integration mechanisms over them are
+  closed.
+- Completed and rejected ADR 0098's four-way raw factor-construction fork.
+  Complete raw flattening, exact local-board relations, explicit market
+  transitions, and fresh candidate-conditioned entity attention reached
+  30.29%, 37.87%, 29.94%, and 17.95% train recall respectively; every arm
+  recovered zero complete train and validation target sets. All ring replays
+  were bit-identical, maximum active MLX memory was 2.97 GB, no process
+  swapped, and the four hypotheses resolved in 2,412.43 seconds of cluster
+  wall time. The classification is `raw_factor_construction_insufficient`;
+  target learnability and supervision structure are now the only authorized
+  immediate branch.
+- Completed ADR 0099's four-host supervision-identifiability audit. Only
+  10.38% of validation target slots were statistically separated, no
+  validation set was completely separated, and 512 finite-teacher resamples
+  reproduced just 41.20% of target slots and 2.50% of exact sets. In contrast,
+  uncertainty-aware expected rank achieved 100% validation R4800-winner
+  recall, 100% confidence coverage, 100% distinguishable recall, and zero
+  regret in every phase. All ring replays were bit-identical. One
+  expected-rank MLX pilot is authorized; further hard-target work is closed.
+- Completed ADR 0115's learned hierarchical retrieval pilot across john1-john4.
+  Every cache, replay, numerical, memory, swap, and sealed-domain gate passed.
+  Draft, tile, and wildlife validation factor recall reached 92.84%, 66.57%,
+  and 100.00%, respectively. The integrated proposal retained only 72.48% of
+  validation target actions and 92.08% of R4800 winners; learned top-64 recall
+  was 18.14%. The result is `hierarchical_proposal_insufficient`.
+- The tile mechanism audit found zero exact model-input label conflicts, but
+  top-32 membership and rank-regression gradients opposed each other at mean
+  cosine `-0.738910`. A learned/screen oracle union reached only 78.29%
+  validation recall. ADR 0116 therefore authorizes one unchanged-architecture,
+  from-scratch tile pilot using only balanced top-32 membership BCE.
+- Completed ADR 0116's target-only tile pilot. Every pipeline and replay gate
+  passed, with zero process swaps and 3.00 GiB peak origin RSS. Tile recall
+  improved by 4.02 validation points over ADR 0115, but the integrated proposal
+  retained only 71.83% of validation targets and 89.58% of winners. The result
+  is `target_only_tile_objective_insufficient`; the next authorized work is a
+  mechanistic capacity and query-representation audit, not another loss swap.
+- Completed ADR 0117's four-host capacity and query audit in 264.50 seconds.
+  The unchanged ranker reached 100% recall and exact recovery on both 16 and
+  256 hard-query cohorts; attention reached 99.95% recall and 98.83% exact at
+  a larger cost. Permuting context cost only 0.59 validation points, while
+  removing descendant summaries cost 27.47. The classification is
+  `full_data_scale_or_optimization_insufficient`; one larger-exposure
+  full-cache target-only origin is the immediate successor.
+- ADR 0120's sole late-cosine conditional-tile origin remains active on john2.
+  Its dependent clean replay, mixed ceiling, integration, and mechanical
+  classification remain queued.
+- Completed ADRs 0121-0123 as nonduplicative backfill on john1, john3, and
+  john4. They isolated late fit-margin specialization, attributed the largest
+  train-only contribution to local geometry, and froze a 50% targeted
+  corruption rate.
+- Preregistered contingent ADR 0124 without launching training. Its first
+  preflight invalidated a memory-heavy duplicate-copy implementation.
+  ADR 0125 repaired only those mechanics; the repeated four-host preflight
+  passed with exact selection-digest preservation, 21.16% preparation
+  overhead, 1.89 GiB peak RSS, and zero swaps. ADR 0124 remains closed unless
+  ADR 0120 finishes valid and insufficient.
 
 ## Evidence Collected
 

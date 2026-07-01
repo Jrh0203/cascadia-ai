@@ -1,0 +1,40 @@
+[package]
+name = "cascadia-v3-nnue"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+blake3.workspace = true
+cascadia-data = { path = "../cascadia-data" }
+cascadia-game = { path = "../cascadia-game" }
+cascadia-sim = { path = "../cascadia-sim" }
+clap.workspace = true
+postcard.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[[bin]]
+name = "v3-engineering-smoke"
+path = "src/bin/engineering_smoke.rs"
+
+[[bin]]
+name = "v3-feature-manifest"
+path = "src/bin/feature_manifest.rs"
+
+[[bin]]
+name = "v3-batch-stream"
+path = "src/bin/batch_stream.rs"
+
+[[bin]]
+name = "v3-engineering-collect"
+path = "src/bin/engineering_collect.rs"

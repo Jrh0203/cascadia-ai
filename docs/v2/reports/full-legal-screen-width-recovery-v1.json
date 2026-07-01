@@ -1,0 +1,5453 @@
+{
+  "audit_protocol_id": "full-legal-decision-regret-audit-v1",
+  "champion_corpus": {
+    "maximum_base_score": 102.0,
+    "mean_base_score": 95.34615384615384,
+    "minimum_base_score": 86.0,
+    "seat_scores": 52
+  },
+  "configuration": {
+    "audited_completed_turns": null,
+    "champion_rollouts": 600,
+    "high_confidence_limit": 8,
+    "high_confidence_rollouts": 4800,
+    "paid_wipe_determinizations": 0,
+    "paid_wipe_followup_determinizations": 2,
+    "paid_wipe_followup_width": 3,
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "realized_hidden_completed_turns": [],
+    "screen_limit": 1024,
+    "sentinel_count": 16,
+    "substantial_rollouts": 1200
+  },
+  "coverage": {
+    "actions_screened": 3872079,
+    "decisions": 1040,
+    "first_seed": 61000,
+    "games": 13,
+    "hosts": {
+      "john1": 5,
+      "john2": 4,
+      "john3": 4
+    },
+    "last_seed": 61012,
+    "paid_wipe_decisions": 0,
+    "realized_hidden_decisions": 0
+  },
+  "decompositions": {
+    "change_kind": {
+      "draft_choice": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 425,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.6402302412339497,
+            0.7678802307998956
+          ],
+          "count": 425,
+          "game_block_standard_error": 0.035013846279909416,
+          "games": 13,
+          "mean": 0.6989093119162011,
+          "normal_confidence_95": [
+            0.6302821732075786,
+            0.7675364506248236
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.4858669835992608,
+            0.6089235772423542
+          ],
+          "count": 425,
+          "game_block_standard_error": 0.034505034424405355,
+          "games": 13,
+          "mean": 0.5414100549049616,
+          "normal_confidence_95": [
+            0.4737801874331271,
+            0.6090399223767962
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.003547490538291197
+          ],
+          "count": 425,
+          "game_block_standard_error": 0.0011156223345340705,
+          "games": 13,
+          "mean": 0.0012243471982589305,
+          "normal_confidence_95": [
+            -0.0009622725774278476,
+            0.0034109669739457085
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9881235154394299,
+            1.0
+          ],
+          "count": 425,
+          "game_block_standard_error": 0.003365384615384615,
+          "games": 13,
+          "mean": 0.9952941176470588,
+          "normal_confidence_95": [
+            0.9886979638009049,
+            1.0018902714932125
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9881235154394299,
+            1.0
+          ],
+          "count": 425,
+          "game_block_standard_error": 0.003365384615384615,
+          "games": 13,
+          "mean": 0.9952941176470588,
+          "normal_confidence_95": [
+            0.9886979638009049,
+            1.0018902714932125
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.13714404012533568,
+            0.17786913717287692
+          ],
+          "count": 425,
+          "game_block_standard_error": 0.01095413602897353,
+          "games": 13,
+          "mean": 0.15749925701123935,
+          "normal_confidence_95": [
+            0.13602915039445124,
+            0.17896936362802746
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.8427230046948356,
+            0.902676399026764
+          ],
+          "count": 425,
+          "game_block_standard_error": 0.015667194343434082,
+          "games": 13,
+          "mean": 0.8729411764705882,
+          "normal_confidence_95": [
+            0.8422334755574574,
+            0.903648877383719
+          ]
+        }
+      },
+      "same_action": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.012254593822483614
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.0027480340747719307,
+          "games": 13,
+          "mean": 0.004921298454933252,
+          "normal_confidence_95": [
+            -0.000464848331619732,
+            0.010307445241486236
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9691780821917808,
+            1.0
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.006962335386235424,
+          "games": 13,
+          "mean": 0.9850187265917603,
+          "normal_confidence_95": [
+            0.9713725492347388,
+            0.9986649039487817
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "tile_placement": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 323,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.4053979034676393,
+            0.5322707244948679
+          ],
+          "count": 323,
+          "game_block_standard_error": 0.03549770246692954,
+          "games": 13,
+          "mean": 0.47057951799200226,
+          "normal_confidence_95": [
+            0.4010040211568204,
+            0.5401550148271842
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.29566963275068614,
+            0.3910002210382031
+          ],
+          "count": 323,
+          "game_block_standard_error": 0.027332097976988903,
+          "games": 13,
+          "mean": 0.3433816130172358,
+          "normal_confidence_95": [
+            0.2898107009823375,
+            0.3969525250521341
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 323,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 323,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 323,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.09226206841001482,
+            0.1677315401090475
+          ],
+          "count": 323,
+          "game_block_standard_error": 0.019437855993706083,
+          "games": 13,
+          "mean": 0.1271979049747664,
+          "normal_confidence_95": [
+            0.08909970722710248,
+            0.16529610272243034
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.8005952380952381,
+            0.8793650793650793
+          ],
+          "count": 323,
+          "game_block_standard_error": 0.02043371229256138,
+          "games": 13,
+          "mean": 0.8421052631578947,
+          "normal_confidence_95": [
+            0.8020551870644744,
+            0.882155339251315
+          ]
+        }
+      },
+      "wildlife_placement": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 25,
+          "game_block_standard_error": 0.0,
+          "games": 8,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.1321973729575085,
+            0.23365213952311023
+          ],
+          "count": 25,
+          "game_block_standard_error": 0.03527427915360523,
+          "games": 8,
+          "mean": 0.1817599931113557,
+          "normal_confidence_95": [
+            0.11262240597028945,
+            0.250897580252422
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.011976973459205183,
+            0.1282805270171546
+          ],
+          "count": 25,
+          "game_block_standard_error": 0.04913338674200634,
+          "games": 8,
+          "mean": 0.0594229662094773,
+          "normal_confidence_95": [
+            -0.03687847180485513,
+            0.15572440422380973
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 25,
+          "game_block_standard_error": 0.0,
+          "games": 8,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 25,
+          "game_block_standard_error": 0.0,
+          "games": 8,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 25,
+          "game_block_standard_error": 0.0,
+          "games": 8,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.06375928092501633,
+            0.18797352216831564
+          ],
+          "count": 25,
+          "game_block_standard_error": 0.03115735406113793,
+          "games": 8,
+          "mean": 0.1223370269018784,
+          "normal_confidence_95": [
+            0.061268612942048065,
+            0.18340544086170874
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.09090909090909091,
+            0.64
+          ],
+          "count": 25,
+          "game_block_standard_error": 0.14946166626442942,
+          "games": 8,
+          "mean": 0.32,
+          "normal_confidence_95": [
+            0.02705513412171834,
+            0.6129448658782817
+          ]
+        }
+      }
+    },
+    "host": {
+      "john1": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7125,
+            0.7875
+          ],
+          "count": 400,
+          "game_block_standard_error": 0.019121323175972944,
+          "games": 5,
+          "mean": 0.7475,
+          "normal_confidence_95": [
+            0.7100222065750931,
+            0.784977793424907
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.3711791188742888,
+            0.4426365297485253
+          ],
+          "count": 400,
+          "game_block_standard_error": 0.01832087241591506,
+          "games": 5,
+          "mean": 0.4058389631765121,
+          "normal_confidence_95": [
+            0.36993005324131856,
+            0.4417478731117056
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.27270396746120407,
+            0.34111045850636856
+          ],
+          "count": 400,
+          "game_block_standard_error": 0.01707471050131831,
+          "games": 5,
+          "mean": 0.30664324099651485,
+          "normal_confidence_95": [
+            0.273176808413931,
+            0.3401096735790987
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.000934730428360453
+          ],
+          "count": 400,
+          "game_block_standard_error": 0.0002528303645644973,
+          "games": 5,
+          "mean": 0.00038691025708658343,
+          "normal_confidence_95": [
+            -0.00010863725745983131,
+            0.0008824577716329982
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9916666666666667,
+            1.0
+          ],
+          "count": 400,
+          "game_block_standard_error": 0.002499999999999991,
+          "games": 5,
+          "mean": 0.9975,
+          "normal_confidence_95": [
+            0.9926,
+            1.0024
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9875,
+            1.0
+          ],
+          "count": 400,
+          "game_block_standard_error": 0.0030618621784789615,
+          "games": 5,
+          "mean": 0.995,
+          "normal_confidence_95": [
+            0.9889987501301812,
+            1.0010012498698189
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.07913502291030232,
+            0.11897923483054207
+          ],
+          "count": 400,
+          "game_block_standard_error": 0.010376072446417927,
+          "games": 5,
+          "mean": 0.09919572217999723,
+          "normal_confidence_95": [
+            0.07885862018501809,
+            0.11953282417497636
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.58125,
+            0.6575
+          ],
+          "count": 400,
+          "game_block_standard_error": 0.01960548392669766,
+          "games": 5,
+          "mean": 0.62,
+          "normal_confidence_95": [
+            0.5815732515036726,
+            0.6584267484963274
+          ]
+        }
+      },
+      "john2": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.6375,
+            0.765
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.028412878535387213,
+          "games": 4,
+          "mean": 0.7125,
+          "normal_confidence_95": [
+            0.656810758070641,
+            0.768189241929359
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.33593067999086446,
+            0.4985411877925273
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.0409647729765933,
+          "games": 4,
+          "mean": 0.422271875350111,
+          "normal_confidence_95": [
+            0.34198092031598815,
+            0.5025628303842339
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.21908430971090684,
+            0.3646682259274401
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.03386454933737212,
+          "games": 4,
+          "mean": 0.3190492814618573,
+          "normal_confidence_95": [
+            0.25267476476060796,
+            0.3854237981631066
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.011365401903640517
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.0030312090067003764,
+          "games": 4,
+          "mean": 0.004642206927974834,
+          "normal_confidence_95": [
+            -0.0012989627251579032,
+            0.010583376581107572
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9895833333333334,
+            1.0
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.003124999999999989,
+          "games": 4,
+          "mean": 0.996875,
+          "normal_confidence_95": [
+            0.99075,
+            1.003
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.975,
+            1.0
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.005983919423477116,
+          "games": 4,
+          "mean": 0.990625,
+          "normal_confidence_95": [
+            0.9788965179299848,
+            1.002353482070015
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.07400155447768757,
+            0.14385289973903284
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.014653512137575537,
+          "games": 4,
+          "mean": 0.1032225938882537,
+          "normal_confidence_95": [
+            0.07450171009860565,
+            0.13194347767790174
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.525,
+            0.7
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.04254287053471278,
+          "games": 4,
+          "mean": 0.61875,
+          "normal_confidence_95": [
+            0.5353659737519629,
+            0.7021340262480371
+          ]
+        }
+      },
+      "john3": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.725,
+            0.825
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.02134781409574916,
+          "games": 4,
+          "mean": 0.76875,
+          "normal_confidence_95": [
+            0.7269082843723317,
+            0.8105917156276684
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.4139488586446147,
+            0.5621676030343419
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.034554651984007395,
+          "games": 4,
+          "mean": 0.48785955100295536,
+          "normal_confidence_95": [
+            0.4201324331143009,
+            0.5555866688916098
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.297870459784453,
+            0.4418864933045235
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.0344419218452511,
+          "games": 4,
+          "mean": 0.36795013133753923,
+          "normal_confidence_95": [
+            0.3004439645208471,
+            0.43545629815423137
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0019406392694064324
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.00060644977168951,
+          "games": 4,
+          "mean": 0.00060644977168951,
+          "normal_confidence_95": [
+            -0.0005821917808219296,
+            0.0017950913242009497
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.0,
+          "games": 4,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9895833333333334,
+            1.0
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.003124999999999989,
+          "games": 4,
+          "mean": 0.996875,
+          "normal_confidence_95": [
+            0.99075,
+            1.003
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.09911736091795831,
+            0.1445242972027825
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.011241260956420456,
+          "games": 4,
+          "mean": 0.1199094196654161,
+          "normal_confidence_95": [
+            0.09787654819083201,
+            0.1419422911400002
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5925,
+            0.7375
+          ],
+          "count": 320,
+          "game_block_standard_error": 0.03321920566479578,
+          "games": 4,
+          "mean": 0.640625,
+          "normal_confidence_95": [
+            0.5755153568970003,
+            0.7057346431029997
+          ]
+        }
+      }
+    },
+    "phase": {
+      "early": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7362637362637363,
+            0.8324175824175825
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.025893251860070868,
+          "games": 13,
+          "mean": 0.7857142857142857,
+          "normal_confidence_95": [
+            0.7349635120685468,
+            0.8364650593600246
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.5309112033960719,
+            0.7056699327810764
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.04646438652285987,
+          "games": 13,
+          "mean": 0.6154182766928301,
+          "normal_confidence_95": [
+            0.5243480791080247,
+            0.7064884742776355
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.3549117905237732,
+            0.508983191355125
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.04090433117877322,
+          "games": 13,
+          "mean": 0.4288502750193948,
+          "normal_confidence_95": [
+            0.34867778590899934,
+            0.5090227641297903
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0015994279692910156
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.0005331426564303385,
+          "games": 13,
+          "mean": 0.0005331426564303385,
+          "normal_confidence_95": [
+            -0.000511816950173125,
+            0.0015781022630338018
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9917582417582418,
+            1.0
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.002747252747252746,
+          "games": 13,
+          "mean": 0.9972527472527473,
+          "normal_confidence_95": [
+            0.9918681318681318,
+            1.0026373626373626
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.1509500559640107,
+            0.22351915100239744
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.019368301482060094,
+          "games": 13,
+          "mean": 0.18656800167343524,
+          "normal_confidence_95": [
+            0.14860613076859747,
+            0.224529872578273
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5741758241758241,
+            0.7335164835164835
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.042441868960646396,
+          "games": 13,
+          "mean": 0.6510989010989011,
+          "normal_confidence_95": [
+            0.5679128379360342,
+            0.734284964261768
+          ]
+        }
+      },
+      "late": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.5865384615384616,
+            0.6602564102564102
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.019452074205163594,
+          "games": 13,
+          "mean": 0.625,
+          "normal_confidence_95": [
+            0.5868739345578794,
+            0.6631260654421206
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.15819497283524264,
+            0.2535230162780299
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.025560719450640614,
+          "games": 13,
+          "mean": 0.2009480338420643,
+          "normal_confidence_95": [
+            0.1508490237188087,
+            0.2510470439653199
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.13553100259049675,
+            0.21590444253818156
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.021455037541656168,
+          "games": 13,
+          "mean": 0.1723438331971009,
+          "normal_confidence_95": [
+            0.1302919596154548,
+            0.21439570677874698
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.01965794337162369,
+            0.03929191244110676
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.0052568310967568465,
+          "games": 13,
+          "mean": 0.02860420064496343,
+          "normal_confidence_95": [
+            0.01830081169532001,
+            0.03890758959460685
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.44871794871794873,
+            0.5416666666666666
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.024895684183185985,
+          "games": 13,
+          "mean": 0.4935897435897436,
+          "normal_confidence_95": [
+            0.4447942025906991,
+            0.5423852845887881
+          ]
+        }
+      },
+      "middle": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7554945054945055,
+            0.8379120879120879
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.022375076415513954,
+          "games": 13,
+          "mean": 0.8021978021978022,
+          "normal_confidence_95": [
+            0.7583426524233949,
+            0.8460529519722095
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.4109446121111702,
+            0.5049106827836847
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.024865497850314822,
+          "games": 13,
+          "mean": 0.4584329737051424,
+          "normal_confidence_95": [
+            0.40969659791852536,
+            0.5071693494917595
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.321092832121054,
+            0.4091049803335514
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.023280723779846746,
+          "games": 13,
+          "mean": 0.364352561620488,
+          "normal_confidence_95": [
+            0.3187223430119884,
+            0.40998278022898765
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0002739136786404258,
+            0.011116181701139649
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.0029486132578894764,
+          "games": 13,
+          "mean": 0.004506237142270825,
+          "normal_confidence_95": [
+            -0.0012730448431925489,
+            0.010285519127734198
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9862637362637363,
+            1.0
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.003719797804320494,
+          "games": 13,
+          "mean": 0.9945054945054945,
+          "normal_confidence_95": [
+            0.9872146908090264,
+            1.0017962982019626
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9725274725274725,
+            0.9972527472527473
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.006442878790966247,
+          "games": 13,
+          "mean": 0.9862637362637363,
+          "normal_confidence_95": [
+            0.9736356938334425,
+            0.9988917786940301
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.08049225147195481,
+            0.10747850761063989
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.00718605267563674,
+          "games": 13,
+          "mean": 0.09408041208465442,
+          "normal_confidence_95": [
+            0.07999574884040642,
+            0.10816507532890243
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.6620879120879121,
+            0.7582417582417582
+          ],
+          "count": 364,
+          "game_block_standard_error": 0.025893251860070857,
+          "games": 13,
+          "mean": 0.7142857142857143,
+          "normal_confidence_95": [
+            0.6635349406399754,
+            0.7650364879314532
+          ]
+        }
+      }
+    },
+    "token_bucket": {
+      "0": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7135416666666666,
+            0.8333333333333334
+          ],
+          "count": 190,
+          "game_block_standard_error": 0.03640115385282229,
+          "games": 13,
+          "mean": 0.7736842105263158,
+          "normal_confidence_95": [
+            0.7023379489747841,
+            0.8450304720778474
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.4973512384035449,
+            0.7093738797172343
+          ],
+          "count": 190,
+          "game_block_standard_error": 0.07178277772253676,
+          "games": 13,
+          "mean": 0.5802422114943058,
+          "normal_confidence_95": [
+            0.4395479671581337,
+            0.7209364558304778
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.30871624859384217,
+            0.5246124968776844
+          ],
+          "count": 190,
+          "game_block_standard_error": 0.07832422268717124,
+          "games": 13,
+          "mean": 0.3975932342488284,
+          "normal_confidence_95": [
+            0.2440777577819728,
+            0.551108710715684
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 190,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 190,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 190,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.12717269266202058,
+            0.258686315850693
+          ],
+          "count": 190,
+          "game_block_standard_error": 0.04150178081010794,
+          "games": 13,
+          "mean": 0.18264897724547743,
+          "normal_confidence_95": [
+            0.10130548685766587,
+            0.263992467633289
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5151469787697333,
+            0.7098445595854922
+          ],
+          "count": 190,
+          "game_block_standard_error": 0.05613390108038196,
+          "games": 13,
+          "mean": 0.6157894736842106,
+          "normal_confidence_95": [
+            0.5057670275666619,
+            0.7258119198017592
+          ]
+        }
+      },
+      "1": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7473309608540926,
+            0.8126984126984127
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.01417076349136334,
+          "games": 13,
+          "mean": 0.7792207792207793,
+          "normal_confidence_95": [
+            0.7514460827777071,
+            0.8069954756638514
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.4657755070148591,
+            0.5932490180525906
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.04081698094559454,
+          "games": 13,
+          "mean": 0.5239150701155337,
+          "normal_confidence_95": [
+            0.4439137874621684,
+            0.603916352768899
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.3517115587238725,
+            0.46486102014028347
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.037278092041235104,
+          "games": 13,
+          "mean": 0.4010546871904887,
+          "normal_confidence_95": [
+            0.3279896267896679,
+            0.4741197475913095
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0063482608590890305
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.0015882789716500454,
+          "games": 13,
+          "mean": 0.002401687382023857,
+          "normal_confidence_95": [
+            -0.0007113394024102319,
+            0.005514714166457946
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9839743589743589,
+            1.0
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.004651565496994263,
+          "games": 13,
+          "mean": 0.9935064935064936,
+          "normal_confidence_95": [
+            0.9843894251323848,
+            1.0026235618806023
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.0999009399318642,
+            0.14574058914673482
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.014542473044269939,
+          "games": 13,
+          "mean": 0.12286038292504502,
+          "normal_confidence_95": [
+            0.09435713575827594,
+            0.15136363009181408
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.6225165562913907,
+            0.7313915857605178
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.025991291260861766,
+          "games": 13,
+          "mean": 0.6753246753246753,
+          "normal_confidence_95": [
+            0.6243817444533862,
+            0.7262676061959644
+          ]
+        }
+      },
+      "2": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7222222222222222,
+            0.8078602620087336
+          ],
+          "count": 230,
+          "game_block_standard_error": 0.023191177258957894,
+          "games": 13,
+          "mean": 0.7652173913043478,
+          "normal_confidence_95": [
+            0.7197626838767903,
+            0.8106720987319054
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.3866423230276947,
+            0.4512116978598525
+          ],
+          "count": 230,
+          "game_block_standard_error": 0.02061775360169548,
+          "games": 13,
+          "mean": 0.4189765767535239,
+          "normal_confidence_95": [
+            0.37856577969420074,
+            0.45938737381284706
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.2820121985757279,
+            0.3490107977309649
+          ],
+          "count": 230,
+          "game_block_standard_error": 0.019740243978517064,
+          "games": 13,
+          "mean": 0.3195869559123159,
+          "normal_confidence_95": [
+            0.28089607771442243,
+            0.35827783411020936
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.006522729468932623
+          ],
+          "count": 230,
+          "game_block_standard_error": 0.0018837572285446446,
+          "games": 13,
+          "mean": 0.0020229914584805526,
+          "normal_confidence_95": [
+            -0.001669172709466951,
+            0.0057151556264280565
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.986046511627907,
+            1.0
+          ],
+          "count": 230,
+          "game_block_standard_error": 0.004048582995951421,
+          "games": 13,
+          "mean": 0.9956521739130435,
+          "normal_confidence_95": [
+            0.9877169512409787,
+            1.0035873965851083
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9861111111111112,
+            1.0
+          ],
+          "count": 230,
+          "game_block_standard_error": 0.004048582995951421,
+          "games": 13,
+          "mean": 0.9956521739130435,
+          "normal_confidence_95": [
+            0.9877169512409787,
+            1.0035873965851083
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.07377904876332492,
+            0.12629307593232936
+          ],
+          "count": 230,
+          "game_block_standard_error": 0.014964482286397397,
+          "games": 13,
+          "mean": 0.09938962084120805,
+          "normal_confidence_95": [
+            0.07005923555986915,
+            0.12872000612254694
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5981308411214953,
+            0.7125995565209522
+          ],
+          "count": 230,
+          "game_block_standard_error": 0.030235120519777454,
+          "games": 13,
+          "mean": 0.6565217391304348,
+          "normal_confidence_95": [
+            0.597260902911671,
+            0.7157825753491985
+          ]
+        }
+      },
+      "3+": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.6269592476489029,
+            0.7178683385579937
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.02613881635050296,
+          "games": 13,
+          "mean": 0.6730769230769231,
+          "normal_confidence_95": [
+            0.6218448430299374,
+            0.7243090031239089
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.24467136178552107,
+            0.3045207170312439
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.01582681416456266,
+          "games": 13,
+          "mean": 0.27436271561145215,
+          "normal_confidence_95": [
+            0.24334215984890933,
+            0.30538327137399496
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.19697211819800883,
+            0.25415775929030787
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.014391796656650897,
+          "games": 13,
+          "mean": 0.22411714895074447,
+          "normal_confidence_95": [
+            0.1959092275037087,
+            0.25232507039778024
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.005177061699647721
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.0012982217695236718,
+          "games": 13,
+          "mean": 0.0020170721077350916,
+          "normal_confidence_95": [
+            -0.0005274425605313049,
+            0.004561586776001488
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9895104895104895,
+            1.0
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.003496503496503494,
+          "games": 13,
+          "mean": 0.9967948717948718,
+          "normal_confidence_95": [
+            0.9899417249417249,
+            1.0036480186480186
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9810126582278481,
+            1.0
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.004490344846566859,
+          "games": 13,
+          "mean": 0.9903846153846154,
+          "normal_confidence_95": [
+            0.9815835394853444,
+            0.9991856912838865
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.03804786866907347,
+            0.0626324075106179
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.006293795646368248,
+          "games": 13,
+          "mean": 0.05024556666070769,
+          "normal_confidence_95": [
+            0.037909727193825925,
+            0.06258140612758946
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5123674911660777,
+            0.6089743589743589
+          ],
+          "count": 312,
+          "game_block_standard_error": 0.027275606675513524,
+          "games": 13,
+          "mean": 0.5608974358974359,
+          "normal_confidence_95": [
+            0.5074372468134294,
+            0.6143576249814424
+          ]
+        }
+      }
+    },
+    "winner_demand_bucket": {
+      "high_6_plus": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.574468085106383,
+            0.7868852459016393
+          ],
+          "count": 59,
+          "game_block_standard_error": 0.07043707248880066,
+          "games": 12,
+          "mean": 0.6949152542372882,
+          "normal_confidence_95": [
+            0.5568585921592388,
+            0.8329719163153375
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.26089744356327627,
+            0.837911585352908
+          ],
+          "count": 59,
+          "game_block_standard_error": 0.11761516944432175,
+          "games": 12,
+          "mean": 0.5317070566873564,
+          "normal_confidence_95": [
+            0.3011813245764858,
+            0.762232788798227
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.21552232785294526,
+            0.723921485388807
+          ],
+          "count": 59,
+          "game_block_standard_error": 0.1032139680413593,
+          "games": 12,
+          "mean": 0.45515861580567024,
+          "normal_confidence_95": [
+            0.252859238444606,
+            0.6574579931667345
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 59,
+          "game_block_standard_error": 0.0,
+          "games": 12,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 59,
+          "game_block_standard_error": 0.0,
+          "games": 12,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 59,
+          "game_block_standard_error": 0.0,
+          "games": 12,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.00509594539564832,
+            0.12871969497566288
+          ],
+          "count": 59,
+          "game_block_standard_error": 0.02202270829647805,
+          "games": 12,
+          "mean": 0.07654844088168612,
+          "normal_confidence_95": [
+            0.03338393262058915,
+            0.1197129491427831
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.47368421052631576,
+            0.7333333333333333
+          ],
+          "count": 59,
+          "game_block_standard_error": 0.08641276601378928,
+          "games": 12,
+          "mean": 0.6101694915254238,
+          "normal_confidence_95": [
+            0.4408004701383968,
+            0.7795385129124508
+          ]
+        }
+      },
+      "low_0_2": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7458191644401263,
+            0.8230776173285198
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.025460723701284865,
+          "games": 13,
+          "mean": 0.7824675324675324,
+          "normal_confidence_95": [
+            0.7325645140130141,
+            0.8323705509220507
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.3879921379970951,
+            0.5463798061618556
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.03626147159334241,
+          "games": 13,
+          "mean": 0.4615568932360573,
+          "normal_confidence_95": [
+            0.3904844089131062,
+            0.5326293775590084
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.2661072205256581,
+            0.3914619529493241
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.033070452405583865,
+          "games": 13,
+          "mean": 0.3278152232294293,
+          "normal_confidence_95": [
+            0.2629971365144849,
+            0.3926333099443737
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0025933644941759674
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.0008620064247573041,
+          "games": 13,
+          "mean": 0.000953793850538176,
+          "normal_confidence_95": [
+            -0.00073573874198614,
+            0.0026433264430624917
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9829351535836177,
+            1.0
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.005636511059892792,
+          "games": 13,
+          "mean": 0.9935064935064936,
+          "normal_confidence_95": [
+            0.9824589318291037,
+            1.0045540551838834
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.0990925992542495,
+            0.17264611105822092
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.0169173595602336,
+          "games": 13,
+          "mean": 0.133741670006628,
+          "normal_confidence_95": [
+            0.10058364526857017,
+            0.16689969474468586
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5741324921135647,
+            0.6996807584644754
+          ],
+          "count": 308,
+          "game_block_standard_error": 0.034666487683616715,
+          "games": 13,
+          "mean": 0.6363636363636364,
+          "normal_confidence_95": [
+            0.5684173205037476,
+            0.7043099522235251
+          ]
+        }
+      },
+      "medium_3_5": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7020057306590258,
+            0.757527733755943
+          ],
+          "count": 673,
+          "game_block_standard_error": 0.01464420450420628,
+          "games": 13,
+          "mean": 0.7295690936106983,
+          "normal_confidence_95": [
+            0.700866452782454,
+            0.7582717344389427
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.3729470585903475,
+            0.4574474745009
+          ],
+          "count": 673,
+          "game_block_standard_error": 0.022809172206110503,
+          "games": 13,
+          "mean": 0.4161179825294597,
+          "normal_confidence_95": [
+            0.3714120050054831,
+            0.4608239600534363
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.2809172684046558,
+            0.35760546648387176
+          ],
+          "count": 673,
+          "game_block_standard_error": 0.02009757760960105,
+          "games": 13,
+          "mean": 0.3189831521652512,
+          "normal_confidence_95": [
+            0.27959190005043316,
+            0.3583744042800692
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.00567756533478326
+          ],
+          "count": 673,
+          "game_block_standard_error": 0.0014576283683565088,
+          "games": 13,
+          "mean": 0.002289102140804555,
+          "normal_confidence_95": [
+            -0.0005678494611742022,
+            0.005146053742783312
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9926578560939795,
+            1.0
+          ],
+          "count": 673,
+          "game_block_standard_error": 0.0019601163460583365,
+          "games": 13,
+          "mean": 0.9970282317979198,
+          "normal_confidence_95": [
+            0.9931864037596454,
+            1.0008700598361941
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9871428571428571,
+            1.0
+          ],
+          "count": 673,
+          "game_block_standard_error": 0.003134934660461822,
+          "games": 13,
+          "mean": 0.9940564635958395,
+          "normal_confidence_95": [
+            0.9879119916613344,
+            1.0002009355303447
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.0794004342941895,
+            0.11552971570333023
+          ],
+          "count": 673,
+          "game_block_standard_error": 0.01000466137014608,
+          "games": 13,
+          "mean": 0.0971348303642085,
+          "normal_confidence_95": [
+            0.07752569407872219,
+            0.11674396664969482
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5912408759124088,
+            0.6486911657507519
+          ],
+          "count": 673,
+          "game_block_standard_error": 0.015587120044492659,
+          "games": 13,
+          "mean": 0.6225854383358098,
+          "normal_confidence_95": [
+            0.5920346830486042,
+            0.6531361936230154
+          ]
+        }
+      }
+    },
+    "winner_draft_kind": {
+      "Independent": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7105263157894737,
+            0.8415841584158416
+          ],
+          "count": 99,
+          "game_block_standard_error": 0.03774427468658814,
+          "games": 13,
+          "mean": 0.7777777777777778,
+          "normal_confidence_95": [
+            0.703798999392065,
+            0.8517565561634906
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.3148865966214564,
+            0.5248171401125851
+          ],
+          "count": 99,
+          "game_block_standard_error": 0.05823278541529127,
+          "games": 13,
+          "mean": 0.4187804751421963,
+          "normal_confidence_95": [
+            0.3046442157282254,
+            0.5329167345561672
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.23936558883470413,
+            0.3623768299394765
+          ],
+          "count": 99,
+          "game_block_standard_error": 0.03812258678113065,
+          "games": 13,
+          "mean": 0.3019470384866785,
+          "normal_confidence_95": [
+            0.22722676839566242,
+            0.37666730857769454
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.004016618052300693
+          ],
+          "count": 99,
+          "game_block_standard_error": 0.001141271073253519,
+          "games": 13,
+          "mean": 0.0015632737660063976,
+          "normal_confidence_95": [
+            -0.0006736175375704995,
+            0.0038001650695832947
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.968421052631579,
+            1.0
+          ],
+          "count": 99,
+          "game_block_standard_error": 0.007692307692307692,
+          "games": 13,
+          "mean": 0.98989898989899,
+          "normal_confidence_95": [
+            0.9748220668220668,
+            1.004975912975913
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9504950495049505,
+            1.0
+          ],
+          "count": 99,
+          "game_block_standard_error": 0.01287794566391718,
+          "games": 13,
+          "mean": 0.9797979797979798,
+          "normal_confidence_95": [
+            0.9545572062967022,
+            1.0050387532992575
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.06267540607177242,
+            0.180811902140769
+          ],
+          "count": 99,
+          "game_block_standard_error": 0.03186315188214563,
+          "games": 13,
+          "mean": 0.1168334366555178,
+          "normal_confidence_95": [
+            0.054381658966512376,
+            0.17928521434452324
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.6063829787234043,
+            0.7701149425287356
+          ],
+          "count": 99,
+          "game_block_standard_error": 0.048574956155619645,
+          "games": 13,
+          "mean": 0.6868686868686869,
+          "normal_confidence_95": [
+            0.5916617728036724,
+            0.7820756009337013
+          ]
+        }
+      },
+      "Paired": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7122844827586207,
+            0.7666666666666667
+          ],
+          "count": 941,
+          "game_block_standard_error": 0.014508982228747535,
+          "games": 13,
+          "mean": 0.7396386822529224,
+          "normal_confidence_95": [
+            0.7112010770845772,
+            0.7680762874212675
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.40139939056792473,
+            0.4774409553703629
+          ],
+          "count": 941,
+          "game_block_standard_error": 0.020339336013179724,
+          "games": 13,
+          "mean": 0.4379578901854502,
+          "normal_confidence_95": [
+            0.39809279159961797,
+            0.4778229887712825
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.3007897122743717,
+            0.3659218134405668
+          ],
+          "count": 941,
+          "game_block_standard_error": 0.017283641013473117,
+          "games": 13,
+          "mean": 0.3322044119917446,
+          "normal_confidence_95": [
+            0.2983284756053373,
+            0.3660803483781519
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.004288716403116727
+          ],
+          "count": 941,
+          "game_block_standard_error": 0.0011593552592221571,
+          "games": 13,
+          "mean": 0.001784877942500096,
+          "normal_confidence_95": [
+            -0.0004874583655753318,
+            0.004057214250575524
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9968051118210862,
+            1.0
+          ],
+          "count": 941,
+          "game_block_standard_error": 0.0010121457489878573,
+          "games": 13,
+          "mean": 0.9989373007438895,
+          "normal_confidence_95": [
+            0.9969534950758734,
+            1.0009211064119057
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9905163329820864,
+            1.0
+          ],
+          "count": 941,
+          "game_block_standard_error": 0.002421293113027803,
+          "games": 13,
+          "mean": 0.9957492029755579,
+          "normal_confidence_95": [
+            0.9910034684740234,
+            1.0004949374770924
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.09064741805604597,
+            0.12256918348481263
+          ],
+          "count": 941,
+          "game_block_standard_error": 0.00868596781784022,
+          "games": 13,
+          "mean": 0.10575347819370559,
+          "normal_confidence_95": [
+            0.08872898127073876,
+            0.12277797511667242
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5853920515574651,
+            0.6510903426791277
+          ],
+          "count": 941,
+          "game_block_standard_error": 0.017533303080245474,
+          "games": 13,
+          "mean": 0.6195536663124336,
+          "normal_confidence_95": [
+            0.5851883922751524,
+            0.6539189403497148
+          ]
+        }
+      }
+    },
+    "winner_rank_bucket": {
+      "01-08": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.48854961832061067,
+            0.6039643609669894
+          ],
+          "count": 403,
+          "game_block_standard_error": 0.030148635043577513,
+          "games": 13,
+          "mean": 0.5459057071960298,
+          "normal_confidence_95": [
+            0.4868143825106179,
+            0.6049970318814417
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.2120784655619717,
+            0.29766361992447665
+          ],
+          "count": 403,
+          "game_block_standard_error": 0.022769181905811023,
+          "games": 13,
+          "mean": 0.25393537049580045,
+          "normal_confidence_95": [
+            0.20930777396041084,
+            0.29856296703119006
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.13858314702297633,
+            0.21884247441550378
+          ],
+          "count": 403,
+          "game_block_standard_error": 0.02137517850044291,
+          "games": 13,
+          "mean": 0.17754897588994772,
+          "normal_confidence_95": [
+            0.13565362602907963,
+            0.21944432575081582
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 403,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 403,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 403,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.05492595995967587,
+            0.09955133057699073
+          ],
+          "count": 403,
+          "game_block_standard_error": 0.012041357925181833,
+          "games": 13,
+          "mean": 0.07638639460585274,
+          "normal_confidence_95": [
+            0.052785333072496346,
+            0.09998745613920913
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.3219895287958115,
+            0.4156479217603912
+          ],
+          "count": 403,
+          "game_block_standard_error": 0.024707197229085927,
+          "games": 13,
+          "mean": 0.36724565756823824,
+          "normal_confidence_95": [
+            0.3188195509992298,
+            0.41567176413724666
+          ]
+        }
+      },
+      "09-32": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7872340425531915,
+            0.8669724770642202
+          ],
+          "count": 211,
+          "game_block_standard_error": 0.024200159945805873,
+          "games": 13,
+          "mean": 0.8293838862559242,
+          "normal_confidence_95": [
+            0.7819515727621447,
+            0.8768161997497037
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.45603703895572817,
+            0.6139085263265448
+          ],
+          "count": 211,
+          "game_block_standard_error": 0.03729672377335485,
+          "games": 13,
+          "mean": 0.5356046062755611,
+          "normal_confidence_95": [
+            0.46250302767978557,
+            0.6087061848713365
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.3168028823923366,
+            0.4486478699450683
+          ],
+          "count": 211,
+          "game_block_standard_error": 0.032520484152977897,
+          "games": 13,
+          "mean": 0.38332734638014465,
+          "normal_confidence_95": [
+            0.31958719744030795,
+            0.44706749531998136
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 211,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 211,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 211,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.1064696273087097,
+            0.1935148793632204
+          ],
+          "count": 211,
+          "game_block_standard_error": 0.02257912292367721,
+          "games": 13,
+          "mean": 0.15227725989541638,
+          "normal_confidence_95": [
+            0.10802217896500904,
+            0.19653234082582371
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.6231884057971014,
+            0.7579908675799086
+          ],
+          "count": 211,
+          "game_block_standard_error": 0.04222240547738887,
+          "games": 13,
+          "mean": 0.6919431279620853,
+          "normal_confidence_95": [
+            0.6091872132264031,
+            0.7746990426977676
+          ]
+        }
+      },
+      "129+": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.8397405660377358,
+            0.9602272727272727
+          ],
+          "count": 182,
+          "game_block_standard_error": 0.03035062315778669,
+          "games": 13,
+          "mean": 0.9065934065934066,
+          "normal_confidence_95": [
+            0.8471061852041447,
+            0.9660806279826685
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.4980374008844418,
+            0.6717290232981056
+          ],
+          "count": 182,
+          "game_block_standard_error": 0.04907152624533131,
+          "games": 13,
+          "mean": 0.5840933060647335,
+          "normal_confidence_95": [
+            0.4879131146238842,
+            0.6802734975055829
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.37977339958568945,
+            0.5363317646946217
+          ],
+          "count": 182,
+          "game_block_standard_error": 0.04329136957782537,
+          "games": 13,
+          "mean": 0.4570896951672105,
+          "normal_confidence_95": [
+            0.3722386107946728,
+            0.5419407795397482
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0012787370947726048,
+            0.023123812626093414
+          ],
+          "count": 182,
+          "game_block_standard_error": 0.005870165928215081,
+          "games": 13,
+          "mean": 0.010078759597402329,
+          "normal_confidence_95": [
+            -0.00142676562189923,
+            0.021584284816703887
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9710982658959537,
+            1.0
+          ],
+          "count": 182,
+          "game_block_standard_error": 0.009468576229179446,
+          "games": 13,
+          "mean": 0.989010989010989,
+          "normal_confidence_95": [
+            0.9704525796017973,
+            1.0075693984201808
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9385474860335196,
+            0.9896907216494846
+          ],
+          "count": 182,
+          "game_block_standard_error": 0.014295688164380052,
+          "games": 13,
+          "mean": 0.967032967032967,
+          "normal_confidence_95": [
+            0.9390134182307821,
+            0.995052515835152
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.0947094871812552,
+            0.1626105242031065
+          ],
+          "count": 182,
+          "game_block_standard_error": 0.019884531795234864,
+          "games": 13,
+          "mean": 0.12700361089752296,
+          "normal_confidence_95": [
+            0.08802992857886263,
+            0.1659772932161833
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.7916666666666666,
+            0.893491124260355
+          ],
+          "count": 182,
+          "game_block_standard_error": 0.026493755016889345,
+          "games": 13,
+          "mean": 0.8461538461538461,
+          "normal_confidence_95": [
+            0.794226086320743,
+            0.8980816059869493
+          ]
+        }
+      },
+      "33-64": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7818181818181819,
+            0.8818181818181818
+          ],
+          "count": 118,
+          "game_block_standard_error": 0.030122404073555938,
+          "games": 13,
+          "mean": 0.8305084745762712,
+          "normal_confidence_95": [
+            0.7714685625921016,
+            0.8895483865604408
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.4130414773044766,
+            0.5859572518977545
+          ],
+          "count": 118,
+          "game_block_standard_error": 0.055781362495181855,
+          "games": 13,
+          "mean": 0.4965663218791677,
+          "normal_confidence_95": [
+            0.3872348513886113,
+            0.6058977923697242
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.3450255560241373,
+            0.4808599349167733
+          ],
+          "count": 118,
+          "game_block_standard_error": 0.04232002872547961,
+          "games": 13,
+          "mean": 0.4127801584116266,
+          "normal_confidence_95": [
+            0.3298329021096865,
+            0.4957274147135666
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 118,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 118,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 118,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.03992129633331147,
+            0.14033839771660994
+          ],
+          "count": 118,
+          "game_block_standard_error": 0.029769389774246608,
+          "games": 13,
+          "mean": 0.08378616346754113,
+          "normal_confidence_95": [
+            0.02543815951001778,
+            0.14213416742506446
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.7272727272727273,
+            0.8446601941747572
+          ],
+          "count": 118,
+          "game_block_standard_error": 0.029860656670085414,
+          "games": 13,
+          "mean": 0.788135593220339,
+          "normal_confidence_95": [
+            0.7296087061469716,
+            0.8466624802937064
+          ]
+        }
+      },
+      "65-128": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.8559322033898306,
+            0.9621212121212122
+          ],
+          "count": 126,
+          "game_block_standard_error": 0.03933326771087486,
+          "games": 13,
+          "mean": 0.9126984126984127,
+          "normal_confidence_95": [
+            0.835605207985098,
+            0.9897916174117274
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.49793824449473295,
+            0.6507776598640005
+          ],
+          "count": 126,
+          "game_block_standard_error": 0.05290893072134942,
+          "games": 13,
+          "mean": 0.5819786332072366,
+          "normal_confidence_95": [
+            0.4782771289933918,
+            0.6856801374210815
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.37866245443323626,
+            0.5304450069293629
+          ],
+          "count": 126,
+          "game_block_standard_error": 0.04803012301616165,
+          "games": 13,
+          "mean": 0.4616223643773741,
+          "normal_confidence_95": [
+            0.36748332326569727,
+            0.555761405489051
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 126,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 126,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 126,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.07750379396754392,
+            0.1718955534170495
+          ],
+          "count": 126,
+          "game_block_standard_error": 0.028373766036987366,
+          "games": 13,
+          "mean": 0.12035626882986256,
+          "normal_confidence_95": [
+            0.06474368739736733,
+            0.17596885026235778
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.7857142857142857,
+            0.9435483870967742
+          ],
+          "count": 126,
+          "game_block_standard_error": 0.058027149017791047,
+          "games": 13,
+          "mean": 0.873015873015873,
+          "normal_confidence_95": [
+            0.7592826609410026,
+            0.9867490850907434
+          ]
+        }
+      }
+    },
+    "winner_supply_bucket": {
+      "00-04": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.4891304347826087,
+            0.62
+          ],
+          "count": 96,
+          "game_block_standard_error": 0.03363568428205948,
+          "games": 13,
+          "mean": 0.5520833333333334,
+          "normal_confidence_95": [
+            0.4861573921404968,
+            0.6180092745261699
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.03823359613090512,
+            0.16302445978737742
+          ],
+          "count": 96,
+          "game_block_standard_error": 0.030427920814289404,
+          "games": 13,
+          "mean": 0.09545539779289018,
+          "normal_confidence_95": [
+            0.03581667299688295,
+            0.1550941225888974
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.028209329720724107,
+            0.15497389278067034
+          ],
+          "count": 96,
+          "game_block_standard_error": 0.03105251193471558,
+          "games": 13,
+          "mean": 0.0870474765057924,
+          "normal_confidence_95": [
+            0.02618455311374987,
+            0.14791039989783494
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 96,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 96,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 96,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.004102146392610887,
+            0.013540051327410619
+          ],
+          "count": 96,
+          "game_block_standard_error": 0.002745597270920028,
+          "games": 13,
+          "mean": 0.008407921287097775,
+          "normal_confidence_95": [
+            0.00302655063609452,
+            0.01378929193810103
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.32978723404255317,
+            0.5047619047619047
+          ],
+          "count": 96,
+          "game_block_standard_error": 0.042865490770417645,
+          "games": 13,
+          "mean": 0.4166666666666667,
+          "normal_confidence_95": [
+            0.3326503047566481,
+            0.5006830285766852
+          ]
+        }
+      },
+      "05-09": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.675,
+            0.7611464968152867
+          ],
+          "count": 311,
+          "game_block_standard_error": 0.023076093479448674,
+          "games": 13,
+          "mean": 0.7170418006430869,
+          "normal_confidence_95": [
+            0.6718126574233675,
+            0.7622709438628062
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.27722192803801,
+            0.37917797265015285
+          ],
+          "count": 311,
+          "game_block_standard_error": 0.0286200701812655,
+          "games": 13,
+          "mean": 0.320646853047964,
+          "normal_confidence_95": [
+            0.2645515154926836,
+            0.3767421906032444
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.2232832566292337,
+            0.3084599653325787
+          ],
+          "count": 311,
+          "game_block_standard_error": 0.023768003799641283,
+          "games": 13,
+          "mean": 0.25967771289569624,
+          "normal_confidence_95": [
+            0.21309242544839935,
+            0.30626300034299314
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.009841332940528167
+          ],
+          "count": 311,
+          "game_block_standard_error": 0.0029066045057020515,
+          "games": 13,
+          "mean": 0.003280444313509389,
+          "normal_confidence_95": [
+            -0.002416500517666632,
+            0.00897738914468541
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 311,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9807073954983923,
+            1.0
+          ],
+          "count": 311,
+          "game_block_standard_error": 0.0056980056980056966,
+          "games": 13,
+          "mean": 0.9935691318327974,
+          "normal_confidence_95": [
+            0.9824010406647062,
+            1.0047372230008886
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.04679612647787836,
+            0.0755889707907363
+          ],
+          "count": 311,
+          "game_block_standard_error": 0.00795632861066015,
+          "games": 13,
+          "mean": 0.06096914015226774,
+          "normal_confidence_95": [
+            0.045374736075373845,
+            0.07656354422916163
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5369774919614148,
+            0.6535947712418301
+          ],
+          "count": 311,
+          "game_block_standard_error": 0.03198101925961784,
+          "games": 13,
+          "mean": 0.5916398713826366,
+          "normal_confidence_95": [
+            0.5289570736337856,
+            0.6543226691314876
+          ]
+        }
+      },
+      "10+": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7539432176656151,
+            0.8142857142857143
+          ],
+          "count": 633,
+          "game_block_standard_error": 0.01637000877570915,
+          "games": 13,
+          "mean": 0.7851500789889415,
+          "normal_confidence_95": [
+            0.7530648617885516,
+            0.8172352961893314
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.4916449573630029,
+            0.5999737449416108
+          ],
+          "count": 633,
+          "game_block_standard_error": 0.028819476231000885,
+          "games": 13,
+          "mean": 0.5445383131398923,
+          "normal_confidence_95": [
+            0.4880521397271306,
+            0.6010244865526541
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.3572699157516422,
+            0.4466150897722588
+          ],
+          "count": 633,
+          "game_block_standard_error": 0.023800463970618163,
+          "games": 13,
+          "mean": 0.4002855956386971,
+          "normal_confidence_95": [
+            0.35363668625628547,
+            0.4469345050211087
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.00015776040984986548,
+            0.002920962494088023
+          ],
+          "count": 633,
+          "game_block_standard_error": 0.0007564744445743802,
+          "games": 13,
+          "mean": 0.0012861233257911592,
+          "normal_confidence_95": [
+            -0.0001965665855746259,
+            0.0027688132371569444
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9921011058451816,
+            1.0
+          ],
+          "count": 633,
+          "game_block_standard_error": 0.0021478752782383955,
+          "games": 13,
+          "mean": 0.9968404423380727,
+          "normal_confidence_95": [
+            0.9926306067927254,
+            1.0010502778834198
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9888,
+            0.998422712933754
+          ],
+          "count": 633,
+          "game_block_standard_error": 0.00272192061020507,
+          "games": 13,
+          "mean": 0.9936808846761453,
+          "normal_confidence_95": [
+            0.9883459202801435,
+            0.9990158490721472
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.12308581734915476,
+            0.16571775309171097
+          ],
+          "count": 633,
+          "game_block_standard_error": 0.011239125420058088,
+          "games": 13,
+          "mean": 0.14425271750119523,
+          "normal_confidence_95": [
+            0.12222403167788137,
+            0.16628140332450908
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.6305732484076433,
+            0.7236421725239617
+          ],
+          "count": 633,
+          "game_block_standard_error": 0.02513081339119334,
+          "games": 13,
+          "mean": 0.674565560821485,
+          "normal_confidence_95": [
+            0.6253091665747461,
+            0.7238219550682239
+          ]
+        }
+      }
+    },
+    "winner_visible_count": {
+      "1": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7076205287713841,
+            0.7674074074074074
+          ],
+          "count": 656,
+          "game_block_standard_error": 0.016429485696380558,
+          "games": 13,
+          "mean": 0.739329268292683,
+          "normal_confidence_95": [
+            0.7071274763277771,
+            0.7715310602575889
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.3639266783170994,
+            0.47377928216004866
+          ],
+          "count": 656,
+          "game_block_standard_error": 0.029155203565645195,
+          "games": 13,
+          "mean": 0.4209794139670867,
+          "normal_confidence_95": [
+            0.36383521497842214,
+            0.4781236129557513
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.2672036329419337,
+            0.35360765606241973
+          ],
+          "count": 656,
+          "game_block_standard_error": 0.023588972752177258,
+          "games": 13,
+          "mean": 0.31291476733812656,
+          "normal_confidence_95": [
+            0.26668038074385914,
+            0.359149153932394
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.00034680442221014107,
+            0.0063995329393669075
+          ],
+          "count": 656,
+          "game_block_standard_error": 0.0017305323064950044,
+          "games": 13,
+          "mean": 0.002796241229767109,
+          "normal_confidence_95": [
+            -0.0005956020909630997,
+            0.006188084550497318
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9923547400611621,
+            1.0
+          ],
+          "count": 656,
+          "game_block_standard_error": 0.002104469626333435,
+          "games": 13,
+          "mean": 0.9969512195121951,
+          "normal_confidence_95": [
+            0.9928264590445816,
+            1.0010759799798086
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.9832826747720365,
+            0.9969742813918305
+          ],
+          "count": 656,
+          "game_block_standard_error": 0.003757090057380877,
+          "games": 13,
+          "mean": 0.9908536585365854,
+          "normal_confidence_95": [
+            0.9834897620241189,
+            0.9982175550490519
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.08793831264503471,
+            0.1293659138067481
+          ],
+          "count": 656,
+          "game_block_standard_error": 0.011245094317313797,
+          "games": 13,
+          "mean": 0.10806464662896018,
+          "normal_confidence_95": [
+            0.08602426176702513,
+            0.13010503149089522
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5736196319018405,
+            0.6570996978851964
+          ],
+          "count": 656,
+          "game_block_standard_error": 0.02322528786380432,
+          "games": 13,
+          "mean": 0.6189024390243902,
+          "normal_confidence_95": [
+            0.5733808748113338,
+            0.6644240032374467
+          ]
+        }
+      },
+      "2": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7142857142857143,
+            0.7963917525773195
+          ],
+          "count": 380,
+          "game_block_standard_error": 0.021034811698121124,
+          "games": 13,
+          "mean": 0.7526315789473684,
+          "normal_confidence_95": [
+            0.711403348019051,
+            0.7938598098756858
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.40990008808465933,
+            0.5207321656227692
+          ],
+          "count": 380,
+          "game_block_standard_error": 0.03231271944356257,
+          "games": 13,
+          "mean": 0.4645188575195632,
+          "normal_confidence_95": [
+            0.40118592741018055,
+            0.5278517876289458
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.30664477541344626,
+            0.4189509277956428
+          ],
+          "count": 380,
+          "game_block_standard_error": 0.032037937046112554,
+          "games": 13,
+          "mean": 0.35875537062331225,
+          "normal_confidence_95": [
+            0.2959610140129316,
+            0.4215497272336929
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 380,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 380,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 380,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.08238442338529671,
+            0.1315870094438387
+          ],
+          "count": 380,
+          "game_block_standard_error": 0.013361586787690283,
+          "games": 13,
+          "mean": 0.10576348689625092,
+          "normal_confidence_95": [
+            0.07957477679237797,
+            0.13195219700012387
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.6016949152542372,
+            0.6842105263157895
+          ],
+          "count": 380,
+          "game_block_standard_error": 0.021386656836726047,
+          "games": 13,
+          "mean": 0.6394736842105263,
+          "normal_confidence_95": [
+            0.5975558368105433,
+            0.6813915316105094
+          ]
+        }
+      },
+      "3": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.0,
+            1.0
+          ],
+          "count": 4,
+          "game_block_standard_error": 0.28867513459481287,
+          "games": 4,
+          "mean": 0.5,
+          "normal_confidence_95": [
+            -0.06580326380583323,
+            1.0658032638058332
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.4610550602317858
+          ],
+          "count": 4,
+          "game_block_standard_error": 0.12987199681883163,
+          "games": 4,
+          "mean": 0.22449507093579513,
+          "normal_confidence_95": [
+            -0.03005404282911489,
+            0.47904418470070514
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.46239560671625196
+          ],
+          "count": 4,
+          "game_block_standard_error": 0.12987199681883163,
+          "games": 4,
+          "mean": 0.22449507093579513,
+          "normal_confidence_95": [
+            -0.03005404282911489,
+            0.47904418470070514
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 4,
+          "game_block_standard_error": 0.0,
+          "games": 4,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 4,
+          "game_block_standard_error": 0.0,
+          "games": 4,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 4,
+          "game_block_standard_error": 0.0,
+          "games": 4,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 4,
+          "game_block_standard_error": 0.0,
+          "games": 4,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.0,
+            1.0
+          ],
+          "count": 4,
+          "game_block_standard_error": 0.28867513459481287,
+          "games": 4,
+          "mean": 0.5,
+          "normal_confidence_95": [
+            -0.06580326380583323,
+            1.0658032638058332
+          ]
+        }
+      }
+    },
+    "winner_wildlife": {
+      "Bear": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.7431879700404486,
+            0.850909090909091
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.031175250979248132,
+          "games": 13,
+          "mean": 0.8014981273408239,
+          "normal_confidence_95": [
+            0.7403946354214976,
+            0.8626016192601502
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.5132952491356008,
+            0.763324011299621
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.06733495855292106,
+          "games": 13,
+          "mean": 0.6393502025252651,
+          "normal_confidence_95": [
+            0.5073736837615398,
+            0.7713267212889904
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.4231995472221632,
+            0.6576499385087569
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.06265525984937267,
+          "games": 13,
+          "mean": 0.540160212634358,
+          "normal_confidence_95": [
+            0.41735590332958755,
+            0.6629645219391285
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0009055824977215244,
+            0.015801505708489535
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.004170472715251133,
+          "games": 13,
+          "mean": 0.006870165718079489,
+          "normal_confidence_95": [
+            -0.0013039608038127315,
+            0.01504429223997171
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            0.9809885931558935,
+            1.0
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.005636511059892792,
+          "games": 13,
+          "mean": 0.9925093632958801,
+          "normal_confidence_95": [
+            0.9814618016184903,
+            1.00355692497327
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            0.959409594095941,
+            0.9927272727272727
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.009089967947210897,
+          "games": 13,
+          "mean": 0.9775280898876404,
+          "normal_confidence_95": [
+            0.959711752711107,
+            0.9953444270641738
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.07946676166824672,
+            0.12337252130685543
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.012341907851976688,
+          "games": 13,
+          "mean": 0.09918998989090687,
+          "normal_confidence_95": [
+            0.07499985050103256,
+            0.12338012928078118
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.6133828996282528,
+            0.7700348432055749
+          ],
+          "count": 267,
+          "game_block_standard_error": 0.0422016954272154,
+          "games": 13,
+          "mean": 0.6966292134831461,
+          "normal_confidence_95": [
+            0.6139138904458039,
+            0.7793445365204883
+          ]
+        }
+      },
+      "Elk": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.6836158192090396,
+            0.8340807174887892
+          ],
+          "count": 189,
+          "game_block_standard_error": 0.04183396001055622,
+          "games": 13,
+          "mean": 0.7619047619047619,
+          "normal_confidence_95": [
+            0.6799102002840717,
+            0.843899323525452
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.28675232541485757,
+            0.3984920738263038
+          ],
+          "count": 189,
+          "game_block_standard_error": 0.030535696656332545,
+          "games": 13,
+          "mean": 0.3484686289663254,
+          "normal_confidence_95": [
+            0.2886186635199136,
+            0.4083185944127372
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.2044269420453679,
+            0.29107847652634644
+          ],
+          "count": 189,
+          "game_block_standard_error": 0.023637860540476886,
+          "games": 13,
+          "mean": 0.2533245923141169,
+          "normal_confidence_95": [
+            0.20699438565478223,
+            0.2996547989734516
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 189,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 189,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 189,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.07212842238727249,
+            0.11651714958518206
+          ],
+          "count": 189,
+          "game_block_standard_error": 0.013051259691297105,
+          "games": 13,
+          "mean": 0.09514403665220847,
+          "normal_confidence_95": [
+            0.06956356765726615,
+            0.12072450564715079
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5151469787697333,
+            0.6854460093896714
+          ],
+          "count": 189,
+          "game_block_standard_error": 0.042094713002143326,
+          "games": 13,
+          "mean": 0.6084656084656085,
+          "normal_confidence_95": [
+            0.5259599709814076,
+            0.6909712459498094
+          ]
+        }
+      },
+      "Fox": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.6587677725118484,
+            0.7755102040816326
+          ],
+          "count": 208,
+          "game_block_standard_error": 0.029358232463908937,
+          "games": 13,
+          "mean": 0.7163461538461539,
+          "normal_confidence_95": [
+            0.6588040182168924,
+            0.7738882894754153
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.31697146423732253,
+            0.4778649035296456
+          ],
+          "count": 208,
+          "game_block_standard_error": 0.04010726984749039,
+          "games": 13,
+          "mean": 0.39492292128857687,
+          "normal_confidence_95": [
+            0.3163126723874957,
+            0.473533170189658
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.2236500346257049,
+            0.3191596073994459
+          ],
+          "count": 208,
+          "game_block_standard_error": 0.024304655003265452,
+          "games": 13,
+          "mean": 0.2700186754984275,
+          "normal_confidence_95": [
+            0.22238155169202722,
+            0.3176557993048278
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 208,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 208,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 208,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.0788773473547917,
+            0.177291054829425
+          ],
+          "count": 208,
+          "game_block_standard_error": 0.02652746668479166,
+          "games": 13,
+          "mean": 0.12490424579014937,
+          "normal_confidence_95": [
+            0.07291041108795772,
+            0.17689808049234101
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5661375661375662,
+            0.675
+          ],
+          "count": 208,
+          "game_block_standard_error": 0.02942681340848575,
+          "games": 13,
+          "mean": 0.6201923076923077,
+          "normal_confidence_95": [
+            0.5625157534116756,
+            0.6778688619729398
+          ]
+        }
+      },
+      "Hawk": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.6385542168674698,
+            0.7559523809523809
+          ],
+          "count": 172,
+          "game_block_standard_error": 0.03372698412503368,
+          "games": 13,
+          "mean": 0.6976744186046512,
+          "normal_confidence_95": [
+            0.6315695297195851,
+            0.7637793074897172
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.3087036409962127,
+            0.3973025691866253
+          ],
+          "count": 172,
+          "game_block_standard_error": 0.021022687247486613,
+          "games": 13,
+          "mean": 0.3537793068982412,
+          "normal_confidence_95": [
+            0.3125748398931675,
+            0.39498377390331496
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.2080157549016245,
+            0.2844107431594468
+          ],
+          "count": 172,
+          "game_block_standard_error": 0.018846416435528115,
+          "games": 13,
+          "mean": 0.24655503620044616,
+          "normal_confidence_95": [
+            0.20961605998681107,
+            0.2834940124140813
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 172,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 172,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 172,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.07628366793418634,
+            0.13777426426336825
+          ],
+          "count": 172,
+          "game_block_standard_error": 0.01547080979363405,
+          "games": 13,
+          "mean": 0.10722427069779503,
+          "normal_confidence_95": [
+            0.07690148350227229,
+            0.13754705789331775
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.47674418604651164,
+            0.625
+          ],
+          "count": 172,
+          "game_block_standard_error": 0.03974952992500995,
+          "games": 13,
+          "mean": 0.5523255813953488,
+          "normal_confidence_95": [
+            0.4744165027423293,
+            0.6302346600483684
+          ]
+        }
+      },
+      "Salmon": {
+        "action_change_rate": {
+          "bootstrap_confidence_95": [
+            0.6714285714285714,
+            0.7635467980295566
+          ],
+          "count": 204,
+          "game_block_standard_error": 0.02420064078226439,
+          "games": 13,
+          "mean": 0.7156862745098039,
+          "normal_confidence_95": [
+            0.6682530185765657,
+            0.7631195304430421
+          ]
+        },
+        "champion_regret": {
+          "bootstrap_confidence_95": [
+            0.30763266008699097,
+            0.42618805257256503
+          ],
+          "count": 204,
+          "game_block_standard_error": 0.03201720799499809,
+          "games": 13,
+          "mean": 0.3628262663734478,
+          "normal_confidence_95": [
+            0.3000725387032515,
+            0.42557999404364405
+          ]
+        },
+        "frontier_regret": {
+          "bootstrap_confidence_95": [
+            0.21265713179294268,
+            0.2979161734409395
+          ],
+          "count": 204,
+          "game_block_standard_error": 0.023273317986093202,
+          "games": 13,
+          "mean": 0.25404231884079154,
+          "normal_confidence_95": [
+            0.20842661558804887,
+            0.2996580220935342
+          ]
+        },
+        "retained_screen_regret": {
+          "bootstrap_confidence_95": [
+            0.0,
+            0.0
+          ],
+          "count": 204,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 0.0,
+          "normal_confidence_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "screen_or_frontier_union_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 204,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "screen_recall": {
+          "bootstrap_confidence_95": [
+            1.0,
+            1.0
+          ],
+          "count": 204,
+          "game_block_standard_error": 0.0,
+          "games": 13,
+          "mean": 1.0,
+          "normal_confidence_95": [
+            1.0,
+            1.0
+          ]
+        },
+        "selection_regret": {
+          "bootstrap_confidence_95": [
+            0.08397738637348438,
+            0.13509677096435319
+          ],
+          "count": 204,
+          "game_block_standard_error": 0.013156861462781978,
+          "games": 13,
+          "mean": 0.10878394753265627,
+          "normal_confidence_95": [
+            0.0829964990656036,
+            0.13457139599970894
+          ]
+        },
+        "winner_outside_frontier_rate": {
+          "bootstrap_confidence_95": [
+            0.5748792270531401,
+            0.6614583333333334
+          ],
+          "count": 204,
+          "game_block_standard_error": 0.023239413022682086,
+          "games": 13,
+          "mean": 0.6176470588235294,
+          "normal_confidence_95": [
+            0.5720978092990725,
+            0.6631963083479864
+          ]
+        }
+      }
+    }
+  },
+  "dominant_error": {
+    "components": {
+      "proposal_frontier_regret": {
+        "bootstrap_confidence_95": [
+          0.29844300521056133,
+          0.36113908744583306
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.016561817873300435,
+        "games": 13,
+        "mean": 0.3293241427830893,
+        "normal_confidence_95": [
+          0.29686297975142045,
+          0.36178530581475815
+        ]
+      },
+      "top64_truncation_regret": {
+        "bootstrap_confidence_95": [
+          0.0002395417795674631,
+          0.003976857932514614
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.0010250967655148636,
+        "games": 13,
+        "mean": 0.0017637829295454074,
+        "normal_confidence_95": [
+          -0.0002454067308637251,
+          0.00377297258995454
+        ]
+      },
+      "within_frontier_selection_regret": {
+        "bootstrap_confidence_95": [
+          0.09423996676908646,
+          0.1198106970924376
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.006828530449228998,
+        "games": 13,
+        "mean": 0.1068082050088204,
+        "normal_confidence_95": [
+          0.09342428532833157,
+          0.12019212468930925
+        ]
+      }
+    },
+    "name": "proposal_frontier_regret",
+    "required_for_substantive_gate": false,
+    "runner_up": "within_frontier_selection_regret",
+    "supported_by_nonoverlapping_bootstrap_intervals": true
+  },
+  "experiment_id": "full-legal-screen-width-recovery-v1-20260615",
+  "frontier_bookkeeping": {
+    "analysis_uses_best_r4800_frontier_finalist": true,
+    "decisions_where_champion_beat_r1200_best_frontier_at_r4800": 39,
+    "raw_r1200_selected_frontier_regret_mean": 0.32932414278308925
+  },
+  "generated_at": "2026-06-16T00:50:26+00:00",
+  "host_utilization": {
+    "john1": {
+      "assigned_games": 5,
+      "completed_games": 5,
+      "failures_or_retries_observed": 0,
+      "idle_with_work_queued_seconds": 0.0,
+      "maximum_resident_bytes": 753778688,
+      "measured_process_wall_seconds": 1479.05,
+      "process_swaps": null,
+      "productive_wall_seconds": 1830.0891663329999,
+      "runner_overhead_seconds": 0.0,
+      "system_swap_after": {
+        "raw": "total = 3072.00M  used = 2350.38M  free = 721.62M  (encrypted)",
+        "sha256": "93326e6677ace561bd300219dcadb8b2ee0b4028ac17668bf71a7c0ac4f1bb9c",
+        "used_bytes": 2464552058
+      },
+      "system_swap_before": {
+        "raw": "total = 3072.00M  used = 2350.38M  free = 721.62M  (encrypted)",
+        "sha256": "93326e6677ace561bd300219dcadb8b2ee0b4028ac17668bf71a7c0ac4f1bb9c",
+        "used_bytes": 2464552058
+      },
+      "system_swap_delta_bytes": 0,
+      "timing_telemetry_complete": false,
+      "timings": [
+        {
+          "maximum_resident_bytes": 753778688,
+          "real_seconds": 384.64,
+          "seed": 61000,
+          "sha256": "b1668d170a1e00938706a67404a2f9da957ca557ea9d18f48d976a58f793ef7a",
+          "swaps": 0,
+          "system_seconds": 264.05,
+          "user_seconds": 1839.32
+        },
+        {
+          "maximum_resident_bytes": 687226880,
+          "real_seconds": 389.28,
+          "seed": 61001,
+          "sha256": "f60f8b9e0c0fc8c0ea5eb1fd965367e04be561e83b229dd0e90a266016e06811",
+          "swaps": 0,
+          "system_seconds": 249.78,
+          "user_seconds": 1710.36
+        },
+        {
+          "maximum_resident_bytes": 649183232,
+          "real_seconds": 345.78,
+          "seed": 61002,
+          "sha256": "80165b982f1e24ba44c1c7291d8fbcc610044b7f941e8ef842b289b10a5cd8a4",
+          "swaps": 0,
+          "system_seconds": 238.91,
+          "user_seconds": 1619.79
+        },
+        {
+          "maximum_resident_bytes": 677232640,
+          "real_seconds": 359.35,
+          "seed": 61003,
+          "sha256": "ded24de684461697277539268c1d07576e6b5771df5ec51356e27bdd3ff24fcc",
+          "swaps": 0,
+          "system_seconds": 250.64,
+          "user_seconds": 1697.71
+        },
+        {
+          "maximum_resident_bytes": null,
+          "real_seconds": null,
+          "seed": 61004,
+          "sha256": "5d8451d5bdc38a3c322edeb7043e634a2dab29c4bec606f75bea982e0bfe95f2",
+          "swaps": null,
+          "system_seconds": null,
+          "user_seconds": null
+        }
+      ]
+    },
+    "john2": {
+      "assigned_games": 4,
+      "completed_games": 4,
+      "failures_or_retries_observed": 0,
+      "idle_with_work_queued_seconds": 0.0,
+      "maximum_resident_bytes": 728809472,
+      "measured_process_wall_seconds": 1460.77,
+      "process_swaps": 0,
+      "productive_wall_seconds": 1459.00226004,
+      "runner_overhead_seconds": 1.7677399599999717,
+      "system_swap_after": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_before": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_delta_bytes": 0,
+      "timing_telemetry_complete": true,
+      "timings": [
+        {
+          "maximum_resident_bytes": 720961536,
+          "real_seconds": 358.84,
+          "seed": 61005,
+          "sha256": "4f2a792edcee4e92ac17d3db4987a84b68ddd22bbebaecae33839aa39f3ff79e",
+          "swaps": 0,
+          "system_seconds": 227.35,
+          "user_seconds": 1840.6
+        },
+        {
+          "maximum_resident_bytes": 696516608,
+          "real_seconds": 360.57,
+          "seed": 61006,
+          "sha256": "3283afc7332152e5a9bf5000ed26f9b903d53199c711000b236ca9cd87e7e36a",
+          "swaps": 0,
+          "system_seconds": 227.18,
+          "user_seconds": 1891.35
+        },
+        {
+          "maximum_resident_bytes": 728809472,
+          "real_seconds": 380.7,
+          "seed": 61007,
+          "sha256": "66635af70b26debd89e0ac2ac500caec8a68d54e888101514389e5e74cbfc6a4",
+          "swaps": 0,
+          "system_seconds": 234.68,
+          "user_seconds": 1984.2
+        },
+        {
+          "maximum_resident_bytes": 672546816,
+          "real_seconds": 360.66,
+          "seed": 61008,
+          "sha256": "c592cc6fd17ef6c6c061fe61d3d882aa5a548ef7f232b558a7d9f0a4af61fbe5",
+          "swaps": 0,
+          "system_seconds": 229.47,
+          "user_seconds": 1889.94
+        }
+      ]
+    },
+    "john3": {
+      "assigned_games": 4,
+      "completed_games": 4,
+      "failures_or_retries_observed": 0,
+      "idle_with_work_queued_seconds": 0.0,
+      "maximum_resident_bytes": 755400704,
+      "measured_process_wall_seconds": 1458.8400000000001,
+      "process_swaps": 0,
+      "productive_wall_seconds": 1457.133668999,
+      "runner_overhead_seconds": 1.7063310010000805,
+      "system_swap_after": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_before": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_delta_bytes": 0,
+      "timing_telemetry_complete": true,
+      "timings": [
+        {
+          "maximum_resident_bytes": 741687296,
+          "real_seconds": 376.07,
+          "seed": 61009,
+          "sha256": "8da435e70eb70215f6b2408ca64ea0c15d7cc38315480e7fe071f03d90318c74",
+          "swaps": 0,
+          "system_seconds": 232.49,
+          "user_seconds": 1865.41
+        },
+        {
+          "maximum_resident_bytes": 755400704,
+          "real_seconds": 358.82,
+          "seed": 61010,
+          "sha256": "0b2107bb62e657331b09459a9d36b8abe8398669784238e06a24b391532e58f3",
+          "swaps": 0,
+          "system_seconds": 227.19,
+          "user_seconds": 1801.56
+        },
+        {
+          "maximum_resident_bytes": 717176832,
+          "real_seconds": 353.29,
+          "seed": 61011,
+          "sha256": "89326a4894e81286766613251c2b1134ec156f1d7ff7c55eb469fee2fcd0530d",
+          "swaps": 0,
+          "system_seconds": 216.73,
+          "user_seconds": 1789.65
+        },
+        {
+          "maximum_resident_bytes": 701562880,
+          "real_seconds": 370.66,
+          "seed": 61012,
+          "sha256": "3ed201f58ce456ef6ad3ef9650fd7069de9e16d891658f8683234920cf9d2d91",
+          "swaps": 0,
+          "system_seconds": 233.58,
+          "user_seconds": 1886.27
+        }
+      ]
+    }
+  },
+  "paid_wipe": {
+    "decisions": 0,
+    "expected_gain_over_stop": {
+      "bootstrap_confidence_95": [
+        null,
+        null
+      ],
+      "count": 0,
+      "game_block_standard_error": null,
+      "games": 0,
+      "mean": null,
+      "normal_confidence_95": [
+        null,
+        null
+      ]
+    },
+    "positive_expected_gain_decisions": 0,
+    "preferred_probability": {
+      "bootstrap_confidence_95": [
+        null,
+        null
+      ],
+      "count": 0,
+      "game_block_standard_error": null,
+      "games": 0,
+      "mean": null,
+      "normal_confidence_95": [
+        null,
+        null
+      ]
+    },
+    "recursive_followup_decisions": 0
+  },
+  "provenance": {
+    "executable_blake3": "77a2f83d6b3b7ff09bf85180da96b18c0611eb28bf8646254e100f587ef34b69",
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65",
+    "v2_source_blake3": "46a98e935a2b72e76ee152b9f62ed30ec804d22ddee79d4bd1aa4ada9af3ae4b"
+  },
+  "public_decision_regret": {
+    "best_champion_frontier": {
+      "bootstrap_confidence_95": [
+        0.29844300521056133,
+        0.36113908744583306
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.016561817873300435,
+      "games": 13,
+      "mean": 0.3293241427830893,
+      "normal_confidence_95": [
+        0.29686297975142045,
+        0.36178530581475815
+      ]
+    },
+    "champion": {
+      "bootstrap_confidence_95": [
+        0.4003888729785767,
+        0.4721338412066077
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.019154974793568442,
+      "games": 13,
+      "mean": 0.4361323477919097,
+      "normal_confidence_95": [
+        0.3985885971965155,
+        0.47367609838730385
+      ]
+    },
+    "champion_action_change_rate": {
+      "bootstrap_confidence_95": [
+        0.7173076923076923,
+        0.7682692307692308
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.013620852154407552,
+      "games": 13,
+      "mean": 0.7432692307692308,
+      "normal_confidence_95": [
+        0.716572360546592,
+        0.7699661009918696
+      ]
+    },
+    "first_order_20_turn_headroom_points": 8.722646955838194,
+    "first_order_headroom_is_not_online_oracle_evidence": true,
+    "maximum_observed_winner_screen_rank": 3181,
+    "rank_stratified_sentinel_winner_rate": {
+      "bootstrap_confidence_95": [
+        0.0,
+        0.004807692307692308
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0013019292315121732,
+      "games": 13,
+      "mean": 0.0019230769230769232,
+      "normal_confidence_95": [
+        -0.0006287043706869363,
+        0.004474858216840783
+      ]
+    },
+    "retained_screen": {
+      "bootstrap_confidence_95": [
+        0.0002395417795674631,
+        0.003976857932514614
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0010250967655148636,
+      "games": 13,
+      "mean": 0.0017637829295454074,
+      "normal_confidence_95": [
+        -0.0002454067308637251,
+        0.00377297258995454
+      ]
+    },
+    "retained_top64": {
+      "bootstrap_confidence_95": [
+        0.0002395417795674631,
+        0.003976857932514614
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0010250967655148636,
+      "games": 13,
+      "mean": 0.0017637829295454074,
+      "normal_confidence_95": [
+        -0.0002454067308637251,
+        0.00377297258995454
+      ]
+    },
+    "screen_limit": 1024,
+    "screen_or_champion_frontier_union_recall": {
+      "bootstrap_confidence_95": [
+        0.9951923076923077,
+        1.0
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0013019292315121689,
+      "games": 13,
+      "mean": 0.9980769230769231,
+      "normal_confidence_95": [
+        0.9955251417831592,
+        1.000628704370687
+      ]
+    },
+    "screen_rank_recall_curve": {
+      "1024": {
+        "bootstrap_confidence_95": [
+          0.989423076923077,
+          0.9980769230769231
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.0022889193681227067,
+        "games": 13,
+        "mean": 0.9942307692307693,
+        "normal_confidence_95": [
+          0.9897444872692488,
+          0.9987170511922897
+        ]
+      },
+      "128": {
+        "bootstrap_confidence_95": [
+          0.8028846153846154,
+          0.8471153846153846
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.011925919843037858,
+        "games": 13,
+        "mean": 0.825,
+        "normal_confidence_95": [
+          0.8016251971076458,
+          0.8483748028923541
+        ]
+      },
+      "2048": {
+        "bootstrap_confidence_95": [
+          0.9942307692307693,
+          1.0
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.0015203257981578693,
+        "games": 13,
+        "mean": 0.9971153846153846,
+        "normal_confidence_95": [
+          0.9941355460509952,
+          1.000095223179774
+        ]
+      },
+      "256": {
+        "bootstrap_confidence_95": [
+          0.8807692307692307,
+          0.9144230769230769
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.008934205041516895,
+        "games": 13,
+        "mean": 0.8980769230769231,
+        "normal_confidence_95": [
+          0.88056588119555,
+          0.9155879649582962
+        ]
+      },
+      "512": {
+        "bootstrap_confidence_95": [
+          0.9403846153846154,
+          0.9625
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.0059790891365953955,
+        "games": 13,
+        "mean": 0.9519230769230769,
+        "normal_confidence_95": [
+          0.9402040622153499,
+          0.9636420916308038
+        ]
+      },
+      "64": {
+        "bootstrap_confidence_95": [
+          0.6740384615384616,
+          0.7307692307692307
+        ],
+        "count": 1040,
+        "game_block_standard_error": 0.015137233833373676,
+        "games": 13,
+        "mean": 0.7038461538461539,
+        "normal_confidence_95": [
+          0.6741771755327415,
+          0.7335151321595663
+        ]
+      }
+    },
+    "screen_recall": {
+      "bootstrap_confidence_95": [
+        0.989423076923077,
+        0.9980769230769231
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0022889193681227067,
+      "games": 13,
+      "mean": 0.9942307692307693,
+      "normal_confidence_95": [
+        0.9897444872692488,
+        0.9987170511922897
+      ]
+    },
+    "smallest_observed_width_at_98_percent": 1024,
+    "top64_or_champion_frontier_union_recall": {
+      "bootstrap_confidence_95": [
+        0.9951923076923077,
+        1.0
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0013019292315121689,
+      "games": 13,
+      "mean": 0.9980769230769231,
+      "normal_confidence_95": [
+        0.9955251417831592,
+        1.000628704370687
+      ]
+    },
+    "top64_recall": {
+      "bootstrap_confidence_95": [
+        0.989423076923077,
+        0.9980769230769231
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0022889193681227067,
+      "games": 13,
+      "mean": 0.9942307692307693,
+      "normal_confidence_95": [
+        0.9897444872692488,
+        0.9987170511922897
+      ]
+    },
+    "winner_outside_champion_frontier_rate": {
+      "bootstrap_confidence_95": [
+        0.5942307692307692,
+        0.6567307692307692
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.016774184754012215,
+      "games": 13,
+      "mean": 0.6259615384615385,
+      "normal_confidence_95": [
+        0.5930841363436745,
+        0.6588389405794024
+      ]
+    },
+    "within_frontier_selection": {
+      "bootstrap_confidence_95": [
+        0.09423996676908646,
+        0.1198106970924376
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.006828530449228998,
+      "games": 13,
+      "mean": 0.1068082050088204,
+      "normal_confidence_95": [
+        0.09342428532833157,
+        0.12019212468930925
+      ]
+    }
+  },
+  "realized_hidden_future": {
+    "champion_hindsight_regret": {
+      "bootstrap_confidence_95": [
+        null,
+        null
+      ],
+      "count": 0,
+      "game_block_standard_error": null,
+      "games": 0,
+      "mean": null,
+      "normal_confidence_95": [
+        null,
+        null
+      ]
+    },
+    "decisions": 0,
+    "never_used_for_public_selection": true,
+    "public_hindsight_regret": {
+      "bootstrap_confidence_95": [
+        null,
+        null
+      ],
+      "count": 0,
+      "game_block_standard_error": null,
+      "games": 0,
+      "mean": null,
+      "normal_confidence_95": [
+        null,
+        null
+      ]
+    },
+    "public_winner_match_rate": {
+      "bootstrap_confidence_95": [
+        null,
+        null
+      ],
+      "count": 0,
+      "game_block_standard_error": null,
+      "games": 0,
+      "mean": null,
+      "normal_confidence_95": [
+        null,
+        null
+      ]
+    }
+  },
+  "rules_protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "schema_version": 1,
+  "screen_contract": {
+    "algorithm": "sha256-canonical-json-v1",
+    "by_seed": {
+      "61000": "bee60e3806419601a74ab88e5ec653df0d0ee92d4ffbe0edf751f29898006b5e",
+      "61001": "354f990bd4e33a3eb584c7a6a16edc0343e49f5b2e88fc96c94a06fd14b2651d",
+      "61002": "72bedb85906dc13f19775eaea5cceb750e94c8b4ce6d31f59b48d671d67b9e86",
+      "61003": "b2a2d9c0c4505240635128b5e81e36e7b0a24d8037052935b32338562ad160f3",
+      "61004": "9cda92cdcdf716818a9a9f000675e7e379fa26d62f43887f7ea8582e27dabe22",
+      "61005": "2b9ab237b11937621635a862ed5cb02f0605747ba870a707cea00923a12417f2",
+      "61006": "d31195191f9467895adef6c665ecc700e1e27263aae4cfb2e61b6a67eebdd608",
+      "61007": "7aba09092e9f775df99763b24ac6930f127cc0f4aa00c567f4c8fb22a9c5605e",
+      "61008": "281927c4081e2fa6d3f89b516a4b6874480c10dc40cff43db70b8e702c83c03c",
+      "61009": "24909f97ad5881be2120a240c414193d03658c38e561c4a77aef2a1e65d7de31",
+      "61010": "599e99c7f06455ad44dcae75b9539452252ac057aed68c5c87fad14c340d6831",
+      "61011": "a24d8d1da7589c8255095bd8a33bd046836d3dbe14aae4d151831c76aac97391",
+      "61012": "1c2c70cb30a02ff4f1eea417c2464a983c22ea71b9a1bfa159cf456f4e894f3b"
+    },
+    "mismatched_seeds": [],
+    "pairing_passed": true,
+    "pairing_required": true,
+    "reference_by_seed": {
+      "61000": "bee60e3806419601a74ab88e5ec653df0d0ee92d4ffbe0edf751f29898006b5e",
+      "61001": "354f990bd4e33a3eb584c7a6a16edc0343e49f5b2e88fc96c94a06fd14b2651d",
+      "61002": "72bedb85906dc13f19775eaea5cceb750e94c8b4ce6d31f59b48d671d67b9e86",
+      "61003": "b2a2d9c0c4505240635128b5e81e36e7b0a24d8037052935b32338562ad160f3",
+      "61004": "9cda92cdcdf716818a9a9f000675e7e379fa26d62f43887f7ea8582e27dabe22",
+      "61005": "2b9ab237b11937621635a862ed5cb02f0605747ba870a707cea00923a12417f2",
+      "61006": "d31195191f9467895adef6c665ecc700e1e27263aae4cfb2e61b6a67eebdd608",
+      "61007": "7aba09092e9f775df99763b24ac6930f127cc0f4aa00c567f4c8fb22a9c5605e",
+      "61008": "281927c4081e2fa6d3f89b516a4b6874480c10dc40cff43db70b8e702c83c03c",
+      "61009": "24909f97ad5881be2120a240c414193d03658c38e561c4a77aef2a1e65d7de31",
+      "61010": "599e99c7f06455ad44dcae75b9539452252ac057aed68c5c87fad14c340d6831",
+      "61011": "a24d8d1da7589c8255095bd8a33bd046836d3dbe14aae4d151831c76aac97391",
+      "61012": "1c2c70cb30a02ff4f1eea417c2464a983c22ea71b9a1bfa159cf456f4e894f3b"
+    }
+  },
+  "screen_miss_breakdown": {
+    "misses_discovered_by_rank_stratified_sentinel": 2,
+    "misses_recovered_by_champion_frontier": 4,
+    "screen_misses": 6,
+    "top64_misses": 6,
+    "winner_screen_rank_over_1024": 6,
+    "winner_screen_rank_over_128": 182,
+    "winner_screen_rank_over_256": 106
+  },
+  "source_context": {
+    "git_revision": [
+      "310df03699aeb9a5c06dafc8c32f5c33f717b354",
+      "unavailable"
+    ],
+    "git_status_blake3": [
+      "7059b781fb84a4f8014368a55134c9cc1329f2973c53c637965715788567d97c",
+      "7f794533d739d317716905c9ab73bf902be53eca7ef927f59925fd2bee5ced2d",
+      "a4a999c50f0a2ae30f157b7336bb978624e0851078be418f8ad2d9e56bce706e",
+      "abaa4cd000d60a99ff6f558595957e121c6d16186553692882774e6f914fbb40"
+    ]
+  },
+  "status": "complete",
+  "substantive_gates": {
+    "all_decisions_complete": true,
+    "all_games_complete": true,
+    "dominant_error_source_supported_by_game_block_ci": true,
+    "every_action_screened": true,
+    "exact_screen_contract_pairing": true,
+    "paid_wipe_diagnostic_complete": true,
+    "realized_hidden_diagnostic_complete": true,
+    "retained_screen_mean_regret_at_most_0_15": true,
+    "screen_recall_at_least_98_percent": true,
+    "single_frozen_executable_model_source_set": true
+  },
+  "substantive_gates_passed": true,
+  "timings": {
+    "champion_seconds": {
+      "bootstrap_confidence_95": [
+        0.23373480112947118,
+        0.2424038758674039
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0023101714530905522,
+      "games": 13,
+      "mean": 0.23808954940769234,
+      "normal_confidence_95": [
+        0.23356161335963485,
+        0.24261748545574982
+      ]
+    },
+    "enumeration_seconds": {
+      "bootstrap_confidence_95": [
+        0.0039105935496875,
+        0.004433948202091346
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.00014050771003078908,
+      "games": 13,
+      "mean": 0.004184392145192308,
+      "normal_confidence_95": [
+        0.003908997033531962,
+        0.004459787256852654
+      ]
+    },
+    "high_confidence_seconds": {
+      "bootstrap_confidence_95": [
+        1.4406404164278848,
+        1.4790692554823797
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.010246020907508983,
+      "games": 13,
+      "mean": 1.460255942021154,
+      "normal_confidence_95": [
+        1.4401737410424365,
+        1.4803381429998717
+      ]
+    },
+    "paid_wipe_seconds": {
+      "bootstrap_confidence_95": [
+        5.721536057692307e-08,
+        7.13298076923077e-08
+      ],
+      "count": 1040,
+      "game_block_standard_error": 3.734818257778958e-09,
+      "games": 13,
+      "mean": 6.410673076923078e-08,
+      "normal_confidence_95": [
+        5.678648698398402e-08,
+        7.142697455447754e-08
+      ]
+    },
+    "realized_hidden_seconds": {
+      "bootstrap_confidence_95": [
+        5.0082668269230765e-08,
+        6.173079326923077e-08
+      ],
+      "count": 1040,
+      "game_block_standard_error": 3.116300909884466e-09,
+      "games": 13,
+      "mean": 5.560576923076924e-08,
+      "normal_confidence_95": [
+        4.9497819447395685e-08,
+        6.17137190141428e-08
+      ]
+    },
+    "screening_seconds": {
+      "bootstrap_confidence_95": [
+        0.02432888248442308,
+        0.026562797486682697
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.0005900008907792108,
+      "games": 13,
+      "mean": 0.02539959268557692,
+      "normal_confidence_95": [
+        0.02424319093964967,
+        0.026555994431504172
+      ]
+    },
+    "substantial_seconds": {
+      "bootstrap_confidence_95": [
+        2.758340113827548,
+        2.9164627289864664
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.04212572049248519,
+      "games": 13,
+      "mean": 2.834865657969231,
+      "normal_confidence_95": [
+        2.7522992458039597,
+        2.917432070134502
+      ]
+    },
+    "total_seconds": {
+      "bootstrap_confidence_95": [
+        4.479808391460746,
+        4.652567820704736
+      ],
+      "count": 1040,
+      "game_block_standard_error": 0.046368118027447315,
+      "games": 13,
+      "mean": 4.563666927375,
+      "normal_confidence_95": [
+        4.472785416041203,
+        4.654548438708797
+      ]
+    }
+  },
+  "winner_minus_champion_immediate_score_delta": {
+    "base_total": -0.4153846153846154,
+    "habitat": [
+      -0.058653846153846154,
+      -0.01826923076923077,
+      -0.015384615384615385,
+      -0.035576923076923075,
+      -0.05
+    ],
+    "nature_tokens": 0.01826923076923077,
+    "wildlife": [
+      -0.05480769230769231,
+      -0.06826923076923076,
+      -0.06153846153846154,
+      -0.08942307692307692,
+      0.01826923076923077
+    ]
+  },
+  "worst_champion_regret_decisions": [
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "af801776a66ce478bd6b3e0812d655f255c18bc7b7608f7a546798cd1ef9fa33",
+      "champion_regret": 3.5757743782226328,
+      "champion_screen_rank": 14,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 44,
+      "current_player": 0,
+      "current_tokens": 0,
+      "frontier_regret": 3.338947510822507,
+      "personal_turn": 12,
+      "phase": "middle",
+      "retained_screen_regret": 0.0,
+      "seed": 61004,
+      "selection_regret": 0.2368268674001257,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "78b44e1d575856c86468d1d4e34d75c1ac135b7a6a910cd7cfba4cde3c8f34c5",
+      "winner_opponent_slots": 3,
+      "winner_public_bag_count": 9,
+      "winner_screen_rank": 179,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "7540dcac114749275683a592a170883eadffe9496e3a9c8a2635a69bad781f41",
+      "champion_regret": 3.161962737502307,
+      "champion_screen_rank": 162,
+      "champion_wildlife": "Hawk",
+      "change_kind": "draft_choice",
+      "completed_turns": 6,
+      "current_player": 2,
+      "current_tokens": 0,
+      "frontier_regret": 3.161962737502307,
+      "personal_turn": 2,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61006,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "ad1da482c1cf07666f45e569e35adbd3525c4d3a8bd6f3a4ed960291177cd73e",
+      "winner_opponent_slots": 2,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 3,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "eb7243697da0927f3c45de49e7b3954858a6be7c876420ebff9242a494437797",
+      "champion_regret": 2.932000553403441,
+      "champion_screen_rank": 110,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 4,
+      "current_player": 0,
+      "current_tokens": 0,
+      "frontier_regret": 2.932000553403441,
+      "personal_turn": 2,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61009,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "a58f18e0bd5094f10b12c78b011f239d5a68e6e8e24884551a651c511d73c2e8",
+      "winner_opponent_slots": 6,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 30,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "3dc9026ee1ba06cf2b80f1a41bec9fed2e86f4898ce5c6ee86ca1e4f93f41276",
+      "champion_regret": 2.777821031869607,
+      "champion_screen_rank": 73,
+      "champion_wildlife": "Bear",
+      "change_kind": "tile_placement",
+      "completed_turns": 40,
+      "current_player": 0,
+      "current_tokens": 0,
+      "frontier_regret": 2.777821031869607,
+      "personal_turn": 11,
+      "phase": "middle",
+      "retained_screen_regret": 0.0,
+      "seed": 61001,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "81b189707a67704c40158900e47d5e69bebdd63240b2b4d883d5d07829266136",
+      "winner_opponent_slots": 5,
+      "winner_public_bag_count": 14,
+      "winner_screen_rank": 12,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "05d186c03db388a3f9195b45654db998472b59c43abd4af84f7d7142b472c1c2",
+      "champion_regret": 2.6092501711937928,
+      "champion_screen_rank": 76,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 12,
+      "current_player": 0,
+      "current_tokens": 1,
+      "frontier_regret": 1.9554040173476466,
+      "personal_turn": 4,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61004,
+      "selection_regret": 0.6538461538461462,
+      "winner_draft_kind": "Independent",
+      "winner_hash": "abf3daed2b1a259711367a8c87712c4757a845aafb9a655737bd97f763a8fe71",
+      "winner_opponent_slots": 0,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 26,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "0f173c6c753e81135fd27fb848b21791c3c7cf5ca25420777c08b66bc80c593b",
+      "champion_regret": 2.5631125631125684,
+      "champion_screen_rank": 12,
+      "champion_wildlife": "Elk",
+      "change_kind": "draft_choice",
+      "completed_turns": 8,
+      "current_player": 0,
+      "current_tokens": 0,
+      "frontier_regret": 2.5631125631125684,
+      "personal_turn": 3,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61009,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "2008d4fa8a7835eb954354d69ae883cbafaf34a673b6b6fccbca5f5563d227f3",
+      "winner_opponent_slots": 8,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 3,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "32067f810a32ec20f7c63fb63bacd868e0d8fb2faa7613bd5031793d99bc3668",
+      "champion_regret": 2.5160377597888726,
+      "champion_screen_rank": 34,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 17,
+      "current_player": 1,
+      "current_tokens": 1,
+      "frontier_regret": 2.32611860251302,
+      "personal_turn": 5,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61006,
+      "selection_regret": 0.1899191572758525,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "1e7f4c4d3d3b6e9bb549260410fa4281e141693cf062720adc3253185ea1a20d",
+      "winner_opponent_slots": 4,
+      "winner_public_bag_count": 17,
+      "winner_screen_rank": 565,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "a8ef4aca3faa86aad569bbe82ed171d1ff27e04b4bb2af12a1bc1d5bc8e1f52b",
+      "champion_regret": 2.479039831561124,
+      "champion_screen_rank": 8,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 9,
+      "current_player": 1,
+      "current_tokens": 1,
+      "frontier_regret": 2.479039831561124,
+      "personal_turn": 3,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61000,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "82cc2ad9654ab5e4388319d74d476a8cc6df462fe46fec3c6e61126986a110da",
+      "winner_opponent_slots": 3,
+      "winner_public_bag_count": 19,
+      "winner_screen_rank": 55,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Independent",
+      "champion_hash": "38d5f6f5b1b4c55803649bfb11f873d275c6906b6e4d502e0b4bbfdca189206d",
+      "champion_regret": 2.4714809000523275,
+      "champion_screen_rank": 216,
+      "champion_wildlife": "Bear",
+      "change_kind": "draft_choice",
+      "completed_turns": 15,
+      "current_player": 3,
+      "current_tokens": 1,
+      "frontier_regret": 2.4714809000523275,
+      "personal_turn": 4,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61010,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "d86665fbd6a5c878e543f70054bd6ce11779975ac7df55b54b7ed089251ddd48",
+      "winner_opponent_slots": 0,
+      "winner_public_bag_count": 17,
+      "winner_screen_rank": 14,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Independent",
+      "champion_hash": "397009fc693dc23ea6e857212b922c78568ca4476b59425b8c07f630709620f7",
+      "champion_regret": 2.4265573383671466,
+      "champion_screen_rank": 99,
+      "champion_wildlife": "Bear",
+      "change_kind": "draft_choice",
+      "completed_turns": 13,
+      "current_player": 1,
+      "current_tokens": 1,
+      "frontier_regret": 1.5647249032863044,
+      "personal_turn": 4,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61011,
+      "selection_regret": 0.8618324350808422,
+      "winner_draft_kind": "Independent",
+      "winner_hash": "9b8da1057247e694d542585e290235f0629a9156d8042daf1ccf97cdafd80037",
+      "winner_opponent_slots": 3,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 803,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "71aca4f7862404c79f18af565b9db3e66dd25fe4aff84d3a494c1781a7e4e2f5",
+      "champion_regret": 2.401977577078796,
+      "champion_screen_rank": 28,
+      "champion_wildlife": "Hawk",
+      "change_kind": "draft_choice",
+      "completed_turns": 6,
+      "current_player": 2,
+      "current_tokens": 1,
+      "frontier_regret": 2.401977577078796,
+      "personal_turn": 2,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61009,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "36e7316dc736d642114f438e5393d942ff5f43d768f8197b005de19994888bc7",
+      "winner_opponent_slots": 6,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 1,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "1f68b764db3e0a21916ed19b932b8061e14b271f738d90b66232e42fe4c6bdc1",
+      "champion_regret": 2.3668713718204373,
+      "champion_screen_rank": 27,
+      "champion_wildlife": "Elk",
+      "change_kind": "draft_choice",
+      "completed_turns": 5,
+      "current_player": 1,
+      "current_tokens": 1,
+      "frontier_regret": 2.3668713718204373,
+      "personal_turn": 2,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61000,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "cbb4acaf82ad3efd8757adff6bd040e56202320dbf3b0c6a90f15765c4cda8f7",
+      "winner_opponent_slots": 3,
+      "winner_public_bag_count": 19,
+      "winner_screen_rank": 1,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "47a39fa58075ce28d1bb47991fc60ceb440c4f97377cca326853097359ca2f71",
+      "champion_regret": 2.350570182546818,
+      "champion_screen_rank": 41,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 2,
+      "current_player": 2,
+      "current_tokens": 0,
+      "frontier_regret": 2.350570182546818,
+      "personal_turn": 1,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61009,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "36e7316dc736d642114f438e5393d942ff5f43d768f8197b005de19994888bc7",
+      "winner_opponent_slots": 4,
+      "winner_public_bag_count": 19,
+      "winner_screen_rank": 1,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "87df5b63e92ef852065b4ba900b0df211af3399e73b150e7d25db4ab6468e4a7",
+      "champion_regret": 2.2812143097077637,
+      "champion_screen_rank": 134,
+      "champion_wildlife": "Fox",
+      "change_kind": "tile_placement",
+      "completed_turns": 6,
+      "current_player": 2,
+      "current_tokens": 0,
+      "frontier_regret": 0.26198354047699013,
+      "personal_turn": 2,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61010,
+      "selection_regret": 2.0192307692307736,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "2bb88ddf08a964812c4bc1f47ef161424b5834b5bdd7449cfcee97038f966b2f",
+      "winner_opponent_slots": 2,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 9,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Fox"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "c4fd01589bfba2b028cdfa41349f5dddbedf9b773834fd85411ebdc5dc0afb31",
+      "champion_regret": 2.2666123463522467,
+      "champion_screen_rank": 42,
+      "champion_wildlife": "Bear",
+      "change_kind": "draft_choice",
+      "completed_turns": 30,
+      "current_player": 2,
+      "current_tokens": 1,
+      "frontier_regret": 1.848618715778997,
+      "personal_turn": 8,
+      "phase": "middle",
+      "retained_screen_regret": 0.0,
+      "seed": 61010,
+      "selection_regret": 0.4179936305732497,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "a1c929dc724a2185bbe9add87d1cbdbe46f9b158c3dbc1716ebd770660477276",
+      "winner_opponent_slots": 2,
+      "winner_public_bag_count": 12,
+      "winner_screen_rank": 24,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Fox"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "f0fe9941a2bc3891327735aaaf4577f6d476eed08d66d0f627c30f3a2fe77b97",
+      "champion_regret": 2.1896256562428533,
+      "champion_screen_rank": 2139,
+      "champion_wildlife": "Bear",
+      "change_kind": "tile_placement",
+      "completed_turns": 42,
+      "current_player": 2,
+      "current_tokens": 2,
+      "frontier_regret": 0.9011641177813203,
+      "personal_turn": 11,
+      "phase": "middle",
+      "retained_screen_regret": 0.0,
+      "seed": 61006,
+      "selection_regret": 1.288461538461533,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "7165c4998680ad89701282932994239a2266a09037a1c902cfffe2b845ef3c23",
+      "winner_opponent_slots": 7,
+      "winner_public_bag_count": 15,
+      "winner_screen_rank": 77,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Independent",
+      "champion_hash": "a8d2595edc133674e71fb8fd75ea4b3d065832ee10daf57fd85862d87287b195",
+      "champion_regret": 2.1831436699857676,
+      "champion_screen_rank": 140,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 37,
+      "current_player": 1,
+      "current_tokens": 2,
+      "frontier_regret": 0.2182313892840142,
+      "personal_turn": 10,
+      "phase": "middle",
+      "retained_screen_regret": 0.0,
+      "seed": 61002,
+      "selection_regret": 1.9649122807017534,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "1bc081d220fd90bdf36cd0c5c027ed2efa6717b5876aeb025f12504dc5fec58d",
+      "winner_opponent_slots": 4,
+      "winner_public_bag_count": 11,
+      "winner_screen_rank": 76,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Hawk"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "410bad569efb3b1d275bfc8a0f5f2db1cb0037e17294c27cee6745403bd54cbf",
+      "champion_regret": 2.157005911176796,
+      "champion_screen_rank": 34,
+      "champion_wildlife": "Hawk",
+      "change_kind": "draft_choice",
+      "completed_turns": 7,
+      "current_player": 3,
+      "current_tokens": 0,
+      "frontier_regret": 2.157005911176796,
+      "personal_turn": 2,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61008,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "88b25c09cf9656f546e4798970ffdc0f2988e08dae89b09d98df5820b4212ab9",
+      "winner_opponent_slots": 5,
+      "winner_public_bag_count": 17,
+      "winner_screen_rank": 16,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "2dce8f0316473fe136589688480879bda98fae973171dc948e919daeaf4343b3",
+      "champion_regret": 2.1464086687306576,
+      "champion_screen_rank": 2,
+      "champion_wildlife": "Hawk",
+      "change_kind": "draft_choice",
+      "completed_turns": 0,
+      "current_player": 0,
+      "current_tokens": 0,
+      "frontier_regret": 2.1464086687306576,
+      "personal_turn": 1,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61009,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "74508191893011a04dbc95a0660bef8fe09f1d9b4b1ba87bb530c3580d98846f",
+      "winner_opponent_slots": 4,
+      "winner_public_bag_count": 19,
+      "winner_screen_rank": 85,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "d676f88ae269a036cb34cdf9d9f58eb1ee17d40499a5e5695c0abfef073e13a0",
+      "champion_regret": 2.1300928792569636,
+      "champion_screen_rank": 26,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 6,
+      "current_player": 2,
+      "current_tokens": 1,
+      "frontier_regret": 0.14196078431372428,
+      "personal_turn": 2,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61001,
+      "selection_regret": 1.9881320949432393,
+      "winner_draft_kind": "Independent",
+      "winner_hash": "6ac39e0dee17bdb159792d3c3bc79f66939ddd7bf151a0b9a74d7861299422e5",
+      "winner_opponent_slots": 2,
+      "winner_public_bag_count": 19,
+      "winner_screen_rank": 247,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "2a69fb953875facc9e858ec413520d04d182619716904356cb320837d993fb45",
+      "champion_regret": 2.0530481423338642,
+      "champion_screen_rank": 31,
+      "champion_wildlife": "Hawk",
+      "change_kind": "draft_choice",
+      "completed_turns": 31,
+      "current_player": 3,
+      "current_tokens": 3,
+      "frontier_regret": 2.0530481423338642,
+      "personal_turn": 8,
+      "phase": "middle",
+      "retained_screen_regret": 0.0,
+      "seed": 61001,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "cf80384eab49b31e36c94dae43dde6e6e9296698ac55ab9060f8ac2dc7d5c5e9",
+      "winner_opponent_slots": 4,
+      "winner_public_bag_count": 16,
+      "winner_screen_rank": 8,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "c19bcb81ac8ddd7acc0329f8a9bbe5e9953c1866d7adcec2831a9ed47f834af3",
+      "champion_regret": 2.048295280480815,
+      "champion_screen_rank": 39,
+      "champion_wildlife": "Elk",
+      "change_kind": "draft_choice",
+      "completed_turns": 12,
+      "current_player": 0,
+      "current_tokens": 2,
+      "frontier_regret": 2.048295280480815,
+      "personal_turn": 4,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61000,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "764e117718dab25432ebfd64546bea2e08075ed69078848738e3e3513d56b1f8",
+      "winner_opponent_slots": 2,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 72,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "021a833698c958ee841edc4859fe89a87f179aec648e8e8e6d8b843c25ab409d",
+      "champion_regret": 2.005787677550259,
+      "champion_screen_rank": 356,
+      "champion_wildlife": "Fox",
+      "change_kind": "draft_choice",
+      "completed_turns": 7,
+      "current_player": 3,
+      "current_tokens": 1,
+      "frontier_regret": 1.8327107544733394,
+      "personal_turn": 2,
+      "phase": "early",
+      "retained_screen_regret": 0.0,
+      "seed": 61009,
+      "selection_regret": 0.1730769230769198,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "485b91ef875ca593e79a76113ec8814c1e5cdfc3affead642ddc62b4d30d600a",
+      "winner_opponent_slots": 6,
+      "winner_public_bag_count": 18,
+      "winner_screen_rank": 12,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Bear"
+    },
+    {
+      "champion_draft_kind": "Paired",
+      "champion_hash": "4beaf32863186d764c5eb1fa4df2650a65dfff1c035c731dadc52e121f89605d",
+      "champion_regret": 1.9551389890250732,
+      "champion_screen_rank": 186,
+      "champion_wildlife": "Elk",
+      "change_kind": "draft_choice",
+      "completed_turns": 30,
+      "current_player": 2,
+      "current_tokens": 3,
+      "frontier_regret": 0.5216287428213349,
+      "personal_turn": 8,
+      "phase": "middle",
+      "retained_screen_regret": 0.0,
+      "seed": 61000,
+      "selection_regret": 1.4335102462037383,
+      "winner_draft_kind": "Independent",
+      "winner_hash": "0457671d0b8d3852c1aa191e3bb85cc3d0cd964f7bd07005c39249c1e4c662ac",
+      "winner_opponent_slots": 4,
+      "winner_public_bag_count": 14,
+      "winner_screen_rank": 3,
+      "winner_visible_count": 1,
+      "winner_wildlife": "Salmon"
+    },
+    {
+      "champion_draft_kind": "Independent",
+      "champion_hash": "994d1fd3a6d4622d56fcf813de2c704f1d4cd6ba8a61d53f29a17dc0d33f92c2",
+      "champion_regret": 1.9209948956747525,
+      "champion_screen_rank": 130,
+      "champion_wildlife": "Elk",
+      "change_kind": "draft_choice",
+      "completed_turns": 34,
+      "current_player": 2,
+      "current_tokens": 2,
+      "frontier_regret": 1.9209948956747525,
+      "personal_turn": 9,
+      "phase": "middle",
+      "retained_screen_regret": 0.0,
+      "seed": 61009,
+      "selection_regret": 0.0,
+      "winner_draft_kind": "Paired",
+      "winner_hash": "58d1f715d4893f4b6b3d66176b87c389c657a0d9eb3e8544ca4ab785a8988dba",
+      "winner_opponent_slots": 4,
+      "winner_public_bag_count": 13,
+      "winner_screen_rank": 4,
+      "winner_visible_count": 2,
+      "winner_wildlife": "Bear"
+    }
+  ]
+}

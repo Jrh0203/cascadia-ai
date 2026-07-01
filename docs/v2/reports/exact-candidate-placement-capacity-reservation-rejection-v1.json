@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-candidate-placement-capacity-reservation-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "Reserve each candidate-placement vector's exact known final capacity before preserving the original generation and stable-sort path.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "pipeline_chunk_states": 96,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "implementation": {
+    "treatment_capable_binary_sha256": "15de32ed5e6a6fd7e58a095a7078d2d30bea45e3326d85df8ca70e9e99155c55",
+    "source_screen_snapshot_sha256": "27734f65826db46dcc5dc4e07fd2e1785d0982a8de9c10a9161fdc75cf1a9da4",
+    "restored_search_source_sha256": "18544722241e587de471dcbc211ae3ac688fadde8fb36ecfe581370a8723caab",
+    "template_requests": 440239,
+    "exact_capacity_reservation": true,
+    "stable_sort_preserved": true,
+    "placement_order_preserved": true,
+    "release_switch_retained": false,
+    "treatment_removed": true
+  },
+  "correctness": {
+    "complete_candidate_set_oracle_passed": true,
+    "complete_candidate_set_games_checked": 3,
+    "mixed_card_sets_checked": true,
+    "nature_token_variants_checked": true,
+    "overflow_replacement_checked": true,
+    "shared_outcome_oracle_passed": true,
+    "pre_timing_default_library_tests": {
+      "cascadia_ai_passed": 86,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "pre_timing_mid_v4_library_tests": {
+      "cascadia_ai_passed": 87,
+      "failed": 0
+    },
+    "post_removal_default_library_tests": {
+      "cascadia_ai_passed": 85,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "post_removal_mid_v4_library_tests": {
+      "cascadia_ai_passed": 86,
+      "failed": 0
+    },
+    "python_exact_tests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "frozen_diagnostics": {
+      "scores": [
+        102,
+        96,
+        92,
+        95
+      ],
+      "mean_score": 96.25,
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "physical_neural_rows": 5062305,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "bootstrapped_samples": 0,
+      "policy_fallbacks": 0,
+      "clean_shutdown": true,
+      "diagnostic_runs_matching": 4,
+      "source_runs_matching": 8,
+      "complete_frozen_game_runs_matching": 12
+    }
+  },
+  "mechanism": {
+    "targeted_stage": "template_preparation_ms",
+    "john2_control_milliseconds": 4457.857643,
+    "john2_treatment_milliseconds": 4415.140219,
+    "john2_reduction_milliseconds": 42.717424,
+    "john2_reduction_percent": 0.958250070346636,
+    "john2_control_instructions": 1087636624942,
+    "john2_treatment_instructions": 1079452825917,
+    "john2_instruction_reduction_percent": 0.7524387131994947,
+    "john3_control_milliseconds": 4530.610851,
+    "john3_treatment_milliseconds": 4442.074631,
+    "john3_reduction_milliseconds": 88.53622,
+    "john3_reduction_percent": 1.954178430055589,
+    "john3_control_instructions": 1088750073260,
+    "john3_treatment_instructions": 1080477046066,
+    "john3_instruction_reduction_percent": 0.759864673921758,
+    "mean_peak_rss_control_bytes": 114278400,
+    "mean_peak_rss_treatment_bytes": 114335744,
+    "peak_rss_delta_percent": 0.05017921146953405,
+    "mean_peak_footprint_control_bytes": 62382524,
+    "mean_peak_footprint_treatment_bytes": 61514160,
+    "peak_footprint_delta_percent": -1.391998823260181
+  },
+  "source_screen": {
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 14.435217083,
+        "peak_rss_bytes": 102825984,
+        "peak_footprint_bytes": 65716680
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 14.4214205,
+        "peak_rss_bytes": 103088128,
+        "peak_footprint_bytes": 56820144
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 14.451356583,
+        "peak_rss_bytes": 103088128,
+        "peak_footprint_bytes": 66109872
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 14.341106916,
+        "peak_rss_bytes": 103186432,
+        "peak_footprint_bytes": 55394736
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 14.5759575,
+        "peak_rss_bytes": 102809600,
+        "peak_footprint_bytes": 58491312
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 14.351886708,
+        "peak_rss_bytes": 103333888,
+        "peak_footprint_bytes": 59261360
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 14.865381,
+        "peak_rss_bytes": 102694912,
+        "peak_footprint_bytes": 65126832
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 14.408920083,
+        "peak_rss_bytes": 102809600,
+        "peak_footprint_bytes": 56951192
+      }
+    ],
+    "john2_control_mean_seconds": 14.5136570415,
+    "john2_treatment_mean_seconds": 14.6502990415,
+    "john2_improvement_percent": -0.9414718813410538,
+    "john3_control_mean_seconds": 14.4151702915,
+    "john3_treatment_mean_seconds": 14.346496812,
+    "john3_improvement_percent": 0.47639728224712535,
+    "combined_control_mean_seconds": 14.4644136665,
+    "combined_treatment_mean_seconds": 14.49839792675,
+    "combined_improvement_percent": -0.23495083197674366,
+    "mean_peak_rss_control_bytes": 102948864,
+    "mean_peak_rss_treatment_bytes": 103010304,
+    "peak_rss_delta_percent": 0.05968011458582001,
+    "mean_peak_footprint_control_bytes": 59593130,
+    "mean_peak_footprint_treatment_bytes": 61374902,
+    "peak_footprint_delta_percent": 2.9898949761490967
+  },
+  "pgo": {
+    "attempted": false,
+    "reason": "The source screen regressed on john2 and in the combined mean, failing the preregistered source performance gate."
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "John2 regressed 0.941% and the combined treatment was 0.235% slower despite a real reduction in the targeted template-preparation stage.",
+    "accepted_baseline_seconds": 14.16305453125,
+    "initial_reference_seconds": 141.027296,
+    "total_speedup_unchanged": 9.957406835427417,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_gap_seconds": 0.06032493125
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-candidate-placement-capacity-reservation-v1"
+  }
+}

@@ -70,6 +70,76 @@ nominal resume from silently becoming a different experiment.
 `make train-smoke` performs collection, GPU training, checkpointing, and a
 second resumed epoch, promotion, and Rust-to-MLX inference end to end.
 
+## R2-MAP expert-iteration benchmark overlap
+
+During John1 MLX training, only the previous verified checkpoint's fixed
+100-game longitudinal panel may use available remote CPU. Every game is an
+independent `game-NNNN` work item; Bacalhau owns placement and may use john2 or
+john3 without a host or parity assignment. No worker generates the next
+training round. The campaign cannot enter the paired candidate gate until both
+training and all 100 benchmark receipts are terminal and independently
+validated.
+
+The operational commands and artifact schemas are documented in the
+`R2-MAP topology-free serving and benchmark work items` section of `CLI_REFERENCE.md` and
+the ordinary worker-image workflow is documented in `R2_MAP_DOCKER.md`.
+Execution is restart-safe at the checksummed game-work-item boundary.
+John1's internal root `/Users/johnherrick/cascadia-bench/r2-map-v1` is the
+primary active store. John2 and john3 return checksummed Docker outputs to
+john1; john2 retains only dependency-closed cold archives.
+
+John1 runs MLX/Metal training natively and writes loss telemetry, checkpoint
+bundles, optimizer state, verification results, and recovery pointers beneath
+the primary active root. The former zero-write/remote-storage attestation path
+and its D0 trust-chain dependencies are superseded and must not gate training.
+Training consumes locally verified, checksummed generation shards and keeps its
+compact-window reads bounded. Ordinary checkpoint manifests and atomic pointer
+updates provide recovery; no remote CAS or signed publication protocol is
+required.
+
+Production training emits hash-chained loss telemetry every 20 optimizer steps
+and checkpoints at the configured fixed-step interval, no later than five
+minutes after the prior complete checkpoint, plus final completion. MLX's
+in-process cache is capped at 1 GiB. Validation selection is incremental and
+deterministic, so the runner retains only the current serialized checkpoint
+and the best verified checkpoint instead of accumulating every checkpoint
+bundle across the 45-minute run. A checkpoint is eligible for
+`last_verified` only after exact bundle reload, fixed-panel replay, and
+next-batch resume verification. A failed write, reload, or validation stops at
+the last verified checkpoint on John1.
+
+Before freezing the production group cap, run
+`tools/r2_map_john1_packing_sweep.py` on John1 against the checksummed compact
+index in John1's campaign root. It reads disposable windows only into memory,
+derives exact steps for each of 12 D6 epochs from replay candidate widths, and
+measures representative optimizer steps for group caps `[16, 32, 64, 128]`.
+Keep the fastest cap that stays within the configured memory and candidate
+budgets. Record the source revision, compact-index checksum, selected cap, and
+measured timing in the run directory; these are ordinary reproducibility
+metadata, not a distributed trust gate.
+
+The native training command accepts explicit local compact paths below
+`/Users/johnherrick/cascadia-bench/r2-map-v1`, validates their checksums and
+dataset identity, and binds the selected adapter parameters into every
+checkpoint. The console entry point is `cascadia-mlx-r2-map-train`; serving,
+verification, and promotion are exposed as the matching
+`cascadia-mlx-r2-map-{serve,verify,promote}` commands. Linux Docker workers do
+not run MLX training.
+
+The local runner resolves market preparation sequentially from public state.
+It scores the free replacement choice, commits it, then scores one paid wipe or
+stop at a time, rebuilding after each public reveal, and finally scores every
+legal draft action without pruning. Benchmark mode is deterministic argmax at
+all stages. The bundled replay action remains the accounting authority for the
+free-replacement count, each paid wipe, independent-draft spend, and final
+Pinecone conservation.
+
+The W3 integrated smoke checkpoint may exercise the open performance panel,
+but that report is explicitly `real-open-checkpoint-performance-only`. It is
+not a playing-strength estimate and cannot promote a model. The blinded
+20-pair and fixed-250 stages remain unopened until the campaign controller
+enters their registered phase.
+
 ## Promote
 
 ```bash

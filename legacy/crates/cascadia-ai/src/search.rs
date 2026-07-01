@@ -1,17 +1,14 @@
 use rand::Rng;
-use std::hash::Hash;
-
-use cascadia_core::game::GameState;
-use cascadia_core::hex::HexCoord;
-use cascadia_core::scoring::ScoreBreakdown;
-use cascadia_core::types::ScoringCards;
 
 use cascadia_core::board::Board;
+use cascadia_core::game::GameState;
+use cascadia_core::hex::HexCoord;
 use cascadia_core::hex::ADJACENCY;
+use cascadia_core::scoring::ScoreBreakdown;
 use cascadia_core::types::Wildlife;
 
 use crate::eval::{best_move_with_potential, ScoredMove, EVAL_SCALE};
-use crate::potential::board_potential;
+use crate::potential::{board_potential, board_potential_after_single_move, BoardPotentialContext};
 
 /// Compute a setup bonus for placing wildlife at a given position.
 /// This is public so eval.rs can use it too.
@@ -146,18 +143,29 @@ pub fn wildlife_setup_bonus(board: &Board, pos: usize, wildlife: Wildlife) -> u1
 /// Collect all candidate moves for the current game state.
 /// Public accessor for candidate_moves (used by NNUE re-ranking).
 ///
-/// PERF: when env `CASCADIA_MCE_CACHE=1` is set, the result is memoized in a
-/// thread-local single-entry cache keyed by a hash of the inputs that affect
-/// candidate_moves output. Strict tie-out: same inputs → identical output.
-/// Inside MCE rollouts at fixed-state nodes (e.g. the root across all
-/// rollouts of one decision) this provides ~14% wall speedup.
+/// PERF: the result is memoized in a thread-local single-entry cache keyed by
+/// the exact valid-game inputs that affect candidate generation. MCE evaluates
+/// many rollout states with identical public boards and markets but different
+/// hidden bag order, so this removes repeated candidate generation without
+/// changing any move. Set `CASCADIA_MCE_CACHE=0` for performance A/B tests.
 pub fn candidate_moves_pub(game: &GameState) -> Vec<ScoredMove> {
+    candidate_moves_with_base_pub(game).moves
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CandidateMoveSet {
+    pub(crate) moves: Vec<ScoredMove>,
+    pub(crate) base_move: Option<ScoredMove>,
+}
+
+pub(crate) fn candidate_moves_with_base_pub(game: &GameState) -> CandidateMoveSet {
     use std::cell::RefCell;
     if !candidate_cache_enabled() {
-        return candidate_moves(game);
+        return candidate_move_set(game);
     }
     thread_local! {
-        static CACHE: RefCell<Option<(u64, Vec<ScoredMove>)>> = const { RefCell::new(None) };
+        static CACHE: RefCell<Option<(CandidateCacheKey, CandidateMoveSet)>> =
+            const { RefCell::new(None) };
     }
     let key = candidate_cache_key(game);
     CACHE.with(|c| {
@@ -169,10 +177,14 @@ pub fn candidate_moves_pub(game: &GameState) -> Vec<ScoredMove> {
                 }
             }
         }
-        let result = candidate_moves(game);
+        let result = candidate_move_set(game);
         *c.borrow_mut() = Some((key, result.clone()));
         result
     })
+}
+
+pub(crate) fn candidate_moves_with_base_uncached_pub(game: &GameState) -> CandidateMoveSet {
+    candidate_move_set(game)
 }
 
 #[inline(always)]
@@ -189,86 +201,204 @@ fn candidate_cache_enabled() -> bool {
         let enabled = std::env::var("CASCADIA_MCE_CACHE")
             .ok()
             .map(|s| !s.is_empty() && s != "0")
-            .unwrap_or(false);
+            .unwrap_or(true);
         cell.set(if enabled { 1 } else { 0 });
         enabled
     })
 }
 
-/// Hash the subset of game state that affects `candidate_moves` output.
-/// candidate_moves reads: current player's board (grid + nature_tokens +
-/// placed_tiles), market.pairs, scoring_cards, turns_remaining,
-/// current_player, num_players (via has_tokens).
-fn candidate_cache_key(game: &GameState) -> u64 {
-    use std::hash::Hasher;
-    // Simple FxHash-style fold; we don't need cryptographic strength, just
-    // collision resistance for typical game states. Inline a small variant.
-    let mut h: u64 = 0xcbf29ce484222325; // FNV-1a basis
-    let mix = |h: &mut u64, v: u64| {
-        *h ^= v;
-        *h = h.wrapping_mul(0x100000001b3);
-    };
-    mix(&mut h, game.current_player as u64);
-    mix(&mut h, game.num_players as u64);
-    mix(&mut h, game.turns_remaining as u64);
-    // Market pairs (4 slots). Each slot has Option<MarketSlotPair { tile, wildlife }>.
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub(crate) struct CandidateCacheKey {
+    words: arrayvec::ArrayVec<u64, 80>,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub(crate) struct CandidateBoardCacheKey {
+    words: arrayvec::ArrayVec<u64, 72>,
+}
+
+/// Capture the exact subset of a valid game state read by `candidate_moves`.
+///
+/// This deliberately stores values instead of a digest: a cache collision
+/// cannot alter play. Tile rotations are included because habitat connectivity
+/// and therefore candidate ordering depend on edge orientation.
+pub(crate) fn candidate_cache_key(game: &GameState) -> CandidateCacheKey {
+    let mut words = arrayvec::ArrayVec::new();
+    words.push(game.current_player as u64);
+    words.push(game.num_players as u64);
+    words.push(game.turns_remaining as u64);
+
     for slot in &game.market.pairs {
         match slot {
             Some(p) => {
-                mix(&mut h, 0x5a5a5a5a);
-                mix(&mut h, p.tile.terrain1 as u64);
-                mix(&mut h, p.tile.terrain2.map(|t| t as u64 + 1).unwrap_or(0));
-                mix(&mut h, p.tile.keystone as u64);
-                mix(&mut h, p.tile.allowed.0 as u64);
-                mix(&mut h, p.wildlife as u64);
+                let terrain2 = p.tile.terrain2.map(|t| t as u64 + 1).unwrap_or(0);
+                words.push(
+                    1 | ((p.tile.terrain1 as u64) << 1)
+                        | (terrain2 << 4)
+                        | ((p.tile.keystone as u64) << 7)
+                        | ((p.tile.allowed.0 as u64) << 8)
+                        | ((p.wildlife as u64) << 16),
+                );
             }
-            None => {
-                mix(&mut h, 0xa5a5a5a5);
-            }
+            None => words.push(0),
         }
     }
-    // Board: placed_tiles (positions placed in order matters for can_place check
-    // via placed_tiles iteration in candidate_moves) plus per-cell wildlife
-    // assignments, plus nature_tokens count.
+
+    words.extend(candidate_board_cache_key(game).words);
+    CandidateCacheKey { words }
+}
+
+/// Capture the exact board-and-scoring subset of candidate generation.
+///
+/// This excludes the market so diagnostics can quantify how much expensive
+/// board analysis is repeated across stochastic public markets.
+pub(crate) fn candidate_board_cache_key(game: &GameState) -> CandidateBoardCacheKey {
+    let mut words = arrayvec::ArrayVec::new();
     let board = &game.boards[game.current_player];
-    mix(&mut h, board.nature_tokens as u64);
+    words.push(
+        (board.nature_tokens as u64)
+            | ((board.tile_count as u64) << 8)
+            | ((board.largest_group[0] as u64) << 16)
+            | ((board.largest_group[1] as u64) << 24)
+            | ((board.largest_group[2] as u64) << 32)
+            | ((board.largest_group[3] as u64) << 40)
+            | ((board.largest_group[4] as u64) << 48),
+    );
     for &tile_idx in &board.placed_tiles {
-        mix(&mut h, tile_idx as u64);
-        // Per-cell wildlife state affects candidate generation via
-        // can_place_wildlife checks.
-        let cell = board.grid.get(tile_idx as usize);
-        mix(&mut h, cell.0 as u64);
+        let idx = tile_idx as usize;
+        words.push(
+            (tile_idx as u64)
+                | ((board.grid.get(idx).0 as u64) << 16)
+                | ((board.rotations[idx] as u64) << 32),
+        );
     }
-    // ScoringCards is constant per game; hash variants directly (5 of them,
-    // each fits in a u64).
-    for v in &game.scoring_cards.cards {
-        mix(&mut h, *v as u64);
+    // Some legacy wildlife scorers use stable, insertion-ordered traversals
+    // when equally scoring structures are available. Preserve that order in
+    // the cache key even though the visible grid alone contains the same
+    // wildlife identities.
+    for positions in &board.wildlife_positions {
+        words.push(positions.len() as u64);
+        for &position in positions {
+            words.push(position as u64);
+        }
     }
-    h
+
+    let mut scoring = 0u64;
+    for (index, variant) in game.scoring_cards.cards.iter().enumerate() {
+        scoring |= (*variant as u64) << (index * 3);
+    }
+    words.push(scoring);
+
+    CandidateBoardCacheKey { words }
+}
+
+/// Derive the exact frontier after placing `placed_idx` from the frontier
+/// before placement. `Board::place_tile` appends the tile to `placed_tiles`,
+/// so this also reproduces `Board::frontier` ordering.
+#[cfg(test)]
+fn frontier_after_tile_placement(
+    board: &Board,
+    frontier_before: &[u16],
+    placed_idx: usize,
+) -> arrayvec::ArrayVec<u16, 128> {
+    let mut frontier = arrayvec::ArrayVec::new();
+    for &idx in frontier_before {
+        if idx as usize != placed_idx {
+            frontier.push(idx);
+        }
+    }
+    for neighbor in ADJACENCY.neighbors_of(placed_idx) {
+        let neighbor = neighbor as u16;
+        if !board.grid.get(neighbor as usize).is_present() && !frontier.contains(&neighbor) {
+            frontier.push(neighbor);
+        }
+    }
+    frontier
 }
 
 fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
+    candidate_move_set(game).moves
+}
+
+#[derive(Clone, Copy)]
+struct PotentialTileAction {
+    index: usize,
+}
+
+fn place_potential_tile(
+    board: &mut Board,
+    index: usize,
+    tile: cascadia_core::types::TileData,
+) -> PotentialTileAction {
+    assert!(
+        !board.grid.get(index).is_present(),
+        "potential-only tile placement requires an empty cell"
+    );
+    board.grid.set(index, tile.to_cell());
+    board.placed_tiles.push(index as u16);
+    PotentialTileAction { index }
+}
+
+fn undo_potential_tile(board: &mut Board, action: PotentialTileAction) {
+    let removed = board
+        .placed_tiles
+        .pop()
+        .expect("potential-only tile placement was appended");
+    assert_eq!(removed as usize, action.index);
+    board
+        .grid
+        .set(action.index, cascadia_core::types::Cell::EMPTY);
+}
+
+fn candidate_move_set(game: &GameState) -> CandidateMoveSet {
+    candidate_move_set_impl::<true>(game)
+}
+
+#[cfg(test)]
+fn candidate_move_set_reference(game: &GameState) -> CandidateMoveSet {
+    candidate_move_set_impl::<false>(game)
+}
+
+#[inline(always)]
+fn local_outcome_buffer<T: Copy, const REUSE_SHARED_OUTCOMES: bool>(len: usize) -> Vec<Option<T>> {
+    if REUSE_SHARED_OUTCOMES {
+        Vec::new()
+    } else {
+        vec![None; len]
+    }
+}
+
+fn candidate_move_set_impl<const REUSE_SHARED_OUTCOMES: bool>(
+    game: &GameState,
+) -> CandidateMoveSet {
     let board = &game.boards[game.current_player];
     let cards = &game.scoring_cards;
     let frontier = board.frontier();
     if frontier.is_empty() {
-        return Vec::new();
+        return CandidateMoveSet {
+            moves: Vec::new(),
+            base_move: None,
+        };
     }
 
-    let market_pairs: Vec<_> = game
+    let market_pairs: arrayvec::ArrayVec<_, 4> = game
         .market
         .available()
         .map(|(i, pair)| (i, pair.tile, pair.wildlife))
         .collect();
     if market_pairs.is_empty() {
-        return Vec::new();
+        return CandidateMoveSet {
+            moves: Vec::new(),
+            base_move: None,
+        };
     }
 
     let has_tokens = board.nature_tokens > 0;
-    let base_wildlife: u16 = cascadia_core::scoring::wildlife::score_all_wildlife(board, cards)
-        .iter()
-        .sum();
+    let base_wildlife_scores = cascadia_core::scoring::wildlife::score_all_wildlife(board, cards);
+    let base_wildlife: u16 = base_wildlife_scores.iter().sum();
+    let potential_context = BoardPotentialContext::new(board, cards, &frontier);
 
+    #[derive(Clone, Copy)]
     struct Combo {
         tile_idx: usize,
         tile: cascadia_core::types::TileData,
@@ -276,7 +406,37 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
         wl_market_idx: Option<usize>,
     }
 
-    let mut combos = Vec::new();
+    #[derive(Clone, Copy)]
+    struct TilePlacement {
+        index: u16,
+        q: i8,
+        r: i8,
+        rot: u8,
+        hab: u16,
+    }
+
+    #[derive(Clone, Copy)]
+    struct ExistingWildlifePlacement {
+        value: u16,
+        q: i8,
+        r: i8,
+    }
+
+    #[derive(Clone, Copy)]
+    struct RotationInvariantOutcome {
+        wildlife_value: u16,
+        wildlife_q: Option<i8>,
+        wildlife_r: Option<i8>,
+        potential: i32,
+    }
+
+    struct RotationInvariantOutcomeCache {
+        tile_idx: usize,
+        wildlife: Wildlife,
+        outcomes: Box<[Option<RotationInvariantOutcome>]>,
+    }
+
+    let mut combos = arrayvec::ArrayVec::<Combo, 16>::new();
     for &(idx, tile, wl) in &market_pairs {
         combos.push(Combo {
             tile_idx: idx,
@@ -299,9 +459,72 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
             }
         }
     }
+    let mut frontier_positions = [u8::MAX; 441];
+    for (position, &index) in frontier.iter().enumerate() {
+        frontier_positions[index as usize] = position as u8;
+    }
+    let mut placements_by_market: [Vec<TilePlacement>; 4] = std::array::from_fn(|_| Vec::new());
+    for &(market_index, tile, _) in &market_pairs {
+        let max_rotation = if tile.terrain2.is_none() { 1 } else { 6 };
+        let placements = &mut placements_by_market[market_index];
+        for &frontier_index in &frontier {
+            let coord = HexCoord::from_index(frontier_index as usize);
+            for rotation in 0..max_rotation {
+                let habitat_score = board
+                    .preview_habitat_total_at_index(frontier_index as usize, tile, rotation)
+                    .expect("candidate frontier placement remains legal");
+                placements.push(TilePlacement {
+                    index: frontier_index,
+                    q: coord.q,
+                    r: coord.r,
+                    rot: rotation,
+                    hab: habitat_score,
+                });
+            }
+        }
+        placements.sort_by(|left, right| right.hab.cmp(&left.hab));
+        placements.truncate(128);
+    }
 
-    let mut moves = Vec::new();
+    let mut moves = Vec::with_capacity(combos.len());
+    let derive_base_move = !greedy_potential_enabled();
+    let mut base_move = None;
     let mut board_clone = board.clone();
+    let mut shared_outcome_caches = arrayvec::ArrayVec::<RotationInvariantOutcomeCache, 16>::new();
+    let mut best_existing_wildlife: [Option<ExistingWildlifePlacement>; 5] = [None; 5];
+    for wildlife in Wildlife::ALL {
+        let variant = cards.variant_for(wildlife);
+        let without = base_wildlife_scores[wildlife as usize];
+        for &tile_index in &board.placed_tiles {
+            if !board
+                .grid
+                .get(tile_index as usize)
+                .can_place_wildlife(wildlife)
+            {
+                continue;
+            }
+            let with = cascadia_core::scoring::wildlife::score_wildlife_after_placement(
+                &mut board_clone,
+                wildlife,
+                variant,
+                tile_index as usize,
+            );
+            let nature_bonus = u16::from(board.grid.get(tile_index as usize).is_keystone());
+            let value = with.saturating_sub(without) + nature_bonus;
+            if value == 0
+                || best_existing_wildlife[wildlife as usize]
+                    .is_some_and(|current| current.value >= value)
+            {
+                continue;
+            }
+            let coord = HexCoord::from_index(tile_index as usize);
+            best_existing_wildlife[wildlife as usize] = Some(ExistingWildlifePlacement {
+                value,
+                q: coord.q,
+                r: coord.r,
+            });
+        }
+    }
 
     for combo in &combos {
         let is_independent = combo.wl_market_idx.is_some();
@@ -310,41 +533,14 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
         } else {
             board.nature_tokens as u16
         };
-        let max_rot: u8 = if combo.tile.terrain2.is_none() { 1 } else { 6 };
 
-        // Evaluate ALL tile placements — don't limit by habitat.
-        // Wildlife-valuable placements often aren't habitat-optimal.
-        const TOP_K: usize = 128; // effectively unlimited
-        struct TilePlacement {
-            q: i8,
-            r: i8,
-            rot: u8,
-            hab: u16,
-        }
-        let mut placements: Vec<TilePlacement> = Vec::new();
-
-        for &fi in frontier.iter() {
-            let coord = HexCoord::from_index(fi as usize);
-            for rot in 0..max_rot {
-                let action = match board_clone.place_tile(coord, combo.tile, rot) {
-                    Some(a) => a,
-                    None => continue,
-                };
-                let hab: u16 = board_clone.largest_group.iter().sum();
-                placements.push(TilePlacement {
-                    q: coord.q,
-                    r: coord.r,
-                    rot,
-                    hab,
-                });
-                board_clone.undo(action);
-            }
-        }
+        // Habitat previews depend only on the drafted tile, not the wildlife
+        // paired with it. Reuse the exact sorted top-K placements for all
+        // normal and independent-draft combinations of the same market tile.
+        let placements = &placements_by_market[combo.tile_idx];
         if placements.is_empty() {
             continue;
         }
-        placements.sort_by(|a, b| b.hab.cmp(&a.hab));
-        placements.truncate(TOP_K);
 
         // For each top tile placement, jointly find best wildlife placement
         let mut best_total: u16 = 0;
@@ -355,84 +551,125 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
         let mut best_wq: Option<i8> = None;
         let mut best_wr: Option<i8> = None;
         let mut found = false;
+        let mut local_outcomes_by_coordinate =
+            local_outcome_buffer::<RotationInvariantOutcome, REUSE_SHARED_OUTCOMES>(frontier.len());
+        let outcomes_by_coordinate = if REUSE_SHARED_OUTCOMES {
+            let cache_index = match shared_outcome_caches.iter().position(|cache| {
+                cache.tile_idx == combo.tile_idx && cache.wildlife == combo.wildlife
+            }) {
+                Some(index) => index,
+                None => {
+                    shared_outcome_caches.push(RotationInvariantOutcomeCache {
+                        tile_idx: combo.tile_idx,
+                        wildlife: combo.wildlife,
+                        outcomes: vec![None; frontier.len()].into_boxed_slice(),
+                    });
+                    shared_outcome_caches.len() - 1
+                }
+            };
+            shared_outcome_caches[cache_index].outcomes.as_mut()
+        } else {
+            &mut local_outcomes_by_coordinate
+        };
 
-        for placement in &placements {
-            let action = board_clone
-                .place_tile(
-                    HexCoord::new(placement.q, placement.r),
-                    combo.tile,
-                    placement.rot,
-                )
-                .unwrap();
+        for (placement_rank, placement) in placements.iter().enumerate() {
+            let tile_idx = placement.index as usize;
+            let frontier_position = frontier_positions[tile_idx] as usize;
+            debug_assert!(frontier_position < frontier.len());
+            let outcome = if let Some(outcome) = outcomes_by_coordinate[frontier_position] {
+                outcome
+            } else {
+                let tile_action = place_potential_tile(&mut board_clone, tile_idx, combo.tile);
+                let variant = cards.variant_for(combo.wildlife);
+                let without = base_wildlife_scores[combo.wildlife as usize];
+                let mut wildlife_value = 0;
+                let mut wildlife_q = None;
+                let mut wildlife_r = None;
 
-            let variant = cards.variant_for(combo.wildlife);
-            let without = cascadia_core::scoring::wildlife::score_wildlife(
-                &board_clone,
-                combo.wildlife,
-                variant,
-            );
+                if let Some(existing) = best_existing_wildlife[combo.wildlife as usize] {
+                    wildlife_value = existing.value;
+                    wildlife_q = Some(existing.q);
+                    wildlife_r = Some(existing.r);
+                }
 
-            // Score with no wildlife placement
-            let skip_score = placement.hab + base_wildlife + effective_nature;
-            let mut local_best_total = skip_score;
-            let mut local_best_wq: Option<i8> = None;
-            let mut local_best_wr: Option<i8> = None;
-
-            let placed_snapshot: arrayvec::ArrayVec<u16, 64> =
-                board_clone.placed_tiles.iter().copied().collect();
-            for &ti in placed_snapshot.iter() {
-                if !board_clone
+                if board_clone
                     .grid
-                    .get(ti as usize)
+                    .get(tile_idx)
                     .can_place_wildlife(combo.wildlife)
                 {
-                    continue;
-                }
-                let wa = match board_clone.place_wildlife(ti as usize, combo.wildlife) {
-                    Some(a) => a,
-                    None => continue,
-                };
-                let with = cascadia_core::scoring::wildlife::score_wildlife(
-                    &board_clone,
-                    combo.wildlife,
-                    variant,
-                );
-                board_clone.undo(wa);
+                    let with = cascadia_core::scoring::wildlife::score_wildlife_after_placement(
+                        &mut board_clone,
+                        combo.wildlife,
+                        variant,
+                        tile_idx,
+                    );
 
-                let delta = with.saturating_sub(without);
-                let nat_bonus: u16 = if board_clone.grid.get(ti as usize).is_keystone() {
-                    1
+                    let value = with.saturating_sub(without)
+                        + u16::from(board_clone.grid.get(tile_idx).is_keystone());
+                    if value > wildlife_value {
+                        wildlife_value = value;
+                        let wildlife_coord = HexCoord::from_index(tile_idx);
+                        wildlife_q = Some(wildlife_coord.q);
+                        wildlife_r = Some(wildlife_coord.r);
+                    }
+                }
+
+                let potential = if let (Some(q), Some(r)) = (wildlife_q, wildlife_r) {
+                    let wildlife_index = HexCoord::new(q, r).to_index().unwrap();
+                    let wildlife_action =
+                        board_clone.place_wildlife(wildlife_index, combo.wildlife);
+                    let potential = board_potential_after_single_move(
+                        &board_clone,
+                        cards,
+                        &potential_context,
+                        tile_idx,
+                        Some((wildlife_index, combo.wildlife)),
+                    );
+                    if let Some(wildlife_action) = wildlife_action {
+                        board_clone.undo(wildlife_action);
+                    }
+                    potential
                 } else {
-                    0
+                    board_potential_after_single_move(
+                        &board_clone,
+                        cards,
+                        &potential_context,
+                        tile_idx,
+                        None,
+                    )
                 };
-                let total = placement.hab + base_wildlife + delta + effective_nature + nat_bonus;
-                if total > local_best_total {
-                    local_best_total = total;
-                    let wc = HexCoord::from_index(ti as usize);
-                    local_best_wq = Some(wc.q);
-                    local_best_wr = Some(wc.r);
-                }
-            }
+                undo_potential_tile(&mut board_clone, tile_action);
 
-            // Compute potential while the TILE is still placed.
-            // Saves a redundant place_tile+undo cycle vs the original code.
-            // Correctness: place+undo+place is equivalent to a single place for
-            // board state (Board::undo fully restores merged UF groups).
-            let potential = if local_best_wq.is_some() {
-                let wc = HexCoord::new(local_best_wq.unwrap(), local_best_wr.unwrap());
-                let wa = board_clone.place_wildlife(wc.to_index().unwrap(), combo.wildlife);
-                let p = board_potential(&board_clone, cards);
-                if let Some(wa) = wa {
-                    board_clone.undo(wa);
-                }
-                p
-            } else {
-                board_potential(&board_clone, cards)
+                let outcome = RotationInvariantOutcome {
+                    wildlife_value,
+                    wildlife_q,
+                    wildlife_r,
+                    potential,
+                };
+                outcomes_by_coordinate[frontier_position] = Some(outcome);
+                outcome
             };
 
-            board_clone.undo(action);
+            let local_best_total =
+                placement.hab + base_wildlife + effective_nature + outcome.wildlife_value;
+            let local_eval = (local_best_total as i32) * EVAL_SCALE + outcome.potential;
 
-            let local_eval = (local_best_total as i32) * EVAL_SCALE + potential;
+            if derive_base_move && placement_rank < 8 {
+                let base_eval = (local_best_total as i32) * EVAL_SCALE;
+                if base_move.is_none_or(|current: ScoredMove| base_eval > current.eval) {
+                    base_move = Some(ScoredMove {
+                        market_index: combo.tile_idx,
+                        tile_q: placement.q,
+                        tile_r: placement.r,
+                        rotation: placement.rot,
+                        wildlife_q: outcome.wildlife_q,
+                        wildlife_r: outcome.wildlife_r,
+                        score: local_best_total,
+                        eval: base_eval,
+                        wildlife_market_index: combo.wl_market_idx,
+                    });
+                }
+            }
 
             if !found || local_eval > best_eval {
                 best_eval = local_eval;
@@ -440,8 +677,8 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
                 best_tq = placement.q;
                 best_tr = placement.r;
                 best_rot = placement.rot;
-                best_wq = local_best_wq;
-                best_wr = local_best_wr;
+                best_wq = outcome.wildlife_q;
+                best_wr = outcome.wildlife_r;
                 found = true;
             }
         }
@@ -464,7 +701,27 @@ fn candidate_moves(game: &GameState) -> Vec<ScoredMove> {
 
     // Sort by eval (score * 100 + potential) to consider setup value
     moves.sort_by(|a, b| b.eval.cmp(&a.eval));
-    moves
+    let base_move = if derive_base_move {
+        base_move
+    } else {
+        let mut fallback_board = board.clone();
+        best_move_with_potential(
+            &mut fallback_board,
+            &market_pairs,
+            cards,
+            game.turns_remaining,
+        )
+    };
+    CandidateMoveSet { moves, base_move }
+}
+
+fn greedy_potential_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("CASCADIA_GREEDY_POTENTIAL")
+            .ok()
+            .is_some_and(|value| !value.is_empty() && value != "0")
+    })
 }
 
 /// Generate candidate moves using NNUE afterstate evaluation.
@@ -850,7 +1107,7 @@ pub fn execute_scored_move(game: &mut GameState, mv: &ScoredMove) -> bool {
 
 /// Quick greedy move for any player (used for opponent simulation).
 pub fn greedy_move(game: &GameState) -> Option<ScoredMove> {
-    let mp: Vec<_> = game
+    let mp: arrayvec::ArrayVec<_, 4> = game
         .market
         .available()
         .map(|(i, p)| (i, p.tile, p.wildlife))
@@ -1072,4 +1329,381 @@ pub fn best_move_mcts(
         score: avg.round() as u16,
         ..mv
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cascadia_core::types::ScoringCards;
+    use rand::{rngs::StdRng, SeedableRng};
+
+    fn seeded_game() -> GameState {
+        let mut rng = StdRng::seed_from_u64(0xc57ad1a);
+        GameState::new(4, ScoringCards::all_a(), &mut rng)
+    }
+
+    #[test]
+    fn candidate_cache_key_includes_tile_rotations() {
+        let game = seeded_game();
+        let mut rotated = game.clone();
+        let tile_idx = rotated.boards[0].placed_tiles[0] as usize;
+        rotated.boards[0].rotations[tile_idx] = (rotated.boards[0].rotations[tile_idx] + 1) % 6;
+
+        assert!(candidate_cache_key(&game) != candidate_cache_key(&rotated));
+    }
+
+    #[test]
+    fn candidate_cache_key_includes_wildlife_insertion_order() {
+        let mut first = seeded_game();
+        let positions = &mut first.boards[0].wildlife_positions[Wildlife::Elk as usize];
+        positions.push(10);
+        positions.push(20);
+        let mut reversed = first.clone();
+        reversed.boards[0].wildlife_positions[Wildlife::Elk as usize].swap(0, 1);
+
+        assert!(candidate_cache_key(&first) != candidate_cache_key(&reversed));
+    }
+
+    #[test]
+    fn derived_frontier_and_potential_match_full_recomputation() {
+        let game = seeded_game();
+        let board = &game.boards[0];
+        let frontier = board.frontier();
+        let context = BoardPotentialContext::new(board, &game.scoring_cards, &frontier);
+
+        for (_, pair) in game.market.available() {
+            let max_rotation = if pair.tile.terrain2.is_some() { 6 } else { 1 };
+            for &frontier_idx in &frontier {
+                for rotation in 0..max_rotation {
+                    let mut placed = board.clone();
+                    let coord = HexCoord::from_index(frontier_idx as usize);
+                    placed.place_tile(coord, pair.tile, rotation).unwrap();
+
+                    let derived =
+                        frontier_after_tile_placement(&placed, &frontier, frontier_idx as usize);
+                    let exact = placed.frontier();
+                    assert_eq!(derived.as_slice(), exact.as_slice());
+                    assert_eq!(
+                        crate::potential::board_potential_with_frontier(
+                            &placed,
+                            &game.scoring_cards,
+                            &derived,
+                        ),
+                        board_potential(&placed, &game.scoring_cards),
+                    );
+                    assert_eq!(
+                        board_potential_after_single_move(
+                            &placed,
+                            &game.scoring_cards,
+                            &context,
+                            frontier_idx as usize,
+                            None,
+                        ),
+                        board_potential(&placed, &game.scoring_cards),
+                    );
+                    for wildlife in Wildlife::ALL {
+                        let Some(wildlife_index) = placed
+                            .placed_tiles
+                            .iter()
+                            .copied()
+                            .find(|&index| {
+                                placed.grid.get(index as usize).can_place_wildlife(wildlife)
+                            })
+                            .map(usize::from)
+                        else {
+                            continue;
+                        };
+                        let action = placed.place_wildlife(wildlife_index, wildlife).unwrap();
+                        assert_eq!(
+                            board_potential_after_single_move(
+                                &placed,
+                                &game.scoring_cards,
+                                &context,
+                                frontier_idx as usize,
+                                Some((wildlife_index, wildlife)),
+                            ),
+                            board_potential(&placed, &game.scoring_cards),
+                        );
+                        placed.undo(action);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn incremental_potential_matches_full_recomputation_during_play() {
+        use cascadia_core::types::ScoringCardVariant::{A, B, C, D};
+
+        let card_sets = [
+            ScoringCards::all_a(),
+            ScoringCards {
+                cards: [D, C, B, D, A],
+            },
+        ];
+
+        for (card_index, cards) in card_sets.into_iter().enumerate() {
+            let mut rng = StdRng::seed_from_u64(0xc57ad1a + card_index as u64);
+            let mut game = GameState::new(4, cards, &mut rng);
+            for turn_index in 0..16 {
+                let board = &game.boards[game.current_player];
+                let frontier = board.frontier();
+                let context = BoardPotentialContext::new(board, &game.scoring_cards, &frontier);
+
+                for (_, pair) in game.market.available() {
+                    let max_rotation = if pair.tile.terrain2.is_some() { 6 } else { 1 };
+                    for &frontier_index in frontier.iter().take(3) {
+                        for rotation in 0..max_rotation {
+                            let mut placed = board.clone();
+                            let mut potential_only = board.clone();
+                            placed
+                                .place_tile(
+                                    HexCoord::from_index(frontier_index as usize),
+                                    pair.tile,
+                                    rotation,
+                                )
+                                .unwrap();
+                            let potential_tile_action = place_potential_tile(
+                                &mut potential_only,
+                                frontier_index as usize,
+                                pair.tile,
+                            );
+                            assert_eq!(
+                                board_potential(&potential_only, &game.scoring_cards),
+                                board_potential(&placed, &game.scoring_cards),
+                            );
+                            assert_eq!(
+                                board_potential_after_single_move(
+                                    &placed,
+                                    &game.scoring_cards,
+                                    &context,
+                                    frontier_index as usize,
+                                    None,
+                                ),
+                                board_potential(&placed, &game.scoring_cards),
+                            );
+                            assert_eq!(
+                                board_potential_after_single_move(
+                                    &potential_only,
+                                    &game.scoring_cards,
+                                    &context,
+                                    frontier_index as usize,
+                                    None,
+                                ),
+                                board_potential(&placed, &game.scoring_cards),
+                            );
+                            for wildlife in Wildlife::ALL {
+                                let Some(wildlife_index) = placed
+                                    .placed_tiles
+                                    .iter()
+                                    .copied()
+                                    .find(|&index| {
+                                        placed.grid.get(index as usize).can_place_wildlife(wildlife)
+                                    })
+                                    .map(usize::from)
+                                else {
+                                    continue;
+                                };
+                                let action =
+                                    placed.place_wildlife(wildlife_index, wildlife).unwrap();
+                                let potential_action = potential_only
+                                    .place_wildlife(wildlife_index, wildlife)
+                                    .unwrap();
+                                assert_eq!(
+                                    board_potential(&potential_only, &game.scoring_cards),
+                                    board_potential(&placed, &game.scoring_cards),
+                                );
+                                assert_eq!(
+                                    board_potential_after_single_move(
+                                        &placed,
+                                        &game.scoring_cards,
+                                        &context,
+                                        frontier_index as usize,
+                                        Some((wildlife_index, wildlife)),
+                                    ),
+                                    board_potential(&placed, &game.scoring_cards),
+                                    "incremental potential mismatch: card_set={card_index}, turn={turn_index}, frontier={frontier_index}, rotation={rotation}, wildlife={wildlife:?}, wildlife_index={wildlife_index}",
+                                );
+                                assert_eq!(
+                                    board_potential_after_single_move(
+                                        &potential_only,
+                                        &game.scoring_cards,
+                                        &context,
+                                        frontier_index as usize,
+                                        Some((wildlife_index, wildlife)),
+                                    ),
+                                    board_potential(&placed, &game.scoring_cards),
+                                );
+                                placed.undo(action);
+                                potential_only.undo(potential_action);
+                            }
+                            undo_potential_tile(&mut potential_only, potential_tile_action);
+                            assert_eq!(potential_only.placed_tiles, board.placed_tiles);
+                            assert!(!potential_only
+                                .grid
+                                .get(frontier_index as usize)
+                                .is_present());
+                        }
+                    }
+                }
+
+                let Some(movement) = greedy_move(&game) else {
+                    break;
+                };
+                assert!(execute_scored_move(&mut game, &movement));
+            }
+        }
+    }
+
+    #[test]
+    fn cached_candidates_match_uncached_generation() {
+        let game = seeded_game();
+        let expected = candidate_moves(&game);
+        assert_eq!(candidate_moves_pub(&game), expected);
+        assert_eq!(candidate_moves_pub(&game), expected);
+    }
+
+    #[test]
+    fn shared_candidate_path_elides_the_dead_local_outcome_buffer() {
+        assert!(local_outcome_buffer::<u8, true>(17).is_empty());
+        assert_eq!(local_outcome_buffer::<u8, false>(17).len(), 17);
+    }
+
+    #[test]
+    fn dead_local_outcome_buffer_elision_preserves_complete_candidate_sets() {
+        use cascadia_core::types::ScoringCardVariant::{A, B, C, D};
+
+        let card_sets = [
+            ScoringCards::all_a(),
+            ScoringCards {
+                cards: [D, C, B, A, D],
+            },
+        ];
+        for (card_index, cards) in card_sets.into_iter().enumerate() {
+            for seed_offset in 0..2 {
+                let mut rng =
+                    StdRng::seed_from_u64(0xde1d_c700 + card_index as u64 * 16 + seed_offset);
+                let mut game = GameState::new(4, cards, &mut rng);
+                for turn in 0..28 {
+                    if game.can_replace_overflow().is_some() {
+                        game.replace_overflow();
+                    }
+
+                    let reference = candidate_move_set_reference(&game);
+                    assert_eq!(
+                        candidate_move_set(&game),
+                        reference,
+                        "shared candidate set diverged: cards={card_index}, seed={seed_offset}, turn={turn}"
+                    );
+
+                    let mut token_game = game.clone();
+                    let player = token_game.current_player;
+                    token_game.boards[player].nature_tokens =
+                        token_game.boards[player].nature_tokens.max(1);
+                    let token_reference = candidate_move_set_reference(&token_game);
+                    assert_eq!(
+                        candidate_move_set(&token_game),
+                        token_reference,
+                        "shared token candidate set diverged: cards={card_index}, seed={seed_offset}, turn={turn}"
+                    );
+
+                    let Some(movement) = reference
+                        .base_move
+                        .or_else(|| reference.moves.first().copied())
+                    else {
+                        break;
+                    };
+                    assert!(execute_scored_move(&mut game, &movement));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn cached_candidate_sets_match_direct_generation_across_complete_games() {
+        for game_index in 0..4_u64 {
+            let mut rng = StdRng::seed_from_u64(0xD1CE_C700_0000_0000 + game_index);
+            let mut game = GameState::new(4, ScoringCards::all_a(), &mut rng);
+            while !game.is_game_over() {
+                if game.can_replace_overflow().is_some() {
+                    game.replace_overflow();
+                }
+                let direct = candidate_moves_with_base_uncached_pub(&game);
+                assert_eq!(candidate_moves_with_base_pub(&game), direct);
+                let movement = direct.base_move.or_else(|| direct.moves.first().copied());
+                let Some(movement) = movement else {
+                    break;
+                };
+                assert!(execute_scored_move(&mut game, &movement));
+            }
+        }
+    }
+
+    #[test]
+    fn combined_candidate_pass_preserves_greedy_base_move() {
+        if std::env::var("CASCADIA_GREEDY_POTENTIAL")
+            .ok()
+            .is_some_and(|value| !value.is_empty() && value != "0")
+        {
+            return;
+        }
+
+        let mut game = seeded_game();
+        for _ in 0..24 {
+            let market = game
+                .market
+                .available()
+                .map(|(index, pair)| (index, pair.tile, pair.wildlife))
+                .collect::<Vec<_>>();
+            let mut board = game.boards[game.current_player].clone();
+            let expected = best_move_with_potential(
+                &mut board,
+                &market,
+                &game.scoring_cards,
+                game.turns_remaining,
+            );
+            let combined = candidate_move_set(&game);
+            assert_eq!(combined.base_move, expected);
+
+            let Some(movement) = expected else {
+                break;
+            };
+            assert!(execute_scored_move(&mut game, &movement));
+        }
+    }
+
+    #[test]
+    fn shared_duplicate_wildlife_outcomes_match_per_combo_reference() {
+        use cascadia_core::types::ScoringCardVariant::{A, B, C, D};
+
+        let card_sets = [
+            ScoringCards::all_a(),
+            ScoringCards {
+                cards: [D, C, B, A, D],
+            },
+        ];
+        for (card_index, cards) in card_sets.into_iter().enumerate() {
+            for seed_offset in 0..3 {
+                let mut rng =
+                    StdRng::seed_from_u64(0x5a4ed000 + card_index as u64 * 16 + seed_offset);
+                let mut game = GameState::new(4, cards, &mut rng);
+                for turn in 0..28 {
+                    let expected = candidate_move_set_reference(&game);
+                    let actual = candidate_move_set(&game);
+                    assert_eq!(
+                        actual, expected,
+                        "candidate outcome reuse diverged: cards={card_index}, seed={seed_offset}, turn={turn}"
+                    );
+
+                    let Some(movement) = expected
+                        .base_move
+                        .or_else(|| expected.moves.first().copied())
+                    else {
+                        break;
+                    };
+                    assert!(execute_scored_move(&mut game, &movement));
+                }
+            }
+        }
+    }
 }

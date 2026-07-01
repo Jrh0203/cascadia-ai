@@ -26,7 +26,7 @@ GLOBAL_DIM = 96
 TARGET_DIM = 11
 
 _HEADER = struct.Struct("<8sHHHHIIQBBBB5s7s32s")
-_RECORD_DTYPE = np.dtype(
+POSITION_RECORD_DTYPE = np.dtype(
     {
         "names": [
             "game_index",
@@ -64,6 +64,10 @@ _RECORD_DTYPE = np.dtype(
         "itemsize": RECORD_SIZE,
     }
 )
+
+# Kept for older dataset adapters that imported the private name before the
+# canonical position dtype became a shared public contract.
+_RECORD_DTYPE = POSITION_RECORD_DTYPE
 
 
 class DatasetError(ValueError):
@@ -252,22 +256,7 @@ def decode_records(records: np.ndarray) -> Batch:
     )
     board_features *= board_mask[..., None]
 
-    market_mask = (market_raw[..., 0] < 5) | (market_raw[..., 3] < 5)
-    zeros = np.zeros((batch_size, 4, 2), dtype=np.float32)
-    rotation_zeros = np.zeros((batch_size, 4, 6), dtype=np.float32)
-    market_features = np.concatenate(
-        [
-            zeros,
-            _one_hot(market_raw[..., 0], 5),
-            _one_hot_with_none(market_raw[..., 1], 5),
-            rotation_zeros,
-            _mask_bits(market_raw[..., 2], 5),
-            _one_hot_with_none(market_raw[..., 3], 5),
-            market_raw[..., 4, None].astype(np.float32),
-        ],
-        axis=-1,
-    )
-    market_features *= market_mask[..., None]
+    market_features, market_mask = decode_market_entities(market_raw)
 
     turns = records["turn"].astype(np.float32)
     total_turns = records["total_turns"].astype(np.float32)
@@ -312,6 +301,31 @@ def decode_records(records: np.ndarray) -> Batch:
         game_index=mx.array(records["game_index"].astype(np.int64)),
         turn=mx.array(records["turn"].astype(np.int32)),
     )
+
+
+def decode_market_entities(market_raw: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Decode compact market rows with any leading batch dimensions."""
+    market_raw = np.asarray(market_raw)
+    market_mask = (market_raw[..., 0] < 5) | (market_raw[..., 3] < 5)
+    prefix = market_raw.shape[:-1]
+    zeros = np.zeros((*prefix, 2), dtype=np.float32)
+    rotation_zeros = np.zeros((*prefix, 6), dtype=np.float32)
+    market_features = np.concatenate(
+        [
+            zeros,
+            _one_hot(market_raw[..., 0], 5),
+            _one_hot_with_none(market_raw[..., 1], 5),
+            rotation_zeros,
+            _mask_bits(market_raw[..., 2], 5),
+            _one_hot_with_none(market_raw[..., 3], 5),
+            market_raw[..., 4, None].astype(np.float32),
+        ],
+        axis=-1,
+    )
+    market_features *= market_mask[..., None]
+    if market_features.shape[-1] != ENTITY_DIM:
+        raise AssertionError("market feature dimension drifted")
+    return market_features, market_mask
 
 
 def decode_record_bytes(payload: bytes | bytearray | memoryview, count: int) -> Batch:

@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-incremental-top8-rejection-v1-20260615",
+  "status": "rejected",
+  "date": "2026-06-15",
+  "phase": 0,
+  "hypothesis": "Maintaining the stable top-eight placements in sorted order during traversal would remove repeated worst-element scans and the final sort without changing behavior.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false
+  },
+  "source_screen": {
+    "control_binary_sha256": "53e62599c9fb9d8c6f232a850d3f7247f668662913297f4ebc36440a21107487",
+    "treatment_binary_sha256": "7d4feb68947301cd0269f44ca04eac2462ad84843ef6bc644fe564c48b73a11d",
+    "order_per_host": [
+      "treatment",
+      "control",
+      "treatment",
+      "control"
+    ],
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.538587958
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.75871925
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 15.645186417
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.644564625
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 16.015737208
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "control",
+        "seconds": 16.184595209
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 16.083651
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 16.042461875
+      }
+    ],
+    "john2_control_mean_seconds": 15.7016419375,
+    "john2_treatment_mean_seconds": 15.5918871875,
+    "john3_control_mean_seconds": 16.113528542,
+    "john3_treatment_mean_seconds": 16.049694104,
+    "combined_control_mean_seconds": 15.90758523975,
+    "combined_treatment_mean_seconds": 15.82079064575,
+    "combined_treatment_delta_seconds": -0.086794594,
+    "combined_speedup": 1.005486109761734,
+    "combined_speedup_percent": 0.5486109761734026,
+    "advancement_floor_percent": 0.25,
+    "advanced_to_pgo": true
+  },
+  "pgo": {
+    "instrumented_binary_sha256": "a7b07156f7432c959573633bdaac912a942fe84bfe4752e5f916db765c3550fc",
+    "raced_profile": {
+      "john2_profraw_sha256": "827400f8269e3dbf95d85db92899090988508f22aee509763365599bcd749f42",
+      "john3_profraw_sha256": "a36370bf253e8469417fdf19954dd0f8f5567ff3842a8e3e9ab6c989135b70c0",
+      "merged_profdata_sha256": "00cb9513d6ba824ff191f1925c2eaf1b91a421701a4bef7b24ac3b50a5b886c6",
+      "production_binary_sha256": "ec76a5c2e987ed190b4bf726a1d64e847f54eb48e5171f2982c1f29ffb8f6691",
+      "combined_control_mean_seconds": 15.541880427,
+      "combined_treatment_mean_seconds": 16.20579560375,
+      "regression_percent": 4.271781525204776,
+      "accepted": false,
+      "reason": "Default LLVM profile counters lost concurrent Rayon updates and produced inconsistent hot-block counts."
+    },
+    "race_free_profile": {
+      "collection_rayon_threads": 1,
+      "john2_training_seconds": 53.621848625,
+      "john3_training_seconds": 54.152163334,
+      "john2_profraw_sha256": "1c188b5e65ac17d7a74aa4f4df10c9f73c03d52c5c51a811cd7d5c06f9ec42e3",
+      "john3_profraw_sha256": "6aaaef3ca17b43dbe4592b6826b819e70c43a2f12dbb104ee324ded6c7c04cb8",
+      "merged_profdata_sha256": "2a0707914ce3df33acf281e4c593485b58e67396dab160a7156a9f3c3f93aced",
+      "profile_functions": 5537,
+      "profile_blocks": 119172,
+      "john2_total_count": 119470389930,
+      "john3_total_count": 119470388494,
+      "total_count_difference": 1436,
+      "production_binary_sha256": "ad0551548841d6d80a8e494e1780f1df206b80f96f81eb9515b11e29f876c41c",
+      "design": {
+        "john2_order": [
+          "control",
+          "treatment",
+          "treatment",
+          "control"
+        ],
+        "john3_order": [
+          "treatment",
+          "control",
+          "control",
+          "treatment"
+        ]
+      },
+      "measurements": [
+        {
+          "host": "john2",
+          "round": 1,
+          "variant": "control",
+          "seconds": 15.475878875
+        },
+        {
+          "host": "john2",
+          "round": 2,
+          "variant": "treatment",
+          "seconds": 15.468564875
+        },
+        {
+          "host": "john2",
+          "round": 3,
+          "variant": "treatment",
+          "seconds": 15.616861666
+        },
+        {
+          "host": "john2",
+          "round": 4,
+          "variant": "control",
+          "seconds": 15.362933875
+        },
+        {
+          "host": "john3",
+          "round": 1,
+          "variant": "treatment",
+          "seconds": 15.950593834
+        },
+        {
+          "host": "john3",
+          "round": 2,
+          "variant": "control",
+          "seconds": 15.796733667
+        },
+        {
+          "host": "john3",
+          "round": 3,
+          "variant": "control",
+          "seconds": 15.900445292
+        },
+        {
+          "host": "john3",
+          "round": 4,
+          "variant": "treatment",
+          "seconds": 15.875099833
+        }
+      ],
+      "john2_control_mean_seconds": 15.419406375,
+      "john2_treatment_mean_seconds": 15.5427132705,
+      "john3_control_mean_seconds": 15.8485894795,
+      "john3_treatment_mean_seconds": 15.9128468335,
+      "combined_control_mean_seconds": 15.63399792725,
+      "combined_treatment_mean_seconds": 15.727780052,
+      "combined_treatment_delta_seconds": 0.09378212475,
+      "combined_speedup": 0.9940371670738062,
+      "regression_percent": 0.5998601585237351
+    }
+  },
+  "exactness": {
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true
+  },
+  "implementation": {
+    "source_retained": false,
+    "runtime_switch_retained": false
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The source-level gain reversed under a race-free production PGO profile, regressing end-to-end time on both hosts.",
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_passed": false
+  }
+}

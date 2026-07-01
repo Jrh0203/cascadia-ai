@@ -4,14 +4,21 @@ mod action_ranking;
 mod conservative_advantage;
 mod counterfactual_advantage;
 mod counterfactual_value;
+mod graded_oracle;
 mod imitation;
 mod imitation_parent_prior;
 mod imitation_targets;
+mod opponent_intent;
+mod opportunity_graph;
 mod public_beam_value;
 mod public_supply;
+mod r2_map_collector;
+mod r2_map_experience;
 mod ranking;
 mod rollout_value;
 mod score_to_go;
+mod semantic_supply;
+mod spatial_representation;
 
 use std::{
     fs::{self, File},
@@ -69,6 +76,22 @@ pub use counterfactual_value::{
     CounterfactualValueRecord, CounterfactualValueTeacherConfig,
     read_counterfactual_value_shard_records, validate_counterfactual_value_dataset,
 };
+pub use graded_oracle::{
+    GRADED_FIDELITY_R600, GRADED_FIDELITY_R1200, GRADED_FIDELITY_R4800,
+    GRADED_ORACLE_ACTION_FEATURE_SIZE, GRADED_ORACLE_CANDIDATE_RECORD_SIZE,
+    GRADED_ORACLE_DATASET_SCHEMA_VERSION, GRADED_ORACLE_FEATURE_SCHEMA,
+    GRADED_ORACLE_GROUP_HEADER_SIZE, GRADED_ORACLE_HEADER_SIZE, GRADED_ORACLE_MAX_WILDLIFE_WIPES,
+    GRADED_ORACLE_SHARD_MAGIC, GRADED_ORACLE_STAGED_MARKET_SIZE, GRADED_ORACLE_TARGET_SCHEMA,
+    GRADED_SOURCE_BEST_CHAMPION_FRONTIER, GRADED_SOURCE_CHAMPION_FRONTIER,
+    GRADED_SOURCE_CHAMPION_SELECTED, GRADED_SOURCE_COMPLETE_LEGAL, GRADED_SOURCE_R600,
+    GRADED_SOURCE_R1200, GRADED_SOURCE_R4800, GRADED_SOURCE_SENTINEL,
+    GRADED_SOURCE_SUBSTANTIAL_TOP, GRADED_SOURCE_TOP_SCREEN, GradedOracleActionFeatures,
+    GradedOracleAuditInput, GradedOracleCandidate, GradedOracleDatasetConfig,
+    GradedOracleDatasetManifest, GradedOracleDatasetWriter, GradedOracleEstimate,
+    GradedOracleGroup, GradedOracleSourceManifest, GradedOracleStagedActionContext,
+    GradedOracleTeacherIdentity, merge_graded_oracle_datasets, read_graded_oracle_shard,
+    validate_graded_oracle_dataset,
+};
 pub use imitation::{
     IMITATION_CANDIDATE_RECORD_SIZE, IMITATION_DATASET_SCHEMA_VERSION, IMITATION_FEATURE_SCHEMA,
     IMITATION_GROUP_HEADER_SIZE, IMITATION_HEADER_SIZE, IMITATION_SHARD_MAGIC,
@@ -103,6 +126,25 @@ pub use imitation_targets::{
     SOURCE_TEACHER_FRONTIER, read_imitation_target_shard_records,
     validate_imitation_targets_dataset,
 };
+pub use opponent_intent::{
+    OPPONENT_INTENT_DATASET_SCHEMA_VERSION, OPPONENT_INTENT_FEATURE_SCHEMA,
+    OPPONENT_INTENT_HEADER_SIZE, OPPONENT_INTENT_HISTORY_LENGTH, OPPONENT_INTENT_RECORD_SIZE,
+    OPPONENT_INTENT_SHARD_MAGIC, OPPONENT_INTENT_TARGET_SCHEMA, OpponentActionTarget,
+    OpponentIntentCohort, OpponentIntentDatasetConfig, OpponentIntentDatasetManifest,
+    OpponentIntentDatasetWriter, OpponentIntentHistoryEntry, OpponentIntentRecord,
+    PublicActionRecord, TileSurvivalTarget, collect_opponent_intent_dataset,
+    opponent_intent_game_seed, opponent_intent_policy_code, opponent_intent_policy_from_code,
+    opponent_intent_seat_policies, read_opponent_intent_shard_records,
+    validate_opponent_intent_dataset,
+};
+pub use opportunity_graph::{
+    DemandId, OPPORTUNITY_GRAPH_SCHEMA, OPPORTUNITY_GRAPH_SCHEMA_VERSION, OpportunityAssignment,
+    OpportunityDemand, OpportunityDemandKind, OpportunityEdge, OpportunityEdgeId,
+    OpportunityGraphBuildContext, OpportunityGraphError, OpportunityGraphV1,
+    OpportunityMatchingSummary, OpportunitySupply, OpportunitySupplyKind,
+    PreparedOpportunityMatching, PreparedWildlifeMatching, PreparedWildlifeOpportunityDemands,
+    SupplyId,
+};
 pub use public_beam_value::{
     PUBLIC_BEAM_VALUE_DATASET_SCHEMA_VERSION, PUBLIC_BEAM_VALUE_FEATURE_SCHEMA,
     PUBLIC_BEAM_VALUE_HEADER_SIZE, PUBLIC_BEAM_VALUE_RECORD_SIZE, PUBLIC_BEAM_VALUE_SHARD_MAGIC,
@@ -111,6 +153,30 @@ pub use public_beam_value::{
     read_public_beam_value_shard_records, validate_public_beam_value_dataset,
 };
 pub use public_supply::PUBLIC_SUPPLY_SIZE;
+pub use r2_map_collector::{
+    GreedyBootstrapRunner, R2_MAP_COLLECTOR_MANIFEST_FILE, R2_MAP_COLLECTOR_SCHEMA_VERSION,
+    R2MapCollectorConfig, R2MapCollectorError, R2MapCollectorManifest, R2MapCollectorPolicy,
+    R2MapCollectorShardManifest, R2MapCollectorWriter, R2MapGameRequest, R2MapGameRunner,
+    R2MapPlayedGame, collect_r2_map_bootstrap, collect_r2_map_with_runner,
+    validate_r2_map_collector_dataset,
+};
+pub use r2_map_experience::{
+    IdentityHash, R2_MAP_ASSIGNMENT_RNG_DOMAIN, R2_MAP_COMPONENT_COUNT,
+    R2_MAP_EXPERIENCE_HEADER_SIZE, R2_MAP_EXPERIENCE_MAGIC, R2_MAP_EXPERIENCE_SCHEMA_VERSION,
+    R2_MAP_EXPLORATION_RNG_DOMAIN, R2_MAP_EXPLORATION_SCHEDULE_ID, R2_MAP_SHARD_HEADER_SIZE,
+    R2_MAP_SHARD_MAGIC, R2_MAP_STRATEGY_RNG_DOMAIN, R2MapCollectionKind, R2MapDecisionRecord,
+    R2MapExperienceError, R2MapExplorationDecisionIdentity, R2MapExplorationDraw,
+    R2MapExplorationIdentity, R2MapExplorationRngContext, R2MapExplorationTrace, R2MapGameIdentity,
+    R2MapGameRecord, R2MapMarketDecisionRecord, R2MapPineconeEvent, R2MapPolicyIdentity,
+    R2MapPolicyRole, R2MapPrimaryExample, R2MapProtocolIdentity, R2MapPublicTurnTrace,
+    R2MapRecordContext, R2MapRngIdentity, R2MapSeedLease, R2MapSeedPurpose, assign_iterative_seats,
+    expected_r2_map_exploration_draws, exploration_epsilon_ppm, focal_seat_for_game,
+    r2_map_action_draw_u64, r2_map_draft_action_id, r2_map_explore_draw_u64, r2_map_game_seed,
+    r2_map_ordered_action_ids_blake3, read_r2_map_record, read_r2_map_shard,
+    read_r2_map_shard_after_semantic_validation, reconstruct_r2_map_public_turn,
+    reconstruct_r2_map_public_turns, validate_r2_map_record_batch, validate_r2_map_seed_leases,
+    write_r2_map_record, write_r2_map_shard,
+};
 pub use ranking::{
     RANKING_DATASET_SCHEMA_VERSION, RANKING_HEADER_SIZE, RANKING_RECORD_SIZE, RANKING_SHARD_MAGIC,
     RANKING_TARGET_SCHEMA, RankingCandidateFamily, RankingDatasetConfig, RankingDatasetManifest,
@@ -129,6 +195,22 @@ pub use score_to_go::{
     SCORE_TO_GO_RECORD_SIZE, SCORE_TO_GO_SHARD_MAGIC, SCORE_TO_GO_TARGET_SCHEMA,
     ScoreToGoDatasetConfig, ScoreToGoDatasetManifest, ScoreToGoDatasetWriter, ScoreToGoRecord,
     ScoreToGoTeacherConfig, validate_score_to_go_dataset,
+};
+pub use semantic_supply::{
+    CANONICAL_TILE_ARCHETYPE_SCHEMA, CanonicalTileArchetype, EXACT_SEMANTIC_SUPPLY_SCHEMA,
+    EXACT_SEMANTIC_SUPPLY_SCHEMA_VERSION, ExactProbability, ExactRefillDistribution,
+    ExactSemanticSupply, FrontierCompatibility, FrontierTerrainRequirements,
+    MAX_EXACT_REFILL_SLOTS, OrderedRefillOutcome, SemanticArchetypeCatalog,
+    SemanticArchetypeDefinition, SemanticArchetypeId, SemanticMarketLink, SemanticSupplyError,
+    SemanticTileReference, standard_semantic_archetype_catalog,
+};
+pub use spatial_representation::{
+    ALLOWED_WILDLIFE_CHANNEL, IndexedSpatialEntity, KEYSTONE_CHANNEL, PLACED_WILDLIFE_CHANNEL,
+    POSITION_NON_SPATIAL_BYTES, ROTATION_CHANNEL, SPATIAL_PACKED_HEADER_SIZE, SPATIAL_PACKED_MAGIC,
+    SPATIAL_REPRESENTATION_SCHEMA_VERSION, SPATIAL_SEMANTIC_CHANNELS, SpatialArm,
+    SpatialBoardRepresentation, SpatialEntity, SpatialPositionMetadata,
+    SpatialPositionRepresentation, SpatialRepresentationAccounting, SpatialRepresentationError,
+    TERRAIN_A_CHANNEL, TERRAIN_B_CHANNEL, centered_hex_capacity, deterministic_integer_center,
 };
 
 pub const DATASET_SCHEMA_VERSION: u16 = 1;
@@ -269,6 +351,56 @@ pub struct ShardManifest {
     pub blake3: String,
 }
 
+pub struct PositionShardReader {
+    reader: BufReader<File>,
+    remaining: usize,
+}
+
+impl PositionShardReader {
+    pub fn open(root: &Path, shard: &ShardManifest) -> Result<Self, DataError> {
+        let path = root.join(&shard.file);
+        validate_shard_header(&path, shard)?;
+        let mut reader = BufReader::new(File::open(path)?);
+        let mut header = [0u8; SHARD_HEADER_SIZE];
+        reader.read_exact(&mut header)?;
+        Ok(Self {
+            reader,
+            remaining: shard.record_count,
+        })
+    }
+
+    pub const fn remaining(&self) -> usize {
+        self.remaining
+    }
+}
+
+impl Iterator for PositionShardReader {
+    type Item = Result<PositionRecord, DataError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining == 0 {
+            return None;
+        }
+        let mut bytes = [0u8; RECORD_SIZE];
+        match self.reader.read_exact(&mut bytes) {
+            Ok(()) => {
+                self.remaining -= 1;
+                Some(Ok(PositionRecord::from_bytes(&bytes)))
+            }
+            Err(error) => {
+                self.remaining = 0;
+                Some(Err(error.into()))
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
+impl ExactSizeIterator for PositionShardReader {}
+
 pub struct DatasetWriter {
     output: PathBuf,
     manifest_path: PathBuf,
@@ -384,6 +516,14 @@ impl PositionRecord {
         }
     }
 
+    /// Replace only the public market rows while preserving every other
+    /// position field. This supports exact selected-afterstate materializers
+    /// that reuse an already observed parent record.
+    pub fn overwrite_market(&mut self, market: &Market) {
+        self.market_entities = [[NONE; MARKET_ENTITY_SIZE]; 4];
+        self.write_market(market);
+    }
+
     pub fn observable_afterstate(
         game: &GameState,
         action: &cascadia_game::TurnAction,
@@ -472,6 +612,13 @@ impl PositionRecord {
                 u8::from(placed.tile.keystone),
             ];
         }
+    }
+
+    /// Replace one relative public board using the canonical compact-entity
+    /// ordering and derived summary fields.
+    pub fn overwrite_relative_board(&mut self, relative: usize, board: &Board) {
+        assert!(relative < BOARD_SLOTS, "relative board index is in range");
+        self.write_board(relative, board);
     }
 
     pub(crate) fn from_bytes(bytes: &[u8; RECORD_SIZE]) -> Self {
@@ -1097,6 +1244,36 @@ mod tests {
         assert_eq!(resumed.manifest().strategy, "teacher-search-v1");
         assert_eq!(resumed.manifest().completed_games, 1);
         assert_eq!(resumed.manifest().requested_games, 2);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn position_shard_reader_streams_validated_records() {
+        let root = std::env::temp_dir().join(format!(
+            "cascadia-position-reader-test-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let records = [sample_record(), sample_record()];
+        let path = root.join("shard-00000.csd");
+        write_shard(&path, DatasetSplit::Train, 0, 7, 1, &records).unwrap();
+        let shard = ShardManifest {
+            file: "shard-00000.csd".to_owned(),
+            first_game_index: 7,
+            game_count: 1,
+            record_count: records.len(),
+            byte_count: fs::metadata(&path).unwrap().len(),
+            blake3: checksum_file(&path).unwrap(),
+        };
+
+        let mut reader = PositionShardReader::open(&root, &shard).unwrap();
+        assert_eq!(reader.remaining(), 2);
+        assert_eq!(reader.next().unwrap().unwrap(), records[0]);
+        assert_eq!(reader.remaining(), 1);
+        assert_eq!(reader.next().unwrap().unwrap(), records[1]);
+        assert_eq!(reader.remaining(), 0);
+        assert!(reader.next().is_none());
         fs::remove_dir_all(root).unwrap();
     }
 

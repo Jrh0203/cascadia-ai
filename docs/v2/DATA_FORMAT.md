@@ -173,6 +173,76 @@ the same canonical actions as the historical teacher before substantive
 collection. The second writes fresh disjoint train and validation domains and
 validates both paired datasets after every durable append.
 
+## Opponent-Intent Sequential Shards
+
+`opponent-intent-v1` uses `.o1i` shards for O1 next-action and future-access
+research. Each game contributes exactly 76 focal windows: turns `0..75`, each
+with three intervening opponent actions and a next-focal-access market.
+
+The 64-byte shard header binds:
+
+- magic `CSD2O1I\0`;
+- schema and 1,312-byte record width;
+- split, first game index, game count, and record count.
+
+Each fixed record contains:
+
+- game index and focal turn for provenance;
+- four seat-policy codes for held-out evaluation provenance;
+- one 864-byte compact public state at `t + 1`, from the focal seat;
+- up to 12 public action-history entries with exact age and relative actor;
+- three ordered opponent-action targets;
+- exact physical-tile survival targets for the four post-action market tiles;
+- four terminal scores for analysis.
+
+The public action encoding records draft kind and slots, tile and wildlife
+semantics, placement, wildlife placement or return, free replacement, and
+paid-wipe summary.
+
+Policy identity is deliberately stored beside targets, not in model input.
+`OpponentIntentRecord::model_input_bytes` zeroes `game_index` and score targets
+inside the compact position and includes only that sanitized public state plus
+public recent-action history. It excludes split, cohort, policy codes, physical
+tile IDs, future actions, survival outcomes, and terminal scores. Tests mutate
+game and policy identities and require byte-identical model inputs.
+
+The manifest freezes the policy pool, required held-out family, assignment
+domain, history length, and explicit false values for
+`policy_identity_observable`, `game_index_observable`, and
+`strategy_switch_targets_available`.
+
+Validation checks every shard checksum and header, contiguous game and turn
+ranges, exact 76-window counts, history ages, relative seats, policy-cohort
+membership, required held-out policy presence, unique physical tile targets,
+and valid consumption or survival outcomes.
+
+The v1 policy corpus intentionally represents stationary v2 heuristic
+families. Its production audit records three scope boundaries rather than
+silently overclaiming:
+
+- no current v2 policy emits a paid wildlife wipe, so the corpus cannot train a
+  positive paid-wipe intent class;
+- strategy-switch targets are unavailable;
+- policy-held-out results do not establish transfer to the v1 champion or a
+  learned v2 policy.
+
+These limits do not prevent matched public-state, recent-history, next-draft,
+or market-survival learnability experiments. They do prevent paid-wipe,
+strategy-switch, champion-generalization, and gameplay-promotion claims.
+
+```bash
+target/release/opponent_intent_collect collect \
+  --output artifacts/datasets/o1-opponent-intent-v1-validation \
+  --split validation --first-game-index 100000 \
+  --games 256 --shard-games 16 \
+  --cohort-id o1-validation-heldout-competition-v1 \
+  --policy-pool greedy,pattern-aware,pattern-commitment,pattern-competition \
+  --required-policy pattern-competition
+
+target/release/opponent_intent_collect validate \
+  --dataset artifacts/datasets/o1-opponent-intent-v1-validation
+```
+
 ## Commands
 
 ```bash
@@ -348,6 +418,65 @@ target/release/cascadia-v2 validate-action-ranking-dataset \
 indices 0-15 into one-game resumable source shards, then enriches and validates
 them. The architecture, decoder, loss, optimizer, and gates are frozen before
 that command is run.
+
+## R2-MAP benchmark artifacts
+
+The topology-free paired focal gate uses version-4 schemas:
+
+- `cascadia.r2-map.focal-contract.v4` and
+  `cascadia.r2-map.opponent-field.v4` freeze the candidate, incumbent,
+  inference settings, protected pair seeds, focal seats, and exact opponent
+  seats. They declare scheduler-managed pairs and contain no physical or manual
+  partition;
+- `cascadia.r2-map.focal-pair-receipt.v4` contains one normalized
+  candidate/control payload plus exact contract/field SHA-256, semantic
+  BLAKE3, and payload BLAKE3;
+- `cascadia.r2-map.focal-work-item.v4` contains exactly one pair receipt
+  reference and its resource/integrity telemetry; and
+- `cascadia.r2-map.focal-report.v4` is the strict promotion input.
+
+Physical candidate/control order alternates by pair parity to balance warm-up,
+but the receipt is always serialized candidate then control. The 20-pair smoke
+report omits strength distributions. The fixed-250 report exposes them only
+after complete 250-work-item aggregation.
+
+The separate non-comparative panel uses:
+
+- `cascadia.r2-map.longitudinal-contract.v4`, with exactly 100
+  scheduler-managed games, a frozen historical pool, evidence class, and
+  `strength_claim_authorized=false`;
+- `cascadia.r2-map.longitudinal-field.v4`, with complete indices 0-99, unique
+  seeds, focal seat `index mod 4`, and three exact opponent identities;
+- `cascadia.r2-map.longitudinal-game-receipt.v4`, one replay-verified game and
+  its contract/field hashes;
+- `cascadia.r2-map.longitudinal-work-item.v4`, exactly one game receipt
+  reference plus RSS, swap, load/runtime, shutdown, and Pinecone integrity; and
+- `cascadia.r2-map.longitudinal-report.v4`, the complete focal score anatomy
+  and resource report.
+
+Both artifact families write immutable receipts with same-volume fsync and
+rename. Resume validates existing bytes and never trusts a stored work-item
+summary: aggregation reconstructs it from receipts. Any missing, extra,
+duplicate, partial, identity-drifted, or hash-drifted artifact fails closed.
+
+Benchmark gameplay uses the sequential public market protocol. A model chooses
+the free three-of-a-kind action first, then repeatedly chooses either stop or
+one legal paid wipe. Each committed wipe changes the public market before the
+next decision. The sealed replay stores the resulting ordered decisions in the
+single canonical `TurnAction`: `replace_three_of_a_kind` plus the ordered
+`wildlife_wipes` vector. Scientific Pinecone fields are reconstructed from that
+replay, not runner counters: independent drafts cost one, every vector entry
+costs one, and a free replacement costs zero.
+
+Each complete root also contains two bounded projections:
+`projections/dashboard-benchmark.json` matches the existing compact dashboard
+input exactly, while `projections/ledger-experiment.json` matches the existing
+experiment-ledger object. They are non-authoritative imports; the underlying
+contract, field, receipts, and report remain scientific truth.
+The ledger feed keeps all three time fields at zero so its bytes are
+reproducible. John1's `import-benchmark-feed` requires a current-state CAS and
+an imported aggregate receipt that uniquely binds the feed path and SHA-256,
+then stamps that receipt's completion time only in the locked ledger copy.
 
 ## Exact MLX Rollout-Value Dataset
 

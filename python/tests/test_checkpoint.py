@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import mlx.core as mx
@@ -50,7 +51,13 @@ def test_checkpoint_round_trip_preserves_model_optimizer_and_cursor(tmp_path: Pa
         ranking_epochs_without_improvement=3,
     )
 
-    save_checkpoint(tmp_path, model, optimizer, state)
+    checkpoint = save_checkpoint(
+        tmp_path,
+        model,
+        optimizer,
+        state,
+        metadata={"kind": "unit-test", "epoch": 2},
+    )
     loaded, loaded_optimizer, loaded_state, _ = load_latest_checkpoint(
         tmp_path,
         learning_rate=1e-3,
@@ -62,6 +69,8 @@ def test_checkpoint_round_trip_preserves_model_optimizer_and_cursor(tmp_path: Pa
     np.testing.assert_allclose(np.asarray(actual), np.asarray(expected), atol=0, rtol=0)
     assert loaded_state == state
     assert int(loaded_optimizer.state["step"].item()) == 1
+    manifest = json.loads((checkpoint / "checkpoint.json").read_text())
+    assert manifest["metadata"] == {"kind": "unit-test", "epoch": 2}
 
 
 def test_checkpoint_detects_tampered_weights(tmp_path: Path) -> None:

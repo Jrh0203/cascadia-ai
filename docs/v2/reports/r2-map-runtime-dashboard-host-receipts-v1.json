@@ -1,0 +1,41 @@
+{
+  "john1": {
+    "benchmark_pairs_completed": 0,
+    "benchmark_pairs_total": null,
+    "detail": "d0=RED non-certified; docker=blocked; os=26.2/25C56 seal=broken; required=os-update-reboot",
+    "eta_seconds": null,
+    "generation_games_completed": 0,
+    "generation_games_target": null,
+    "generation_seed_prefix": null,
+    "intent": "control",
+    "rss_bytes": null,
+    "swap_delta_bytes": null,
+    "throughput_games_per_second": null
+  },
+  "john2": {
+    "benchmark_pairs_completed": 0,
+    "benchmark_pairs_total": null,
+    "detail": "d0=RED non-certified; docker=live; profile=cascadia-r2 cpu=10 ram_gib=14; receipt_sha256=09a4327bec341f4cd57c89ba0ef1d38ca5ecad3f38f7731e62714ee9e11105d8; lima_tcp_udp53=closed",
+    "eta_seconds": null,
+    "generation_games_completed": 0,
+    "generation_games_target": null,
+    "generation_seed_prefix": null,
+    "intent": "idle",
+    "rss_bytes": null,
+    "swap_delta_bytes": 0,
+    "throughput_games_per_second": null
+  },
+  "john3": {
+    "benchmark_pairs_completed": 0,
+    "benchmark_pairs_total": null,
+    "detail": "d0=RED non-certified; docker=live; profile=cascadia-r2 cpu=10 ram_gib=14; receipt_sha256=41fd6d4b8615098ea019dad0b837a42f08e2f9105144423a5788d5e92ac665b7; lima_tcp_udp53=closed",
+    "eta_seconds": null,
+    "generation_games_completed": 0,
+    "generation_games_target": null,
+    "generation_seed_prefix": null,
+    "intent": "idle",
+    "rss_bytes": null,
+    "swap_delta_bytes": 0,
+    "throughput_games_per_second": null
+  }
+}

@@ -201,7 +201,9 @@ fn finish_score(board: &Board, score: &mut ScoreBreakdown) {
     score.total = score.base_total;
 }
 
-fn score_wildlife(board: &Board, cards: ScoringCards, wildlife: Wildlife) -> u16 {
+/// Score one wildlife card exactly without recomputing habitat or unrelated
+/// animal cards. Opportunity extraction calls this for many apply/undo probes.
+pub fn score_wildlife_type(board: &Board, cards: ScoringCards, wildlife: Wildlife) -> u16 {
     match wildlife {
         Wildlife::Bear => score_bears(board, cards.bear),
         Wildlife::Elk => score_elk(board, cards.elk),
@@ -209,6 +211,10 @@ fn score_wildlife(board: &Board, cards: ScoringCards, wildlife: Wildlife) -> u16
         Wildlife::Hawk => score_hawks(board, cards.hawk),
         Wildlife::Fox => score_foxes(board, cards.fox),
     }
+}
+
+fn score_wildlife(board: &Board, cards: ScoringCards, wildlife: Wildlife) -> u16 {
+    score_wildlife_type(board, cards, wildlife)
 }
 
 fn apply_multiplayer_habitat_bonuses(scores: &mut [ScoreBreakdown]) {

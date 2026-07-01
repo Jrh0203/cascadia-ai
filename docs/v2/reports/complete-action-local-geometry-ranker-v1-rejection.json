@@ -1,0 +1,532 @@
+{
+  "cross_host_portability": {
+    "all_origin_cross_scientific_digests_identical": true,
+    "all_origin_cross_scientific_payloads_identical": true,
+    "performance_by_replay": {
+      "john1-cross-on-john3": {
+        "action_scores_per_second": 82248.75596173301,
+        "actions": 860203,
+        "elapsed_seconds": 10.45855332328938,
+        "gates": {
+          "action_scores_per_second_at_least_20000": true,
+          "all_scores_finite": true,
+          "p99_decision_milliseconds_at_most_250": true,
+          "peak_process_rss_at_most_4_gib": true,
+          "process_swaps_zero": true,
+          "system_swap_not_consumed": true
+        },
+        "groups": 240,
+        "mean_decision_milliseconds": 43.577305513705745,
+        "nonfinite_scores": 0,
+        "p99_decision_milliseconds": 98.44220673490776,
+        "passed": true,
+        "peak_process_rss_bytes": 592183296,
+        "process_swaps": 0,
+        "system_swap_after_bytes": 590935490,
+        "system_swap_before_bytes": 590935490,
+        "system_swap_delta_bytes": 0
+      },
+      "john1-origin": {
+        "action_scores_per_second": 51795.77026374351,
+        "actions": 860203,
+        "elapsed_seconds": 16.607591616455466,
+        "gates": {
+          "action_scores_per_second_at_least_20000": true,
+          "all_scores_finite": true,
+          "p99_decision_milliseconds_at_most_250": true,
+          "peak_process_rss_at_most_4_gib": true,
+          "process_swaps_zero": true,
+          "system_swap_not_consumed": true
+        },
+        "groups": 240,
+        "mean_decision_milliseconds": 69.19829840189777,
+        "nonfinite_scores": 0,
+        "p99_decision_milliseconds": 172.56615761667481,
+        "passed": true,
+        "peak_process_rss_bytes": 409141248,
+        "process_swaps": 0,
+        "system_swap_after_bytes": 4659609600,
+        "system_swap_before_bytes": 5357761986,
+        "system_swap_delta_bytes": -698152386
+      },
+      "john2-cross-on-john3": {
+        "action_scores_per_second": 80991.6185272884,
+        "actions": 860203,
+        "elapsed_seconds": 10.620889119658386,
+        "gates": {
+          "action_scores_per_second_at_least_20000": true,
+          "all_scores_finite": true,
+          "p99_decision_milliseconds_at_most_250": true,
+          "peak_process_rss_at_most_4_gib": true,
+          "process_swaps_zero": true,
+          "system_swap_not_consumed": true
+        },
+        "groups": 240,
+        "mean_decision_milliseconds": 44.253704665243276,
+        "nonfinite_scores": 0,
+        "p99_decision_milliseconds": 98.09008813434043,
+        "passed": true,
+        "peak_process_rss_bytes": 416727040,
+        "process_swaps": 0,
+        "system_swap_after_bytes": 590935490,
+        "system_swap_before_bytes": 590935490,
+        "system_swap_delta_bytes": 0
+      },
+      "john2-origin": {
+        "action_scores_per_second": 81740.33543616047,
+        "actions": 860203,
+        "elapsed_seconds": 10.523604966997254,
+        "gates": {
+          "action_scores_per_second_at_least_20000": true,
+          "all_scores_finite": true,
+          "p99_decision_milliseconds_at_most_250": true,
+          "peak_process_rss_at_most_4_gib": true,
+          "process_swaps_zero": true,
+          "system_swap_not_consumed": true
+        },
+        "groups": 240,
+        "mean_decision_milliseconds": 43.848354029155225,
+        "nonfinite_scores": 0,
+        "p99_decision_milliseconds": 97.86180762989939,
+        "passed": true,
+        "peak_process_rss_bytes": 601571328,
+        "process_swaps": 0,
+        "system_swap_after_bytes": 20447232,
+        "system_swap_before_bytes": 20447232,
+        "system_swap_delta_bytes": 0
+      },
+      "john3-cross-on-john1": {
+        "action_scores_per_second": 43836.2323574516,
+        "actions": 860203,
+        "elapsed_seconds": 19.623105220030993,
+        "gates": {
+          "action_scores_per_second_at_least_20000": true,
+          "all_scores_finite": true,
+          "p99_decision_milliseconds_at_most_250": true,
+          "peak_process_rss_at_most_4_gib": true,
+          "process_swaps_zero": true,
+          "system_swap_not_consumed": true
+        },
+        "groups": 240,
+        "mean_decision_milliseconds": 81.7629384167958,
+        "nonfinite_scores": 0,
+        "p99_decision_milliseconds": 181.10695521812883,
+        "passed": true,
+        "peak_process_rss_bytes": 409403392,
+        "process_swaps": 0,
+        "system_swap_after_bytes": 4874567680,
+        "system_swap_before_bytes": 5405346365,
+        "system_swap_delta_bytes": -530778685
+      },
+      "john3-origin": {
+        "action_scores_per_second": 80565.37868755842,
+        "actions": 860203,
+        "elapsed_seconds": 10.677080080960877,
+        "gates": {
+          "action_scores_per_second_at_least_20000": true,
+          "all_scores_finite": true,
+          "p99_decision_milliseconds_at_most_250": true,
+          "peak_process_rss_at_most_4_gib": true,
+          "process_swaps_zero": true,
+          "system_swap_not_consumed": true
+        },
+        "groups": 240,
+        "mean_decision_milliseconds": 44.48783367067032,
+        "nonfinite_scores": 0,
+        "p99_decision_milliseconds": 98.46161162771745,
+        "passed": true,
+        "peak_process_rss_bytes": 521781248,
+        "process_swaps": 0,
+        "system_swap_after_bytes": 590935490,
+        "system_swap_before_bytes": 590935490,
+        "system_swap_delta_bytes": 0
+      }
+    },
+    "performance_passed": true
+  },
+  "diagnosis": {
+    "conclusion": "Explicit rotation-canonical local geometry reduced retained regret but did not materially solve exact complete-action winner recovery. The representation treatment is rejected before sealed test or gameplay.",
+    "learned_mean_top64_retained_r4800_regret": 0.0937572161356608,
+    "learned_top64_r4800_winner_recall": 0.7416666666666667,
+    "retained_regret_reduction_fraction": 0.17046966312486608,
+    "retained_regret_reduction_points": 0.019267241160074874,
+    "screen_mean_top64_retained_r4800_regret": 0.11302445729573568,
+    "screen_top64_r4800_winner_recall": 0.7166666666666667,
+    "winner_recall_change_percentage_points": 2.500000000000002
+  },
+  "execution": {
+    "all_three_hosts_started_concurrently": true,
+    "completed_wrapper_jobs": [
+      {
+        "elapsed_seconds": 1408.8607630729675,
+        "host": "john1",
+        "name": "adr0088-train-john1",
+        "return_code": 0
+      },
+      {
+        "elapsed_seconds": 1032.9283561706543,
+        "host": "john3",
+        "name": "adr0088-train-john3",
+        "return_code": 0
+      },
+      {
+        "elapsed_seconds": 848.0015559196472,
+        "host": "john2",
+        "name": "adr0088-resume-john2",
+        "return_code": 0
+      }
+    ],
+    "incomplete_wrapper_jobs": [
+      {
+        "host": "john2",
+        "name": "adr0088-train-john2"
+      }
+    ],
+    "infrastructure_retries": [
+      {
+        "host": "john2",
+        "reason": "the initial SSH wrapper disconnected after checkpoints were written; the frozen run resumed from its latest checkpoint",
+        "scientific_contract_changed": false
+      }
+    ],
+    "initial_training_launch_skew_seconds": 0.2466259002685547,
+    "initial_training_start_unix_seconds": {
+      "john1": 1781575305.573031,
+      "john2": 1781575305.6810508,
+      "john3": 1781575305.8196568
+    },
+    "maximum_lock_queue_seconds": 7.295608520507812e-05,
+    "training_by_host": {
+      "john1": {
+        "elapsed_seconds": 1380.3549512499012,
+        "epochs": 7,
+        "global_step": 3154,
+        "seed": 2026061601,
+        "stopped_reason": "validation futility after 6 non-improving epochs"
+      },
+      "john2": {
+        "elapsed_seconds": 2133.2126055419944,
+        "epochs": 15,
+        "global_step": 6746,
+        "seed": 2026061602,
+        "stopped_reason": "validation futility after 6 non-improving epochs"
+      },
+      "john3": {
+        "elapsed_seconds": 1007.5486644589982,
+        "epochs": 7,
+        "global_step": 3146,
+        "seed": 2026061603,
+        "stopped_reason": "validation futility after 6 non-improving epochs"
+      }
+    }
+  },
+  "experiment_id": "complete-action-local-geometry-ranker-v1",
+  "input_sha256": {
+    "cross-host/john1-seed-2026061601/validation-report-john3.json": "08c92748ffe69046d63c7e7406b3c6c64740a2ff90c3371031e28ee937671c7b",
+    "cross-host/john2-seed-2026061602/validation-report-john3.json": "5462a32af91f999762958aa3d79575fd1737ccb5686f0558f5fcd0790fa03c73",
+    "cross-host/john3-seed-2026061603/validation-report-john1.json": "754a2cb57b3b935eef743c628a09b371c3b67a6c78f2cbb27ca070e3151b924c",
+    "events-john1.jsonl": "37fa54f85da1ce19b88079039ff9eaf2bfeeb6371533d5bf67dd1158a73ea5ff",
+    "events-john2.jsonl": "ad9f7a7f22bd4c425202aaca99d4123aae05361e312962501dea3c25a842a6be",
+    "events-john3.jsonl": "40fc7597f5d5573c39f58a15bc72317e86c733b35b60cb8825a15a2c81a801ca",
+    "events-resume-john2.jsonl": "2e7234aa52cfd71687f397e1bd13f792b6156a3b35f5791f6719229ba7a96379",
+    "manifest.json": "61c792de0a90f6f53d7778eea4cf250e1066bc4a0e6b0cc06fd0f1505291e87f",
+    "runs/john1-seed-2026061601/best.json": "37c06024859049db833da51926a86dfb39dbb87d7f6d31cc1f555ebabb9964b9",
+    "runs/john1-seed-2026061601/final-report.json": "d7a2e290bac53470caae6b04f771d71ba1c7393854314d7e3123229a467d6020",
+    "runs/john1-seed-2026061601/run.json": "8347d19c0c3bfec0d23f139653deb65f61b6a5b7f19724005b9b5a28b5bae927",
+    "runs/john1-seed-2026061601/validation-report-john1.json": "be4037d10c44d7c0ff19fcddea97e6b12a216cd5281f84f6a7afc19ce4ae7bd1",
+    "runs/john2-seed-2026061602/best.json": "d0efe16fe73bb6e95d3b6430894d07c4ba04b563455e4a412b63c5063bc521bb",
+    "runs/john2-seed-2026061602/final-report.json": "042ddf8377a9e3f8e0c3c42df0f7ce6ad127076cca8995bf9354b4e02892bcf1",
+    "runs/john2-seed-2026061602/run.json": "34a1b70d3c3832c9e0e57a1f785764ec7b43232371201fcf01080bca06e43119",
+    "runs/john2-seed-2026061602/validation-report-john2.json": "301d7c1e15989d373fbf0088eeff6ecac1fb221d647640a32db5741d52ee6544",
+    "runs/john3-seed-2026061603/best.json": "c1df9ccee448d549f303d1bb89c52f922c1e84c39f7b5522f8814de88ce25135",
+    "runs/john3-seed-2026061603/final-report.json": "3b68ab49d8f487b05db79421f25fe346534fd277948e61da842fe07656c7bbc0",
+    "runs/john3-seed-2026061603/run.json": "e14aa9beecae77628fb3d0d855b7f411c0a0cfeba1c628b89962a5df27b7077f",
+    "runs/john3-seed-2026061603/validation-report-john3.json": "57e30c764fa0cc41656006d27aa4939e0ac9370f211728c92499a2744375e6fa"
+  },
+  "integrity": {
+    "all_actions_scored_once": true,
+    "all_groups_scored_once": true,
+    "all_replica_sources_identical": true,
+    "all_replica_train_datasets_identical": true,
+    "all_replica_validation_datasets_identical": true,
+    "all_scores_finite": true,
+    "relation_schema": "active-board-local-13-v1",
+    "sealed_test_opened": false
+  },
+  "passed": false,
+  "protocol_status": {
+    "gameplay": "closed_unopened",
+    "sealed_test": "closed_unopened",
+    "validation": "failed"
+  },
+  "replica_selection": {
+    "objective": [
+      "lowest validation retained mean R4800 regret",
+      "higher top-64 R4800-winner recall",
+      "lower R4800 residual MAE",
+      "lower training seed"
+    ],
+    "replicas": [
+      {
+        "checkpoint": "step-000000452-epoch-0001-batch-000000",
+        "checkpoint_manifest_blake3": "ccfe6234e578fb2df47809a5dfc40b330c8c48ff3c0664760f59af2b25632c94",
+        "cross_host": "john3",
+        "epochs": 7,
+        "global_step": 3154,
+        "host": "john1",
+        "model_blake3": "938fa3451f4b996a8b65cc3e09a02dcd751103ebad36926dbe184611e0c1c6db",
+        "r4800_residual_mae": 4.912167087618967,
+        "scientific_blake3": "3fc5a889ba008b7a0b42ee418911f561e99965f982fc0aab96717eb0fd241235",
+        "seed": 2026061601,
+        "selection_loss": 0.11302445729573568,
+        "stopped_reason": "validation futility after 6 non-improving epochs",
+        "top64_r4800_winner_recall": 0.7166666666666667,
+        "training_elapsed_seconds": 1380.3549512499012
+      },
+      {
+        "checkpoint": "step-000004045-epoch-0009-batch-000000",
+        "checkpoint_manifest_blake3": "27519ddef98a971f476a596899006df16cf3ed19a2ee1e3b791e2400e59c0292",
+        "cross_host": "john3",
+        "epochs": 15,
+        "global_step": 6746,
+        "host": "john2",
+        "model_blake3": "d6800f4a9c09106665d1faf7e34ddcd6938fc81fde3e168ade4c030d0a430e27",
+        "r4800_residual_mae": 1.721005684466099,
+        "scientific_blake3": "9c27a443113fe13b4313f9d8264ff51f223104d83cf7b157578980a75a7ea215",
+        "seed": 2026061602,
+        "selection_loss": 0.0937572161356608,
+        "stopped_reason": "validation futility after 6 non-improving epochs",
+        "top64_r4800_winner_recall": 0.7416666666666667,
+        "training_elapsed_seconds": 2133.2126055419944
+      },
+      {
+        "checkpoint": "step-000000450-epoch-0001-batch-000000",
+        "checkpoint_manifest_blake3": "f56a36036f589955886cbb68fcfaf88d1590df4942ab4887dede0e46c7e352fd",
+        "cross_host": "john1",
+        "epochs": 7,
+        "global_step": 3146,
+        "host": "john3",
+        "model_blake3": "e44f0fd272291e98ef6c8d5d7a4b26f584e7b0492f6930f883391424be003c0f",
+        "r4800_residual_mae": 4.912167087618967,
+        "scientific_blake3": "0442045d0deba93438d314fee17b6fd1b6525a690767174975a8ce560119fab2",
+        "seed": 2026061603,
+        "selection_loss": 0.11302445729573568,
+        "stopped_reason": "validation futility after 6 non-improving epochs",
+        "top64_r4800_winner_recall": 0.7166666666666667,
+        "training_elapsed_seconds": 1007.5486644589982
+      }
+    ],
+    "selected_checkpoint": "step-000004045-epoch-0009-batch-000000",
+    "selected_host": "john2",
+    "selected_model_blake3": "d6800f4a9c09106665d1faf7e34ddcd6938fc81fde3e168ade4c030d0a430e27",
+    "selected_seed": 2026061602
+  },
+  "schema_version": 1,
+  "sealed_test": {
+    "manifest_model_access": "sealed",
+    "manifest_opened": false,
+    "passed": true,
+    "test_authorization_exists": false,
+    "test_groups_read_by_reporter": false,
+    "test_or_gameplay_output_exists": false
+  },
+  "selected_validation": {
+    "confidence_top64": {
+      "confidence_set_coverage_95": 0.8791666666666667,
+      "distinguishable_groups": 76,
+      "distinguishable_winner_recall": 0.881578947368421,
+      "exact_winner_misses": 62,
+      "exact_winner_recall": 0.7416666666666667,
+      "mean_retained_r4800_regret": 0.0937572161356608,
+      "misses_retaining_confidence_equivalent_fraction": 0.532258064516129
+    },
+    "failed_quality_gates": [
+      "early_confidence_set_coverage_at_least_0_98",
+      "early_top64_recall_at_least_0_97",
+      "independent_draft_winner_top64_recall_at_least_0_95",
+      "late_confidence_set_coverage_at_least_0_98",
+      "late_top64_recall_at_least_0_97",
+      "middle_confidence_set_coverage_at_least_0_98",
+      "middle_top64_recall_at_least_0_97",
+      "nature_token_available_top64_recall_at_least_0_95",
+      "top64_confidence_set_coverage_at_least_0_99",
+      "top64_distinguishable_winner_recall_at_least_0_98",
+      "top64_r4800_winner_recall_strictly_greater_than_0_98"
+    ],
+    "metrics": {
+      "action_family": {
+        "free_refresh": {
+          "groups": 25,
+          "mean_top64_retained_r4800_regret": 0.0991375732421875,
+          "top64_r4800_winner_recall": 0.84
+        },
+        "independent": {
+          "groups": 21,
+          "mean_top64_retained_r4800_regret": 0.08170827229817708,
+          "top64_r4800_winner_recall": 0.7619047619047619
+        },
+        "paid_wipe": {
+          "groups": 0,
+          "mean_top64_retained_r4800_regret": 0.0,
+          "top64_r4800_winner_recall": 0.0
+        },
+        "paired": {
+          "groups": 219,
+          "mean_top64_retained_r4800_regret": 0.09491259431185788,
+          "top64_r4800_winner_recall": 0.7397260273972602
+        },
+        "same_slot_independent": {
+          "groups": 0,
+          "mean_top64_retained_r4800_regret": 0.0,
+          "top64_r4800_winner_recall": 0.0
+        }
+      },
+      "all_candidates_scored_once": true,
+      "all_groups_scored_once": true,
+      "all_scores_finite": true,
+      "candidates": 860203,
+      "expected_candidates": 860203,
+      "expected_groups": 240,
+      "groups": 240,
+      "mean_selected_rank": 65.22083333333333,
+      "mean_top1_retained_r4800_regret": 0.9338799158732096,
+      "mean_top32_retained_r4800_regret": 0.21673863728841145,
+      "mean_top64_retained_r4800_regret": 0.0937572161356608,
+      "mean_top8_retained_r4800_regret": 0.4662235577901204,
+      "nonfinite_scores": 0,
+      "phase": {
+        "early": {
+          "groups": 84,
+          "mean_top64_retained_r4800_regret": 0.08641851515997023,
+          "top64_r4800_winner_recall": 0.7261904761904762
+        },
+        "late": {
+          "groups": 72,
+          "mean_top64_retained_r4800_regret": 0.05067030588785807,
+          "top64_r4800_winner_recall": 0.8194444444444444
+        },
+        "middle": {
+          "groups": 84,
+          "mean_top64_retained_r4800_regret": 0.13802755446661086,
+          "top64_r4800_winner_recall": 0.6904761904761905
+        }
+      },
+      "r1200_correlation": 0.5972225700074619,
+      "r1200_residual_mae": 2.291983346660974,
+      "r4800_correlation": 0.7404188563134912,
+      "r4800_residual_mae": 1.721005684466099,
+      "screen_mean_top64_retained_r4800_regret": 0.11302445729573568,
+      "screen_only_residual": {
+        "count": 629837,
+        "mean": 1.0693825203198337,
+        "p95_abs": 3.9701822280883783,
+        "p99_abs": 6.388430767059329,
+        "stddev": 1.5643021552954364
+      },
+      "screen_top64_r4800_winner_recall": 0.7166666666666667,
+      "subsets": {
+        "independent_draft_winner": {
+          "groups": 21,
+          "mean_top64_retained_r4800_regret": 0.08170827229817708,
+          "top64_r4800_winner_recall": 0.7619047619047619
+        },
+        "nature_token_available": {
+          "groups": 191,
+          "mean_top64_retained_r4800_regret": 0.0940338054876677,
+          "top64_r4800_winner_recall": 0.7539267015706806
+        }
+      },
+      "top1_r4800_winner_recall": 0.11666666666666667,
+      "top32_r4800_winner_recall": 0.5875,
+      "top64_r4800_winner_recall": 0.7416666666666667,
+      "top8_r4800_winner_recall": 0.3458333333333333,
+      "training_objective": 15.33728079398473,
+      "uncertainty": {
+        "count": 230366,
+        "gaussian_cross_entropy": 1.7826864972673448,
+        "mean_predicted_standard_error": 2.4897434639827023,
+        "mean_teacher_standard_error": 1.2055685598295742,
+        "one_sigma_empirical_coverage": 0.6443659220544699,
+        "standard_error_correlation": 0.19849646789647324,
+        "standard_error_mae": 1.3093665344396994
+      }
+    },
+    "phase_top64": {
+      "early": {
+        "confidence_set_coverage_95": 0.9285714285714286,
+        "distinguishable_groups": 26,
+        "distinguishable_winner_recall": 0.8461538461538461,
+        "exact_winner_misses": 23,
+        "exact_winner_recall": 0.7261904761904762,
+        "mean_retained_r4800_regret": 0.08641851515997023,
+        "misses_retaining_confidence_equivalent_fraction": 0.7391304347826086
+      },
+      "late": {
+        "confidence_set_coverage_95": 0.8888888888888888,
+        "distinguishable_groups": 23,
+        "distinguishable_winner_recall": 0.9130434782608695,
+        "exact_winner_misses": 13,
+        "exact_winner_recall": 0.8194444444444444,
+        "mean_retained_r4800_regret": 0.05067030588785807,
+        "misses_retaining_confidence_equivalent_fraction": 0.38461538461538464
+      },
+      "middle": {
+        "confidence_set_coverage_95": 0.8214285714285714,
+        "distinguishable_groups": 27,
+        "distinguishable_winner_recall": 0.8888888888888888,
+        "exact_winner_misses": 26,
+        "exact_winner_recall": 0.6904761904761905,
+        "mean_retained_r4800_regret": 0.13802755446661086,
+        "misses_retaining_confidence_equivalent_fraction": 0.4230769230769231
+      }
+    },
+    "quality_gates": {
+      "all_candidates_scored_once": true,
+      "all_groups_scored_once": true,
+      "all_scores_finite": true,
+      "confidence_all_candidates_scored_once": true,
+      "confidence_all_groups_scored_once": true,
+      "confidence_all_scores_finite": true,
+      "early_confidence_set_coverage_at_least_0_98": false,
+      "early_retained_regret_strictly_less_than_0_20": true,
+      "early_top64_recall_at_least_0_97": false,
+      "independent_draft_winner_retained_regret_strictly_less_than_0_25": true,
+      "independent_draft_winner_top64_recall_at_least_0_95": false,
+      "late_confidence_set_coverage_at_least_0_98": false,
+      "late_retained_regret_strictly_less_than_0_20": true,
+      "late_top64_recall_at_least_0_97": false,
+      "mean_top64_retained_r4800_regret_strictly_less_than_0_15": true,
+      "middle_confidence_set_coverage_at_least_0_98": false,
+      "middle_retained_regret_strictly_less_than_0_20": true,
+      "middle_top64_recall_at_least_0_97": false,
+      "nature_token_available_retained_regret_strictly_less_than_0_25": true,
+      "nature_token_available_top64_recall_at_least_0_95": false,
+      "sealed_test_unopened": true,
+      "top64_confidence_set_coverage_at_least_0_99": false,
+      "top64_distinguishable_winner_recall_at_least_0_98": false,
+      "top64_r4800_winner_recall_strictly_greater_than_0_98": false
+    },
+    "quality_passed": false,
+    "subset_top64": {
+      "independent_draft_winner": {
+        "confidence_set_coverage_95": 0.8571428571428571,
+        "distinguishable_groups": 4,
+        "distinguishable_winner_recall": 0.75,
+        "exact_winner_misses": 5,
+        "exact_winner_recall": 0.7619047619047619,
+        "mean_retained_r4800_regret": 0.08170827229817708,
+        "misses_retaining_confidence_equivalent_fraction": 0.4
+      },
+      "nature_token_available": {
+        "confidence_set_coverage_95": 0.8743455497382199,
+        "distinguishable_groups": 58,
+        "distinguishable_winner_recall": 0.8793103448275862,
+        "exact_winner_misses": 47,
+        "exact_winner_recall": 0.7539267015706806,
+        "mean_retained_r4800_regret": 0.0940338054876677,
+        "misses_retaining_confidence_equivalent_fraction": 0.48936170212765956
+      }
+    }
+  },
+  "status": "rejected_on_validation"
+}

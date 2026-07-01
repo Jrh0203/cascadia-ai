@@ -6,16 +6,19 @@ mod lookahead;
 mod mlx_prefilter;
 mod mlx_ranking_rollout;
 mod mlx_value;
+mod offline_public_belief;
 mod oracle;
 mod pattern_rollout;
 mod policy_improvement;
 mod public_tree;
+mod r2_map_direct;
+mod r2_map_runner;
 mod ranking_prediction;
 
 use blake3::Hasher;
-use cascadia_data::DataError;
+use cascadia_data::{DataError, R2MapExperienceError};
 use cascadia_game::{GameSeed, GameState, RuleError};
-use cascadia_model::ModelError;
+use cascadia_model::{ModelError, R2MapModelError};
 use cascadia_sim::SimulationError;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -68,6 +71,14 @@ pub use public_tree::{
     PUBLIC_FOCAL_OPEN_LOOP_TREE_STRATEGY_ID, PublicFocalOpenLoopTreeConfig,
     PublicFocalOpenLoopTreeStrategy, PublicTreeAnalysis, PublicTreeRootEvaluation,
 };
+pub use r2_map_direct::{
+    R2MapExactScoreReferencePredictor, R2MapExplorationChoice, R2MapMarketDecisionTrace,
+    R2MapPredictor, R2MapPreparedDecision, R2MapPreparedMarketDecision, R2MapScoredDecision,
+    R2MapScoredMarketDecision, R2MapScoredTurn, R2MapTurnDecisionContext, R2MapTurnDecisionKind,
+    prepare_r2_map_draft_decision, prepare_r2_map_market_decision, score_r2_map_decision,
+    score_r2_map_market_decision, select_r2_map_argmax, select_r2_map_turn,
+};
+pub use r2_map_runner::R2MapLocalGameRunner;
 
 pub use lookahead::{
     BearCandidateLookaheadConfig, BearCandidateLookaheadStrategy,
@@ -95,6 +106,12 @@ pub use mlx_ranking_rollout::{
 pub use mlx_value::{
     MlxValueConfig, MlxValueLeafLookaheadConfig, MlxValueLeafLookaheadStrategy, MlxValueStrategy,
     Predictor,
+};
+pub use offline_public_belief::{
+    HalvingRootStatistics, HalvingWork, HorizonPatternPolicyConfig, PublicBeliefTrajectory,
+    SequentialHalving, SequentialHalvingResult, SequentialHalvingSchedule,
+    canonical_complete_action_hash, public_belief_determinization_seed,
+    simulate_pattern_prior_horizon, simulate_pattern_prior_post_root_horizon,
 };
 pub(crate) use ranking_prediction::predict_ranking_scores;
 
@@ -170,9 +187,17 @@ pub enum SearchError {
     #[error(transparent)]
     Model(#[from] ModelError),
     #[error(transparent)]
+    R2MapModel(#[from] R2MapModelError),
+    #[error(transparent)]
+    R2(#[from] cascadia_r2::R2Error),
+    #[error(transparent)]
     Data(#[from] DataError),
     #[error(transparent)]
+    R2MapExperience(#[from] R2MapExperienceError),
+    #[error(transparent)]
     Simulation(#[from] SimulationError),
+    #[error(transparent)]
+    Serialization(#[from] serde_json::Error),
 }
 
 impl SearchError {

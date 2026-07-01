@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-legal-audit-cross-request-row-reuse-diagnostic-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 1,
+  "question": "Do different searches in one multiplexed evaluator batch submit enough exactly identical sparse rows to justify bounded global deduplication?",
+  "contract": {
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "raw_seed": 60999,
+    "audited_completed_turns": [
+      66
+    ],
+    "realized_hidden_completed_turns": [
+      66
+    ],
+    "champion_rollouts": 600,
+    "substantial_rollouts": 1200,
+    "high_confidence_rollouts": 4800,
+    "screen_limit": 64,
+    "high_confidence_limit": 8,
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "implementation": {
+    "environment": "CASCADIA_MULTIPLEX_ROW_REUSE_DIAGNOSTICS=1",
+    "scope": "one temporary exact map per coalesced evaluator batch",
+    "key": "borrowed complete sparse row slice",
+    "duplicate_requirement": "first occurrence belongs to another request",
+    "prediction_reuse_enabled": false,
+    "binary_sha256": "56f1599559c1388d16d4019fadfd0fc4c17ffa32cf81dda7725262f80b75e7e8",
+    "binary_blake3": "89eee5be40d42da1bc1fb45eeb84ba8d9bf679656033b30f5fca341cf1915abf",
+    "binary_bytes": 2801584,
+    "v2_source_blake3": "245c05b0ae954d31f83e98eecbc8fd4234de322851dcb5730e6e6319c77c8872"
+  },
+  "correctness": {
+    "semantic_turn66_blake3": "6f19d82622bab6a5a45c6cdf6e1152f99791630436d1a0354d9f629f95089863",
+    "terminal_base_scores": [
+      96,
+      99,
+      92,
+      102
+    ],
+    "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+    "logical_neural_batches": 5469,
+    "logical_neural_rows": 9288014,
+    "physical_neural_rows": 7198144,
+    "rollout_waves": 4355,
+    "rollout_samples": 104615,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "bridge_fallbacks": 0,
+    "selected_actions": 171,
+    "selected_actions_legal": 171,
+    "differential_library_tests_passed": 25,
+    "exact_cross_request_counter_test_passed": true,
+    "report_validation_passed": true,
+    "zero_swaps": true
+  },
+  "measurement": {
+    "multiplex_search_cohorts": 13,
+    "multiplex_searches": 104,
+    "evaluator_requests": 1512,
+    "evaluator_batches": 189,
+    "coalesced_batches": 189,
+    "coalesced_rows_observed": 891486,
+    "exact_cross_request_duplicate_rows": 247,
+    "exact_reuse_percent": 0.02770654839223499,
+    "rows_per_duplicate": 3609.255060728745,
+    "minimum_observed_rows_gate": 500000,
+    "minimum_duplicate_rows_gate": 50000,
+    "minimum_reuse_percent_gate": 5.0,
+    "advance_gate_passed": false
+  },
+  "diagnostic_cost": {
+    "uninstrumented_seconds": 31.881540125,
+    "instrumented_seconds": 31.857941166,
+    "wall_change_percent": -0.07402076219490973,
+    "uninstrumented_maximum_rss_bytes": 365674496,
+    "instrumented_maximum_rss_bytes": 365641728,
+    "maximum_rss_change_percent": -0.008960974954075003,
+    "uninstrumented_allocator_peak_bytes": 145408504,
+    "instrumented_allocator_peak_bytes": 161907216,
+    "allocator_peak_change_percent": 11.346456050465935,
+    "memory_ceiling_bytes": 1610612736
+  },
+  "artifact": {
+    "report_bytes": 3534655,
+    "report_sha256": "1dfdebbbb020363a83b7203fa0dc7bf821a5112794d595870aa651a68d342d34",
+    "report_blake3": "c92307eb8d09a59f85c253af9971521b79d15a8290602d59f34e217565e39cd1",
+    "local_archive": "artifacts/performance/full-legal-audit-cross-request-row-reuse-diagnostic-v1",
+    "sha256_manifest": "artifacts/performance/full-legal-audit-cross-request-row-reuse-diagnostic-v1/SHA256SUMS"
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "Only 247 of 891,486 coalesced rows were exact duplicates from another request, so bounded cross-request deduplication would remove 0.028% of rows while adding hashing and scatter overhead.",
+    "deduplication_treatment_authorized": false,
+    "next_direction": "Measure and optimize neural evaluation, template preparation, opponent advancement, and search workload directly."
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "campaign_id": "r2-map-expert-iteration-v1",
+  "d0_certified": false,
+  "d0_gate": "red",
+  "dashboard_representation": {
+    "docker_fields_supported": false,
+    "representation": "existing hosts.<host>.detail fields plus this separate receipt-bound evidence document",
+    "schema_id": "cascadia.r2-map.dashboard-status.v1"
+  },
+  "hosts": {
+    "john1": {
+      "authenticated_root": "enabled",
+      "blockers": [
+        "os-seal-broken",
+        "runtime-not-installed"
+      ],
+      "docker_runtime": "blocked",
+      "os_build": "25C56",
+      "os_version": "26.2",
+      "sealed": false,
+      "sip": "enabled"
+    },
+    "john2": {
+      "buildx": {
+        "buildkit_version": "v0.30.0",
+        "driver": "docker",
+        "installed": true,
+        "version": "0.35.0"
+      },
+      "certification": "direct-per-host-integrity-verified-not-d0-certified",
+      "docker_tcp_listener": false,
+      "lima_hostagent_tcp_53_reachable_over_tailscale": false,
+      "lima_hostagent_udp_53_responsive_over_tailscale": false,
+      "profile": {
+        "cpu": 10,
+        "memory_gib": 14,
+        "name": "cascadia-r2",
+        "status": "running",
+        "vm_type": "vz"
+      },
+      "receipt": {
+        "file_sha256": "09a4327bec341f4cd57c89ba0ef1d38ca5ecad3f38f7731e62714ee9e11105d8",
+        "path": "/Users/john2/.config/cascadia-r2/runtime-profile-receipt.json",
+        "semantic_sha256": "3a8af2e5f8491e2a69b2b1ae440577d071f124866d954bbb34ee74dfc5b34db7"
+      },
+      "resolver_mitigation": {
+        "host_resolver_enabled": false,
+        "override_path": "/Users/john2/.local/share/cascadia-r2/colima/_lima/_config/override.yaml",
+        "override_sha256": "756d2b7313eb261ca9499bc028c43db9493fc72ab4d6544dd545a5b77d44012d",
+        "tcp53_listener_count": 0,
+        "udp53_listener_count": 0
+      },
+      "stores": {
+        "build_cache": 0,
+        "containers": 0,
+        "images": 0,
+        "volumes": 0
+      }
+    },
+    "john3": {
+      "buildx": {
+        "installed": false,
+        "plugin_present": false
+      },
+      "certification": "direct-per-host-integrity-verified-not-d0-certified",
+      "docker_tcp_listener": false,
+      "lima_hostagent_tcp_53_reachable_over_tailscale": false,
+      "lima_hostagent_udp_53_responsive_over_tailscale": false,
+      "profile": {
+        "cpu": 10,
+        "memory_gib": 14,
+        "name": "cascadia-r2",
+        "status": "running",
+        "vm_type": "vz"
+      },
+      "receipt": {
+        "file_sha256": "41fd6d4b8615098ea019dad0b837a42f08e2f9105144423a5788d5e92ac665b7",
+        "path": "/Users/john3/.config/cascadia-r2/runtime-profile-receipt.json",
+        "semantic_sha256": "773867456c894a78b6cb0b5692b3e5f340d1c8ee68d4afcacc48f32201d00707"
+      },
+      "resolver_mitigation": {
+        "host_resolver_enabled": false,
+        "override_path": "/Users/john3/.local/share/cascadia-r2/colima/_lima/_config/override.yaml",
+        "override_sha256": "756d2b7313eb261ca9499bc028c43db9493fc72ab4d6544dd545a5b77d44012d",
+        "tcp53_listener_count": 0,
+        "udp53_listener_count": 0
+      },
+      "stores": {
+        "build_cache": 0,
+        "containers": 0,
+        "images": 0,
+        "volumes": 0
+      }
+    }
+  },
+  "observed_at": "2026-06-19T01:53:08Z",
+  "observed_unix_ms": 1781833988000,
+  "project_execution_authorized": false,
+  "schema_id": "cascadia.r2-map.runtime-profile-dashboard-evidence.v1",
+  "schema_version": 1,
+  "w0_gate": "red"
+}

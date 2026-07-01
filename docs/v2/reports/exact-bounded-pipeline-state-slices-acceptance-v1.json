@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-bounded-pipeline-state-slices-acceptance-v1-20260615",
+  "status": "accepted",
+  "phase": 0,
+  "hypothesis": "Each ordered pipeline cohort can prepare and advance only the bounded state range from its first through last active index, eliminating full-population masks, maps, and scans without changing exact rollout behavior.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "pipeline_chunk_states": 96,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1",
+    "model_manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "implementation": {
+    "prepared_chunk_range_type": "std::ops::Range<usize>",
+    "preparation_scope": "unfinished states in the bounded mutable state slice",
+    "opponent_advance_scope": "the same bounded mutable state slice",
+    "global_state_indices_retained": true,
+    "unsafe_used": false,
+    "full_population_mask_retained": false,
+    "full_population_position_map_retained": false,
+    "release_runtime_switch_retained": false,
+    "source_treatment_capable_binary_sha256": "81c184ac011356f16799ddffae5c8ab88ef268894244c64bae623e61c0d23831",
+    "production_source_binary_sha256": "a60b27d8d976c53cba491b1d9c09d8427cd07a74a91da969db659d3d3eef7854"
+  },
+  "correctness": {
+    "ordered_sparse_rows_identical": true,
+    "predictions_identical": true,
+    "selected_actions_identical": true,
+    "rollout_traces_identical": true,
+    "rollout_samples_identical": true,
+    "random_streams_identical": true,
+    "default_library_tests": {
+      "cascadia_ai_passed": 85,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "mid_v4_library_tests": {
+      "cascadia_ai_passed": 86,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "python_exact_tests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "frozen_diagnostics": {
+      "scores": [
+        102,
+        96,
+        92,
+        95
+      ],
+      "mean_score": 96.25,
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "physical_neural_rows": 5062305,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "bootstrapped_samples": 0,
+      "policy_fallbacks": 0,
+      "clean_shutdown": true,
+      "source_runs_matching": 8,
+      "production_parity_runs_matching": 2,
+      "profile_training_runs_matching": 2,
+      "pgo_runs_matching": 8,
+      "final_stage_diagnostic_runs_matching": 2
+    }
+  },
+  "mechanism": {
+    "targeted_stage": "template_preparation_ms + opponent_advance_ms",
+    "john2_control_milliseconds": 7899.70626,
+    "john2_treatment_milliseconds": 7827.403737,
+    "john2_reduction_milliseconds": 72.302523,
+    "john2_reduction_percent": 0.9152558414241516,
+    "john3_control_milliseconds": 7990.618453,
+    "john3_treatment_milliseconds": 7838.457042,
+    "john3_reduction_milliseconds": 152.161411,
+    "john3_reduction_percent": 1.904250739726817,
+    "final_pgo_stage_diagnostics": [
+      {
+        "host": "john2",
+        "treatment_seconds": 14.318213292,
+        "rollout_state_initialization_ms": 58.476842,
+        "opponent_advance_ms": 3073.482719,
+        "template_preparation_ms": 4522.372951,
+        "row_assembly_ms": 27.818733,
+        "row_deduplication_ms": 517.407763,
+        "row_materialization_ms": 128.391117,
+        "neural_evaluation_ms": 9037.611119,
+        "prediction_postprocess_ms": 12.411358,
+        "action_selection_ms": 161.868671,
+        "terminal_collection_ms": 10.965373
+      },
+      {
+        "host": "john3",
+        "treatment_seconds": 14.079290625,
+        "rollout_state_initialization_ms": 59.378249,
+        "opponent_advance_ms": 3085.237986,
+        "template_preparation_ms": 4479.530804,
+        "row_assembly_ms": 26.999248,
+        "row_deduplication_ms": 516.948001,
+        "row_materialization_ms": 128.586332,
+        "neural_evaluation_ms": 8833.837704,
+        "prediction_postprocess_ms": 11.375391,
+        "action_selection_ms": 155.16599,
+        "terminal_collection_ms": 9.25513
+      }
+    ]
+  },
+  "source_screen": {
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.648586125,
+        "peak_rss_bytes": 102727680,
+        "peak_footprint_bytes": 59834800
+      },
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.782330125,
+        "peak_rss_bytes": 103137280,
+        "peak_footprint_bytes": 58245552
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.521297708,
+        "peak_rss_bytes": 102858752,
+        "peak_footprint_bytes": 66601392
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.547126834,
+        "peak_rss_bytes": 102891520,
+        "peak_footprint_bytes": 59998640
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.539144208,
+        "peak_rss_bytes": 102793216,
+        "peak_footprint_bytes": 58589616
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.609762625,
+        "peak_rss_bytes": 103137280,
+        "peak_footprint_bytes": 67453384
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.485849375,
+        "peak_rss_bytes": 102793216,
+        "peak_footprint_bytes": 56426904
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.437493667,
+        "peak_rss_bytes": 103170048,
+        "peak_footprint_bytes": 63226288
+      }
+    ],
+    "john2_control_mean_seconds": 14.715458125,
+    "john2_treatment_mean_seconds": 14.534212271,
+    "john2_improvement_percent": 1.2316698023290278,
+    "john3_control_mean_seconds": 14.5744534165,
+    "john3_treatment_mean_seconds": 14.461671521,
+    "john3_improvement_percent": 0.7738327625536688,
+    "combined_control_mean_seconds": 14.64495577075,
+    "combined_treatment_mean_seconds": 14.497941896,
+    "combined_improvement_percent": 1.0038533202239293,
+    "peak_rss_delta_percent": -0.01989337152860667,
+    "peak_footprint_delta_percent": 0.8724572977352858
+  },
+  "pgo": {
+    "instrumented_binary_sha256": "2fd0c0de6fb32f01d69510fa576c3a9eaab7f2750b2f6c0eef1fb933246141fc",
+    "john2_training_seconds": 51.647567375,
+    "john3_training_seconds": 50.935258625,
+    "john2_profraw_sha256": "fa4fa2ad417a1e2f3da7bfc56e4716b109af3dbc4215e4b69e83cc3f96184f2c",
+    "john3_profraw_sha256": "a65cb5ef6a552bdaa66af78cb586ef3285c6184f119be6e6a6b6a9ad4b410871",
+    "merged_profdata_sha256": "a905947a6cae4dfc93874f9023b5573a46d7bde930ed310cbbc24253710dd300",
+    "profile_functions": 5557,
+    "profile_blocks": 120252,
+    "john2_total_profile_count": 116169935242,
+    "john3_total_profile_count": 116169972589,
+    "absolute_profile_count_difference": 37347,
+    "merged_total_profile_count": 232339907831,
+    "production_binary_sha256": "0023c3d8bea978082b835fd933281b97d6800047afc32fcb3a33112fc1586cdd",
+    "accepted_control_binary_sha256": "b10c82b50bd4e226913e0cf73c6ae439769628ec849ac89d3d5b35be7a476269",
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.664643083,
+        "peak_rss_bytes": 103022592,
+        "peak_footprint_bytes": 57049520
+      },
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.398642917,
+        "peak_rss_bytes": 102727680,
+        "peak_footprint_bytes": 67256752
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.333005667,
+        "peak_rss_bytes": 102531072,
+        "peak_footprint_bytes": 65487280
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.279627833,
+        "peak_rss_bytes": 102776832,
+        "peak_footprint_bytes": 64438704
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.090615709,
+        "peak_rss_bytes": 103055360,
+        "peak_footprint_bytes": 66601392
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.16737475,
+        "peak_rss_bytes": 102957056,
+        "peak_footprint_bytes": 63095216
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.053819875,
+        "peak_rss_bytes": 103055360,
+        "peak_footprint_bytes": 68780464
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 13.98576475,
+        "peak_rss_bytes": 102989824,
+        "peak_footprint_bytes": 68452808
+      }
+    ],
+    "john2_control_mean_seconds": 14.531643,
+    "john2_treatment_mean_seconds": 14.30631675,
+    "john2_improvement_percent": 1.5505903220991488,
+    "john3_control_mean_seconds": 14.1289952295,
+    "john3_treatment_mean_seconds": 14.0197923125,
+    "john3_improvement_percent": 0.7728993833333172,
+    "combined_control_mean_seconds": 14.33031911475,
+    "combined_treatment_mean_seconds": 14.16305453125,
+    "combined_improvement_percent": 1.1672076676075889,
+    "peak_rss_delta_percent": -0.0994747731975171,
+    "peak_footprint_delta_percent": 5.179616861037166
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-bounded-pipeline-state-slices-v1",
+    "archive_ignored_by_git": true,
+    "worker_binary": "/tmp/cascadia-phase0/legacy-teacher-bounded-slices-pgo",
+    "worker_instrumented_binary": "/tmp/cascadia-phase0/legacy-teacher-bounded-slices-pgo-instrumented"
+  },
+  "verdict": {
+    "accepted": true,
+    "reason": "Bounded state slices removed provably unnecessary full-population allocation and scanning, cleared the source gate on both workers, and remained faster on both workers after fresh race-free PGO while preserving the exact frozen contract.",
+    "initial_reference_seconds": 141.027296,
+    "previous_accepted_seconds": 14.3331512395,
+    "accepted_seconds": 14.16305453125,
+    "improvement_vs_previous_accepted_percent": 1.1867362969089268,
+    "total_speedup": 9.957406835427417,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_gap_seconds": 0.06032493125,
+    "additional_reduction_required_percent": 0.4259316457258391,
+    "threshold_passed": false
+  }
+}

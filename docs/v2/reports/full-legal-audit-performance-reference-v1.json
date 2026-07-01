@@ -1,0 +1,74 @@
+{
+  "experiment_id": "full-legal-audit-performance-reference-v1-20260615",
+  "status": "frozen_reference",
+  "protocol_id": "full-legal-decision-regret-audit-v1",
+  "machine": "john1",
+  "raw_seed": 60999,
+  "audited_completed_turns": [
+    12,
+    39,
+    66
+  ],
+  "champion_rollouts": 600,
+  "screen_limit": 64,
+  "sentinel_count": 16,
+  "substantial_rollouts": 1200,
+  "high_confidence_limit": 8,
+  "high_confidence_rollouts": 4800,
+  "paid_wipe_determinizations": 8,
+  "paid_wipe_followup_determinizations": 2,
+  "paid_wipe_followup_width": 3,
+  "wall_seconds": 242.43305,
+  "ten_x_threshold_seconds": 24.243305,
+  "stage_seconds": {
+    "champion": 0.587635,
+    "enumeration": 0.01184725,
+    "screening": 0.125168042,
+    "substantial": 1.043345583,
+    "high_confidence": 3.945353125,
+    "paid_wipe": 96.281382168,
+    "realized_hidden": 125.548470208,
+    "audited_decisions_total": 227.543532459
+  },
+  "accepted_rollout_pipeline_fraction_of_audited_decisions": 0.576269702,
+  "summary": {
+    "games": 1,
+    "decisions": 3,
+    "actions_screened": 11594,
+    "top_screen_recall": 1.0,
+    "mean_champion_regret": 0.21346239996125385,
+    "mean_champion_frontier_regret": 0.21346239996125385,
+    "mean_retained_screen_regret": 0.0
+  },
+  "terminal_base_scores": [
+    96,
+    99,
+    92,
+    102
+  ],
+  "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+  "batch_diagnostics": {
+    "neural_batches": 125861,
+    "neural_rows": 66274677,
+    "physical_neural_rows": 56095463,
+    "rollout_waves": 32701,
+    "rollout_samples": 617722,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "minimum_batch_rows": 1,
+    "maximum_batch_rows": 24000
+  },
+  "source": {
+    "git_revision": "310df03699aeb9a5c06dafc8c32f5c33f717b354",
+    "git_status_blake3": "15467d59cfa2f1a69a37be96b254d25f73cf047ee967e6d01d101b8acd4e989d",
+    "v2_source_blake3": "9edcd5df5bfb1e424cf357c477e848ec1e7f9dbdeaf3f3b967a7104536f57e30",
+    "executable_blake3": "edcdd48c5361ed05920cd1f593897ca53432a2fc277e48cae9058cf0955fb809",
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "full_reference": {
+    "path": "artifacts/performance/full-legal-audit-reference-v1/reference.json",
+    "bytes": 12703794,
+    "blake3": "1fea91a9243f49b1bd93b50ffb249c0bb4b9e1658749a52d70e87159cfef77bf"
+  }
+}

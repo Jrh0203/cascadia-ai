@@ -2,7 +2,9 @@ use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{GRID_SIZE, HexCoord, Rotation, StarterPlacement, Terrain, Tile, Wildlife};
+use crate::{
+    D6Error, D6Transform, GRID_SIZE, HexCoord, Rotation, StarterPlacement, Terrain, Tile, Wildlife,
+};
 
 pub const MAX_BOARD_TILES: usize = 23;
 
@@ -134,6 +136,103 @@ impl HabitatAnalysis {
                 })
                 .count() as u16
     }
+
+    /// Evaluate one terrain's exact component growth and all matching edges
+    /// in a single neighbor pass. Opportunity extraction needs both values for
+    /// every candidate archetype rotation.
+    pub fn largest_and_matching_edges_after_tile(
+        &self,
+        board: &Board,
+        coord: HexCoord,
+        tile: Tile,
+        rotation: Rotation,
+        terrain: Terrain,
+    ) -> (u8, u8) {
+        let terrain_index = terrain as usize;
+        let mut connected_components = [0u8; 6];
+        let mut connected_count = 0usize;
+        let mut component_size = 1u8;
+        let mut matching_edges = 0u8;
+        for edge in 0..6 {
+            let neighbor = coord.neighbor(edge);
+            let Some(neighbor_index) = neighbor.to_index() else {
+                continue;
+            };
+            let Some(neighbor_tile) = board.cells[neighbor_index] else {
+                continue;
+            };
+            let tile_terrain = tile.terrain_on_edge(rotation, edge);
+            let neighbor_terrain = neighbor_tile
+                .tile
+                .terrain_on_edge(neighbor_tile.rotation, (edge + 3) % 6);
+            if tile_terrain == neighbor_terrain {
+                matching_edges += 1;
+            }
+            if tile_terrain != terrain || neighbor_terrain != terrain {
+                continue;
+            }
+            let component = self.component_ids[terrain_index][neighbor_index];
+            if component == 0 || connected_components[..connected_count].contains(&component) {
+                continue;
+            }
+            connected_components[connected_count] = component;
+            connected_count += 1;
+            component_size += self.component_sizes[terrain_index][usize::from(component)];
+        }
+        (self.largest(terrain).max(component_size), matching_edges)
+    }
+
+    /// Evaluate all terrain component sizes plus matching edges in one pass.
+    /// Only the one or two terrains present on the tile can grow.
+    pub fn largest_all_and_matching_edges_after_tile(
+        &self,
+        board: &Board,
+        coord: HexCoord,
+        tile: Tile,
+        rotation: Rotation,
+    ) -> ([u8; 5], u8) {
+        let mut connected_components = [[0u8; 6]; 5];
+        let mut connected_counts = [0usize; 5];
+        let mut component_sizes = [1u8; 5];
+        let mut matching_edges = 0u8;
+        for edge in 0..6 {
+            let neighbor = coord.neighbor(edge);
+            let Some(neighbor_index) = neighbor.to_index() else {
+                continue;
+            };
+            let Some(neighbor_tile) = board.cells[neighbor_index] else {
+                continue;
+            };
+            let terrain = tile.terrain_on_edge(rotation, edge);
+            if neighbor_tile
+                .tile
+                .terrain_on_edge(neighbor_tile.rotation, (edge + 3) % 6)
+                != terrain
+            {
+                continue;
+            }
+            matching_edges += 1;
+            let terrain_index = terrain as usize;
+            let component = self.component_ids[terrain_index][neighbor_index];
+            let count = connected_counts[terrain_index];
+            if component == 0 || connected_components[terrain_index][..count].contains(&component) {
+                continue;
+            }
+            connected_components[terrain_index][count] = component;
+            connected_counts[terrain_index] += 1;
+            component_sizes[terrain_index] +=
+                self.component_sizes[terrain_index][usize::from(component)];
+        }
+        let largest = std::array::from_fn(|terrain_index| {
+            let terrain = Terrain::ALL[terrain_index];
+            if tile.contains_terrain(terrain) {
+                self.largest[terrain_index].max(component_sizes[terrain_index])
+            } else {
+                self.largest[terrain_index]
+            }
+        });
+        (largest, matching_edges)
+    }
 }
 
 impl Board {
@@ -157,6 +256,43 @@ impl Board {
 
     pub fn nature_tokens(&self) -> u8 {
         self.nature_tokens
+    }
+
+    /// Stable digest of the complete mutable board state used by incremental
+    /// apply/undo audits.
+    pub fn canonical_hash(&self) -> blake3::Hash {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"cascadia-board-canonical-v2");
+        hasher.update(&[self.nature_tokens]);
+        hasher.update(&(self.placed_indices.len() as u16).to_le_bytes());
+        for &index in &self.placed_indices {
+            hasher.update(&index.to_le_bytes());
+        }
+
+        // Hash every storage slot, including an explicit marker for empty
+        // cells. The placed-index sequence is part of the mutable undo state,
+        // but it is not a substitute for proving that no unindexed cell was
+        // changed.
+        let mut cells = [0u8; GRID_SIZE * 8];
+        for (index, cell) in self.cells.iter().enumerate() {
+            let offset = index * 8;
+            let Some(placed) = cell else {
+                continue;
+            };
+            cells[offset] = 1;
+            cells[offset + 1] = placed.tile.id.0;
+            cells[offset + 2] = placed.tile.terrain_a as u8;
+            cells[offset + 3] = placed
+                .tile
+                .terrain_b
+                .map_or(u8::MAX, |terrain| terrain as u8);
+            cells[offset + 4] = placed.tile.wildlife.bits();
+            cells[offset + 5] = u8::from(placed.tile.keystone);
+            cells[offset + 6] = placed.rotation.get();
+            cells[offset + 7] = placed.wildlife.map_or(u8::MAX, |wildlife| wildlife as u8);
+        }
+        hasher.update(&cells);
+        hasher.finalize()
     }
 
     pub fn tile_count(&self) -> usize {
@@ -242,7 +378,7 @@ impl Board {
 
         self.cells[index] = Some(PlacedTile {
             tile,
-            rotation,
+            rotation: tile.canonical_rotation(rotation),
             wildlife: None,
         });
         self.placed_indices.push(index as u16);
@@ -470,6 +606,65 @@ impl Board {
         analysis
     }
 
+    /// Returns an exact transformed copy or an error if the finite backing grid
+    /// cannot represent every transformed occupied or frontier coordinate.
+    pub fn transformed(&self, transform: D6Transform) -> Result<Self, D6Error> {
+        let mut transformed = Self {
+            cells: vec![None; GRID_SIZE],
+            placed_indices: Vec::with_capacity(self.placed_indices.len()),
+            nature_tokens: self.nature_tokens,
+        };
+
+        for &index in &self.placed_indices {
+            let source_coord =
+                HexCoord::from_index(usize::from(index)).expect("stored board index is valid");
+            let target_coord = transform.transform_coord(source_coord)?;
+            let target_index =
+                target_coord
+                    .to_index()
+                    .ok_or(D6Error::BoardCoordinateOutOfBounds {
+                        transform,
+                        source_coord,
+                        transformed: target_coord,
+                    })?;
+            if transformed.cells[target_index].is_some() {
+                return Err(D6Error::BoardCoordinateCollision(target_coord));
+            }
+            let placed = self.cells[usize::from(index)].expect("stored board index is occupied");
+            transformed.cells[target_index] = Some(PlacedTile {
+                tile: placed.tile,
+                rotation: transform.transform_tile_rotation(placed.tile, placed.rotation),
+                wildlife: placed.wildlife,
+            });
+            transformed.placed_indices.push(target_index as u16);
+        }
+
+        let mut expected_frontier = self
+            .frontier()
+            .into_iter()
+            .map(|coord| {
+                let transformed_coord = transform.transform_coord(coord)?;
+                transformed_coord.to_index().map_or_else(
+                    || {
+                        Err(D6Error::BoardCoordinateOutOfBounds {
+                            transform,
+                            source_coord: coord,
+                            transformed: transformed_coord,
+                        })
+                    },
+                    |_| Ok(transformed_coord),
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        expected_frontier.sort_unstable();
+        expected_frontier.dedup();
+        if transformed.frontier() != expected_frontier {
+            return Err(D6Error::FrontierMismatch(transform));
+        }
+        transformed.validate().map_err(D6Error::Invariant)?;
+        Ok(transformed)
+    }
+
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.cells.len() != GRID_SIZE {
             return Err("board cell array has the wrong length");
@@ -482,8 +677,11 @@ impl Board {
             return Err("occupied cells and placed index list disagree");
         }
         for &index in &self.placed_indices {
-            if self.cells[usize::from(index)].is_none() {
+            let Some(placed) = self.cells[usize::from(index)] else {
                 return Err("placed index points to an empty cell");
+            };
+            if placed.tile.terrain_b.is_none() && placed.rotation != Rotation::ZERO {
+                return Err("single-terrain tile has a noncanonical rotation");
             }
         }
         Ok(())
@@ -504,7 +702,7 @@ impl Board {
         }
         self.cells[index] = Some(PlacedTile {
             tile,
-            rotation,
+            rotation: tile.canonical_rotation(rotation),
             wildlife: None,
         });
         self.placed_indices.push(index as u16);
@@ -528,7 +726,7 @@ impl Board {
         }
         self.cells[index] = Some(PlacedTile {
             tile,
-            rotation,
+            rotation: tile.canonical_rotation(rotation),
             wildlife,
         });
         self.placed_indices.push(index as u16);
@@ -565,6 +763,20 @@ mod tests {
             .unwrap();
         board.undo(delta).unwrap();
         assert_eq!(board, before);
+    }
+
+    #[test]
+    fn canonical_hash_covers_empty_markers_and_unindexed_storage_cells() {
+        let empty = Board::empty();
+        let mut unindexed = empty.clone();
+        unindexed.cells[0] = Some(PlacedTile {
+            tile: STANDARD_TILES[0],
+            rotation: Rotation::ZERO,
+            wildlife: None,
+        });
+
+        assert_eq!(unindexed.placed_indices, empty.placed_indices);
+        assert_ne!(unindexed.canonical_hash(), empty.canonical_hash());
     }
 
     #[test]

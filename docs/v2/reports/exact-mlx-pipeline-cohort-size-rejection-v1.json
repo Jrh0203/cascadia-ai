@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-mlx-pipeline-cohort-size-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "control_cohort_states": 96,
+  "treatment_cohort_states": [
+    128,
+    160,
+    192,
+    256
+  ],
+  "design": {
+    "john2_order": [
+      96,
+      128,
+      160,
+      192,
+      256
+    ],
+    "john3_order": [
+      256,
+      192,
+      160,
+      128,
+      96
+    ],
+    "binary_sha256": "b10c82b50bd4e226913e0cf73c6ae439769628ec849ac89d3d5b35be7a476269",
+    "stage_timings": true
+  },
+  "correctness": {
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true,
+    "runs_matching": 10
+  },
+  "measurements": [
+    {
+      "cohort_states": 96,
+      "john2_seconds": 14.383085542,
+      "john3_seconds": 14.138661708,
+      "combined_seconds": 14.260873625,
+      "requests": 7709,
+      "mean_decode_validate_ms": 339.6645835,
+      "mean_graph_build_ms": 77.7821495,
+      "mean_mlx_eval_ms": 7405.225696,
+      "mean_materialize_validate_ms": 95.277332,
+      "mean_response_write_ms": 57.633904,
+      "mean_maximum_rss_bytes": 114999296,
+      "improvement_vs_control_percent": 0.0
+    },
+    {
+      "cohort_states": 128,
+      "john2_seconds": 15.034221125,
+      "john3_seconds": 14.942792417,
+      "combined_seconds": 14.988506771,
+      "requests": 4113,
+      "mean_decode_validate_ms": 167.009105,
+      "mean_graph_build_ms": 25.350399,
+      "mean_mlx_eval_ms": 6523.088025,
+      "mean_materialize_validate_ms": 67.0739735,
+      "mean_response_write_ms": 44.0929875,
+      "mean_maximum_rss_bytes": 150700032,
+      "improvement_vs_control_percent": -5.102304144427902
+    },
+    {
+      "cohort_states": 160,
+      "john2_seconds": 15.072125167,
+      "john3_seconds": 14.829247958,
+      "combined_seconds": 14.9506865625,
+      "requests": 3957,
+      "mean_decode_validate_ms": 157.4439275,
+      "mean_graph_build_ms": 22.8429425,
+      "mean_mlx_eval_ms": 6447.8451525,
+      "mean_materialize_validate_ms": 66.307291,
+      "mean_response_write_ms": 43.6505315,
+      "mean_maximum_rss_bytes": 152633344,
+      "improvement_vs_control_percent": -4.83710153837086
+    },
+    {
+      "cohort_states": 192,
+      "john2_seconds": 14.994921708,
+      "john3_seconds": 14.89445625,
+      "combined_seconds": 14.944688979,
+      "requests": 3957,
+      "mean_decode_validate_ms": 159.881599,
+      "mean_graph_build_ms": 23.1689845,
+      "mean_mlx_eval_ms": 6403.54283,
+      "mean_materialize_validate_ms": 65.4634475,
+      "mean_response_write_ms": 43.268201,
+      "mean_maximum_rss_bytes": 163266560,
+      "improvement_vs_control_percent": -4.795045324581216
+    },
+    {
+      "cohort_states": 256,
+      "john2_seconds": 15.006547625,
+      "john3_seconds": 14.879722042,
+      "combined_seconds": 14.9431348335,
+      "requests": 3957,
+      "mean_decode_validate_ms": 162.1638485,
+      "mean_graph_build_ms": 23.8091725,
+      "mean_mlx_eval_ms": 6419.06261,
+      "mean_materialize_validate_ms": 65.334461,
+      "mean_response_write_ms": 43.354671,
+      "mean_maximum_rss_bytes": 191340544,
+      "improvement_vs_control_percent": -4.784147356189758
+    }
+  ],
+  "selection_gate": {
+    "qualifying_sizes": [],
+    "formal_confirmation_authorized": false,
+    "fresh_pgo_authorized": false
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "Every preregistered larger cohort regressed end-to-end time on both hosts and materially increased maximum RSS despite reducing isolated service-stage work.",
+    "production_default_cohort_states": 96,
+    "production_changed": false
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-mlx-pipeline-cohort-size-rejection-v1"
+  }
+}

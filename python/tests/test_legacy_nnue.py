@@ -46,7 +46,7 @@ def test_parse_legacy_nnue_rejects_trailing_bytes(tmp_path: Path) -> None:
     _write_small_nnue(source)
     source.write_bytes(source.read_bytes() + b"\0")
 
-    with pytest.raises(LegacyNnueError, match="row aligned"):
+    with pytest.raises(LegacyNnueError, match="supported payload"):
         parse_legacy_nnue(source, hidden1=4, hidden2=2, expected_features=3)
 
 
@@ -105,14 +105,25 @@ def test_rust_exact_sparse_mlx_forward_is_bit_identical() -> None:
         b3_policy=np.zeros(1, dtype=np.float32),
     )
     model = LegacyRustExactSparseNnue(weights.tensors())
-    rows = [[], [0], [2, 1], [1, 1]]
+    rows = [
+        [],
+        [0],
+        [2, 1],
+        [1, 1],
+        [0, 1, 2],
+        [0, 1, 1],
+    ]
     offsets, indices = pack_sparse_csr(rows)
     actual = model(offsets, indices)
     hidden, hidden_output = model.hidden_and_output(offsets, indices)
-    mx.eval(actual, hidden, hidden_output)
+    compact_offsets = mx.array(np.asarray([0, 0, 1, 3, 5, 8, 11], dtype=np.uint32))
+    compact_indices = mx.array(np.asarray([0, 2, 1, 1, 1, 0, 1, 2, 0, 1, 1], dtype=np.uint16))
+    compact_actual = model(compact_offsets, compact_indices)
+    mx.eval(actual, hidden, hidden_output, compact_actual)
     expected = np.asarray([reference_forward(weights, row) for row in rows])
 
     assert np.array_equal(np.asarray(actual), expected)
+    assert np.array_equal(np.asarray(compact_actual), expected)
     assert np.array_equal(np.asarray(hidden_output), expected)
     assert np.array_equal(np.asarray(actual), np.asarray(hidden_output))
     assert np.asarray(hidden).shape == (len(rows), 64)

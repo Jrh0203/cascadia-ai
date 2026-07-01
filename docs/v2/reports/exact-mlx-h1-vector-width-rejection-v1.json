@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-mlx-h1-vector-width-rejection-v1-20260615",
+  "status": "rejected_and_removed",
+  "phase": 1,
+  "hypothesis": "Evaluating 8 or 16 exact H1 outputs per Metal thread can reduce repeated sparse-index traversal and scheduling overhead without changing arithmetic order.",
+  "contract": {
+    "raw_seed": 60999,
+    "audited_completed_turns": [66],
+    "realized_hidden_completed_turns": [66],
+    "h1_vector_widths": [4, 8, 16],
+    "threadgroup_threads": 256,
+    "john1_order": [4, 8, 16],
+    "john2_order": [8, 16, 4],
+    "john3_order": [16, 4, 8]
+  },
+  "correctness": {
+    "semantic_report_blake3": "6f19d82622bab6a5a45c6cdf6e1152f99791630436d1a0354d9f629f95089863",
+    "semantic_matches": 9,
+    "terminal_base_scores": [96, 99, 92, 102],
+    "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+    "logical_neural_batches": 5469,
+    "logical_neural_rows": 9288014,
+    "physical_neural_rows": 7198144,
+    "rollout_waves": 4355,
+    "rollout_samples": 104615,
+    "multiplex_search_cohorts": 13,
+    "multiplex_searches": 104,
+    "coalesced_evaluator_rows": 891486,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "bridge_fallbacks": 0,
+    "python_tests_passed_treatment": 18,
+    "differential_tests_passed_treatment": 26,
+    "nnue_batch_tests_passed_treatment": 11,
+    "validated_reports": 9,
+    "clean_shutdowns": 9
+  },
+  "measurements": {
+    "john1": {
+      "width4_wall_seconds": 32.176290292,
+      "width8_wall_seconds": 32.6142275,
+      "width8_wall_change_percent": 1.3610556220922776,
+      "width16_wall_seconds": 33.009086917,
+      "width16_wall_change_percent": 2.588230704790284,
+      "width4_mlx_eval_ms": 10952.296758,
+      "width8_mlx_eval_ms": 11264.13541,
+      "width8_mlx_change_percent": 2.847244362441348,
+      "width16_mlx_eval_ms": 12048.732182,
+      "width16_mlx_change_percent": 10.011009089934664
+    },
+    "john2": {
+      "width4_wall_seconds": 29.636129291,
+      "width8_wall_seconds": 29.740043792,
+      "width8_wall_change_percent": 0.35063452443351295,
+      "width16_wall_seconds": 31.342597334,
+      "width16_wall_change_percent": 5.75806653508637,
+      "width4_mlx_eval_ms": 11024.581028,
+      "width8_mlx_eval_ms": 11601.65177,
+      "width8_mlx_change_percent": 5.234400659166716,
+      "width16_mlx_eval_ms": 12873.355964,
+      "width16_mlx_change_percent": 16.76957093702265
+    },
+    "john3": {
+      "width4_wall_seconds": 29.297619875,
+      "width8_wall_seconds": 29.994569083,
+      "width8_wall_change_percent": 2.3788594806458008,
+      "width16_wall_seconds": 31.03675725,
+      "width16_wall_change_percent": 5.936104647476936,
+      "width4_mlx_eval_ms": 10732.605489,
+      "width8_mlx_eval_ms": 11387.650972,
+      "width8_mlx_change_percent": 6.103322102646613,
+      "width16_mlx_eval_ms": 12762.641723,
+      "width16_mlx_change_percent": 18.914663695415012
+    },
+    "combined": {
+      "width4_wall_seconds": 30.37001315266666,
+      "width8_wall_seconds": 30.78294679166667,
+      "width8_wall_change_percent": 1.3596755356154677,
+      "width16_wall_seconds": 31.796147167,
+      "width16_wall_change_percent": 4.695862353316471,
+      "width4_mlx_eval_ms": 10903.161091666667,
+      "width8_mlx_eval_ms": 11417.812717333334,
+      "width8_mlx_change_percent": 4.7202056480667665,
+      "width16_mlx_eval_ms": 12561.576623,
+      "width16_mlx_change_percent": 15.210410241492877
+    }
+  },
+  "resources": {
+    "maximum_rss_bytes": 557727744,
+    "maximum_peak_memory_footprint_bytes": 156877304,
+    "zero_process_swap_runs": 9,
+    "zero_system_swap_delta_nodes": 3,
+    "memory_ceiling_bytes": 1610612736
+  },
+  "implementation": {
+    "treatment_binary_sha256": "3bba533876ecb383238af8392203fa72a2734cf22f0b689daab802743141d11e",
+    "treatment_python_sha256": "0c3c6b8c5b5f7db90f8d04177c2f8f429ffb0b14b3c505a2ca7054fc3ee6786d",
+    "restored_binary_sha256": "157ba6c0607f8a2cad3e0ecba9ab6d04cd327175efe01732edb043402d57a5ce",
+    "restored_python_sha256": "6556f9c5818354de6847a0630e070f0bb2026252a7bacfa706a094f9f17a9ae9",
+    "experimental_switch_retained": false,
+    "treatment_kernels_retained": false
+  },
+  "verdict": {
+    "advanced_to_full_contract": false,
+    "accepted": false,
+    "reason": "Both wider geometries regressed MLX evaluation and complete wall on all three Macs. Increased per-thread accumulator pressure dominated reduced index-loop and thread-count overhead.",
+    "next_target": "SIMD-group broadcast of sparse indices with the retained float4 accumulator geometry"
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-mlx-h1-vector-width-v1",
+    "sha256_manifest": "artifacts/performance/exact-mlx-h1-vector-width-v1/SHA256SUMS"
+  }
+}

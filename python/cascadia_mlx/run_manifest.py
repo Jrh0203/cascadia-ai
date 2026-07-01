@@ -78,6 +78,8 @@ def source_provenance(repository: Path) -> dict[str, Any]:
         repository / "uv.lock",
         repository / "python" / "cascadia_mlx",
         repository / "apps" / "web" / "src",
+        repository / "legacy" / "crates" / "cascadia-core",
+        repository / "legacy" / "crates" / "cascadia-ai",
         repository / "crates" / "cascadia-game",
         repository / "crates" / "cascadia-sim",
         repository / "crates" / "cascadia-data",

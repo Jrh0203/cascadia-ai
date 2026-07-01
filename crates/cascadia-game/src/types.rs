@@ -117,6 +117,14 @@ impl Tile {
             terrain_b
         }
     }
+
+    pub const fn canonical_rotation(self, rotation: Rotation) -> Rotation {
+        if self.terrain_b.is_some() {
+            rotation
+        } else {
+            Rotation::ZERO
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

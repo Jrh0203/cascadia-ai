@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "schema_id": "cascadia.r2-map.w0-v1-predecessor-transcript-recovery.v1",
+  "campaign_id": "r2-map-expert-iteration-v1",
+  "recovered_at": "2026-06-18T15:03:18Z",
+  "source": {
+    "kind": "immutable-codex-session-transcript",
+    "path": "/Users/johnherrick/.codex/sessions/2026/06/18/rollout-2026-06-18T09-00-49-019edad1-e715-7301-a46e-3b2f522230a1.jsonl",
+    "bytes": 4909097,
+    "sha256": "af47aedb6ab6d38d9964b9555391a8ba52012aac00b5c0ad6980699b01c5604e",
+    "response_call_id": "call_kk9qG59dzqlzRfWqkU46UEVD",
+    "response_output_index": 1,
+    "extraction": "decode payload.output[1].text; retain bytes after the exact line ---RESULT 1--- through the newline immediately before the exact line # R2-MAP Goal Completion Audit"
+  },
+  "objects": [
+    {
+      "canonical_relative": "control/w0-preregistration/registration.json",
+      "source_kind": "transcript-extraction",
+      "bytes": 1380,
+      "sha256": "7d0336714a1e520c9c99f0d488e48577848f6c0b336ca6257ae987f2548e0d51"
+    },
+    {
+      "canonical_relative": "control/w0-preregistration/reference-panel-manifest-v1.json",
+      "source_kind": "safe-repository-predecessor",
+      "repository_relative": "docs/v2/reports/r2-map-w0-reference-panel-manifest-v1.json",
+      "bytes": 10884,
+      "sha256": "12555a92ab337eca8d299210e19f5c4bb52298822e82f688ad967ceeaed1f7ec"
+    },
+    {
+      "canonical_relative": "control/w0-preregistration/paired-gate-power-v1.json",
+      "source_kind": "safe-repository-predecessor",
+      "repository_relative": "docs/v2/reports/r2-map-paired-gate-power-v1.json",
+      "bytes": 4279,
+      "sha256": "029bb8ab6b432e739157cfb686fb7bd7302e526add968d4cecfab99831b0694f"
+    }
+  ],
+  "legacy_ssd_accessed": false,
+  "protected_seed_values_opened": false,
+  "john4_used": false,
+  "treatment": "append-only predecessor recovery; these immutable v1 objects are provenance inputs for a separately generated and registered v1.1 implementation binding"
+}

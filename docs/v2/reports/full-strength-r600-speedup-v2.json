@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-strength-r600-speedup-v2-20260614",
+  "status": "complete",
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "strategy": "canonical-action-legacy-exact-mlx-v1-k32-r600-lmr-no-paid-prelude",
+  "search_contract": {
+    "rollouts": 600,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "candidate_budget": 32,
+    "sequential_halving": true,
+    "lmr": true,
+    "diverse_prefilter": true
+  },
+  "local_comparison": {
+    "seed": 34400,
+    "initial_treatment_seconds": 141.027296,
+    "optimized_treatment_seconds": 37.457207958,
+    "speedup": 3.765024242013207,
+    "optimized_mean_score": 96.25,
+    "optimized_diagnostics": {
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "bootstrapped_samples": 0,
+      "policy_fallbacks": 0
+    }
+  },
+  "strength_validation": {
+    "games": 50,
+    "seat_scores": 200,
+    "first_seed": 34500,
+    "last_seed": 34549,
+    "mean_score": 96.345,
+    "game_mean_stddev": 1.632646843100403,
+    "confidence_95": [
+      95.89245338361667,
+      96.79754661638333
+    ],
+    "historical_champion_mean": 95.94,
+    "paired_control_mean": 91.92,
+    "paired_delta": 4.425,
+    "paired_delta_confidence_95": [
+      3.814072017337559,
+      5.035927982662441
+    ],
+    "wins": 48,
+    "ties": 1,
+    "losses": 1,
+    "mean_breakdown": {
+      "habitat": [
+        6.03,
+        6.17,
+        6.255,
+        6.42,
+        6.235
+      ],
+      "wildlife": [
+        11.565,
+        10.62,
+        13.03,
+        11.315,
+        14.795
+      ],
+      "nature_tokens": 3.91
+    }
+  },
+  "throughput_validation": {
+    "hosts": [
+      "john1",
+      "john2",
+      "john3"
+    ],
+    "mean_treatment_seconds_per_game": 36.33522149838,
+    "projected_single_mac_speedup": 3.881283509068128,
+    "old_sequential_projection_seconds": 7051.3648,
+    "slowest_treatment_shard_seconds": 656.482762124,
+    "treatment_throughput_speedup": 10.741127119904636,
+    "complete_paired_report_wall_seconds": 705.654548791,
+    "end_to_end_paired_speedup": 9.992658322802743,
+    "paired_reports_per_hour": 255.08232081603458,
+    "shards": [
+      {
+        "host": "john1",
+        "games": 17,
+        "first_seed": 34500,
+        "mean_score": 96.08823529411765,
+        "treatment_seconds": 656.482762124,
+        "complete_report_seconds": 705.654548791
+      },
+      {
+        "host": "john2",
+        "games": 17,
+        "first_seed": 34517,
+        "mean_score": 96.6029411764706,
+        "treatment_seconds": 597.495413962,
+        "complete_report_seconds": 643.463100417
+      },
+      {
+        "host": "john3",
+        "games": 16,
+        "first_seed": 34534,
+        "mean_score": 96.34375,
+        "treatment_seconds": 562.782898833,
+        "complete_report_seconds": 607.648711375
+      }
+    ]
+  },
+  "diagnostics": {
+    "neural_batches": 199659,
+    "neural_rows": 314111529,
+    "rollout_waves": 189063,
+    "rollout_samples": 2306322,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "all_services_clean_shutdown": true
+  },
+  "artifacts": {
+    "source_revision": "310df03699aeb9a5c06dafc8c32f5c33f717b354",
+    "working_tree_note": "The benchmarked optimization was present in the working tree and is covered by the accompanying diff and tests.",
+    "executable_blake3": "868b720bd51d88deacf363bb5d3ee6bfb33583f80c5973234b67ca314854e294",
+    "weights_blake3": "9e1d568693274fc537ac4f6d6f729abb1ee8da8330a78d1f78a1f62b733de400",
+    "model_manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "interpretation": {
+    "strength_claim": "The 50-game mean is above the historical champion estimate, and every rollout remained terminal with no bootstrap or policy fallback.",
+    "speed_claim": "The exact algorithm is about 3.88x faster per Mac. Three-way concurrent execution raises treatment throughput to 10.74x; the complete paired harness, including control games, is 9.99x.",
+    "truncated_screening": "The separate two-turn bootstrap mode is faster but sacrifices score and is not included in this result."
+  }
+}

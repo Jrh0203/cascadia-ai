@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-greedy-habitat-rank-cache-rejection-v1-20260615",
+  "status": "rejected",
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "hypothesis": "Compute the pure top-eight habitat ranking once per market tile and reuse it across paired and independent wildlife drafts while preserving every later habitat replay.",
+  "search_contract": {
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "sequential_halving": true,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false
+  },
+  "correctness": {
+    "unit_tests": [
+      "eval::tests::fixed_top_eight_matches_stable_full_sort",
+      "eval::tests::optimized_qualified_greedy_matches_full_scanner",
+      "eval::tests::optimized_qualified_greedy_matches_complete_aaaaa_games"
+    ],
+    "unit_tests_passed": true,
+    "score_vector": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "accepted_logical_neural_rows": 6121807,
+    "experiment_logical_neural_rows": 6122242,
+    "logical_neural_row_delta": 435,
+    "accepted_physical_neural_rows": 5062305,
+    "experiment_physical_neural_rows": 5062471,
+    "physical_neural_row_delta": 166,
+    "accepted_rollout_waves": 3716,
+    "experiment_rollout_waves": 3716,
+    "accepted_rollout_samples": 46207,
+    "experiment_rollout_samples": 46207,
+    "policy_fallbacks": 0
+  },
+  "unprofiled_screen": {
+    "john2_seconds": 15.071513666,
+    "john3_seconds": 15.503853875
+  },
+  "mechanism": "Temporary tile place/undo operations restore explicit merge records but intentionally retain some union-find path-compression history. Habitat scores are mathematically invariant, but moving a frontier scan before those mutation boundaries changes later tie ordering and therefore the neural request trace.",
+  "verdict": {
+    "accepted": false,
+    "reason": "The optimization failed the Phase 0 bit-exact diagnostic gate even though final scores matched. Logical and physical neural row counts changed, proving a different action-evaluation trace.",
+    "source_removed_after_rejection": true
+  }
+}

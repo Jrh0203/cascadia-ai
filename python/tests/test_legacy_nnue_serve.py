@@ -10,14 +10,21 @@ from cascadia_mlx.legacy_nnue_serve import (
     MESSAGE_PREDICT_SPARSE_NNUE,
     MESSAGE_PREDICT_SPARSE_NNUE_CSR_EXACT,
     MESSAGE_PREDICT_SPARSE_NNUE_CSR_EXACT_HIDDEN,
+    MESSAGE_PREDICT_SPARSE_NNUE_CSR_EXACT_SHARED,
     MESSAGE_SHUTDOWN,
     MESSAGE_SPARSE_NNUE_CSR_EXACT_HIDDEN_PREDICTION,
     MESSAGE_SPARSE_NNUE_CSR_EXACT_PREDICTION,
+    MESSAGE_SPARSE_NNUE_CSR_EXACT_SHARED_PREDICTION,
     MESSAGE_SPARSE_NNUE_PREDICTION,
     PROTOCOL_MAGIC,
     PROTOCOL_VERSION,
     ROW_LENGTH,
+    SHARED_HEADER,
+    SHARED_MAGIC,
+    SHARED_VERSION,
     TOTAL_FEATURES,
+    _activation_report,
+    _request_size_bucket_index,
     serve_legacy_nnue,
 )
 
@@ -29,6 +36,8 @@ class _SumSparseModel:
 
 class _SumCsrModel:
     def __call__(self, offsets: mx.array, indices: mx.array) -> mx.array:
+        assert offsets.dtype == mx.uint32
+        assert indices.dtype == mx.uint16
         host_offsets = np.asarray(offsets)
         host_indices = np.asarray(indices)
         return mx.array(
@@ -47,6 +56,41 @@ class _SumCsrModel:
         values = self(offsets, indices)
         hidden = mx.broadcast_to(values[:, None], (values.shape[0], 64))
         return hidden, values
+
+class _ActivationCsrModel:
+    def all_hidden_and_output(
+        self,
+        offsets: mx.array,
+        indices: mx.array,
+    ) -> tuple[mx.array, mx.array, mx.array]:
+        del offsets, indices
+        h1 = mx.array([[1.0, 0.0, -1.0, 2.0]], dtype=mx.float32)
+        h2 = mx.array([[0.0, 3.0]], dtype=mx.float32)
+        return h1, h2, mx.array([4.0], dtype=mx.float32)
+
+
+def test_activation_report_counts_positive_hidden_values() -> None:
+    report = _activation_report(
+        _ActivationCsrModel(),
+        np.asarray([0, 1], dtype=np.uint32),
+        np.asarray([7], dtype=np.uint16),
+    )
+
+    assert report == {
+        "largest_batch_h1_positive": 2,
+        "largest_batch_h1_total": 4,
+        "largest_batch_h1_density": 0.5,
+        "largest_batch_h2_positive": 1,
+        "largest_batch_h2_total": 2,
+        "largest_batch_h2_density": 0.5,
+    }
+
+
+def test_request_size_buckets_cover_boundaries() -> None:
+    assert [_request_size_bucket_index(rows) for rows in (1, 32, 33, 64)] == [0, 0, 1, 1]
+    assert [_request_size_bucket_index(rows) for rows in (65, 128, 129, 256)] == [2, 2, 3, 3]
+    assert [_request_size_bucket_index(rows) for rows in (257, 512, 513, 1_024)] == [4, 4, 5, 5]
+    assert _request_size_bucket_index(1_025) == 6
 
 
 def _request(request_id: int, rows: list[list[int]]) -> bytes:
@@ -223,6 +267,60 @@ def test_exact_hidden_service_returns_hidden_then_bit_identical_value() -> None:
     expected = np.asarray([0.0, 4.0, 11_230.0], dtype=np.float32)
     assert np.array_equal(values[:, :64], np.broadcast_to(expected[:, None], (3, 64)))
     assert np.array_equal(values[:, 64], expected)
+
+
+def test_exact_shared_service_reads_and_writes_only_the_mapping_payload() -> None:
+    request_id = 59
+    rows = [[], [1, 1, 2], [0, 11_230]]
+    offsets = np.asarray([0, 0, 3, 5], dtype="<u4")
+    features = np.asarray([1, 1, 2, 0, 11_230], dtype="<u2")
+    features_start = SHARED_HEADER.size + offsets.nbytes
+    response_offset = (features_start + features.nbytes + 3) & ~3
+    shared = bytearray(response_offset + len(rows) * 4)
+    SHARED_HEADER.pack_into(
+        shared,
+        0,
+        SHARED_MAGIC,
+        SHARED_VERSION,
+        request_id,
+        len(features),
+    )
+    shared[SHARED_HEADER.size : features_start] = offsets.tobytes()
+    shared[features_start : features_start + features.nbytes] = features.tobytes()
+    request = FRAME_HEADER.pack(
+        PROTOCOL_MAGIC,
+        PROTOCOL_VERSION,
+        MESSAGE_PREDICT_SPARSE_NNUE_CSR_EXACT_SHARED,
+        request_id,
+        len(rows),
+    ) + FRAME_HEADER.pack(
+        PROTOCOL_MAGIC,
+        PROTOCOL_VERSION,
+        MESSAGE_SHUTDOWN,
+        request_id + 1,
+        0,
+    )
+    output = io.BytesIO()
+
+    serve_legacy_nnue(
+        _SumSparseModel(),
+        io.BytesIO(request),
+        output,
+        exact_model=_SumCsrModel(),
+        shared_buffer=shared,
+    )
+
+    assert output.getvalue() == FRAME_HEADER.pack(
+        PROTOCOL_MAGIC,
+        PROTOCOL_VERSION,
+        MESSAGE_SPARSE_NNUE_CSR_EXACT_SHARED_PREDICTION,
+        request_id,
+        len(rows),
+    )
+    assert np.array_equal(
+        np.frombuffer(shared, dtype="<f4", count=len(rows), offset=response_offset),
+        np.asarray([0.0, 4.0, 11_230.0], dtype=np.float32),
+    )
 
 
 def test_exact_sparse_service_rejects_non_monotonic_offsets() -> None:

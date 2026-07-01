@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-legal-audit-realized-hidden-concurrency-v1-20260615",
+  "status": "rejected",
+  "phase": 1,
+  "workload": {
+    "ruleset": "four-player AAAAA, no habitat bonuses",
+    "strategy": "canonical-action-legacy-exact-mlx-v1-k32-r600-lmr-no-paid-prelude",
+    "rollouts": 600,
+    "candidate_count": 32,
+    "first_seed": 34400,
+    "environment": {
+      "MCE_LMR": "1",
+      "MCE_DIVERSE_PREFILTER": "1"
+    }
+  },
+  "design": {
+    "cohort_process_counts": [
+      1,
+      2,
+      4
+    ],
+    "john2_order": [
+      1,
+      2,
+      4
+    ],
+    "john3_order": [
+      4,
+      2,
+      1
+    ],
+    "executable_blake3": "868b720bd51d88deacf363bb5d3ee6bfb33583f80c5973234b67ca314854e294",
+    "v2_source_blake3": "ce2562cd2fea26608536ecfb91b5b3c7ecad71a7a63a0ae2089eae02d11a3c99",
+    "weights_blake3": "9e1d568693274fc537ac4f6d6f729abb1ee8da8330a78d1f78a1f62b733de400",
+    "model_manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "correctness": {
+    "runs": 14,
+    "all_status_smoke_passed": true,
+    "all_clean_shutdown": true,
+    "all_exact_r600": true,
+    "all_zero_bootstrap_samples": true,
+    "all_zero_policy_fallbacks": true,
+    "all_repeated_seed_contracts_identical": true,
+    "seed_contracts": [
+      {
+        "seed": 34400,
+        "scores": [
+          102,
+          96,
+          92,
+          95
+        ],
+        "neural_batches": 3920,
+        "neural_rows": 6121807,
+        "rollout_waves": 3716,
+        "rollout_samples": 46207
+      },
+      {
+        "seed": 34401,
+        "scores": [
+          97,
+          94,
+          97,
+          98
+        ],
+        "neural_batches": 3993,
+        "neural_rows": 6265370,
+        "rollout_waves": 3797,
+        "rollout_samples": 46156
+      },
+      {
+        "seed": 34402,
+        "scores": [
+          92,
+          97,
+          95,
+          97
+        ],
+        "neural_batches": 4026,
+        "neural_rows": 6381322,
+        "rollout_waves": 3800,
+        "rollout_samples": 46079
+      },
+      {
+        "seed": 34403,
+        "scores": [
+          94,
+          95,
+          91,
+          94
+        ],
+        "neural_batches": 3990,
+        "neural_rows": 6319834,
+        "rollout_waves": 3784,
+        "rollout_samples": 45977
+      }
+    ]
+  },
+  "measurements": {
+    "john2": [
+      {
+        "processes": 1,
+        "cohort_seconds": 33.963929,
+        "sum_job_real_seconds": 33.94,
+        "games_per_minute": 1.7665800679303034,
+        "throughput_vs_single": 1.0,
+        "aggregate_maximum_rss_bytes": 231194624,
+        "aggregate_peak_footprint_bytes": 72204744,
+        "swaps": 0
+      },
+      {
+        "processes": 2,
+        "cohort_seconds": 58.449131,
+        "sum_job_real_seconds": 116.15,
+        "games_per_minute": 2.0530673073651,
+        "throughput_vs_single": 1.1621705376594906,
+        "aggregate_maximum_rss_bytes": 374079488,
+        "aggregate_peak_footprint_bytes": 126878536,
+        "swaps": 0
+      },
+      {
+        "processes": 4,
+        "cohort_seconds": 97.096545,
+        "sum_job_real_seconds": 384.95,
+        "games_per_minute": 2.4717666318611027,
+        "throughput_vs_single": 1.3991817731516605,
+        "aggregate_maximum_rss_bytes": 656900096,
+        "aggregate_peak_footprint_bytes": 227001976,
+        "swaps": 0
+      }
+    ],
+    "john3": [
+      {
+        "processes": 1,
+        "cohort_seconds": 34.230646,
+        "sum_job_real_seconds": 34.21,
+        "games_per_minute": 1.752815298899121,
+        "throughput_vs_single": 1.0,
+        "aggregate_maximum_rss_bytes": 231489536,
+        "aggregate_peak_footprint_bytes": 67240368,
+        "swaps": 0
+      },
+      {
+        "processes": 2,
+        "cohort_seconds": 58.740134,
+        "sum_job_real_seconds": 116.99,
+        "games_per_minute": 2.0428962589700594,
+        "throughput_vs_single": 1.1654943109254738,
+        "aggregate_maximum_rss_bytes": 374685696,
+        "aggregate_peak_footprint_bytes": 133497696,
+        "swaps": 0
+      },
+      {
+        "processes": 4,
+        "cohort_seconds": 97.737026,
+        "sum_job_real_seconds": 387.41,
+        "games_per_minute": 2.455568885429356,
+        "throughput_vs_single": 1.4009284874291141,
+        "aggregate_maximum_rss_bytes": 656769024,
+        "aggregate_peak_footprint_bytes": 234571456,
+        "swaps": 0
+      }
+    ]
+  },
+  "gates": {
+    "exact_contract_and_clean_shutdown": true,
+    "two_process_minimum_throughput": 1.5,
+    "two_process_passed_both_hosts": false,
+    "four_process_minimum_throughput": 2.5,
+    "four_process_passed_both_hosts": false,
+    "memory_and_swap_guardrail_passed": true,
+    "direction_agreed_across_hosts": true,
+    "four_process_rejection_boundary": 1.5,
+    "primary_direction_rejected": true
+  },
+  "verdict": {
+    "accepted": false,
+    "production_changed": false,
+    "reason": "Two- and four-process throughput missed the preregistered gates on both hosts; four-process throughput remained below the explicit 1.50x rejection boundary despite low memory use and zero swaps.",
+    "next_direction": "One coordinated exact multi-trajectory scheduler with shared MLX batching and inference-work elimination."
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/full-legal-audit-realized-hidden-concurrency-v1"
+  }
+}

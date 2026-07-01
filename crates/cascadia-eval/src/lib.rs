@@ -1,5 +1,12 @@
 //! Canonical benchmark runner for Cascadia v2.
 
+pub mod focal;
+pub mod focal_campaign;
+pub mod focal_gameplay;
+pub mod longitudinal;
+pub mod r2_map_binding;
+pub mod r2_map_gameplay;
+
 use std::time::Instant;
 
 use cascadia_game::{GameConfig, GameSeed, ScoreBreakdown};

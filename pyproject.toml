@@ -23,6 +23,12 @@ cascadia-mlx-imitation-parent-hidden-train = "cascadia_mlx.imitation_parent_hidd
 cascadia-mlx-imitation-score-residual-train = "cascadia_mlx.imitation_score_residual_train:main"
 cascadia-mlx-legacy-nnue = "cascadia_mlx.legacy_nnue_tool:main"
 cascadia-mlx-legacy-nnue-serve = "cascadia_mlx.legacy_nnue_serve:main"
+cascadia-mlx-opponent-intent = "cascadia_mlx.opponent_intent_experiment:main"
+cascadia-mlx-o1-ranking-aggregate = "cascadia_mlx.o1_ranking_aggregate:main"
+cascadia-mlx-o1-ranking-cohort = "cascadia_mlx.o1_ranking_cohort:main"
+cascadia-mlx-o1-ranking-controls = "cascadia_mlx.o1_ranking_controls:main"
+cascadia-mlx-o1-ranking-intent-cache = "cascadia_mlx.o1_ranking_intent_cache:main"
+cascadia-mlx-o1-ranking-train = "cascadia_mlx.o1_ranking_train:main"
 cascadia-mlx-imitation-promote = "cascadia_mlx.imitation_promote:main"
 cascadia-mlx-imitation-serve = "cascadia_mlx.imitation_serve:main"
 cascadia-mlx-imitation-train = "cascadia_mlx.imitation_train:main"
@@ -36,6 +42,26 @@ cascadia-mlx-counterfactual-advantage-evaluate = "cascadia_mlx.counterfactual_ad
 cascadia-mlx-counterfactual-advantage-train = "cascadia_mlx.counterfactual_advantage_train:main"
 cascadia-mlx-conservative-policy-evaluate = "cascadia_mlx.conservative_policy_evaluate:main"
 cascadia-mlx-conservative-policy-train = "cascadia_mlx.conservative_policy_train:main"
+cascadia-mlx-graded-oracle-evaluate = "cascadia_mlx.graded_oracle_evaluate:main"
+cascadia-mlx-graded-oracle-embedding-probe = "cascadia_mlx.graded_oracle_embedding_probe:main"
+cascadia-mlx-graded-oracle-observable-bypass = "cascadia_mlx.graded_oracle_observable_bypass:main"
+cascadia-mlx-graded-oracle-prepool-context = "cascadia_mlx.graded_oracle_prepool_context:main"
+cascadia-mlx-graded-oracle-factor-integration = "cascadia_mlx.graded_oracle_factor_integration:main"
+cascadia-mlx-graded-oracle-frontier-anchor-ceiling = "cascadia_mlx.graded_oracle_frontier_anchor_ceiling:main"
+cascadia-mlx-graded-oracle-frontier-anchor-evaluate = "cascadia_mlx.graded_oracle_frontier_anchor_evaluate:main"
+cascadia-mlx-graded-oracle-frontier-anchor-train = "cascadia_mlx.graded_oracle_frontier_anchor_train:main"
+cascadia-mlx-graded-oracle-frontier-boundary-evaluate = "cascadia_mlx.graded_oracle_frontier_boundary_evaluate:main"
+cascadia-mlx-graded-oracle-frontier-boundary-train = "cascadia_mlx.graded_oracle_frontier_boundary_train:main"
+cascadia-mlx-graded-oracle-frontier-rank-boundary-evaluate = "cascadia_mlx.graded_oracle_frontier_rank_boundary_evaluate:main"
+cascadia-mlx-graded-oracle-frontier-rank-boundary-train = "cascadia_mlx.graded_oracle_frontier_rank_boundary_train:main"
+cascadia-mlx-graded-oracle-frontier-target-curriculum-evaluate = "cascadia_mlx.graded_oracle_frontier_target_curriculum_evaluate:main"
+cascadia-mlx-graded-oracle-frontier-target-curriculum-train = "cascadia_mlx.graded_oracle_frontier_target_curriculum_train:main"
+cascadia-mlx-frontier-failure-diagnostics = "cascadia_mlx.frontier_failure_diagnostics:main"
+cascadia-mlx-graded-oracle-identifiability = "cascadia_mlx.graded_oracle_identifiability:main"
+cascadia-mlx-graded-oracle-local-geometry-evaluate = "cascadia_mlx.graded_oracle_local_geometry_evaluate:main"
+cascadia-mlx-graded-oracle-local-geometry-train = "cascadia_mlx.graded_oracle_local_geometry_train:main"
+cascadia-mlx-graded-oracle-target-sufficiency = "cascadia_mlx.graded_oracle_target_sufficiency:main"
+cascadia-mlx-graded-oracle-train = "cascadia_mlx.graded_oracle_train:main"
 cascadia-mlx-promote = "cascadia_mlx.promote:main"
 cascadia-mlx-public-beam-value-evaluate = "cascadia_mlx.public_beam_value_evaluate:main"
 cascadia-mlx-public-beam-value-promote = "cascadia_mlx.public_beam_value_promote:main"
@@ -50,10 +76,22 @@ cascadia-mlx-ranking-serve = "cascadia_mlx.ranking_serve:main"
 cascadia-mlx-ranking-train = "cascadia_mlx.ranking_train:main"
 cascadia-mlx-rollout-joint-train = "cascadia_mlx.rollout_joint_train:main"
 cascadia-mlx-rollout-value-train = "cascadia_mlx.rollout_value_train:main"
+cascadia-mlx-r3-action-edit-train = "cascadia_mlx.r3_action_edit_mlx_train:main"
+cascadia-mlx-r2-map-promote = "cascadia_mlx.r2_map_promote:main"
+cascadia-mlx-r2-map-backend-parity = "cascadia_mlx.r2_map_backend_parity:main"
+cascadia-mlx-r2-map-serve = "cascadia_mlx.r2_map_serve:main"
+cascadia-mlx-r2-map-train = "cascadia_mlx.r2_map_train:main"
+cascadia-mlx-r2-map-verify = "cascadia_mlx.r2_map_verify:main"
 cascadia-mlx-score-to-go-benchmark = "cascadia_mlx.score_to_go_benchmark:main"
 cascadia-mlx-score-to-go-train = "cascadia_mlx.score_to_go_train:main"
 cascadia-mlx-serve = "cascadia_mlx.serve:main"
 cascadia-mlx-train = "cascadia_mlx.train:main"
+cascadia-v3-train = "cascadia_v3_mlx.train:main"
+cascadia-v3-profile = "cascadia_v3_mlx.profile:main"
+cascadia-v3-verify = "cascadia_v3_mlx.verify:main"
+cascadia-v3-campaign-train = "cascadia_v3_mlx.campaign_train:main"
+cascadia-v3-checkpoint-eval = "cascadia_v3_mlx.checkpoint_eval:main"
+cascadia-v3-cycle-train = "cascadia_v3_mlx.cycle_train:main"
 
 [dependency-groups]
 dev = [
@@ -62,11 +100,15 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["python/cascadia_mlx"]
+packages = ["python/cascadia_mlx", "python/cascadia_cluster", "python/cascadia_v3_mlx"]
 
 [tool.pytest.ini_options]
-testpaths = ["python/tests"]
+testpaths = ["python/tests", "tests/cluster_unit"]
 addopts = ["--strict-markers", "-ra"]
+markers = [
+    "integration: requires the live private Bacalhau fabric",
+    "destructive_cluster: intentionally interrupts a worker or service",
+]
 
 [tool.ruff]
 target-version = "py312"

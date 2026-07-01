@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-shared-tile-potential-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "Prepare the exact tile-only board-potential contribution once for Nature Token candidate combinations that share a market tile and frontier coordinate, then evaluate only the additional wildlife-placement changes.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "exactness": {
+    "reference_games": 6,
+    "all_exercised_tile_rotations_compared": true,
+    "tile_only_afterstates_compared": true,
+    "all_legal_wildlife_afterstates_compared": true,
+    "direct_incremental_potential_compared": true,
+    "complete_board_potential_compared": true,
+    "unshared_candidate_sets_compared": true,
+    "post_removal_default_library_tests_passed": 84,
+    "post_removal_exact_feature_library_tests_passed": 84,
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true,
+    "post_removal_code_identity": {
+      "section": "__TEXT,__text",
+      "offset_bytes": 2160,
+      "size_bytes": 2878612,
+      "retained_control_sha256": "68334bc49378b86ddcf28034301ad5dcbffb1c52ab0045f60a680fe32bc12873",
+      "rebuilt_control_sha256": "68334bc49378b86ddcf28034301ad5dcbffb1c52ab0045f60a680fe32bc12873",
+      "identical": true,
+      "whole_file_hash_note": "Mach-O whole-file hashes differ because LC_UUID and debug metadata changed during rebuild."
+    }
+  },
+  "source_screen": {
+    "control_binary_sha256": "52881887639f5a7940f0efed3baf0892fb2e44b824518a50b7bf2da9d8aa6ce7",
+    "treatment_binary_sha256": "04a21cf34f736159201b1b6a7b429da62560db3189abffe81dcf84a04940c9aa",
+    "advancement_floor_percent": 0.25,
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.567152458
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.646978583
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.851134417
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 15.625203375
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 15.60514525
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 15.36379125
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 15.373475459
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.606600917
+      }
+    ],
+    "john2_control_mean_seconds": 15.7490565,
+    "john2_treatment_mean_seconds": 15.5961779165,
+    "john2_speedup": 1.0098023108173357,
+    "john2_improvement_percent": 0.970715823516156,
+    "john3_control_mean_seconds": 15.6058730835,
+    "john3_treatment_mean_seconds": 15.3686333545,
+    "john3_speedup": 1.0154366184375487,
+    "john3_improvement_percent": 1.5201951709503057,
+    "combined_control_mean_seconds": 15.67746479175,
+    "combined_treatment_mean_seconds": 15.4824056355,
+    "combined_treatment_delta_seconds": -0.19505915625000014,
+    "combined_speedup": 1.0125987628048412,
+    "combined_improvement_percent": 1.2442008886069813,
+    "advanced_to_pgo": true
+  },
+  "pgo": {
+    "performed": true,
+    "instrumented_binary_sha256": "9913ba38223f2edd1632429a01633c606f309a8645e33f69a27ff9418bbf89e9",
+    "john2_training_seconds": 51.106545167,
+    "john3_training_seconds": 50.475445542,
+    "john2_profraw_sha256": "20759db36ac4cbbae624bb6a38462e2c21c94ac08efbb23e8dd20f014641c981",
+    "john3_profraw_sha256": "8f0c336e49a00aa308794f7ed2a9a2ef53dc86fd79c626862a32b9d21c79f6c9",
+    "john2_total_profile_counts": 117475299728,
+    "john3_total_profile_counts": 117475347389,
+    "profile_count_difference": 47661,
+    "merged_profdata_sha256": "881aca9bcaed0e239a966db0a44d1cdbfabf4db120d269a42c7cecd0135ad48d",
+    "merged_profile_functions": 5545,
+    "merged_profile_blocks": 119564,
+    "control_binary_sha256": "0b08b33d298d0bca5a0d09f1f5633d449d6984abb200053410bd731b0342f976",
+    "treatment_binary_sha256": "f15f2a88192b9b7ad62099dace35477b553025029625e3712f96c254c309ac22",
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.286481833
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.423585875
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.314963375
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 15.478925083
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 15.078524417
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 15.012262375
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 15.038536458
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.112249583
+      }
+    ],
+    "john2_control_mean_seconds": 15.369274625,
+    "john2_treatment_mean_seconds": 15.382703458,
+    "john2_speedup": 0.9991270173648822,
+    "john2_improvement_percent": -0.08737453996792481,
+    "john3_control_mean_seconds": 15.095387,
+    "john3_treatment_mean_seconds": 15.0253994165,
+    "john3_speedup": 1.004657951616457,
+    "john3_improvement_percent": 0.46363556959486807,
+    "combined_control_mean_seconds": 15.2323308125,
+    "combined_treatment_mean_seconds": 15.204051437250001,
+    "combined_treatment_delta_seconds": -0.02827937524999946,
+    "combined_speedup": 1.0018599894486488,
+    "combined_improvement_percent": 0.18565363106999194,
+    "reproducibly_faster_across_both_hosts": false
+  },
+  "implementation": {
+    "production_runtime_switch_retained": false,
+    "test_oracle_retained": false,
+    "treatment_source_retained": false,
+    "accepted_elk_potential_implementation_retained": true
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "Fresh PGO reduced the aggregate improvement to 0.186% and regressed john2 by 0.087%, failing the preregistered cross-host reproducibility rule.",
+    "accepted_champion_binary_sha256": "0b08b33d298d0bca5a0d09f1f5633d449d6984abb200053410bd731b0342f976",
+    "accepted_champion_seconds": 15.515981063,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_passed": false
+  }
+}

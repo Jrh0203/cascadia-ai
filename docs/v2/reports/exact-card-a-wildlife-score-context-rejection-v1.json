@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-card-a-wildlife-score-context-rejection-v1-20260615",
+  "status": "rejected_after_source_screen",
+  "phase": 0,
+  "hypothesis": "Construct one exact immutable Card A wildlife score context per parent board and update only placement-affected scoring facts instead of rescoring complete wildlife categories.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "exactness": {
+    "adversarial_component_merge_test_passed": true,
+    "complete_seeded_aaaaa_games": 16,
+    "complete_game_turns": 1280,
+    "all_legal_existing_slots_compared": true,
+    "all_legal_new_tile_slots_compared": true,
+    "all_five_wildlife_types_compared": true,
+    "target_category_compared": true,
+    "fox_side_effect_compared": true,
+    "qualified_greedy_full_game_parity_passed": true,
+    "candidate_set_parity_passed": true,
+    "mid_v4_parent_afterstate_oracle_passed": true,
+    "pre_timing_default_library_suite_passed": true,
+    "pre_timing_exact_feature_library_suite_passed": true,
+    "post_removal_default_ai_tests_passed": 84,
+    "post_removal_exact_feature_ai_tests_passed": 85,
+    "post_removal_core_tests_passed": 125,
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true,
+    "post_removal_code_identity": {
+      "retained_control_sha256": "786351ea84e4b2674e81f2ade87d0596e47a8a3b21be2f336dc9e6ff62c4cd94",
+      "rebuilt_control_sha256": "786351ea84e4b2674e81f2ade87d0596e47a8a3b21be2f336dc9e6ff62c4cd94",
+      "whole_file_identical": true
+    }
+  },
+  "source_screen": {
+    "control_binary_sha256": "786351ea84e4b2674e81f2ade87d0596e47a8a3b21be2f336dc9e6ff62c4cd94",
+    "treatment_binary_sha256": "930c96f9e84833ae76db25be6c8659a8bd0eb6adf4b76913108c7c173ea7884e",
+    "advancement_floor_percent": 1.0,
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.198916834,
+        "maximum_resident_set_bytes": 103022592,
+        "peak_memory_footprint_bytes": 66224560
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.231131667,
+        "maximum_resident_set_bytes": 103104512,
+        "peak_memory_footprint_bytes": 57590192
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.183283959,
+        "maximum_resident_set_bytes": 102924288,
+        "peak_memory_footprint_bytes": 59376048
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 15.140461333,
+        "maximum_resident_set_bytes": 102825984,
+        "peak_memory_footprint_bytes": 64274864
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 15.085635666,
+        "maximum_resident_set_bytes": 102957056,
+        "peak_memory_footprint_bytes": 56787376
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 14.871021625,
+        "maximum_resident_set_bytes": 103038976,
+        "peak_memory_footprint_bytes": 62374320
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 14.992089666,
+        "maximum_resident_set_bytes": 102907904,
+        "peak_memory_footprint_bytes": 59343280
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.049580167,
+        "maximum_resident_set_bytes": 102891520,
+        "peak_memory_footprint_bytes": 57295280
+      }
+    ],
+    "john2_control_mean_seconds": 15.207207813,
+    "john2_treatment_mean_seconds": 15.1696890835,
+    "john2_treatment_delta_seconds": -0.0375187295,
+    "john2_speedup": 1.0024732695108964,
+    "john2_improvement_percent": 0.2467167540639983,
+    "john3_control_mean_seconds": 15.0676079165,
+    "john3_treatment_mean_seconds": 14.9315556455,
+    "john3_treatment_delta_seconds": -0.136052271,
+    "john3_speedup": 1.0091117278219435,
+    "john3_improvement_percent": 0.9029453895665449,
+    "combined_control_mean_seconds": 15.13740786475,
+    "combined_treatment_mean_seconds": 15.0506223645,
+    "combined_treatment_delta_seconds": -0.08678550025,
+    "combined_speedup": 1.0057662399698968,
+    "combined_improvement_percent": 0.5733181072044496,
+    "combined_control_mean_maximum_resident_set_bytes": 102969344,
+    "combined_treatment_mean_maximum_resident_set_bytes": 102948864,
+    "combined_maximum_resident_set_change_percent": -0.019889414853415013,
+    "combined_control_mean_peak_memory_footprint_bytes": 57762224,
+    "combined_treatment_mean_peak_memory_footprint_bytes": 63054256,
+    "combined_peak_memory_footprint_change_percent": 9.161752497618512,
+    "mechanism_diagnostics": {
+      "john2": {
+        "control_opponent_advance_ms": 3438.248016,
+        "treatment_opponent_advance_ms": 3419.357978,
+        "control_template_preparation_ms": 3509.721585,
+        "treatment_template_preparation_ms": 3430.236957,
+        "control_candidate_preparation_ms": 1252.633045,
+        "treatment_candidate_preparation_ms": 1255.296478,
+        "control_target_stage_total_ms": 8200.602646,
+        "treatment_target_stage_total_ms": 8104.891413,
+        "target_stage_improvement_percent": 1.1671243825803956,
+        "candidate_preparation_improvement_percent": -0.21262675534796713
+      },
+      "john3": {
+        "control_opponent_advance_ms": 3468.700831,
+        "treatment_opponent_advance_ms": 3396.490494,
+        "control_template_preparation_ms": 3530.010455,
+        "treatment_template_preparation_ms": 3402.957942,
+        "control_candidate_preparation_ms": 1268.27285,
+        "treatment_candidate_preparation_ms": 1251.033223,
+        "control_target_stage_total_ms": 8266.984136,
+        "treatment_target_stage_total_ms": 8050.481659,
+        "target_stage_improvement_percent": 2.61888100228959
+      }
+    },
+    "gates": {
+      "both_hosts_improved": true,
+      "combined_improvement_exceeded_one_percent": false,
+      "aggregate_target_stages_improved": true,
+      "no_individual_target_stage_regressed": false,
+      "maximum_resident_set_did_not_regress_in_aggregate": true,
+      "allocator_peak_memory_footprint_did_not_regress": false,
+      "exact_diagnostics_preserved": true,
+      "advanced_to_pgo": false
+    }
+  },
+  "pgo": {
+    "performed": false,
+    "reason": "The treatment failed the preregistered source gate: combined end-to-end improvement was 0.573%, john2 candidate preparation regressed 0.213%, and allocator peak memory footprint increased."
+  },
+  "implementation": {
+    "production_switch_added": false,
+    "treatment_source_retained": false,
+    "card_a_context_retained": false,
+    "accepted_parent_context_restored": true
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The exact mechanism was real but insufficient end to end and failed multiple registered source-level promotion conditions.",
+    "accepted_pgo_mean_seconds": 15.01887077075,
+    "reference_seconds": 141.027296,
+    "accepted_speedup": 9.390006622512372,
+    "ten_x_threshold_seconds": 14.1027296,
+    "remaining_seconds": 0.91614117075,
+    "remaining_percent": 6.099934
+  }
+}
+

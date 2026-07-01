@@ -1,0 +1,161 @@
+{
+  "analysis_sha256": "484c1a9e14f5ada613d79b06085425e5ca84f6f3a9750721917cd41434d2b9ab",
+  "calculation": {
+    "alpha_two_sided": 0.05,
+    "assumptions": [
+      "paired focal-score deltas are independent across registered pairs",
+      "the future paired-delta standard deviation matches the calibration scenario",
+      "the normal approximation is adequate at the planned sample size",
+      "the configured effect is a fixed alternative chosen before candidate outcomes are opened"
+    ],
+    "configured_effects": [
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "limitations": [
+      "this is a planning calculation, not evidence of model strength",
+      "normal critical values do not add a finite-sample Student-t correction",
+      "component, tail, integrity, memory, latency, and zero-swap gates can still prevent promotion",
+      "D6 augmentation and multiple decisions within a game do not increase the benchmark pair count"
+    ],
+    "method": "paired-mean normal approximation",
+    "target_power": 0.8
+  },
+  "calibration_status": "provisional-sensitivity-until-first-eligible-pilot",
+  "frozen_gate": {
+    "development_pairs": 250,
+    "outcome_driven_sample_extension_allowed": false,
+    "promotion_rule": "paired mean > 0 and two-sided 95% interval excludes 0, with all preregistered integrity, guardrail, and resource gates passing",
+    "single_fixed_analysis": true,
+    "strength_blinded_smoke_pairs": 20,
+    "strength_outputs_blinded": true
+  },
+  "observed_pilot": {
+    "available": false,
+    "mean_paired_delta": null,
+    "pair_count": 0,
+    "reason": "no scientifically compatible focal-seat paired pilot was supplied",
+    "standard_deviation": null
+  },
+  "protocol_id": "r2-map-focal-paired-v1",
+  "scenarios": [
+    {
+      "mde_at_250_pairs": 0.3543756139318638,
+      "required_pairs_by_effect": [
+        {
+          "effect": 0.25,
+          "required_pairs": 503
+        },
+        {
+          "effect": 0.5,
+          "required_pairs": 126
+        },
+        {
+          "effect": 0.75,
+          "required_pairs": 56
+        },
+        {
+          "effect": 1.0,
+          "required_pairs": 32
+        }
+      ],
+      "scenario_id": "sensitivity-sd-2",
+      "standard_deviation": 2.0
+    },
+    {
+      "mde_at_250_pairs": 0.5315634208977956,
+      "required_pairs_by_effect": [
+        {
+          "effect": 0.25,
+          "required_pairs": 1131
+        },
+        {
+          "effect": 0.5,
+          "required_pairs": 283
+        },
+        {
+          "effect": 0.75,
+          "required_pairs": 126
+        },
+        {
+          "effect": 1.0,
+          "required_pairs": 71
+        }
+      ],
+      "scenario_id": "sensitivity-sd-3",
+      "standard_deviation": 3.0
+    },
+    {
+      "mde_at_250_pairs": 0.7087512278637276,
+      "required_pairs_by_effect": [
+        {
+          "effect": 0.25,
+          "required_pairs": 2010
+        },
+        {
+          "effect": 0.5,
+          "required_pairs": 503
+        },
+        {
+          "effect": 0.75,
+          "required_pairs": 224
+        },
+        {
+          "effect": 1.0,
+          "required_pairs": 126
+        }
+      ],
+      "scenario_id": "sensitivity-sd-4",
+      "standard_deviation": 4.0
+    },
+    {
+      "mde_at_250_pairs": 0.8859390348296595,
+      "required_pairs_by_effect": [
+        {
+          "effect": 0.25,
+          "required_pairs": 3140
+        },
+        {
+          "effect": 0.5,
+          "required_pairs": 785
+        },
+        {
+          "effect": 0.75,
+          "required_pairs": 349
+        },
+        {
+          "effect": 1.0,
+          "required_pairs": 197
+        }
+      ],
+      "scenario_id": "sensitivity-sd-5",
+      "standard_deviation": 5.0
+    },
+    {
+      "mde_at_250_pairs": 1.0631268417955912,
+      "required_pairs_by_effect": [
+        {
+          "effect": 0.25,
+          "required_pairs": 4521
+        },
+        {
+          "effect": 0.5,
+          "required_pairs": 1131
+        },
+        {
+          "effect": 0.75,
+          "required_pairs": 503
+        },
+        {
+          "effect": 1.0,
+          "required_pairs": 283
+        }
+      ],
+      "scenario_id": "sensitivity-sd-6",
+      "standard_deviation": 6.0
+    }
+  ],
+  "schema_id": "cascadia.r2-map.paired-gate-power.v1"
+}

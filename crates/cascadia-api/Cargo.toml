@@ -7,6 +7,7 @@ description = "Canonical local API and application services for Cascadia v2"
 
 [dependencies]
 axum.workspace = true
+blake3.workspace = true
 cascadia-game = { path = "../cascadia-game" }
 cascadia-search = { path = "../cascadia-search" }
 cascadia-sim = { path = "../cascadia-sim" }

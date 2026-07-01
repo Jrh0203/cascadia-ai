@@ -116,6 +116,9 @@ class CounterfactualAdvantageBatch:
     target_mean: mx.array
     target_stddev: mx.array
     target_standard_error: mx.array
+    target_total_samples: mx.array
+    target_centered_samples: mx.array
+    target_component_samples: mx.array
     immediate_score: mx.array
     shallow_mean: mx.array
     shallow_stddev: mx.array
@@ -457,6 +460,12 @@ def decode_counterfactual_advantage_records(
 
     sample_components = candidate_records["sample_finals"][:, :, :12].astype(np.float32)
     sample_totals = np.sum(sample_components, axis=-1)
+    centered_samples = sample_totals - np.mean(
+        sample_totals,
+        axis=1,
+        keepdims=True,
+        dtype=np.float32,
+    )
     target_mean = np.mean(sample_totals, axis=-1, dtype=np.float32)
     target_stddev = np.std(sample_totals, axis=-1, ddof=1, dtype=np.float32)
     target_standard_error = target_stddev / np.sqrt(
@@ -478,6 +487,9 @@ def decode_counterfactual_advantage_records(
         target_mean=mx.array(target_mean),
         target_stddev=mx.array(target_stddev),
         target_standard_error=mx.array(target_standard_error),
+        target_total_samples=mx.array(sample_totals),
+        target_centered_samples=mx.array(centered_samples),
+        target_component_samples=mx.array(sample_components),
         immediate_score=mx.array(
             candidate_records["input"]["action"]["immediate_score"].astype(np.float32)
         ),

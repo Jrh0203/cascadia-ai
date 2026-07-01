@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-packed-csr-pipeline-rejection-v1-20260615",
+  "status": "rejected",
+  "date": "2026-06-15",
+  "hypothesis": "Packing each pipelined sparse request into one CSR offset vector and one contiguous feature vector would reduce row allocation and transport overhead without changing behavior.",
+  "benchmark": {
+    "ruleset": "four-player AAAAA, no habitat bonuses",
+    "seed": 34400,
+    "games_per_run": 1,
+    "rollouts": 600,
+    "environment": {
+      "MCE_LMR": "1",
+      "MCE_DIVERSE_PREFILTER": "1"
+    },
+    "sequence_per_host": [
+      "treatment",
+      "control",
+      "treatment",
+      "control"
+    ],
+    "profile": "release without PGO"
+  },
+  "control": {
+    "description": "pipelined sparse requests retain independently allocated rows until the shared-memory encoder",
+    "executable_sha256": "53e62599c9fb9d8c6f232a850d3f7247f668662913297f4ebc36440a21107487"
+  },
+  "treatment": {
+    "description": "pipelined sparse requests materialize CSR offsets and contiguous features before crossing the evaluator-thread boundary",
+    "executable_sha256": "4d38dacc1abfe16b5d7b394355272ff5d5a78bd205b316176808b66390162058"
+  },
+  "exactness": {
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "logical_neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "all_runs_identical": true
+  },
+  "measurements": {
+    "john2": {
+      "control_seconds": [
+        15.695718,
+        15.663263125
+      ],
+      "treatment_seconds": [
+        16.17351175,
+        16.259270834
+      ],
+      "control_mean_seconds": 15.679490562,
+      "treatment_mean_seconds": 16.216391292,
+      "speedup": 0.966891479,
+      "regression_percent": 3.424
+    },
+    "john3": {
+      "control_seconds": [
+        16.053490459,
+        15.956748458
+      ],
+      "treatment_seconds": [
+        16.213013375,
+        16.301403792
+      ],
+      "control_mean_seconds": 16.005119458,
+      "treatment_mean_seconds": 16.257208583,
+      "speedup": 0.984493702,
+      "regression_percent": 1.575
+    },
+    "combined": {
+      "control_mean_seconds": 15.84230501,
+      "treatment_mean_seconds": 16.236799938,
+      "delta_seconds": 0.394494927,
+      "speedup": 0.975703653,
+      "regression_percent": 2.49
+    }
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "Packing added an early full feature copy; the existing row form transfers ownership and copies once into the shared mapping. The treatment was exact but consistently slower end to end.",
+    "source_removed": true,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_passed": false
+  }
+}

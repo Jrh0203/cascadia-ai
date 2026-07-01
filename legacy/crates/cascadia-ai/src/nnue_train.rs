@@ -2869,7 +2869,7 @@ fn pick_random_move(game: &GameState, rng: &mut StdRng) -> Option<crate::eval::S
     use crate::eval::ScoredMove;
     use cascadia_core::hex::HexCoord;
 
-    let mp: Vec<_> = game
+    let mp: arrayvec::ArrayVec<_, 4> = game
         .market
         .available()
         .map(|(i, p)| (i, p.tile, p.wildlife))
@@ -2948,32 +2948,38 @@ pub struct PreparedNnueMove {
     pub candidates: Vec<PreparedNnueMoveCandidate>,
 }
 
-/// Build the exact candidate afterstates consumed by the historical NNUE
-/// rollout policy without evaluating the network.
-pub fn prepare_nnue_move(game: &GameState) -> PreparedNnueMove {
-    use crate::eval::ScoredMove;
-    use cascadia_core::hex::HexCoord;
+/// Deterministic move choices shared by rollout states with the same public
+/// board, market, scoring cards, and turn count.
+#[derive(Debug, Clone)]
+pub struct NnueMoveTemplate {
+    pub fallback: Option<crate::eval::ScoredMove>,
+    pub candidates: Vec<crate::eval::ScoredMove>,
+}
 
-    let mp: Vec<_> = game
-        .market
-        .available()
-        .map(|(i, p)| (i, p.tile, p.wildlife))
-        .collect();
-    if mp.is_empty() {
-        return PreparedNnueMove {
+/// Build the deterministic candidate list consumed by the historical NNUE
+/// rollout policy. This deliberately excludes opponent and bag features so an
+/// exact public-state match can reuse the expensive candidate search.
+pub fn prepare_nnue_move_template(game: &GameState) -> NnueMoveTemplate {
+    prepare_nnue_move_template_with(game, || crate::search::candidate_moves_with_base_pub(game))
+}
+
+fn prepare_nnue_move_template_with(
+    game: &GameState,
+    candidate_set: impl FnOnce() -> crate::search::CandidateMoveSet,
+) -> NnueMoveTemplate {
+    use crate::eval::ScoredMove;
+
+    if game.market.available().next().is_none() {
+        return NnueMoveTemplate {
             fallback: None,
             candidates: Vec::new(),
         };
     }
 
-    let cards = game.scoring_cards;
-    let turns = game.turns_remaining;
-    let player = game.current_player;
-    let mut board = game.boards[player].clone();
-    let base_move = crate::eval::best_move_with_potential(&mut board, &mp, &cards, turns);
-
     // Use fast greedy candidates + NNUE re-ranking (faster than full NNUE candidates)
-    let mut candidates: Vec<ScoredMove> = crate::search::candidate_moves_pub(game);
+    let candidate_set = candidate_set();
+    let base_move = candidate_set.base_move;
+    let mut candidates: Vec<ScoredMove> = candidate_set.moves;
     if let Some(ref bm) = base_move {
         if !candidates.iter().any(|c| {
             c.tile_q == bm.tile_q
@@ -2988,13 +2994,95 @@ pub fn prepare_nnue_move(game: &GameState) -> PreparedNnueMove {
     candidates.truncate(15);
 
     if candidates.is_empty() {
-        return PreparedNnueMove {
+        return NnueMoveTemplate {
             fallback: base_move,
             candidates: Vec::new(),
         };
     }
 
+    NnueMoveTemplate {
+        fallback: base_move,
+        candidates,
+    }
+}
+
+/// Build and consume an uncached template for one exact batched rollout state.
+///
+/// The qualified pipeline observes effectively no full-public-state reuse, so
+/// retaining or cloning the template only adds bookkeeping and allocation.
+pub fn prepare_nnue_move_direct_mut(game: &mut GameState) -> PreparedNnueMove {
+    let template = prepare_nnue_move_template_with(game, || {
+        crate::search::candidate_moves_with_base_uncached_pub(game)
+    });
+    prepare_nnue_move_from_template_mut(game, &template)
+}
+
+/// Add state-specific bag/opponent features to a reusable move template.
+pub fn prepare_nnue_move_from_template(
+    game: &GameState,
+    template: &NnueMoveTemplate,
+) -> PreparedNnueMove {
+    if template.candidates.is_empty() {
+        return PreparedNnueMove {
+            fallback: template.fallback,
+            candidates: Vec::new(),
+        };
+    }
+
+    let mp: Vec<_> = game
+        .market
+        .available()
+        .map(|(i, p)| (i, p.tile, p.wildlife))
+        .collect();
+    let cards = game.scoring_cards;
+    let player = game.current_player;
+    let mut board = game.boards[player].clone();
     let bag_info = crate::nnue::BagInfo::from_game_for_player(game, player);
+    prepare_nnue_move_from_parts(&mut board, mp.as_slice(), &cards, &bag_info, template)
+}
+
+/// Mutable variant used by batched rollouts. Every temporary placement is
+/// undone before return, avoiding a full board clone per policy state.
+pub fn prepare_nnue_move_from_template_mut(
+    game: &mut GameState,
+    template: &NnueMoveTemplate,
+) -> PreparedNnueMove {
+    if template.candidates.is_empty() {
+        return PreparedNnueMove {
+            fallback: template.fallback,
+            candidates: Vec::new(),
+        };
+    }
+
+    let mp: arrayvec::ArrayVec<_, 4> = game
+        .market
+        .available()
+        .map(|(i, p)| (i, p.tile, p.wildlife))
+        .collect();
+    let cards = game.scoring_cards;
+    let player = game.current_player;
+    let bag_info = crate::nnue::BagInfo::from_game_for_player(game, player);
+    prepare_nnue_move_from_parts(
+        &mut game.boards[player],
+        mp.as_slice(),
+        &cards,
+        &bag_info,
+        template,
+    )
+}
+
+fn prepare_nnue_move_from_parts(
+    board: &mut cascadia_core::board::Board,
+    mp: &[(
+        usize,
+        cascadia_core::types::TileData,
+        cascadia_core::types::Wildlife,
+    )],
+    cards: &cascadia_core::types::ScoringCards,
+    bag_info: &crate::nnue::BagInfo,
+    template: &NnueMoveTemplate,
+) -> PreparedNnueMove {
+    use cascadia_core::hex::HexCoord;
 
     // Optimization: use place/undo on the single outer `board` rather than
     // cloning it per candidate. Saves 15 × ~15KB board copies per decision
@@ -3004,18 +3092,48 @@ pub fn prepare_nnue_move(game: &GameState) -> PreparedNnueMove {
     // reverse their effects (including keystone nature_tokens). ScoreBreakdown::compute
     // takes &mut but only reads state. Candidates where tile placement fails
     // leave `board` untouched (place_tile returns None without mutating).
-    let mut prepared = Vec::with_capacity(candidates.len());
-    for mv in &candidates {
+    let all_card_a = cards
+        .cards
+        .iter()
+        .all(|&variant| variant == cascadia_core::types::ScoringCardVariant::A);
+    let base_wildlife_scores =
+        all_card_a.then(|| cascadia_core::scoring::wildlife::score_all_wildlife(board, cards));
+    let base_wildlife_total = base_wildlife_scores
+        .as_ref()
+        .map(|scores| scores.iter().sum::<u16>());
+    let mut market_by_index = [None; 4];
+    for &(index, tile, wildlife) in mp {
+        market_by_index[index] = Some((tile, wildlife));
+    }
+    #[cfg(all(
+        feature = "mid-features",
+        feature = "v4-opp",
+        not(any(
+            feature = "legacy-features",
+            feature = "v5-feat",
+            feature = "czero-feat",
+            feature = "v6-peak",
+            feature = "cards-alt",
+            feature = "cards-alt-v2",
+            feature = "oppmarket-feat"
+        ))
+    ))]
+    let feature_context = crate::nnue::MidV4AfterstateFeatureContext::new(board, bag_info);
+    let mut prepared = Vec::with_capacity(template.candidates.len());
+    for mv in &template.candidates {
         let coord = HexCoord::new(mv.tile_q, mv.tile_r);
-        let tile = match mp.iter().find(|&&(i, _, _)| i == mv.market_index) {
-            Some(&(_, tile, _)) => tile,
+        let tile = match market_by_index
+            .get(mv.market_index)
+            .and_then(|entry| *entry)
+        {
+            Some((tile, _)) => tile,
             None => continue,
         };
-        let wildlife = match mp
-            .iter()
-            .find(|&&(i, _, _)| i == mv.wildlife_market_index.unwrap_or(mv.market_index))
+        let wildlife = match market_by_index
+            .get(mv.wildlife_market_index.unwrap_or(mv.market_index))
+            .and_then(|entry| *entry)
         {
-            Some(&(_, _, wl)) => wl,
+            Some((_, wildlife)) => wildlife,
             None => continue,
         };
 
@@ -3023,13 +3141,12 @@ pub fn prepare_nnue_move(game: &GameState) -> PreparedNnueMove {
             Some(a) => a,
             None => continue,
         };
-        let wl_act = if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
-            HexCoord::new(wq, wr)
-                .to_index()
-                .and_then(|idx| board.place_wildlife(idx, wildlife))
+        let wildlife_index = if let (Some(wq), Some(wr)) = (mv.wildlife_q, mv.wildlife_r) {
+            HexCoord::new(wq, wr).to_index()
         } else {
             None
         };
+        let wl_act = wildlife_index.and_then(|index| board.place_wildlife(index, wildlife));
         let nt_saved = if mv.wildlife_market_index.is_some() {
             let saved = board.nature_tokens;
             board.nature_tokens = board.nature_tokens.saturating_sub(1);
@@ -3038,9 +3155,94 @@ pub fn prepare_nnue_move(game: &GameState) -> PreparedNnueMove {
             None
         };
 
-        let actual =
-            cascadia_core::scoring::ScoreBreakdown::compute(&mut board, &cards).total as f32;
-        let features = crate::nnue::extract_features_with_bag(&board, Some(&bag_info));
+        let actual = if let (Some(base_scores), Some(base_total)) =
+            (base_wildlife_scores.as_ref(), base_wildlife_total)
+        {
+            let wildlife_index = wildlife as usize;
+            let wildlife_score = cascadia_core::scoring::wildlife::score_wildlife(
+                board,
+                wildlife,
+                cascadia_core::types::ScoringCardVariant::A,
+            );
+            let mut wildlife_total = base_total - base_scores[wildlife_index] + wildlife_score;
+            if wildlife != cascadia_core::types::Wildlife::Fox {
+                let fox_index = cascadia_core::types::Wildlife::Fox as usize;
+                wildlife_total = wildlife_total - base_scores[fox_index]
+                    + cascadia_core::scoring::wildlife::score_wildlife(
+                        board,
+                        cascadia_core::types::Wildlife::Fox,
+                        cascadia_core::types::ScoringCardVariant::A,
+                    );
+            }
+            (board.largest_group.iter().sum::<u16>() + wildlife_total + board.nature_tokens as u16)
+                as f32
+        } else {
+            cascadia_core::scoring::ScoreBreakdown::compute(board, cards).total as f32
+        };
+        #[cfg(debug_assertions)]
+        {
+            let expected = cascadia_core::scoring::ScoreBreakdown::compute(board, cards);
+            debug_assert_eq!(
+                actual as u16,
+                expected.total,
+                "incremental candidate score must match the full scorer: movement={mv:?}, \
+                 wildlife={wildlife:?}, habitat={}, base_wildlife={base_wildlife_scores:?}, \
+                 nature_tokens={}, expected={expected:?}",
+                board.largest_group.iter().sum::<u16>(),
+                board.nature_tokens,
+            );
+        }
+        #[cfg(all(
+            feature = "mid-features",
+            feature = "v4-opp",
+            not(any(
+                feature = "legacy-features",
+                feature = "v5-feat",
+                feature = "czero-feat",
+                feature = "v6-peak",
+                feature = "cards-alt",
+                feature = "cards-alt-v2",
+                feature = "oppmarket-feat"
+            ))
+        ))]
+        let features = {
+            let tile_index = coord
+                .to_index()
+                .expect("successful tile placement must have an in-bounds index");
+            let successful_wildlife_index = wl_act.as_ref().map(|_| {
+                wildlife_index.expect("wildlife action requires a wildlife placement index")
+            });
+            let features = feature_context.after_single_move_features(
+                board,
+                tile_index,
+                successful_wildlife_index,
+            );
+            #[cfg(debug_assertions)]
+            {
+                let expected = crate::nnue::extract_features_with_bag(board, Some(bag_info));
+                debug_assert_eq!(
+                    features, expected,
+                    "parent-afterstate feature context diverged: movement={mv:?}, \
+                     wildlife={wildlife:?}, tile_index={tile_index}, \
+                     wildlife_index={successful_wildlife_index:?}"
+                );
+            }
+            features
+        };
+        #[cfg(not(all(
+            feature = "mid-features",
+            feature = "v4-opp",
+            not(any(
+                feature = "legacy-features",
+                feature = "v5-feat",
+                feature = "czero-feat",
+                feature = "v6-peak",
+                feature = "cards-alt",
+                feature = "cards-alt-v2",
+                feature = "oppmarket-feat"
+            ))
+        )))]
+        let features = crate::nnue::extract_features_with_bag(board, Some(bag_info));
         prepared.push(PreparedNnueMoveCandidate {
             movement: *mv,
             actual_score: actual,
@@ -3058,9 +3260,16 @@ pub fn prepare_nnue_move(game: &GameState) -> PreparedNnueMove {
     }
 
     PreparedNnueMove {
-        fallback: base_move,
+        fallback: template.fallback,
         candidates: prepared,
     }
+}
+
+/// Build the exact candidate afterstates consumed by the historical NNUE
+/// rollout policy without evaluating the network.
+pub fn prepare_nnue_move(game: &GameState) -> PreparedNnueMove {
+    let template = prepare_nnue_move_template(game);
+    prepare_nnue_move_from_template(game, &template)
 }
 
 pub fn select_prepared_nnue_move(
@@ -3426,6 +3635,166 @@ mod tests {
             select_prepared_nnue_move(&prepared, &[]).map(|movement| movement.market_index),
             Some(fallback.market_index)
         );
+    }
+
+    #[cfg(all(
+        feature = "mid-features",
+        feature = "v4-opp",
+        not(any(
+            feature = "legacy-features",
+            feature = "v5-feat",
+            feature = "czero-feat",
+            feature = "v6-peak",
+            feature = "cards-alt",
+            feature = "cards-alt-v2",
+            feature = "oppmarket-feat"
+        ))
+    ))]
+    #[test]
+    fn mid_v4_parent_afterstate_context_matches_oracle_across_complete_games() {
+        #[derive(Default)]
+        struct Coverage {
+            candidates: usize,
+            ordinary: usize,
+            independent: usize,
+            same_cell_wildlife: usize,
+            different_cell_wildlife: usize,
+            no_wildlife: usize,
+            keystone: usize,
+            rotations: u8,
+        }
+
+        let mut coverage = Coverage::default();
+        for game_index in 0..8u64 {
+            let mut rng = StdRng::seed_from_u64(0xA57A_7E00_0000_0000u64.wrapping_add(game_index));
+            let mut game = GameState::new(4, ScoringCards::all_a(), &mut rng);
+
+            // Exercise all six rotations and the no-wildlife path explicitly.
+            // The normal candidate generator is free to omit strategically
+            // dominated rotations or no-placement moves.
+            let dual_market_index = game
+                .market
+                .available()
+                .find(|(_, pair)| pair.tile.terrain2.is_some())
+                .map(|(market_index, _)| market_index);
+            if let (Some(market_index), Some(&frontier_index)) = (
+                dual_market_index,
+                game.boards[game.current_player].frontier().first(),
+            ) {
+                let coordinate = HexCoord::from_index(frontier_index as usize);
+                let candidates = (0..6)
+                    .map(|rotation| crate::eval::ScoredMove {
+                        market_index,
+                        tile_q: coordinate.q,
+                        tile_r: coordinate.r,
+                        rotation,
+                        wildlife_q: None,
+                        wildlife_r: None,
+                        score: 0,
+                        eval: 0,
+                        wildlife_market_index: None,
+                    })
+                    .collect();
+                let template = NnueMoveTemplate {
+                    fallback: None,
+                    candidates,
+                };
+                let prepared = prepare_nnue_move_from_template_mut(&mut game, &template);
+                assert_eq!(prepared.candidates.len(), 6);
+                coverage.no_wildlife += prepared.candidates.len();
+                coverage.rotations |= 0b00_111111;
+            }
+
+            let mut executed_turns = 0usize;
+            while !game.is_game_over() {
+                if game.can_replace_overflow().is_some() {
+                    game.replace_overflow();
+                }
+
+                let template = prepare_nnue_move_template(&game);
+                let prepared = prepare_nnue_move_from_template_mut(&mut game, &template);
+                assert_eq!(
+                    prepared.candidates.len(),
+                    template.candidates.len(),
+                    "all generated candidates should remain legal during preparation"
+                );
+
+                let current_player = game.current_player;
+                let current_tokens = game.boards[current_player].nature_tokens;
+                for candidate in &prepared.candidates {
+                    coverage.candidates += 1;
+                    let movement = candidate.movement;
+                    coverage.rotations |= 1 << movement.rotation;
+                    if movement.wildlife_market_index.is_some() {
+                        coverage.independent += 1;
+                    } else {
+                        coverage.ordinary += 1;
+                    }
+                    match (movement.wildlife_q, movement.wildlife_r) {
+                        (Some(q), Some(r)) if q == movement.tile_q && r == movement.tile_r => {
+                            coverage.same_cell_wildlife += 1;
+                        }
+                        (Some(_), Some(_)) => coverage.different_cell_wildlife += 1,
+                        _ => coverage.no_wildlife += 1,
+                    }
+                    if game.market.pairs[movement.market_index]
+                        .map(|pair| pair.tile.keystone)
+                        .unwrap_or(false)
+                    {
+                        coverage.keystone += 1;
+                    }
+                }
+
+                let chosen = if current_tokens == 0 {
+                    prepared.candidates.iter().find(|candidate| {
+                        let movement = candidate.movement;
+                        movement.wildlife_q == Some(movement.tile_q)
+                            && movement.wildlife_r == Some(movement.tile_r)
+                            && game.market.pairs[movement.market_index]
+                                .map(|pair| pair.tile.keystone)
+                                .unwrap_or(false)
+                    })
+                } else {
+                    prepared
+                        .candidates
+                        .iter()
+                        .find(|candidate| candidate.movement.wildlife_market_index.is_some())
+                }
+                .or_else(|| {
+                    if prepared.candidates.is_empty() {
+                        None
+                    } else {
+                        Some(
+                            &prepared.candidates[(executed_turns + game_index as usize)
+                                % prepared.candidates.len()],
+                        )
+                    }
+                });
+
+                let movement = chosen
+                    .map(|candidate| candidate.movement)
+                    .or(prepared.fallback)
+                    .expect("a live game must have a legal prepared or fallback move");
+                assert!(
+                    execute_scored_move(&mut game, &movement),
+                    "prepared movement must execute successfully: {movement:?}"
+                );
+                executed_turns += 1;
+            }
+            assert_eq!(
+                executed_turns, 80,
+                "four-player games must complete 80 turns"
+            );
+        }
+
+        assert!(coverage.candidates >= 8 * 80);
+        assert!(coverage.ordinary > 0);
+        assert!(coverage.independent > 0);
+        assert!(coverage.same_cell_wildlife > 0);
+        assert!(coverage.different_cell_wildlife > 0);
+        assert!(coverage.no_wildlife > 0);
+        assert!(coverage.keystone > 0);
+        assert_eq!(coverage.rotations, 0b00_111111);
     }
 
     #[test]

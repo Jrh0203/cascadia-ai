@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "experiment_id": "complete-action-frontier-factor-integration-v1",
+  "launch": "allocator-default-1",
+  "date": "2026-06-16",
+  "disposition": "invalid_operational_launch",
+  "scientific_result": false,
+  "reason": "MLX default free-buffer cache retained variable-shape Metal allocations and caused severe host swap",
+  "interrupted_arms": {
+    "wide-concat": {
+      "host": "john1",
+      "completed_epochs": 1,
+      "elapsed_seconds": 869.8037359714508,
+      "last_train_target_positive_recall": 0.2625290759145697,
+      "last_validation_target_positive_recall": 0.2349264705882353
+    },
+    "screen-relative": {
+      "host": "john2",
+      "completed_epochs": 7,
+      "elapsed_seconds": 869.158694267273,
+      "last_train_target_positive_recall": 0.2902833580038063,
+      "last_validation_target_positive_recall": 0.25049019607843137
+    },
+    "factor-attention": {
+      "host": "john3",
+      "completed_epochs": 3,
+      "elapsed_seconds": 871.6641051769257,
+      "last_train_target_positive_recall": 0.27854726157750054,
+      "last_validation_target_positive_recall": 0.25698529411764703
+    },
+    "pairwise-gated": {
+      "host": "john4",
+      "completed_epochs": 2,
+      "elapsed_seconds": 872.9120228290558,
+      "last_train_target_positive_recall": 0.26691689574962996,
+      "last_validation_target_positive_recall": 0.225
+    }
+  },
+  "partial_metrics_prohibited_from_selection": true,
+  "correction": {
+    "mlx_cache_limit_bytes": 536870912,
+    "phase_boundary_cache_clear": true,
+    "allocator_telemetry": true,
+    "maximum_width_backward_audit": true,
+    "scientific_contract_changed": false,
+    "factor_cache_regeneration_required": false
+  },
+  "corrected_source": {
+    "files": 97,
+    "bundle_sha256": "a9b30f3f468ad41cee66aa997d4ae28000a2be19244601499d64379f14b7bb6e",
+    "bit_identical_across_john1_john2_john3_john4": true
+  },
+  "corrected_audits": {
+    "john1": {
+      "path": "artifacts/experiments/complete-action-frontier-factor-integration-v1/audits/max-width-backward-john1.json",
+      "passed": true,
+      "maximum_peak_active_memory_bytes": 4327356826,
+      "system_swap_delta_bytes": 0
+    },
+    "john4": {
+      "path": "artifacts/experiments/complete-action-frontier-factor-integration-v1/audits/max-width-backward-john4.json",
+      "passed": true,
+      "maximum_peak_active_memory_bytes": 4327356826,
+      "system_swap_delta_bytes": -8388608
+    }
+  },
+  "verification": {
+    "john1_complete_tests_passed": 260,
+    "remote_focused_tests_passed_per_host": 12,
+    "ruff_passed_all_hosts": true,
+    "sealed_test_opened": false,
+    "gameplay_opened": false,
+    "external_compute_used": false
+  },
+  "archive_root": "artifacts/experiments/complete-action-frontier-factor-integration-v1/invalid-launches/allocator-default-1"
+}

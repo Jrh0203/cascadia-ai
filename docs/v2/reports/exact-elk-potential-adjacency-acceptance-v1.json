@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-elk-potential-adjacency-acceptance-v1-20260615",
+  "status": "accepted",
+  "phase": 0,
+  "hypothesis": "Traverse precomputed adjacency from maximal Card-A elk line starts instead of repeatedly converting and walking axial coordinates.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false
+  },
+  "same_binary_abba": {
+    "binary_sha256": "0db8f60273991cda7f7abacdd777de07d0f2cdd50eceb414b2b4d269876a312c",
+    "design": {
+      "john2_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ],
+      "john3_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "control",
+        "seconds": 15.706256666
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 15.642645291
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 15.572522917
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.699149334
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 16.088064583
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "control",
+        "seconds": 16.154198917
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "control",
+        "seconds": 16.169345458
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 16.054330875
+      }
+    ],
+    "john2_control_mean_seconds": 15.702703,
+    "john2_treatment_mean_seconds": 15.607584104,
+    "john3_control_mean_seconds": 16.1617721875,
+    "john3_treatment_mean_seconds": 16.071197729,
+    "combined_control_mean_seconds": 15.93223759375,
+    "combined_treatment_mean_seconds": 15.839390916500001,
+    "combined_treatment_delta_seconds": -0.09284667724999807,
+    "combined_speedup": 1.0058617580524059,
+    "combined_speedup_percent": 0.5861758052405852
+  },
+  "pgo": {
+    "instrumented_binary_sha256": "0b301d4e1264679df9c982a85c539dc3f2202e45ba85a9555b6eb4893c3086ec",
+    "john2_training_seconds": 52.402189667,
+    "john3_training_seconds": 52.868926792,
+    "john2_profraw_sha256": "26f0a0e159bc9d50cc5f686b948b2f1bee8e49448c915c42f0cd6e6857dc4efd",
+    "john3_profraw_sha256": "0e63286e46d09c48afd5beb9e963c286a112959642dec163a625b060d9db1c83",
+    "merged_profdata_sha256": "80ddfff1b3cee04922e6b4df65037d8760fa708c2a4243144df92272486d370d",
+    "profile_functions": 5478,
+    "profile_blocks": 118569,
+    "production_binary_sha256": "0b08b33d298d0bca5a0d09f1f5633d449d6984abb200053410bd731b0342f976",
+    "calibration": {
+      "john2_previous_seconds": 15.363098959,
+      "john2_treatment_seconds": 15.241029709,
+      "john3_previous_seconds": 15.864978,
+      "john3_treatment_seconds": 15.790932417,
+      "combined_previous_seconds": 15.6140384795,
+      "combined_treatment_seconds": 15.515981063,
+      "combined_treatment_delta_seconds": -0.09805741649999966,
+      "combined_speedup": 1.0063197690240697,
+      "combined_speedup_percent": 0.6319769024069721
+    }
+  },
+  "exactness": {
+    "behavioral_digest_sha256": "3059e4a2ac96caa7e14599a804d29fb883f49360eb0947209f41ee3319bf5079",
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true,
+    "reference_games": 24
+  },
+  "implementation": {
+    "production_runtime_switch_retained": false,
+    "coordinate_reference_test_only": true,
+    "source_retained": true
+  },
+  "verdict": {
+    "accepted": true,
+    "reason": "The adjacency traversal is exact and produced a consistent two-host gain in crossed same-binary measurements and a fresh runtime-profiled PGO build.",
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_passed": false
+  }
+}

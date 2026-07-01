@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-legal-audit-cross-wave-row-reuse-diagnostic-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 1,
+  "question": "Do exact NNUE sparse rows recur across rollout waves or sequential-halving rounds within one independent K32/R600 search?",
+  "contract": {
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "raw_seed": 60999,
+    "audited_completed_turns": [
+      66
+    ],
+    "realized_hidden_completed_turns": [
+      66
+    ],
+    "champion_rollouts": 600,
+    "substantial_rollouts": 1200,
+    "high_confidence_rollouts": 4800,
+    "screen_limit": 64,
+    "high_confidence_limit": 8,
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "implementation": {
+    "environment": "CASCADIA_NNUE_ROW_REUSE_DIAGNOSTICS=1",
+    "scope": "one tracker per independent teacher search",
+    "lookup_bucket": "64-bit sparse-row fingerprint",
+    "repeat_requirement": "complete Vec<u16> equality",
+    "prediction_reuse_enabled": false,
+    "binary_sha256": "8e85bad3e50e28be98b3119b0e18567f8bce3715dddad533db0b53664672d0b7",
+    "binary_blake3": "4d3cfe2828a121da14f7a0b130973c2ed3b814245f2551510cfef2aa1c752a88",
+    "binary_bytes": 2784448,
+    "v2_source_blake3": "9cdddbbbc275a75b460969d64ffa6866a93e19cdc998c1cdf599513379573817"
+  },
+  "correctness": {
+    "semantic_turn66_blake3": "6f19d82622bab6a5a45c6cdf6e1152f99791630436d1a0354d9f629f95089863",
+    "terminal_base_scores": [
+      96,
+      99,
+      92,
+      102
+    ],
+    "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+    "logical_neural_batches": 5469,
+    "logical_neural_rows": 9288014,
+    "physical_neural_rows": 7198144,
+    "rollout_waves": 4355,
+    "rollout_samples": 104615,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "bridge_fallbacks": 0,
+    "selected_actions": 171,
+    "selected_actions_legal": 171,
+    "nnue_batch_tests_passed": 11,
+    "differential_library_tests_passed": 24,
+    "forced_fingerprint_collision_test_passed": true,
+    "report_validation_passed": true,
+    "zero_swaps": true
+  },
+  "measurement": {
+    "physical_rows_observed": 6116501,
+    "exact_repeated_rows": 0,
+    "exact_reuse_percent": 0.0,
+    "independent_searches_measured": 104,
+    "multiplex_search_cohorts": 13,
+    "minimum_observed_rows_gate": 100000,
+    "minimum_reuse_percent_gate": 5.0,
+    "advance_gate_passed": false
+  },
+  "diagnostic_cost": {
+    "uninstrumented_seconds": 31.881540125,
+    "instrumented_seconds": 32.636196375,
+    "wall_change_percent": 2.3670633446225224,
+    "uninstrumented_maximum_rss_bytes": 365674496,
+    "instrumented_maximum_rss_bytes": 504102912,
+    "maximum_rss_change_percent": 37.85563869348985,
+    "uninstrumented_allocator_peak_bytes": 145408504,
+    "instrumented_allocator_peak_bytes": 303203000,
+    "allocator_peak_change_percent": 108.51806576594723,
+    "memory_ceiling_bytes": 1610612736
+  },
+  "artifact": {
+    "report_bytes": 3534582,
+    "report_sha256": "d25b5ba1a49f02a6d321f3e07013e0ad7c86535c13f8645a0fe1ce02d78b3681",
+    "report_blake3": "d52cc7dcebc037e2b9cb8b46083637a47c0c00c4f2e71ebca21c4a9cedb44f27",
+    "local_archive": "artifacts/performance/full-legal-audit-cross-wave-row-reuse-diagnostic-v1",
+    "sha256_manifest": "artifacts/performance/full-legal-audit-cross-wave-row-reuse-diagnostic-v1/SHA256SUMS"
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "Zero of 6,116,501 observed physical rows recurred across later waves or halving rounds, so a per-search cross-wave prediction cache cannot remove inference work.",
+    "full_contract_diagnostic_authorized": false,
+    "cache_implementation_authorized": false,
+    "next_question": "Measure exact duplicate rows between contemporaneous requests inside each multiplexed evaluator batch."
+  }
+}

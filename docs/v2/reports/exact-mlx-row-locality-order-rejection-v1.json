@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-mlx-row-locality-order-rejection-v1-20260615",
+  "status": "rejected_after_source_screen",
+  "phase": 0,
+  "hypothesis": "Lexicographically order already-deduplicated exact sparse rows before the unchanged shared-CSR MLX evaluator, then scatter predictions to original request order, to improve ordinary first-layer weight-cache reuse.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "pipeline_chunk_states": 96,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "exactness": {
+    "service_parity": {
+      "john2_iterations": 200,
+      "john2_maximum_absolute_error": 0.0,
+      "john2_deterministic_repeat": true,
+      "john3_iterations": 200,
+      "john3_maximum_absolute_error": 0.0,
+      "john3_deterministic_repeat": true
+    },
+    "limited_rollout_wave_smoke": {
+      "trajectory_decisions": 8,
+      "candidate_gate_passed": true,
+      "selected_action_gate_passed": true,
+      "rollout_sample_gate_passed": true,
+      "maximum_error_gate_passed": true,
+      "mean_error_gate_passed": true,
+      "deterministic_repeat_gate_passed": true,
+      "zero_fallback_gate_passed": true,
+      "clean_shutdown_gate_passed": true,
+      "canonical_trajectory_gate_passed": false,
+      "canonical_trajectory_gate_not_applicable_reason": "The diagnostic was deliberately limited to eight decisions."
+    },
+    "post_removal_default_library_suite_passed": true,
+    "post_removal_exact_feature_library_suite_passed": true,
+    "post_removal_default_ai_tests_passed": 84,
+    "post_removal_exact_feature_ai_tests_passed": 85,
+    "post_removal_core_tests_passed": 125,
+    "post_removal_model_tests_passed": 6,
+    "post_removal_python_client_service_tests_passed": 15,
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true,
+    "post_removal_code_identity": {
+      "retained_control_sha256": "786351ea84e4b2674e81f2ade87d0596e47a8a3b21be2f336dc9e6ff62c4cd94",
+      "rebuilt_control_sha256": "786351ea84e4b2674e81f2ade87d0596e47a8a3b21be2f336dc9e6ff62c4cd94",
+      "whole_file_identical": true,
+      "treatment_symbols_remaining": false
+    }
+  },
+  "mechanism_diagnostic": {
+    "largest_request_rows": 1298,
+    "largest_request_feature_occurrences": 271588,
+    "control_adjacent_trie_edges": 258189,
+    "control_adjacent_trie_reduction": 0.04933575857548933,
+    "treatment_adjacent_trie_edges": 174862,
+    "treatment_adjacent_trie_reduction": 0.35614975624843515,
+    "john2": {
+      "control_mlx_eval_ms": 7681.0609,
+      "treatment_mlx_eval_ms": 7681.068759,
+      "mlx_improvement_percent": -0.00010231649065772785,
+      "control_rust_neural_evaluation_ms": 9282.574352,
+      "treatment_rust_neural_evaluation_ms": 10359.864739,
+      "rust_neural_regression_percent": 11.605513149139401,
+      "control_game_seconds": 15.25300225,
+      "treatment_game_seconds": 16.292900417,
+      "game_regression_percent": 6.817662188439
+    },
+    "john3": {
+      "control_mlx_eval_ms": 7505.444202,
+      "treatment_mlx_eval_ms": 7412.169031,
+      "mlx_improvement_percent": 1.258405881057123,
+      "control_rust_neural_evaluation_ms": 9182.528787,
+      "treatment_rust_neural_evaluation_ms": 10141.388035,
+      "rust_neural_regression_percent": 10.44221336237452,
+      "control_game_seconds": 15.208564625,
+      "treatment_game_seconds": 16.034011333,
+      "game_regression_percent": 5.427512249532884
+    }
+  },
+  "source_screen": {
+    "control_binary_sha256": "38fdaed177cd417a4211be77557dc76143c558a5e8a66035839dda83e347a294",
+    "treatment_binary_sha256": "38fdaed177cd417a4211be77557dc76143c558a5e8a66035839dda83e347a294",
+    "control_switch": "CASCADIA_MLX_ROW_LOCALITY_ORDER unset",
+    "treatment_switch": "CASCADIA_MLX_ROW_LOCALITY_ORDER=1",
+    "advancement_floor_percent": 1.0,
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 16.253209291,
+        "maximum_resident_set_bytes": 102793216,
+        "peak_memory_footprint_bytes": 58540464
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.172157166,
+        "maximum_resident_set_bytes": 102629376,
+        "peak_memory_footprint_bytes": 60211632
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.260155083,
+        "maximum_resident_set_bytes": 102973440,
+        "peak_memory_footprint_bytes": 59933104
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 16.214138292,
+        "maximum_resident_set_bytes": 102924288,
+        "peak_memory_footprint_bytes": 57573808
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 14.949287083,
+        "maximum_resident_set_bytes": 103137280,
+        "peak_memory_footprint_bytes": 58687944
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 16.135094959,
+        "maximum_resident_set_bytes": 102957056,
+        "peak_memory_footprint_bytes": 64520648
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 15.969747584,
+        "maximum_resident_set_bytes": 102957056,
+        "peak_memory_footprint_bytes": 57754008
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.037884541,
+        "maximum_resident_set_bytes": 102891520,
+        "peak_memory_footprint_bytes": 59867568
+      }
+    ],
+    "john2_control_mean_seconds": 15.2161561245,
+    "john2_treatment_mean_seconds": 16.2336737915,
+    "john2_treatment_delta_seconds": 1.017517667,
+    "john2_speedup": 0.9373205547882342,
+    "john2_improvement_percent": -6.267944521176583,
+    "john2_regression_percent": 6.6870874528006885,
+    "john3_control_mean_seconds": 14.993585812,
+    "john3_treatment_mean_seconds": 16.0524212715,
+    "john3_treatment_delta_seconds": 1.0588354595,
+    "john3_speedup": 0.9340388940963135,
+    "john3_improvement_percent": -6.596110590368653,
+    "john3_regression_percent": 7.06192283004492,
+    "combined_control_mean_seconds": 15.10487096825,
+    "combined_treatment_mean_seconds": 16.1430475315,
+    "combined_treatment_delta_seconds": 1.03817656325,
+    "combined_speedup": 0.9356889359816227,
+    "combined_improvement_percent": -6.431106401837727,
+    "combined_regression_percent": 6.87312434136127,
+    "combined_control_mean_maximum_resident_set_bytes": 102907904,
+    "combined_treatment_mean_maximum_resident_set_bytes": 102907904,
+    "combined_maximum_resident_set_change_percent": 0.0,
+    "combined_control_mean_peak_memory_footprint_bytes": 59675062,
+    "combined_treatment_mean_peak_memory_footprint_bytes": 59597232,
+    "combined_peak_memory_footprint_change_percent": -0.13042298975742828,
+    "gates": {
+      "both_hosts_improved": false,
+      "combined_improvement_exceeded_one_percent": false,
+      "mlx_service_evaluation_improved_on_both_hosts": false,
+      "host_ordering_and_scatter_cost_did_not_erase_service_gain": false,
+      "maximum_resident_set_did_not_materially_regress": true,
+      "allocator_peak_memory_footprint_did_not_materially_regress": true,
+      "exact_diagnostics_preserved": true,
+      "advanced_to_pgo": false
+    }
+  },
+  "pgo": {
+    "performed": false,
+    "reason": "The treatment failed the preregistered source gate on both workers and regressed 6.873% combined."
+  },
+  "implementation": {
+    "production_switch_added": false,
+    "treatment_source_retained": false,
+    "row_sort_retained": false,
+    "prediction_scatter_retained": false,
+    "accepted_parent_context_restored": true
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The row ordering achieved substantially greater adjacent sparse-feature locality, but host sorting and scatter cost overwhelmed a flat-to-small MLX evaluation gain.",
+    "accepted_pgo_mean_seconds": 15.01887077075,
+    "reference_seconds": 141.027296,
+    "accepted_speedup": 9.390006622512372,
+    "ten_x_threshold_seconds": 14.1027296,
+    "remaining_seconds": 0.91614117075,
+    "remaining_percent": 6.099934
+  }
+}
+

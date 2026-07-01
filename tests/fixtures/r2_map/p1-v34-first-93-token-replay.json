@@ -1,0 +1,1626 @@
+{
+  "schema_version": 1,
+  "config": {
+    "player_count": 4,
+    "mode": "Standard",
+    "scoring_cards": {
+      "bear": "A",
+      "elk": "A",
+      "salmon": "A",
+      "hawk": "A",
+      "fox": "A"
+    },
+    "habitat_bonuses": false
+  },
+  "seed": [
+    166,
+    98,
+    109,
+    28,
+    252,
+    10,
+    196,
+    39,
+    3,
+    24,
+    208,
+    213,
+    77,
+    179,
+    118,
+    9,
+    99,
+    239,
+    41,
+    118,
+    105,
+    190,
+    150,
+    216,
+    218,
+    161,
+    205,
+    235,
+    121,
+    222,
+    142,
+    230
+  ],
+  "turns": [
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -1
+        },
+        "rotation": 5
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": 1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -1
+        },
+        "rotation": 5
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": 1
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": 1
+        },
+        "rotation": 1
+      },
+      "wildlife": {
+        "q": 2,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -1
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 0,
+          "r": -1
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 1
+        },
+        "rotation": 1
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -1
+        },
+        "rotation": 5
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -2
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 1,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 0,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 2,
+          "wildlife_slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 1
+        },
+        "rotation": 1
+      },
+      "wildlife": {
+        "q": 1,
+        "r": -2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 1,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 1,
+          "wildlife_slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 1
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 0,
+          "wildlife_slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 0
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 2
+        },
+        "rotation": 1
+      },
+      "wildlife": {
+        "q": 1,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -1
+        },
+        "rotation": 4
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 1,
+          "wildlife_slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -3
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -3
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": -1
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": 2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": 0
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 1
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 0,
+          "r": -2
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 3
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": 2
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 1,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 3,
+          "r": -2
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": 1
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 3,
+          "wildlife_slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 0
+        },
+        "rotation": 4
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 0,
+          "r": 2
+        },
+        "rotation": 5
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 3,
+          "r": -4
+        },
+        "rotation": 1
+      },
+      "wildlife": {
+        "q": 3,
+        "r": -4
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 0,
+          "r": 2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -1,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 0,
+          "r": 2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 3,
+          "r": -1
+        },
+        "rotation": 4
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 0,
+          "wildlife_slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -4
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": 0
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 4
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 3
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -2
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -5
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 3,
+        "r": -2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": 1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 2,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 4
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 3
+        },
+        "rotation": 5
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 3
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 2
+        },
+        "rotation": 4
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 0,
+          "wildlife_slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -2
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 3
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 3
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 3,
+          "r": 0
+        },
+        "rotation": 1
+      },
+      "wildlife": {
+        "q": 3,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -5
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -5
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 1,
+          "wildlife_slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 4
+        },
+        "rotation": 1
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 4
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 2
+        },
+        "rotation": 1
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 0,
+          "r": -1
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -4
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 0
+        },
+        "rotation": 4
+      },
+      "wildlife": {
+        "q": 0,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 2,
+          "wildlife_slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 0,
+          "r": 3
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 1,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 4,
+          "r": -1
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 4,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 3,
+          "r": -3
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 3,
+        "r": -3
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 0,
+          "wildlife_slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 2
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": 1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 2,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -3,
+          "r": 2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -3,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 4,
+          "r": -5
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 4,
+        "r": -5
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 2,
+          "wildlife_slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -3,
+          "r": 2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -3,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": 0
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 2,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 2,
+          "wildlife_slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -2
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": 1,
+        "r": -2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 3,
+          "wildlife_slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -4
+        },
+        "rotation": 4
+      },
+      "wildlife": {
+        "q": 0,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 0
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 2
+        },
+        "rotation": 4
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 1,
+          "wildlife_slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": 2
+        },
+        "rotation": 4
+      },
+      "wildlife": {
+        "q": 2,
+        "r": 2
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -3,
+          "r": 1
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": -3,
+        "r": 1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 1,
+          "r": -6
+        },
+        "rotation": 2
+      },
+      "wildlife": {
+        "q": 1,
+        "r": -6
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 1,
+          "wildlife_slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -2,
+          "r": 3
+        },
+        "rotation": 3
+      },
+      "wildlife": {
+        "q": -2,
+        "r": 3
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 0,
+          "wildlife_slot": 2
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 2,
+          "r": -1
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 2,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 0,
+          "r": 3
+        },
+        "rotation": 5
+      },
+      "wildlife": {
+        "q": 3,
+        "r": -1
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 3
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 0
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": -1,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": -1,
+          "r": 3
+        },
+        "rotation": 5
+      },
+      "wildlife": null
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Independent": {
+          "tile_slot": 3,
+          "wildlife_slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 3,
+          "r": 0
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 3,
+        "r": 0
+      }
+    },
+    {
+      "replace_three_of_a_kind": false,
+      "wildlife_wipes": [],
+      "draft": {
+        "Paired": {
+          "slot": 1
+        }
+      },
+      "tile": {
+        "coord": {
+          "q": 3,
+          "r": -2
+        },
+        "rotation": 0
+      },
+      "wildlife": {
+        "q": 3,
+        "r": -2
+      }
+    }
+  ],
+  "final_state_hash": null
+}

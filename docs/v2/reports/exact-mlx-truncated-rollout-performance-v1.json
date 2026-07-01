@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-mlx-truncated-rollout-performance-v1-20260614",
+  "status": "screening-qualified",
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "configuration": {
+    "rollouts": 600,
+    "rollout_turns": 2,
+    "rollout_leaf_timing": "after-focal-move",
+    "policy_model": "artifacts/models/legacy-nnue-v4opp-mlx-v1",
+    "leaf_model": null,
+    "first_seed": 34200,
+    "games": 30,
+    "hosts": [
+      "john1",
+      "john2",
+      "john3"
+    ]
+  },
+  "confirmation": {
+    "treatment_mean": 93.775,
+    "baseline_mean": 92.34166666666667,
+    "mean_paired_delta": 1.4333333333333333,
+    "paired_delta_stddev": 1.9945327571990963,
+    "standard_error": 0.36415019426697315,
+    "confidence_95": [
+      0.7195989525700659,
+      2.147067714096601
+    ],
+    "treatment_seconds_per_game": 12.236561424966665,
+    "cluster_wall_seconds": 161,
+    "cluster_games_per_hour": 670.8074534161491,
+    "neural_rows": 19458628,
+    "rollout_samples": 1379892,
+    "bootstrapped_samples": 1310879
+  },
+  "performance": {
+    "full_terminal_seconds_per_game": 137.91,
+    "speedup": 11.270323027073408
+  },
+  "matched_strength_diagnostic": {
+    "seeds": [
+      34099,
+      34100,
+      34103,
+      34106
+    ],
+    "full_terminal_mean": 96.875,
+    "after_focal_move_mean": 93.1875,
+    "after_opponent_round_mean": 93.0,
+    "after_focal_move_delta": -3.6875,
+    "after_opponent_round_delta": -3.875
+  },
+  "leaf_model_diagnostic": {
+    "seeds": [
+      34100,
+      34103,
+      34106
+    ],
+    "parent_leaf_mean": 93.33333333333333,
+    "joint_return_ranking_leaf_mean": 93.66666666666667,
+    "full_terminal_mean": 97.91666666666667,
+    "joint_leaf_gain": 0.3333333333333428,
+    "joint_leaf_gap_to_full": -4.25,
+    "absolute_rollout_return_verdict": "rejected",
+    "joint_return_ranking_verdict": "rejected"
+  },
+  "usage_contract": {
+    "screening_only": true,
+    "promotion_requires_full_terminal_rollouts": true
+  }
+}

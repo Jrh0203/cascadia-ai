@@ -1,0 +1,460 @@
+{
+  "baseline": {
+    "bootstrap_confidence_95": [
+      95.45833333333333,
+      96.89583333333333
+    ],
+    "count": 12,
+    "game_block_standard_error": 0.3816746062426803,
+    "mean": 96.20833333333333,
+    "normal_confidence_95": [
+      95.46025110509767,
+      96.95641556156899
+    ]
+  },
+  "baseline_breakdown": {
+    "base_total": 96.20833333333333,
+    "habitat": [
+      6.125,
+      5.9375,
+      6.270833333333333,
+      6.333333333333333,
+      6.270833333333333
+    ],
+    "nature_tokens": 3.75,
+    "wildlife": [
+      12.229166666666666,
+      10.145833333333334,
+      12.333333333333334,
+      10.9375,
+      15.875
+    ]
+  },
+  "breakdown_delta": {
+    "base_total": 2.375,
+    "habitat": [
+      0.125,
+      0.47916666666666696,
+      0.125,
+      0.04166666666666696,
+      0.0625
+    ],
+    "nature_tokens": 1.208333333333333,
+    "wildlife": [
+      -1.166666666666666,
+      0.39583333333333215,
+      1.25,
+      -0.3958333333333339,
+      0.25
+    ]
+  },
+  "configuration": {
+    "audited_completed_turns": null,
+    "champion_rollouts": 600,
+    "high_confidence_limit": 8,
+    "high_confidence_rollouts": 4800,
+    "paid_wipe_determinizations": 0,
+    "paid_wipe_followup_determinizations": 2,
+    "paid_wipe_followup_width": 3,
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "realized_hidden_completed_turns": [],
+    "screen_limit": 64,
+    "sentinel_count": 16,
+    "substantial_rollouts": 1200
+  },
+  "coverage": {
+    "first_seed": 62020,
+    "games": 12,
+    "hosts": {
+      "john1": 4,
+      "john2": 4,
+      "john3": 4
+    },
+    "last_seed": 62031,
+    "seat_games_per_strategy": 48
+  },
+  "decision_summary": {
+    "action_change_rate": 0.5958333333333333,
+    "actions_screened": 3671105,
+    "champion_frontier_actions": 29104,
+    "champion_regret_sum": 263.7557331276251,
+    "changed_actions": 572,
+    "decisions": 960,
+    "high_confidence_actions": 8164,
+    "mean_champion_regret": 0.27474555534127615,
+    "substantial_actions": 96499,
+    "top_screen_recall": 0.9145833333333333,
+    "top_screen_recalled_winners": 878
+  },
+  "experiment_id": "full-legal-public-oracle-v1",
+  "game_losses": 1,
+  "game_ties": 0,
+  "game_wins": 11,
+  "gates": {
+    "all_games_and_decisions_complete": true,
+    "all_integrity_checks_passed": true,
+    "complete_phase_coverage": true,
+    "every_host_paired_delta_nonnegative": true,
+    "host_memory_and_swap_telemetry_complete": true,
+    "paired_delta_at_least_threshold": false,
+    "paired_delta_bootstrap_lower_bound_positive": true,
+    "process_swaps_zero": true,
+    "single_source_binary_model_identity": true,
+    "treatment_mean_at_least_threshold": false
+  },
+  "generated_at": "2026-06-15T23:41:48+00:00",
+  "host_utilization": {
+    "john1": {
+      "system_swap_after": {
+        "raw": "total = 4096.00M  used = 3079.50M  free = 1016.50M  (encrypted)",
+        "sha256": "65edab81b27c4e84a0c4559908a651f47ef4d4e007a48fd87fa9935c3d1258c4",
+        "used_bytes": 3229089792
+      },
+      "system_swap_before": {
+        "raw": "total = 4096.00M  used = 3279.62M  free = 816.38M  (encrypted)",
+        "sha256": "c4802233f60e9e8594bb7a71fa06449b9de3785c5566081185bcac4288bc7e53",
+        "used_bytes": 3438930821
+      },
+      "system_swap_delta_bytes": -209841029,
+      "timing": {
+        "maximum_resident_bytes": 272482304,
+        "real_seconds": 747.87,
+        "sha256": "078c5196ffe4ea9555b47adbec948bfe89754563c8a02dc7f773f18e4c12236b",
+        "swaps": 0
+      }
+    },
+    "john2": {
+      "system_swap_after": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_before": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_delta_bytes": 0,
+      "timing": {
+        "maximum_resident_bytes": 286261248,
+        "real_seconds": 730.43,
+        "sha256": "1614be22ed9a48835a9eae96ddc3a774cad31667ef7cac2a3855abd5b9d85e36",
+        "swaps": 0
+      }
+    },
+    "john3": {
+      "system_swap_after": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_before": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_delta_bytes": 0,
+      "timing": {
+        "maximum_resident_bytes": 322125824,
+        "real_seconds": 746.83,
+        "sha256": "30c7166511f40753708b5ea9d6dbbb3a186631652a4b591fe1e09e2f4c33da81",
+        "swaps": 0
+      }
+    }
+  },
+  "hosts": {
+    "john1": {
+      "baseline": {
+        "bootstrap_confidence_95": [
+          95.5625,
+          97.3125
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.5253966755382705,
+        "mean": 96.375,
+        "normal_confidence_95": [
+          95.345222515945,
+          97.404777484055
+        ]
+      },
+      "first_seed": 62020,
+      "games": 4,
+      "paired_delta": {
+        "bootstrap_confidence_95": [
+          2.375,
+          4.75
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.6692657668420421,
+        "mean": 3.5,
+        "normal_confidence_95": [
+          2.1882390969895975,
+          4.811760903010402
+        ]
+      },
+      "treatment": {
+        "bootstrap_confidence_95": [
+          99.5625,
+          100.3125
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.21650635094610965,
+        "mean": 99.875,
+        "normal_confidence_95": [
+          99.45064755214563,
+          100.29935244785437
+        ]
+      }
+    },
+    "john2": {
+      "baseline": {
+        "bootstrap_confidence_95": [
+          94.0,
+          95.75
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.543666181279162,
+        "mean": 94.9375,
+        "normal_confidence_95": [
+          93.87191428469285,
+          96.00308571530715
+        ]
+      },
+      "first_seed": 62024,
+      "games": 4,
+      "paired_delta": {
+        "bootstrap_confidence_95": [
+          2.0,
+          4.125
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.625,
+        "mean": 3.125,
+        "normal_confidence_95": [
+          1.9,
+          4.35
+        ]
+      },
+      "treatment": {
+        "bootstrap_confidence_95": [
+          96.8125,
+          99.125
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.6798820363366966,
+        "mean": 98.0625,
+        "normal_confidence_95": [
+          96.72993120878007,
+          99.39506879121993
+        ]
+      }
+    },
+    "john3": {
+      "baseline": {
+        "bootstrap_confidence_95": [
+          96.875,
+          97.75
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.27716947282604315,
+        "mean": 97.3125,
+        "normal_confidence_95": [
+          96.76924783326096,
+          97.85575216673904
+        ]
+      },
+      "first_seed": 62028,
+      "games": 4,
+      "paired_delta": {
+        "bootstrap_confidence_95": [
+          -0.6875,
+          1.3125
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.60380736442456,
+        "mean": 0.5,
+        "normal_confidence_95": [
+          -0.6834624342721376,
+          1.6834624342721376
+        ]
+      },
+      "treatment": {
+        "bootstrap_confidence_95": [
+          96.6875,
+          99.0
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.6721777418709033,
+        "mean": 97.8125,
+        "normal_confidence_95": [
+          96.49503162593302,
+          99.12996837406698
+        ]
+      }
+    }
+  },
+  "identity": {
+    "executable_blake3": "b666e499cc04d8d74236baedeb10761879d2818f59a1a83ea8d083056d05f0fd",
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65",
+    "v2_source_blake3": "3d8a378b8b3088141fbc30f3194a84681008c0c339263714b2e94d0ce4f3c40d"
+  },
+  "paired_delta": {
+    "bootstrap_confidence_95": [
+      1.375,
+      3.3333333333333335
+    ],
+    "count": 12,
+    "game_block_standard_error": 0.5208712107439019,
+    "mean": 2.375,
+    "normal_confidence_95": [
+      1.3540924269419523,
+      3.3959075730580475
+    ]
+  },
+  "pairs": [
+    {
+      "baseline_mean": 96.5,
+      "delta": 3.25,
+      "host": "john1",
+      "seed": 62020,
+      "treatment_mean": 99.75
+    },
+    {
+      "baseline_mean": 96.0,
+      "delta": 3.5,
+      "host": "john1",
+      "seed": 62021,
+      "treatment_mean": 99.5
+    },
+    {
+      "baseline_mean": 95.25,
+      "delta": 5.25,
+      "host": "john1",
+      "seed": 62022,
+      "treatment_mean": 100.5
+    },
+    {
+      "baseline_mean": 97.75,
+      "delta": 2.0,
+      "host": "john1",
+      "seed": 62023,
+      "treatment_mean": 99.75
+    },
+    {
+      "baseline_mean": 94.75,
+      "delta": 1.5,
+      "host": "john2",
+      "seed": 62024,
+      "treatment_mean": 96.25
+    },
+    {
+      "baseline_mean": 95.5,
+      "delta": 3.0,
+      "host": "john2",
+      "seed": 62025,
+      "treatment_mean": 98.5
+    },
+    {
+      "baseline_mean": 93.5,
+      "delta": 4.5,
+      "host": "john2",
+      "seed": 62026,
+      "treatment_mean": 98.0
+    },
+    {
+      "baseline_mean": 96.0,
+      "delta": 3.5,
+      "host": "john2",
+      "seed": 62027,
+      "treatment_mean": 99.5
+    },
+    {
+      "baseline_mean": 96.75,
+      "delta": 0.75,
+      "host": "john3",
+      "seed": 62028,
+      "treatment_mean": 97.5
+    },
+    {
+      "baseline_mean": 98.0,
+      "delta": 1.5,
+      "host": "john3",
+      "seed": 62029,
+      "treatment_mean": 99.5
+    },
+    {
+      "baseline_mean": 97.5,
+      "delta": -1.25,
+      "host": "john3",
+      "seed": 62030,
+      "treatment_mean": 96.25
+    },
+    {
+      "baseline_mean": 97.0,
+      "delta": 1.0,
+      "host": "john3",
+      "seed": 62031,
+      "treatment_mean": 98.0
+    }
+  ],
+  "passed": false,
+  "phase": {
+    "early": {
+      "action_change_rate": 0.6636904761904762,
+      "decisions": 336,
+      "mean_champion_regret": 0.4410953768153387
+    },
+    "late": {
+      "action_change_rate": 0.5381944444444444,
+      "decisions": 288,
+      "mean_champion_regret": 0.09570725124966344
+    },
+    "middle": {
+      "action_change_rate": 0.5773809523809523,
+      "decisions": 336,
+      "mean_champion_regret": 0.2618571373743102
+    }
+  },
+  "rules_protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "schema_version": 1,
+  "stage": "pilot",
+  "status": "pilot_failed",
+  "thresholds": {
+    "paired_delta_minimum": 3.0,
+    "positive_delta_confidence_required": false,
+    "positive_host_deltas_required": false,
+    "treatment_mean_minimum": 100.0
+  },
+  "treatment": {
+    "bootstrap_confidence_95": [
+      97.8125,
+      99.3125
+    ],
+    "count": 12,
+    "game_block_standard_error": 0.4051436956703314,
+    "mean": 98.58333333333333,
+    "normal_confidence_95": [
+      97.78925168981948,
+      99.37741497684718
+    ]
+  },
+  "treatment_breakdown": {
+    "base_total": 98.58333333333333,
+    "habitat": [
+      6.25,
+      6.416666666666667,
+      6.395833333333333,
+      6.375,
+      6.333333333333333
+    ],
+    "nature_tokens": 4.958333333333333,
+    "wildlife": [
+      11.0625,
+      10.541666666666666,
+      13.583333333333334,
+      10.541666666666666,
+      16.125
+    ]
+  }
+}

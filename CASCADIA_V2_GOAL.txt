@@ -1,12 +1,113 @@
-Rebuild Cascadia AI as a clean, ambitious v2 repository and continue autonomously until the system is genuinely complete.
+CASCADIA V2 / R2-MAP EXECUTION GOAL
+
+AUTHORITY
+
+This file is the single source of truth for the Cascadia v2 and R2-MAP campaign. Execute it directly; no ADR, amendment, historical handoff, or older plan must be applied on top of it. Supporting documents may provide implementation detail, but this file wins every conflict. When policy changes, update this file coherently instead of layering another supersession notice onto it.
 
 MISSION
 
-Create Cascadia AI v2: a fast, maintainable, thoroughly tested, locally trainable, user-friendly Cascadia platform with a genuinely stronger AI. The primary research target is a pre-habitat-bonus mean score of at least 100.0 on the four-player AAAAA ruleset.
+Rebuild Cascadia AI as a clean, ambitious v2 repository and continue autonomously until the system is genuinely complete. The primary research target is a pre-habitat-bonus mean score of at least 100.0 on the four-player AAAAA ruleset.
 
-Treat every historical research conclusion, benchmark, champion claim, training recipe, failed-experiment note, and architectural assumption in the current repository as untrusted. Do not inherit conclusions merely because they are documented. The existing implementation may be inspected as a reference for rules, UX ideas, test cases, and useful algorithms, but all important claims must be independently reproduced.
+Treat historical experiments as evidence and useful priors, not as unquestioned truth. Reproduce every important baseline or claim under the current canonical rules and benchmark protocol before relying on it. Do not depend on Modal, cloud GPUs, hosted inference, external training services, or paid compute.
 
-Everything must run on the local Apple Silicon cluster consisting of john1, john2, and john3. Do not depend on Modal, cloud GPUs, hosted inference, external training services, or paid compute. Use MLX for all neural-network training and Apple-specific neural computation. Design around the measured CPU, GPU, memory, storage, network, and MLX capabilities of all three machines.
+ACTIVE CLUSTER AND HOST ROLES
+
+The active campaign uses only the local Apple Silicon hosts john1, john2, and john3. John4 is busy, excluded, and must not be inspected, mutated, scheduled, or used as a fallback. `/Volumes/John_1` and every other external SSD are also excluded.
+
+- **john1:** sole code and image authority; sole source-authoring tree at `/Users/johnherrick/cascadia`; primary active-artifact store; sole canonical Docker image builder; result aggregator; dashboard-status owner; Docker execution worker; and sole native MLX/Metal training host.
+- **john2:** Docker execution worker and cold archive for dependency-closed old research only.
+- **john3:** Docker execution worker. It has no source-authoring or archive authority.
+
+All code is written on john1. John1 builds and tests the one canonical Docker image directly from its current source tree, publishes it once to the private john1 OCI registry, resolves its immutable digest, and submits only that digest. Bacalhau v1.9.0 pulls and schedules the image across john1, john2, and john3; callers never choose a node or copy an image archive. John2 and john3 never rebuild, patch, or independently package project code. All non-MLX project tests, simulations, self-play, inference, evaluation, and benchmarks run in Bacalhau-managed containers created from the John1-built image. The only native project-code exception is MLX/Metal training and checkpoint verification on john1. The local dashboard/control projection and Bacalhau services may run natively as disposable infrastructure and may not execute game or model code.
+
+PRAGMATIC CONTAINER WORKFLOW
+
+Trust john1, john2, and john3 by default. They are private local machines and run Cascadia project workloads inside Docker containers, except for the explicit native MLX/Metal training path on john1. Do not build another cryptographic trust chain, helper-rotation system, signed control protocol, attestation graph, sealed-result protocol, reproducible double-build gate, or host qualification campaign.
+
+Use normal, headless native-arm64 Docker/Colima behind the private Bacalhau execution fabric. For each source/image revision:
+
+1. Record the source revision, Dockerfile/config revision, human-readable image tag, and observed image digest.
+2. Build and test the sole canonical `linux/arm64` image on john1. Never delegate or repeat the authoritative build on john2 or john3.
+3. Run container startup plus the relevant format, lint, unit, integration, and smoke tests.
+4. Push the John1-built image once to `100.110.109.6:5000`, record the resolved digest, and let Bacalhau workers pull and cache it. `docker save`, `rsync`, and `docker load` are forbidden in the active execution path.
+5. Express every independent work item as a topology-free `ContainerInput` with frozen content-addressed MinIO inputs, disjoint scientific identities, explicit resources, and explicit timeouts. Never pass host, node, SSH, remote-root, compatibility, or manual-partition fields through the public API.
+6. Publish every execution to its unique MinIO job/execution prefix. Validate the strict output manifest, byte sizes, and SHA-256 checksums before atomically importing exactly one successful execution to john1. Preserve partial failures and duplicate attempts as noncanonical diagnostics.
+
+These checks are engineering bookkeeping, not a security ceremony. A new source revision does not require runtime requalification, helper rotation, cryptographic signatures, duplicate clean builds, or attestation evidence.
+
+The john1-john3 topology, operators, images, and workloads are trusted. Standard Bacalhau Docker execution is acceptable: a custom executor, Bacalhau fork, read-only-root gate, non-root gate, capability-dropping gate, `no-new-privileges` gate, network-disable gate, mount-policy gate, and Docker-socket prohibition are not cutover requirements. Reproducibility controls remain mandatory: immutable image digests, explicit CPU/memory/disk/timeouts, execution-specific outputs, content hashes, strict manifests, idempotent submission/import, and secrets excluded from images, arguments, labels, and logs.
+
+Bacalhau owns node selection, queueing, admission, execution attempts, retry/rescheduling, cancellation, and live scheduler state. `python/cascadia_cluster` owns typed topology-free submission, stable specification hashes, reconnect, ordered aggregation, retry classification, and artifact validation. The existing scientific ledger owns hypotheses, protocols, metrics, and conclusions. Do not mirror Bacalhau live state into the frozen legacy queue.
+
+Bacalhau v1.9 has a finite internal over-subscription queue, so a large logical map must not burst every job into the scheduler at once. Persist the complete ordered logical map before execution, derive a topology-free admission window from the connected workers' advertised CPU/memory/disk capacity and each item's declared resources, and release only that many outstanding jobs. A terminal job frees one slot for the next planned item. This is client-side backpressure, not placement: it may neither choose nor record a preferred worker, and Bacalhau remains the sole authority for admission of each released job, packing, retry, and rescheduling. The request must reconnect without duplicate submission, expose planned/admitted/running/completed counts, and preserve one request ID and one scientific identity per item.
+
+ACTIVE STORAGE AND ARCHIVAL
+
+John1 is the sole authority for every active campaign artifact under the owner-private internal-APFS root:
+
+```text
+/Users/johnherrick/cascadia-bench/r2-map-v1
+```
+
+This root holds Docker artifacts, datasets, opponent-pool objects, checkpoints and optimizer state, logs, results, reports, queue state, dashboard status, checksums, and bounded temporary work. The source tree remains separate at `/Users/johnherrick/cascadia`.
+
+The active root has a 64-GiB hard ceiling. Before admitting work, prove that its peak allocation plus the greater of 8 GiB or 10% safety margin will leave at least 64 GiB free on john1's internal APFS container. Begin dependency-closure archival review at 48 GiB active usage, below 80 GiB host free space, or before any hard-cap violation.
+
+John2 stores only old, dependency-closed research archives at:
+
+```text
+/Users/john2/cascadia-bench/r2-map-archive-v1
+```
+
+The former john2 path `/Users/john2/cascadia-bench/r2-map-v1` is frozen legacy state until explicitly classified and migrated; it is never an active authority or fallback. Archive only dependency-closed research: record a manifest and checksums, copy it to john2, verify it there, and only then delete the exact local copy. Age alone never makes an active dependency archival.
+
+There is no shared writable research directory or cross-host append. Workers operate on local frozen inputs and return checksummed outputs at explicit round boundaries.
+
+DIRECT EXECUTION; NO SUBAGENTS
+
+Use only the main Codex agent for this campaign. Do not create, resume, or delegate to subagents or host-owner agents. The main agent performs source edits on john1. SSH is permitted only for installing, upgrading, diagnosing, or recovering the cluster fabric; normal research submission, image distribution, job monitoring, cancellation, retry, and artifact return go through Bacalhau, the OCI registry, and MinIO. Keep work independent through immutable images, disjoint seeds, and execution-specific outputs rather than through agent or host topology.
+
+CPU throughput is valuable, but useful decision-making throughput is the objective. Prefer independent hypotheses, disjoint seed work, and nonduplicative work over synchronized multi-host experiments. Never distribute one model inference or training step across hosts. During CPU-bound windows target at least 85% useful aggregate physical-core utilization without swap. Bacalhau advertises 9 CPUs on john1 and all 10 CPUs on each of john2 and john3, for 29 scheduler-owned CPUs; individual workloads request only their measured per-item needs.
+
+R2-MAP EXPERT-ITERATION CONTRACT
+
+Implement and test the width-192 exact-R2 fixed-latent Multitask Action Perceiver described in `docs/v2/R2_MAP_EXPERT_ITERATION_RESEARCH_PLAN.md`. The detailed plan is subordinate to this goal. When it contains stale topology or storage language, repair it before executing that section.
+
+The scientific baseline has these invariants:
+
+- Begin with exactly 100,000 deterministic four-player greedy games, expressed as topology-free logical shards with disjoint seed ranges and scheduled across the john1-john3 fabric.
+- Project each bootstrap game to exactly one deterministic focal seat (`global_game_index mod 4`, 20 decisions) for training. The complete four-seat replay remains authoritative for targets and audits, but correlated all-greedy seat copies are not repeated as training rows.
+- Bootstrap is selected-action value training, not greedy-policy imitation: train score-to-go, score components, public market decisions, opponent-action, and market-survival heads on every focal decision; freeze the bootstrap-policy loss at zero while retaining its architecture/schema for later expert iterations. Inference continues to enumerate every exact legal action and ranks by `exact_afterstate_score + predicted_score_to_go`; no inference action is pruned.
+- Feed native MLX through a persistent, backpressured Rust packed-batch pipe. The producer emits one exact no-pruning batch at a time, waits for an identity acknowledgement, and checkpoints the source/game/turn/batch cursor and sampler identity. Expanded `.r2map` training windows and caches are forbidden.
+- Run the initial bootstrap for exactly one focal-seat epoch. Additional exposure is authorized only after held-out whole-game validation improves and a new schedule is recorded. Before a production launch, a 100-real-step end-to-end gate must measure feeder plus MLX throughput, memory, swap, loss, resume, and projected completion wall time; a multi-day projection blocks launch.
+- Train the initial R2-MAP checkpoint from scratch on john1 with native MLX/Metal.
+- Ignore MCE for this campaign. Do not prune, approximate, quantize, or omit legal moves. Optimize performance only after the exact implementation is correct and tested.
+- Every iterative self-play game has exactly one seat controlled by the newest promoted checkpoint. The other three seats use locally frozen greedy or earlier promoted opponents; the newest checkpoint never occupies two seats.
+- Train each candidate only from the newest completed generation round. Historical checkpoints are opponent-pool members, not historical training examples.
+- Use exploration noise during training self-play and decrease it through a preregistered schedule as iterations mature. Benchmark and promotion games remain deterministic.
+- Each generation round is one approximately 45-minute wall-clock self-play window across all three hosts. Hosts run independently from frozen local inputs and disjoint seeds; no per-game or per-move coordination is permitted.
+- When generation ends, all hosts stop, checksum their completed shards, and return them to john1. John1 verifies and installs the complete round before training begins.
+- During john1 MLX training, the fabric admits only disjoint benchmarks of the previously promoted checkpoint, one iteration behind, and reserves john1 from competing container work. No node generates the next round.
+- After training and checkpoint verification, submit every paired candidate comparison as its own topology-free `pair-NNNN` work item. Bacalhau alone owns placement, admission, retry, and rescheduling. Only a promoted candidate may become the single newest-model seat for the next generation window.
+- Repeat the generate, train/benchmark, gate, and promote loop until the research evidence supports stopping or the 100-point goal is reached.
+
+Every training run must emit monotonic loss events and robust atomic checkpoints containing model, optimizer, scheduler, RNG, dataset identity, source/image identity, and validation state. A checkpoint must reload independently and resume without changing completed work. Preserve the incumbent, every promoted checkpoint, `last_verified`, and at least the two newest complete recovery points.
+
+Every longitudinal benchmark and candidate gate reports sample count, mean, standard deviation, standard error, 95% confidence interval, P10/P50/P90, min/max, exact score histogram, paired delta, win/tie/loss counts where applicable, throughput, latency, memory, and swap. Report score anatomy for each animal and all animals in aggregate; each terrain and all terrain in aggregate; nature tokens; and Pinecone/wild-token acquisition, spending, and scoring. Use paired, held-out, leakage-proof seeds and fixed seat rotation.
+
+DASHBOARD
+
+Keep `http://100.110.109.6:5187/cluster` live and truthful throughout the campaign. Its canonical compact status is `/Users/johnherrick/cascadia-bench/r2-map-v1/control/dashboard-status.json`; the source tree contains only a bounded disposable read-only projection. Show host reachability and intent, phase, run and image identities, utilization, memory/swap, generation/training/benchmark progress, ETA, loss/checkpoint status, focal mean and P10/P50/P90, score anatomy, Pinecone metrics, cleanup status, and the legal next transition. Missing or stale data must be shown as stale or blocked, never silently borrowed from a worker.
+
+CURRENT STATE (2026-06-20)
+
+- John1, john2, and john3 have working headless Docker/Colima environments and are trusted local execution machines.
+- John1 has sufficient recovered internal disk space and remains the primary source and active-artifact host. Old dependency-closed research may be archived on john2.
+- The previous D0 helper-rotation, signed-packet, attestation, runtime-qualification, and aggregate campaign is permanently superseded. Stop it where it is, preserve its existing files as historical evidence, and do not finish, repair, extend, dispatch, or use it as a gate for research.
+- The exact R2-MAP implementation, 100,000-game greedy bootstrap, one-epoch native MLX training, checkpoint verification, portable freeze, protected 20-pair strength-blinded smoke, and protected fixed-250 comparison are complete. The terminal candidate is `r2-map-bootstrap-iteration0-value-v1.resume-step-000006870-1.step-000007235`.
+- The fixed-250 result is decisively negative: R2-MAP 91.604 versus qualified exact NNUE K32/R600 97.468, paired delta -5.864, SE 0.281, 95% CI [-6.414, -5.314], and 19/9/222 wins/ties/losses. All 250 pairs and 500 physical games passed identity, replay, shutdown, Pinecone, memory, and zero-swap gates. Do not promote R2-MAP or begin expert iteration; return primary research effort to NNUE.
+- The Bacalhau v1.9.0 fabric is live with scheduler-owned capacity of 9 CPUs on john1 and 10 each on john2 and john3. Focal pairs and longitudinal games use independent v4 work-item contracts with no host or parity partition. Large maps use durable topology-free scheduler-capacity backpressure because the pinned scheduler's internal over-subscription queue is finite.
+- The dashboard endpoint remains `http://100.110.109.6:5187/cluster`, but its status must describe real research work and must not remain blocked on superseded D0 closure.
 
 OPERATING STANDARD
 
@@ -18,7 +119,7 @@ This is a permanent rebuild, not an experimental patch series.
 - Do not leave abandoned code paths in the production tree.
 - Keep experimental code isolated from promoted production code.
 - Every promoted feature must have tests, documentation, benchmarks, and a clear owner/module.
-- Record major architectural decisions in concise ADRs.
+- Record material adaptations in the campaign decision log and update this goal when an authoritative policy changes. Do not create policy overlays that must be mentally merged with this file.
 - Keep a factual experiment registry containing hypotheses, protocols, results, confidence intervals, artifacts, and conclusions.
 - Never promote a model or algorithm from a small or statistically inconclusive benchmark.
 - Optimize only after profiling.
@@ -29,42 +130,35 @@ This is a permanent rebuild, not an experimental patch series.
 
 DISTRIBUTED LOCAL COMPUTE
 
-john1 is the coordinator and primary development machine. john2 and john3 are authorized local compute workers reachable through the existing `john2` and `john3` SSH aliases over Tailscale. Full permission is granted to SSH into both workers, provision the repository and required local dependencies, start and monitor compute jobs, retrieve artifacts, and stop or restart jobs when needed for Cascadia research.
+Full permission is granted to operate the private Bacalhau fabric on john1, john2, and john3; build and push the canonical Docker image on john1; stage frozen content-addressed inputs; submit, monitor, cancel, or recover topology-free container jobs; and import checksummed outputs from MinIO. SSH aliases may be used for fabric installation and recovery, not normal workload dispatch. This permission does not authorize a worker source checkout, worker image build, native worker project execution, a synchronized writable tree, or any use of john4.
 
-Proactively distribute meaningful parallel workloads across john1, john2, and john3. This is the default expectation for data collection, simulation, benchmarks, parameter sweeps, independent training runs, ablations, and other divisible experiments. Do not leave john2 and john3 idle while a long-running workload could safely benefit from them. Tiny smoke tests, latency-sensitive debugging, and inherently serial tasks may remain on john1.
+Design each campaign as a portfolio before launch, with enough launch-ready decision-changing work items to consume the 29-CPU fabric. During generation, submit independent disjoint seed ranges without node affinity. During john1 native training, reserve john1 and admit only nonduplicative benchmark work for the previous checkpoint. Outside the fixed expert-iteration barrier, backfill genuinely idle capacity with compatible profiling, ablation, reanalysis, or shared-prerequisite work only when it cannot contaminate seeds, overload a node, or delay the critical path. Duplicate training is reserved for preregistered seed sensitivity or reproducibility checks.
 
 Distributed work must be rigorous:
 
 - Verify node health, available disk, memory pressure, power settings, and current workloads before dispatch.
-- Synchronize the exact source revision, configuration, dataset schema, model inputs, and dependency environment used by every worker.
-- Record the hostname, hardware, source revision, command, seed range, start time, runtime, and output manifest for each shard.
+- All three workers record the same source revision, image tag/digest, configuration, schema, model, and input identities before running.
+- Record scheduler request/item/job/execution IDs, source and image identity, scientific seed or pair identity, start time, runtime, and output manifest for each work item. Any observed node name is diagnostic execution provenance and never part of scientific identity or placement intent.
 - Assign deterministic, disjoint seed or game-index ranges. Never duplicate samples accidentally or mix train, validation, and held-out test partitions.
 - Write independent resumable shards with checksums and atomic completion markers; never have multiple workers append unsafely to one file.
-- Aggregate and validate worker artifacts on john1 before training, analysis, promotion, or deletion.
+- Keep active authoritative artifacts under john1's campaign root. Bacalhau publishes execution-specific outputs to MinIO; john1 validates and atomically imports them. Move only dependency-closed old research to john2.
 - Detect failed, partial, stale, or duplicated shards and rerun only the missing work.
 - Keep benchmark comparisons statistically valid when work is split across machines, including paired seeds where required.
-- Use MLX locally on each Apple Silicon node where appropriate. Do not pretend independent processes are synchronized multi-node training unless a real, tested distributed algorithm implements that behavior.
+- Use native MLX/Metal only through the narrow john1 exception above. Remote Linux containers may use an explicitly pinned CPU-only reference backend, but cannot make a Metal-performance claim. Do not pretend independent processes are synchronized multi-node training unless a real, tested distributed algorithm implements that behavior.
 - Avoid oversubscription. Preserve enough headroom for SSH, telemetry, artifact transfer, and the interactive dashboard.
-- Prefer native macOS workers unless containers solve a demonstrated reproducibility problem without sacrificing Apple Silicon or MLX performance.
+- Record the hypothesis, decision gate, resource profile, expected runtime, request/item IDs, image digest, input hashes, artifact destination, and attempt status of every scheduled job. Public research specifications never contain compatible-host fields.
+- Report useful CPU utilization, idle healthy-node minutes with compatible work queued, duplicate compute fraction, work completed per node, critical-path time, and trustworthy decisions per campaign hour.
+- At campaign closeout, identify avoidable idle time, poor worker scaling, duplicate discovery work, or queue starvation and encode the correction in the next campaign manifest.
+- Use ordinary Docker containers for every non-MLX project test, simulation, and evaluation. Native project execution is forbidden on john2 and john3; the only exception is the john1 MLX/Metal worker above.
 - Keep the cluster dashboard accurate enough to show reachability, utilization, health, and active Cascadia workloads.
 
-FIRST ACTIONS
+NEXT ACTIONS AFTER THIS COMPLETED R2 GATE
 
-1. Detect and stop any stale benchmark or training process left by earlier work.
-2. Inspect all three cluster nodes and record their Apple Silicon model, CPU/GPU resources, memory, storage, OS, Rust toolchain, Python runtime, MLX version, SSH reachability, and sustained workload behavior.
-3. Audit the existing repository:
-   - exact rules engine behavior,
-   - scoring implementations,
-   - market and nature-token mechanics,
-   - current tests,
-   - benchmark methodology,
-   - neural data formats,
-   - web-tool behavior,
-   - performance bottlenecks,
-   - accumulated architectural debt.
-4. Produce a written v2 architecture and migration plan before large edits.
-5. Establish a clean git branch using the `codex/` prefix.
-6. Preserve v1 as a reference, but separate it clearly from v2. Historical research reports must not influence v2 decisions unless independently reproduced.
+1. Preserve the fixed-250 report, independent audit, scheduler provenance, frozen candidate, and imported ledger entry as the terminal R2 bootstrap evidence.
+2. Keep the completed dashboard classification visible and stop without R2 expert iteration or additional R2 training.
+3. Return the main research effort to NNUE, using the R2 anatomy result as evidence: the candidate gained elk, salmon, hawk, and fox but lost 12.264 bear points and 5.864 total points relative to the exact control.
+4. Retain the topology-free Bacalhau map controller, scheduler-capacity admission window, immutable image workflow, and deterministic aggregation for future NNUE experiments.
+5. Keep the dashboard, living plan, decision log, experiment registry, current-status document, and recovery instructions accurate at every phase boundary.
 
 PRODUCT REQUIREMENTS
 
@@ -108,6 +202,7 @@ PRODUCT REQUIREMENTS
   - self-play and search-guided policy iteration.
 - Choose architectures through measured accuracy, ranking quality, inference latency, calibration, and playing strength.
 - Keep Rust and MLX boundaries explicit and well documented.
+- Keep the Linux-container CPU/reference boundary and the native john1 Metal boundary explicit; checkpoint and tensor parity must be verified across them before promotion.
 - Avoid redundant Rust implementations of neural training.
 - Provide one-command local training, resumption, evaluation, and checkpoint promotion.
 
@@ -230,7 +325,7 @@ QUALITY GATES
 Before calling v2 complete:
 
 - All formatting, linting, unit, integration, property, and end-to-end tests pass.
-- The repository builds from a clean checkout using documented commands.
+- A normal arm64 Docker image builds, starts, and passes the documented format, lint, unit, integration, smoke, and cross-host deterministic-parity checks; its tag and observed digest are recorded.
 - The web application is visually verified at desktop and mobile sizes.
 - Core rules are cross-checked against trusted fixtures.
 - Neural data and checkpoint round trips are tested.

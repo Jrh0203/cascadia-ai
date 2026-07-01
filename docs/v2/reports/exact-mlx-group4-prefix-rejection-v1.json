@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-mlx-group4-prefix-rejection-v1-20260615",
+  "status": "rejected",
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "hypothesis": "Group rows with an identical 128-feature prefix in fours and accumulate that prefix once in threadgroup memory before evaluating each row's suffix.",
+  "search_contract": {
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "sequential_halving": true,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false
+  },
+  "microbenchmark": {
+    "captured_batch_rows": 1298,
+    "captured_batch_features": 271588,
+    "baseline_median_milliseconds": 1.032,
+    "group4_median_milliseconds": 0.799,
+    "kernel_speedup": 1.2916145181476845,
+    "feature_work_reduction_fraction": 0.165
+  },
+  "unprofiled_screen": {
+    "john2": {
+      "control_seconds": 15.363984417,
+      "treatment_seconds": 15.632455375
+    },
+    "john3": {
+      "control_seconds": 15.806484167,
+      "treatment_seconds": 16.066820625
+    }
+  },
+  "pgo": {
+    "training_hosts": [
+      "john2",
+      "john3"
+    ],
+    "training_seed": 34400,
+    "training_scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "training_mean": 96.25,
+    "john2_training_seconds": 53.032946167,
+    "john3_training_seconds": 53.432423375,
+    "john2_profraw_sha256": "1ddce2325a306dc53971a80b99a64b149456541d8ea2680295dea8369bfe58e7",
+    "john3_profraw_sha256": "1a4e6338b4b5b654052367d302ee3be30b4176006f3845e46935973bbdcba41a",
+    "merged_profdata_sha256": "ddd4500ca8cb913ef26ff7e141672aafd7df0cfa67caff98a7d5421453e44722",
+    "profile_functions": 5499,
+    "profile_blocks": 118811
+  },
+  "abba": {
+    "design": {
+      "john2_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ],
+      "john3_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "control",
+        "seconds": 15.386003541
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 15.4565145
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 15.519628833
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "control",
+        "seconds": 15.433791334
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 15.7714305
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "control",
+        "seconds": 15.784150125
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "control",
+        "seconds": 15.918416833
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 15.854929042
+      }
+    ],
+    "john2_control_mean_seconds": 15.4098974375,
+    "john2_treatment_mean_seconds": 15.488071666500002,
+    "john2_treatment_delta_seconds": 0.07817422900000182,
+    "john3_control_mean_seconds": 15.851283479,
+    "john3_treatment_mean_seconds": 15.813179771,
+    "john3_treatment_delta_seconds": -0.038103707999999514,
+    "combined_control_mean_seconds": 15.63059045825,
+    "combined_treatment_mean_seconds": 15.650625718750002,
+    "combined_treatment_delta_seconds": 0.02003526050000204,
+    "combined_speedup": 0.9987198428446219,
+    "combined_speedup_percent": -0.12801571553781033
+  },
+  "exactness": {
+    "all_measurement_score_vectors": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "all_services_clean_shutdown": true,
+    "service_parity_iterations_per_host": 200,
+    "service_parity_maximum_absolute_error": 0.0,
+    "service_parity_deterministic": true,
+    "r600_spot_rollout_wave_maximum_absolute_error": 0.0
+  },
+  "artifacts": {
+    "control_binary_sha256": "191c00117f145946dbc3c962e56d14171659dae9ae16cdc39c1caf84b1d7297d",
+    "treatment_binary_sha256": "95d4bb65104e938e025cad98454644d16c7e94ffb3128f3dbf0f0cb26d284e62",
+    "legacy_nnue_py_sha256": "7e4521003dd009ceaf6d47df3767e3aa1f2b3b55c6c3cb555368cfdfa544a1fb",
+    "legacy_nnue_serve_py_sha256": "efd953e231f9fbd49144137ccc7ba3c457283517184f7662d48f519248aea44b",
+    "source_removed_after_rejection": true
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The isolated H1 kernel improved, but prefix discovery, grouping, metadata transport, row scattering, and a 512-thread launch erased the gain. Fresh PGO plus crossed ABBA was neutral to slightly slower end to end.",
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_passed": false
+  }
+}

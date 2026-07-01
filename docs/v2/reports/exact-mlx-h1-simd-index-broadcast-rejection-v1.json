@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-mlx-h1-simd-index-broadcast-rejection-v1-20260615",
+  "status": "rejected_and_removed",
+  "phase": 1,
+  "hypothesis": "Loading exact H1 CSR offsets and feature indices once per SIMD group and broadcasting them can reduce redundant device-memory traffic without changing arithmetic order.",
+  "contract": {
+    "raw_seed": 60999,
+    "audited_completed_turns": [
+      66
+    ],
+    "realized_hidden_completed_turns": [
+      66
+    ],
+    "threadgroup_threads": 256,
+    "threads_per_row": 128,
+    "simd_lanes": 32,
+    "john1_order": [
+      "control",
+      "treatment",
+      "treatment",
+      "control"
+    ],
+    "john2_order": [
+      "treatment",
+      "control",
+      "control",
+      "treatment"
+    ],
+    "john3_order": [
+      "control",
+      "treatment",
+      "treatment",
+      "control"
+    ]
+  },
+  "correctness": {
+    "semantic_report_blake3": "6f19d82622bab6a5a45c6cdf6e1152f99791630436d1a0354d9f629f95089863",
+    "semantic_matches": 12,
+    "terminal_base_scores": [
+      96,
+      99,
+      92,
+      102
+    ],
+    "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+    "logical_neural_batches": 5469,
+    "logical_neural_rows": 9288014,
+    "physical_neural_rows": 7198144,
+    "rollout_waves": 4355,
+    "rollout_samples": 104615,
+    "multiplex_search_cohorts": 13,
+    "multiplex_searches": 104,
+    "coalesced_evaluator_rows": 891486,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "bridge_fallbacks": 0,
+    "python_tests_passed_treatment": 16,
+    "differential_library_tests_passed_treatment": 25,
+    "trusted_fixture_tests_passed_treatment": 3,
+    "nnue_batch_tests_passed_treatment": 11,
+    "validated_reports": 12,
+    "clean_shutdowns": 12
+  },
+  "measurements": {
+    "john1": {
+      "control_wall_seconds": 31.7044393125,
+      "treatment_wall_seconds": 32.017977646,
+      "wall_change_percent": 0.9889414236585514,
+      "control_process_real_seconds": 32.24,
+      "treatment_process_real_seconds": 32.489999999999995,
+      "process_real_change_percent": 0.7754342431761652,
+      "control_mlx_eval_ms": 10573.553680500001,
+      "treatment_mlx_eval_ms": 10704.155092,
+      "mlx_change_percent": 1.23517045873478
+    },
+    "john2": {
+      "control_wall_seconds": 29.6496066665,
+      "treatment_wall_seconds": 29.418389228499997,
+      "wall_change_percent": -0.7798330703025713,
+      "control_process_real_seconds": 30.055,
+      "treatment_process_real_seconds": 29.915,
+      "process_real_change_percent": -0.46581267675928073,
+      "control_mlx_eval_ms": 11088.3167825,
+      "treatment_mlx_eval_ms": 10993.0742795,
+      "mlx_change_percent": -0.8589446429805747
+    },
+    "john3": {
+      "control_wall_seconds": 29.326900229,
+      "treatment_wall_seconds": 29.081106,
+      "wall_change_percent": -0.8381186797128515,
+      "control_process_real_seconds": 29.814999999999998,
+      "treatment_process_real_seconds": 29.509999999999998,
+      "process_real_change_percent": -1.022975012577565,
+      "control_mlx_eval_ms": 10807.4095175,
+      "treatment_mlx_eval_ms": 10541.217969,
+      "mlx_change_percent": -2.4630467464841432
+    },
+    "combined": {
+      "control_wall_seconds": 30.22698206933333,
+      "treatment_wall_seconds": 30.172490958166666,
+      "wall_change_percent": -0.18027307867413134,
+      "control_process_real_seconds": 30.703333333333333,
+      "treatment_process_real_seconds": 30.638333333333335,
+      "process_real_change_percent": -0.21170339811095173,
+      "control_mlx_eval_ms": 10823.093326833334,
+      "treatment_mlx_eval_ms": 10746.149113499998,
+      "mlx_change_percent": -0.7109262667316263
+    }
+  },
+  "gates": {
+    "minimum_combined_wall_improvement_percent": 1.0,
+    "minimum_combined_mlx_improvement_percent": 3.0,
+    "minimum_nodes_improving_both_metrics": 2,
+    "maximum_node_wall_regression_percent": 1.0,
+    "nodes_improving_both_metrics": 2,
+    "combined_wall_gate_passed": false,
+    "combined_mlx_gate_passed": false,
+    "node_count_gate_passed": true,
+    "maximum_regression_gate_passed": true,
+    "advanced_to_full_contract": false
+  },
+  "resources": {
+    "maximum_rss_bytes": 557694976,
+    "maximum_peak_memory_footprint_bytes": 184894016,
+    "zero_process_swap_runs": 12,
+    "zero_system_swap_delta_nodes": 3,
+    "memory_ceiling_bytes": 1610612736
+  },
+  "implementation": {
+    "treatment_binary_sha256": "45978aded0240332afeddca5f6c16b21864c54b12c6b0d32faf3afbef380d2e2",
+    "treatment_python_sha256": "6354c120ab0710a0607e745aa2c4f1ad781f4c46beb57f6c90ea403f9b60a2ac",
+    "restored_binary_sha256": "157ba6c0607f8a2cad3e0ecba9ab6d04cd327175efe01732edb043402d57a5ce",
+    "restored_python_sha256": "6556f9c5818354de6847a0630e070f0bb2026252a7bacfa706a094f9f17a9ae9",
+    "experimental_switch_retained": false,
+    "treatment_kernel_retained": false,
+    "python_tests_passed_restored": 15,
+    "differential_library_tests_passed_restored": 25,
+    "trusted_fixture_tests_passed_restored": 3,
+    "nnue_batch_tests_passed_restored": 11
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The treatment was bit exact but improved combined wall by only 0.180% and MLX evaluation by only 0.711%, with a regression on john1. It failed both combined advance gates.",
+    "next_target": "Replicated exact per-layer MLX timing for H1, H2, and output before selecting an intermediate-tensor or kernel-fusion treatment."
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-mlx-h1-simd-index-broadcast-v1",
+    "run_script": "artifacts/performance/exact-mlx-h1-simd-index-broadcast-v1/run_screen.zsh",
+    "sha256_manifest": "artifacts/performance/exact-mlx-h1-simd-index-broadcast-v1/SHA256SUMS"
+  }
+}

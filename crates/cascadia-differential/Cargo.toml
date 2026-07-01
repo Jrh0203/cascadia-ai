@@ -17,9 +17,11 @@ legacy-teacher = [
     "dep:cascadia-provenance",
     "dep:cascadia-search",
     "dep:cascadia-sim",
+    "dep:cascadia-v3-nnue",
     "dep:clap",
     "dep:rand",
     "dep:rand_chacha",
+    "dep:rayon",
     "dep:serde",
     "dep:serde_json",
     "dep:thiserror",
@@ -36,9 +38,11 @@ cascadia-model = { path = "../cascadia-model", optional = true }
 cascadia-provenance = { path = "../cascadia-provenance", optional = true }
 cascadia-search = { path = "../cascadia-search", optional = true }
 cascadia-sim = { path = "../cascadia-sim", optional = true }
+cascadia-v3-nnue = { path = "../cascadia-v3-nnue", optional = true }
 clap = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 rand_chacha = { workspace = true, optional = true }
+rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
@@ -48,4 +52,29 @@ thiserror = { workspace = true, optional = true }
 [[bin]]
 name = "legacy-teacher"
 path = "src/bin/legacy_teacher.rs"
+required-features = ["legacy-teacher"]
+
+[[bin]]
+name = "full-legal-audit"
+path = "src/bin/full_legal_audit.rs"
+required-features = ["legacy-teacher"]
+
+[[bin]]
+name = "r2-map-cross-arch-focal"
+path = "src/bin/r2_map_cross_arch_focal.rs"
+required-features = ["legacy-teacher"]
+
+[[bin]]
+name = "r2-map-focal-control"
+path = "src/bin/r2_map_focal_control.rs"
+required-features = ["legacy-teacher"]
+
+[[bin]]
+name = "state-footprint-census"
+path = "src/bin/state_footprint_census.rs"
+required-features = ["legacy-teacher"]
+
+[[bin]]
+name = "v3-campaign-worker"
+path = "src/bin/v3_campaign_worker.rs"
 required-features = ["legacy-teacher"]

@@ -1,0 +1,240 @@
+{
+  "schema_id": "cascadia.r2-map.d0-source-audit-matrix.v2",
+  "schema_version": 2,
+  "campaign_id": "r2-map-expert-iteration-v1",
+  "run_id": "d0-runtime-bootstrap-20260618-v1",
+  "status": "source-candidate-awaiting-independent-audit-and-race-closure",
+  "execution_blocked": true,
+  "blockers": [
+    {
+      "code": "john1-sealed-broken",
+      "host": "john1",
+      "observed_os": "26.2/25C56",
+      "observed_seal": "Broken"
+    },
+    {
+      "code": "john2-sealed-broken",
+      "host": "john2",
+      "observed_os": "26.4/25E246",
+      "observed_seal": "Broken"
+    },
+    {
+      "code": "post-repair-host-pins-not-refrozen",
+      "host": "all",
+      "required_action": "repair outside this protocol, independently reaudit, then review and refreeze exact OS/build/platform identities"
+    },
+    {
+      "code": "source-race-incident-open",
+      "host": "john1",
+      "required_action": "freeze stable source hashes and complete a final independent read-only audit"
+    }
+  ],
+  "prohibited_during_source_repair": [
+    "package-fetch",
+    "package-install",
+    "campaign-key-generation",
+    "bootstrap-apply",
+    "vm-start",
+    "image-build",
+    "container-run",
+    "remote-campaign-mutation"
+  ],
+  "controls": [
+    {
+      "id": "D0-SRC-001",
+      "requirement": "exclusive John1 source ownership and recorded race closure",
+      "implementation": ["tools/r2_d0/SOURCE_OWNERSHIP.json", "docs/v2/reports/r2-map-d0-source-race-incident-v1.json"],
+      "tests": [],
+      "status": "open-blocker"
+    },
+    {
+      "id": "D0-ADM-001",
+      "requirement": "exact M4 macOS internal APFS platform and sealed-root admission",
+      "implementation": ["tools/r2_d0/runtime.py:host_platform_snapshot", "tools/r2_d0/runtime.py:preflight_audit"],
+      "tests": ["tools/test_r2_d0_inventory_artifacts.py:test_storage_write_probe_fsyncs_renames_rereads_and_cleans"],
+      "status": "implemented-live-red"
+    },
+    {
+      "id": "D0-HLP-001",
+      "requirement": "deterministic standard-library-only helper under isolated Python",
+      "implementation": ["tools/r2_d0/bootstrap.py:build_helper_archive", "tools/r2_d0/cli.py:main", "tools/r2_map_d0_runtime.py"],
+      "tests": ["tools/test_r2_d0_signing_bootstrap.py:test_helper_archive_is_reproducible_complete_and_tamper_evident", "tools/test_r2_d0_runtime_transport.py:test_helper_closure_imports_under_actual_macos_system_python"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-BST-001",
+      "requirement": "bootstrap validity precedes mutation and helper/key/receipt install rolls back atomically",
+      "implementation": ["tools/r2_d0/bootstrap.py:apply_bootstrap", "tools/r2_d0/bootstrap.py:install_bootstrap_artifacts"],
+      "tests": ["tools/test_r2_d0_signing_bootstrap.py:test_bootstrap_expiry_precedes_mutation_and_partial_key_transaction_rolls_back"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-AUT-001",
+      "requirement": "signed host, phase, operation, helper, key, time, output, path, and execution confirmation",
+      "implementation": ["tools/r2_d0/authorization.py:authorize_work_packet", "tools/r2_d0/canonical.py:validate_work_packet", "tools/r2_d0/cli.py:_authorized", "tools/r2_d0/cli.py:_remaining_signed_seconds", "tools/r2_d0/runtime.py:CommandRunner"],
+      "tests": ["tools/test_r2_d0_signing_bootstrap.py:test_signed_work_authorization_binds_host_phase_time_helper_and_key", "tools/test_r2_d0_runtime_transport.py:test_command_runner_streams_with_a_cumulative_output_cap", "tools/test_r2_d0_runtime_transport.py:test_cli_mutating_commands_require_explicit_execution_confirmation"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-LIN-001",
+      "requirement": "authenticated predecessor transactions, policy identity, exact receipt paths, dependency evidence, and preflight substitution resistance",
+      "implementation": ["tools/r2_d0/canonical.py:_validate_predecessors", "tools/r2_d0/cli.py:_bound_predecessors", "tools/r2_d0/cli.py:_bound_preflight", "tools/r2_d0/cli.py:_validate_dependency_evidence"],
+      "tests": ["tools/test_r2_d0_canonical.py:test_final_live_cycle_requires_qualification_barrier_and_current_dependencies", "tools/test_r2_d0_canonical.py:test_both_cycles_render_the_complete_positive_host_phase_graph", "tools/test_r2_d0_canonical.py:test_failed_rollback_can_only_transition_to_rollback_retry"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-RES-001",
+      "requirement": "zero host swap continuously across every authorized phase and persistence window",
+      "implementation": ["tools/r2_d0/cli.py:_phase_resource_snapshot", "tools/r2_d0/cli.py:_phase_resource_evidence", "tools/r2_d0/aggregate.py:validate_operation_evidence"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_every_authorized_phase_binds_zero_swap_before_and_after"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-NEG-001",
+      "requirement": "John1 post-cleanup no-Podman-machine, disk, socket, activity, or storage semantics",
+      "implementation": ["tools/r2_d0/inventory.py:podman_negative_control", "tools/r2_d0/runtime.py:preflight_audit", "tools/r2_d0/runtime.py:postflight_audit"],
+      "tests": ["tools/test_r2_d0_inventory_artifacts.py:test_post_cleanup_podman_negative_control_is_semantic_not_old_vm_identity", "tools/test_r2_d0_aggregate.py:test_aggregate_recomputes_podman_negative_control_semantics"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-RET-001",
+      "requirement": "cleanup evidence is fully reopened, policy-bound, non-campaign, and never execution authority",
+      "implementation": ["CASCADIA_V2_GOAL.txt", "docs/v2/R2_MAP_EXPERT_ITERATION_RESEARCH_PLAN.md", "docs/v2/decisions/0200-r2-map-colima-runtime-and-john2-build-host.md", "docs/v2/R2_MAP_D0_RUNTIME_BOOTSTRAP.md", "docs/v2/reports/john1-storage-cleanup-phase3-target-inventory-v1.txt"],
+      "tests": [],
+      "status": "pass"
+    },
+    {
+      "id": "D0-STO-001",
+      "requirement": "internal physical John2 storage identity, capacity, fsync, atomic commit, and precommit revalidation at every local commit boundary",
+      "implementation": ["tools/r2_d0/storage.py:verify_john2_storage", "tools/r2_d0/storage.py:verify_john2_commit_boundary", "tools/r2_d0/transport.py:atomic_write", "tools/r2_d0/transport.py:install_result_bundle", "tools/r2_d0/transport.py:persist_receipt_transaction"],
+      "tests": ["tools/test_r2_d0_inventory_artifacts.py:test_storage_write_probe_fsyncs_renames_rereads_and_cleans", "tools/test_r2_d0_runtime_transport.py:test_atomic_write_revalidates_physical_storage_before_commit"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-RPC-001",
+      "requirement": "frozen standalone remote protocol, reservation-aware capacity proof, stable replay semantics, and bounded receipts",
+      "implementation": ["tools/r2_d0/remote_protocol.py", "tools/r2_d0/transport.py:_validate_remote_storage_precommit", "tools/r2_d0/transport.py:_decode_remote_worker_response"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_remote_capacity_proof_binds_protocol_and_reserved_receipt_budget"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-TRN-001",
+      "requirement": "fixed John2-to-John3 forced receiver plus one pinned John1 initial-key edge, both source-address and live Tailscale bound",
+      "implementation": ["tools/r2_d0/transport.py:worker_channel", "tools/r2_d0/transport.py:worker_key_bootstrap_channel", "tools/r2_d0/transport.py:bootstrap_worker_key_on_john3", "tools/r2_d0/transport.py:_worker_channel_roundtrip", "tools/r2_d0/transport.py:_validate_tailscale_status"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_tailscale_transport_identity_is_exact_and_fail_closed", "tools/test_r2_d0_runtime_transport.py:test_initial_worker_key_channel_installs_bound_dependency_and_key_atomically", "tools/test_r2_d0_runtime_transport.py:test_john3_runtime_supply_push_is_target_packet_bound", "tools/test_r2_d0_runtime_transport.py:test_worker_channel_client_requires_both_tailscale_identities"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-SSH-001",
+      "requirement": "dedicated worker SSH provisioning, initial install, forced authorization, and qualification rollback reject partial state",
+      "implementation": ["tools/r2_d0/transport.py:provision_john2_worker_ssh", "tools/r2_d0/transport.py:install_john3_worker_channel_transaction", "tools/r2_d0/transport.py:remove_john2_worker_ssh", "tools/r2_d0/transport.py:remove_john3_worker_authorized_key", "tools/r2_d0/runtime.py:rollback_runtime"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_worker_ssh_provisioning_rejects_every_partial_transaction", "tools/test_r2_d0_runtime_transport.py:test_worker_ssh_cleanup_removes_only_the_exact_dedicated_key", "tools/test_r2_d0_runtime_transport.py:test_initial_worker_key_channel_installs_bound_dependency_and_key_atomically"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-OCI-001",
+      "requirement": "derived smoke/scanner identities, full OCI graph, decompressed layer payload, no project paths, SBOM, provenance, and canonical USTAR",
+      "implementation": ["tools/r2_d0/artifacts.py:verify_smoke_oci_archive", "tools/r2_d0/artifacts.py:verify_scanner_oci_archive", "tools/r2_d0/artifacts.py:_layer_payload_projection"],
+      "tests": ["tools/test_r2_d0_inventory_artifacts.py:test_smoke_oci_archive_validates_every_descriptor", "tools/test_r2_d0_inventory_artifacts.py:test_scanner_oci_binds_image_attestations_and_source_revision", "tools/test_r2_d0_runtime_transport.py:test_probe_oci_requires_image_spdx_and_max_provenance"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-HBR-001",
+      "requirement": "exact Homebrew source, metadata, bottle bytes, closure, positive delta, isolated roots, and no automatic cleanup",
+      "implementation": ["tools/r2_d0/runtime.py:runtime_environment", "tools/r2_d0/runtime.py:verify_homebrew_installer", "tools/r2_d0/runtime.py:install_homebrew", "tools/r2_d0/inventory.py:compare_homebrew_install"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_homebrew_installer_verifies_bytes_before_install", "tools/test_r2_d0_inventory_artifacts.py:test_homebrew_metadata_regeneration_accepts_same_semantics_and_rejects_drift"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-SUP-001",
+      "requirement": "one deterministic John2 runtime-supply archive is dependency-bound and atomically materialized on John1 and John3",
+      "implementation": ["tools/r2_d0/artifacts.py:runtime_supply_archive", "tools/r2_d0/artifacts.py:install_runtime_supply_archive", "tools/r2_d0/transport.py:push_runtime_supply_to_john3", "tools/r2_d0/cli.py:_validate_dependency_evidence"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_runtime_supply_archive_is_canonical_and_component_bound", "tools/test_r2_d0_runtime_transport.py:test_runtime_supply_materialization_is_atomic_replayable_and_cleans_abort", "tools/test_r2_d0_runtime_transport.py:test_john3_runtime_supply_push_is_target_packet_bound"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-CFG-001",
+      "requirement": "effective native arm64 Apple-VZ 10-CPU/14-GiB runtime with 2-GiB host reserve, exact disks/config, and no shared mounts",
+      "implementation": ["tools/r2_d0/canonical.py:COLIMA_CONFIG", "tools/r2_d0/runtime.py:verify_configs", "tools/r2_d0/runtime.py:_guest_effective_config", "tools/r2_d0/runtime.py:_guest_mount_projection"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_install_configs_creates_only_private_exact_files", "tools/test_r2_d0_runtime_transport.py:test_guest_listener_mount_and_effective_config_are_allowlisted"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-CTX-001",
+      "requirement": "unchanged built-in default Docker context, isolated effective socket, no startup item, and no host runtime mount",
+      "implementation": ["tools/r2_d0/runtime.py:_docker_context_snapshot", "tools/r2_d0/runtime.py:_positive_runtime_activity", "tools/r2_d0/runtime.py:verify_socket"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_stop_start_recovery_repeats_the_identical_smoke"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-GST-001",
+      "requirement": "strict guest TCP listener allowlist and runtime package/license/SBOM inventory",
+      "implementation": ["tools/r2_d0/runtime.py:_guest_listener_allowlist", "tools/r2_d0/runtime.py:guest_package_audit"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_guest_listener_mount_and_effective_config_are_allowlisted"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-SMK-001",
+      "requirement": "non-root read-only/no-network smoke, drop-all capabilities, no-new-privileges, bounded resources, named-volume-only I/O, and failure-safe helper cleanup",
+      "implementation": ["tools/r2_d0/runtime.py:hardened_flags", "tools/r2_d0/runtime.py:smoke_and_volume_roundtrip"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_hardening_flags_include_every_required_control", "tools/test_r2_d0_runtime_transport.py:test_stop_start_recovery_repeats_the_identical_smoke"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-BLD-001",
+      "requirement": "John2 integrated Docker-driver BuildKit, pinned scanner, original-direction egress denial with reply-only SSH, semantic cache emptiness, SPDX, and maximal provenance",
+      "implementation": ["tools/r2_d0/runtime.py:verify_buildx_inspect", "tools/r2_d0/runtime.py:buildkit_probe", "tools/r2_d0/runtime.py:verify_probe_oci"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_buildkit_probe_preloads_explicit_scanner_and_always_cleans", "tools/test_r2_d0_runtime_transport.py:test_probe_oci_requires_image_spdx_and_max_provenance"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-J3-001",
+      "requirement": "John3 buildx/profile absence and semantic Docker-API plus filesystem proof of empty stock-daemon BuildKit cache/content",
+      "implementation": ["tools/r2_d0/runtime.py:verify_positive_runtime", "tools/r2_d0/runtime.py:_guest_buildkit_state"],
+      "tests": ["tools/test_r2_d0_canonical.py:test_john3_packet_rejects_every_build_operation"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-REC-001",
+      "requirement": "exact stop/start recovery preserves stable Engine version/info identity, config, default context, owner socket, and identical smoke result",
+      "implementation": ["tools/r2_d0/runtime.py:stop_start_recovery"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_stop_start_recovery_repeats_the_identical_smoke"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-RBK-001",
+      "requirement": "exact rollback, no broad cleanup, exact formula versions, and safe absent-Colima quiescent fallback",
+      "implementation": ["tools/r2_d0/runtime.py:rollback_runtime", "tools/r2_d0/runtime.py:postflight_audit"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_rollback_succeeds_without_a_colima_binary_only_when_inactive"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-BND-001",
+      "requirement": "campaign-signed v3 result bundle binds packet, signature, report, whole-archive output limit, materialization receipt, collision-free path, and canonical installation",
+      "implementation": ["tools/r2_d0/bundle.py:seal_result_bundle", "tools/r2_d0/bundle.py:verify_result_bundle", "tools/r2_d0/closure.py:build_materialization_receipt", "tools/r2_d0/transport.py:result_bundle_publication_relative", "tools/r2_d0/transport.py:result_bundle_install_destination", "tools/r2_d0/transport.py:publish_to_john2"],
+      "tests": ["tools/test_r2_d0_runtime_transport.py:test_result_bundle_verification_and_tamper", "tools/test_r2_d0_runtime_transport.py:test_result_bundle_install_is_atomic_and_canonical_on_john2", "tools/test_r2_d0_runtime_transport.py:test_authenticated_publisher_verifies_then_uses_exact_john2_path"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-AGG-001",
+      "requirement": "final validator recomputes the exact 50-transaction graph, three signed bootstrap records, every materialization receipt, and terminal publication closure",
+      "implementation": ["tools/r2_d0/aggregate.py:build_final_aggregate", "tools/r2_d0/aggregate.py:verify_final_aggregate", "tools/r2_d0/aggregate.py:validate_operation_evidence", "tools/r2_d0/closure.py:verify_final_publication_record"],
+      "tests": ["tools/test_r2_d0_aggregate.py:test_final_aggregate_requires_the_exact_qualification_and_live_graph", "tools/test_r2_d0_aggregate.py:test_aggregate_recomputes_podman_negative_control_semantics"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-DSH-001",
+      "requirement": "dashboard remains red while blocked and recomputes digests from canonical John2 D0 state/report inputs",
+      "implementation": ["tools/r2_d0/cli.py:_dashboard_authoritative_input", "tools/r2_d0/dashboard.py:publish_dashboard_diagnostic"],
+      "tests": ["tools/test_r2_d0_dashboard.py:test_blocked_diagnostic_has_no_legal_bootstrap_and_excludes_john4", "tools/test_r2_d0_dashboard.py:test_dashboard_publish_is_atomic_cas_and_idempotent", "tools/test_r2_d0_runtime_transport.py:test_dashboard_digests_are_recomputed_from_authoritative_john2_inputs"],
+      "status": "pass"
+    },
+    {
+      "id": "D0-TST-001",
+      "requirement": "complete D0 source gate passes under the repository environment and helper compiles under system Python",
+      "implementation": ["docs/v2/R2_MAP_D0_RUNTIME_BOOTSTRAP.md:Local verification"],
+      "tests": ["PYTHONPATH=tools .venv/bin/pytest -q tools/test_r2_d0_*.py", "PYTHONPATH=python .venv/bin/pytest -q python/tests/test_r2_map_remote_storage.py", ".venv/bin/ruff check tools/r2_d0 tools/r2_map_d0_runtime.py tools/r2_d0_test_support.py tools/test_r2_d0_*.py python/cascadia_mlx/r2_map_remote_worker.py python/tests/test_r2_map_remote_storage.py", "/usr/bin/python3 -m compileall -q tools/r2_d0 tools/r2_map_d0_runtime.py python/cascadia_mlx/r2_map_remote_worker.py"],
+      "status": "139-d0-passed-69-remote-passed-ruff-pass-compileall-pass"
+    }
+  ]
+}

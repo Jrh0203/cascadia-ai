@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-greedy-placed-tile-snapshot-elision-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "Traverse placed-tile indices directly during qualified greedy wildlife scoring instead of cloning the insertion-ordered vector on every request.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "pipeline_chunk_states": 96,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "implementation": {
+    "treatment_capable_binary_sha256": "7b93898525d7dac2de6acb786f76faefc594d1f52a11f9446bd92312aeeee51e",
+    "source_screen_snapshot_sha256": "3756174b791b73f4eb7f2764da8cdfa0cb949dd8d6fafdd4d268e7731dd536c6",
+    "qualified_greedy_requests": 1390050,
+    "placed_tile_order_preserved": true,
+    "wildlife_category_order_preserved": true,
+    "hypothetical_mutation_order_preserved": true,
+    "release_switch_retained": false,
+    "treatment_removed": true,
+    "restored_eval_source_sha256": "df8b8bc7843a728c3f31e67ad16394da1e4caf933eb0a0ac25294988defeffd6"
+  },
+  "correctness": {
+    "snapshot_oracle_passed": true,
+    "snapshot_oracle_card_sets_checked": 3,
+    "snapshot_oracle_evolving_turns_per_card_set": 32,
+    "nature_token_variants_checked": true,
+    "duplicate_markets_checked": true,
+    "default_library_tests": {
+      "cascadia_ai_passed": 86,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "mid_v4_library_tests": {
+      "cascadia_ai_passed": 87,
+      "failed": 0
+    },
+    "python_exact_tests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "post_removal_parity_test_passed": true,
+    "frozen_diagnostics": {
+      "scores": [
+        102,
+        96,
+        92,
+        95
+      ],
+      "mean_score": 96.25,
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "physical_neural_rows": 5062305,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "bootstrapped_samples": 0,
+      "policy_fallbacks": 0,
+      "clean_shutdown": true,
+      "diagnostic_runs_matching": 4,
+      "source_runs_matching": 8,
+      "complete_frozen_game_runs_matching": 12
+    }
+  },
+  "mechanism": {
+    "targeted_stage": "opponent_advance_ms",
+    "john2_control_milliseconds": 3400.106979,
+    "john2_treatment_milliseconds": 3373.852391,
+    "john2_reduction_milliseconds": 26.254588,
+    "john2_reduction_percent": 0.7721694688477695,
+    "john3_control_milliseconds": 3417.879927,
+    "john3_treatment_milliseconds": 3410.114873,
+    "john3_reduction_milliseconds": 7.765054,
+    "john3_reduction_percent": 0.22718919815347757
+  },
+  "source_screen": {
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "round": 1,
+        "variant": "treatment",
+        "seconds": 14.445570583,
+        "peak_rss_bytes": 102957056,
+        "peak_footprint_bytes": 65487304
+      },
+      {
+        "host": "john3",
+        "round": 1,
+        "variant": "control",
+        "seconds": 14.260057959,
+        "peak_rss_bytes": 102776832,
+        "peak_footprint_bytes": 58311088
+      },
+      {
+        "host": "john2",
+        "round": 2,
+        "variant": "control",
+        "seconds": 14.501646167,
+        "peak_rss_bytes": 102793216,
+        "peak_footprint_bytes": 69730760
+      },
+      {
+        "host": "john3",
+        "round": 2,
+        "variant": "treatment",
+        "seconds": 14.353395167,
+        "peak_rss_bytes": 102907904,
+        "peak_footprint_bytes": 60834224
+      },
+      {
+        "host": "john2",
+        "round": 3,
+        "variant": "control",
+        "seconds": 14.562945375,
+        "peak_rss_bytes": 102891520,
+        "peak_footprint_bytes": 57983408
+      },
+      {
+        "host": "john3",
+        "round": 3,
+        "variant": "treatment",
+        "seconds": 14.331141291,
+        "peak_rss_bytes": 102924288,
+        "peak_footprint_bytes": 62914992
+      },
+      {
+        "host": "john2",
+        "round": 4,
+        "variant": "treatment",
+        "seconds": 14.486286958,
+        "peak_rss_bytes": 102924288,
+        "peak_footprint_bytes": 65913288
+      },
+      {
+        "host": "john3",
+        "round": 4,
+        "variant": "control",
+        "seconds": 14.330062375,
+        "peak_rss_bytes": 103219200,
+        "peak_footprint_bytes": 59261360
+      }
+    ],
+    "john2_control_mean_seconds": 14.532295771,
+    "john2_treatment_mean_seconds": 14.4659287705,
+    "john2_improvement_percent": 0.4566862768678329,
+    "john3_control_mean_seconds": 14.295060167,
+    "john3_treatment_mean_seconds": 14.342268229,
+    "john3_improvement_percent": -0.3302403868784014,
+    "combined_control_mean_seconds": 14.413677969,
+    "combined_treatment_mean_seconds": 14.40409849975,
+    "combined_improvement_percent": 0.06646096347233808,
+    "mean_peak_rss_control_bytes": 102920192,
+    "mean_peak_rss_treatment_bytes": 102928384,
+    "peak_rss_delta_percent": 0.007959565407728738,
+    "mean_peak_footprint_control_bytes": 61321654,
+    "mean_peak_footprint_treatment_bytes": 63787452,
+    "peak_footprint_delta_percent": 4.021088537500962
+  },
+  "pgo": {
+    "attempted": false,
+    "reason": "The source screen failed the positive-on-both-hosts, combined-gain, and memory gates."
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "John3 regressed 0.330%, the combined gain was only 0.066% versus the required 0.25%, and mean allocator peak footprint increased 4.021%.",
+    "accepted_baseline_seconds": 14.16305453125,
+    "initial_reference_seconds": 141.027296,
+    "total_speedup_unchanged": 9.957406835427417,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_gap_seconds": 0.06032493125
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-greedy-placed-tile-snapshot-elision-v1"
+  }
+}

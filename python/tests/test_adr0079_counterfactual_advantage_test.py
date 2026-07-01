@@ -49,7 +49,7 @@ def _authorization() -> dict:
 
 
 def test_frozen_test_gates_pass_only_with_post_validation_authorization() -> None:
-    gates = evaluator.test_gates(
+    gates = evaluator.evaluate_gates(
         metrics=_metrics(),
         initial_metrics={
             "decision_objective": 0.55,
@@ -69,7 +69,7 @@ def test_frozen_test_gates_pass_only_with_post_validation_authorization() -> Non
     )
     assert all(gates.values())
 
-    premature = evaluator.test_gates(
+    premature = evaluator.evaluate_gates(
         metrics=_metrics(),
         initial_metrics={
             "decision_objective": 0.55,
@@ -91,7 +91,7 @@ def test_frozen_test_gates_pass_only_with_post_validation_authorization() -> Non
 
 
 def test_checkpoint_or_validation_replay_drift_fails_closed() -> None:
-    gates = evaluator.test_gates(
+    gates = evaluator.evaluate_gates(
         metrics=_metrics(),
         initial_metrics={
             "decision_objective": 0.55,

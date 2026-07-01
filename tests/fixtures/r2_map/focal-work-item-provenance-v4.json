@@ -1,0 +1,47 @@
+{
+  "all_clean_shutdowns": true,
+  "all_pinecone_conservation_checks_passed": true,
+  "contract_blake3": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "contract_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "implementation_binding": {
+    "contract_revision": "sequential-public-market-v1.1",
+    "market_action_schema_blake3": "8888888888888888888888888888888888888888888888888888888888888888",
+    "maximum_width_panel_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+    "model_schema_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+    "open_reference_seed_domain_id": "r2-map-open-reference-performance-100-v1",
+    "protocol_fixture_canonical_blake3": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "protocol_fixture_file_blake3": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "protocols": {
+      "collector_hash": [68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68],
+      "serving_protocol_hash": [102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102, 102],
+      "source_hash": [85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85]
+    },
+    "reference_manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "replay_pinecone_panel_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+    "request_schema_blake3": "9999999999999999999999999999999999999999999999999999999999999999",
+    "response_schema_blake3": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "schema_id": "cascadia.r2-map.implementation-binding.v1.1",
+    "serving_protocol_schema_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+    "source_bundle_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+    "w0_registration_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "maximum_swap_delta_bytes": 0,
+  "opponent_field_blake3": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "opponent_field_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "pair_receipts": [
+    {
+      "pair_index": 0,
+      "receipt_blake3": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  ],
+  "pairs": 1,
+  "peak_rss_bytes": 1048576,
+  "physical_games": 2,
+  "schema_id": "cascadia.r2-map.focal-work-item.v4",
+  "schema_version": 4,
+  "stage": "development",
+  "summed_checkpoint_load_seconds": 0.25,
+  "summed_game_seconds": 2.5,
+  "work_item_id": "pair-0000"
+}
+

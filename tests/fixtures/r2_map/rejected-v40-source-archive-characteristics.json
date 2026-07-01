@@ -1,0 +1,35 @@
+{
+  "schema_id": "cascadia.r2-map.rejected-source-archive-fixture.v1",
+  "source_target": "source/r2-map-complete-7d69f1b4-v40",
+  "status": "rejected",
+  "source_manifest_document_sha256": "7d69f1b44fa3b6f0dd7881b45098be8f1e43627f9ed81c2a1e15037345297975",
+  "source_manifest_file_count": 699,
+  "source_tar_sha256": "3a0e1a9693d2e9b02616851b0e5d71cb44a5a2323afaea81228bf5350c588464",
+  "source_tar_regular_member_count": 887,
+  "extra_member_count": 188,
+  "missing_member_count": 0,
+  "expected_type_mismatch_count": 0,
+  "expected_size_mismatch_count": 0,
+  "expected_content_sha256_mismatch_count": 0,
+  "appledouble_magic_hex": "00051607",
+  "appledouble_member_bytes": 163,
+  "appledouble_payload_sha256": "777de58e21d36c143b6591754cbaa56e2475068b991652f16613b559eb73b38a",
+  "appledouble_paths_canonical_json_sha256": "bb9aad0233194aedd74fe29d76f8ab2ce460d448c3dd8218dcfdcf966a30e737",
+  "appledouble_paths_newline_sha256": "d0407860573a93c2d62b7f6feaaa2b64671bf2916e5d0e9618cfdca701b17f9b",
+  "pax_xattr_member_count": 188,
+  "expected_mode_counts": {
+    "0400": 690,
+    "0500": 9
+  },
+  "observed_mode_counts": {
+    "0600": 409,
+    "0644": 289,
+    "0755": 1
+  },
+  "mode_mismatch_count": 699,
+  "transaction_manifest_canonical_sha256": "b68a12fef70cac317b2ce12bf6da720af2aa2a60428602579724f10b2b4833e6",
+  "transaction_manifest_raw_sha256": "e2d7ea4c3e5cffd7eff56d0c91b1c204def1fafc0506a8ee4c13cc41fbcaa817",
+  "commit_receipt_relative": "control/receipts/req-798fdc38b55b47a0bddb539e662bda99.json",
+  "commit_receipt_canonical_sha256": "9e6c0fb988637f45230f213a34a49ee91fa0343ca899cdf7917f4c7550e487c4",
+  "commit_receipt_raw_sha256": "08d719a81e2f9d3b51238512e088f0f430af5fca5f70d7e2bcb03fbb5bdb20b3"
+}

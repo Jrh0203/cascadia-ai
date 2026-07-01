@@ -47,6 +47,9 @@ class GroupedRankingAdapter:
     evaluate: Callable[[Any, Any, int], dict[str, Any]] | None = None
     selection_metric: str = "listwise_loss"
     accuracy_metric: str = "top1_accuracy"
+    tertiary_metric: str | None = None
+    batch_kwargs: dict[str, object] = field(default_factory=dict)
+    init_manifest_name: str = "model.json"
 
 
 def _entity_adapter() -> GroupedRankingAdapter:
@@ -210,6 +213,10 @@ def train_ranking(
     if not config.resume and state.best_ranking_loss is None:
         state.best_ranking_loss = initial_validation["selection_loss"]
         state.best_top1_accuracy = initial_validation["validation"][adapter.accuracy_metric]
+        state.best_ranking_tiebreak_loss = _optional_metric(
+            initial_validation["validation"],
+            adapter.tertiary_metric,
+        )
         checkpoint = save_checkpoint(config.run_dir, model, optimizer, state)
         set_checkpoint_pointer(
             config.run_dir,
@@ -244,6 +251,7 @@ def train_ranking(
                 config.group_batch_size,
                 seed=config.seed + epoch,
                 adapter=adapter,
+                batch_kwargs=adapter.batch_kwargs,
             )
         ):
             if batch_index < resume_batch:
@@ -275,12 +283,21 @@ def train_ranking(
             latest_regression,
             adapter.selection_metric,
         )
-        improved = (
-            state.best_ranking_loss is None or latest_selection_loss < state.best_ranking_loss
+        latest_accuracy = float(latest_validation[adapter.accuracy_metric])
+        latest_tiebreak = _optional_metric(
+            latest_validation,
+            adapter.tertiary_metric,
+        )
+        improved = _ranking_improved(
+            latest_selection_loss,
+            latest_accuracy,
+            latest_tiebreak,
+            state,
         )
         if improved:
             state.best_ranking_loss = latest_selection_loss
-            state.best_top1_accuracy = latest_validation[adapter.accuracy_metric]
+            state.best_top1_accuracy = latest_accuracy
+            state.best_ranking_tiebreak_loss = latest_tiebreak
             state.ranking_epochs_without_improvement = 0
         else:
             state.ranking_epochs_without_improvement += 1
@@ -334,6 +351,7 @@ def train_ranking(
         "global_step": state.global_step,
         "best_ranking_loss": state.best_ranking_loss,
         "best_top1_accuracy": state.best_top1_accuracy,
+        "best_ranking_tiebreak_loss": state.best_ranking_tiebreak_loss,
         "initial_validation": initial_validation,
         "stopped_reason": (
             f"validation futility after {config.validation_patience} non-improving epochs"
@@ -371,6 +389,8 @@ def _completed_resume_report(
         or int(report.get("global_step", -1)) != state.global_step
         or report.get("best_ranking_loss") != state.best_ranking_loss
         or report.get("best_top1_accuracy") != state.best_top1_accuracy
+        or report.get("best_ranking_tiebreak_loss")
+        != state.best_ranking_tiebreak_loss
     ):
         raise ValueError("completed ranking report disagrees with the latest checkpoint")
     return report
@@ -481,6 +501,7 @@ def _training_batches(
     *,
     seed: int,
     adapter: GroupedRankingAdapter,
+    batch_kwargs: dict[str, object],
 ) -> Any:
     order = np.arange(len(datasets))
     rng = np.random.default_rng(seed)
@@ -490,6 +511,7 @@ def _training_batches(
             group_batch_size,
             shuffle=True,
             seed=seed + order_index + 1,
+            **batch_kwargs,
         ):
             if adapter.augment_batch is not None:
                 augmentation_seed = int(rng.integers(0, np.iinfo(np.int64).max, dtype=np.int64))
@@ -518,6 +540,32 @@ def _selection_loss(
     losses = [float(validation[metric])]
     losses.extend(float(metrics[metric]) for metrics in regressions.values())
     return float(np.mean(losses))
+
+
+def _optional_metric(
+    metrics: dict[str, Any],
+    name: str | None,
+) -> float | None:
+    return None if name is None else float(metrics[name])
+
+
+def _ranking_improved(
+    selection_loss: float,
+    accuracy: float,
+    tiebreak_loss: float | None,
+    state: TrainerState,
+) -> bool:
+    if state.best_ranking_loss is None:
+        return True
+    if selection_loss != state.best_ranking_loss:
+        return selection_loss < state.best_ranking_loss
+    best_accuracy = state.best_top1_accuracy
+    if best_accuracy is None or accuracy != best_accuracy:
+        return best_accuracy is None or accuracy > best_accuracy
+    if tiebreak_loss is None:
+        return False
+    best_tiebreak = state.best_ranking_tiebreak_loss
+    return best_tiebreak is None or tiebreak_loss < best_tiebreak
 
 
 def _evaluate_dataset(
@@ -618,7 +666,7 @@ def _build_run_manifest(
         str(config.init_model_dir.resolve()) if config.init_model_dir is not None else None
     )
     training["init_model_manifest_blake3"] = (
-        _checksum(config.init_model_dir / "model.json")
+        _checksum(config.init_model_dir / adapter.init_manifest_name)
         if config.init_model_dir is not None
         else None
     )

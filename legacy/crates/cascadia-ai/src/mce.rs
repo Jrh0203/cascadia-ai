@@ -2844,6 +2844,18 @@ pub fn nnue_prefilter_candidates(
     selected
 }
 
+/// Exact direct-policy ordering over the complete supplied candidate set.
+/// Unlike the search prefilter this does not apply diversity quotas or a
+/// top-K truncation; it exists for frozen-policy data generation and bridge
+/// parity where the best NNUE afterstate must be selected directly.
+pub fn rank_candidates_nnue_direct(
+    game: &GameState,
+    net: &NNUENetwork,
+    candidates: Vec<ScoredMove>,
+) -> Vec<ScoredMove> {
+    nnue_prefilter_with_priors(game, net, candidates, usize::MAX).0
+}
+
 /// Prefilter ensemble: extra NNUE checkpoints whose predictions are averaged
 /// with the primary net when scoring candidates. Gated by env var
 /// `MCE_PREFILTER_ENSEMBLE=<path1,path2,...>`. Loaded lazily per env-var
@@ -4196,6 +4208,30 @@ pub fn score_nnue_rollout_mce_seq_halving(
     candidates: Vec<ScoredMove>,
     rng: &mut StdRng,
 ) -> Vec<MceMoveEstimate> {
+    score_nnue_rollout_mce_seq_halving_impl(game, net, num_rollouts, candidates, rng, false)
+}
+
+/// Label-only exact-budget variant. Historical playing-strength controls retain
+/// the original allocator above; scientific labels use this path so the shared
+/// rollout count is literally the declared budget.
+pub fn score_nnue_rollout_mce_seq_halving_exact(
+    game: &GameState,
+    net: &NNUENetwork,
+    num_rollouts: usize,
+    candidates: Vec<ScoredMove>,
+    rng: &mut StdRng,
+) -> Vec<MceMoveEstimate> {
+    score_nnue_rollout_mce_seq_halving_impl(game, net, num_rollouts, candidates, rng, true)
+}
+
+fn score_nnue_rollout_mce_seq_halving_impl(
+    game: &GameState,
+    net: &NNUENetwork,
+    num_rollouts: usize,
+    candidates: Vec<ScoredMove>,
+    rng: &mut StdRng,
+    exact_budget: bool,
+) -> Vec<MceMoveEstimate> {
     let player = game.current_player;
     if candidates.is_empty() {
         return Vec::new();
@@ -4256,9 +4292,10 @@ pub fn score_nnue_rollout_mce_seq_halving(
     let num_rounds = (n_cands as f64).log2().ceil().max(1.0) as usize;
     let budget_per_round = (num_rollouts / num_rounds).max(n_cands);
     let mut alive: Vec<usize> = (0..n_cands).collect();
+    let mut spent = 0usize;
 
     for round in 0..num_rounds {
-        if alive.is_empty() {
+        if alive.is_empty() || (exact_budget && spent >= num_rollouts) {
             break;
         }
         let base_per = (budget_per_round / alive.len()).max(1);
@@ -4283,6 +4320,9 @@ pub fn score_nnue_rollout_mce_seq_halving(
             for _ in 0..pers[idx] {
                 work_items.push((ci, rng.gen()));
             }
+        }
+        if exact_budget {
+            work_items.truncate(num_rollouts.saturating_sub(spent));
         }
 
         let num_threads = thread::available_parallelism()
@@ -4312,6 +4352,7 @@ pub fn score_nnue_rollout_mce_seq_halving(
                 totals[ci] += score;
                 sumsq[ci] += score * score;
                 counts[ci] += 1;
+                spent += 1;
             }
         }
 
@@ -4330,6 +4371,58 @@ pub fn score_nnue_rollout_mce_seq_halving(
             alive = scored.into_iter().take(keep).map(|(ci, _)| ci).collect();
         }
     }
+
+    if exact_budget && spent < num_rollouts {
+        let winner = (0..n_cands)
+            .filter(|&index| counts[index] > 0)
+            .max_by(|&left, &right| {
+                (totals[left] as f64 / f64::from(counts[left]))
+                    .partial_cmp(&(totals[right] as f64 / f64::from(counts[right])))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+        if let Some(winner) = winner {
+            let work_items = (0..(num_rollouts - spent))
+                .map(|_| rng.gen::<u64>())
+                .collect::<Vec<_>>();
+            let num_threads = thread::available_parallelism()
+                .map(|value| value.get())
+                .unwrap_or(4);
+            let chunk_size = ((work_items.len() + num_threads - 1) / num_threads).max(1);
+            let handles = work_items
+                .chunks(chunk_size)
+                .map(|chunk| {
+                    let seeds = chunk.to_vec();
+                    let game = Arc::clone(&game_arc);
+                    let candidates = Arc::clone(&cands_arc);
+                    let net = Arc::clone(&net_arc);
+                    thread::spawn(move || {
+                        seeds
+                            .into_iter()
+                            .map(|seed| {
+                                run_nnue_rollout(
+                                    (*game).clone(),
+                                    player,
+                                    seed,
+                                    &candidates[winner],
+                                    &net,
+                                )
+                                .0
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect::<Vec<_>>();
+            for handle in handles {
+                for score in handle.join().unwrap() {
+                    totals[winner] += score;
+                    sumsq[winner] += score * score;
+                    counts[winner] += 1;
+                    spent += 1;
+                }
+            }
+        }
+    }
+    debug_assert!(!exact_budget || spent == num_rollouts);
 
     let mut scored: Vec<MceMoveEstimate> = candidates
         .iter()

@@ -4,5 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+blake3.workspace = true
 cascadia-data = { path = "../cascadia-data" }
+cascadia-game = { path = "../cascadia-game" }
+cascadia-r2 = { path = "../cascadia-r2" }
+memmap2 = "0.9"
+serde.workspace = true
+serde_json.workspace = true
+tempfile = "3"
 thiserror.workspace = true
+zerocopy.workspace = true

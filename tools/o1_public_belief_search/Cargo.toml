@@ -1,0 +1,20 @@
+[package]
+name = "o1-public-belief-search"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+blake3 = "1.8"
+cascadia-ai = { path = "../../legacy/crates/cascadia-ai", features = ["mid-features", "v4-opp"] }
+cascadia-data = { path = "../../crates/cascadia-data" }
+cascadia-differential = { path = "../../crates/cascadia-differential", features = ["legacy-teacher"] }
+cascadia-game = { path = "../../crates/cascadia-game" }
+cascadia-model = { path = "../../crates/cascadia-model" }
+cascadia-sim = { path = "../../crates/cascadia-sim" }
+clap = { version = "4", features = ["derive"] }
+rayon = "1.11"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+
+[workspace]

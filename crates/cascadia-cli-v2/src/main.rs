@@ -9,6 +9,7 @@ mod pattern_potential;
 mod policy_commands;
 mod public_beam_data_commands;
 mod public_beam_probe;
+mod r2_map_commands;
 mod ranking_data;
 mod ranking_data_commands;
 mod ranking_model_commands;
@@ -160,6 +161,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         | Command::AuditCounterfactualValueDataset { .. }
         | Command::AuditCounterfactualAdvantageDataset { .. }) => {
             basic_data_commands::run(command)?;
+        }
+        command @ (Command::CollectR2MapBootstrap { .. }
+        | Command::CollectR2MapIteration { .. }
+        | Command::ValidateR2MapCollector { .. }
+        | Command::InspectR2MapIndexMetadata { .. }
+        | Command::ExportR2MapDataset { .. }
+        | Command::ServeR2MapPackedBatches { .. }
+        | Command::PrepareR2MapServingBundle { .. }
+        | Command::InitR2MapLongitudinalOpenPanel { .. }
+        | Command::InitR2MapLongitudinalCampaign { .. }
+        | Command::InitR2MapFocalCampaign { .. }
+        | Command::RunR2MapLongitudinalWorkItem { .. }
+        | Command::AggregateR2MapLongitudinal { .. }
+        | Command::RunR2MapFocalWorkItem { .. }
+        | Command::AggregateR2MapFocal { .. }) => {
+            r2_map_commands::run(command)?;
         }
         command @ (Command::CollectRanking { .. }
         | Command::CollectTerminalRanking { .. }

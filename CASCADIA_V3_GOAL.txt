@@ -1,0 +1,13 @@
+Execute Cascadia V3 strictly from docs/v3/CASCADIA_V3_RESEARCH_SPEC.md and the immutable state under /Users/johnherrick/cascadia-bench/v3-nnue.
+
+Use John1 as the sole source, image, artifact, MLX-training, and aggregation authority. Build one canonical Docker image on John1 and submit independent CPU work to Bacalhau without choosing hosts or hand-sharding ranges. John4 must remain dashboard-visible and receive no campaign compute.
+
+First complete Part 1 only: the clean-sheet radius-7 plus exact-overflow representation, collision-free FullOpportunities features and train-only coalesced factors, fixed SFNNv13-style quantized network, deterministic CSR MLX/QAT trainer, exact-resume checkpoints, scalar/NEON/MLX parity, exhaustive direct/K32-R64/K32-R600 search, compact replay data, campaign state machine, dashboard, Docker/Bacalhau integration, two measured MLX and gameplay optimization passes, and all bounded smoke qualifications.
+
+Use only the 2,000-game engineering_smoke domain in Part 1. It is permanently excluded from science. Do not open protected seeds, collect bootstrap data, start a scientific origin, or reserve the cluster for Part 2.
+
+At the end of Part 1, write the complete readiness package, transition to awaiting_phase2_approval, show “Part 1 complete — awaiting John” on the dashboard, and stop. Report every green/red gate honestly and provide the exact readiness-manifest checksum. Phase 2 may begin only after John supplies that checksum in an explicit authorization command.
+
+After such approval only, execute the specified 500,000-game bootstrap, three origins, exactly ten expert-iteration cycles, paired sequential promotions, protected 250-pair comparison, and 1,000/4,000 all-V3 evaluation. Resume verified work after failure and never restart completed work unnecessarily.
+
+Use no subagents. Preserve unrelated files and existing user work.

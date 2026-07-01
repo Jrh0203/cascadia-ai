@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-direct-rollout-template-preparation-acceptance-v1-20260615",
+  "status": "accepted",
+  "phase": 0,
+  "hypothesis": "The qualified exact rollout pipeline has effectively no complete-public-state template reuse, so direct uncached template construction and immediate consumption can remove exact-key grouping, duplicate cache-key construction, indirection, and template cloning without changing behavior.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "pipeline_chunk_states": 96,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "reuse_audit": {
+    "template_requests": 440239,
+    "unique_exact_public_states": 440227,
+    "reusable_requests": 12,
+    "reuse_percent": 0.0027257919502815517
+  },
+  "implementation": {
+    "direct_function": "prepare_nnue_move_direct_mut",
+    "qualified_public_state_grouping_retained": false,
+    "qualified_template_cache_retained": false,
+    "scalar_and_synchronous_cache_retained": true,
+    "release_runtime_switch_retained": false,
+    "production_source_binary_sha256": "988729125ab6156aff50893aa87ff87687066a1e52f7f8ec3aebe374b00edc9a",
+    "source_treatment_capable_binary_sha256": "66d49fa0af78c104236b6f0937c22c3acea4d89628209a7859dd4bdba6f5829a"
+  },
+  "correctness": {
+    "direct_vs_cached_complete_games": 4,
+    "ordered_sparse_rows_identical": true,
+    "predictions_identical": true,
+    "selected_actions_identical": true,
+    "rollout_samples_identical": true,
+    "default_library_tests": {
+      "cascadia_ai_passed": 85,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "mid_v4_library_tests": {
+      "cascadia_ai_passed": 86,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "python_exact_tests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "frozen_diagnostics": {
+      "scores": [
+        102,
+        96,
+        92,
+        95
+      ],
+      "mean_score": 96.25,
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "physical_neural_rows": 5062305,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "bootstrapped_samples": 0,
+      "policy_fallbacks": 0,
+      "clean_shutdown": true,
+      "source_runs_matching": 8,
+      "production_parity_runs_matching": 2,
+      "profile_training_runs_matching": 2,
+      "pgo_runs_matching": 8
+    }
+  },
+  "mechanism": {
+    "john2_previous_combined_preparation_milliseconds": 5106.105738,
+    "john2_direct_combined_preparation_milliseconds": 4506.035685,
+    "john2_reduction_percent": 11.75200992283093,
+    "john3_previous_combined_preparation_milliseconds": 5120.997131,
+    "john3_direct_combined_preparation_milliseconds": 4524.078099,
+    "john3_reduction_percent": 11.656304753356437
+  },
+  "source_screen": {
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 15.364301041,
+        "peak_rss_bytes": 102776832,
+        "peak_footprint_bytes": 59457968
+      },
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 15.168061084,
+        "peak_rss_bytes": 102924288,
+        "peak_footprint_bytes": 57639344
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.812041583,
+        "peak_rss_bytes": 102760448,
+        "peak_footprint_bytes": 63979976
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.691304458,
+        "peak_rss_bytes": 102842368,
+        "peak_footprint_bytes": 67125680
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 15.06892275,
+        "peak_rss_bytes": 102727680,
+        "peak_footprint_bytes": 58835376
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.981558416,
+        "peak_rss_bytes": 103104512,
+        "peak_footprint_bytes": 60129712
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.464383583,
+        "peak_rss_bytes": 102858752,
+        "peak_footprint_bytes": 64029104
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.42229125,
+        "peak_rss_bytes": 102940672,
+        "peak_footprint_bytes": 66044336
+      }
+    ],
+    "john2_control_mean_seconds": 15.2661810625,
+    "john2_treatment_mean_seconds": 14.7516730205,
+    "john2_improvement_percent": 3.3702472143727022,
+    "john3_control_mean_seconds": 15.025240583,
+    "john3_treatment_mean_seconds": 14.4433374165,
+    "john3_improvement_percent": 3.8728375980773477,
+    "combined_control_mean_seconds": 15.14571082275,
+    "combined_treatment_mean_seconds": 14.5975052185,
+    "combined_improvement_percent": 3.619543583431913,
+    "combined_speedup": 1.037554746242203,
+    "peak_rss_delta_percent": -0.031849669559678315,
+    "experimental_peak_footprint_delta_percent": 10.639854546933353,
+    "memory_interpretation": "Maximum RSS was flat to lower. The temporary footprint increase was present only while both experiment branches were linked; the production-only parity and final PGO runs removed it."
+  },
+  "pgo": {
+    "instrumented_binary_sha256": "1c8cfeb929ea02e2fd44816859f0554f7ad446db5abdbc33e7da7fb36f1c0f55",
+    "john2_training_seconds": 52.010683917,
+    "john3_training_seconds": 51.353683333,
+    "john2_profraw_sha256": "887082d7ec4fa31cddb0872ea9f5b4a1987e2bafa295afd306858de2c23e2005",
+    "john3_profraw_sha256": "e92dd030d13db1acb22c01ed49cbeabb80d448e268b452eda5e6c17b6b8d93ed",
+    "merged_profdata_sha256": "00562a54fc5edb4f715d1cf49ece828291c0f5b5efb1a4c1e28126e51224eba8",
+    "profile_functions": 5557,
+    "profile_blocks": 120282,
+    "john2_total_profile_count": 116174345305,
+    "john3_total_profile_count": 116174329882,
+    "absolute_profile_count_difference": 15423,
+    "production_binary_sha256": "b10c82b50bd4e226913e0cf73c6ae439769628ec849ac89d3d5b35be7a476269",
+    "accepted_control_binary_sha256": "f5c544b610eb9c77607b6cb818587c2ea43906ff6cdb3040722fae761a3117bd",
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 15.02145975,
+        "peak_rss_bytes": 102957056,
+        "peak_footprint_bytes": 66863536
+      },
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 15.041494042,
+        "peak_rss_bytes": 102973440,
+        "peak_footprint_bytes": 69435848
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.429918875,
+        "peak_rss_bytes": 103006208,
+        "peak_footprint_bytes": 58556848
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.569884833,
+        "peak_rss_bytes": 102629376,
+        "peak_footprint_bytes": 62390704
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.912029875,
+        "peak_rss_bytes": 102793216,
+        "peak_footprint_bytes": 61342128
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.826510583,
+        "peak_rss_bytes": 102842368,
+        "peak_footprint_bytes": 67142088
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.212190958,
+        "peak_rss_bytes": 102940672,
+        "peak_footprint_bytes": 58524056
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.120610292,
+        "peak_rss_bytes": 103022592,
+        "peak_footprint_bytes": 61800880
+      }
+    ],
+    "john2_control_mean_seconds": 15.031476896,
+    "john2_treatment_mean_seconds": 14.499901854,
+    "john2_improvement_percent": 3.536412593904572,
+    "john3_control_mean_seconds": 14.869270229,
+    "john3_treatment_mean_seconds": 14.166400625,
+    "john3_improvement_percent": 4.72699462162689,
+    "combined_control_mean_seconds": 14.9503735625,
+    "combined_treatment_mean_seconds": 14.3331512395,
+    "combined_improvement_percent": 4.128474251293478,
+    "combined_speedup": 1.0430625696112819,
+    "peak_rss_delta_percent": 0.007961783439490446,
+    "peak_footprint_delta_percent": -8.879368661805339
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-direct-rollout-template-preparation-v1",
+    "archive_ignored_by_git": true,
+    "worker_binary": "/tmp/cascadia-phase0/legacy-teacher-direct-template-pgo",
+    "worker_profile_directories": [
+      "/tmp/cascadia-phase0/pgo-direct-template-data-john2",
+      "/tmp/cascadia-phase0/pgo-direct-template-data-john3"
+    ]
+  },
+  "verdict": {
+    "accepted": true,
+    "reason": "Direct exact template preparation removed work whose measured reuse was effectively zero, cleared the source gate on both workers, and remained faster on both workers after fresh race-free PGO.",
+    "initial_reference_seconds": 141.027296,
+    "previous_accepted_seconds": 15.01887077075,
+    "accepted_seconds": 14.3331512395,
+    "improvement_vs_previous_accepted_percent": 4.565719631768004,
+    "total_speedup": 9.839238674280507,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_gap_seconds": 0.2304216395,
+    "additional_reduction_required_percent": 1.607613257194928,
+    "threshold_passed": false
+  }
+}

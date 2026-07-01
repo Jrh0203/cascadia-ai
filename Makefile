@@ -1,9 +1,12 @@
-.PHONY: bootstrap setup format format-check lint test cli-docs cli-docs-check performance-check performance-report mlx-device legacy-nnue-mlx-port legacy-nnue-mlx-convert legacy-nnue-mlx-fixture legacy-nnue-mlx-parity legacy-nnue-mlx-benchmark legacy-nnue-mlx-service legacy-nnue-mlx-exact-service legacy-nnue-mlx-rollout-parity legacy-nnue-mlx-gameplay-smoke legacy-nnue-mlx-gameplay-confirm final-strength-shard final-strength-aggregate rollout-value-smoke collect-rollout-value train-rollout-value resume-rollout-value rollout-joint-smoke collect-rollout-joint-validation train-rollout-joint resume-rollout-joint benchmark benchmark-research reproduce-research-requalification benchmark-smoke pattern-competition-smoke evaluate-pattern-competition pattern-portfolio-smoke evaluate-pattern-portfolio late-terminal-smoke late-terminal-confirm lookahead-benchmark lookahead-compare data-smoke ranking-data-smoke ranking-iteration-smoke terminal-ranking-smoke action-ranking-smoke imitation-smoke imitation-evidence-smoke imitation-evidence-parity conservative-advantage-smoke conservative-policy-smoke score-to-go-smoke score-to-go-hexgraph-smoke counterfactual-value-smoke counterfactual-advantage-smoke counterfactual-contrast-smoke collect-counterfactual-value-audit audit-counterfactual-value collect-counterfactual-advantage-audit audit-counterfactual-advantage collect-counterfactual-contrast-audit audit-counterfactual-contrast collect-r12-counterfactual-audit audit-r12-counterfactual collect-score-to-go-hexgraph-validation train-score-to-go-hexgraph benchmark-score-to-go-hexgraph resume-score-to-go-hexgraph public-beam-value-probe collect-public-beam-value collect-search collect-score-to-go collect-ranking collect-ranking-iteration collect-terminal-ranking enrich-action-ranking collect-action-ranking-test collect-imitation collect-imitation-evidence collect-imitation-score-residual-validation collect-imitation-test collect-conservative-advantage train-public-beam-value train-public-beam-set train-model train-search-value train-score-to-go resume-model train-smoke train-ranking train-ranking-iteration train-terminal-ranking train-action-ranking train-imitation train-imitation-distribution train-imitation-score-residual train-imitation-cross train-imitation-residual train-imitation-rotations train-conservative-advantage train-conservative-policy resume-ranking resume-imitation resume-imitation-distribution resume-imitation-score-residual ranking-train-smoke promote promote-public-beam-value promote-public-beam-set promote-search-value promote-ranking promote-ranking-iteration promote-terminal-ranking promote-action-ranking promote-imitation model-smoke public-beam-value-model-smoke public-beam-set-model-smoke evaluate-public-beam-value-test evaluate-public-beam-value evaluate-public-beam-set-test evaluate-model compare-model evaluate-ranking evaluate-ranking-iteration evaluate-terminal-ranking evaluate-action-ranking-test evaluate-imitation-test evaluate-conservative-advantage-test evaluate-conservative-policy-test evaluate-action-ranking evaluate-imitation evaluate-value-leaf web-dev web-build web-test build check
+.PHONY: bootstrap setup format format-check lint test cli-docs cli-docs-check performance-check performance-report mlx-device legacy-nnue-mlx-port legacy-nnue-mlx-convert legacy-nnue-mlx-fixture legacy-nnue-mlx-parity legacy-nnue-mlx-benchmark legacy-nnue-mlx-service legacy-nnue-mlx-exact-service legacy-nnue-mlx-rollout-parity legacy-nnue-mlx-gameplay-smoke legacy-nnue-mlx-gameplay-confirm legacy-nnue-mlx-full-strength-speed legacy-nnue-mlx-fast-screen final-strength-shard final-strength-aggregate rollout-value-smoke collect-rollout-value train-rollout-value resume-rollout-value rollout-joint-smoke collect-rollout-joint-validation train-rollout-joint resume-rollout-joint benchmark benchmark-research reproduce-research-requalification benchmark-smoke pattern-competition-smoke evaluate-pattern-competition pattern-portfolio-smoke evaluate-pattern-portfolio late-terminal-smoke late-terminal-confirm lookahead-benchmark lookahead-compare data-smoke ranking-data-smoke ranking-iteration-smoke terminal-ranking-smoke action-ranking-smoke imitation-smoke imitation-evidence-smoke imitation-evidence-parity conservative-advantage-smoke conservative-policy-smoke score-to-go-smoke score-to-go-hexgraph-smoke counterfactual-value-smoke counterfactual-advantage-smoke counterfactual-contrast-smoke collect-counterfactual-value-audit audit-counterfactual-value collect-counterfactual-advantage-audit audit-counterfactual-advantage collect-counterfactual-contrast-audit audit-counterfactual-contrast collect-r12-counterfactual-audit audit-r12-counterfactual collect-score-to-go-hexgraph-validation train-score-to-go-hexgraph benchmark-score-to-go-hexgraph resume-score-to-go-hexgraph public-beam-value-probe collect-public-beam-value collect-search collect-score-to-go collect-ranking collect-ranking-iteration collect-terminal-ranking enrich-action-ranking collect-action-ranking-test collect-imitation collect-imitation-evidence collect-imitation-score-residual-validation collect-imitation-test collect-conservative-advantage train-public-beam-value train-public-beam-set train-model train-search-value train-score-to-go resume-model train-smoke train-ranking train-ranking-iteration train-terminal-ranking train-action-ranking train-imitation train-imitation-distribution train-imitation-score-residual train-imitation-cross train-imitation-residual train-imitation-rotations train-conservative-advantage train-conservative-policy resume-ranking resume-imitation resume-imitation-distribution resume-imitation-score-residual ranking-train-smoke promote promote-public-beam-value promote-public-beam-set promote-search-value promote-ranking promote-ranking-iteration promote-terminal-ranking promote-action-ranking promote-imitation model-smoke public-beam-value-model-smoke public-beam-set-model-smoke evaluate-public-beam-value-test evaluate-public-beam-value evaluate-public-beam-set-test evaluate-model compare-model evaluate-ranking evaluate-ranking-iteration evaluate-terminal-ranking evaluate-action-ranking-test evaluate-imitation-test evaluate-conservative-advantage-test evaluate-conservative-policy-test evaluate-action-ranking evaluate-imitation evaluate-value-leaf web-dev web-build web-test build check
 .PHONY: imitation-parent-residual-smoke collect-imitation-parent-train-priors collect-imitation-parent-validation collect-imitation-parent-validation-priors train-imitation-parent-residual resume-imitation-parent-residual
 .PHONY: imitation-parent-hidden-smoke collect-imitation-parent-train-hidden collect-imitation-parent-hidden-validation collect-imitation-parent-validation-hidden train-imitation-parent-hidden resume-imitation-parent-hidden audit-imitation-identifiability
 .PHONY: exact-mlx-crn-qualification exact-mlx-crn-smoke exact-mlx-crn-pilot exact-mlx-crn-confirm
 .PHONY: counterfactual-ranker-smoke collect-r12-counterfactual-corpus train-r12-counterfactual-ranker resume-r12-counterfactual-ranker evaluate-r12-counterfactual-ranker evaluate-r12-counterfactual-test
-.PHONY: web-visual-report
+.PHONY: web-visual-report cluster-queue-status cluster-queue-validate cluster-queue-dispatch cluster-queue-run cluster-campaign-closeout
+.PHONY: graded-oracle-smoke collect-graded-oracle train-graded-oracle evaluate-graded-oracle-test
+.PHONY: docker-r2-map-build docker-r2-map-smoke docker-r2-map-bootstrap-smoke docker-r2-map-iteration-smoke
+.PHONY: cluster-fabric-install cluster-fabric-health cluster-fabric-test cluster-fabric-start-storage cluster-fabric-build-push cluster-fabric-canary
 
 V2_PACKAGES = -p cascadia-provenance -p cascadia-game -p cascadia-sim -p cascadia-eval -p cascadia-data -p cascadia-model -p cascadia-search -p cascadia-api -p cascadia-cli-v2
 HOST_TOOL_PATH := /opt/homebrew/bin:/usr/local/bin:/opt/homebrew/opt/rustup/bin:/usr/local/opt/rustup/bin:$(PATH)
@@ -12,6 +15,13 @@ NPM_BIN := $(or $(firstword $(wildcard /opt/homebrew/bin/npm /usr/local/bin/npm)
 NPM := /usr/bin/env PATH=$(HOST_TOOL_PATH) $(NPM_BIN)
 CARGO_BIN := $(or $(firstword $(wildcard /opt/homebrew/opt/rustup/bin/cargo /usr/local/opt/rustup/bin/cargo)),$(shell command -v cargo 2>/dev/null),cargo)
 CARGO := /usr/bin/env PATH=$(HOST_TOOL_PATH) $(CARGO_BIN)
+DOCKER ?= docker
+R2_MAP_IMAGE ?= cascadia-r2-map:dev
+R2_MAP_SMOKE_ROOT ?= /Users/johnherrick/cascadia-bench/r2-map-v1/smoke/docker
+CLUSTER_IMAGE_NAME ?= cascadia-r2-map
+CLUSTER_IMAGE_TAG ?= dev
+CLUSTER_IMAGE_RECEIPT ?= artifacts/cluster/images/$(CLUSTER_IMAGE_NAME)-$(CLUSTER_IMAGE_TAG).json
+SOURCE_REVISION ?= $(shell git rev-parse --verify HEAD 2>/dev/null || echo dirty-uncommitted)
 RUN_DIR ?= artifacts/runs/entity-value-v1
 MODEL_DIR ?= artifacts/models/entity-value-v1
 TRAIN_DATASET ?= artifacts/datasets/greedy-v1-train-256
@@ -62,6 +72,12 @@ ACTION_RANKING_MODEL_DIR ?= artifacts/models/action-delta-ranker-v1-terminal-r8
 ACTION_RANKING_TEST_GAMES ?= 16
 ACTION_RANKING_EPOCHS ?= 20
 ACTION_RANKING_GAMES ?= 10
+GRADED_ORACLE_SOURCE ?= artifacts/datasets/full-legal-screen-width-recovery-v1
+GRADED_ORACLE_TRAIN_DATASET ?= artifacts/datasets/complete-action-graded-oracle-v1-train
+GRADED_ORACLE_VALIDATION_DATASET ?= artifacts/datasets/complete-action-graded-oracle-v1-validation
+GRADED_ORACLE_TEST_DATASET ?= artifacts/datasets/complete-action-graded-oracle-v1-test
+GRADED_ORACLE_RUN_DIR ?= artifacts/runs/complete-action-graded-oracle-ranker-v1
+GRADED_ORACLE_EPOCHS ?= 20
 IMITATION_TRAIN_DATASET ?= artifacts/datasets/canonical-action-imitation-v1-train
 IMITATION_VALIDATION_DATASET ?= artifacts/datasets/canonical-action-imitation-v1-validation
 IMITATION_TEST_DATASET ?= artifacts/datasets/canonical-action-imitation-v1-test
@@ -137,6 +153,13 @@ LEGACY_NNUE_MLX_SERVICE_DIRECT_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-s
 LEGACY_NNUE_MLX_SERVICE_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-service-v1.json
 LEGACY_NNUE_MLX_EXACT_SERVICE_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-exact-csr-service-v1.json
 LEGACY_NNUE_MLX_ROLLOUT_REPORT ?= docs/v2/reports/legacy-nnue-v4opp-mlx-exact-rollout-wave-v1.json
+FULL_STRENGTH_SPEED_SEED ?= 34400
+FULL_STRENGTH_SPEED_ROLLOUTS ?= 600
+FULL_STRENGTH_SPEED_REPORT ?= /tmp/cascadia-full-strength-speed.json
+FAST_SCREEN_GAMES ?= 10
+FAST_SCREEN_FIRST_SEED ?= 34200
+FAST_SCREEN_ROLLOUTS ?= 600
+FAST_SCREEN_REPORT ?= /tmp/cascadia-exact-mlx-fast-screen.json
 FINAL_STRENGTH_OUTPUT_DIR ?= artifacts/final-strength/local
 FINAL_STRENGTH_FIRST_GAME_INDEX ?= 0
 FINAL_STRENGTH_GAMES ?= 1
@@ -144,6 +167,10 @@ FINAL_STRENGTH_ROLLOUTS ?= 600
 FINAL_STRENGTH_SHARDS ?= artifacts/final-strength/local
 FINAL_STRENGTH_REPORT ?= docs/v2/reports/final-strength-validation.json
 FINAL_STRENGTH_MARKDOWN ?= docs/v2/reports/final-strength-validation.md
+CLUSTER_QUEUE ?= artifacts/cluster/research-queue-v1.json
+CLUSTER_TELEMETRY ?= artifacts/cluster/telemetry-v1.jsonl
+CAMPAIGN_END ?= $(shell date +%s000)
+CAMPAIGN_REPORT ?= artifacts/cluster/campaign-closeout.json
 ROLLOUT_VALUE_SMOKE_DATASET ?= artifacts/datasets/exact-mlx-rollout-value-smoke-r32
 ROLLOUT_VALUE_TRAIN_DATASET ?= artifacts/datasets/exact-mlx-rollout-value-r600-train
 ROLLOUT_VALUE_VALIDATION_DATASET ?= artifacts/datasets/exact-mlx-rollout-value-r600-validation
@@ -160,6 +187,81 @@ setup:
 	$(UV) sync --all-groups
 	$(NPM) --prefix apps/web ci
 	$(NPM) --prefix apps/web run test:e2e:install
+
+cluster-fabric-install:
+	$(UV) run python tools/cluster_fabric_install.py
+
+cluster-fabric-health:
+	$(UV) run python tools/cluster_fabric_health.py
+
+cluster-fabric-test:
+	PYTHONPATH=python:tools $(UV) run pytest -q \
+		tests/cluster_unit tests/cluster_integration \
+		python/tests/test_r2_map_promote.py \
+		tools/test_cluster_fabric_install.py \
+		tools/test_cluster_build_push.py \
+		tools/test_cluster_storage_launcher.py \
+		tools/test_cluster_fabric_topology.py \
+		tools/test_cluster_legacy_freeze.py \
+		tools/test_r2_map_bacalhau_gate.py \
+		tools/test_r2_map_bootstrap_dashboard_watch.py \
+		tools/test_r2_map_gate_control.py \
+		tools/test_r2_map_focal_dashboard_watch.py
+
+cluster-fabric-start-storage:
+	CASCADIA_CLUSTER_ROOT=/Users/johnherrick/cascadia-bench/orchestrator \
+	DOCKER_HOST=unix:///Users/johnherrick/.local/share/cascadia-r2/colima/cascadia-r2/docker.sock \
+	/Users/johnherrick/cascadia-bench/orchestrator/bin/run-storage.zsh
+
+cluster-fabric-build-push:
+	$(UV) run python tools/cluster_build_push.py \
+		--context . --dockerfile Dockerfile --name $(CLUSTER_IMAGE_NAME) \
+		--tag $(CLUSTER_IMAGE_TAG) --receipt $(CLUSTER_IMAGE_RECEIPT)
+
+cluster-fabric-canary:
+	$(UV) run pytest -q -m integration tests/cluster_integration
+
+docker-r2-map-build:
+	$(DOCKER) build --platform linux/arm64 \
+		--build-arg SOURCE_REVISION=$(SOURCE_REVISION) \
+		--build-arg IMAGE_TAG=$(R2_MAP_IMAGE) \
+		--tag $(R2_MAP_IMAGE) .
+
+docker-r2-map-smoke:
+	$(DOCKER) run --rm --network none --read-only --cap-drop ALL \
+		--security-opt no-new-privileges --pids-limit 64 \
+		--memory 512m --cpus 2 $(R2_MAP_IMAGE) --version
+
+docker-r2-map-bootstrap-smoke:
+	mkdir -p $(R2_MAP_SMOKE_ROOT)
+	$(DOCKER) run --rm --network none --read-only --cap-drop ALL \
+		--user $(shell id -u):$(shell id -g) \
+		--security-opt no-new-privileges --pids-limit 256 \
+		--memory 4g --cpus 8 \
+		--mount type=bind,src=$(R2_MAP_SMOKE_ROOT),dst=/output \
+		$(R2_MAP_IMAGE) collect-r2-map-bootstrap \
+		--output /output/bootstrap --campaign-id r2-map-expert-iteration-v1 \
+		--iteration 0 --host john1 --first-game-index 0 --games 1 --shard-games 1 \
+		--collector-hash 1111111111111111111111111111111111111111111111111111111111111111 \
+		--source-hash 2222222222222222222222222222222222222222222222222222222222222222 \
+		--serving-protocol-hash 3333333333333333333333333333333333333333333333333333333333333333 \
+		--resume
+
+docker-r2-map-iteration-smoke:
+	mkdir -p $(R2_MAP_SMOKE_ROOT)
+	$(DOCKER) run --rm --network none --read-only --cap-drop ALL \
+		--user $(shell id -u):$(shell id -g) \
+		--security-opt no-new-privileges --pids-limit 256 \
+		--memory 8g --cpus 8 \
+		--mount type=bind,src=$(R2_MAP_SMOKE_ROOT),dst=/output \
+		$(R2_MAP_IMAGE) collect-r2-map-iteration \
+		--output /output/iteration-reference --campaign-id r2-map-expert-iteration-v1 \
+		--iteration 1 --host john1 --first-game-index 100000 --games 1 --shard-games 1 \
+		--temperature-parts-per-million 1000000 --exact-score-reference \
+		--collector-hash 1111111111111111111111111111111111111111111111111111111111111111 \
+		--source-hash 2222222222222222222222222222222222222222222222222222222222222222 \
+		--serving-protocol-hash 3333333333333333333333333333333333333333333333333333333333333333 \
+		--resume
 
 format:
 	$(CARGO) fmt --all
@@ -249,6 +351,14 @@ legacy-nnue-mlx-gameplay-smoke:
 legacy-nnue-mlx-gameplay-confirm:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
 	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-productive-token-compare --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 10 --first-seed 32600 --rollouts 600 --weights $(IMITATION_WEIGHTS) --output docs/v2/reports/legacy-nnue-v4opp-exact-mlx-gameplay-confirm10.json
+
+legacy-nnue-mlx-full-strength-speed:
+	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-productive-token-compare --server-program $(UV) --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games 1 --first-seed $(FULL_STRENGTH_SPEED_SEED) --rollouts $(FULL_STRENGTH_SPEED_ROLLOUTS) --weights $(IMITATION_WEIGHTS) --output $(FULL_STRENGTH_SPEED_REPORT)
+
+legacy-nnue-mlx-fast-screen:
+	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
+	MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 target/release/legacy-teacher exact-mlx-productive-token-compare --server-program $(UV) --model-dir $(LEGACY_NNUE_MLX_MODEL_DIR) --games $(FAST_SCREEN_GAMES) --first-seed $(FAST_SCREEN_FIRST_SEED) --rollouts $(FAST_SCREEN_ROLLOUTS) --rollout-turns 2 --rollout-leaf-timing after-focal-move --weights $(IMITATION_WEIGHTS) --output $(FAST_SCREEN_REPORT)
 
 final-strength-shard:
 	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin legacy-teacher
@@ -379,6 +489,15 @@ action-ranking-smoke:
 	$(UV) run cascadia-mlx-action-ranking-train --train-dataset /tmp/cascadia-v2-action-ranking-smoke/train --validation-dataset /tmp/cascadia-v2-action-ranking-smoke/validation --run-dir /tmp/cascadia-v2-action-ranking-smoke/run --epochs 1 --group-batch-size 8 --checkpoint-steps 2 --hidden-dim 32 --attention-heads 4 --board-blocks 0 --market-blocks 0 --validation-patience 2
 	$(UV) run cascadia-mlx-action-ranking-evaluate --run-dir /tmp/cascadia-v2-action-ranking-smoke/run --test-dataset /tmp/cascadia-v2-action-ranking-smoke/test --group-batch-size 8
 	target/release/cascadia-v2 action-ranking-model-compare --run-dir /tmp/cascadia-v2-action-ranking-smoke/run --games 1 --first-seed 25699 --policy-candidates 2 --policy-habitat-candidates 1 --policy-bear-candidates 1 --policy-market-draws 2
+
+graded-oracle-smoke:
+	rm -rf /tmp/cascadia-v2-graded-oracle-smoke
+	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin full-legal-audit
+	target/release/full-legal-audit export-graded-oracle --input $(GRADED_ORACLE_SOURCE)/john1/seed-61000.json --output /tmp/cascadia-v2-graded-oracle-smoke/train --split train
+	target/release/full-legal-audit export-graded-oracle --input $(GRADED_ORACLE_SOURCE)/john1/seed-61000.json --output /tmp/cascadia-v2-graded-oracle-smoke/validation --split validation
+	target/release/full-legal-audit export-graded-oracle --input $(GRADED_ORACLE_SOURCE)/john1/seed-61000.json --output /tmp/cascadia-v2-graded-oracle-smoke/test --split test
+	$(UV) run cascadia-mlx-graded-oracle-train --train-dataset /tmp/cascadia-v2-graded-oracle-smoke/train --validation-dataset /tmp/cascadia-v2-graded-oracle-smoke/validation --run-dir /tmp/cascadia-v2-graded-oracle-smoke/run --epochs 1 --group-batch-size 1 --checkpoint-steps 40 --hidden-dim 32 --attention-heads 4 --board-blocks 0 --market-blocks 0 --validation-patience 2
+	$(UV) run cascadia-mlx-graded-oracle-evaluate --run-dir /tmp/cascadia-v2-graded-oracle-smoke/run --test-dataset /tmp/cascadia-v2-graded-oracle-smoke/test
 
 imitation-smoke:
 	rm -rf /tmp/cascadia-v2-imitation-smoke
@@ -692,6 +811,22 @@ train-terminal-ranking:
 train-action-ranking:
 	$(UV) run cascadia-mlx-action-ranking-train --train-dataset $(ACTION_RANKING_TRAIN_DATASET) --validation-dataset $(ACTION_RANKING_VALIDATION_DATASET) --run-dir $(ACTION_RANKING_RUN_DIR) --epochs $(ACTION_RANKING_EPOCHS) --group-batch-size 16 --validation-patience 5 --learning-rate 0.0001 --weight-decay 0.0001
 
+collect-graded-oracle:
+	rm -rf $(GRADED_ORACLE_TRAIN_DATASET) $(GRADED_ORACLE_VALIDATION_DATASET) $(GRADED_ORACLE_TEST_DATASET)
+	$(CARGO) build --release -p cascadia-differential --features legacy-teacher --bin full-legal-audit
+	target/release/full-legal-audit export-graded-oracle $(foreach seed,61000 61001 61002 61003 61004,--input $(GRADED_ORACLE_SOURCE)/john1/seed-$(seed).json) $(foreach seed,61005 61006 61007 61008,--input $(GRADED_ORACLE_SOURCE)/john2/seed-$(seed).json) --output $(GRADED_ORACLE_TRAIN_DATASET) --split train
+	target/release/full-legal-audit export-graded-oracle $(foreach seed,61009 61010,--input $(GRADED_ORACLE_SOURCE)/john3/seed-$(seed).json) --output $(GRADED_ORACLE_VALIDATION_DATASET) --split validation
+	target/release/full-legal-audit export-graded-oracle $(foreach seed,61011 61012,--input $(GRADED_ORACLE_SOURCE)/john3/seed-$(seed).json) --output $(GRADED_ORACLE_TEST_DATASET) --split test
+	target/release/full-legal-audit validate-graded-oracle --dataset $(GRADED_ORACLE_TRAIN_DATASET)
+	target/release/full-legal-audit validate-graded-oracle --dataset $(GRADED_ORACLE_VALIDATION_DATASET)
+	target/release/full-legal-audit validate-graded-oracle --dataset $(GRADED_ORACLE_TEST_DATASET)
+
+train-graded-oracle:
+	$(UV) run cascadia-mlx-graded-oracle-train --train-dataset $(GRADED_ORACLE_TRAIN_DATASET) --validation-dataset $(GRADED_ORACLE_VALIDATION_DATASET) --run-dir $(GRADED_ORACLE_RUN_DIR) --epochs $(GRADED_ORACLE_EPOCHS) --group-batch-size 1 --validation-patience 5 --learning-rate 0.00003 --weight-decay 0.0001 --seed 20260615
+
+evaluate-graded-oracle-test:
+	$(UV) run cascadia-mlx-graded-oracle-evaluate --run-dir $(GRADED_ORACLE_RUN_DIR) --test-dataset $(GRADED_ORACLE_TEST_DATASET) --group-batch-size 1
+
 train-imitation:
 	$(UV) run cascadia-mlx-imitation-train --train-dataset $(IMITATION_TRAIN_DATASET) --validation-dataset $(IMITATION_VALIDATION_DATASET) --run-dir $(IMITATION_RUN_DIR) --epochs $(IMITATION_EPOCHS) --group-batch-size 16 --validation-patience 5 --learning-rate 0.0001 --weight-decay 0.0001
 
@@ -865,6 +1000,33 @@ web-test:
 
 web-visual-report:
 	CASCADIA_VISUAL_REPORT_DIR=../../docs/v2/reports $(NPM) --prefix apps/web run test:e2e
+
+cluster-queue-status:
+	PYTHONPATH=tools .venv/bin/python tools/cluster_research_queue.py \
+		--queue $(CLUSTER_QUEUE) status
+
+cluster-queue-validate:
+	PYTHONPATH=tools .venv/bin/python tools/cluster_research_queue.py \
+		--queue $(CLUSTER_QUEUE) validate
+
+cluster-queue-dispatch:
+	test -n "$(HOST)"
+	PYTHONPATH=tools .venv/bin/python tools/cluster_research_queue.py \
+		--queue $(CLUSTER_QUEUE) dispatch --host $(HOST)
+
+cluster-queue-run:
+	PYTHONPATH=tools .venv/bin/python tools/cluster_research_queue.py \
+		--queue $(CLUSTER_QUEUE) run-coordinator \
+		--hosts john1 john2 john3 john4
+
+cluster-campaign-closeout:
+	test -n "$(CAMPAIGN_START)"
+	PYTHONPATH=tools .venv/bin/python tools/cluster_campaign_closeout.py \
+		--queue $(CLUSTER_QUEUE) \
+		--telemetry $(CLUSTER_TELEMETRY) \
+		--start-unix-ms $(CAMPAIGN_START) \
+		--end-unix-ms $(CAMPAIGN_END) \
+		--output $(CAMPAIGN_REPORT)
 
 build:
 	$(NPM) --prefix apps/web run build

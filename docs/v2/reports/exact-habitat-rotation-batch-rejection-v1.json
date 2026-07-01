@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-habitat-rotation-batch-rejection-v1-20260615",
+  "status": "rejected",
+  "phase": 0,
+  "hypothesis": "Resolve each prepared frontier neighbor's current habitat root and size once, then evaluate all six dual-terrain rotations from the immutable snapshot.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false
+  },
+  "measurements": [
+    {
+      "host": "john2",
+      "order": [
+        "control",
+        "treatment"
+      ],
+      "control_seconds": 15.699866417,
+      "treatment_seconds": 15.882818208,
+      "treatment_delta_seconds": 0.18295179099999892,
+      "speedup": 0.988481150599089
+    },
+    {
+      "host": "john3",
+      "order": [
+        "treatment",
+        "control"
+      ],
+      "control_seconds": 16.054097125,
+      "treatment_seconds": 16.072541625,
+      "treatment_delta_seconds": 0.018444500000001085,
+      "speedup": 0.9988524216996699
+    }
+  ],
+  "combined": {
+    "control_mean_seconds": 15.876981771,
+    "treatment_mean_seconds": 15.9776799165,
+    "treatment_delta_seconds": 0.10069814549999911,
+    "speedup": 0.993697573989074,
+    "speedup_percent": -0.630242601092601
+  },
+  "exactness": {
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown": true,
+    "core_habitat_preview_tests_passed": 3,
+    "greedy_parity_tests_passed": 3
+  },
+  "artifacts": {
+    "control_binary_sha256": "5ce8c0c346ddabf8387f17b0cc5f2357600017f90e9a150f9dc5e462582f06f5",
+    "treatment_binary_sha256": "4cb1988ce2dd2bc1773d5401833374a54f1a20ab56785fced767d066a2c94b9e",
+    "source_removed_after_rejection": true
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The current union-find trees are shallow. Fixed-array initialization and six batched passes exceeded the cost of repeated readonly root walks, producing a cross-host end-to-end regression.",
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_passed": false
+  }
+}

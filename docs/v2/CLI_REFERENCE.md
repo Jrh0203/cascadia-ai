@@ -2,6 +2,84 @@
 
 Generated from the typed Clap schema. Regenerate with `make cli-docs`.
 
+## `opponent_intent_collect`
+
+The standalone O1 collector creates and validates compact policy-held-out
+sequential datasets.
+
+```text
+Usage:
+  opponent_intent_collect collect --output PATH --split SPLIT
+    --first-game-index N --games N --shard-games N --cohort-id ID
+    --policy-pool IDS [--required-policy ID] [--resume]
+  opponent_intent_collect validate --dataset PATH
+
+SPLIT: train, validation, test, final
+IDS: comma-separated random, greedy, pattern-aware, pattern-commitment,
+     pattern-competition, pattern-portfolio
+```
+
+Collection validates the complete dataset before returning success. Resume is
+accepted only when schema, split, range, cohort, source, and executable
+provenance match exactly.
+
+## `opponent_intent_policy_corpus_audit`
+
+The standalone O1 corpus auditor validates all five frozen policy cohorts,
+measures action and survival support, proves forbidden-field exclusion from
+model inputs, and rejects exact model-input overlap.
+
+```text
+Usage:
+  opponent_intent_policy_corpus_audit \
+    --dataset train-part-0=PATH \
+    --dataset train-part-1=PATH \
+    --dataset validation=PATH \
+    --dataset test=PATH \
+    --dataset final-stress=PATH \
+    --output PATH
+```
+
+The audit is deterministic over immutable corpus bytes. Production closeout
+runs it on two distinct Macs with the same executable and corpus tree, then
+requires exact scientific JSON and BLAKE3 agreement.
+
+## Full-Legal Research Binary
+
+The exact full-legal audit and public-oracle experiments use the separately
+feature-gated binary:
+
+```bash
+cargo build --release -p cascadia-differential \
+  --features legacy-teacher --bin full-legal-audit
+```
+
+Run a paired public-oracle shard:
+
+```bash
+MCE_LMR=1 MCE_DIVERSE_PREFILTER=1 \
+./target/release/full-legal-audit oracle-compare \
+  --model-dir artifacts/models/legacy-nnue-v4opp-mlx-v1 \
+  --games 4 --first-seed 62000 --worker john1 \
+  --output artifacts/experiments/full-legal-public-oracle-v1/john1.json
+```
+
+Strictly validate and merge distributed shards:
+
+```bash
+./target/release/full-legal-audit oracle-merge \
+  --input artifacts/experiments/full-legal-public-oracle-v1/john1.json \
+  --input artifacts/experiments/full-legal-public-oracle-v1/john2.json \
+  --input artifacts/experiments/full-legal-public-oracle-v1/john3.json \
+  --expected-first-seed 62000 --expected-games 12 \
+  --output docs/v2/reports/full-legal-public-oracle-v1-pilot12.json \
+  --markdown-output docs/v2/reports/full-legal-public-oracle-v1-pilot12.md
+```
+
+The merger rejects incomplete coverage, overlapping seeds, dirty service
+shutdowns, fallbacks, bootstrapped samples, and executable, model,
+configuration, or source-root identity mismatches.
+
 ## Top Level
 
 ```text
@@ -1672,3 +1750,339 @@ Options:
       --output <OUTPUT>                                          
   -h, --help                                                     Print help
 ```
+
+## O1 opponent-intent MLX factorial
+
+The research runner is installed as `cascadia-mlx-opponent-intent` and is also
+available through:
+
+```bash
+.venv/bin/python -m cascadia_mlx.opponent_intent_experiment --help
+```
+
+Subcommands:
+
+- `authorize`: bind the two train roles, open validation, corpus
+  classification, train-only priors, graph, and initialization;
+- `verify-authorization`: rebuild all authorization fields without creating an
+  optimizer or run directory;
+- `run`: train one primary or replay arm with exact checkpoints and validation
+  evidence;
+- `classify`: require all eight crossed-host reports, models, and evidence
+  files before applying frozen validation gates;
+- `evaluate-selected`: leave sealed roles unopened after a null, or compare the
+  selected treatment with A0 once on test and then descriptive final stress.
+
+Production runs require exactly two `--train-dataset` arguments. Policy IDs,
+physical tile IDs, future actions, and final scores are never accepted as
+model inputs.
+
+## R2-MAP deterministic campaign controller
+
+`tools/r2_map_expert_iteration.py` adapts immutable R2-MAP work packets to the
+existing `cluster_research_queue.py` and `cluster_experiment_ledger.py`. It is
+not a second scheduler. ADR 0195 makes John2's internal APFS root canonical.
+Canonical controller commands run on John2 (or through a fixed authenticated
+SSH invocation) with this environment:
+
+```bash
+export PYTHONDONTWRITEBYTECODE=1
+export R2_MAP_CAMPAIGN_ROOT=/Users/john2/cascadia-bench/r2-map-v1
+export PYTHONPYCACHEPREFIX=$R2_MAP_CAMPAIGN_ROOT/tmp/pycache
+export TMPDIR=$R2_MAP_CAMPAIGN_ROOT/tmp
+export CARGO_TARGET_DIR=$R2_MAP_CAMPAIGN_ROOT/build/cargo-target
+export UV_CACHE_DIR=$R2_MAP_CAMPAIGN_ROOT/cache/uv
+```
+
+Commands:
+
+- `advance-phase`: prove the current receipt barrier, CAS the campaign state,
+  create immutable packets, and atomically add their DAG to the existing queue;
+- `import-work-receipt`: accept a receipt only from its registered
+  `incoming-receipts/john1|john2|john3` directory after the queue task completes;
+- `import-benchmark-feed`: verify that a deterministic compact ledger feed is
+  uniquely path/SHA-bound by an already imported John1 benchmark-aggregate
+  receipt, compare-and-swap the current campaign state, stamp the receipt's
+  completion time in memory, and idempotently upsert through the existing
+  locked ledger;
+- `phase-barrier`: require every packet task and immutable receipt;
+- `reconcile-controller`: validate packet/queue identities, expire stale
+  claims, repair the ledger projection, and publish dashboard inputs;
+- `recover-phase`: reconstruct deterministic packets after a crash between
+  state CAS, packet installation, queue update, and ledger projection; and
+- `w6-dry-run`: exercise bootstrap, rejection, and promotion transition shapes
+  using only an isolated John2 root and synthetic receipts.
+
+`advance-phase` and `recover-phase` require a reviewed JSON command manifest
+mapping every operation in the next phase to an argv array. Commands, fixed
+host, state hash, phase intent, seed lease, retry ceiling, outputs, and gates
+are included in the packet hash. `/usr/bin/true` is rejected outside the
+explicit isolated dry-run path.
+
+No operator may edit the queue, ledger, campaign state, packet, or imported
+receipt by hand. A stale or partial projection is repaired with
+`recover-phase`/`reconcile-controller`; identity drift fails closed.
+
+### Headless goal supervisor
+
+`tools/r2_map_headless_resume.sh` runs Codex from John1 but stores no turn
+output locally. Anonymous pipes stream the JSONL event log and stderr directly
+to canonical John2 `logs/headless/`; owner/lease, stop check, and terminal
+sentinel are remote control objects. Every write uses the
+content-addressed remote worker's bounded `put-stream` operation and verified
+receipt; the runner lock uses its expiring lease API. The underlying transport
+uses batch-authenticated, strict-host-key SSH and never names
+`/Volumes/John_1`.
+
+`tools/r2_map_headless_turn.py` owns both anonymous-pipe sinks and the Codex
+child for one turn. It drains sink diagnostics concurrently, bounds retained
+diagnostics, hashes the bytes copied into each sink, and requires each
+authenticated result to match the exact remote path, byte count, mode `0400`,
+stream SHA-256, and storage-receipt locator/SHA-256. An early or nonzero sink,
+broken pump, oversized diagnostic, malformed receipt, or receipt mismatch
+terminates the Codex child and exits `74`; the supervisor never advances the
+turn counter. The multiplexer also watches the independent remote-lock
+heartbeat PID and terminates Codex if lease renewal stops. Shell process
+substitutions are intentionally not used because zsh does not propagate a
+process-substitution exit through the foreground command's status or a later
+bare `wait`.
+
+```bash
+tmux new-session -d -s cascadia-r2-headless \
+  'cd /Users/johnherrick/cascadia && exec tools/r2_map_headless_resume.sh'
+
+tmux capture-pane -pt cascadia-r2-headless
+```
+
+The pane prints the immutable `SESSION_RUN_ID`. Inspect a completed turn without
+a local file using `tools/r2_map_remote_storage.py fetch --relative
+logs/headless/SESSION_RUN_ID/turn-NNNN.jsonl`.
+
+Request a clean stop before the next turn by atomically installing
+`control/headless-STOP` on John2. Do not create a terminal sentinel merely to
+stop the supervisor. The runner renews its content-addressed lease every five
+minutes; a crashed runner can be replaced only after that lease expires or an
+identity-bound release succeeds.
+
+```bash
+printf 'operator stop requested\n' | PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=python \
+  .venv/bin/python tools/r2_map_remote_storage.py put-stream \
+  --relative control/headless-STOP --max-bytes 1024
+```
+
+After the aggregate work receipt is imported, centralize its deterministic
+ledger feed without changing the feed or scientific report bytes:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/r2_map_expert_iteration.py \
+  import-benchmark-feed \
+  --feed /Users/john2/cascadia-bench/r2-map-v1/benchmarks/ROUND/projections/ledger-experiment.json \
+  --aggregate-task-id TASK_ID \
+  --expected-state-sha256 CURRENT_STATE_SHA256
+```
+
+The feed must use zero placeholder times and a distinct completed experiment
+ID. Only the controller-authorized John2 canonical import replaces those
+placeholders, using the immutable
+aggregate receipt's `completed_unix_ms`; it appends the feed and receipt hashes
+to the ledger note. A stale state hash, nonterminal queue task, non-John1
+aggregate, path escape, duplicate binding, byte tamper, or invalid ledger
+object is rejected.
+
+## R2-MAP topology-free serving and benchmark work items
+
+The active distributed path is `tools/r2_map_bacalhau_gate.py`, documented in
+[`R2_MAP_EXPERT_ITERATION_RESEARCH_PLAN.md`](R2_MAP_EXPERT_ITERATION_RESEARCH_PLAN.md).
+It stages content-addressed inputs, submits one independent `pair-NNNN` job per
+registered pair by immutable image digest, imports validated MinIO outputs, and
+aggregates in a container. Callers never pass a host, worker root, SSH command,
+compatibility list, parity split, or manual lease.
+
+The Rust benchmark path uses the verified exhaustive R2-MAP service directly;
+it never prunes actions. Checkpoint-controlled turns use sequential public
+market decisions: free-replacement keep/replace, then one stop-or-single-wipe
+decision per reveal, then the exhaustive draft. Benchmark selection is argmax
+at every stage, and the canonical replay action retains the full ordered
+prelude so every paid wipe is independently auditable. No future refill may be
+observed before its choice is committed. Optional market actions are derived
+from visible wildlife plus per-species public bag counts and must be executable
+for every consistent hidden order; partial public legal sets fail closed.
+Serving bundle v2 also binds collector, source, and serving-protocol hashes and
+rejects stale identities. The v3 live draft response carries only the four
+consumed tensors (action score, score-to-go, 11 components, bootstrap logits),
+while checkpoint fixed panels retain every training-only auxiliary head.
+Canonical bundles, checkpoints, source, and images are prepared on John1.
+Workers receive only immutable content-addressed inputs and the John1-built
+image digest through Bacalhau. Preparing the canonical frozen model registry:
+
+```bash
+cargo run -p cascadia-cli-v2 -- prepare-r2-map-serving-bundle \
+  --host john1 \
+  --output /Users/johnherrick/cascadia-bench/r2-map-v1/bundles/c0.json \
+  --checkpoint /Users/johnherrick/cascadia-bench/r2-map-v1/runs/RUN/checkpoints/CHECKPOINT
+```
+
+The command reconstructs every compact identity from the schema-v2 checkpoint
+and standalone verification receipt, writes one immutable bundle, then asks
+both Rust and Python-compatible bundle validation to verify it. Pass
+`--checkpoint` more than once for a candidate plus its frozen historical pool.
+
+Initialize the non-protected W0 fixed-100 longitudinal panel:
+
+```bash
+cargo run -p cascadia-cli-v2 -- init-r2-map-longitudinal-open-panel \
+  --root /Users/johnherrick/cascadia-bench/r2-map-v1/benchmarks/open-r0 \
+  --reference-panel-manifest /Users/johnherrick/cascadia-bench/r2-map-v1/control/w0-preregistration/reference-panel-manifest-v1.1.json \
+  --reference-panel-registration /Users/johnherrick/cascadia-bench/r2-map-v1/control/w0-preregistration/registration-v1.1.json \
+  --benchmark-id r2-map-open-r0 \
+  --focal-checkpoint-id CHECKPOINT \
+  --field-manifest-id open-r0-field \
+  --historical-checkpoint CHECKPOINT
+```
+
+This accepts only the append-only sequential-public-market v1.1 registration
+and its registered `open-performance-100` panel. The immutable v1 registration
+is retained only as a stale predecessor and is rejected for launch. V1.1
+reuses exactly the already-open 100-seed domain; it does not open a protected
+domain. The initializer requires the panel's non-protected and
+no-strength-claim flags, creates one scheduler-managed `game-NNNN` item per
+index, rotates the focal seat by `index mod 4`, and freezes all 100 seeds and
+opponent seats before execution. A W3 smoke checkpoint is valid
+only for real implementation/performance evidence; its report is labeled
+`real-open-checkpoint-performance-only` and cannot support a strength claim.
+It is also labeled `open-performance-reference-only`; the registered
+reference/optimized two-order comparison remains incomplete until an optimized
+mode exists and passes exact parity. This command never fabricates that second
+arm. The initializer verifies the registration's exact formatted and canonical
+manifest identities, the manifest and selected panel canonical hashes, and the
+live SHA-256 of every required game, R2, model, search, evaluator, and service
+source binding. A superseded or locally edited registration cannot launch.
+
+Production iteration-longitudinal seeds and historical assignments come from
+the controller packet, not the W0 open panel. Install those already frozen
+inputs with:
+
+```bash
+cargo run -p cascadia-cli-v2 -- init-r2-map-longitudinal-campaign \
+  --root /Users/johnherrick/cascadia-bench/r2-map-v1/benchmarks/ROUND \
+  --contract CONTROLLER_LONGITUDINAL_CONTRACT.json \
+  --historical-field CONTROLLER_HISTORICAL_FIELD.json
+```
+
+The contract must declare `expert-iteration-longitudinal`, exactly 100
+scheduler-managed games, a frozen pool, and
+`strength_claim_authorized=false`. It contains no host, parity, or manual lease.
+
+Inside a Bacalhau execution, run one independent game work item:
+
+```bash
+cargo run -p cascadia-cli-v2 -- run-r2-map-longitudinal-work-item \
+  --root /input/campaign \
+  --work-item game-0000 --bundle /input/r2-run/bundle.json \
+  --collector-hash COLLECTOR_BLAKE3 --source-hash SOURCE_BLAKE3 \
+  --serving-protocol-hash SERVING_BLAKE3
+```
+
+Each completed game becomes one fsync-and-rename receipt. Rerunning validates
+and resumes complete receipts without replaying them. A service failure gets
+one bounded restart and exact same-request retry. Extra, partial, duplicate,
+identity-drifted, or hash-drifted receipts fail closed. Central aggregation:
+
+```bash
+cargo run -p cascadia-cli-v2 -- aggregate-r2-map-longitudinal \
+  --root /Users/johnherrick/cascadia-bench/r2-map-v1/benchmarks/open-r0 \
+  --wall-seconds SECONDS
+```
+
+It requires exact 0-99 coverage and reproduces all 100 work-item summaries from
+game receipts. In addition to the full report it writes compact, deterministic
+projections under `projections/dashboard-benchmark.json` and
+`projections/ledger-experiment.json`; only the controller may install those
+into canonical John1 dashboard and ledger state.
+
+The 20-pair blinded smoke and fixed-250 gate use pre-provisioned immutable
+contract/field files. Use the topology-free controller; infrastructure setup
+does not open protected seed values:
+
+```bash
+PYTHONPATH=python python3 tools/r2_map_bacalhau_gate.py \
+  --stage smoke --image 'REGISTRY/IMAGE@sha256:DIGEST' \
+  --gate-directory GATE_INPUT --candidate-freeze CANDIDATE_FREEZE \
+  --exact-weights nnue_weights_v4opp_modal_iter3.bin \
+  --state-directory BACALHAU_CLIENT_STATE \
+  --artifact-directory BACALHAU_ACCEPTED_RESULTS \
+  --campaign-directory CANONICAL_SMOKE_CAMPAIGN
+```
+
+Candidate/control physical execution order alternates by pair index while the
+receipt remains normalized as candidate then control. The smoke projection
+contains no score output. The fixed-250 projection carries the same report and
+contract/field SHA-256 and BLAKE3 identities consumed by strict promotion.
+These commands must be launched only from the controller's authorized phase;
+they do not derive, reveal, or accept the untouched final-domain seeds.
+
+## R2-MAP compact replay training
+
+`tools/r2_map_compact_dataset.py` owns the production `.r2sh` data boundary:
+
+- `build-index` sequentially validates shards through the Rust exporter and
+  writes a compact game/source index; temporary `.r2map` windows are bounded
+  and deleted.
+- `validate` rechecks index identity plus every source byte count and BLAKE3.
+- `project` proves the requested game count, index, current window, and one
+  optional prefetched window fit the 40-GiB run budget. It exits 2 if compact
+  storage fails or if the 2-MB/game expanded-corpus counterfactual fits.
+- `smoke` proves deterministic repeat, reopen/next-batch parity, streamed
+  validation, fixed-panel construction, and zero leftover windows.
+
+On John2, reference/local validation of `python -m cascadia_mlx.r2_map_train` uses
+`--compact-index`, `--compact-shard-root`, `--compact-exporter`, and
+`--compact-window-dir`. `--maximum-window-bytes` defaults to 1 GiB and
+`--maximum-prefetch-windows` is restricted to 0 or 1. The CLI projects 100,000
+games before allocating the adapter and fails closed above 40 GiB. This local
+path mode requires John2 storage authority and cannot run on John1.
+
+Production John1 MLX training uses the authenticated remote-storage training
+path. It fetches the compact index into bounded memory, asks John2 to export
+exactly one `.json` plus `.r2map` window beneath a registered ephemeral run,
+verifies token-bound range receipts and source identity, and then commits the
+run-cleanup CAS before moving to another window. Prefetch is zero. Loss events
+are published every 20 steps, and each complete checkpoint is installed as one
+immutable John2 transaction before the mutable pointers advance. No dataset
+window, checkpoint, loss log, cache, or temporary product is written on John1.
+
+The production entry point is `tools/r2_map_john1_train.py`. It uses
+`r2_map_remote_training.py` and the frozen John2 client directly; the local
+`r2_map_train` CLI remains a John2-only reference path. Its sole data/packing
+input is `--packing-report-relative`. The command independently reopens the W0
+source transaction, the post-W7 bootstrap phase barrier, all four controller
+packet/receipt pairs, the exact 100,000-game dataset transaction and compact
+index, the qualifying packing report publication receipt, and the zero-write
+attestation plus its digest-derived direct put receipt. Cap, candidate budget,
+exact 12-epoch schedule, index, shard root, and exporter are all derived; there
+are no CLI overrides. The command fixes
+prefetch to zero, retains each window's ordered open/range/cleanup evidence,
+publishes loss-stream updates with SHA-256 CAS at complete checkpoints, installs
+each checkpoint as an immutable transaction, reopens every committed object,
+publishes exact-panel verification, and only then advances `latest_complete` and
+`last_verified`. Resume reopens the pointer, verification receipt, loss prefix,
+and every checkpoint object before calling `resume_from_bundle`.
+
+The qualifying pre-training entry point is
+`tools/r2_map_john1_packing_sweep.py`. Its only storage locators are the W0
+source transaction manifest/commit receipt and the W7 dataset transaction
+manifest. The source manifest, v1.1 reference panel, compact exporter, bootstrap
+phase barrier, compact index, shard root, and dataset commit receipt are derived
+from those immutable authorities. Redundant caller-selected dataset paths and
+all caller-selected identity digests are rejected by construction.
+
+SSH compression is off by default. `--ssh-compression` is rejected unless the
+caller also supplies `--compression-measurement-sha256`, the digest of a
+recorded bulk-window comparison. The result records that digest; compression
+cannot be enabled as an undocumented tuning guess.
+
+The legacy six manifest/stream arguments require the explicit
+`--allow-reference-expanded-streams` flag and are only for small regression
+fixtures. `--maximum-reference-stream-bytes` defaults to 1 GiB, so the flag
+cannot authorize a corpus-scale expansion. This is not an authorized bootstrap
+data path.

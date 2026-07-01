@@ -14,6 +14,12 @@
     <string>apps/web/dist</string>
     <string>--cluster-history-path</string>
     <string>artifacts/cluster/telemetry-v1.jsonl</string>
+    <string>--cluster-queue-path</string>
+    <string>artifacts/cluster/research-queue-v1.json</string>
+    <string>--cluster-experiments-path</string>
+    <string>artifacts/cluster/research-experiments-v1.json</string>
+    <string>--r2-map-status-path</string>
+    <string>artifacts/cluster/r2-map-dashboard-serving-projection-v2.json</string>
   </array>
   <key>WorkingDirectory</key>
   <string>/Users/johnherrick/cascadia</string>

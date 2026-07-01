@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "experiment_id": "full-legal-audit-static-screen-cohort-acceptance-v1-20260615",
+  "status": "accepted",
+  "phase": 1,
+  "hypothesis": "Complete static screens can use much larger exact MLX cohorts than the overlapped rollout pipeline, reducing service and kernel-launch overhead without changing rows, values, or search behavior.",
+  "contract": {
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "raw_seed": 60999,
+    "audited_completed_turns": [
+      12,
+      39,
+      66
+    ],
+    "champion_rollouts": 600,
+    "screen_limit": 64,
+    "sentinel_count": 16,
+    "substantial_rollouts": 1200,
+    "high_confidence_limit": 8,
+    "high_confidence_rollouts": 4800,
+    "paid_wipe_determinizations": 8,
+    "paid_wipe_followup_determinizations": 2,
+    "paid_wipe_followup_width": 3,
+    "pipeline_chunk_states": 96,
+    "static_screen_chunk_rows": 4096,
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "implementation": {
+    "rollout_pipeline_changed": false,
+    "static_screen_chunk_rows": 4096,
+    "runtime_experiment_switch_retained": false,
+    "shared_memory_bytes": 8388608,
+    "maximum_observed_request_rows": 3948,
+    "maximum_observed_request_features": 817196,
+    "shared_memory_fallbacks": 0,
+    "treatment_capable_binary_sha256": "90b71c8e0afbb1fe4a9f580708278221dda3b8b361466c1824080877830b5c8d",
+    "production_binary_sha256": "64ce899e0baf0b880f99d40ab4af302687930cfcb8ea9004cc8138d495f869e8",
+    "production_binary_blake3": "88a7cd2214c0945bd538c2ce84fc6b2a8b0df7b4fd95e37cf21ff9282de89a38",
+    "production_v2_source_blake3": "1047d1cc16d3cf962d6f83b4d267f9da65c2bc1513159232d8ec11342d51337d"
+  },
+  "correctness": {
+    "root_qualification_sha256": "e3210d624f8da22c1a4fb0c61ec15478aec03ab2b079b75bf4e46207aa7bd6be",
+    "paid_wipe_qualification_sha256": "dc866e7fa52fbfc09701bc2a78bbd74e5064f88ac676fece39f27e1c8ed2e348",
+    "all_sweep_reports_matching": 10,
+    "all_balanced_confirmation_reports_matching": 8,
+    "post_promotion_reports_matching": 2,
+    "semantic_report_blake3": "7fd0764edd33ac608f18d011808716679a088fad540b263a58428bad4b8f5d91",
+    "terminal_base_scores": [
+      96,
+      99,
+      92,
+      102
+    ],
+    "terminal_state_blake3": "7b3f520d5441aa2ae9c3d97d87e0cd08299d546a7d1e8398f76fdadedb53fa7d",
+    "actions_screened": 11594,
+    "neural_rows": 66274677,
+    "physical_neural_rows": 56095463,
+    "rollout_waves": 32701,
+    "rollout_samples": 617722,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "focused_rust_tests_passed": 19,
+    "report_validation_passed": true,
+    "clean_shutdown": true
+  },
+  "sweep": {
+    "john2_order": [
+      512,
+      1024,
+      2048,
+      4096,
+      8192
+    ],
+    "john3_order": [
+      8192,
+      4096,
+      2048,
+      1024,
+      512
+    ],
+    "measurements": [
+      {
+        "host": "john2",
+        "rows": 512,
+        "seconds": 20.22
+      },
+      {
+        "host": "john2",
+        "rows": 1024,
+        "seconds": 18.68
+      },
+      {
+        "host": "john2",
+        "rows": 2048,
+        "seconds": 18.51
+      },
+      {
+        "host": "john2",
+        "rows": 4096,
+        "seconds": 18.52
+      },
+      {
+        "host": "john2",
+        "rows": 8192,
+        "seconds": 18.56
+      },
+      {
+        "host": "john3",
+        "rows": 8192,
+        "seconds": 18.5
+      },
+      {
+        "host": "john3",
+        "rows": 4096,
+        "seconds": 18.19
+      },
+      {
+        "host": "john3",
+        "rows": 2048,
+        "seconds": 18.31
+      },
+      {
+        "host": "john3",
+        "rows": 1024,
+        "seconds": 18.66
+      },
+      {
+        "host": "john3",
+        "rows": 512,
+        "seconds": 19.57
+      }
+    ],
+    "combined_mean_seconds": {
+      "512": 19.895,
+      "1024": 18.67,
+      "2048": 18.41,
+      "4096": 18.355,
+      "8192": 18.53
+    },
+    "winner_rows": 4096
+  },
+  "balanced_confirmation": {
+    "john2_order": [
+      96,
+      4096,
+      4096,
+      96
+    ],
+    "john3_order": [
+      4096,
+      96,
+      96,
+      4096
+    ],
+    "john2_control_mean_seconds": 24.665,
+    "john2_treatment_mean_seconds": 18.515,
+    "john2_improvement_percent": 24.934117170079055,
+    "john3_control_mean_seconds": 23.9,
+    "john3_treatment_mean_seconds": 18.375,
+    "john3_improvement_percent": 23.117154811715476,
+    "combined_control_mean_seconds": 24.2825,
+    "combined_treatment_mean_seconds": 18.445,
+    "combined_improvement_percent": 24.039946463502517
+  },
+  "mechanism": {
+    "john2": {
+      "control_requests": 23115,
+      "treatment_requests": 4519,
+      "request_reduction_percent": 80.44992429158555,
+      "control_mlx_eval_ms": 11196.234447,
+      "treatment_mlx_eval_ms": 5757.181659,
+      "mlx_eval_reduction_percent": 48.579304173622226,
+      "control_service_total_ms": 11896.911399,
+      "treatment_service_total_ms": 6057.478457,
+      "service_reduction_percent": 49.083604526892884,
+      "control_maximum_rss_bytes": 106070016,
+      "treatment_maximum_rss_bytes": 161185792,
+      "rss_delta_mib": 52.5625,
+      "control_peak_footprint_bytes": 39027096,
+      "treatment_peak_footprint_bytes": 39289240
+    },
+    "john3": {
+      "control_requests": 23115,
+      "treatment_requests": 4519,
+      "request_reduction_percent": 80.44992429158555,
+      "control_mlx_eval_ms": 10700.567887,
+      "treatment_mlx_eval_ms": 5619.818297,
+      "mlx_eval_reduction_percent": 47.48112103631944,
+      "control_service_total_ms": 11388.151998,
+      "treatment_service_total_ms": 5928.680095,
+      "service_reduction_percent": 47.939928304072495,
+      "control_maximum_rss_bytes": 106594304,
+      "treatment_maximum_rss_bytes": 161251328,
+      "rss_delta_mib": 52.125,
+      "control_peak_footprint_bytes": 38732184,
+      "treatment_peak_footprint_bytes": 42910104
+    }
+  },
+  "full_contract": {
+    "reference_seconds": 242.43305,
+    "treatment_seconds": 217.302693625,
+    "improvement_percent": 10.365895398750302,
+    "speedup": 1.1156467780301313,
+    "reference_paid_wipe_seconds": 96.281382168,
+    "treatment_paid_wipe_seconds": 70.168686293,
+    "paid_wipe_improvement_percent": 27.121230799778438,
+    "reference_realized_hidden_seconds": 125.548470208,
+    "treatment_realized_hidden_seconds": 126.341883918,
+    "reference_neural_batches": 125861,
+    "treatment_neural_batches": 38695,
+    "neural_batch_reduction_percent": 69.25576628185061,
+    "treatment_report_bytes": 12703804,
+    "treatment_report_blake3": "beb9126abd62375e0c15a230ecfeb96ea169d22ddac1993cd884baf358d7df03"
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/full-legal-audit-static-screen-cohort-v1",
+    "archive_ignored_by_git": true,
+    "sha256_manifest": "artifacts/performance/full-legal-audit-static-screen-cohort-v1/SHA256SUMS"
+  },
+  "verdict": {
+    "accepted": true,
+    "reason": "The 4096-row static cohort improved both workers and the complete frozen contract materially while preserving every semantic output and all logical work.",
+    "phase1_reference_seconds": 242.43305,
+    "accepted_seconds": 217.302693625,
+    "phase1_ten_x_threshold_seconds": 24.243305,
+    "remaining_factor": 8.96341046012497,
+    "phase1_ten_x_gate_passed": false
+  }
+}

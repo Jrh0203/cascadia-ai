@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.johnherrick.cascadia.o2.john1.production-v1</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/johnherrick/cascadia/.venv/bin/python</string>
+    <string>-B</string>
+    <string>/Users/johnherrick/cascadia/tools/host_local_job_runner.py</string>
+    <string>--status</string>
+    <string>/Volumes/John_1/cascadia-cluster/john1/runs/o2-exact-opportunity-matching-v1/production-v1/process-status.json</string>
+    <string>--progress-directory</string>
+    <string>/Volumes/John_1/cascadia-cluster/john1/runs/o2-exact-opportunity-matching-v1/production-v1/groups</string>
+    <string>--progress-prefix</string>
+    <string>row-</string>
+    <string>--progress-suffix</string>
+    <string>.json</string>
+    <string>--expected-items</string>
+    <string>560</string>
+    <string>--poll-seconds</string>
+    <string>2</string>
+    <string>--stdout-log</string>
+    <string>/Volumes/John_1/cascadia-cluster/john1/runs/o2-exact-opportunity-matching-v1/production-v1/stdout.log</string>
+    <string>--stderr-log</string>
+    <string>/Volumes/John_1/cascadia-cluster/john1/runs/o2-exact-opportunity-matching-v1/production-v1/stderr.log</string>
+    <string>--</string>
+    <string>/Volumes/John_1/cascadia-cluster/john1/builds/cargo/release/o2-opportunity-foundation</string>
+    <string>--dataset-root</string>
+    <string>/Users/johnherrick/cascadia/artifacts/datasets/complete-action-graded-oracle-v1-train</string>
+    <string>--cohort-root</string>
+    <string>/Users/johnherrick/cascadia/artifacts/experiments/t1-search-horizon-decomposition-v1/cohort/aac7a480bd3f73bf15fa09b2314c8efa80cbae01a4ce09f8cf342845c2808512</string>
+    <string>--output-root</string>
+    <string>/Volumes/John_1/cascadia-cluster/john1/runs/o2-exact-opportunity-matching-v1/production-v1</string>
+    <string>--source-id</string>
+    <string>c9efb4a40dab58fa61367211fa1ad336a5eb3afd696cd40958d9e352f10e6dc4</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/johnherrick/cascadia</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>RAYON_NUM_THREADS</key>
+    <string>10</string>
+    <key>PYTHONDONTWRITEBYTECODE</key>
+    <string>1</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <false/>
+  <key>ProcessType</key>
+  <string>Interactive</string>
+</dict>
+</plist>

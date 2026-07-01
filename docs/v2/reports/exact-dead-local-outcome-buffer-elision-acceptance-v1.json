@@ -1,0 +1,331 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-dead-local-outcome-buffer-elision-acceptance-v1-20260615",
+  "status": "accepted",
+  "phase": 0,
+  "hypothesis": "The shared production candidate path can omit a local outcome vector that it never reads, removing millions of small allocations, zero-fill loops, and frees without changing exact search behavior.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_measurement": 1,
+    "seat_games_per_measurement": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "pipeline_chunk_states": 96,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1",
+    "model_manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65"
+  },
+  "implementation": {
+    "production_shared_outcome_reuse": true,
+    "production_dead_local_buffer_retained": false,
+    "test_reference_local_buffer_retained": true,
+    "release_runtime_switch_retained": false,
+    "source_treatment_capable_binary_sha256": "c9930cb14bf19c6ea440e1b7fac8376866fdc3da819d514a0bfc10eff31ba2de",
+    "production_source_binary_sha256": "3cf20aa2df6ea48c76e8895b8da6db0a1280cc7f3d25e9be00fc688cf5b404fe",
+    "production_source_sha256": "ad7594397195d71f71dbf6460d08619611426a643562c3996fec89ee3b322eee",
+    "production_llvm_ir_sha256": "6309d3adcf2edda0acfe0757d08e0037d6e7ec30cf3c2e669be2f0c64b5322d1",
+    "production_llvm_ir_archive_sha256": "442c61fc4945dc4c9fd543a8654626396998f70238af8ade9b7fda5a7f7ca802",
+    "matching_dynamic_allocations_in_production_ir": 1,
+    "matching_allocation_purpose": "live shared outcome cache"
+  },
+  "correctness": {
+    "complete_ordered_candidate_sets_identical": true,
+    "cache_outcomes_identical": true,
+    "ordered_sparse_rows_identical": true,
+    "predictions_identical": true,
+    "selected_actions_identical": true,
+    "rollout_traces_identical": true,
+    "rollout_samples_identical": true,
+    "random_streams_identical": true,
+    "default_library_tests": {
+      "cascadia_ai_passed": 87,
+      "cascadia_core_passed": 125,
+      "cascadia_search_passed": 61,
+      "workspace_failed": 0
+    },
+    "mid_v4_cascadia_ai_tests": {
+      "passed": 88,
+      "failed": 0
+    },
+    "python_exact_tests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "frozen_diagnostics": {
+      "scores": [
+        102,
+        96,
+        92,
+        95
+      ],
+      "mean_score": 96.25,
+      "neural_batches": 3920,
+      "neural_rows": 6121807,
+      "physical_neural_rows": 5062305,
+      "rollout_waves": 3716,
+      "rollout_samples": 46207,
+      "bootstrapped_samples": 0,
+      "policy_fallbacks": 0,
+      "clean_shutdown": true,
+      "mechanism_runs_matching": 4,
+      "source_runs_matching": 8,
+      "production_parity_runs_matching": 2,
+      "profile_training_runs_matching": 2,
+      "pgo_runs_matching": 8,
+      "final_stage_diagnostic_runs_matching": 2
+    }
+  },
+  "mechanism": {
+    "targeted_stage": "template_preparation_ms",
+    "john2_control_milliseconds": 4542.286273,
+    "john2_treatment_milliseconds": 4452.052259,
+    "john2_reduction_percent": 1.9865329610853366,
+    "john3_control_milliseconds": 4497.88407,
+    "john3_treatment_milliseconds": 4476.285531,
+    "john3_reduction_percent": 0.480193323435293,
+    "john2_control_retired_instructions": 1087604873751,
+    "john2_treatment_retired_instructions": 1082900943846,
+    "john2_instruction_reduction_percent": 0.4325035698651102,
+    "john3_control_retired_instructions": 1088150435236,
+    "john3_treatment_retired_instructions": 1082970687422,
+    "john3_instruction_reduction_percent": 0.47601394497228755,
+    "final_pgo_stage_diagnostics": [
+      {
+        "host": "john2",
+        "treatment_seconds": 14.214014705,
+        "rollout_state_initialization_ms": 58.033167,
+        "opponent_advance_ms": 3087.0893,
+        "template_preparation_ms": 4455.08443,
+        "row_assembly_ms": 27.947733,
+        "row_deduplication_ms": 515.971621,
+        "row_materialization_ms": 126.138979,
+        "neural_evaluation_ms": 8986.581527,
+        "prediction_postprocess_ms": 11.696553,
+        "action_selection_ms": 162.290879,
+        "terminal_collection_ms": 10.389789
+      },
+      {
+        "host": "john3",
+        "treatment_seconds": 14.065726418,
+        "rollout_state_initialization_ms": 58.555964,
+        "opponent_advance_ms": 3096.300195,
+        "template_preparation_ms": 4457.863359,
+        "row_assembly_ms": 27.255934,
+        "row_deduplication_ms": 520.533944,
+        "row_materialization_ms": 129.215596,
+        "neural_evaluation_ms": 8833.797666,
+        "prediction_postprocess_ms": 11.864647,
+        "action_selection_ms": 156.210468,
+        "terminal_collection_ms": 10.460824
+      }
+    ]
+  },
+  "source_screen": {
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.924047377,
+        "peak_rss_bytes": 102891520,
+        "peak_footprint_bytes": 59048368
+      },
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.681556618,
+        "peak_rss_bytes": 102891520,
+        "peak_footprint_bytes": 57508248
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.551655539,
+        "peak_rss_bytes": 102858752,
+        "peak_footprint_bytes": 58245552
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.53118158,
+        "peak_rss_bytes": 102678528,
+        "peak_footprint_bytes": 58016176
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.418518455,
+        "peak_rss_bytes": 102678528,
+        "peak_footprint_bytes": 65192392
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.515176415,
+        "peak_rss_bytes": 103120896,
+        "peak_footprint_bytes": 57573808
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.47300783,
+        "peak_rss_bytes": 102875136,
+        "peak_footprint_bytes": 68895152
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 14.302059292,
+        "peak_rss_bytes": 102924288,
+        "peak_footprint_bytes": 60588464
+      }
+    ],
+    "john2_control_mean_seconds": 14.8028019975,
+    "john2_treatment_mean_seconds": 14.5414185595,
+    "john2_improvement_percent": 1.765770007895433,
+    "john3_control_mean_seconds": 14.466847435,
+    "john3_treatment_mean_seconds": 14.387533561,
+    "john3_improvement_percent": 0.5482457346450916,
+    "combined_control_mean_seconds": 14.63482471625,
+    "combined_treatment_mean_seconds": 14.46447606025,
+    "combined_improvement_percent": 1.1639951916257023,
+    "peak_rss_delta_percent": -0.059710998765972696,
+    "peak_footprint_delta_percent": 2.6836254509056086
+  },
+  "pgo": {
+    "instrumented_binary_sha256": "4c9fd9eae6fc7554210ee15b2e367e9b4ee4eb171c844ae85a1c9703a19e3008",
+    "john2_training_seconds": 51.633956333,
+    "john3_training_seconds": 50.819619294,
+    "john2_profraw_sha256": "a59303defb9f737a2a6e1899c607bc2e541cccf0d0e3cdd9a52882436ac14068",
+    "john3_profraw_sha256": "12c8ba521bf94ac8694d7ddb7b3e58f33610a085f7bc0f58b1a5bc92c48d5bf7",
+    "merged_profdata_sha256": "d4f95f70c705cad77678ff338d889698f3fe1391a2ddbe73a28c51c3eec3664b",
+    "profile_functions": 5556,
+    "profile_blocks": 120240,
+    "john2_total_profile_count": 115988873836,
+    "john3_total_profile_count": 115988857614,
+    "absolute_profile_count_difference": 16222,
+    "merged_total_profile_count": 231977731450,
+    "production_binary_sha256": "95e9138434a3010f4359133e52f674088c806aabfaa10820f7884a64b04ad685",
+    "accepted_control_binary_sha256": "0023c3d8bea978082b835fd933281b97d6800047afc32fcb3a33112fc1586cdd",
+    "design": {
+      "john2_order": [
+        "treatment",
+        "control",
+        "control",
+        "treatment"
+      ],
+      "john3_order": [
+        "control",
+        "treatment",
+        "treatment",
+        "control"
+      ]
+    },
+    "measurements": [
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.309978374,
+        "peak_rss_bytes": 102924288,
+        "peak_footprint_bytes": 66372016
+      },
+      {
+        "host": "john2",
+        "variant": "control",
+        "seconds": 14.471494417,
+        "peak_rss_bytes": 102989824,
+        "peak_footprint_bytes": 64422320
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.229935543,
+        "peak_rss_bytes": 102891520,
+        "peak_footprint_bytes": 61620680
+      },
+      {
+        "host": "john2",
+        "variant": "treatment",
+        "seconds": 14.193939082,
+        "peak_rss_bytes": 102760448,
+        "peak_footprint_bytes": 68501936
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.087310715,
+        "peak_rss_bytes": 103104512,
+        "peak_footprint_bytes": 69091760
+      },
+      {
+        "host": "john3",
+        "variant": "control",
+        "seconds": 14.094271708,
+        "peak_rss_bytes": 103120896,
+        "peak_footprint_bytes": 66666928
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 13.971997997,
+        "peak_rss_bytes": 102907904,
+        "peak_footprint_bytes": 69337544
+      },
+      {
+        "host": "john3",
+        "variant": "treatment",
+        "seconds": 13.989513462,
+        "peak_rss_bytes": 103137280,
+        "peak_footprint_bytes": 56361392
+      }
+    ],
+    "john2_control_mean_seconds": 14.3907363955,
+    "john2_treatment_mean_seconds": 14.2119373125,
+    "john2_improvement_percent": 1.2424595801498397,
+    "john3_control_mean_seconds": 14.0907912115,
+    "john3_treatment_mean_seconds": 13.9807557295,
+    "john3_improvement_percent": 0.780903501786307,
+    "combined_control_mean_seconds": 14.2407638035,
+    "combined_treatment_mean_seconds": 14.096346521,
+    "combined_improvement_percent": 1.0141119148714977,
+    "peak_rss_delta_percent": -0.1073345259391771,
+    "peak_footprint_delta_percent": -4.0260177277148435
+  },
+  "artifacts": {
+    "local_archive": "artifacts/performance/exact-dead-local-outcome-buffer-elision-v1",
+    "archive_ignored_by_git": true,
+    "worker_binary": "/private/tmp/cascadia-phase0/legacy-teacher-dead-local-outcomes-pgo",
+    "worker_instrumented_binary": "/private/tmp/cascadia-phase0/legacy-teacher-dead-local-outcomes-pgo-instrumented"
+  },
+  "verdict": {
+    "accepted": true,
+    "reason": "Dead local outcome-buffer elision removed provably unused allocation work, cleared every correctness and mechanism gate, improved both workers before and after fresh PGO, and crossed the absolute Phase 0 threshold.",
+    "initial_reference_seconds": 141.027296,
+    "previous_accepted_seconds": 14.16305453125,
+    "accepted_seconds": 14.096346521,
+    "improvement_vs_previous_accepted_percent": 0.47100016527375943,
+    "total_speedup": 10.004528179688611,
+    "phase0_10x_threshold_seconds": 14.1027296,
+    "threshold_margin_seconds": 0.006383079,
+    "threshold_passed": true
+  }
+}

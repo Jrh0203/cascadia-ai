@@ -2,13 +2,615 @@ use cascadia_core::board::Board;
 use cascadia_core::hex::{HexCoord, ADJACENCY};
 use cascadia_core::types::{ScoringCardVariant, ScoringCards, Wildlife};
 
+#[derive(Clone)]
+pub(crate) struct BoardPotentialContext {
+    frontier: [bool; 441],
+    habitat_neighbor_counts: [[u8; 5]; 441],
+    habitat_contributions: [i16; 441],
+    habitat_total: i32,
+    empty_acceptance: [u16; 5],
+    wildlife_contributions: [i32; 5],
+    wildlife_total: i32,
+    aaaaa: Option<AaaaaPotentialContext>,
+}
+
+#[derive(Clone)]
+struct AaaaaPotentialContext {
+    bear: BearAPotentialContext,
+    salmon: SalmonAPotentialContext,
+    hawk: HawkAPotentialContext,
+    fox: FoxAPotentialContext,
+}
+
+#[derive(Clone)]
+struct BearAPotentialContext {
+    component_ids: [u8; 441],
+    component_sizes: arrayvec::ArrayVec<u8, 24>,
+    half_eligible: [bool; 441],
+    penalized: [bool; 441],
+    pair_count: u8,
+    half_pairs: i32,
+    penalty: i32,
+    total: i32,
+}
+
+#[derive(Clone)]
+struct SalmonAComponent {
+    positions: arrayvec::ArrayVec<u16, 24>,
+    contribution: i32,
+}
+
+#[derive(Clone)]
+struct SalmonAPotentialContext {
+    component_ids: [u8; 441],
+    components: arrayvec::ArrayVec<SalmonAComponent, 24>,
+    total: i32,
+}
+
+#[derive(Clone)]
+struct HawkAPotentialContext {
+    isolated: [bool; 441],
+    safety_contributions: [i8; 441],
+    safe_slots: [bool; 441],
+    isolated_count: i32,
+    safety_total: i32,
+    safe_slot_count: i32,
+    total: i32,
+}
+
+#[derive(Clone)]
+struct FoxAPotentialContext {
+    contributions: [i16; 441],
+    total: i32,
+}
+
+impl BoardPotentialContext {
+    pub(crate) fn new(board: &Board, cards: &ScoringCards, frontier: &[u16]) -> Self {
+        let mut stored_frontier = [false; 441];
+        let mut habitat_neighbor_counts = [[0u8; 5]; 441];
+        let mut habitat_contributions = [0i16; 441];
+        let mut habitat_total = 0;
+        for &index in frontier {
+            let counts = habitat_counts_around_cell(board, index as usize);
+            let contribution = habitat_potential_from_counts(counts);
+            stored_frontier[index as usize] = true;
+            habitat_neighbor_counts[index as usize] = counts;
+            habitat_contributions[index as usize] = contribution as i16;
+            habitat_total += contribution;
+        }
+        let aaaaa = cards
+            .cards
+            .iter()
+            .all(|&variant| variant == ScoringCardVariant::A)
+            .then(|| AaaaaPotentialContext::new(board));
+        let wildlife_contributions = if let Some(context) = &aaaaa {
+            [
+                context.bear.total,
+                elk_potential(board),
+                context.salmon.total,
+                context.hawk.total,
+                context.fox.total,
+            ]
+        } else {
+            std::array::from_fn(|index| wildlife_potential(board, cards, Wildlife::ALL[index]))
+        };
+
+        Self {
+            frontier: stored_frontier,
+            habitat_neighbor_counts,
+            habitat_contributions,
+            habitat_total,
+            empty_acceptance: empty_acceptance_counts(board),
+            wildlife_total: wildlife_contributions.iter().sum(),
+            wildlife_contributions,
+            aaaaa,
+        }
+    }
+
+    fn frontier_contribution(&self, index: u16) -> Option<i32> {
+        self.frontier[index as usize].then_some(self.habitat_contributions[index as usize] as i32)
+    }
+}
+
+impl AaaaaPotentialContext {
+    fn new(board: &Board) -> Self {
+        Self {
+            bear: BearAPotentialContext::new(board),
+            salmon: SalmonAPotentialContext::new(board),
+            hawk: HawkAPotentialContext::new(board),
+            fox: FoxAPotentialContext::new(board),
+        }
+    }
+}
+
+impl BearAPotentialContext {
+    fn new(board: &Board) -> Self {
+        let positions = &board.wildlife_positions[Wildlife::Bear as usize];
+        let mut component_ids = [u8::MAX; 441];
+        let mut component_sizes = arrayvec::ArrayVec::<u8, 24>::new();
+        let mut half_eligible = [false; 441];
+        let mut penalized = [false; 441];
+        let mut pair_count = 0u8;
+        let mut half_pairs = 0i32;
+        let mut penalty = 0i32;
+
+        for &position in positions {
+            let index = position as usize;
+            let (half, penalized_position) = bear_a_local_terms(board, index);
+            half_eligible[index] = half;
+            penalized[index] = penalized_position;
+            half_pairs += i32::from(half);
+            penalty -= 20 * i32::from(penalized_position);
+
+            if component_ids[index] != u8::MAX {
+                continue;
+            }
+            let component_id = component_sizes.len() as u8;
+            let mut size = 0u8;
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(position);
+            component_ids[index] = component_id;
+            while let Some(current) = queue.pop() {
+                size += 1;
+                for neighbor in ADJACENCY.neighbors_of(current as usize) {
+                    if component_ids[neighbor] == u8::MAX
+                        && board.grid.get(neighbor).placed_wildlife() == Some(Wildlife::Bear)
+                    {
+                        component_ids[neighbor] = component_id;
+                        queue.push(neighbor as u16);
+                    }
+                }
+            }
+            pair_count += u8::from(size == 2);
+            component_sizes.push(size);
+        }
+
+        let total = bear_a_total(pair_count, half_pairs, penalty);
+        Self {
+            component_ids,
+            component_sizes,
+            half_eligible,
+            penalized,
+            pair_count,
+            half_pairs,
+            penalty,
+            total,
+        }
+    }
+
+    fn after_single_move(
+        &self,
+        board: &Board,
+        placed_tile_index: usize,
+        placed_wildlife: Option<(usize, Wildlife)>,
+    ) -> i32 {
+        let mut pair_count = self.pair_count;
+        let mut half_pairs = self.half_pairs;
+        let mut penalty = self.penalty;
+        let mut affected = arrayvec::ArrayVec::<u16, 12>::new();
+        push_neighboring_wildlife(board, placed_tile_index, Wildlife::Bear, &mut affected);
+        if let Some((wildlife_index, _)) = placed_wildlife {
+            push_neighboring_wildlife(board, wildlife_index, Wildlife::Bear, &mut affected);
+        }
+
+        for &position in &affected {
+            let index = position as usize;
+            if placed_wildlife == Some((index, Wildlife::Bear)) {
+                continue;
+            }
+            half_pairs -= i32::from(self.half_eligible[index]);
+            penalty += 20 * i32::from(self.penalized[index]);
+            let (half, penalized_position) = bear_a_local_terms(board, index);
+            half_pairs += i32::from(half);
+            penalty -= 20 * i32::from(penalized_position);
+        }
+
+        if let Some((wildlife_index, Wildlife::Bear)) = placed_wildlife {
+            let mut adjacent_components = arrayvec::ArrayVec::<u8, 6>::new();
+            let mut merged_size = 1u8;
+            for neighbor in ADJACENCY.neighbors_of(wildlife_index) {
+                let component_id = self.component_ids[neighbor];
+                if component_id != u8::MAX && !adjacent_components.contains(&component_id) {
+                    adjacent_components.push(component_id);
+                    let size = self.component_sizes[component_id as usize];
+                    merged_size += size;
+                    pair_count -= u8::from(size == 2);
+                }
+            }
+            pair_count += u8::from(merged_size == 2);
+
+            let (half, penalized_position) = bear_a_local_terms(board, wildlife_index);
+            half_pairs += i32::from(half);
+            penalty -= 20 * i32::from(penalized_position);
+        }
+
+        bear_a_total(pair_count, half_pairs, penalty)
+    }
+}
+
+impl SalmonAPotentialContext {
+    fn new(board: &Board) -> Self {
+        let positions = &board.wildlife_positions[Wildlife::Salmon as usize];
+        let mut component_ids = [u8::MAX; 441];
+        let mut components = arrayvec::ArrayVec::<SalmonAComponent, 24>::new();
+        let mut total = 0i32;
+
+        for &position in positions {
+            let index = position as usize;
+            if component_ids[index] != u8::MAX {
+                continue;
+            }
+            let component_id = components.len() as u8;
+            let mut component = arrayvec::ArrayVec::<u16, 24>::new();
+            let mut queue = arrayvec::ArrayVec::<u16, 24>::new();
+            queue.push(position);
+            component_ids[index] = component_id;
+            while let Some(current) = queue.pop() {
+                component.push(current);
+                for neighbor in ADJACENCY.neighbors_of(current as usize) {
+                    if component_ids[neighbor] == u8::MAX
+                        && board.grid.get(neighbor).placed_wildlife() == Some(Wildlife::Salmon)
+                    {
+                        component_ids[neighbor] = component_id;
+                        queue.push(neighbor as u16);
+                    }
+                }
+            }
+            let contribution = salmon_a_component_potential(board, &component);
+            total += contribution;
+            components.push(SalmonAComponent {
+                positions: component,
+                contribution,
+            });
+        }
+
+        Self {
+            component_ids,
+            components,
+            total,
+        }
+    }
+
+    fn after_single_move(
+        &self,
+        board: &Board,
+        placed_tile_index: usize,
+        placed_wildlife: Option<(usize, Wildlife)>,
+    ) -> i32 {
+        let mut affected_components = arrayvec::ArrayVec::<u8, 12>::new();
+        self.push_adjacent_components(placed_tile_index, &mut affected_components);
+        if let Some((wildlife_index, _)) = placed_wildlife {
+            self.push_adjacent_components(wildlife_index, &mut affected_components);
+        }
+
+        let mut total = self.total;
+        for &component_id in &affected_components {
+            total -= self.components[component_id as usize].contribution;
+        }
+
+        let mut merged_components = arrayvec::ArrayVec::<u8, 6>::new();
+        if let Some((wildlife_index, Wildlife::Salmon)) = placed_wildlife {
+            self.push_adjacent_components(wildlife_index, &mut merged_components);
+            let mut merged_positions = arrayvec::ArrayVec::<u16, 24>::new();
+            for &component_id in &merged_components {
+                for &position in &self.components[component_id as usize].positions {
+                    merged_positions.push(position);
+                }
+            }
+            merged_positions.push(wildlife_index as u16);
+            total += salmon_a_component_potential(board, &merged_positions);
+        }
+
+        for &component_id in &affected_components {
+            if !merged_components.contains(&component_id) {
+                let component = &self.components[component_id as usize];
+                total += salmon_a_component_potential(board, &component.positions);
+            }
+        }
+        total
+    }
+
+    fn push_adjacent_components<const N: usize>(
+        &self,
+        index: usize,
+        components: &mut arrayvec::ArrayVec<u8, N>,
+    ) {
+        for neighbor in ADJACENCY.neighbors_of(index) {
+            let component_id = self.component_ids[neighbor];
+            if component_id != u8::MAX && !components.contains(&component_id) {
+                components.push(component_id);
+            }
+        }
+    }
+}
+
+impl HawkAPotentialContext {
+    fn new(board: &Board) -> Self {
+        let mut isolated = [false; 441];
+        let mut safety_contributions = [0i8; 441];
+        let mut isolated_count = 0i32;
+        let mut safety_total = 0i32;
+        for &position in &board.wildlife_positions[Wildlife::Hawk as usize] {
+            let index = position as usize;
+            let (is_isolated, contribution) = hawk_a_local_terms(board, index);
+            isolated[index] = is_isolated;
+            safety_contributions[index] = contribution as i8;
+            isolated_count += i32::from(is_isolated);
+            safety_total += contribution;
+        }
+
+        let mut safe_slots = [false; 441];
+        let mut safe_slot_count = 0i32;
+        for &position in &board.placed_tiles {
+            let index = position as usize;
+            let safe = hawk_a_safe_slot(board, index);
+            safe_slots[index] = safe;
+            safe_slot_count += i32::from(safe);
+        }
+
+        let total = hawk_a_total(isolated_count, safety_total, safe_slot_count);
+        Self {
+            isolated,
+            safety_contributions,
+            safe_slots,
+            isolated_count,
+            safety_total,
+            safe_slot_count,
+            total,
+        }
+    }
+
+    fn after_single_move(
+        &self,
+        board: &Board,
+        placed_tile_index: usize,
+        placed_wildlife: Option<(usize, Wildlife)>,
+    ) -> i32 {
+        let mut isolated_count = self.isolated_count;
+        let mut safety_total = self.safety_total;
+        let mut affected_hawks = arrayvec::ArrayVec::<u16, 12>::new();
+        push_neighboring_wildlife(
+            board,
+            placed_tile_index,
+            Wildlife::Hawk,
+            &mut affected_hawks,
+        );
+        if let Some((wildlife_index, _)) = placed_wildlife {
+            push_neighboring_wildlife(board, wildlife_index, Wildlife::Hawk, &mut affected_hawks);
+        }
+
+        for &position in &affected_hawks {
+            let index = position as usize;
+            if placed_wildlife == Some((index, Wildlife::Hawk)) {
+                continue;
+            }
+            isolated_count -= i32::from(self.isolated[index]);
+            safety_total -= i32::from(self.safety_contributions[index]);
+            let (isolated, contribution) = hawk_a_local_terms(board, index);
+            isolated_count += i32::from(isolated);
+            safety_total += contribution;
+        }
+        if let Some((wildlife_index, Wildlife::Hawk)) = placed_wildlife {
+            let (isolated, contribution) = hawk_a_local_terms(board, wildlife_index);
+            isolated_count += i32::from(isolated);
+            safety_total += contribution;
+        }
+
+        let mut affected_slots = arrayvec::ArrayVec::<u16, 8>::new();
+        push_unique_u16(&mut affected_slots, placed_tile_index as u16);
+        if let Some((wildlife_index, wildlife)) = placed_wildlife {
+            push_unique_u16(&mut affected_slots, wildlife_index as u16);
+            if wildlife == Wildlife::Hawk {
+                for neighbor in ADJACENCY.neighbors_of(wildlife_index) {
+                    push_unique_u16(&mut affected_slots, neighbor as u16);
+                }
+            }
+        }
+        let mut safe_slot_count = self.safe_slot_count;
+        for &position in &affected_slots {
+            let index = position as usize;
+            safe_slot_count -= i32::from(self.safe_slots[index]);
+            safe_slot_count += i32::from(hawk_a_safe_slot(board, index));
+        }
+
+        hawk_a_total(isolated_count, safety_total, safe_slot_count)
+    }
+}
+
+impl FoxAPotentialContext {
+    fn new(board: &Board) -> Self {
+        let mut contributions = [0i16; 441];
+        let mut total = 0i32;
+        for &position in &board.wildlife_positions[Wildlife::Fox as usize] {
+            let index = position as usize;
+            let contribution = fox_a_position_potential(board, index);
+            contributions[index] = contribution as i16;
+            total += contribution;
+        }
+        Self {
+            contributions,
+            total,
+        }
+    }
+
+    fn after_single_move(
+        &self,
+        board: &Board,
+        placed_tile_index: usize,
+        placed_wildlife: Option<(usize, Wildlife)>,
+    ) -> i32 {
+        let mut total = self.total;
+        let mut affected_foxes = arrayvec::ArrayVec::<u16, 12>::new();
+        push_neighboring_wildlife(board, placed_tile_index, Wildlife::Fox, &mut affected_foxes);
+        if let Some((wildlife_index, _)) = placed_wildlife {
+            push_neighboring_wildlife(board, wildlife_index, Wildlife::Fox, &mut affected_foxes);
+        }
+        for &position in &affected_foxes {
+            let index = position as usize;
+            if placed_wildlife == Some((index, Wildlife::Fox)) {
+                continue;
+            }
+            total -= i32::from(self.contributions[index]);
+            total += fox_a_position_potential(board, index);
+        }
+        if let Some((wildlife_index, Wildlife::Fox)) = placed_wildlife {
+            total += fox_a_position_potential(board, wildlife_index);
+        }
+        total
+    }
+}
+
+fn push_neighboring_wildlife<const N: usize>(
+    board: &Board,
+    index: usize,
+    wildlife: Wildlife,
+    positions: &mut arrayvec::ArrayVec<u16, N>,
+) {
+    for neighbor in ADJACENCY.neighbors_of(index) {
+        if board.grid.get(neighbor).placed_wildlife() == Some(wildlife) {
+            push_unique_u16(positions, neighbor as u16);
+        }
+    }
+}
+
+fn push_unique_u16<const N: usize>(values: &mut arrayvec::ArrayVec<u16, N>, value: u16) {
+    if !values.contains(&value) {
+        values.push(value);
+    }
+}
+
+fn bear_a_local_terms(board: &Board, index: usize) -> (bool, bool) {
+    let bear_neighbors = ADJACENCY
+        .neighbors_of(index)
+        .filter(|&neighbor| board.grid.get(neighbor).placed_wildlife() == Some(Wildlife::Bear))
+        .count();
+    let half_eligible = bear_neighbors == 0
+        && ADJACENCY.neighbors_of(index).any(|neighbor| {
+            let cell = board.grid.get(neighbor);
+            cell.is_present() && cell.can_place_wildlife(Wildlife::Bear)
+        });
+    (half_eligible, bear_neighbors >= 2)
+}
+
+fn bear_a_total(pair_count: u8, half_pairs: i32, penalty: i32) -> i32 {
+    let next_pair_marginal = match pair_count {
+        0 => 40,
+        1 => 70,
+        _ => 80,
+    };
+    (half_pairs / 2).min(2) * next_pair_marginal / 2 + penalty
+}
+
+fn salmon_a_component_potential(board: &Board, component: &[u16]) -> i32 {
+    let valid = component.iter().all(|&position| {
+        ADJACENCY
+            .neighbors_of(position as usize)
+            .filter(|&neighbor| {
+                board.grid.get(neighbor).placed_wildlife() == Some(Wildlife::Salmon)
+            })
+            .count()
+            <= 2
+    });
+    if !valid {
+        return -30;
+    }
+
+    let run_len = component.len() as u16;
+    let extendable = component.iter().any(|&position| {
+        let salmon_neighbors = ADJACENCY
+            .neighbors_of(position as usize)
+            .filter(|&neighbor| {
+                board.grid.get(neighbor).placed_wildlife() == Some(Wildlife::Salmon)
+            })
+            .count();
+        salmon_neighbors <= 1
+            && ADJACENCY.neighbors_of(position as usize).any(|neighbor| {
+                let cell = board.grid.get(neighbor);
+                cell.is_present()
+                    && cell.can_place_wildlife(Wildlife::Salmon)
+                    && cell.placed_wildlife() != Some(Wildlife::Salmon)
+            })
+    });
+    if !extendable {
+        return 0;
+    }
+    match run_len {
+        1 => 10,
+        2 => 15,
+        3 | 4 => 20,
+        5 => 25,
+        6 => 30,
+        _ => 0,
+    }
+}
+
+fn hawk_a_local_terms(board: &Board, index: usize) -> (bool, i32) {
+    let isolated = !ADJACENCY
+        .neighbors_of(index)
+        .any(|neighbor| board.grid.get(neighbor).placed_wildlife() == Some(Wildlife::Hawk));
+    if !isolated {
+        return (false, 0);
+    }
+    let danger_slots = ADJACENCY.neighbors_of(index).any(|neighbor| {
+        let cell = board.grid.get(neighbor);
+        cell.is_present() && cell.can_place_wildlife(Wildlife::Hawk)
+    });
+    (true, if danger_slots { 5 } else { 10 })
+}
+
+fn hawk_a_safe_slot(board: &Board, index: usize) -> bool {
+    board.grid.get(index).can_place_wildlife(Wildlife::Hawk)
+        && !ADJACENCY
+            .neighbors_of(index)
+            .any(|neighbor| board.grid.get(neighbor).placed_wildlife() == Some(Wildlife::Hawk))
+}
+
+fn hawk_a_total(isolated_count: i32, safety_total: i32, safe_slot_count: i32) -> i32 {
+    let next_marginal = match isolated_count {
+        0 => 20,
+        1..=4 => 30,
+        5..=6 => 40,
+        _ => 60,
+    };
+    safety_total + safe_slot_count.min(2) * next_marginal / 2
+}
+
+fn fox_a_position_potential(board: &Board, index: usize) -> i32 {
+    let mut seen_mask = 0u8;
+    let mut empty_slots = 0u8;
+    for neighbor in ADJACENCY.neighbors_of(index) {
+        let cell = board.grid.get(neighbor);
+        if let Some(wildlife) = cell.placed_wildlife() {
+            seen_mask |= 1 << wildlife as u8;
+        } else if cell.is_present() && cell.allowed_wildlife().count() > 0 {
+            empty_slots += 1;
+        }
+    }
+    let current_types = seen_mask.count_ones() as i32;
+    (5 - current_types).min(empty_slots as i32) * 5
+}
+
 /// Compute a potential bonus estimating future scoring opportunities.
 /// Returns a value in "fractional points" (scaled by 10 to avoid floats).
 /// Per-animal heuristics dispatch to the active scoring-card variant.
 pub fn board_potential(board: &Board, cards: &ScoringCards) -> i32 {
+    let frontier = board.frontier();
+    board_potential_with_frontier(board, cards, &frontier)
+}
+
+/// Compute board potential when the caller already has the exact frontier.
+///
+/// Candidate generation places one tile at a time and can update its existing
+/// frontier in O(frontier + 6), avoiding a full scan of every placed tile for
+/// every candidate while preserving the same frontier order and score.
+pub(crate) fn board_potential_with_frontier(
+    board: &Board,
+    cards: &ScoringCards,
+    frontier: &[u16],
+) -> i32 {
     let mut potential: i32 = 0;
 
-    potential += habitat_potential(board);
+    potential += habitat_potential(board, frontier);
     potential += bear_potential_dispatch(board, cards.variant_for(Wildlife::Bear));
     potential += elk_potential_dispatch(board, cards.variant_for(Wildlife::Elk));
     potential += salmon_potential_dispatch(board, cards.variant_for(Wildlife::Salmon));
@@ -17,6 +619,161 @@ pub fn board_potential(board: &Board, cards: &ScoringCards) -> i32 {
     potential += empty_slot_potential(board);
 
     potential
+}
+
+/// Compute the same potential as `board_potential` after one tile and at most
+/// one wildlife placement, reusing the unchanged frontier and empty-slot work
+/// from the parent board.
+pub(crate) fn board_potential_after_single_move(
+    board: &Board,
+    cards: &ScoringCards,
+    context: &BoardPotentialContext,
+    placed_tile_index: usize,
+    placed_wildlife: Option<(usize, Wildlife)>,
+) -> i32 {
+    if full_potential_recompute_enabled() {
+        return board_potential(board, cards);
+    }
+
+    let mut habitat = context.habitat_total;
+    if let Some(removed) = context.frontier_contribution(placed_tile_index as u16) {
+        habitat -= removed;
+    }
+
+    let placed_cell = board.grid.get(placed_tile_index);
+    for neighbor in ADJACENCY.neighbors_of(placed_tile_index) {
+        let neighbor = neighbor as u16;
+        if let Some(before) = context.frontier_contribution(neighbor) {
+            let mut counts = context.habitat_neighbor_counts[neighbor as usize];
+            add_cell_terrains_to_habitat_counts(&mut counts, placed_cell);
+            habitat += habitat_potential_from_counts(counts) - before;
+        } else if !board.grid.get(neighbor as usize).is_present() {
+            let mut counts = [0u8; 5];
+            add_cell_terrains_to_habitat_counts(&mut counts, placed_cell);
+            habitat += habitat_potential_from_counts(counts);
+        }
+    }
+
+    let mut affected_wildlife = placed_cell.allowed_wildlife().0;
+    let mut acceptance = context.empty_acceptance;
+    for wildlife in Wildlife::ALL {
+        if placed_cell.allowed_wildlife().contains(wildlife) {
+            acceptance[wildlife as usize] += 1;
+        }
+    }
+    if let Some((wildlife_index, wildlife)) = placed_wildlife {
+        let occupied = board.grid.get(wildlife_index);
+        affected_wildlife |= occupied.allowed_wildlife().0 | (1 << wildlife as u8);
+        for wildlife in Wildlife::ALL {
+            if occupied.allowed_wildlife().contains(wildlife) {
+                acceptance[wildlife as usize] = acceptance[wildlife as usize].saturating_sub(1);
+            }
+        }
+    }
+
+    // Fox setup values inspect all adjacent wildlife and open neighboring
+    // slots. Salmon D and Hawk D also inspect non-matching wildlife. Recompute
+    // these cross-species terms whenever the board gains a tile or token.
+    affected_wildlife |= 1 << Wildlife::Fox as u8;
+    if cards.variant_for(Wildlife::Salmon) == ScoringCardVariant::D {
+        affected_wildlife |= 1 << Wildlife::Salmon as u8;
+    }
+    if cards.variant_for(Wildlife::Hawk) == ScoringCardVariant::D {
+        affected_wildlife |= 1 << Wildlife::Hawk as u8;
+    }
+
+    let mut wildlife_total = context.wildlife_total;
+    if let Some(aaaaa) = &context.aaaaa {
+        if affected_wildlife & (1 << Wildlife::Bear as u8) != 0 {
+            wildlife_total -= context.wildlife_contributions[Wildlife::Bear as usize];
+            wildlife_total +=
+                aaaaa
+                    .bear
+                    .after_single_move(board, placed_tile_index, placed_wildlife);
+        }
+        if affected_wildlife & (1 << Wildlife::Elk as u8) != 0 {
+            wildlife_total -= context.wildlife_contributions[Wildlife::Elk as usize];
+            wildlife_total += elk_potential(board);
+        }
+        if affected_wildlife & (1 << Wildlife::Salmon as u8) != 0 {
+            wildlife_total -= context.wildlife_contributions[Wildlife::Salmon as usize];
+            wildlife_total +=
+                aaaaa
+                    .salmon
+                    .after_single_move(board, placed_tile_index, placed_wildlife);
+        }
+        if affected_wildlife & (1 << Wildlife::Hawk as u8) != 0 {
+            wildlife_total -= context.wildlife_contributions[Wildlife::Hawk as usize];
+            wildlife_total +=
+                aaaaa
+                    .hawk
+                    .after_single_move(board, placed_tile_index, placed_wildlife);
+        }
+        wildlife_total -= context.wildlife_contributions[Wildlife::Fox as usize];
+        wildlife_total += aaaaa
+            .fox
+            .after_single_move(board, placed_tile_index, placed_wildlife);
+    } else {
+        for wildlife in Wildlife::ALL {
+            if affected_wildlife & (1 << wildlife as u8) != 0 {
+                wildlife_total -= context.wildlife_contributions[wildlife as usize];
+                wildlife_total += wildlife_potential(board, cards, wildlife);
+            }
+        }
+    }
+
+    let result = habitat + wildlife_total + empty_slot_potential_from_counts(acceptance);
+    #[cfg(debug_assertions)]
+    if std::env::var_os("CASCADIA_POTENTIAL_DIAGNOSTICS").is_some() {
+        let exact = board_potential(board, cards);
+        if result != exact {
+            let exact_wildlife: [i32; 5] =
+                std::array::from_fn(|index| wildlife_potential(board, cards, Wildlife::ALL[index]));
+            let fast_wildlife = context.aaaaa.as_ref().map(|aaaaa| {
+                [
+                    aaaaa
+                        .bear
+                        .after_single_move(board, placed_tile_index, placed_wildlife),
+                    elk_potential(board),
+                    aaaaa
+                        .salmon
+                        .after_single_move(board, placed_tile_index, placed_wildlife),
+                    aaaaa
+                        .hawk
+                        .after_single_move(board, placed_tile_index, placed_wildlife),
+                    aaaaa
+                        .fox
+                        .after_single_move(board, placed_tile_index, placed_wildlife),
+                ]
+            });
+            eprintln!(
+                "potential mismatch result={result} exact={exact} habitat={habitat} empty={} base_wildlife={:?} exact_wildlife={exact_wildlife:?} fast_wildlife={fast_wildlife:?} tile={placed_tile_index} wildlife={placed_wildlife:?}",
+                empty_slot_potential_from_counts(acceptance),
+                context.wildlife_contributions,
+            );
+        }
+    }
+    result
+}
+
+fn full_potential_recompute_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("LEGACY_TEACHER_POTENTIAL_FULL_RECOMPUTE")
+            .ok()
+            .is_some_and(|value| !value.is_empty() && value != "0")
+    })
+}
+
+#[inline]
+fn wildlife_potential(board: &Board, cards: &ScoringCards, wildlife: Wildlife) -> i32 {
+    match wildlife {
+        Wildlife::Bear => bear_potential_dispatch(board, cards.variant_for(wildlife)),
+        Wildlife::Elk => elk_potential_dispatch(board, cards.variant_for(wildlife)),
+        Wildlife::Salmon => salmon_potential_dispatch(board, cards.variant_for(wildlife)),
+        Wildlife::Hawk => hawk_potential_dispatch(board, cards.variant_for(wildlife)),
+        Wildlife::Fox => fox_potential_dispatch(board, cards.variant_for(wildlife)),
+    }
 }
 
 #[inline]
@@ -79,34 +836,49 @@ fn fox_potential_dispatch(board: &Board, v: ScoringCardVariant) -> i32 {
 
 /// Habitat potential: bonus for frontier cells adjacent to same-terrain tiles,
 /// especially when they could bridge separate groups.
-fn habitat_potential(board: &Board) -> i32 {
-    let adj = &*ADJACENCY;
-    let frontier = board.frontier();
-    let mut potential: i32 = 0;
+fn habitat_potential(board: &Board, frontier: &[u16]) -> i32 {
+    frontier
+        .iter()
+        .map(|&index| habitat_cell_potential(board, index as usize))
+        .sum()
+}
 
-    for &fi in frontier.iter() {
-        let idx = fi as usize;
-        // For each terrain, count how many neighboring tiles have this terrain
-        for ti in 0..5 {
-            let mut terrain_neighbor_count = 0u8;
-            for nidx in adj.neighbors_of(idx) {
-                let cell = board.grid.get(nidx);
-                let has_terrain = cell.primary_terrain().map_or(false, |t| t as usize == ti)
-                    || cell.secondary_terrain().map_or(false, |t| t as usize == ti);
-                if has_terrain {
-                    terrain_neighbor_count += 1;
-                }
-            }
-            // Multiple same-terrain neighbors suggests a bridging opportunity
-            if terrain_neighbor_count >= 2 {
-                potential += 15; // bridging opportunity = ~1.5 habitat points
-            } else if terrain_neighbor_count == 1 {
-                potential += 2; // simple growth
+fn habitat_cell_potential(board: &Board, index: usize) -> i32 {
+    habitat_potential_from_counts(habitat_counts_around_cell(board, index))
+}
+
+fn habitat_counts_around_cell(board: &Board, index: usize) -> [u8; 5] {
+    let mut counts = [0u8; 5];
+    for neighbor in ADJACENCY.neighbors_of(index) {
+        add_cell_terrains_to_habitat_counts(&mut counts, board.grid.get(neighbor));
+    }
+    counts
+}
+
+fn add_cell_terrains_to_habitat_counts(counts: &mut [u8; 5], cell: cascadia_core::types::Cell) {
+    if let Some(primary) = cell.primary_terrain() {
+        counts[primary as usize] += 1;
+        if let Some(secondary) = cell.secondary_terrain() {
+            if secondary != primary {
+                counts[secondary as usize] += 1;
             }
         }
     }
+}
 
-    potential
+fn habitat_potential_from_counts(counts: [u8; 5]) -> i32 {
+    counts
+        .into_iter()
+        .map(|count| {
+            if count >= 2 {
+                15
+            } else if count == 1 {
+                2
+            } else {
+                0
+            }
+        })
+        .sum()
 }
 
 /// Bear potential (Card A): reward setups toward completing bear pairs.
@@ -203,65 +975,89 @@ fn elk_potential(board: &Board) -> i32 {
     let adj = &*ADJACENCY;
     let mut potential: i32 = 0;
 
-    // Find line lengths for each elk by checking the 3 hex directions
-    for &pos in positions.iter() {
-        let coord = HexCoord::from_index(pos as usize);
-
-        for &(dq, dr) in &HexCoord::LINE_DIRECTIONS {
-            // Measure line length in the forward direction from this elk
-            let fwd = HexCoord::new(coord.q + dq, coord.r + dr);
-            let has_fwd_elk = fwd.to_index().map_or(false, |idx| {
-                board.grid.get(idx).placed_wildlife() == Some(Wildlife::Elk)
-            });
-
-            if !has_fwd_elk {
+    for &position in positions {
+        let start = position as usize;
+        for direction in 0..3 {
+            let backward = adj.neighbors[start][direction + 3];
+            if backward == u16::MAX {
+                continue;
+            }
+            let extension_index = backward as usize;
+            if !board
+                .grid
+                .get(extension_index)
+                .can_place_wildlife(Wildlife::Elk)
+            {
                 continue;
             }
 
-            // Count the full line length through this elk in this direction
-            let mut line_len = 1u16;
-            // Forward
-            let mut c = HexCoord::new(coord.q + dq, coord.r + dr);
-            while let Some(idx) = c.to_index() {
-                if board.grid.get(idx).placed_wildlife() == Some(Wildlife::Elk) {
-                    line_len += 1;
-                    c = HexCoord::new(c.q + dq, c.r + dr);
-                } else {
+            let mut line_len = 0u8;
+            let mut current = adj.neighbors[extension_index][direction];
+            while current != u16::MAX && line_len < 4 {
+                let current_index = current as usize;
+                if board.grid.get(current_index).placed_wildlife() != Some(Wildlife::Elk) {
                     break;
                 }
+                line_len += 1;
+                current = adj.neighbors[current_index][direction];
             }
-            // Backward
-            c = HexCoord::new(coord.q - dq, coord.r - dr);
-            while let Some(idx) = c.to_index() {
-                if board.grid.get(idx).placed_wildlife() == Some(Wildlife::Elk) {
-                    line_len += 1;
-                    c = HexCoord::new(c.q - dq, c.r - dr);
-                } else {
+            potential += 20 * i32::from(matches!(line_len, 2 | 3));
+        }
+    }
+
+    potential
+}
+
+#[cfg(test)]
+fn elk_potential_reference(board: &Board) -> i32 {
+    let positions = &board.wildlife_positions[Wildlife::Elk as usize];
+    if positions.is_empty() {
+        return 0;
+    }
+    let mut potential = 0;
+
+    for &position in positions {
+        let coord = HexCoord::from_index(position as usize);
+        for &(dq, dr) in &HexCoord::LINE_DIRECTIONS {
+            let forward = HexCoord::new(coord.q + dq, coord.r + dr);
+            if !forward
+                .to_index()
+                .is_some_and(|index| board.grid.get(index).placed_wildlife() == Some(Wildlife::Elk))
+            {
+                continue;
+            }
+
+            let mut line_len = 1u16;
+            let mut current = forward;
+            while let Some(index) = current.to_index() {
+                if board.grid.get(index).placed_wildlife() != Some(Wildlife::Elk) {
                     break;
                 }
+                line_len += 1;
+                current = HexCoord::new(current.q + dq, current.r + dr);
+            }
+            current = HexCoord::new(coord.q - dq, coord.r - dr);
+            while let Some(index) = current.to_index() {
+                if board.grid.get(index).placed_wildlife() != Some(Wildlife::Elk) {
+                    break;
+                }
+                line_len += 1;
+                current = HexCoord::new(current.q - dq, current.r - dr);
             }
 
             if line_len >= 4 {
                 continue;
-            } // line already maxed out
-
-            // Check if the backward direction can accept an elk (extension point)
-            let bwd = HexCoord::new(coord.q - dq, coord.r - dr);
-            let can_extend = bwd.to_index().map_or(false, |idx| {
-                let cell = board.grid.get(idx);
-                cell.is_present() && cell.can_place_wildlife(Wildlife::Elk)
-            });
-
-            if can_extend {
-                // Marginal value of extending based on current line length
-                let marginal = match line_len {
-                    1 => 30, // 1→2: +3 points
-                    2 => 40, // 2→3: +4 points
-                    3 => 40, // 3→4: +4 points
+            }
+            let backward = HexCoord::new(coord.q - dq, coord.r - dr);
+            if backward
+                .to_index()
+                .is_some_and(|index| board.grid.get(index).can_place_wildlife(Wildlife::Elk))
+            {
+                potential += match line_len {
+                    1 => 15,
+                    2 | 3 => 20,
                     _ => 0,
                 };
-                // Discount for uncertainty
-                potential += marginal / 2;
             }
         }
     }
@@ -877,9 +1673,10 @@ fn fox_potential_b(board: &Board) -> i32 {
 
 /// Bonus for wildlife types that have very few remaining placement slots.
 fn empty_slot_potential(board: &Board) -> i32 {
-    let mut potential: i32 = 0;
+    empty_slot_potential_from_counts(empty_acceptance_counts(board))
+}
 
-    // Count how many tiles accept each wildlife type (empty slots only)
+fn empty_acceptance_counts(board: &Board) -> [u16; 5] {
     let mut acceptance_count = [0u16; 5];
     for &tile_idx in &board.placed_tiles {
         let cell = board.grid.get(tile_idx as usize);
@@ -892,16 +1689,43 @@ fn empty_slot_potential(board: &Board) -> i32 {
             }
         }
     }
+    acceptance_count
+}
 
-    // Urgency bonus: fewer slots = more important to use them wisely
-    for w in Wildlife::ALL {
-        let count = acceptance_count[w as usize];
+fn empty_slot_potential_from_counts(acceptance_count: [u16; 5]) -> i32 {
+    let mut potential = 0;
+    for wildlife in Wildlife::ALL {
+        let count = acceptance_count[wildlife as usize];
         if count == 1 {
-            potential += 15; // last slot — very urgent
+            potential += 15;
         } else if count == 2 {
             potential += 5;
         }
     }
 
     potential
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cascadia_core::{game::GameState, types::ScoringCards};
+    use rand::{rngs::StdRng, SeedableRng};
+
+    #[test]
+    fn adjacency_elk_potential_matches_coordinate_reference() {
+        for game_index in 0..24 {
+            let mut rng = StdRng::seed_from_u64(0xe1ca_0000 + game_index);
+            let mut game = GameState::new(4, ScoringCards::all_a(), &mut rng);
+            while !game.is_game_over() {
+                for board in &game.boards {
+                    assert_eq!(elk_potential(board), elk_potential_reference(board));
+                }
+                let Some(movement) = crate::search::greedy_move(&game) else {
+                    break;
+                };
+                assert!(crate::search::execute_scored_move(&mut game, &movement));
+            }
+        }
+    }
 }

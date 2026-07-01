@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const webPort = "5187";
+
 export default defineConfig({
   testDir: "./tests",
   outputDir: "../../artifacts/web-test-results",
@@ -10,7 +12,7 @@ export default defineConfig({
     ["html", { outputFolder: "../../artifacts/web-report", open: "never" }],
   ],
   use: {
-    baseURL: "http://127.0.0.1:5187",
+    baseURL: `http://127.0.0.1:${webPort}`,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -23,9 +25,9 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: "npm run dev -- --port 5187",
+      command: `npm run dev -- --port ${webPort} --strictPort`,
       cwd: ".",
-      url: "http://127.0.0.1:5187",
+      url: `http://127.0.0.1:${webPort}`,
       reuseExistingServer: true,
       timeout: 60_000,
     },

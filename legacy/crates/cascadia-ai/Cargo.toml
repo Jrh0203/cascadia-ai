@@ -11,6 +11,12 @@ mid-features = []
 # Appends per-opponent detail block (369 features, 3 opponents × 123).
 # Backward-compatible: older weights load with zero columns for new features.
 v4-opp = []
+# Corrected historical mid-tail schema. Preserves the first 10,561 v2
+# columns, migrates the live 369-column opponent block, and replaces the
+# frozen dead 301-column adjacency prefix with the intended 150 + 150 + 1
+# extended tile-supply tail. The feature implies the production champion
+# feature pair but uses an explicit schema-tagged weight container.
+legacy-mid-v4-fixed-v1 = ["mid-features", "v4-opp"]
 # v5: appends new feature blocks (frontier, richer opp patterns, bonus distance,
 # habitat structure, tile-bag joint distribution) AND switches to 11-head split
 # value architecture (5 wildlife + 5 per-terrain hab+bonus + 1 tokens).
@@ -82,3 +88,7 @@ criterion = "0.5"
 name = "az_v2_perf"
 harness = false
 required-features = ["v4-opp", "v5-feat", "czero-feat", "az-v2"]
+
+[[example]]
+name = "migrate_legacy_mid_v4_weights"
+required-features = ["legacy-mid-v4-fixed-v1"]

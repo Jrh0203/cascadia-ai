@@ -8,8 +8,10 @@ blake3.workspace = true
 cascadia-data = { path = "../cascadia-data" }
 cascadia-game = { path = "../cascadia-game" }
 cascadia-model = { path = "../cascadia-model" }
+cascadia-r2 = { path = "../cascadia-r2" }
 cascadia-sim = { path = "../cascadia-sim" }
 rand.workspace = true
 rand_chacha.workspace = true
 rayon.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true

@@ -1,0 +1,313 @@
+{
+  "campaign_id": "r2-map-expert-iteration-v1",
+  "manifest_sha256": "5d88e296810eb5f8c5abc67ebc317ce987a2edb11d97b0c4e55ea873d96e5a65",
+  "panels": [
+    {
+      "definition": {
+        "complete_cardinality_required": true,
+        "expected_action_evaluations": 6372,
+        "ordered_action_id_derivation": "sha256('r2-map-max-width-service-v1:' || zero-padded action index)",
+        "protocol": "r2-map-grouped-exhaustive-request-v1",
+        "reference_candidate_count": 6372,
+        "truncation_allowed": false
+      },
+      "panel_id": "maximum-width-service",
+      "panel_sha256": "a6b1f2c24eda1024a3be13c10b058b143effe2186c066a0069712d028756da16",
+      "source_bindings": [
+        {
+          "path": "python/cascadia_mlx/r2_map_serve.py",
+          "sha256": "eae9e2dff5303c71c4ac693ccf496c80f57c05cbf8ff40f05ca650296e35eb37"
+        },
+        {
+          "path": "python/tests/test_r2_map_serve.py",
+          "sha256": "cf779bf3b680b1b366a75dea8917580e622a9e8d8abfdb474aec20daf0704e27"
+        }
+      ]
+    },
+    {
+      "definition": {
+        "d6_schema": "exact-r2-d6-v1",
+        "forbidden_tensor_metadata": [
+          "campaign_id",
+          "checkpoint_id",
+          "collector_host",
+          "game_seed",
+          "global_game_index",
+          "iteration",
+          "policy_id",
+          "promotion_index",
+          "seed_domain",
+          "split"
+        ],
+        "future_refill_mutation_independence_required": true,
+        "hidden_order_mutation_independence_required": true,
+        "prediction_permutation_or_invariance_required": true,
+        "round_trip_required": true,
+        "transform_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      "panel_id": "d6-public-only",
+      "panel_sha256": "e95128e384d60a04fa575c86d4d8d2a498ec73dd8d11415d28ec0bf51085c153",
+      "source_bindings": [
+        {
+          "path": "crates/cascadia-game/src/symmetry.rs",
+          "sha256": "42a4065b0bbeeeab17dd640c8039f0979bf78da319fae590f406144803e4c973"
+        },
+        {
+          "path": "python/cascadia_mlx/r2_map_dataset.py",
+          "sha256": "dc99f94eff4dc92e4f93120bf5d1b6590bb6c5d38f94f06061037476ddcca756"
+        },
+        {
+          "path": "python/cascadia_mlx/r2_map_model.py",
+          "sha256": "0fa2edfd9a4f6e17ea6dba5672a40078306df0a208e7709480db65b4c254725f"
+        },
+        {
+          "path": "python/tests/test_d6_contract.py",
+          "sha256": "435ba42b40ddb31d2a2dfeada9441516964081a328ad3ad43ceec1281af0a838"
+        },
+        {
+          "path": "python/tests/test_r2_map_dataset.py",
+          "sha256": "2393f08e4ed8fbc04fbb67e70757bfa93d63e577a915650714a42ec1a034cc67"
+        },
+        {
+          "path": "python/tests/test_r2_map_model.py",
+          "sha256": "8b660dc7fe8e3e95414805ef244ad0b692d6a54e2d24dd3dd44478faea923d86"
+        }
+      ]
+    },
+    {
+      "definition": {
+        "bootstrap_decisions_per_game": 80,
+        "experience_schema": "CSDR2XP-v1",
+        "focal_decisions_per_iterative_game": 20,
+        "free_three_of_a_kind_replacements_are_context_only": true,
+        "game_config": "research-aaaaa-4p-no-habitat-bonus",
+        "pinecone_identity": "earned - independent_draft_spend - paid_wipe_spend = remaining",
+        "replay_seal_required": true,
+        "score_reconciliation_required": true
+      },
+      "panel_id": "replay-pinecone",
+      "panel_sha256": "2f5bdc1f7147dd8b4b28443480181cc48ae32f11582967e7def97223a32bda6a",
+      "source_bindings": [
+        {
+          "path": "crates/cascadia-data/src/r2_map_experience.rs",
+          "sha256": "03bbd69b1382b5056c5de7c667dfae8a35fa54a96675b71ddfb4d20a36bc8a9f"
+        },
+        {
+          "path": "crates/cascadia-eval/src/focal.rs",
+          "sha256": "73c9512e0c12f5ce8ecebf9f7877f1472ae581b0db968d8caa900aad28abb164"
+        }
+      ]
+    },
+    {
+      "definition": {
+        "checkpoint_after_global_step": 1,
+        "checkpoint_schema_version": 2,
+        "corruption_rejection_required": true,
+        "expected_next_batch_identity": "synthetic-batch-0001",
+        "fault_stages": "all registered R2_MAP_WRITE_STAGES",
+        "model_optimizer_rng_cursor_sampler_and_loss_head_exact": true,
+        "prediction_panel_id": "r2-map-fixed-panel-v1",
+        "synthetic_seed": 42
+      },
+      "panel_id": "checkpoint-resume",
+      "panel_sha256": "7a1fe86b720f84b60463b0b19fb799b187c4504a9e189d21c78d593451fda8ca",
+      "source_bindings": [
+        {
+          "path": "python/cascadia_mlx/checkpoint.py",
+          "sha256": "023fc5a7603e8a878986173fc744b60eb9279516a33463e04d2130a0e89097f3"
+        },
+        {
+          "path": "python/cascadia_mlx/r2_map_train.py",
+          "sha256": "f6ec950cbbed964b182e33b8d19271df13f08ec0ebd33a1f661999408dee2fc2"
+        },
+        {
+          "path": "python/cascadia_mlx/r2_map_verify.py",
+          "sha256": "482f701572f9ff66bce103f9dc88046bc5ae37e5ecb35340feda0c704850f276"
+        },
+        {
+          "path": "python/tests/test_r2_map_checkpoint_train.py",
+          "sha256": "77b641334c048caa1e4b26453b44424491890a3e6b8bd405ce16d4c885d22c8b"
+        }
+      ]
+    },
+    {
+      "definition": {
+        "focal_seat": "game_index mod 4",
+        "game_config": "research-aaaaa-4p-no-habitat-bonus",
+        "game_count": 100,
+        "protected_domain": false,
+        "reference_and_optimized_order": [
+          "reference-then-optimized",
+          "optimized-then-reference"
+        ],
+        "seed_domain": "r2-map-open-reference-performance-100-v1",
+        "seeds": [
+          5138821804482869219,
+          4819016731977184206,
+          7623683326808011010,
+          2851292414919368110,
+          11921627116437743272,
+          3384904197281681592,
+          9486521931190147642,
+          2063101107651799678,
+          3483163968606994285,
+          12590215878377892160,
+          3929951485561252542,
+          14098581565596568034,
+          16981473536696008750,
+          18070038948453072055,
+          11760571868592913742,
+          1260771964473489007,
+          3143477248833269270,
+          248861734669515606,
+          7589687804832854446,
+          225919196778748519,
+          7710906437531438220,
+          2665158981294421411,
+          8493211958070226244,
+          2700933213725248154,
+          14763337786233507756,
+          10594848712894253362,
+          8235290856141710187,
+          3749802665085004216,
+          14036401132996399791,
+          16941786732257490682,
+          12945415700068459547,
+          39454175301647883,
+          10592285407873080346,
+          3842376455904662286,
+          10220428310965356766,
+          1703159921792000014,
+          17382293298395376898,
+          12500817230556673249,
+          1109554297158041552,
+          10577677264655864412,
+          10573333185417676515,
+          1378848972578014986,
+          12766732730697811078,
+          15971513032633255249,
+          6199366117971397117,
+          973348903554197412,
+          3236141498031704655,
+          10737571333400056387,
+          12831994115652869565,
+          6092240816043367272,
+          609012381443018266,
+          12826746161765046667,
+          11925100489435039620,
+          5592239474803345084,
+          732891771774213064,
+          16783512383721105312,
+          5114251109435721177,
+          8001438455756011406,
+          1408601443540345031,
+          12383344152047805109,
+          5592338497528374121,
+          3014489727288884864,
+          18193346720667887566,
+          42880530021838559,
+          14739672465818136373,
+          4310419427513020675,
+          4645805108122535998,
+          18133659805963962715,
+          3342076703116329195,
+          15362691143278166198,
+          4769137659525752639,
+          5983667221401386831,
+          10000110904823907613,
+          5632971350934366333,
+          12080845676978104200,
+          3682264276604192193,
+          12247623021574921543,
+          16788731527559477393,
+          15506254940738550703,
+          58863474629820093,
+          17715729120575459177,
+          6789126921453876701,
+          3205778848242512531,
+          12494705655609246057,
+          15352513588154830810,
+          13784973988394026258,
+          15057311948458295615,
+          4574327069607384974,
+          15261824130938441501,
+          1682387652007385724,
+          9883491569883901544,
+          321502282667990698,
+          11189278511720573603,
+          1540572787242507074,
+          2314888648407170912,
+          7981648109034968794,
+          13115049754776651274,
+          1992406460875716447,
+          3272472297217997964,
+          15285298424501128343
+        ],
+        "strength_claim_authorized": false
+      },
+      "panel_id": "open-performance-100",
+      "panel_sha256": "850f3849397147b975f65a246598684c1923d209c22ded26c17216dcdf3c7019",
+      "source_bindings": [
+        {
+          "path": "crates/cascadia-eval/src/focal.rs",
+          "sha256": "73c9512e0c12f5ce8ecebf9f7877f1472ae581b0db968d8caa900aad28abb164"
+        },
+        {
+          "path": "crates/cascadia-eval/src/focal_campaign.rs",
+          "sha256": "fc49f6756f3d5c854b5b196fee21db78a5cf84b47680edea47cbbedc9e877de5"
+        },
+        {
+          "path": "crates/cascadia-eval/src/focal_gameplay.rs",
+          "sha256": "36cb5a861fbb015d63681de6aaf057aa229e29913318e7ad4a6bd3f938489860"
+        }
+      ]
+    }
+  ],
+  "protected_seed_domains": [
+    {
+      "count": 20,
+      "domain_commitment_sha256": "34a2dcc12a114549c2ba2e5f28d67b53dca52b8a402086c0a88a008fbe7cc610",
+      "domain_id": "r2-map-strength-blinded-smoke-20-v1",
+      "opened": false,
+      "provisioning": "separate sealed workflow only after its registered phase barrier",
+      "seed_material_present": false
+    },
+    {
+      "count": 250,
+      "domain_commitment_sha256": "a58f04c60289261ec9eadb6d4fefcfa41011730d768ec775bf35845f34f1abfe",
+      "domain_id": "r2-map-fixed-development-gate-250-v1",
+      "opened": false,
+      "provisioning": "separate sealed workflow only after its registered phase barrier",
+      "seed_material_present": false
+    },
+    {
+      "count": 1000,
+      "domain_commitment_sha256": "78cc76adb2dfd495579c8c34dc31c4babafb1683ab82b0bac64aca176a306923",
+      "domain_id": "r2-map-final-domain-1000-v1",
+      "opened": false,
+      "provisioning": "separate sealed workflow only after its registered phase barrier",
+      "seed_material_present": false
+    }
+  ],
+  "protected_seed_handling": {
+    "opening_authorized": false,
+    "values_accepted_by_tool": false,
+    "values_derivable_by_tool": false,
+    "values_in_manifest": false
+  },
+  "schema_id": "cascadia.r2-map.reference-panel-manifest.v1",
+  "status": "frozen-open-reference-panels"
+}

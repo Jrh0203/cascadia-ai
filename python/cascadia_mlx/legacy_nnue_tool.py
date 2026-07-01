@@ -12,19 +12,31 @@ import uuid
 from collections import Counter
 from pathlib import Path
 
+import blake3
 import mlx.core as mx
 import numpy as np
 
 from cascadia_mlx.legacy_nnue import (
+    CORRECTED_NNUE_BASE_END,
+    CORRECTED_NNUE_MAGIC,
+    CORRECTED_NNUE_OPPONENT_END,
+    CORRECTED_NNUE_OPPONENT_START,
+    CORRECTED_NNUE_OVERFLOW_END,
+    CORRECTED_NNUE_TERRAIN_START,
     LEGACY_NNUE_FEATURES,
     LegacyNnueError,
+    LegacyNnueWeights,
+    LegacyRustExactSparseNnue,
     LegacySparseNnue,
     checksum_file,
+    convert_corrected_nnue,
     convert_legacy_nnue,
     load_legacy_nnue_manifest,
+    pack_sparse_csr,
     pack_sparse_features,
     parse_legacy_nnue,
     reference_forward,
+    remap_historical_features_to_corrected,
 )
 from cascadia_mlx.legacy_nnue_serve import (
     FRAME_HEADER,
@@ -71,6 +83,37 @@ def _error_metrics(actual: np.ndarray, expected: np.ndarray) -> dict[str, float]
         "p99_absolute_error": float(np.percentile(errors, 99)),
         "mean_absolute_error": float(np.mean(errors)),
     }
+
+
+def _array_blake3(array: np.ndarray) -> str:
+    return blake3.blake3(np.asarray(array).tobytes(order="C")).hexdigest()
+
+
+def _bit_identical(left: np.ndarray, right: np.ndarray) -> bool:
+    left = np.asarray(left, dtype=np.float32)
+    right = np.asarray(right, dtype=np.float32)
+    return left.shape == right.shape and left.tobytes(order="C") == right.tobytes(order="C")
+
+
+def _non_first_layer_tensors(weights: LegacyNnueWeights) -> dict[str, np.ndarray]:
+    names = (
+        "b1",
+        "w2",
+        "b2",
+        "w3",
+        "b3",
+        "w3_policy",
+        "b3_policy",
+        "w3_wildlife",
+        "b3_wildlife",
+        "w3_habitat",
+        "b3_habitat",
+        "w3_heads",
+        "b3_heads",
+        "w3_var",
+        "b3_var",
+    )
+    return {name: tensor for name in names if (tensor := getattr(weights, name)) is not None}
 
 
 def _predict(model: LegacySparseNnue, feature_sets: list[list[int]]) -> np.ndarray:
@@ -246,6 +289,192 @@ def run_parity(
     return report
 
 
+def run_corrected_parity(
+    historical_source: Path,
+    corrected_source: Path,
+    fixture_path: Path,
+    output: Path,
+    model_dir: Path,
+) -> dict[str, object]:
+    """Prove Rust migration rows and Rust-order MLX predictions are exact."""
+
+    historical = parse_legacy_nnue(historical_source)
+    corrected = parse_legacy_nnue(corrected_source)
+    if historical.container_magic != b"NNUE":
+        raise LegacyNnueError("corrected parity control must use the historical NNUE container")
+    if historical.feature_count != LEGACY_NNUE_FEATURES:
+        raise LegacyNnueError("corrected parity control must be the 11,231-row champion layout")
+    if corrected.container_magic != CORRECTED_NNUE_MAGIC or not corrected.is_corrected:
+        raise LegacyNnueError("corrected parity treatment must use the NNUC corrected container")
+    if corrected.version != historical.version:
+        raise LegacyNnueError("historical and corrected checkpoint head versions differ")
+
+    base_source = historical.w1[:CORRECTED_NNUE_BASE_END]
+    base_treatment = corrected.w1[:CORRECTED_NNUE_BASE_END]
+    opponent_source = historical.w1[10_862:LEGACY_NNUE_FEATURES]
+    opponent_treatment = corrected.w1[CORRECTED_NNUE_OPPONENT_START:CORRECTED_NNUE_OPPONENT_END]
+    corrected_tail = corrected.w1[CORRECTED_NNUE_TERRAIN_START:CORRECTED_NNUE_OVERFLOW_END]
+    downstream_control = _non_first_layer_tensors(historical)
+    downstream_treatment = _non_first_layer_tensors(corrected)
+    downstream_names_match = downstream_control.keys() == downstream_treatment.keys()
+    downstream_byte_parity = downstream_names_match and all(
+        _bit_identical(downstream_control[name], downstream_treatment[name])
+        for name in downstream_control
+    )
+
+    fixture = _load_and_validate_fixture(fixture_path)
+    records = fixture["records"]
+    historical_features = [[int(index) for index in record["features"]] for record in records]
+    discarded_activations = sum(
+        1
+        for features in historical_features
+        for index in features
+        if CORRECTED_NNUE_BASE_END <= index < 10_862
+    )
+    corrected_features = [
+        remap_historical_features_to_corrected(features) for features in historical_features
+    ]
+    rust_fixture_values = np.asarray(
+        [record["rust_value"] for record in records],
+        dtype=np.float32,
+    )
+    historical_reference = np.asarray(
+        [reference_forward(historical, features) for features in historical_features],
+        dtype=np.float32,
+    )
+    corrected_reference = np.asarray(
+        [reference_forward(corrected, features) for features in corrected_features],
+        dtype=np.float32,
+    )
+    exact_model = LegacyRustExactSparseNnue(corrected.tensors())
+    offsets, indices = pack_sparse_csr(corrected_features)
+    corrected_mlx = exact_model(offsets, indices)
+    mx.eval(corrected_mlx)
+    corrected_mlx_values = np.asarray(corrected_mlx, dtype=np.float32)
+    artifact_manifest = None
+    artifact_values = None
+    if model_dir is not None:
+        artifact_manifest = load_legacy_nnue_manifest(model_dir)
+        if artifact_manifest["source"]["blake3"] != checksum_file(corrected_source):
+            raise LegacyNnueError("corrected MLX artifact source does not match the checkpoint")
+        artifact_model = LegacyRustExactSparseNnue.load(model_dir)
+        artifact_predictions = artifact_model(offsets, indices)
+        mx.eval(artifact_predictions)
+        artifact_values = np.asarray(artifact_predictions, dtype=np.float32)
+
+    tail_bits = corrected_tail.view(np.uint32)
+    gates = {
+        "historical_container": historical.container_magic == b"NNUE",
+        "corrected_container": corrected.is_corrected,
+        "head_version_match": corrected.version == historical.version,
+        "base_rows_byte_identical": _bit_identical(base_source, base_treatment),
+        "opponent_rows_byte_identical": _bit_identical(
+            opponent_source,
+            opponent_treatment,
+        ),
+        "corrected_tail_all_signed_zero": bool(np.all((tail_bits & 0x7FFF_FFFF) == 0)),
+        "non_first_layer_tensors_byte_identical": downstream_byte_parity,
+        "fixture_has_no_discarded_row_activations": discarded_activations == 0,
+        "historical_reference_matches_rust_fixture_bits": _bit_identical(
+            historical_reference,
+            rust_fixture_values,
+        ),
+        "corrected_reference_matches_historical_bits": _bit_identical(
+            corrected_reference,
+            historical_reference,
+        ),
+        "corrected_mlx_matches_corrected_reference_bits": _bit_identical(
+            corrected_mlx_values,
+            corrected_reference,
+        ),
+        "corrected_mlx_matches_rust_fixture_bits": _bit_identical(
+            corrected_mlx_values,
+            rust_fixture_values,
+        ),
+        "corrected_artifact_integrity": artifact_manifest is not None,
+        "corrected_artifact_matches_source_mlx_bits": (
+            artifact_values is not None and _bit_identical(artifact_values, corrected_mlx_values)
+        ),
+        "corrected_artifact_matches_rust_fixture_bits": (
+            artifact_values is not None and _bit_identical(artifact_values, rust_fixture_values)
+        ),
+        "finite": bool(np.all(np.isfinite(corrected_mlx_values))),
+    }
+    report = {
+        "schema_version": 1,
+        "experiment_id": "corrected-mid-tail-v1-mlx-foundation",
+        "schema_id": corrected.schema_id,
+        "device": str(mx.default_device()),
+        "records": len(records),
+        "discarded_row_activations": discarded_activations,
+        "inputs": {
+            "historical_checkpoint": {
+                "path": str(historical_source.resolve()),
+                "bytes": historical_source.stat().st_size,
+                "blake3": checksum_file(historical_source),
+            },
+            "corrected_checkpoint": {
+                "path": str(corrected_source.resolve()),
+                "bytes": corrected_source.stat().st_size,
+                "blake3": checksum_file(corrected_source),
+                "head_version": corrected.version,
+            },
+            "rust_fixture": {
+                "path": str(fixture_path.resolve()),
+                "bytes": fixture_path.stat().st_size,
+                "blake3": checksum_file(fixture_path),
+                "records": len(records),
+            },
+            "mlx_artifact": (
+                {
+                    "path": str(model_dir.resolve()),
+                    "manifest_blake3": checksum_file(model_dir / "model.json"),
+                    "safetensors": artifact_manifest["files"]["model.safetensors"],
+                }
+                if model_dir is not None and artifact_manifest is not None
+                else None
+            ),
+        },
+        "first_layer": {
+            "base_rows": {
+                "count": CORRECTED_NNUE_BASE_END,
+                "source_blake3": _array_blake3(base_source),
+                "corrected_blake3": _array_blake3(base_treatment),
+            },
+            "opponent_rows": {
+                "count": CORRECTED_NNUE_OPPONENT_END - CORRECTED_NNUE_OPPONENT_START,
+                "source_blake3": _array_blake3(opponent_source),
+                "corrected_blake3": _array_blake3(opponent_treatment),
+            },
+            "zero_initialized_tail_rows": len(corrected_tail),
+            "zero_initialized_tail_blake3": _array_blake3(corrected_tail),
+        },
+        "predictions": {
+            "historical_reference_vs_rust_fixture": _error_metrics(
+                historical_reference,
+                rust_fixture_values,
+            ),
+            "corrected_reference_vs_historical_reference": _error_metrics(
+                corrected_reference,
+                historical_reference,
+            ),
+            "corrected_mlx_vs_rust_fixture": _error_metrics(
+                corrected_mlx_values,
+                rust_fixture_values,
+            ),
+            "rust_fixture_blake3": _array_blake3(rust_fixture_values),
+            "corrected_mlx_blake3": _array_blake3(corrected_mlx_values),
+            "corrected_artifact_blake3": (
+                _array_blake3(artifact_values) if artifact_values is not None else None
+            ),
+        },
+        "gates": gates,
+        "passed": all(gates.values()),
+    }
+    _write_json_atomic(output, report)
+    return report
+
+
 def run_benchmark(
     model_dir: Path,
     output: Path,
@@ -381,6 +610,10 @@ def main() -> None:
     convert.add_argument("--source", type=Path, required=True)
     convert.add_argument("--output", type=Path, required=True)
 
+    convert_corrected = subparsers.add_parser("convert-corrected")
+    convert_corrected.add_argument("--source", type=Path, required=True)
+    convert_corrected.add_argument("--output", type=Path, required=True)
+
     parity = subparsers.add_parser("parity")
     parity.add_argument("--source", type=Path, required=True)
     parity.add_argument("--model-dir", type=Path, required=True)
@@ -399,10 +632,19 @@ def main() -> None:
     service_parity.add_argument("--fixture", type=Path, required=True)
     service_parity.add_argument("--output", type=Path, required=True)
 
+    corrected_parity = subparsers.add_parser("corrected-parity")
+    corrected_parity.add_argument("--historical-source", type=Path, required=True)
+    corrected_parity.add_argument("--corrected-source", type=Path, required=True)
+    corrected_parity.add_argument("--model-dir", type=Path, required=True)
+    corrected_parity.add_argument("--fixture", type=Path, required=True)
+    corrected_parity.add_argument("--output", type=Path, required=True)
+
     args = parser.parse_args()
     try:
         if args.command == "convert":
             report = convert_legacy_nnue(args.source, args.output)
+        elif args.command == "convert-corrected":
+            report = convert_corrected_nnue(args.source, args.output)
         elif args.command == "parity":
             report = run_parity(
                 args.source,
@@ -417,6 +659,14 @@ def main() -> None:
                 args.output,
                 args.seed,
                 args.iterations,
+            )
+        elif args.command == "corrected-parity":
+            report = run_corrected_parity(
+                args.historical_source,
+                args.corrected_source,
+                args.fixture,
+                args.output,
+                args.model_dir,
             )
         else:
             report = run_service_direct_parity(

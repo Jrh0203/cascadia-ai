@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-resolved-habitat-preview-rejection-v1-20260615",
+  "status": "rejected",
+  "date": "2026-06-15",
+  "hypothesis": "Resolve occupied-neighbor habitat roots once per frontier cell and reuse them across all six rotations inside the original scan boundary.",
+  "preregistered_minimum_speedup_percent": 0.25,
+  "benchmark": {
+    "ruleset": "four-player AAAAA, no habitat bonuses",
+    "seed": 34400,
+    "games_per_run": 1,
+    "rollouts": 600,
+    "sequence_per_host": [
+      "treatment",
+      "control",
+      "treatment",
+      "control"
+    ],
+    "profile": "release without PGO"
+  },
+  "control": {
+    "executable_sha256": "53e62599c9fb9d8c6f232a850d3f7247f668662913297f4ebc36440a21107487"
+  },
+  "treatment": {
+    "executable_sha256": "2d1fa49d20e71c5568357e622c90c134eb9220f2caddabb8497386d69d3d24a4"
+  },
+  "exactness": {
+    "scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "mean_score": 96.25,
+    "neural_batches": 3920,
+    "logical_neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "all_runs_identical": true
+  },
+  "measurements": {
+    "john2": {
+      "control_seconds": [
+        15.611984291,
+        15.820577333
+      ],
+      "treatment_seconds": [
+        15.682575792,
+        15.8040235
+      ],
+      "control_mean_seconds": 15.716280812,
+      "treatment_mean_seconds": 15.743299646,
+      "speedup": 0.998283788,
+      "regression_percent": 0.172
+    },
+    "john3": {
+      "control_seconds": [
+        16.042663,
+        16.092177334
+      ],
+      "treatment_seconds": [
+        16.07529675,
+        16.152551292
+      ],
+      "control_mean_seconds": 16.067420167,
+      "treatment_mean_seconds": 16.113924021,
+      "speedup": 0.997114058,
+      "regression_percent": 0.289
+    },
+    "combined": {
+      "control_mean_seconds": 15.89185049,
+      "treatment_mean_seconds": 15.928611833,
+      "delta_seconds": 0.036761344,
+      "speedup": 0.997692119,
+      "regression_percent": 0.231
+    }
+  },
+  "verdict": {
+    "accepted": false,
+    "reason": "The extra resolved-neighbor representation cost slightly more than repeated shallow root traversal.",
+    "source_removed": true,
+    "threshold_passed": false
+  }
+}

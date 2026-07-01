@@ -156,7 +156,7 @@ pub fn rank_greedy_actions(
             immediate_rank: 0,
         })
         .collect();
-    candidates.sort_by(|left, right| right.resulting_base_score.cmp(&left.resulting_base_score));
+    candidates.sort_by_key(|candidate| std::cmp::Reverse(candidate.resulting_base_score));
     for (index, candidate) in candidates.iter_mut().enumerate() {
         candidate.immediate_rank = index + 1;
     }
@@ -465,8 +465,38 @@ pub fn play_match_with_selector(
     game_config: GameConfig,
     seed: GameSeed,
     strategy_id: &str,
+    select_action: impl FnMut(usize, &GameState) -> Result<TurnAction, SimulationError>,
+) -> Result<MatchResult, SimulationError> {
+    let strategy_ids = vec![strategy_id.to_owned(); usize::from(game_config.player_count)];
+    play_match_with_seat_selector(game_config, seed, &strategy_ids, select_action)
+}
+
+/// Plays a match with an externally supplied selector and an exact identity for
+/// every seat.
+///
+/// This is the serving boundary for heterogeneous model pools.  The callback
+/// receives the active seat and may dispatch to a different frozen local model
+/// for each seat.  The identities are copied into the result verbatim so a
+/// trajectory can prove which policy controlled every action.
+pub fn play_match_with_seat_selector(
+    game_config: GameConfig,
+    seed: GameSeed,
+    strategy_ids: &[String],
     mut select_action: impl FnMut(usize, &GameState) -> Result<TurnAction, SimulationError>,
 ) -> Result<MatchResult, SimulationError> {
+    let expected = usize::from(game_config.player_count);
+    if strategy_ids.len() != expected {
+        return Err(SimulationError::SeatCount {
+            expected,
+            actual: strategy_ids.len(),
+        });
+    }
+    if strategy_ids
+        .iter()
+        .any(|identity| identity.trim().is_empty())
+    {
+        return Err(SimulationError::InvalidStrategyIdentity);
+    }
     let started = Instant::now();
     let mut game = GameState::new(game_config, seed)?;
     let mut replay = Replay::new(game_config, seed);
@@ -482,7 +512,7 @@ pub fn play_match_with_selector(
     replay.final_state_hash = Some(*game.canonical_hash().as_bytes());
     Ok(MatchResult {
         seed,
-        strategies: vec![strategy_id.to_owned(); usize::from(game_config.player_count)],
+        strategies: strategy_ids.to_vec(),
         scores: score_game(&game),
         turns: game.completed_turns(),
         decision_seconds,
@@ -598,6 +628,8 @@ pub fn play_greedy_plies(
 pub enum SimulationError {
     #[error("match needs {expected} seat strategies but received {actual}")]
     SeatCount { expected: usize, actual: usize },
+    #[error("strategy identities must be non-empty")]
+    InvalidStrategyIdentity,
     #[error("strategy found no legal action")]
     NoLegalActions,
     #[error("strategy failed: {0}")]
@@ -644,6 +676,60 @@ mod tests {
         let result = play_match(&config).unwrap();
         assert_eq!(result.turns, 20);
         assert_eq!(result.scores.len(), 1);
+    }
+
+    #[test]
+    fn external_selector_preserves_each_seat_identity() {
+        let game_config = GameConfig::research_aaaaa(4).unwrap();
+        let seed = GameSeed::from_u64(3);
+        let identities = vec![
+            "r2-map-newest".to_owned(),
+            "greedy-v1".to_owned(),
+            "r2-map-c0".to_owned(),
+            "r2-map-c1".to_owned(),
+        ];
+        let mut rngs: Vec<_> = identities
+            .iter()
+            .enumerate()
+            .map(|(seat, identity)| strategy_rng(seed, seat, identity))
+            .collect();
+        let result = play_match_with_seat_selector(game_config, seed, &identities, |seat, game| {
+            let (prelude, _) = game.preview_free_three_of_a_kind_if_feasible()?;
+            select_greedy_action(game, &prelude, &mut rngs[seat])
+        })
+        .unwrap();
+
+        assert_eq!(result.strategies, identities);
+        assert_eq!(result.turns, 80);
+        result.replay.play().unwrap();
+    }
+
+    #[test]
+    fn external_selector_rejects_missing_or_blank_seat_identity() {
+        let game_config = GameConfig::research_aaaaa(4).unwrap();
+        let seed = GameSeed::from_u64(4);
+        let selector = |_: usize, _: &GameState| Err(SimulationError::NoLegalActions);
+        assert!(matches!(
+            play_match_with_seat_selector(game_config, seed, &["only-one".to_owned()], selector,),
+            Err(SimulationError::SeatCount {
+                expected: 4,
+                actual: 1
+            })
+        ));
+        assert!(matches!(
+            play_match_with_seat_selector(
+                game_config,
+                seed,
+                &[
+                    "a".to_owned(),
+                    "b".to_owned(),
+                    "".to_owned(),
+                    "d".to_owned(),
+                ],
+                selector,
+            ),
+            Err(SimulationError::InvalidStrategyIdentity)
+        ));
     }
 
     #[test]

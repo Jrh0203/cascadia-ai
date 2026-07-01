@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exact-opponent-greedy-decision-reuse-rejection-v1-20260615",
+  "status": "rejected_before_implementation",
+  "phase": 0,
+  "hypothesis": "Deduplicate exact public opponent greedy decisions across synchronized rollout states and apply the shared move to each state's independent hidden bags.",
+  "search_contract": {
+    "protocol_id": "cascadia-aaaaa-4p-base-v1",
+    "seed": 34400,
+    "games_per_host": 1,
+    "seat_games_per_host": 4,
+    "rollouts": 600,
+    "candidate_budget": 32,
+    "lmr": true,
+    "diverse_prefilter": true,
+    "rollout_turn_limit": null,
+    "leaf_bootstrap": false,
+    "weights": "nnue_weights_v4opp_modal_iter3.bin",
+    "model": "legacy-nnue-v4opp-mlx-v1"
+  },
+  "audit": {
+    "hosts": [
+      "john2",
+      "john3"
+    ],
+    "diagnostic_binary_sha256": "4b71f5b34c820f6bb8d6cc85bad5b385ff04496c9844a465d03aab003837e845",
+    "mlx_service_sha256": "3e9d62ee5d1f38b0b2ae1fe8ac32d312b3c1dcb25b4fa5b4cc668b7212b457a1",
+    "opponent_move_waves": 22544,
+    "opponent_move_requests": 1390050,
+    "unique_opponent_move_states": 1382936,
+    "reusable_requests": 7114,
+    "reuse_rate": 0.00511780151793101,
+    "reuse_percent": 0.511780151793101,
+    "mean_requests_per_unique_state": 1.0051441281447586,
+    "maximum_opponent_move_group": 14
+  },
+  "correctness": {
+    "john2_scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "john3_scores": [
+      102,
+      96,
+      92,
+      95
+    ],
+    "neural_batches": 3920,
+    "neural_rows": 6121807,
+    "physical_neural_rows": 5062305,
+    "rollout_waves": 3716,
+    "rollout_samples": 46207,
+    "bootstrapped_samples": 0,
+    "policy_fallbacks": 0,
+    "clean_shutdown_on_both_hosts": true
+  },
+  "performance_ceiling": {
+    "accepted_john3_opponent_advance_milliseconds": 3156.582557,
+    "ideal_zero_overhead_savings_milliseconds": 16.154763001689147,
+    "remaining_phase0_gap_milliseconds": 916.14117075,
+    "ideal_savings_as_fraction_of_remaining_gap": 0.017633486538394548,
+    "diagnostic_john2_opponent_advance_milliseconds": 5694.061373,
+    "diagnostic_john3_opponent_advance_milliseconds": 5726.423822
+  },
+  "verdict": {
+    "accepted": false,
+    "production_deduplication_implemented": false,
+    "diagnostic_code_retained": false,
+    "reason": "Only 0.512% of opponent greedy requests shared an exact decision state. The ideal zero-overhead ceiling is roughly 16 ms, while synchronization and keying added about 2.55 seconds."
+  }
+}

@@ -6,11 +6,18 @@ license = "MIT"
 description = "Canonical Cascadia v2 benchmark protocol and statistics"
 
 [dependencies]
+blake3.workspace = true
 cascadia-game = { path = "../cascadia-game" }
+cascadia-data = { path = "../cascadia-data" }
+cascadia-model = { path = "../cascadia-model" }
+cascadia-search = { path = "../cascadia-search" }
 cascadia-sim = { path = "../cascadia-sim" }
+clap.workspace = true
+libc = "0.2"
+rand.workspace = true
+rand_chacha.workspace = true
 rayon.workspace = true
 serde.workspace = true
-thiserror.workspace = true
-
-[dev-dependencies]
 serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true

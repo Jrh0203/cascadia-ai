@@ -1,0 +1,16 @@
+/Users/johnherrick/Library/Application Support/Claude/vm_bundles|kib=11761312|files=       8|dirs=       4|symlinks=       0
+/Users/johnherrick/Library/Application Support/Claude/claude-code-vm|kib=223112|files=       3|dirs=       2|symlinks=       0
+/Users/johnherrick/Library/Application Support/Claude/Cache|kib=645876|files=    2410|dirs=       4|symlinks=       0
+/Users/johnherrick/Library/Application Support/Claude/Code Cache|kib=93832|files=    2112|dirs=       5|symlinks=       0
+/Users/johnherrick/Library/Application Support/Claude/GPUCache|kib=1608|files=       5|dirs=       1|symlinks=       0
+/Users/johnherrick/Library/Application Support/Claude/DawnWebGPUCache|kib=1608|files=       5|dirs=       1|symlinks=       0
+/Users/johnherrick/Library/Application Support/Claude/DawnGraphiteCache|kib=548|files=       5|dirs=       1|symlinks=       0
+/Users/johnherrick/Library/Application Support/Claude/fcache|kib=24|files=1|dirs=0|symlinks=0
+/Users/johnherrick/Library/Caches/com.anthropic.claudefordesktop.ShipIt|kib=86768|files=       2|dirs=       1|symlinks=       0
+/Users/johnherrick/Library/Caches/com.anthropic.claudefordesktop|kib=1156|files=       3|dirs=       2|symlinks=       0
+/Users/johnherrick/Library/Caches/claude-cli-nodejs|kib=124|files=      31|dirs=      12|symlinks=       0
+/Users/johnherrick/Library/Caches/node-gyp|kib=127688|files=    5454|dirs=    1201|symlinks=       0
+/Users/johnherrick/Library/Caches/Homebrew|kib=76056|files=    1048|dirs=     264|symlinks=       0
+/Users/johnherrick/Library/Caches/com.apple.python|kib=143372|files=   10155|dirs=    1554|symlinks=       0
+/Users/johnherrick/Library/Caches/pip|kib=12|files=       3|dirs=      36|symlinks=       0
+/Users/johnherrick/.cache/uv|kib=2260|files=     313|dirs=     121|symlinks=      23

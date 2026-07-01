@@ -1,0 +1,21 @@
+[package]
+name = "cascadia-r2"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+blake3.workspace = true
+cascadia-data = { path = "../cascadia-data" }
+cascadia-game = { path = "../cascadia-game" }
+clap.workspace = true
+rayon.workspace = true
+postcard.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+cascadia-sim = { path = "../cascadia-sim" }
+proptest.workspace = true

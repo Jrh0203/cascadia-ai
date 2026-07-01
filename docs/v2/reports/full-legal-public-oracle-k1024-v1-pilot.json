@@ -1,0 +1,555 @@
+{
+  "baseline": {
+    "bootstrap_confidence_95": [
+      94.8125,
+      96.25
+    ],
+    "count": 12,
+    "game_block_standard_error": 0.38573645619303815,
+    "mean": 95.5625,
+    "normal_confidence_95": [
+      94.80645654586165,
+      96.31854345413835
+    ]
+  },
+  "baseline_breakdown": {
+    "base_total": 95.5625,
+    "habitat": [
+      6.083333333333333,
+      6.625,
+      6.479166666666667,
+      6.333333333333333,
+      5.625
+    ],
+    "nature_tokens": 3.8125,
+    "wildlife": [
+      11.4375,
+      10.520833333333334,
+      12.604166666666666,
+      11.208333333333334,
+      14.833333333333334
+    ]
+  },
+  "breakdown_delta": {
+    "base_total": 2.8541666666666714,
+    "habitat": [
+      0.29166666666666696,
+      -0.14583333333333304,
+      -0.020833333333333925,
+      0.14583333333333393,
+      0.645833333333333
+    ],
+    "nature_tokens": 0.8125,
+    "wildlife": [
+      -0.3541666666666661,
+      0.22916666666666607,
+      0.8125,
+      -0.5,
+      0.9375
+    ]
+  },
+  "cluster_utilization": {
+    "aggregate_games_per_hour": 27.151710180634296,
+    "cluster_wall_seconds": 1591.06,
+    "normalized_per_node_games_per_hour": {
+      "john1": 9.696904397950183,
+      "john2": 9.553506269488489,
+      "john3": 9.050570060211431
+    },
+    "total_failures_or_retries_observed": 3
+  },
+  "configuration": {
+    "audited_completed_turns": null,
+    "champion_rollouts": 600,
+    "high_confidence_limit": 8,
+    "high_confidence_rollouts": 4800,
+    "paid_wipe_determinizations": 0,
+    "paid_wipe_followup_determinizations": 2,
+    "paid_wipe_followup_width": 3,
+    "protocol_id": "full-legal-decision-regret-audit-v1",
+    "realized_hidden_completed_turns": [],
+    "screen_limit": 1024,
+    "sentinel_count": 16,
+    "substantial_rollouts": 1200
+  },
+  "coverage": {
+    "first_seed": 62040,
+    "games": 12,
+    "hosts": {
+      "john1": 4,
+      "john2": 4,
+      "john3": 4
+    },
+    "last_seed": 62051,
+    "seat_games_per_strategy": 48
+  },
+  "decision_latency": {
+    "baseline": {
+      "decisions": 960,
+      "maximum_milliseconds": 496.888,
+      "mean_milliseconds": 194.67426254583333,
+      "per_host": {
+        "john1": {
+          "decisions": 320,
+          "max_milliseconds": 465.330084,
+          "mean_milliseconds": 211.5760269375001,
+          "p50_milliseconds": 221.39858300000003,
+          "p90_milliseconds": 354.2697044,
+          "p99_milliseconds": 399.83848127
+        },
+        "john2": {
+          "decisions": 320,
+          "max_milliseconds": 366.49462500000004,
+          "mean_milliseconds": 183.25355051874996,
+          "p50_milliseconds": 191.84002049999998,
+          "p90_milliseconds": 307.5876673,
+          "p99_milliseconds": 335.25267693999996
+        },
+        "john3": {
+          "decisions": 320,
+          "max_milliseconds": 496.888,
+          "mean_milliseconds": 189.19321018124998,
+          "p50_milliseconds": 195.5977085,
+          "p90_milliseconds": 320.16735389999997,
+          "p99_milliseconds": 348.95129473000003
+        }
+      }
+    },
+    "treatment": {
+      "decisions": 960,
+      "maximum_milliseconds": 10063.131834,
+      "mean_milliseconds": 4578.74484110625,
+      "per_host": {
+        "john1": {
+          "decisions": 320,
+          "max_milliseconds": 9499.805834,
+          "mean_milliseconds": 4428.102024346872,
+          "p50_milliseconds": 4611.591729,
+          "p90_milliseconds": 7497.825583900001,
+          "p99_milliseconds": 8867.96413175
+        },
+        "john2": {
+          "decisions": 320,
+          "max_milliseconds": 9291.430042,
+          "mean_milliseconds": 4526.165253921878,
+          "p50_milliseconds": 4887.295603500001,
+          "p90_milliseconds": 7500.4620961,
+          "p99_milliseconds": 8521.30767946
+        },
+        "john3": {
+          "decisions": 320,
+          "max_milliseconds": 10063.131834,
+          "mean_milliseconds": 4781.9672450499975,
+          "p50_milliseconds": 5174.024354,
+          "p90_milliseconds": 7842.520562800003,
+          "p99_milliseconds": 9532.214176230002
+        }
+      }
+    }
+  },
+  "decision_summary": {
+    "action_change_rate": 0.640625,
+    "actions_screened": 3579574,
+    "champion_frontier_actions": 28935,
+    "champion_regret_sum": 300.46756566133035,
+    "changed_actions": 615,
+    "decisions": 960,
+    "high_confidence_actions": 8219,
+    "mean_champion_regret": 0.3129870475638858,
+    "substantial_actions": 912994,
+    "top_screen_recall": 0.99375,
+    "top_screen_recalled_winners": 954
+  },
+  "experiment_id": "full-legal-public-oracle-k1024-v1",
+  "game_losses": 2,
+  "game_ties": 0,
+  "game_wins": 10,
+  "gates": {
+    "all_games_and_decisions_complete": true,
+    "all_integrity_checks_passed": true,
+    "complete_phase_coverage": true,
+    "every_host_paired_delta_nonnegative": true,
+    "host_memory_and_swap_telemetry_complete": true,
+    "paired_delta_at_least_threshold": false,
+    "paired_delta_bootstrap_lower_bound_positive": true,
+    "process_swaps_zero": true,
+    "single_source_binary_model_identity": true,
+    "treatment_mean_at_least_threshold": false
+  },
+  "generated_at": "2026-06-16T00:15:02+00:00",
+  "host_utilization": {
+    "john1": {
+      "assigned_games": 4,
+      "completed_games": 4,
+      "failures_or_retries_observed": 1,
+      "idle_with_work_queued_seconds": 0.0,
+      "normalized_games_per_hour": 9.696904397950183,
+      "productive_wall_seconds": 1484.933064916,
+      "runner_overhead_seconds": 0.07693508400006976,
+      "system_swap_after": {
+        "raw": "total = 4096.00M  used = 2735.44M  free = 1360.56M  (encrypted)",
+        "sha256": "e2c139c2abcfeafd36bec95a26455ff324592dc71ed5c7aad9206422a306c185",
+        "used_bytes": 2868316733
+      },
+      "system_swap_before": {
+        "raw": "total = 4096.00M  used = 2959.50M  free = 1136.50M  (encrypted)",
+        "sha256": "ea006db0dbc17128d77499b2994f2941c4c37a2addd616be83799d5670eb0618",
+        "used_bytes": 3103260672
+      },
+      "system_swap_delta_bytes": -234943939,
+      "timing": {
+        "maximum_resident_bytes": 303480832,
+        "real_seconds": 1485.01,
+        "sha256": "415b27fa028736d46decebf924faec496fcd2f665169cce04b8890ebd1e1ae07",
+        "swaps": 0
+      }
+    },
+    "john2": {
+      "assigned_games": 4,
+      "completed_games": 4,
+      "failures_or_retries_observed": 1,
+      "idle_with_work_queued_seconds": 0.0,
+      "normalized_games_per_hour": 9.553506269488489,
+      "productive_wall_seconds": 1507.225998208,
+      "runner_overhead_seconds": 0.07400179199999002,
+      "system_swap_after": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_before": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_delta_bytes": 0,
+      "timing": {
+        "maximum_resident_bytes": 296730624,
+        "real_seconds": 1507.3,
+        "sha256": "6b55e068b0553f40876ad4819c2945169c0930d181e3fc9ad8feebbc6f444533",
+        "swaps": 0
+      }
+    },
+    "john3": {
+      "assigned_games": 4,
+      "completed_games": 4,
+      "failures_or_retries_observed": 1,
+      "idle_with_work_queued_seconds": 0.0,
+      "normalized_games_per_hour": 9.050570060211431,
+      "productive_wall_seconds": 1590.989734333,
+      "runner_overhead_seconds": 0.07026566700005787,
+      "system_swap_after": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_before": {
+        "raw": "total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)",
+        "sha256": "35338b8b935d88a5df7dc89aca74624acc8e6128be101508022859cae195ca9c",
+        "used_bytes": 0
+      },
+      "system_swap_delta_bytes": 0,
+      "timing": {
+        "maximum_resident_bytes": 343916544,
+        "real_seconds": 1591.06,
+        "sha256": "ad854c92cc76f4dc22cb86c0bfbb9907f4b6c3fa7a242ff455f3fbf668decfec",
+        "swaps": 0
+      }
+    }
+  },
+  "hosts": {
+    "john1": {
+      "baseline": {
+        "bootstrap_confidence_95": [
+          93.25,
+          96.6875
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.9915003361908995,
+        "mean": 94.8125,
+        "normal_confidence_95": [
+          92.86915934106584,
+          96.75584065893416
+        ]
+      },
+      "first_seed": 62040,
+      "games": 4,
+      "paired_delta": {
+        "bootstrap_confidence_95": [
+          0.5625,
+          6.4375
+        ],
+        "count": 4,
+        "game_block_standard_error": 1.709349291397168,
+        "mean": 3.375,
+        "normal_confidence_95": [
+          0.02467538886155074,
+          6.725324611138449
+        ]
+      },
+      "treatment": {
+        "bootstrap_confidence_95": [
+          95.3125,
+          100.25
+        ],
+        "count": 4,
+        "game_block_standard_error": 1.538989793121882,
+        "mean": 98.1875,
+        "normal_confidence_95": [
+          95.17108000548112,
+          101.20391999451888
+        ]
+      }
+    },
+    "john2": {
+      "baseline": {
+        "bootstrap_confidence_95": [
+          95.6875,
+          96.5625
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.2602082499332666,
+        "mean": 96.125,
+        "normal_confidence_95": [
+          95.61499183013079,
+          96.63500816986921
+        ]
+      },
+      "first_seed": 62044,
+      "games": 4,
+      "paired_delta": {
+        "bootstrap_confidence_95": [
+          -0.125,
+          4.1875
+        ],
+        "count": 4,
+        "game_block_standard_error": 1.316462273164965,
+        "mean": 1.9375,
+        "normal_confidence_95": [
+          -0.6427660554033312,
+          4.517766055403332
+        ]
+      },
+      "treatment": {
+        "bootstrap_confidence_95": [
+          95.75,
+          100.375
+        ],
+        "count": 4,
+        "game_block_standard_error": 1.444728203965484,
+        "mean": 98.0625,
+        "normal_confidence_95": [
+          95.23083272022765,
+          100.89416727977235
+        ]
+      }
+    },
+    "john3": {
+      "baseline": {
+        "bootstrap_confidence_95": [
+          94.8125,
+          96.5
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.5303300858899106,
+        "mean": 95.75,
+        "normal_confidence_95": [
+          94.71055303165578,
+          96.78944696834422
+        ]
+      },
+      "first_seed": 62048,
+      "games": 4,
+      "paired_delta": {
+        "bootstrap_confidence_95": [
+          2.5625,
+          3.8125
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.3679900360969936,
+        "mean": 3.25,
+        "normal_confidence_95": [
+          2.5287395292498926,
+          3.9712604707501074
+        ]
+      },
+      "treatment": {
+        "bootstrap_confidence_95": [
+          97.9375,
+          100.0625
+        ],
+        "count": 4,
+        "game_block_standard_error": 0.6208193510729725,
+        "mean": 99.0,
+        "normal_confidence_95": [
+          97.78319407189697,
+          100.21680592810303
+        ]
+      }
+    }
+  },
+  "identity": {
+    "executable_blake3": "b666e499cc04d8d74236baedeb10761879d2818f59a1a83ea8d083056d05f0fd",
+    "model_json_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65",
+    "v2_source_blake3": "3d8a378b8b3088141fbc30f3194a84681008c0c339263714b2e94d0ce4f3c40d"
+  },
+  "paired_delta": {
+    "bootstrap_confidence_95": [
+      1.5833333333333333,
+      4.1875
+    ],
+    "count": 12,
+    "game_block_standard_error": 0.6884176612076613,
+    "mean": 2.8541666666666665,
+    "normal_confidence_95": [
+      1.5048680506996504,
+      4.203465282633683
+    ]
+  },
+  "pairs": [
+    {
+      "baseline_mean": 92.75,
+      "delta": 7.75,
+      "host": "john1",
+      "seed": 62040,
+      "treatment_mean": 100.5
+    },
+    {
+      "baseline_mean": 94.75,
+      "delta": 3.75,
+      "host": "john1",
+      "seed": 62041,
+      "treatment_mean": 98.5
+    },
+    {
+      "baseline_mean": 94.25,
+      "delta": -0.5,
+      "host": "john1",
+      "seed": 62042,
+      "treatment_mean": 93.75
+    },
+    {
+      "baseline_mean": 97.5,
+      "delta": 2.5,
+      "host": "john1",
+      "seed": 62043,
+      "treatment_mean": 100.0
+    },
+    {
+      "baseline_mean": 96.25,
+      "delta": 5.25,
+      "host": "john2",
+      "seed": 62044,
+      "treatment_mean": 101.5
+    },
+    {
+      "baseline_mean": 96.0,
+      "delta": -1.0,
+      "host": "john2",
+      "seed": 62045,
+      "treatment_mean": 95.0
+    },
+    {
+      "baseline_mean": 96.75,
+      "delta": 2.5,
+      "host": "john2",
+      "seed": 62046,
+      "treatment_mean": 99.25
+    },
+    {
+      "baseline_mean": 95.5,
+      "delta": 1.0,
+      "host": "john2",
+      "seed": 62047,
+      "treatment_mean": 96.5
+    },
+    {
+      "baseline_mean": 96.5,
+      "delta": 4.0,
+      "host": "john3",
+      "seed": 62048,
+      "treatment_mean": 100.5
+    },
+    {
+      "baseline_mean": 96.5,
+      "delta": 2.25,
+      "host": "john3",
+      "seed": 62049,
+      "treatment_mean": 98.75
+    },
+    {
+      "baseline_mean": 94.25,
+      "delta": 3.25,
+      "host": "john3",
+      "seed": 62050,
+      "treatment_mean": 97.5
+    },
+    {
+      "baseline_mean": 95.75,
+      "delta": 3.5,
+      "host": "john3",
+      "seed": 62051,
+      "treatment_mean": 99.25
+    }
+  ],
+  "passed": false,
+  "phase": {
+    "early": {
+      "action_change_rate": 0.75,
+      "decisions": 336,
+      "mean_champion_regret": 0.4898897921822457
+    },
+    "late": {
+      "action_change_rate": 0.4826388888888889,
+      "decisions": 288,
+      "mean_champion_regret": 0.1070269013530509
+    },
+    "middle": {
+      "action_change_rate": 0.6666666666666666,
+      "decisions": 336,
+      "mean_champion_regret": 0.31262157112624156
+    }
+  },
+  "rules_protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "schema_version": 1,
+  "stage": "pilot",
+  "status": "pilot_failed",
+  "thresholds": {
+    "paired_delta_minimum": 3.0,
+    "positive_delta_confidence_required": false,
+    "positive_host_deltas_required": false,
+    "treatment_mean_minimum": 100.0
+  },
+  "treatment": {
+    "bootstrap_confidence_95": [
+      97.10416666666667,
+      99.625
+    ],
+    "count": 12,
+    "game_block_standard_error": 0.6751356017927663,
+    "mean": 98.41666666666667,
+    "normal_confidence_95": [
+      97.09340088715285,
+      99.73993244618049
+    ]
+  },
+  "treatment_breakdown": {
+    "base_total": 98.41666666666667,
+    "habitat": [
+      6.375,
+      6.479166666666667,
+      6.458333333333333,
+      6.479166666666667,
+      6.270833333333333
+    ],
+    "nature_tokens": 4.625,
+    "wildlife": [
+      11.083333333333334,
+      10.75,
+      13.416666666666666,
+      10.708333333333334,
+      15.770833333333334
+    ]
+  }
+}

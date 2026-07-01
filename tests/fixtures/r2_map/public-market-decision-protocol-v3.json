@@ -1,0 +1,222 @@
+{
+  "action_schema_blake3": "e9ab2382f20f4ea440591adba6021d85f8be83ff4e483513b05d46e5f285cd38",
+  "cases": [
+    {
+      "action_bytes_hex": [
+        "0100000000000000",
+        "0100010000000000"
+      ],
+      "action_ids": [
+        "6372faff0a540036059fbcdcf866126b4db9e5f6737acaa533b73378f597bf48",
+        "d67fff097b4164f49b8f76bda3c92b78deb6e864db57158a3214d2f0c0b39432"
+      ],
+      "decision_id": "1111111111111111111111111111111111111111111111111111111111111111",
+      "decision_kind": 0,
+      "name": "free-safe",
+      "ordered_action_ids_blake3": "4201c43eb1d401937ae3bee9ae3041fb2fb656d467653e2ecd1194c9e914fdcb",
+      "public_market_wildlife": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "public_nature_tokens": 0,
+      "public_wildlife_bag_counts": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "public_wildlife_bag_total": 10
+    },
+    {
+      "action_bytes_hex": [
+        "0100000000000000"
+      ],
+      "action_ids": [
+        "eb8529a9ddf8ddf43ef73d752dc00573746f60fb3355b7e1f1bd529d4a280939"
+      ],
+      "decision_id": "2222222222222222222222222222222222222222222222222222222222222222",
+      "decision_kind": 0,
+      "name": "free-hidden-exhaustion",
+      "ordered_action_ids_blake3": "8edf60a26223d699b73a0fc74fda626c1d0a4a392a1e773cf8961ed2de061bd6",
+      "public_market_wildlife": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "public_nature_tokens": 0,
+      "public_wildlife_bag_counts": [
+        0,
+        3,
+        0,
+        0,
+        0
+      ],
+      "public_wildlife_bag_total": 3
+    },
+    {
+      "action_bytes_hex": [
+        "0101020000000000",
+        "0101030100000000",
+        "0101030200000000",
+        "0101030300000000",
+        "0101030400000000",
+        "0101030500000000",
+        "0101030600000000",
+        "0101030700000000",
+        "0101030800000000",
+        "0101030900000000",
+        "0101030a00000000",
+        "0101030b00000000",
+        "0101030c00000000",
+        "0101030d00000000",
+        "0101030e00000000",
+        "0101030f00000000"
+      ],
+      "action_ids": [
+        "197917db77111457c3f7260e39d3cefd0c7c4c79d8b9873348e0b54e988708cb",
+        "92f7b8390d03c432e32c726668b858fbdc14b4daf7dfc2590e9681dc48c82256",
+        "8a758376e54502c63df02d442503ab5b6cd5f06fd1ecb7b64558ffededdaaca7",
+        "8f9d1ecc7aba6d58e0b71a659c91017442d0bdc779b101ea633a4603810e077a",
+        "840c5740a1d3edde4259a4e0cce505f132ff07b3c0c043a0affaf6f108ce00b7",
+        "9520246f3b288eeb193241bed56f591cf93b5a58c0a247b19bcc649a3cd6a257",
+        "ecce85780766a698792785f152d09214225adf44dec6989255fa34b9700d7a89",
+        "3c986ecd32944d385d8dd7afb7b6c64963a0ca9974b42dc3806118b2778e5ce3",
+        "2251f0ba10c350de9c9ff90c922f8b8c3eadd028a4d7dad0c133f3ac449e79ac",
+        "2e9d3cfbbbdad7428419e2997a56f51649100eb3ddc09f7d4f2cfae211e93edf",
+        "fda3cca5700381f332e090cf4ac2d0a7dc2c76846c564aea2d04d85981fb6b05",
+        "c0f472af0c2b507e54964d34f3f62880d816409d5bcf498f0e86966f969cbf20",
+        "0877217333f65f108317dece2d6378198e0f6475d0fd417f02cfc5c1e2725212",
+        "97b236ef26c69c1319b9ecbc9c3ce9890647500d00f2a7d1cbf200db91e12c15",
+        "734b9617bfc433e929f9eed7b70b11e2ebf45e04e0a80e4bdeaea54ba7618cee",
+        "c00dace808a8548ca6a47c6c15700a136ac81ac8e356a400029dd7e6fde8e55d"
+      ],
+      "decision_id": "3333333333333333333333333333333333333333333333333333333333333333",
+      "decision_kind": 1,
+      "name": "paid-all-subsets",
+      "ordered_action_ids_blake3": "1b103a7b77ca23803a2535219414ec912be99e2b70199ebbefb8f31e3362c515",
+      "public_market_wildlife": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "public_nature_tokens": 2,
+      "public_wildlife_bag_counts": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "public_wildlife_bag_total": 10
+    },
+    {
+      "action_bytes_hex": [
+        "0101020000000000",
+        "0101030100000000",
+        "0101030200000000",
+        "0101030300000000",
+        "0101030400000000",
+        "0101030500000000",
+        "0101030600000000",
+        "0101030700000000",
+        "0101030800000000",
+        "0101030900000000",
+        "0101030a00000000",
+        "0101030b00000000",
+        "0101030c00000000",
+        "0101030d00000000"
+      ],
+      "action_ids": [
+        "452a41ec0b839671edbcbe5b5dca5302d4b432cfa41da86188abf76629cf241c",
+        "ef6607a5b4668466d9c3cf8127e9ecb892c5eb534cafb80e32b3a15657c35336",
+        "953af0ee1f727023f47b0c13234035e94cba7f26d58a2192541dea7b4815293a",
+        "f439dab0fe138335d9dc227ab0d2eab73379908f7e1bea993a847cdc7c09157a",
+        "08a58fe4255b3d1e866222927916b094c8ba5b2e5fa4d13b1378749b4a4eec82",
+        "50bba136b1be3db199b04f9e663abc16acaf5d8cf642394e2804aff86c2e06e2",
+        "c8e02163c36d66a22b306094c3466ea3ad168d268009084d7d0f31bb0c612f10",
+        "1fce3f686f335eddcd2f7016de21f0f6786da45f816eafc5a1a8b87ab7ef2dc0",
+        "edd20876ca08bfa90e08685fed43e24a9a24dfe2a05bd5fe2808f76e09c62ad8",
+        "81dafa38d6488d4854aa52a8fc8f88efa6168d3623a9fbf372311518c1635d74",
+        "a177327bb2042ac2ef5336ccbbbba5d078d9f3be0044f70f387dc6f8d179dc75",
+        "5d183819d2a482cfe75c5c10a6842e9b7fd2065ea113f508964d0b7e7b0fe16a",
+        "6861bee9cae7c3eec50981dae6f50f50cef3ab73012aa7af4e0c295686eb2913",
+        "2202300738cf5da3482ce61857cd7ebbae7b410e1af2cb58cbc00eae7cb75d4d"
+      ],
+      "decision_id": "4444444444444444444444444444444444444444444444444444444444444444",
+      "decision_kind": 1,
+      "name": "paid-hidden-exhaustion",
+      "ordered_action_ids_blake3": "1bac5239965afb52a6548f5ed26dcc582e0c63d181ec88b77f74b77cee67da74",
+      "public_market_wildlife": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "public_nature_tokens": 1,
+      "public_wildlife_bag_counts": [
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      "public_wildlife_bag_total": 4
+    },
+    {
+      "action_bytes_hex": [
+        "0101020000000000"
+      ],
+      "action_ids": [
+        "a2a013f1bb43efb0a1975cf442f849efc5106e61dedef833ed35c5c15288a55f"
+      ],
+      "decision_id": "5555555555555555555555555555555555555555555555555555555555555555",
+      "decision_kind": 1,
+      "name": "paid-no-token",
+      "ordered_action_ids_blake3": "a520a33fd7f72ba1f6af7464f7d5720e9aa82eaa29dfbc10cfc22accd53962f6",
+      "public_market_wildlife": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "public_nature_tokens": 0,
+      "public_wildlife_bag_counts": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "public_wildlife_bag_total": 10
+    }
+  ],
+  "fixture_blake3": "4c169798ea70c033ddf9cc3698855bcd2bb1a1781d938cb01f4161f477934dca",
+  "legality": "public-universal-hidden-order-intersection-v1",
+  "request_schema": "r2-map-public-market-decision-request-v3",
+  "request_schema_blake3": "68ca4d115e6a2ca5981a75d8c979752efbd8b1d466fb25afa278e9de103e9082",
+  "request_tensor_dtypes": {
+    "action_bytes": "|u1",
+    "action_offsets": "<i4",
+    "exact_current_scores": "<f4",
+    "parent_global_features": "<f4",
+    "parent_market_features": "<f4",
+    "parent_market_mask": "|u1",
+    "parent_player_features": "<f4",
+    "parent_player_mask": "|u1",
+    "parent_token_features": "<f4",
+    "parent_token_mask": "|u1",
+    "parent_token_types": "<i4"
+  },
+  "response_schema": "r2-map-public-market-decision-response-v2",
+  "response_schema_blake3": "d0d00527f75b7bbcb868433da7cb9f2cd415d0f9fb4e7591a966e51728c708c5",
+  "response_tensor_dtypes": {
+    "market_action_scores": "<f4",
+    "market_predicted_score_to_go": "<f4"
+  },
+  "schema_version": 3
+}

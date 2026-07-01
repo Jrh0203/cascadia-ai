@@ -186,6 +186,18 @@ def test_counterfactual_advantage_dataset_decodes_r12_groups(tmp_path: Path) -> 
         [0.15075567] * 4,
         rtol=1e-5,
     )
+    assert np.asarray(batch.target_total_samples).shape == (4, 4, 12)
+    assert np.asarray(batch.target_centered_samples).shape == (4, 4, 12)
+    assert np.asarray(batch.target_component_samples).shape == (4, 4, 12, 11)
+    np.testing.assert_allclose(
+        np.asarray(batch.target_centered_samples).mean(axis=1),
+        0.0,
+        atol=1e-6,
+    )
+    np.testing.assert_allclose(
+        np.asarray(batch.target_total_samples),
+        np.asarray(batch.target_component_samples).sum(axis=-1),
+    )
 
 
 def test_counterfactual_advantage_dataset_rejects_checksum_drift(tmp_path: Path) -> None:

@@ -103,7 +103,7 @@ def evaluate_test_run(
     )
     validation_replay_exact = replay == validation_report
     validation_sha256 = _sha256(validation_report_path)
-    gates = test_gates(
+    gates = evaluate_gates(
         metrics=metrics,
         initial_metrics=initial_metrics,
         validation_report=validation_report,
@@ -147,7 +147,7 @@ def evaluate_test_run(
     }
 
 
-def test_gates(
+def evaluate_gates(
     *,
     metrics: dict[str, Any],
     initial_metrics: dict[str, Any],

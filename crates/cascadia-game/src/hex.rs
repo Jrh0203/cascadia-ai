@@ -4,6 +4,47 @@ pub const GRID_RADIUS: i8 = 24;
 pub const GRID_DIM: usize = GRID_RADIUS as usize * 2 + 1;
 pub const GRID_SIZE: usize = GRID_DIM * GRID_DIM;
 
+/// Directed hex edges in the canonical clockwise order used by the rules engine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum HexDirection {
+    East = 0,
+    NorthEast = 1,
+    NorthWest = 2,
+    West = 3,
+    SouthWest = 4,
+    SouthEast = 5,
+}
+
+impl HexDirection {
+    pub const ALL: [Self; 6] = [
+        Self::East,
+        Self::NorthEast,
+        Self::NorthWest,
+        Self::West,
+        Self::SouthWest,
+        Self::SouthEast,
+    ];
+
+    pub const NAMES: [&'static str; 6] = ["E", "NE", "NW", "W", "SW", "SE"];
+
+    pub const fn from_index(index: usize) -> Option<Self> {
+        if index < 6 {
+            Some(Self::ALL[index])
+        } else {
+            None
+        }
+    }
+
+    pub const fn index(self) -> usize {
+        self as usize
+    }
+
+    pub const fn opposite(self) -> Self {
+        Self::ALL[(self.index() + 3) % 6]
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct HexCoord {
     pub q: i8,
@@ -21,6 +62,10 @@ impl HexCoord {
     pub fn neighbor(self, edge: usize) -> Self {
         let (dq, dr) = Self::DIRECTIONS[edge % 6];
         Self::new(self.q + dq, self.r + dr)
+    }
+
+    pub fn neighbor_in(self, direction: HexDirection) -> Self {
+        self.neighbor(direction.index())
     }
 
     pub fn neighbors(self) -> [Self; 6] {
@@ -51,6 +96,10 @@ impl HexCoord {
         let dr = i16::from(self.r) - i16::from(other.r);
         let ds = -dq - dr;
         ((dq.abs() + dr.abs() + ds.abs()) / 2) as u8
+    }
+
+    pub fn radius(self) -> u8 {
+        self.distance(Self::ORIGIN)
     }
 }
 
