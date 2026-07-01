@@ -1,0 +1,93 @@
+{
+  "checkpoint": "step-000000001-epoch-0001-batch-000000",
+  "checkpoint_manifest_blake3": "828c44ce647e27026cca39aaea06e221d5fb2e855bcc3592897434a45b1c32c1",
+  "dataset": "/private/tmp/cascadia-v2-counterfactual-ranker-smoke/validation",
+  "dataset_id": "counterfactual-advantage-habitat-candidate-lookahead-v1-k8-h6-r4-d4-selected-high-median-low-v1-reject-unstable-market-trajectories-v1-k4-g4-r12-validation-9997",
+  "dataset_manifest_blake3": "da789578f4348a7e79fca9bd2c609dac376cc32f3804570e7d81ffb5b1948f22",
+  "device": "Device(gpu, 0)",
+  "domain": "validation",
+  "experiment": "r12-counterfactual-advantage-set-ranker-v1-20260613",
+  "failed_gates": [
+    "centered_mae_improves_at_least_10_percent",
+    "top_value_recall_at_least_0_50",
+    "top_value_recall_at_least_h6_plus_0_05"
+  ],
+  "gameplay_domain_opened": false,
+  "gates": {
+    "centered_correlation_at_least_0_55": true,
+    "centered_mae_at_most_0_75": true,
+    "centered_mae_improves_at_least_10_percent": false,
+    "mean_regret_at_least_0_05_below_h6": true,
+    "mean_regret_at_most_0_40": true,
+    "mlx_gpu_device": true,
+    "selected_metrics_match_best_pointer": true,
+    "source_matches_training_run": true,
+    "top_value_recall_at_least_0_50": false,
+    "top_value_recall_at_least_h6_plus_0_05": false,
+    "validation_objective_improves_at_least_10_percent": true
+  },
+  "initial_validation": {
+    "candidates": 16,
+    "centered_advantage_correlation": 0.9028937690792895,
+    "centered_mean_absolute_error": 0.5546875,
+    "centered_mean_squared_error": 0.5158417951315641,
+    "centered_root_mean_squared_error": 0.7182212717064039,
+    "decision_objective": 0.5932502103969455,
+    "groups": 4,
+    "h6_selected_baseline": {
+      "mean_top_action_regret": 0.35416603088378906,
+      "top_action_agreement": 0.25,
+      "top_value_recall": 0.25
+    },
+    "immediate_baseline": {
+      "mean_top_action_regret": 0.35416603088378906,
+      "top_action_agreement": 0.25,
+      "top_value_recall": 0.25
+    },
+    "mean_top_action_regret": 0.35416603088378906,
+    "pairwise_accuracy": 0.4583333333333333,
+    "shallow_argmax_baseline": {
+      "mean_top_action_regret": 0.35416603088378906,
+      "top_action_agreement": 0.25,
+      "top_value_recall": 0.25
+    },
+    "target_standard_error_mean": 0.5622424129396677,
+    "target_standard_error_p90": 0.9022567570209503,
+    "top_action_agreement": 0.25,
+    "top_value_recall": 0.25
+  },
+  "passed": false,
+  "run_dir": "/private/tmp/cascadia-v2-counterfactual-ranker-smoke/run",
+  "schema_version": 1,
+  "test_domain_opened": false,
+  "validation": {
+    "candidates": 16,
+    "centered_advantage_correlation": 0.9029407839215632,
+    "centered_mean_absolute_error": 0.5543630719184875,
+    "centered_mean_squared_error": 0.5153301488608122,
+    "centered_root_mean_squared_error": 0.7178649934777515,
+    "decision_objective": 0.4473650766536593,
+    "groups": 4,
+    "h6_selected_baseline": {
+      "mean_top_action_regret": 0.35416603088378906,
+      "top_action_agreement": 0.25,
+      "top_value_recall": 0.25
+    },
+    "immediate_baseline": {
+      "mean_top_action_regret": 0.35416603088378906,
+      "top_action_agreement": 0.25,
+      "top_value_recall": 0.25
+    },
+    "mean_top_action_regret": 0.20833206176757812,
+    "pairwise_accuracy": 0.75,
+    "shallow_argmax_baseline": {
+      "mean_top_action_regret": 0.35416603088378906,
+      "top_action_agreement": 0.25,
+      "top_value_recall": 0.25
+    },
+    "target_standard_error_mean": 0.5622424129396677,
+    "target_standard_error_p90": 0.9022567570209503,
+    "top_action_agreement": 0.25,
+    "top_value_recall": 0.25
+  }
+}

@@ -1,0 +1,244 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      6.0,
+      5.75,
+      5.75,
+      5.0,
+      6.5
+    ],
+    "nature_tokens": 3.75,
+    "wildlife": [
+      8.5,
+      9.5,
+      12.75,
+      13.0,
+      15.5
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 2.150958,
+    "mean_milliseconds": 1.0547329,
+    "p50_milliseconds": 1.0402295000000001,
+    "p90_milliseconds": 1.6073337,
+    "p99_milliseconds": 2.1195554999999997
+  },
+  "baseline_elapsed_seconds": 0.084921625,
+  "baseline_id": "pattern-aware-v1-k8-h6-b8-m4",
+  "baseline_mean": 92.0,
+  "baseline_seconds_per_game": 0.084921625,
+  "baseline_statistics": {
+    "confidence_95": [
+      92.0,
+      92.0
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 2.150958,
+      "mean_milliseconds": 1.0547329,
+      "p50_milliseconds": 1.0402295000000001,
+      "p90_milliseconds": 1.6073337,
+      "p99_milliseconds": 2.1195554999999997
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 96.0,
+    "mean_breakdown": {
+      "habitat": [
+        6.0,
+        5.75,
+        5.75,
+        5.0,
+        6.5
+      ],
+      "nature_tokens": 3.75,
+      "wildlife": [
+        8.5,
+        9.5,
+        12.75,
+        13.0,
+        15.5
+      ]
+    },
+    "mean_score": 92.0,
+    "min_score": 89.0,
+    "percentiles": {
+      "p10": 89.3,
+      "p50": 91.5,
+      "p90": 95.1
+    },
+    "seat_score_stddev": 3.1622776601683795,
+    "standard_error": 0.0
+  },
+  "confidence_95": [
+    -0.25,
+    -0.25
+  ],
+  "configuration": {
+    "late-conservative-policy-improvement-compare": {
+      "first_seed": 27599,
+      "games": 1,
+      "output": "docs/v2/reports/late-conservative-policy-improvement-v1-t5-r8-w2-c90-runtime-smoke-1.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "sequential": true,
+      "terminal_turns": 5,
+      "wildlife_candidates": 2
+    }
+  },
+  "elapsed_seconds": 11.283217708,
+  "first_seed": 27599,
+  "game_losses": 1,
+  "game_ties": 0,
+  "game_wins": 0,
+  "games": 1,
+  "mean_breakdown_delta": {
+    "habitat": [
+      0.25,
+      0.5,
+      -0.25,
+      -0.5,
+      0.5
+    ],
+    "nature_tokens": 0.0,
+    "wildlife": [
+      0.0,
+      0.75,
+      0.0,
+      -1.0,
+      -0.5
+    ]
+  },
+  "mean_paired_delta": -0.25,
+  "paired_delta_stddev": 0.0,
+  "pairs": [
+    {
+      "baseline_mean": 92.0,
+      "delta": -0.25,
+      "seed": 27599,
+      "treatment_mean": 91.75
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "late-conservative-policy-improvement-compare",
+      "--games",
+      "1",
+      "--first-seed",
+      "27599",
+      "--terminal-turns",
+      "5",
+      "--policy-candidates",
+      "8",
+      "--policy-habitat-candidates",
+      "6",
+      "--policy-bear-candidates",
+      "8",
+      "--wildlife-candidates",
+      "2",
+      "--policy-market-draws",
+      "4",
+      "--sequential",
+      "--output",
+      "docs/v2/reports/late-conservative-policy-improvement-v1-t5-r8-w2-c90-runtime-smoke-1.json"
+    ],
+    "created_unix_seconds": 1781212243,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "7a1d2e8ba3422ead75ce3e3d72d2b266e58f5a475378bd9a14cdd76c1b4caae2",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "8b19cd1be3561cf413e1058dfd4fd2fee0c341aad7916a3f7d20fc8b281ebbf5"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 4,
+  "standard_error": 0.0,
+  "treatment_breakdown": {
+    "habitat": [
+      6.25,
+      6.25,
+      5.5,
+      4.5,
+      7.0
+    ],
+    "nature_tokens": 3.75,
+    "wildlife": [
+      8.5,
+      10.25,
+      12.75,
+      12.0,
+      15.0
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 1353.980916,
+    "mean_milliseconds": 139.968449975,
+    "p50_milliseconds": 1.2559585,
+    "p90_milliseconds": 588.9359497000012,
+    "p99_milliseconds": 1333.9645548599997
+  },
+  "treatment_elapsed_seconds": 11.198263125,
+  "treatment_id": "late-conservative-policy-improvement-v1-t5-r8-k8-h6-b8-w2-m4-c90",
+  "treatment_mean": 91.75,
+  "treatment_seconds_per_game": 11.198263125,
+  "treatment_statistics": {
+    "confidence_95": [
+      91.75,
+      91.75
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 1353.980916,
+      "mean_milliseconds": 139.968449975,
+      "p50_milliseconds": 1.2559585,
+      "p90_milliseconds": 588.9359497000012,
+      "p99_milliseconds": 1333.9645548599997
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 96.0,
+    "mean_breakdown": {
+      "habitat": [
+        6.25,
+        6.25,
+        5.5,
+        4.5,
+        7.0
+      ],
+      "nature_tokens": 3.75,
+      "wildlife": [
+        8.5,
+        10.25,
+        12.75,
+        12.0,
+        15.0
+      ]
+    },
+    "mean_score": 91.75,
+    "min_score": 88.0,
+    "percentiles": {
+      "p10": 88.6,
+      "p50": 91.5,
+      "p90": 95.1
+    },
+    "seat_score_stddev": 3.5,
+    "standard_error": 0.0
+  }
+}

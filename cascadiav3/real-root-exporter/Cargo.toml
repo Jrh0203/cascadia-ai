@@ -1,0 +1,20 @@
+[workspace]
+
+[package]
+name = "cascadiav3-real-root-exporter"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+anyhow = "1.0"
+blake3 = "1.8"
+cascadia-game = { path = "../../crates/cascadia-game" }
+cascadia-sim = { path = "../../crates/cascadia-sim" }
+rand = "0.8"
+rand_chacha = "0.3"
+rayon = "1.11"
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+sha2 = "0.10"
+half = "2.4"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }

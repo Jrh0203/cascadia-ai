@@ -1,0 +1,134 @@
+{
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "baseline_id": "determinized-lookahead-v2-k8-r4-d4",
+  "treatment_id": "determinized-lookahead-v2-k16-r4-d4",
+  "games": 10,
+  "seat_games_per_strategy": 40,
+  "first_seed": 20900,
+  "baseline_mean": 91.0,
+  "treatment_mean": 91.425,
+  "mean_paired_delta": 0.425,
+  "paired_delta_stddev": 2.426846376129592,
+  "standard_error": 0.7674362079895197,
+  "confidence_95": [
+    -1.0791749676594586,
+    1.9291749676594587
+  ],
+  "game_wins": 5,
+  "game_ties": 0,
+  "game_losses": 5,
+  "baseline_breakdown": {
+    "habitat": [
+      5.775,
+      6.3,
+      5.425,
+      5.625,
+      5.65
+    ],
+    "wildlife": [
+      5.65,
+      12.45,
+      13.075,
+      12.15,
+      15.5
+    ],
+    "nature_tokens": 3.4
+  },
+  "treatment_breakdown": {
+    "habitat": [
+      5.7,
+      6.45,
+      5.8,
+      5.9,
+      5.75
+    ],
+    "wildlife": [
+      5.7,
+      12.85,
+      12.7,
+      11.6,
+      15.775
+    ],
+    "nature_tokens": 3.2
+  },
+  "mean_breakdown_delta": {
+    "habitat": [
+      -0.07500000000000018,
+      0.15000000000000036,
+      0.375,
+      0.27500000000000036,
+      0.09999999999999964
+    ],
+    "wildlife": [
+      0.04999999999999982,
+      0.40000000000000036,
+      -0.375,
+      -0.5500000000000007,
+      0.27500000000000036
+    ],
+    "nature_tokens": -0.19999999999999973
+  },
+  "elapsed_seconds": 106.010505,
+  "pairs": [
+    {
+      "seed": 20900,
+      "baseline_mean": 92.25,
+      "treatment_mean": 90.25,
+      "delta": -2.0
+    },
+    {
+      "seed": 20901,
+      "baseline_mean": 93.0,
+      "treatment_mean": 90.0,
+      "delta": -3.0
+    },
+    {
+      "seed": 20902,
+      "baseline_mean": 92.5,
+      "treatment_mean": 91.25,
+      "delta": -1.25
+    },
+    {
+      "seed": 20903,
+      "baseline_mean": 88.0,
+      "treatment_mean": 92.25,
+      "delta": 4.25
+    },
+    {
+      "seed": 20904,
+      "baseline_mean": 89.25,
+      "treatment_mean": 91.75,
+      "delta": 2.5
+    },
+    {
+      "seed": 20905,
+      "baseline_mean": 93.75,
+      "treatment_mean": 92.5,
+      "delta": -1.25
+    },
+    {
+      "seed": 20906,
+      "baseline_mean": 90.75,
+      "treatment_mean": 93.75,
+      "delta": 3.0
+    },
+    {
+      "seed": 20907,
+      "baseline_mean": 91.0,
+      "treatment_mean": 91.25,
+      "delta": 0.25
+    },
+    {
+      "seed": 20908,
+      "baseline_mean": 88.5,
+      "treatment_mean": 90.75,
+      "delta": 2.25
+    },
+    {
+      "seed": 20909,
+      "baseline_mean": 91.0,
+      "treatment_mean": 90.5,
+      "delta": -0.5
+    }
+  ]
+}

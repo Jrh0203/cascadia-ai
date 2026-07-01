@@ -1,0 +1,535 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      5.535,
+      5.94,
+      5.825,
+      5.8,
+      5.63
+    ],
+    "nature_tokens": 3.725,
+    "wildlife": [
+      7.73,
+      11.505,
+      12.375,
+      12.585,
+      14.93
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 4000,
+    "max_milliseconds": 1.6115000000000002,
+    "mean_milliseconds": 0.5318475807499997,
+    "p50_milliseconds": 0.5198125,
+    "p90_milliseconds": 0.8378289,
+    "p99_milliseconds": 1.1603111699999997
+  },
+  "baseline_elapsed_seconds": 2.1455591640000002,
+  "baseline_id": "pattern-aware-v1-k8-h6-b8-m4",
+  "baseline_mean": 91.58,
+  "baseline_seconds_per_game": 0.04291118328000001,
+  "baseline_statistics": {
+    "confidence_95": [
+      91.11410490451175,
+      92.04589509548825
+    ],
+    "decision_latency": {
+      "decisions": 4000,
+      "max_milliseconds": 1.6115000000000002,
+      "mean_milliseconds": 0.5318475807499997,
+      "p50_milliseconds": 0.5198125,
+      "p90_milliseconds": 0.8378289,
+      "p99_milliseconds": 1.1603111699999997
+    },
+    "game_mean_stddev": 1.6808039864351605,
+    "max_score": 100.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.535,
+        5.94,
+        5.825,
+        5.8,
+        5.63
+      ],
+      "nature_tokens": 3.725,
+      "wildlife": [
+        7.73,
+        11.505,
+        12.375,
+        12.585,
+        14.93
+      ]
+    },
+    "mean_score": 91.58,
+    "min_score": 84.0,
+    "percentiles": {
+      "p10": 87.0,
+      "p50": 91.0,
+      "p90": 96.0
+    },
+    "seat_score_stddev": 3.3390637510638146,
+    "standard_error": 0.23770157933073677
+  },
+  "confidence_95": [
+    0.26002184707172027,
+    0.7799781529282798
+  ],
+  "configuration": {
+    "late-conservative-base-policy-improvement-compare": {
+      "first_seed": 35100,
+      "games": 50,
+      "output": "docs/v2/reports/canonical-redetermination-strong-requalify50.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "sequential": true,
+      "terminal_turns": 5
+    }
+  },
+  "elapsed_seconds": 155.272711542,
+  "first_seed": 35100,
+  "game_losses": 9,
+  "game_ties": 10,
+  "game_wins": 31,
+  "games": 50,
+  "mean_breakdown_delta": {
+    "habitat": [
+      -0.004999999999999893,
+      0.040000000000000036,
+      0.08999999999999986,
+      0.1349999999999998,
+      0.10500000000000043
+    ],
+    "nature_tokens": 0.06999999999999984,
+    "wildlife": [
+      0.4599999999999991,
+      -0.09000000000000163,
+      -0.0600000000000005,
+      -0.11000000000000121,
+      -0.11500000000000021
+    ]
+  },
+  "mean_paired_delta": 0.52,
+  "paired_delta_stddev": 0.9379199739588772,
+  "pairs": [
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.25,
+      "seed": 35100,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 89.75,
+      "delta": 2.0,
+      "seed": 35101,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 2.0,
+      "seed": 35102,
+      "treatment_mean": 93.5
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": -0.75,
+      "seed": 35103,
+      "treatment_mean": 90.5
+    },
+    {
+      "baseline_mean": 88.25,
+      "delta": 0.75,
+      "seed": 35104,
+      "treatment_mean": 89.0
+    },
+    {
+      "baseline_mean": 93.25,
+      "delta": -0.5,
+      "seed": 35105,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 94.0,
+      "delta": 0.0,
+      "seed": 35106,
+      "treatment_mean": 94.0
+    },
+    {
+      "baseline_mean": 89.25,
+      "delta": 1.25,
+      "seed": 35107,
+      "treatment_mean": 90.5
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.0,
+      "seed": 35108,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 90.75,
+      "delta": 2.0,
+      "seed": 35109,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.25,
+      "seed": 35110,
+      "treatment_mean": 92.0
+    },
+    {
+      "baseline_mean": 93.5,
+      "delta": 0.5,
+      "seed": 35111,
+      "treatment_mean": 94.0
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": -1.0,
+      "seed": 35112,
+      "treatment_mean": 90.25
+    },
+    {
+      "baseline_mean": 93.5,
+      "delta": 0.5,
+      "seed": 35113,
+      "treatment_mean": 94.0
+    },
+    {
+      "baseline_mean": 92.5,
+      "delta": 1.75,
+      "seed": 35114,
+      "treatment_mean": 94.25
+    },
+    {
+      "baseline_mean": 92.75,
+      "delta": -1.25,
+      "seed": 35115,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 89.75,
+      "delta": 2.0,
+      "seed": 35116,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 92.5,
+      "delta": 1.75,
+      "seed": 35117,
+      "treatment_mean": 94.25
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.0,
+      "seed": 35118,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 92.0,
+      "delta": 2.5,
+      "seed": 35119,
+      "treatment_mean": 94.5
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.25,
+      "seed": 35120,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 90.0,
+      "delta": 2.25,
+      "seed": 35121,
+      "treatment_mean": 92.25
+    },
+    {
+      "baseline_mean": 96.0,
+      "delta": 0.25,
+      "seed": 35122,
+      "treatment_mean": 96.25
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.25,
+      "seed": 35123,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 93.5,
+      "delta": 0.5,
+      "seed": 35124,
+      "treatment_mean": 94.0
+    },
+    {
+      "baseline_mean": 92.75,
+      "delta": 0.0,
+      "seed": 35125,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 0.5,
+      "seed": 35126,
+      "treatment_mean": 92.0
+    },
+    {
+      "baseline_mean": 91.0,
+      "delta": 0.75,
+      "seed": 35127,
+      "treatment_mean": 91.75
+    },
+    {
+      "baseline_mean": 89.0,
+      "delta": 1.5,
+      "seed": 35128,
+      "treatment_mean": 90.5
+    },
+    {
+      "baseline_mean": 92.75,
+      "delta": 1.0,
+      "seed": 35129,
+      "treatment_mean": 93.75
+    },
+    {
+      "baseline_mean": 89.25,
+      "delta": -0.25,
+      "seed": 35130,
+      "treatment_mean": 89.0
+    },
+    {
+      "baseline_mean": 94.25,
+      "delta": 1.75,
+      "seed": 35131,
+      "treatment_mean": 96.0
+    },
+    {
+      "baseline_mean": 90.5,
+      "delta": 0.0,
+      "seed": 35132,
+      "treatment_mean": 90.5
+    },
+    {
+      "baseline_mean": 93.25,
+      "delta": 0.75,
+      "seed": 35133,
+      "treatment_mean": 94.0
+    },
+    {
+      "baseline_mean": 94.0,
+      "delta": 0.75,
+      "seed": 35134,
+      "treatment_mean": 94.75
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.75,
+      "seed": 35135,
+      "treatment_mean": 92.5
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": -0.25,
+      "seed": 35136,
+      "treatment_mean": 91.5
+    },
+    {
+      "baseline_mean": 90.0,
+      "delta": 0.75,
+      "seed": 35137,
+      "treatment_mean": 90.75
+    },
+    {
+      "baseline_mean": 94.0,
+      "delta": -0.5,
+      "seed": 35138,
+      "treatment_mean": 93.5
+    },
+    {
+      "baseline_mean": 91.25,
+      "delta": 0.0,
+      "seed": 35139,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 91.0,
+      "delta": 0.0,
+      "seed": 35140,
+      "treatment_mean": 91.0
+    },
+    {
+      "baseline_mean": 89.5,
+      "delta": -0.25,
+      "seed": 35141,
+      "treatment_mean": 89.25
+    },
+    {
+      "baseline_mean": 92.0,
+      "delta": 0.0,
+      "seed": 35142,
+      "treatment_mean": 92.0
+    },
+    {
+      "baseline_mean": 94.25,
+      "delta": 1.0,
+      "seed": 35143,
+      "treatment_mean": 95.25
+    },
+    {
+      "baseline_mean": 89.5,
+      "delta": -2.0,
+      "seed": 35144,
+      "treatment_mean": 87.5
+    },
+    {
+      "baseline_mean": 90.25,
+      "delta": 0.5,
+      "seed": 35145,
+      "treatment_mean": 90.75
+    },
+    {
+      "baseline_mean": 90.5,
+      "delta": 0.75,
+      "seed": 35146,
+      "treatment_mean": 91.25
+    },
+    {
+      "baseline_mean": 89.0,
+      "delta": 0.0,
+      "seed": 35147,
+      "treatment_mean": 89.0
+    },
+    {
+      "baseline_mean": 90.0,
+      "delta": 1.0,
+      "seed": 35148,
+      "treatment_mean": 91.0
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.0,
+      "seed": 35149,
+      "treatment_mean": 91.75
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "late-conservative-base-policy-improvement-compare",
+      "--games",
+      "50",
+      "--first-seed",
+      "35100",
+      "--terminal-turns",
+      "5",
+      "--policy-candidates",
+      "8",
+      "--policy-habitat-candidates",
+      "6",
+      "--policy-bear-candidates",
+      "8",
+      "--policy-market-draws",
+      "4",
+      "--sequential",
+      "--output",
+      "docs/v2/reports/canonical-redetermination-strong-requalify50.json"
+    ],
+    "created_unix_seconds": 1781317846,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "f811b8a0faab4ebc6add631eea12e75203da0a98189bfefd7e88c0dd71d9d2c8",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "940109c03d88769406b6b1afb9867142e84e7c3c9defc19798699293d411def9",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "aa6e140bbdc8421ae8358d2a80b9da56ac23066e3249bff996ee2aaccd66afc5"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 200,
+  "standard_error": 0.1326419147593264,
+  "treatment_breakdown": {
+    "habitat": [
+      5.53,
+      5.98,
+      5.915,
+      5.935,
+      5.735
+    ],
+    "nature_tokens": 3.795,
+    "wildlife": [
+      8.19,
+      11.415,
+      12.315,
+      12.475,
+      14.815
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 4000,
+    "max_milliseconds": 491.15225000000004,
+    "mean_milliseconds": 38.276657551750056,
+    "p50_milliseconds": 0.547229,
+    "p90_milliseconds": 172.58221659999998,
+    "p99_milliseconds": 372.2065346699992
+  },
+  "treatment_elapsed_seconds": 153.12698349900003,
+  "treatment_id": "late-conservative-base-policy-improvement-v1-t5-r8-k8-h6-b8-m4-c90",
+  "treatment_mean": 92.1,
+  "treatment_seconds_per_game": 3.0625396699800005,
+  "treatment_statistics": {
+    "confidence_95": [
+      91.58011155042644,
+      92.61988844957355
+    ],
+    "decision_latency": {
+      "decisions": 4000,
+      "max_milliseconds": 491.15225000000004,
+      "mean_milliseconds": 38.276657551750056,
+      "p50_milliseconds": 0.547229,
+      "p90_milliseconds": 172.58221659999998,
+      "p99_milliseconds": 372.2065346699992
+    },
+    "game_mean_stddev": 1.8755951436429836,
+    "max_score": 101.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.53,
+        5.98,
+        5.915,
+        5.935,
+        5.735
+      ],
+      "nature_tokens": 3.795,
+      "wildlife": [
+        8.19,
+        11.415,
+        12.315,
+        12.475,
+        14.815
+      ]
+    },
+    "mean_score": 92.1,
+    "min_score": 85.0,
+    "percentiles": {
+      "p10": 88.0,
+      "p50": 92.0,
+      "p90": 97.0
+    },
+    "seat_score_stddev": 3.274693587261606,
+    "standard_error": 0.26524920896610205
+  }
+}

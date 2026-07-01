@@ -1,0 +1,39 @@
+{
+  "batches": {
+    "1": {
+      "evaluations_per_second": 3926.705177621907,
+      "iterations": 200,
+      "p50_milliseconds": 0.25466643273830414,
+      "p90_milliseconds": 0.4827834200114012,
+      "p99_milliseconds": 0.5789124267175775
+    },
+    "256": {
+      "evaluations_per_second": 58449.156298461254,
+      "iterations": 200,
+      "p50_milliseconds": 4.379875026643276,
+      "p90_milliseconds": 4.7782789915800095,
+      "p99_milliseconds": 5.036162491887808
+    },
+    "32": {
+      "evaluations_per_second": 40569.43863914237,
+      "iterations": 200,
+      "p50_milliseconds": 0.7887710817158222,
+      "p90_milliseconds": 0.8237174712121486,
+      "p99_milliseconds": 1.1976907914504407
+    }
+  },
+  "device": "Device(gpu, 0)",
+  "gates": {
+    "batch32_evaluations_per_second": true
+  },
+  "model": {
+    "manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+    "safetensors": {
+      "blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65",
+      "bytes": 23135528
+    }
+  },
+  "passed": true,
+  "schema_version": 1,
+  "seed": 20260619
+}

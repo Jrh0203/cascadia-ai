@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+export JOB_SLUG="${JOB_SLUG:-cascadiaformer_greedy_k32_retention}"
+export PROFILE="${PROFILE:-greedy_k32_retention}"
+export EXPERT_TENSOR_MODE="${EXPERT_TENSOR_MODE:-greedy}"
+export MAX_ACTIONS="${MAX_ACTIONS:-32}"
+export FILTER_TOP_K="${FILTER_TOP_K:-32}"
+export FILTER_MODE="${FILTER_MODE:-greedy-prefix-strict}"
+export OBJECTIVE="${OBJECTIVE:-pure-greedy-retention}"
+export SELECTION_METRIC="${SELECTION_METRIC:-locked_val_greedy_policy}"
+export SELECTION_MODE="${SELECTION_MODE:-min}"
+export MODEL_SIZE="${MODEL_SIZE:-S}"
+export TRAIN_FIRST_SEED="${TRAIN_FIRST_SEED:-2026210000}"
+export TRAIN_SEED_COUNT="${TRAIN_SEED_COUNT:-125}"
+export VAL_FIRST_SEED="${VAL_FIRST_SEED:-2026310000}"
+export VAL_SEED_COUNT="${VAL_SEED_COUNT:-25}"
+export PLIES_PER_SEED="${PLIES_PER_SEED:-80}"
+export TRAIN_STEPS="${TRAIN_STEPS:-1500}"
+export BATCH_SIZE="${BATCH_SIZE:-128}"
+export GRAD_ACCUM="${GRAD_ACCUM:-1}"
+export LR="${LR:-0.0005}"
+export WEIGHT_DECAY="${WEIGHT_DECAY:-0.05}"
+export WARMUP_FRACTION="${WARMUP_FRACTION:-0.03}"
+export VAL_MAX_BATCHES="${VAL_MAX_BATCHES:-0}"
+export SWA_FRACTION="${SWA_FRACTION:-0.20}"
+export SEED="${SEED:-2026070102}"
+
+export CHECKPOINT_DIR="${CHECKPOINT_DIR:-cascadiav3/checkpoints/full_v3_${PROFILE}}"
+export REPORT="${REPORT:-cascadiav3/reports/full_v3_${PROFILE}_train.json}"
+export METRICS="${METRICS:-cascadiav3/reports/full_v3_${PROFILE}_metrics.jsonl}"
+export RUNBOOK_REPORT="${RUNBOOK_REPORT:-cascadiav3/reports/full_v3_${PROFILE}_runbook.json}"
+
+exec bash "$SCRIPT_DIR/run_full_v3_training_pipeline.sh" "${1:-status}"

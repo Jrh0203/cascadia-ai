@@ -1,0 +1,16 @@
+[package]
+name = "cascadia-eval"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Canonical Cascadia v2 benchmark protocol and statistics"
+
+[dependencies]
+cascadia-game = { path = "../cascadia-game" }
+cascadia-sim = { path = "../cascadia-sim" }
+rayon.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

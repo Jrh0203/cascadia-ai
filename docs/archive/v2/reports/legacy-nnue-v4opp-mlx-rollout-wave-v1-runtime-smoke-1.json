@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "experiment_id": "qualified-legacy-nnue-mlx-rollout-wave-v1-parity-20260612",
+  "game_index": 92100,
+  "rollouts": 1,
+  "spot_decisions": [
+    999
+  ],
+  "spot_rollouts": 1,
+  "trajectory_decisions": 80,
+  "new_native": {
+    "decisions": 80,
+    "candidate_identity_mismatches": 0,
+    "selected_action_mismatches": 0,
+    "sample_count_mismatches": 0,
+    "estimate_count": 2494,
+    "maximum_rollout_mean_absolute_error": 0.0,
+    "mean_rollout_mean_absolute_error": 0.0,
+    "total_seconds": 63.713975546
+  },
+  "mlx": {
+    "decisions": 80,
+    "candidate_identity_mismatches": 0,
+    "selected_action_mismatches": 1,
+    "sample_count_mismatches": 7,
+    "estimate_count": 2494,
+    "maximum_rollout_mean_absolute_error": 3.4666666666666686,
+    "mean_rollout_mean_absolute_error": 0.0037376647117444437,
+    "total_seconds": 462.0526789630001
+  },
+  "mlx_repeat": {
+    "decisions": 80,
+    "candidate_identity_mismatches": 0,
+    "selected_action_mismatches": 0,
+    "sample_count_mismatches": 0,
+    "estimate_count": 2494,
+    "maximum_rollout_mean_absolute_error": 0.0,
+    "mean_rollout_mean_absolute_error": 0.0,
+    "total_seconds": 0.0
+  },
+  "mlx_spot": {
+    "decisions": 0,
+    "candidate_identity_mismatches": 0,
+    "selected_action_mismatches": 0,
+    "sample_count_mismatches": 0,
+    "estimate_count": 0,
+    "maximum_rollout_mean_absolute_error": 0.0,
+    "mean_rollout_mean_absolute_error": 0.0,
+    "total_seconds": 0.0
+  },
+  "native_r32_seconds": 76.430663998,
+  "mlx_r32_seconds": 462.0526789630001,
+  "mlx_native_runtime_ratio": 6.045383551490419,
+  "new_native_diagnostics": {
+    "neural_batches": 4030,
+    "neural_rows": 1726630,
+    "minimum_batch_rows": 3,
+    "maximum_batch_rows": 525,
+    "rollout_waves": 3800,
+    "policy_fallbacks": 0
+  },
+  "mlx_diagnostics": {
+    "neural_batches": 4030,
+    "neural_rows": 1726932,
+    "minimum_batch_rows": 3,
+    "maximum_batch_rows": 525,
+    "rollout_waves": 3800,
+    "policy_fallbacks": 0
+  },
+  "mlx_repeat_diagnostics": {
+    "neural_batches": 4030,
+    "neural_rows": 1726932,
+    "minimum_batch_rows": 3,
+    "maximum_batch_rows": 525,
+    "rollout_waves": 3800,
+    "policy_fallbacks": 0
+  },
+  "mlx_spot_diagnostics": {
+    "neural_batches": 0,
+    "neural_rows": 0,
+    "minimum_batch_rows": 0,
+    "maximum_batch_rows": 0,
+    "rollout_waves": 0,
+    "policy_fallbacks": 0
+  },
+  "gates": {
+    "new_native_exact": true,
+    "mlx_r32_candidates": true,
+    "mlx_r32_selected_actions": false,
+    "mlx_r32_samples": false,
+    "mlx_r32_maximum_error": false,
+    "mlx_r32_mean_error": true,
+    "mlx_repeat_deterministic": true,
+    "mlx_r600_selected_actions": true,
+    "mlx_r600_samples": true,
+    "mlx_r600_maximum_error": true,
+    "mlx_r600_mean_error": true,
+    "mlx_zero_fallbacks": true,
+    "mlx_runtime_ratio": false,
+    "canonical_trajectory": true,
+    "clean_shutdown": true
+  },
+  "passed": false,
+  "model_manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+  "fixture_blake3": "1e1a89d4ca2a540587793a0fe681b11de80e661f6d419328c59f31e910797238",
+  "weights_blake3": "9e1d568693274fc537ac4f6d6f729abb1ee8da8330a78d1f78a1f62b733de400",
+  "source": {
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_dirty": true,
+    "git_status_blake3": "940109c03d88769406b6b1afb9867142e84e7c3c9defc19798699293d411def9",
+    "v2_source_blake3": "b955c8377d42c0714ec523fcc7c7d3e5b8d5d29f982a040229ef0e6e4962bf94"
+  },
+  "executable_path": "/Users/johnherrick/cascadia/target/release/legacy-teacher",
+  "executable_blake3": "986e7b5707113563a6e7d7e7123624f83fc8b1f2ae621c72cf3b0e55a8cd18f0"
+}

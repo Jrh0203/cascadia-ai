@@ -1,0 +1,188 @@
+"""CascadiaFormer model definition for expert-root v3 training.
+
+The module is importable without Torch so schema and CLI validation can run on
+CPU-only hosts. Building or training the model imports Torch lazily and fails
+closed for real training when Torch is unavailable.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from typing import Any
+
+from .torch_public_token_merit import PUBLIC_TOKEN_FEATURE_DIM
+from .torch_semantic_relation_bias_merit import SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM
+
+SCORE_CATEGORIES = ("wildlife", "habitat", "nature_tokens")
+
+
+@dataclass(frozen=True)
+class CascadiaFormerConfig:
+    model_size: str = "S"
+    token_feature_dim: int = PUBLIC_TOKEN_FEATURE_DIM
+    action_feature_dim: int = SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM
+    d_model: int = 384
+    layers: int = 8
+    heads: int = 8
+    ffn_dim: int = 1536
+    dropout: float = 0.0
+    seats: int = 4
+    score_categories: tuple[str, ...] = SCORE_CATEGORIES
+    relation_vocab_size: int = 32
+    opponent_aux_dim: int = 16
+    market_aux_dim: int = 16
+    gradient_checkpointing: bool = False
+    model_name: str = "CascadiaFormer-S-v1"
+
+    def to_dict(self) -> dict[str, Any]:
+        out = asdict(self)
+        out["score_categories"] = list(self.score_categories)
+        return out
+
+
+def config_for_size(model_size: str) -> CascadiaFormerConfig:
+    normalized = model_size.upper()
+    if normalized == "TINY":
+        return CascadiaFormerConfig(
+            model_size="tiny",
+            d_model=64,
+            layers=1,
+            heads=4,
+            ffn_dim=128,
+            model_name="CascadiaFormer-tiny-v1",
+        )
+    if normalized == "S":
+        return CascadiaFormerConfig(model_size="S", model_name="CascadiaFormer-S-v1")
+    if normalized == "M":
+        return CascadiaFormerConfig(
+            model_size="M",
+            d_model=768,
+            layers=12,
+            heads=12,
+            ffn_dim=3072,
+            gradient_checkpointing=True,
+            model_name="CascadiaFormer-M-v1",
+        )
+    raise ValueError("model_size must be one of tiny, S, M")
+
+
+def _masked_mean(tensor, mask):  # type: ignore[no-untyped-def]
+    mask_f = mask.to(tensor.dtype).unsqueeze(-1)
+    return (tensor * mask_f).sum(dim=1) / mask_f.sum(dim=1).clamp_min(1.0)
+
+
+def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
+    import torch
+    from torch import nn
+
+    cfg = config or CascadiaFormerConfig()
+    if cfg.d_model % cfg.heads != 0:
+        raise ValueError(f"d_model {cfg.d_model} must be divisible by heads {cfg.heads}")
+
+    class CascadiaGatedActionBias(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.relation_embed = nn.Embedding(cfg.relation_vocab_size, cfg.d_model, padding_idx=0)
+            self.gate = nn.Sequential(
+                nn.Linear(cfg.d_model, cfg.d_model),
+                nn.Sigmoid(),
+            )
+
+        def forward(self, action_h, relation_ids=None, relation_tail=None):  # type: ignore[no-untyped-def]
+            if relation_tail is None and relation_ids is None:
+                return action_h, action_h.new_zeros(action_h.shape)
+            action_count = action_h.shape[1]
+            if relation_tail is None:
+                rel_tail = relation_ids[:, -action_count:, :]
+            else:
+                rel_tail = relation_tail[:, :action_count, :]
+            rel_tail = rel_tail.clamp_min(0).to(dtype=torch.long)
+            rel_mask = rel_tail.ne(0).unsqueeze(-1)
+            rel_emb = self.relation_embed(rel_tail) * rel_mask.to(action_h.dtype)
+            rel_context = rel_emb.sum(dim=2) / rel_mask.sum(dim=2).clamp_min(1).to(action_h.dtype)
+            bias = self.gate(rel_context) * rel_context
+            return action_h + bias, bias
+
+    class CascadiaFormer(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.config = cfg
+            self.token_proj = nn.Linear(cfg.token_feature_dim, cfg.d_model)
+            self.action_proj = nn.Linear(cfg.action_feature_dim, cfg.d_model)
+            encoder_layer = nn.TransformerEncoderLayer(
+                d_model=cfg.d_model,
+                nhead=cfg.heads,
+                dim_feedforward=cfg.ffn_dim,
+                dropout=cfg.dropout,
+                batch_first=True,
+                activation="gelu",
+                norm_first=True,
+            )
+            self.state_encoder = nn.TransformerEncoder(encoder_layer, num_layers=cfg.layers)
+            self.action_cross_attn = nn.MultiheadAttention(
+                cfg.d_model,
+                cfg.heads,
+                dropout=cfg.dropout,
+                batch_first=True,
+            )
+            self.cgab = CascadiaGatedActionBias()
+            self.action_norm = nn.LayerNorm(cfg.d_model)
+            self.root_norm = nn.LayerNorm(cfg.d_model)
+            self.legal_logits = nn.Linear(cfg.d_model, 1)
+            self.q_head = nn.Linear(cfg.d_model, 1)
+            self.uncertainty_head = nn.Linear(cfg.d_model, 1)
+            self.value_head = nn.Linear(cfg.d_model, cfg.seats)
+            self.rank_head = nn.Linear(cfg.d_model, cfg.seats * cfg.seats)
+            self.differential_head = nn.Linear(cfg.d_model, cfg.seats)
+            self.score_head = nn.Linear(cfg.d_model, len(cfg.score_categories) * cfg.seats)
+            self.opponent_aux_head = nn.Linear(cfg.d_model, cfg.opponent_aux_dim)
+            self.market_aux_head = nn.Linear(cfg.d_model, cfg.market_aux_dim)
+
+        def forward(  # type: ignore[no-untyped-def]
+            self,
+            tokens,
+            token_mask,
+            actions,
+            action_mask,
+            relation_ids=None,
+            relation_tail=None,
+        ):
+            token_h = self.token_proj(tokens)
+            token_padding = ~token_mask
+            encoded = self.state_encoder(token_h, src_key_padding_mask=token_padding)
+            action_h = self.action_proj(actions)
+            decoded, _ = self.action_cross_attn(
+                query=action_h,
+                key=encoded,
+                value=encoded,
+                key_padding_mask=token_padding,
+                need_weights=False,
+            )
+            decoded = self.action_norm(decoded + action_h)
+            decoded, cgab_bias = self.cgab(decoded, relation_ids, relation_tail)
+            decoded = decoded.masked_fill(~action_mask.unsqueeze(-1), 0.0)
+            root_h = self.root_norm(_masked_mean(encoded, token_mask))
+            return {
+                "logits": self.legal_logits(decoded).squeeze(-1),
+                "q": self.q_head(decoded).squeeze(-1),
+                "uncertainty": torch.nn.functional.softplus(
+                    self.uncertainty_head(decoded).squeeze(-1)
+                ),
+                "value_vector": self.value_head(root_h),
+                "rank_logits": self.rank_head(root_h).view(-1, cfg.seats, cfg.seats),
+                "differential": self.differential_head(root_h),
+                "score_decomposition": self.score_head(root_h).view(
+                    -1,
+                    len(cfg.score_categories),
+                    cfg.seats,
+                ),
+                "opponent_aux": self.opponent_aux_head(root_h),
+                "market_aux": self.market_aux_head(root_h),
+                "cgab_bias": cgab_bias,
+            }
+
+    return CascadiaFormer()
+
+
+def parameter_count(model) -> int:  # type: ignore[no-untyped-def]
+    return sum(param.numel() for param in model.parameters())

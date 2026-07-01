@@ -1,0 +1,41 @@
+{
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "strategy_id": "determinized-lookahead-v2-k8-r4-d4",
+  "games": 10,
+  "seat_games": 40,
+  "first_seed": 20700,
+  "mean_score": 90.275,
+  "game_mean_stddev": 1.7217965423746595,
+  "seat_score_stddev": 3.258027561231425,
+  "standard_error": 0.5444798741306544,
+  "confidence_95": [
+    89.20781944670392,
+    91.34218055329609
+  ],
+  "percentiles": {
+    "p10": 86.89999999999999,
+    "p50": 90.0,
+    "p90": 94.1
+  },
+  "min_score": 81.0,
+  "max_score": 96.0,
+  "mean_breakdown": {
+    "habitat": [
+      5.75,
+      5.7,
+      5.425,
+      5.95,
+      5.825
+    ],
+    "wildlife": [
+      5.55,
+      13.075,
+      12.95,
+      12.3,
+      14.4
+    ],
+    "nature_tokens": 3.35
+  },
+  "elapsed_seconds": 43.974685167,
+  "games_per_second": 0.2274035609811328
+}

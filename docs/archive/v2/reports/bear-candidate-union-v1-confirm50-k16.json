@@ -1,0 +1,446 @@
+{
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "baseline_id": "determinized-lookahead-v2-k16-r4-d4",
+  "treatment_id": "bear-candidate-lookahead-v1-k8-b8-r4-d4",
+  "games": 50,
+  "seat_games_per_strategy": 200,
+  "first_seed": 21400,
+  "baseline_mean": 91.61,
+  "treatment_mean": 91.73,
+  "baseline_statistics": {
+    "mean_score": 91.61,
+    "game_mean_stddev": 1.428714278572143,
+    "seat_score_stddev": 2.9532198593549466,
+    "standard_error": 0.20205071095128166,
+    "confidence_95": [
+      91.21398060653549,
+      92.00601939346451
+    ],
+    "percentiles": {
+      "p10": 87.0,
+      "p50": 92.0,
+      "p90": 95.0
+    },
+    "min_score": 83.0,
+    "max_score": 98.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.725,
+        5.975,
+        5.9,
+        6.015,
+        5.865
+      ],
+      "wildlife": [
+        5.495,
+        12.485,
+        12.975,
+        12.625,
+        15.18
+      ],
+      "nature_tokens": 3.37
+    }
+  },
+  "treatment_statistics": {
+    "mean_score": 91.73,
+    "game_mean_stddev": 1.5401431155339205,
+    "seat_score_stddev": 3.1056926173022696,
+    "standard_error": 0.2178091281983623,
+    "confidence_95": [
+      91.30309410873122,
+      92.15690589126879
+    ],
+    "percentiles": {
+      "p10": 88.0,
+      "p50": 92.0,
+      "p90": 96.0
+    },
+    "min_score": 82.0,
+    "max_score": 99.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.645,
+        5.975,
+        5.855,
+        5.765,
+        5.875
+      ],
+      "wildlife": [
+        8.055,
+        11.73,
+        12.39,
+        12.27,
+        14.555
+      ],
+      "nature_tokens": 3.615
+    }
+  },
+  "mean_paired_delta": 0.12,
+  "paired_delta_stddev": 1.6814109721132597,
+  "standard_error": 0.23778742006855016,
+  "confidence_95": [
+    -0.34606334333435834,
+    0.5860633433343583
+  ],
+  "game_wins": 24,
+  "game_ties": 3,
+  "game_losses": 23,
+  "baseline_breakdown": {
+    "habitat": [
+      5.725,
+      5.975,
+      5.9,
+      6.015,
+      5.865
+    ],
+    "wildlife": [
+      5.495,
+      12.485,
+      12.975,
+      12.625,
+      15.18
+    ],
+    "nature_tokens": 3.37
+  },
+  "treatment_breakdown": {
+    "habitat": [
+      5.645,
+      5.975,
+      5.855,
+      5.765,
+      5.875
+    ],
+    "wildlife": [
+      8.055,
+      11.73,
+      12.39,
+      12.27,
+      14.555
+    ],
+    "nature_tokens": 3.615
+  },
+  "mean_breakdown_delta": {
+    "habitat": [
+      -0.08000000000000007,
+      0.0,
+      -0.04499999999999993,
+      -0.25,
+      0.009999999999999787
+    ],
+    "wildlife": [
+      2.5599999999999996,
+      -0.754999999999999,
+      -0.5849999999999991,
+      -0.3550000000000004,
+      -0.625
+    ],
+    "nature_tokens": 0.2450000000000001
+  },
+  "baseline_elapsed_seconds": 280.111646659,
+  "treatment_elapsed_seconds": 207.21867495500007,
+  "baseline_seconds_per_game": 5.60223293318,
+  "treatment_seconds_per_game": 4.144373499100001,
+  "elapsed_seconds": 487.330443792,
+  "pairs": [
+    {
+      "seed": 21400,
+      "baseline_mean": 91.75,
+      "treatment_mean": 92.25,
+      "delta": 0.5
+    },
+    {
+      "seed": 21401,
+      "baseline_mean": 89.5,
+      "treatment_mean": 89.5,
+      "delta": 0.0
+    },
+    {
+      "seed": 21402,
+      "baseline_mean": 91.0,
+      "treatment_mean": 90.0,
+      "delta": -1.0
+    },
+    {
+      "seed": 21403,
+      "baseline_mean": 91.75,
+      "treatment_mean": 92.5,
+      "delta": 0.75
+    },
+    {
+      "seed": 21404,
+      "baseline_mean": 93.75,
+      "treatment_mean": 91.5,
+      "delta": -2.25
+    },
+    {
+      "seed": 21405,
+      "baseline_mean": 92.5,
+      "treatment_mean": 94.0,
+      "delta": 1.5
+    },
+    {
+      "seed": 21406,
+      "baseline_mean": 92.0,
+      "treatment_mean": 89.25,
+      "delta": -2.75
+    },
+    {
+      "seed": 21407,
+      "baseline_mean": 87.75,
+      "treatment_mean": 88.5,
+      "delta": 0.75
+    },
+    {
+      "seed": 21408,
+      "baseline_mean": 92.75,
+      "treatment_mean": 90.75,
+      "delta": -2.0
+    },
+    {
+      "seed": 21409,
+      "baseline_mean": 91.25,
+      "treatment_mean": 90.75,
+      "delta": -0.5
+    },
+    {
+      "seed": 21410,
+      "baseline_mean": 93.25,
+      "treatment_mean": 92.75,
+      "delta": -0.5
+    },
+    {
+      "seed": 21411,
+      "baseline_mean": 91.75,
+      "treatment_mean": 91.0,
+      "delta": -0.75
+    },
+    {
+      "seed": 21412,
+      "baseline_mean": 92.75,
+      "treatment_mean": 89.75,
+      "delta": -3.0
+    },
+    {
+      "seed": 21413,
+      "baseline_mean": 91.0,
+      "treatment_mean": 90.75,
+      "delta": -0.25
+    },
+    {
+      "seed": 21414,
+      "baseline_mean": 91.75,
+      "treatment_mean": 90.25,
+      "delta": -1.5
+    },
+    {
+      "seed": 21415,
+      "baseline_mean": 91.25,
+      "treatment_mean": 92.0,
+      "delta": 0.75
+    },
+    {
+      "seed": 21416,
+      "baseline_mean": 92.0,
+      "treatment_mean": 91.25,
+      "delta": -0.75
+    },
+    {
+      "seed": 21417,
+      "baseline_mean": 90.5,
+      "treatment_mean": 91.75,
+      "delta": 1.25
+    },
+    {
+      "seed": 21418,
+      "baseline_mean": 91.25,
+      "treatment_mean": 92.0,
+      "delta": 0.75
+    },
+    {
+      "seed": 21419,
+      "baseline_mean": 92.75,
+      "treatment_mean": 91.5,
+      "delta": -1.25
+    },
+    {
+      "seed": 21420,
+      "baseline_mean": 92.75,
+      "treatment_mean": 92.75,
+      "delta": 0.0
+    },
+    {
+      "seed": 21421,
+      "baseline_mean": 92.5,
+      "treatment_mean": 91.5,
+      "delta": -1.0
+    },
+    {
+      "seed": 21422,
+      "baseline_mean": 93.75,
+      "treatment_mean": 94.5,
+      "delta": 0.75
+    },
+    {
+      "seed": 21423,
+      "baseline_mean": 91.25,
+      "treatment_mean": 93.0,
+      "delta": 1.75
+    },
+    {
+      "seed": 21424,
+      "baseline_mean": 88.0,
+      "treatment_mean": 89.75,
+      "delta": 1.75
+    },
+    {
+      "seed": 21425,
+      "baseline_mean": 91.75,
+      "treatment_mean": 93.75,
+      "delta": 2.0
+    },
+    {
+      "seed": 21426,
+      "baseline_mean": 91.75,
+      "treatment_mean": 92.5,
+      "delta": 0.75
+    },
+    {
+      "seed": 21427,
+      "baseline_mean": 91.75,
+      "treatment_mean": 91.5,
+      "delta": -0.25
+    },
+    {
+      "seed": 21428,
+      "baseline_mean": 89.0,
+      "treatment_mean": 88.75,
+      "delta": -0.25
+    },
+    {
+      "seed": 21429,
+      "baseline_mean": 93.5,
+      "treatment_mean": 91.25,
+      "delta": -2.25
+    },
+    {
+      "seed": 21430,
+      "baseline_mean": 90.0,
+      "treatment_mean": 90.0,
+      "delta": 0.0
+    },
+    {
+      "seed": 21431,
+      "baseline_mean": 92.25,
+      "treatment_mean": 92.5,
+      "delta": 0.25
+    },
+    {
+      "seed": 21432,
+      "baseline_mean": 89.5,
+      "treatment_mean": 93.5,
+      "delta": 4.0
+    },
+    {
+      "seed": 21433,
+      "baseline_mean": 92.5,
+      "treatment_mean": 91.25,
+      "delta": -1.25
+    },
+    {
+      "seed": 21434,
+      "baseline_mean": 92.5,
+      "treatment_mean": 93.75,
+      "delta": 1.25
+    },
+    {
+      "seed": 21435,
+      "baseline_mean": 91.5,
+      "treatment_mean": 91.25,
+      "delta": -0.25
+    },
+    {
+      "seed": 21436,
+      "baseline_mean": 93.5,
+      "treatment_mean": 91.0,
+      "delta": -2.5
+    },
+    {
+      "seed": 21437,
+      "baseline_mean": 90.25,
+      "treatment_mean": 93.0,
+      "delta": 2.75
+    },
+    {
+      "seed": 21438,
+      "baseline_mean": 92.5,
+      "treatment_mean": 90.5,
+      "delta": -2.0
+    },
+    {
+      "seed": 21439,
+      "baseline_mean": 89.5,
+      "treatment_mean": 91.5,
+      "delta": 2.0
+    },
+    {
+      "seed": 21440,
+      "baseline_mean": 91.5,
+      "treatment_mean": 90.0,
+      "delta": -1.5
+    },
+    {
+      "seed": 21441,
+      "baseline_mean": 91.25,
+      "treatment_mean": 92.0,
+      "delta": 0.75
+    },
+    {
+      "seed": 21442,
+      "baseline_mean": 92.25,
+      "treatment_mean": 93.25,
+      "delta": 1.0
+    },
+    {
+      "seed": 21443,
+      "baseline_mean": 92.0,
+      "treatment_mean": 93.5,
+      "delta": 1.5
+    },
+    {
+      "seed": 21444,
+      "baseline_mean": 93.75,
+      "treatment_mean": 93.5,
+      "delta": -0.25
+    },
+    {
+      "seed": 21445,
+      "baseline_mean": 90.75,
+      "treatment_mean": 93.75,
+      "delta": 3.0
+    },
+    {
+      "seed": 21446,
+      "baseline_mean": 92.25,
+      "treatment_mean": 92.5,
+      "delta": 0.25
+    },
+    {
+      "seed": 21447,
+      "baseline_mean": 92.5,
+      "treatment_mean": 90.25,
+      "delta": -2.25
+    },
+    {
+      "seed": 21448,
+      "baseline_mean": 89.0,
+      "treatment_mean": 93.25,
+      "delta": 4.25
+    },
+    {
+      "seed": 21449,
+      "baseline_mean": 93.0,
+      "treatment_mean": 95.0,
+      "delta": 2.0
+    }
+  ]
+}

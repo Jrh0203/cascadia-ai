@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "experiment_id": "qualified-legacy-nnue-mlx-exact-csr-service-v1-parity-20260612",
+  "operation": "packed-csr-rust-order-metal",
+  "device_service": "Device(gpu, 0)",
+  "fixture_records": 80,
+  "maximum_absolute_error_vs_rust": 0.0,
+  "mean_absolute_error_vs_rust": 0.0,
+  "deterministic_repeat": true,
+  "startup_milliseconds": 154.172,
+  "benchmarks": [
+    {
+      "batch_size": 1,
+      "iterations": 200,
+      "p50_milliseconds": 0.404375,
+      "p90_milliseconds": 0.5999589999999999,
+      "p99_milliseconds": 0.899125,
+      "evaluations_per_second": 2472.952086553323
+    },
+    {
+      "batch_size": 32,
+      "iterations": 200,
+      "p50_milliseconds": 0.425667,
+      "p90_milliseconds": 0.434583,
+      "p99_milliseconds": 0.697667,
+      "evaluations_per_second": 75176.13533583764
+    },
+    {
+      "batch_size": 256,
+      "iterations": 200,
+      "p50_milliseconds": 0.669292,
+      "p90_milliseconds": 0.7569159999999999,
+      "p99_milliseconds": 1.021,
+      "evaluations_per_second": 382493.7396532455
+    }
+  ],
+  "gates": {
+    "fixture_records": true,
+    "finite": true,
+    "maximum_rust_error": true,
+    "deterministic_repeat": true,
+    "clean_shutdown": true,
+    "batch32_throughput": true,
+    "batch32_p99_latency": true
+  },
+  "passed": true,
+  "model_manifest_path": "/Users/johnherrick/cascadia/artifacts/models/legacy-nnue-v4opp-mlx-v1/model.json",
+  "model_manifest_blake3": "dd3ea3bbbff0187107695132531a56c09a1da18b58fac4bacacf66960fd7ff0d",
+  "model_safetensors_blake3": "3f8f2609b1440396720aa48adabf9561a4a172d006f77011a9516baa0b06ba65",
+  "fixture_path": "/Users/johnherrick/cascadia/artifacts/fixtures/legacy-nnue-v4opp-mlx-v1-rust.json",
+  "fixture_blake3": "1e1a89d4ca2a540587793a0fe681b11de80e661f6d419328c59f31e910797238",
+  "source": {
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_dirty": true,
+    "git_status_blake3": "940109c03d88769406b6b1afb9867142e84e7c3c9defc19798699293d411def9",
+    "v2_source_blake3": "7711241d807413141c1c4d636aa45dc48393709bba7abde199e03994987f0736"
+  },
+  "executable_path": "/Users/johnherrick/cascadia/target/release/legacy-teacher",
+  "executable_blake3": "eb1598b458052053090298f6da499e713b9ad55c7b8d904ba599ed5c3a42e69a"
+}

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+export TRAIN_OUT="${TRAIN_OUT:-cascadiav3/fixtures/crt_wide32_r16p20_semantic_train.jsonl}"
+export TRAIN_MANIFEST="${TRAIN_MANIFEST:-cascadiav3/fixtures/crt_wide32_r16p20_semantic_train_manifest.json}"
+export VAL_OUT="${VAL_OUT:-cascadiav3/fixtures/crt_wide32_r16p20_semantic_val.jsonl}"
+export VAL_MANIFEST="${VAL_MANIFEST:-cascadiav3/fixtures/crt_wide32_r16p20_semantic_val_manifest.json}"
+
+export TRAIN_FIRST_SEED="${TRAIN_FIRST_SEED:-2026120000}"
+export TRAIN_SEED_COUNT="${TRAIN_SEED_COUNT:-120}"
+export VAL_FIRST_SEED="${VAL_FIRST_SEED:-2026129000}"
+export VAL_SEED_COUNT="${VAL_SEED_COUNT:-30}"
+export PLIES_PER_SEED="${PLIES_PER_SEED:-20}"
+export MAX_ACTIONS="${MAX_ACTIONS:-32}"
+export ROLLOUTS_PER_ACTION="${ROLLOUTS_PER_ACTION:-16}"
+export ROLLOUT_TOP_K="${ROLLOUT_TOP_K:-4}"
+export REGENERATE_ROOTS="${REGENERATE_ROOTS:-0}"
+
+export STEPS="${STEPS:-7600}"
+export BATCH_SIZE="${BATCH_SIZE:-12}"
+export LR="${LR:-0.00032}"
+export HIDDEN_DIM="${HIDDEN_DIM:-256}"
+export LAYERS="${LAYERS:-4}"
+export HEADS="${HEADS:-8}"
+export MLP_DIM="${MLP_DIM:-512}"
+export RESIDUAL_SCALE="${RESIDUAL_SCALE:-0.25}"
+export EXTRA_TRAIN_ARGS="${EXTRA_TRAIN_ARGS:---residual-scale $RESIDUAL_SCALE}"
+export TRAIN_MODULE="${TRAIN_MODULE:-cascadiav3.torch_semantic_residual_attention_merit}"
+export EXPERIMENT_ID="${EXPERIMENT_ID:-crt-wide32-r16p20-semantic-residual-attention-v1}"
+
+export LOSS_MODE="${LOSS_MODE:-topk-retention}"
+export Q_LOSS_WEIGHT="${Q_LOSS_WEIGHT:-0.15}"
+export POLICY_LOSS_WEIGHT="${POLICY_LOSS_WEIGHT:-0.25}"
+export RETENTION_LOSS_WEIGHT="${RETENTION_LOSS_WEIGHT:-1.50}"
+export RETENTION_K="${RETENTION_K:-16}"
+export PAIRWISE_MARGIN="${PAIRWISE_MARGIN:-0.15}"
+export POLICY_TEMPERATURE="${POLICY_TEMPERATURE:-0.75}"
+export REPORT="${REPORT:-cascadiav3/reports/crt_wide32_r16p20_semantic_residual_attention_pilot.json}"
+export CHECKPOINT="${CHECKPOINT:-cascadiav3/checkpoints/crt_wide32_r16p20_semantic_residual_attention_pilot.pt}"
+
+"$SCRIPT_DIR/run_crt_relation_bias_pilot.sh"
+
+REPORT="cascadiav3/reports/crt_wide32_r16p20_semantic_residual_attention_prefilter_eval.json" \
+PER_ROOT_OUT="cascadiav3/reports/crt_wide32_r16p20_semantic_residual_attention_prefilter_eval_roots.jsonl" \
+CHECKPOINT="$CHECKPOINT" \
+VAL="$VAL_OUT" \
+EXPERIMENT_ID="crt-wide32-r16p20-semantic-residual-attention-prefilter-eval-v1" \
+"$SCRIPT_DIR/run_crt_wide32_prefilter_eval.sh"

@@ -1,0 +1,81 @@
+{
+  "candidates_per_group": 4,
+  "collection": {
+    "continuations_per_second": 2.4487297214569943,
+    "projected_160_game_r8_hours": 2.3232,
+    "projected_160_game_r8_seconds": 8363.52,
+    "seconds": 13.068
+  },
+  "dataset": "/private/tmp/cascadia-v2-counterfactual-advantage-smoke",
+  "dataset_id": "counterfactual-advantage-habitat-candidate-lookahead-v1-k8-h6-r4-d4-k4-g4-r2-train-9994",
+  "dataset_manifest_blake3": "edb632caf56c01ec6931f6c8af75c656068c891059521724c5cdfd094aba3dc3",
+  "games": 1,
+  "gates": null,
+  "groups": 4,
+  "h6_shallow_selection": {
+    "exact_r16_best_agreement": 0.75,
+    "mean_regret_to_r16_best": 0.125,
+    "p90_regret_to_r16_best": 0.3500000000000001
+  },
+  "passed": null,
+  "phase_bins": {
+    "turns-1-5": {
+      "groups": 1,
+      "r8": null
+    },
+    "turns-11-15": {
+      "groups": 1,
+      "r8": null
+    },
+    "turns-16-20": {
+      "groups": 1,
+      "r8": null
+    },
+    "turns-6-10": {
+      "groups": 1,
+      "r8": null
+    }
+  },
+  "prefixes": {
+    "1": {
+      "centered_correlation": 0.7569033670482966,
+      "centered_maximum_absolute_drift": 3.5,
+      "centered_mean_absolute_drift": 0.984375,
+      "centered_p90_absolute_drift": 2.5,
+      "maximum_top_action_regret": 0.0,
+      "mean_top_action_regret": 0.0,
+      "p90_top_action_regret": 0.0,
+      "pairwise_accuracy": 0.9166666666666666,
+      "pairwise_comparisons": 24,
+      "top_action_agreement": 1.0,
+      "top_action_agreements": 4
+    },
+    "2": {
+      "centered_correlation": 1.0,
+      "centered_maximum_absolute_drift": 0.0,
+      "centered_mean_absolute_drift": 0.0,
+      "centered_p90_absolute_drift": 0.0,
+      "maximum_top_action_regret": 0.0,
+      "mean_top_action_regret": 0.0,
+      "p90_top_action_regret": 0.0,
+      "pairwise_accuracy": 1.0,
+      "pairwise_comparisons": 24,
+      "top_action_agreement": 1.0,
+      "top_action_agreements": 4
+    }
+  },
+  "r16_target": {
+    "mean_absolute_centered_advantage": 0.953125,
+    "mean_centered_advantage_standard_error": 0.984375,
+    "mean_group_centered_standard_deviation": 1.3456886166459963,
+    "mean_group_value_range": 3.0,
+    "p90_centered_advantage_standard_error": 2.5,
+    "p90_group_value_range": 4.950000000000001
+  },
+  "samples_per_candidate": 2,
+  "schema_version": 1,
+  "split": "train",
+  "substantive": false,
+  "total_candidates": 16,
+  "total_continuations": 32
+}

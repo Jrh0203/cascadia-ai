@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "experiment_id": "mlx-public-beam-value-v1-20260612",
+  "status": "rejected",
+  "selected_checkpoint": "step-000001280-epoch-0020-batch-000000",
+  "device": "Device(gpu, 0)",
+  "training_seconds": 85.5056753330864,
+  "datasets": {
+    "train": {
+      "games": 32,
+      "groups": 512,
+      "candidates": 10116,
+      "manifest_blake3": "fe982f07b3f2138184a49adcbb0a0082804f4f674d804c9ad4c73c461057de9d"
+    },
+    "validation": {
+      "games": 8,
+      "groups": 128,
+      "candidates": 2561,
+      "manifest_blake3": "92d457992adeea6b9f8bf1e2e620b72c2fb1a34b97d83c6c92956b91550a66c0"
+    },
+    "sealed_test": {
+      "games": 8,
+      "groups": 128,
+      "candidates": 2548,
+      "manifest_blake3": "f8f7425c4de7904f323d733f93495b56cbd2937ce88414e8783bfec187e5c16a",
+      "accessed": false
+    }
+  },
+  "validation": {
+    "mean_absolute_error": 2.7682258817470897,
+    "value_correlation": 0.5830336020022574,
+    "centered_advantage_correlation": 0.6729740466297361,
+    "top_action_agreement": 0.140625,
+    "mean_top_action_regret": 0.72802734375
+  },
+  "gates": {
+    "mean_absolute_error": false,
+    "value_correlation": false,
+    "centered_advantage_correlation": true,
+    "top_action_agreement": false,
+    "mean_top_action_regret": false
+  },
+  "validation_diagnostic": {
+    "mean_candidates_per_group": 20.0078125,
+    "mean_teacher_top_margin": 0.14501953125,
+    "median_teacher_top_margin": 0.0625,
+    "teacher_top_tie_fraction": 0.421875,
+    "teacher_batch_top_agreement": 0.546875,
+    "batch_a_winner_regret_on_mean": 0.044921875,
+    "batch_b_winner_regret_on_mean": 0.02392578125,
+    "model_top_value_recall": 0.2265625,
+    "immediate_score_top_value_recall": 0.296875,
+    "immediate_score_mean_regret": 0.4873046875
+  },
+  "passed": false,
+  "test_evaluation_run": false,
+  "promotion_run": false,
+  "gameplay_run": false,
+  "best_manifest_blake3": "eb0a77adb11e356faa1eea99c583b25a5e2dbfbcfa112667c69c3340a98ea83d",
+  "run_manifest_blake3": "0ceeff3d051f12b2ad899b4a4a22a777d97710ea39cdba7aacab72ff881be773"
+}

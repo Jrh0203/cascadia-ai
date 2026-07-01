@@ -1,0 +1,240 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      3.75,
+      7.25,
+      6.25,
+      4.75,
+      6.75
+    ],
+    "nature_tokens": 3.75,
+    "wildlife": [
+      19.0,
+      8.75,
+      7.0,
+      8.75,
+      16.25
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 22630.235542000002,
+    "mean_milliseconds": 1552.2610729250002,
+    "p50_milliseconds": 235.7414375,
+    "p90_milliseconds": 3528.474708000032,
+    "p99_milliseconds": 19145.68234313997
+  },
+  "baseline_elapsed_seconds": 124.488959916,
+  "baseline_id": "perfect-information-focal-beam-v1-t5-b16-k8-h6-b8-w2-m4",
+  "baseline_mean": 92.25,
+  "baseline_seconds_per_game": 124.488959916,
+  "baseline_statistics": {
+    "confidence_95": [
+      92.25,
+      92.25
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 22630.235542000002,
+      "mean_milliseconds": 1552.2610729250002,
+      "p50_milliseconds": 235.7414375,
+      "p90_milliseconds": 3528.474708000032,
+      "p99_milliseconds": 19145.68234313997
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 94.0,
+    "mean_breakdown": {
+      "habitat": [
+        3.75,
+        7.25,
+        6.25,
+        4.75,
+        6.75
+      ],
+      "nature_tokens": 3.75,
+      "wildlife": [
+        19.0,
+        8.75,
+        7.0,
+        8.75,
+        16.25
+      ]
+    },
+    "mean_score": 92.25,
+    "min_score": 88.0,
+    "percentiles": {
+      "p10": 89.5,
+      "p50": 93.5,
+      "p90": 94.0
+    },
+    "seat_score_stddev": 2.8722813232690143,
+    "standard_error": 0.0
+  },
+  "confidence_95": [
+    3.25,
+    3.25
+  ],
+  "configuration": {
+    "perfect-information-focal-frontier-compare": {
+      "baseline_wildlife_candidates": 2,
+      "beam_width": 16,
+      "first_seed": 30499,
+      "games": 1,
+      "output": "docs/v2/reports/perfect-information-focal-frontier-v1-t5-b16-w4-runtime-smoke-1.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "terminal_turns": 5,
+      "treatment_wildlife_candidates": 4
+    }
+  },
+  "elapsed_seconds": 356.764525209,
+  "first_seed": 30499,
+  "game_losses": 0,
+  "game_ties": 0,
+  "game_wins": 1,
+  "games": 1,
+  "mean_breakdown_delta": {
+    "habitat": [
+      0.5,
+      0.75,
+      -1.5,
+      1.0,
+      -0.5
+    ],
+    "nature_tokens": 0.5,
+    "wildlife": [
+      -2.75,
+      0.25,
+      4.75,
+      0.0,
+      0.25
+    ]
+  },
+  "mean_paired_delta": 3.25,
+  "paired_delta_stddev": 0.0,
+  "pairs": [
+    {
+      "baseline_mean": 92.25,
+      "delta": 3.25,
+      "seed": 30499,
+      "treatment_mean": 95.5
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "perfect-information-focal-frontier-compare",
+      "--games",
+      "1",
+      "--first-seed",
+      "30499",
+      "--beam-width",
+      "16",
+      "--terminal-turns",
+      "5",
+      "--baseline-wildlife-candidates",
+      "2",
+      "--treatment-wildlife-candidates",
+      "4",
+      "--output",
+      "docs/v2/reports/perfect-information-focal-frontier-v1-t5-b16-w4-runtime-smoke-1.json"
+    ],
+    "created_unix_seconds": 1781231751,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "d9b6d6c1ebdac6c39881c6ade601cd5b25bfc163cd9393463d8e08d07e5eaeeb",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "b628c1b0c220ad4431e00a7fb5d2cd57159a1de137435588ad70b1f10ea9e59b"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 4,
+  "standard_error": 0.0,
+  "treatment_breakdown": {
+    "habitat": [
+      4.25,
+      8.0,
+      4.75,
+      5.75,
+      6.25
+    ],
+    "nature_tokens": 4.25,
+    "wildlife": [
+      16.25,
+      9.0,
+      11.75,
+      8.75,
+      16.5
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 80,
+    "max_milliseconds": 42782.304208,
+    "mean_milliseconds": 2898.3467271124996,
+    "p50_milliseconds": 413.69508299999995,
+    "p90_milliseconds": 8087.430399700016,
+    "p99_milliseconds": 35307.18576049994
+  },
+  "treatment_elapsed_seconds": 232.275437667,
+  "treatment_id": "perfect-information-focal-beam-v1-t5-b16-k8-h6-b8-w4-m4",
+  "treatment_mean": 95.5,
+  "treatment_seconds_per_game": 232.275437667,
+  "treatment_statistics": {
+    "confidence_95": [
+      95.5,
+      95.5
+    ],
+    "decision_latency": {
+      "decisions": 80,
+      "max_milliseconds": 42782.304208,
+      "mean_milliseconds": 2898.3467271124996,
+      "p50_milliseconds": 413.69508299999995,
+      "p90_milliseconds": 8087.430399700016,
+      "p99_milliseconds": 35307.18576049994
+    },
+    "game_mean_stddev": 0.0,
+    "max_score": 99.0,
+    "mean_breakdown": {
+      "habitat": [
+        4.25,
+        8.0,
+        4.75,
+        5.75,
+        6.25
+      ],
+      "nature_tokens": 4.25,
+      "wildlife": [
+        16.25,
+        9.0,
+        11.75,
+        8.75,
+        16.5
+      ]
+    },
+    "mean_score": 95.5,
+    "min_score": 93.0,
+    "percentiles": {
+      "p10": 93.3,
+      "p50": 95.0,
+      "p90": 98.1
+    },
+    "seat_score_stddev": 2.6457513110645907,
+    "standard_error": 0.0
+  }
+}

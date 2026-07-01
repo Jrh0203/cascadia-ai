@@ -1,0 +1,24 @@
+[package]
+name = "cascadia-game"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Deterministic Cascadia v2 rules engine"
+
+[dependencies]
+arrayvec.workspace = true
+blake3.workspace = true
+postcard.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+proptest.workspace = true
+serde_json.workspace = true
+
+[[bench]]
+name = "engine"
+harness = false

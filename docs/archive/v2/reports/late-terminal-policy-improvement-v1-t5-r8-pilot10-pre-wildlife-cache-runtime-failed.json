@@ -1,0 +1,298 @@
+{
+  "baseline_breakdown": {
+    "habitat": [
+      5.8,
+      5.875,
+      6.025,
+      5.7,
+      5.95
+    ],
+    "nature_tokens": 3.925,
+    "wildlife": [
+      7.85,
+      12.35,
+      11.6,
+      12.225,
+      14.8
+    ]
+  },
+  "baseline_decision_latency": {
+    "decisions": 800,
+    "max_milliseconds": 6.166958999999999,
+    "mean_milliseconds": 1.4600564162500023,
+    "p50_milliseconds": 1.237771,
+    "p90_milliseconds": 2.8353205,
+    "p99_milliseconds": 4.66830408
+  },
+  "baseline_elapsed_seconds": 1.175709001,
+  "baseline_id": "pattern-aware-v1-k8-h6-b8-m4",
+  "baseline_mean": 92.1,
+  "baseline_seconds_per_game": 0.1175709001,
+  "baseline_statistics": {
+    "confidence_95": [
+      90.96321877410138,
+      93.23678122589861
+    ],
+    "decision_latency": {
+      "decisions": 800,
+      "max_milliseconds": 6.166958999999999,
+      "mean_milliseconds": 1.4600564162500023,
+      "p50_milliseconds": 1.237771,
+      "p90_milliseconds": 2.8353205,
+      "p99_milliseconds": 4.66830408
+    },
+    "game_mean_stddev": 1.8340907526316381,
+    "max_score": 100.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.8,
+        5.875,
+        6.025,
+        5.7,
+        5.95
+      ],
+      "nature_tokens": 3.925,
+      "wildlife": [
+        7.85,
+        12.35,
+        11.6,
+        12.225,
+        14.8
+      ]
+    },
+    "mean_score": 92.1,
+    "min_score": 84.0,
+    "percentiles": {
+      "p10": 87.0,
+      "p50": 92.5,
+      "p90": 96.0
+    },
+    "seat_score_stddev": 3.432872759747349,
+    "standard_error": 0.5799904213768438
+  },
+  "confidence_95": [
+    0.574078776193427,
+    1.425921223806573
+  ],
+  "configuration": {
+    "late-terminal-policy-improvement-compare": {
+      "determinizations": 8,
+      "first_seed": 26900,
+      "games": 10,
+      "output": "docs/v2/reports/late-terminal-policy-improvement-v1-t5-r8-pilot10.json",
+      "policy_bear_candidates": 8,
+      "policy_candidates": 8,
+      "policy_habitat_candidates": 6,
+      "policy_market_draws": 4,
+      "sequential": true,
+      "terminal_turns": 5
+    }
+  },
+  "elapsed_seconds": 115.332681708,
+  "first_seed": 26900,
+  "game_losses": 1,
+  "game_ties": 0,
+  "game_wins": 9,
+  "games": 10,
+  "mean_breakdown_delta": {
+    "habitat": [
+      0.0,
+      0.17499999999999982,
+      -0.07500000000000018,
+      0.125,
+      0.07500000000000018
+    ],
+    "nature_tokens": 0.0,
+    "wildlife": [
+      0.75,
+      0.27500000000000036,
+      0.20000000000000107,
+      -0.15000000000000036,
+      -0.375
+    ]
+  },
+  "mean_paired_delta": 1.0,
+  "paired_delta_stddev": 0.6871842709362768,
+  "pairs": [
+    {
+      "baseline_mean": 91.0,
+      "delta": 1.75,
+      "seed": 26900,
+      "treatment_mean": 92.75
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.5,
+      "seed": 26901,
+      "treatment_mean": 92.25
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.75,
+      "seed": 26902,
+      "treatment_mean": 92.5
+    },
+    {
+      "baseline_mean": 93.25,
+      "delta": 2.0,
+      "seed": 26903,
+      "treatment_mean": 95.25
+    },
+    {
+      "baseline_mean": 92.5,
+      "delta": 0.5,
+      "seed": 26904,
+      "treatment_mean": 93.0
+    },
+    {
+      "baseline_mean": 96.25,
+      "delta": -0.25,
+      "seed": 26905,
+      "treatment_mean": 96.0
+    },
+    {
+      "baseline_mean": 92.25,
+      "delta": 1.5,
+      "seed": 26906,
+      "treatment_mean": 93.75
+    },
+    {
+      "baseline_mean": 91.75,
+      "delta": 0.75,
+      "seed": 26907,
+      "treatment_mean": 92.5
+    },
+    {
+      "baseline_mean": 89.0,
+      "delta": 1.5,
+      "seed": 26908,
+      "treatment_mean": 90.5
+    },
+    {
+      "baseline_mean": 91.5,
+      "delta": 1.0,
+      "seed": 26909,
+      "treatment_mean": 92.5
+    }
+  ],
+  "protocol_id": "cascadia-aaaaa-4p-base-v1",
+  "provenance": {
+    "command_argv": [
+      "target/release/cascadia-v2",
+      "late-terminal-policy-improvement-compare",
+      "--games",
+      "10",
+      "--first-seed",
+      "26900",
+      "--terminal-turns",
+      "5",
+      "--determinizations",
+      "8",
+      "--policy-candidates",
+      "8",
+      "--policy-habitat-candidates",
+      "6",
+      "--policy-bear-candidates",
+      "8",
+      "--policy-market-draws",
+      "4",
+      "--sequential",
+      "--output",
+      "docs/v2/reports/late-terminal-policy-improvement-v1-t5-r8-pilot10.json"
+    ],
+    "created_unix_seconds": 1781209837,
+    "executable": "/Users/johnherrick/cascadia/target/release/cascadia-v2",
+    "executable_blake3": "e7e7a4b749cda2a4083f819283b381800d782364abae332a0878aa673fc47d64",
+    "git_dirty": true,
+    "git_revision": "a9918946f66c237a803b23ea299c6a514785ae52",
+    "git_status_blake3": "040649573460f9e760e60a31f702c6b4fd2d529fbf4cde3f99f4959353a08d33",
+    "hardware": {
+      "architecture": "aarch64",
+      "chip": "Apple M4",
+      "logical_cpu_count": 10,
+      "memory_bytes": "17179869184",
+      "operating_system": "macOS 26.2"
+    },
+    "input_artifacts": [],
+    "toolchain": {
+      "cargo": "cargo 1.94.1 (29ea6fb6a 2026-03-24)",
+      "package_version": "0.1.0",
+      "rustc": "rustc 1.94.1 (e408947bf 2026-03-25)"
+    },
+    "v2_source_blake3": "cc1cdacab7fd2298f32a6fef1cc3bf90442994f2e348effb0d5ecf6acc50b4a9"
+  },
+  "report_schema_version": 1,
+  "seat_games_per_strategy": 40,
+  "standard_error": 0.21730674684008827,
+  "treatment_breakdown": {
+    "habitat": [
+      5.8,
+      6.05,
+      5.95,
+      5.825,
+      6.025
+    ],
+    "nature_tokens": 3.925,
+    "wildlife": [
+      8.6,
+      12.625,
+      11.8,
+      12.075,
+      14.425
+    ]
+  },
+  "treatment_decision_latency": {
+    "decisions": 800,
+    "max_milliseconds": 2261.968625,
+    "mean_milliseconds": 142.68582200374985,
+    "p50_milliseconds": 1.249562,
+    "p90_milliseconds": 560.8861128000001,
+    "p99_milliseconds": 1681.756841249999
+  },
+  "treatment_elapsed_seconds": 114.156907875,
+  "treatment_id": "late-terminal-policy-improvement-v1-t5-r8-k8-h6-b8-m4",
+  "treatment_mean": 93.1,
+  "treatment_seconds_per_game": 11.4156907875,
+  "treatment_statistics": {
+    "confidence_95": [
+      92.12765209701236,
+      94.07234790298763
+    ],
+    "decision_latency": {
+      "decisions": 800,
+      "max_milliseconds": 2261.968625,
+      "mean_milliseconds": 142.68582200374985,
+      "p50_milliseconds": 1.249562,
+      "p90_milliseconds": 560.8861128000001,
+      "p99_milliseconds": 1681.756841249999
+    },
+    "game_mean_stddev": 1.5687928834333456,
+    "max_score": 98.0,
+    "mean_breakdown": {
+      "habitat": [
+        5.8,
+        6.05,
+        5.95,
+        5.825,
+        6.025
+      ],
+      "nature_tokens": 3.925,
+      "wildlife": [
+        8.6,
+        12.625,
+        11.8,
+        12.075,
+        14.425
+      ]
+    },
+    "mean_score": 93.1,
+    "min_score": 86.0,
+    "percentiles": {
+      "p10": 88.0,
+      "p50": 94.0,
+      "p90": 96.0
+    },
+    "seat_score_stddev": 2.924695907927207,
+    "standard_error": 0.49609586887124046
+  }
+}

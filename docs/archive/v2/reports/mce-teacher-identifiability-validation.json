@@ -1,0 +1,722 @@
+{
+  "dataset": {
+    "dataset_id": "imitation-parent-hidden-27c07397aeecb623",
+    "first_game_index": 51048,
+    "games": 16,
+    "manifest_blake3": "6894eec076524fe4f134daade48167d83ea7b0ff9da3ba8eaebc7bb3c3282ef1",
+    "path": "/Users/johnherrick/cascadia/artifacts/datasets/canonical-action-exact-parent-hidden-v1-validation",
+    "split": "validation",
+    "teacher": {
+      "prefilter_candidates": 32,
+      "rollouts": 600,
+      "strategy_id": "canonical-action-legacy-heuristic-deterministic-v2-k32-r600-lmr-no-paid-prelude",
+      "weights_blake3": "9e1d568693274fc537ac4f6d6f729abb1ee8da8330a78d1f78a1f62b733de400",
+      "weights_bytes": 23134992,
+      "weights_path": "/Users/johnherrick/cascadia/nnue_weights_v4opp_modal_iter3.bin"
+    }
+  },
+  "method": {
+    "caveat": "Normal approximations treat candidate estimates as independent; adaptive allocation and shared game structure can violate that assumption.",
+    "normal_95": 1.959963984540054,
+    "pairwise_variance_floor_points": 1.0,
+    "phase_definition": "acting turn = global turn // 4; bins [0,5), [5,10), [10,15), [15,20)"
+  },
+  "overall": {
+    "candidates": 122880,
+    "combined_standard_error": {
+      "max": 2.000997543334961,
+      "mean": 0.3770669368823292,
+      "p10": 0.13382568806409836,
+      "p25": 0.2333175428211689,
+      "p50": 0.34568116068840027,
+      "p75": 0.4873233512043953,
+      "p90": 0.6415823876857759,
+      "p95": 0.7712416350841519
+    },
+    "confidence_set_size_68": {
+      "max": 27.0,
+      "mean": 3.7875,
+      "p10": 1.0,
+      "p25": 1.0,
+      "p50": 2.0,
+      "p75": 5.0,
+      "p90": 9.0,
+      "p95": 11.0
+    },
+    "confidence_set_size_95": {
+      "max": 30.0,
+      "mean": 10.13984375,
+      "p10": 1.0,
+      "p25": 4.0,
+      "p50": 10.0,
+      "p75": 15.0,
+      "p90": 20.0,
+      "p95": 23.0
+    },
+    "distinguishable_winner_95_fraction": 0.18359375,
+    "exact_tie_fraction": 0.0421875,
+    "groups": 1280,
+    "margin_at_most_0_25_fraction": 0.4640625,
+    "margin_at_most_0_5_fraction": 0.7125,
+    "margin_at_most_1_fraction": 0.928125,
+    "margin_at_most_2_fraction": 0.99765625,
+    "margin_within_combined_se_fraction": 0.58359375,
+    "margin_within_pairwise_floor_scale_fraction": 0.9453125,
+    "margin_z_score": {
+      "max": 19.100285987862954,
+      "mean": 1.2517954650298673,
+      "p10": 0.10622241018410818,
+      "p25": 0.34704181201500034,
+      "p50": 0.7875437904082581,
+      "p75": 1.5635793308082409,
+      "p90": 2.7936616500379676,
+      "p95": 4.127803986053531
+    },
+    "mean_scored_candidates": 29.87890625,
+    "runner_up_samples": {
+      "max": 236.0,
+      "mean": 95.675,
+      "p10": 28.900000000000006,
+      "p25": 54.0,
+      "p50": 100.0,
+      "p75": 117.0,
+      "p90": 157.0,
+      "p95": 174.0
+    },
+    "scored_candidates": 38245,
+    "scored_candidates_per_group": {
+      "max": 32.0,
+      "mean": 29.87890625,
+      "p10": 24.0,
+      "p25": 30.0,
+      "p50": 32.0,
+      "p75": 32.0,
+      "p90": 32.0,
+      "p95": 32.0
+    },
+    "selected_immediate_rank": {
+      "distribution": {
+        "max": 3438.0,
+        "mean": 110.53984375,
+        "p10": 1.0,
+        "p25": 3.0,
+        "p50": 15.0,
+        "p75": 70.25,
+        "p90": 302.10000000000014,
+        "p95": 568.0
+      },
+      "mean_reciprocal_rank": 0.2720352078889045,
+      "top10_fraction": 0.44765625,
+      "top1_fraction": 0.18046875,
+      "top32_fraction": 0.63046875,
+      "top5_fraction": 0.3671875
+    },
+    "selected_parent_rank": {
+      "distribution": {
+        "max": 74.0,
+        "mean": 11.95390625,
+        "p10": 1.0,
+        "p25": 2.0,
+        "p50": 6.0,
+        "p75": 17.0,
+        "p90": 30.0,
+        "p95": 40.0
+      },
+      "mean_reciprocal_rank": 0.3434234208281187,
+      "top10_fraction": 0.61875,
+      "top1_fraction": 0.21640625,
+      "top32_fraction": 0.91328125,
+      "top5_fraction": 0.46484375
+    },
+    "selected_samples": {
+      "max": 309.0,
+      "mean": 125.67890625,
+      "p10": 86.0,
+      "p25": 106.0,
+      "p50": 115.0,
+      "p75": 157.0,
+      "p90": 174.0,
+      "p95": 180.0
+    },
+    "selected_standard_error": {
+      "max": 1.962613582611084,
+      "mean": 0.23476226232669434,
+      "p10": 0.08178055062890052,
+      "p25": 0.14714749157428741,
+      "p50": 0.21989981830120087,
+      "p75": 0.3054768443107605,
+      "p90": 0.37986837923526784,
+      "p95": 0.4341083124279975
+    },
+    "separated_confidence_intervals_95_fraction": 0.06953125,
+    "top_two_margin": {
+      "max": 3.4158782958984375,
+      "mean": 0.38496549129486085,
+      "p10": 0.023781585693359374,
+      "p25": 0.096405029296875,
+      "p50": 0.2783927917480469,
+      "p75": 0.5486240386962891,
+      "p90": 0.9543174743652347,
+      "p95": 1.1205734252929687
+    }
+  },
+  "phases": {
+    "early": {
+      "candidates": 30720,
+      "combined_standard_error": {
+        "max": 1.175889492034912,
+        "mean": 0.437982581788674,
+        "p10": 0.3173918128013611,
+        "p25": 0.3543448746204376,
+        "p50": 0.4045771509408951,
+        "p75": 0.4762812405824661,
+        "p90": 0.5967592716217042,
+        "p95": 0.7306372970342637
+      },
+      "confidence_set_size_68": {
+        "max": 17.0,
+        "mean": 3.66875,
+        "p10": 1.0,
+        "p25": 1.0,
+        "p50": 3.0,
+        "p75": 5.0,
+        "p90": 8.0,
+        "p95": 10.0
+      },
+      "confidence_set_size_95": {
+        "max": 28.0,
+        "mean": 11.49375,
+        "p10": 3.900000000000002,
+        "p25": 7.0,
+        "p50": 12.0,
+        "p75": 15.0,
+        "p90": 19.0,
+        "p95": 22.0
+      },
+      "distinguishable_winner_95_fraction": 0.128125,
+      "exact_tie_fraction": 0.009375,
+      "groups": 320,
+      "margin_at_most_0_25_fraction": 0.375,
+      "margin_at_most_0_5_fraction": 0.684375,
+      "margin_at_most_1_fraction": 0.93125,
+      "margin_at_most_2_fraction": 0.99375,
+      "margin_within_combined_se_fraction": 0.6125,
+      "margin_within_pairwise_floor_scale_fraction": 0.95,
+      "margin_z_score": {
+        "max": 8.315914068467105,
+        "mean": 1.0373095534845436,
+        "p10": 0.12165262831687061,
+        "p25": 0.38329940155561276,
+        "p50": 0.7737212097779274,
+        "p75": 1.3936860091573902,
+        "p90": 2.1462023262015806,
+        "p95": 2.7748284532492757
+      },
+      "mean_scored_candidates": 29.9625,
+      "runner_up_samples": {
+        "max": 216.0,
+        "mean": 95.85,
+        "p10": 34.800000000000004,
+        "p25": 53.75,
+        "p50": 99.5,
+        "p75": 115.0,
+        "p90": 159.20000000000005,
+        "p95": 174.0
+      },
+      "scored_candidates": 9588,
+      "scored_candidates_per_group": {
+        "max": 32.0,
+        "mean": 29.9625,
+        "p10": 22.0,
+        "p25": 30.0,
+        "p50": 32.0,
+        "p75": 32.0,
+        "p90": 32.0,
+        "p95": 32.0
+      },
+      "selected_immediate_rank": {
+        "distribution": {
+          "max": 2110.0,
+          "mean": 154.09375,
+          "p10": 1.0,
+          "p25": 4.0,
+          "p50": 25.0,
+          "p75": 148.5,
+          "p90": 458.9000000000002,
+          "p95": 903.1
+        },
+        "mean_reciprocal_rank": 0.22211459516884186,
+        "top10_fraction": 0.3625,
+        "top1_fraction": 0.140625,
+        "top32_fraction": 0.55625,
+        "top5_fraction": 0.30625
+      },
+      "selected_parent_rank": {
+        "distribution": {
+          "max": 67.0,
+          "mean": 13.603125,
+          "p10": 1.0,
+          "p25": 2.0,
+          "p50": 9.0,
+          "p75": 20.0,
+          "p90": 36.0,
+          "p95": 42.05000000000001
+        },
+        "mean_reciprocal_rank": 0.2982041523239589,
+        "top10_fraction": 0.55625,
+        "top1_fraction": 0.18125,
+        "top32_fraction": 0.884375,
+        "top5_fraction": 0.39375
+      },
+      "selected_samples": {
+        "max": 216.0,
+        "mean": 123.965625,
+        "p10": 86.0,
+        "p25": 106.0,
+        "p50": 114.0,
+        "p75": 147.0,
+        "p90": 174.0,
+        "p95": 174.20000000000005
+      },
+      "selected_standard_error": {
+        "max": 1.0772621631622314,
+        "mean": 0.2677719580940902,
+        "p10": 0.19997882097959518,
+        "p25": 0.22387832403182983,
+        "p50": 0.2624688595533371,
+        "p75": 0.2920398563146591,
+        "p90": 0.3308181196451187,
+        "p95": 0.35692062824964527
+      },
+      "separated_confidence_intervals_95_fraction": 0.015625,
+      "top_two_margin": {
+        "max": 2.6633224487304688,
+        "mean": 0.42190752029418943,
+        "p10": 0.0535552978515625,
+        "p25": 0.1556854248046875,
+        "p50": 0.3430671691894531,
+        "p75": 0.5703773498535156,
+        "p90": 0.9139549255371094,
+        "p95": 1.0631271362304695
+      }
+    },
+    "late": {
+      "candidates": 30720,
+      "combined_standard_error": {
+        "max": 0.9356509447097778,
+        "mean": 0.14872873533749953,
+        "p10": 0.0,
+        "p25": 0.07498659938573837,
+        "p50": 0.15257937461137772,
+        "p75": 0.21123399958014488,
+        "p90": 0.2678696513175965,
+        "p95": 0.300320652127266
+      },
+      "confidence_set_size_68": {
+        "max": 14.0,
+        "mean": 2.665625,
+        "p10": 1.0,
+        "p25": 1.0,
+        "p50": 2.0,
+        "p75": 3.0,
+        "p90": 6.0,
+        "p95": 9.0
+      },
+      "confidence_set_size_95": {
+        "max": 22.0,
+        "mean": 4.8625,
+        "p10": 1.0,
+        "p25": 1.0,
+        "p50": 3.0,
+        "p75": 7.0,
+        "p90": 11.100000000000023,
+        "p95": 13.050000000000011
+      },
+      "distinguishable_winner_95_fraction": 0.35,
+      "exact_tie_fraction": 0.153125,
+      "groups": 320,
+      "margin_at_most_0_25_fraction": 0.559375,
+      "margin_at_most_0_5_fraction": 0.75,
+      "margin_at_most_1_fraction": 0.946875,
+      "margin_at_most_2_fraction": 0.996875,
+      "margin_within_combined_se_fraction": 0.490625,
+      "margin_within_pairwise_floor_scale_fraction": 0.946875,
+      "margin_z_score": {
+        "max": 19.100285987862954,
+        "mean": 2.1491569719792736,
+        "p10": 0.13760439617021003,
+        "p25": 0.4614748650437059,
+        "p50": 1.244977639513818,
+        "p75": 2.6930359848295495,
+        "p90": 5.535220790166054,
+        "p95": 7.1845767446967015
+      },
+      "mean_scored_candidates": 30.23125,
+      "runner_up_samples": {
+        "max": 236.0,
+        "mean": 96.75,
+        "p10": 24.0,
+        "p25": 60.75,
+        "p50": 96.0,
+        "p75": 117.0,
+        "p90": 157.4000000000001,
+        "p95": 172.0
+      },
+      "scored_candidates": 9674,
+      "scored_candidates_per_group": {
+        "max": 32.0,
+        "mean": 30.23125,
+        "p10": 26.0,
+        "p25": 30.0,
+        "p50": 32.0,
+        "p75": 32.0,
+        "p90": 32.0,
+        "p95": 32.0
+      },
+      "selected_immediate_rank": {
+        "distribution": {
+          "max": 3438.0,
+          "mean": 61.890625,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 5.0,
+          "p75": 22.25,
+          "p90": 50.0,
+          "p95": 293.30000000000007
+        },
+        "mean_reciprocal_rank": 0.4001909942768928,
+        "top10_fraction": 0.621875,
+        "top1_fraction": 0.290625,
+        "top32_fraction": 0.8125,
+        "top5_fraction": 0.521875
+      },
+      "selected_parent_rank": {
+        "distribution": {
+          "max": 69.0,
+          "mean": 8.284375,
+          "p10": 1.0,
+          "p25": 1.0,
+          "p50": 4.0,
+          "p75": 12.0,
+          "p90": 23.100000000000023,
+          "p95": 28.0
+        },
+        "mean_reciprocal_rank": 0.44657260889018924,
+        "top10_fraction": 0.715625,
+        "top1_fraction": 0.3125,
+        "top32_fraction": 0.975,
+        "top5_fraction": 0.59375
+      },
+      "selected_samples": {
+        "max": 209.0,
+        "mean": 135.140625,
+        "p10": 88.9,
+        "p25": 109.0,
+        "p50": 138.0,
+        "p75": 168.0,
+        "p90": 174.0,
+        "p95": 178.0
+      },
+      "selected_standard_error": {
+        "max": 0.383506715297699,
+        "mean": 0.09412519112520386,
+        "p10": 0.0,
+        "p25": 0.04826379753649235,
+        "p50": 0.10012461245059967,
+        "p75": 0.13588882610201836,
+        "p90": 0.171924102306366,
+        "p95": 0.1944862648844719
+      },
+      "separated_confidence_intervals_95_fraction": 0.209375,
+      "top_two_margin": {
+        "max": 3.4158782958984375,
+        "mean": 0.33805620670318604,
+        "p10": 0.0,
+        "p25": 0.0370330810546875,
+        "p50": 0.1946563720703125,
+        "p75": 0.5021514892578125,
+        "p90": 1.0,
+        "p95": 1.0304946899414067
+      }
+    },
+    "middle": {
+      "candidates": 30720,
+      "combined_standard_error": {
+        "max": 0.5584981441497803,
+        "mean": 0.2957111085765064,
+        "p10": 0.2109006091952324,
+        "p25": 0.24618085846304893,
+        "p50": 0.28258055448532104,
+        "p75": 0.3317384719848633,
+        "p90": 0.39332272410392766,
+        "p95": 0.4663150802254677
+      },
+      "confidence_set_size_68": {
+        "max": 16.0,
+        "mean": 2.9375,
+        "p10": 1.0,
+        "p25": 1.0,
+        "p50": 2.0,
+        "p75": 4.0,
+        "p90": 6.0,
+        "p95": 8.0
+      },
+      "confidence_set_size_95": {
+        "max": 24.0,
+        "mean": 7.89375,
+        "p10": 2.0,
+        "p25": 3.0,
+        "p50": 7.0,
+        "p75": 12.0,
+        "p90": 16.0,
+        "p95": 18.0
+      },
+      "distinguishable_winner_95_fraction": 0.190625,
+      "exact_tie_fraction": 0.003125,
+      "groups": 320,
+      "margin_at_most_0_25_fraction": 0.515625,
+      "margin_at_most_0_5_fraction": 0.778125,
+      "margin_at_most_1_fraction": 0.934375,
+      "margin_at_most_2_fraction": 1.0,
+      "margin_within_combined_se_fraction": 0.5625,
+      "margin_within_pairwise_floor_scale_fraction": 0.946875,
+      "margin_z_score": {
+        "max": 8.693522422095798,
+        "mean": 1.2185154581643203,
+        "p10": 0.10592565767702906,
+        "p25": 0.32838632848217714,
+        "p50": 0.8345514369746173,
+        "p75": 1.5203785612289966,
+        "p90": 3.015387506838428,
+        "p95": 3.859664949220593
+      },
+      "mean_scored_candidates": 29.2875,
+      "runner_up_samples": {
+        "max": 201.0,
+        "mean": 98.634375,
+        "p10": 46.0,
+        "p25": 57.75,
+        "p50": 101.0,
+        "p75": 117.0,
+        "p90": 157.0,
+        "p95": 174.0
+      },
+      "scored_candidates": 9372,
+      "scored_candidates_per_group": {
+        "max": 32.0,
+        "mean": 29.2875,
+        "p10": 22.900000000000002,
+        "p25": 28.0,
+        "p50": 32.0,
+        "p75": 32.0,
+        "p90": 32.0,
+        "p95": 32.0
+      },
+      "selected_immediate_rank": {
+        "distribution": {
+          "max": 2958.0,
+          "mean": 106.384375,
+          "p10": 1.0,
+          "p25": 3.0,
+          "p50": 14.5,
+          "p75": 70.0,
+          "p90": 312.30000000000007,
+          "p95": 599.8500000000001
+        },
+        "mean_reciprocal_rank": 0.2645223095316255,
+        "top10_fraction": 0.4625,
+        "top1_fraction": 0.16875,
+        "top32_fraction": 0.60625,
+        "top5_fraction": 0.371875
+      },
+      "selected_parent_rank": {
+        "distribution": {
+          "max": 74.0,
+          "mean": 11.2125,
+          "p10": 1.0,
+          "p25": 2.0,
+          "p50": 6.0,
+          "p75": 17.0,
+          "p90": 27.0,
+          "p95": 37.10000000000002
+        },
+        "mean_reciprocal_rank": 0.359360174196815,
+        "top10_fraction": 0.64375,
+        "top1_fraction": 0.228125,
+        "top32_fraction": 0.921875,
+        "top5_fraction": 0.48125
+      },
+      "selected_samples": {
+        "max": 309.0,
+        "mean": 127.771875,
+        "p10": 87.0,
+        "p25": 106.0,
+        "p50": 115.0,
+        "p75": 157.0,
+        "p90": 174.20000000000005,
+        "p95": 182.05
+      },
+      "selected_standard_error": {
+        "max": 0.520346999168396,
+        "mean": 0.18720888334792107,
+        "p10": 0.1335187703371048,
+        "p25": 0.15378973633050919,
+        "p50": 0.18214698135852814,
+        "p75": 0.2053682804107666,
+        "p90": 0.24287716895341874,
+        "p95": 0.27398338764905933
+      },
+      "separated_confidence_intervals_95_fraction": 0.05,
+      "top_two_margin": {
+        "max": 1.8603134155273438,
+        "mean": 0.3355024099349976,
+        "p10": 0.02946014404296875,
+        "p25": 0.09158706665039062,
+        "p50": 0.23624801635742188,
+        "p75": 0.4358692169189453,
+        "p90": 0.8834640502929688,
+        "p95": 1.052337646484375
+      }
+    },
+    "opening": {
+      "candidates": 30720,
+      "combined_standard_error": {
+        "max": 2.000997543334961,
+        "mean": 0.6258453218266368,
+        "p10": 0.44241765439510344,
+        "p25": 0.48692382127046585,
+        "p50": 0.5602476894855499,
+        "p75": 0.6841483563184738,
+        "p90": 0.8950097382068634,
+        "p95": 1.0294184267520905
+      },
+      "confidence_set_size_68": {
+        "max": 27.0,
+        "mean": 5.878125,
+        "p10": 1.0,
+        "p25": 2.0,
+        "p50": 5.0,
+        "p75": 8.0,
+        "p90": 13.0,
+        "p95": 15.0
+      },
+      "confidence_set_size_95": {
+        "max": 30.0,
+        "mean": 16.309375,
+        "p10": 8.0,
+        "p25": 12.0,
+        "p50": 17.0,
+        "p75": 21.0,
+        "p90": 24.0,
+        "p95": 26.0
+      },
+      "distinguishable_winner_95_fraction": 0.065625,
+      "exact_tie_fraction": 0.003125,
+      "groups": 320,
+      "margin_at_most_0_25_fraction": 0.40625,
+      "margin_at_most_0_5_fraction": 0.6375,
+      "margin_at_most_1_fraction": 0.9,
+      "margin_at_most_2_fraction": 1.0,
+      "margin_within_combined_se_fraction": 0.66875,
+      "margin_within_pairwise_floor_scale_fraction": 0.9375,
+      "margin_z_score": {
+        "max": 4.381725511342357,
+        "mean": 0.7816721778812121,
+        "p10": 0.06587917534458636,
+        "p25": 0.22020473646620725,
+        "p50": 0.5873615707872704,
+        "p75": 1.1815377070410003,
+        "p90": 1.743780463488694,
+        "p95": 2.083809102857466
+      },
+      "mean_scored_candidates": 30.034375,
+      "runner_up_samples": {
+        "max": 213.0,
+        "mean": 91.465625,
+        "p10": 24.0,
+        "p25": 50.75,
+        "p50": 103.5,
+        "p75": 115.0,
+        "p90": 157.0,
+        "p95": 174.0
+      },
+      "scored_candidates": 9611,
+      "scored_candidates_per_group": {
+        "max": 32.0,
+        "mean": 30.034375,
+        "p10": 24.0,
+        "p25": 30.0,
+        "p50": 32.0,
+        "p75": 32.0,
+        "p90": 32.0,
+        "p95": 32.0
+      },
+      "selected_immediate_rank": {
+        "distribution": {
+          "max": 1800.0,
+          "mean": 119.790625,
+          "p10": 1.0,
+          "p25": 5.0,
+          "p50": 25.0,
+          "p75": 107.5,
+          "p90": 284.30000000000007,
+          "p95": 552.8000000000002
+        },
+        "mean_reciprocal_rank": 0.20131293257825789,
+        "top10_fraction": 0.34375,
+        "top1_fraction": 0.121875,
+        "top32_fraction": 0.546875,
+        "top5_fraction": 0.26875
+      },
+      "selected_parent_rank": {
+        "distribution": {
+          "max": 74.0,
+          "mean": 14.715625,
+          "p10": 1.0,
+          "p25": 3.0,
+          "p50": 9.0,
+          "p75": 21.0,
+          "p90": 37.0,
+          "p95": 51.10000000000002
+        },
+        "mean_reciprocal_rank": 0.26955674790151163,
+        "top10_fraction": 0.559375,
+        "top1_fraction": 0.14375,
+        "top32_fraction": 0.871875,
+        "top5_fraction": 0.390625
+      },
+      "selected_samples": {
+        "max": 216.0,
+        "mean": 115.8375,
+        "p10": 55.0,
+        "p25": 106.0,
+        "p50": 114.0,
+        "p75": 138.0,
+        "p90": 174.0,
+        "p95": 178.0
+      },
+      "selected_standard_error": {
+        "max": 1.962613582611084,
+        "mean": 0.38994301673956216,
+        "p10": 0.2800915569067001,
+        "p25": 0.31152772158384323,
+        "p50": 0.35345369577407837,
+        "p75": 0.40242648124694824,
+        "p90": 0.5052721083164219,
+        "p95": 0.6492407500743866
+      },
+      "separated_confidence_intervals_95_fraction": 0.003125,
+      "top_two_margin": {
+        "max": 1.9460678100585938,
+        "mean": 0.4443958282470703,
+        "p10": 0.0442047119140625,
+        "p25": 0.15622520446777344,
+        "p50": 0.34456634521484375,
+        "p75": 0.62335205078125,
+        "p90": 1.001133728027344,
+        "p95": 1.2480834960937501
+      }
+    }
+  },
+  "schema_version": 1
+}

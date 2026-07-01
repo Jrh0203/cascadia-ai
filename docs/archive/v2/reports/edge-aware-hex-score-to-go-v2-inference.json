@@ -1,0 +1,25 @@
+{
+  "batch_size": 256,
+  "checkpoint": "/Users/johnherrick/cascadia/artifacts/runs/edge-aware-hex-score-to-go-v2/checkpoints/step-000003840-epoch-0015-batch-000000",
+  "checkpoint_manifest_blake3": "0475fae27960bfa33d8c66117a67caa95af97310215fd5b8f472512990f5c4fd",
+  "dataset": "/Users/johnherrick/cascadia/artifacts/datasets/score-to-go-hexgraph-v2-validation",
+  "dataset_manifest_blake3": "e03d6e02436c6a8fb67f45483128804ee3bcdf16626e61e1441fcb0939574867",
+  "device": "Device(gpu, 0)",
+  "gates": {
+    "apple_gpu": true,
+    "batch_size_256": true,
+    "p90_milliseconds_per_item_at_most_25": true
+  },
+  "iterations": 100,
+  "latency": {
+    "p50_milliseconds": 88.03097903728485,
+    "p50_positions_per_second": 2908.067169076617,
+    "p90_milliseconds": 88.69780846871436,
+    "p90_milliseconds_per_item": 0.34647581433091545,
+    "p99_milliseconds": 92.98079422675075
+  },
+  "passed": true,
+  "run_dir": "/Users/johnherrick/cascadia/artifacts/runs/edge-aware-hex-score-to-go-v2",
+  "schema_version": 1,
+  "warmup_iterations": 10
+}

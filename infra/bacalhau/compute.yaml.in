@@ -1,0 +1,24 @@
+NameProvider: hostname
+API:
+  Host: __TAILSCALE_IP__
+  Port: 1234
+Orchestrator:
+  Enabled: false
+Compute:
+  Enabled: true
+  Orchestrators:
+    - nats://100.110.109.6:4222
+  Heartbeat:
+    Interval: 5s
+    InfoUpdateInterval: 30s
+  AllocatedCapacity:
+    CPU: 10000m
+    Memory: 15Gi
+    Disk: 80Gi
+Labels:
+  cascadia_internal_node: __NODE_NAME__
+  cascadia_internal_role: compute
+Logging:
+  Level: info
+UpdateConfig:
+  Interval: 24h
