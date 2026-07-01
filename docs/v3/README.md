@@ -13,8 +13,8 @@ packed expert tensors with search-supervised action values.
   expert iteration, checkpointing, and promotion gates.
 - [Operations](OPERATIONS.md): local, john0 GPU, and Bacalhau worker workflows.
 - [Performance](PERFORMANCE.md): measured loader/training/gameplay facts.
-- [EI-0 Runbook](EI0_GREEDY_SEARCH_BOOTSTRAP_RUNBOOK.md): next experiment
-  checklist, resume path, timeline, and success gates.
+- [EI-0 Runbook](EI0_GREEDY_SEARCH_BOOTSTRAP_RUNBOOK.md): completed bootstrap
+  checklist, resume path, measured timeline, and success gates.
 
 The implementation package lives in
 [cascadiav3/README.md](../../cascadiav3/README.md).
@@ -27,11 +27,13 @@ The implementation package lives in
   plus exact overflow entities.
 - The model must learn score-to-go, and serving must rank by
   `exact_afterstate_score_active + predicted_score_to_go`.
-- Current transformer baselines have reached the greedy neighborhood, but have
-  not yet surpassed greedy in gameplay.
-- The next meaningful strength run is EI-0: greedy-state search bootstrap with
-  selected-preserving K32 tensors, corrected Q semantics, and
-  search-improved greedy retention.
+- EI-0 is the first transformer run with positive no-search gameplay evidence:
+  CascadiaFormer-q scored `89.6175` versus greedy `87.5575` over 100 complete
+  games.
+- EI-0 search-integrated K32 retained search reached `95.8000`, but trailed
+  matched full K64 search by `1.1750`; the next improvement should raise
+  full-search winner retention or evaluate a larger retained set before a broad
+  expert-iteration scale-up.
 
 ## Historical Recovery
 

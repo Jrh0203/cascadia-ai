@@ -6,8 +6,8 @@ promotion evidence.
 
 ## 2026-07-01 - `cascadiaformer-ei0-greedy-search-bootstrap-v1`
 
-Status: training completed, infrastructure pass, no-search gameplay pass,
-search-integrated gate pending.
+Status: completed, infrastructure pass, no-search gameplay pass,
+search-integrated timing pass, K32 retained search trails full K64 search.
 
 Purpose: make the first useful move beyond greedy without leaving greedy's
 state distribution. Roots are generated from greedy self-play states, the action
@@ -56,8 +56,7 @@ Evidence:
 - No-search complete-game benchmark:
   `reports/cascadiaformer_ei0_no_search_game100.json`.
 - Search-integrated complete-game benchmark:
-  `reports/cascadiaformer_ei0_search_game20.json` once the running gate
-  completes.
+  `reports/cascadiaformer_ei0_search_game20.json`.
 
 Result:
 
@@ -80,12 +79,24 @@ Result:
     `+0.2350`, exact greedy-action match `70.1125%`;
   - CascadiaFormer q mean `89.6175`, P90 `94.0000`, paired delta `+2.0600`,
     exact greedy-action match `29.8125%`.
+- 20-game search-integrated benchmark:
+  - CascadiaFormer-search mean `95.8000`, P90 `99.0000`;
+  - full-search control mean `96.9750`, P90 `100.0000`;
+  - paired delta candidate-control `-1.1750`;
+  - treatment/control time ratio `1.0044`, passing the `<=1.20` gate;
+  - full-search winner retained rate `79.1875%`;
+  - mean shadow search regret `0.0916`;
+  - mean model score time/root `0.0170s` versus mean search time/root
+    `8.8088s`, so this benchmark is CPU rollout-bound, not GPU-bound.
 
 Interpretation: EI-0 is the first CascadiaFormer run with positive no-search
 gameplay evidence against greedy. The q head is clearly useful without search,
-but promotion to full expert iteration still depends on the search-integrated
-gate: the model-ranked retained set must feed sampled search without unacceptable
-regret or decision-time overhead.
+and K32 retained search reaches a strong absolute mean above `95`, but the
+retained set still trails matched full K64 search by `1.175` points. Treat this
+as real merit and a good bootstrap, not as proof that K32 model-retained search
+is stronger than full search. The next improvement should raise full-search
+winner retention or train/evaluate a retained set larger than K32 before scaling
+to a broader expert-iteration loop.
 
 ## 2026-07-01 - `cascadiaformer-k32-greedy-retention-v1`
 

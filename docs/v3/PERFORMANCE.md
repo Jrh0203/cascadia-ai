@@ -106,8 +106,32 @@ Training health:
 | CascadiaFormer policy | 87.7925 | 92.0000 | +0.2350 | 70.1125% |
 | CascadiaFormer q | 89.6175 | 94.0000 | +2.0600 | 29.8125% |
 
+20-game search-integrated complete-game benchmark:
+
+| Strategy | Mean | P90 | Delta vs Control | Mean Decision Seconds |
+|---|---:|---:|---:|---:|
+| CascadiaFormer-search K32 of K64 | 95.8000 | 99.0000 | -1.1750 | 8.8258 |
+| Full-search K64 control | 96.9750 | 100.0000 | - | 8.7871 |
+
+Search-gate diagnostics:
+
+- selection head: q;
+- retain K32 out of max K64;
+- rollouts/action: 16;
+- rollout top-k: 4;
+- shadow full search: true;
+- treatment/control time ratio: `1.0044`, passing the `<=1.20` gate;
+- full-search winner retained rate: `79.1875%`;
+- mean shadow search regret: `0.0916`;
+- p95 shadow search regret: `0.5656`;
+- zero-regret decision rate: `80.25%`;
+- model score time/root: `0.0170s`;
+- search time/root: `8.8088s`.
+
 Interpretation: the q serving head is now the useful no-search policy, and it
-beats greedy by about two points on the first 100-game EI-0 gate. This is merit
-evidence, not yet promotion evidence. The search-integrated 20-game gate must
-still show that model-ranked retained sets improve or preserve sampled-search
-quality without unacceptable decision-time overhead.
+beats greedy by about two points on the first 100-game EI-0 gate. Search
+integration reaches a strong absolute mean above `95` and passes the timing
+gate, but the K32 retained set trails the matched K64 full-search control by
+`1.175` points. This is real bootstrap merit, not promotion proof for K32
+retained search. The benchmark is CPU rollout-bound rather than GPU-bound:
+model inference is tiny compared with terminal rollout search.

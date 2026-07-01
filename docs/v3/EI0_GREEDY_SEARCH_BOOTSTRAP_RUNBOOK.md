@@ -1,9 +1,11 @@
 # EI-0 Greedy Search Bootstrap Runbook
 
 Created: 2026-07-01
+First completed run: 2026-07-01
 
-This is the next v3 strength experiment. It is designed to be resumable after a
-lost SSH session, Codex restart, or interrupted run.
+This is the v3 EI-0 strength experiment. It is designed to be resumable after a
+lost SSH session, Codex restart, or interrupted run, and records the first
+completed john0 run.
 
 ## One-Screen Resume Index
 
@@ -155,24 +157,32 @@ Generated artifacts stay ignored by Git.
 
 ## Timeline
 
-Treat generation as the long pole until measured.
+Measured first full john0 run:
 
-1. Preflight and tiny calibration: 30-60 minutes.
-2. Full tensor generation: likely overnight on john0 alone.
-3. GPU training after tensors exist: roughly 1-3 hours.
-4. Benchmark suite: roughly 1-3 hours.
+1. Tiny calibration: 70 s generation plus 19 s training.
+2. Full tensor generation: 1,569 s total.
+3. GPU training: 2,457 s.
+4. 100-game no-search benchmark: completed before the search-integrated gate.
+5. 20-game search-integrated benchmark with matched full-search control:
+   roughly 2 hours, CPU rollout-bound.
 
-After the first full status report, replace the rough timeline with measured:
+Measured full-run throughput:
 
-- `roots_per_second`
-- `rollout_evals_per_second`
-- `train_step_seconds`
-- train/validation generation seconds
+- train roots: `20,000`;
+- validation roots: `4,000`;
+- train generation: `1,282 s`;
+- validation generation: `287 s`;
+- roots/s: `15.2964`;
+- rollout evals/s: `1,957.9350`;
+- train step seconds: `0.09828`;
+- search benchmark model score time/root: `0.0170 s`;
+- search benchmark rollout search time/root: `8.8088 s`.
 
 These are written to:
 
 ```text
 cascadiav3/reports/full_v3_ei0_greedy_search_bootstrap_runbook.json
+cascadiav3/reports/cascadiaformer_ei0_search_game20.json
 ```
 
 ## Preflight Checklist

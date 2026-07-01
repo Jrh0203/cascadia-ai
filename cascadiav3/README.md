@@ -80,10 +80,11 @@ Important runners:
 
 ## Current Status
 
-The current transformer has not surpassed greedy. The best established baseline
-is the corrected greedy-state K32 retention run, which scored `86.7800` versus
-greedy `87.5875` over 100 complete games. This validates the plumbing but is not
-promotion evidence.
+EI-0 is the first CascadiaFormer run with positive no-search gameplay evidence.
+The guarded EI-0 checkpoint scored `89.6175` with q-head serving versus greedy
+`87.5575` over 100 complete games.
 
-The next useful run is EI-0 search bootstrap as specified in
-`docs/v3/TRAINING_PIPELINE.md`.
+The search-integrated gate is strong but not promoted over full search:
+CascadiaFormer-search K32 of K64 scored `95.8000` versus matched full K64 search
+at `96.9750` over 20 games. See `docs/v3/PERFORMANCE.md` and
+`cascadiav3/EXPERIMENT_LOG.md` before choosing the next scale-up.
