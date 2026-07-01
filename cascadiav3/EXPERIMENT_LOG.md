@@ -4,6 +4,89 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-01 - `cascadiaformer-ei0-greedy-search-bootstrap-v1`
+
+Status: training completed, infrastructure pass, no-search gameplay pass,
+search-integrated gate pending.
+
+Purpose: make the first useful move beyond greedy without leaving greedy's
+state distribution. Roots are generated from greedy self-play states, the action
+menu is strict greedy-ranked K32, and sampled rollout search supplies
+search-improved supervised targets while the objective preserves greedy
+retention.
+
+Implementation:
+
+- Runner: `scripts/run_cascadiaformer_ei0_greedy_search_bootstrap.sh`.
+- Benchmark runner: `scripts/run_cascadiaformer_ei0_benchmark_suite.sh`.
+- Source runbook:
+  `docs/v3/EI0_GREEDY_SEARCH_BOOTSTRAP_RUNBOOK.md`.
+- Expert tensor mode: `greedy_search_bootstrap`.
+- Objective: `search-improved-greedy-retention`.
+- Filter: `greedy-prefix-strict`, K32.
+- Model: CascadiaFormer-S.
+- Warm start:
+  `checkpoints/full_v3_greedy_k32_retention/best_locked_val.manifest.json`.
+- Promotion checkpoint used for gameplay:
+  `checkpoints/full_v3_ei0_greedy_search_bootstrap/guarded_retention_safe_best.manifest.json`.
+
+Run defaults:
+
+- Corpus: 20,000 train roots and 4,000 locked validation roots generated from
+  greedy self-play states.
+- Action menu: K32 retained actions/root.
+- Search target generation: 4 rollouts/action, rollout top-k 4.
+- Training: 25,000 steps, batch size 192, learning rate 1e-4.
+- Checkpoint selection: guarded retention-safe best, selected at step 7,250.
+
+Evidence:
+
+- Full runbook report:
+  `reports/full_v3_ei0_greedy_search_bootstrap_runbook.json`.
+- Training report:
+  `reports/full_v3_ei0_greedy_search_bootstrap_train.json`.
+- Metrics JSONL:
+  `reports/full_v3_ei0_greedy_search_bootstrap_metrics.jsonl`.
+- Tensor invariants:
+  `reports/full_v3_ei0_greedy_search_bootstrap_train_tensor_invariants.json`
+  and `reports/full_v3_ei0_greedy_search_bootstrap_val_tensor_invariants.json`.
+- Strict K32 tensor invariants:
+  `reports/full_v3_ei0_greedy_search_bootstrap_train_tensor_top32_invariants.json`
+  and `reports/full_v3_ei0_greedy_search_bootstrap_val_tensor_top32_invariants.json`.
+- No-search complete-game benchmark:
+  `reports/cascadiaformer_ei0_no_search_game100.json`.
+- Search-integrated complete-game benchmark:
+  `reports/cascadiaformer_ei0_search_game20.json` once the running gate
+  completes.
+
+Result:
+
+- Runbook status: `pass`.
+- Generation: 1,569 s total, 1,282 s train generation, 287 s validation
+  generation.
+- Throughput: `15.2964` roots/s and `1,957.9350` rollout evals/s.
+- Training: 2,457 s total, `0.09828` s/step.
+- Tensor invariants: train and validation raw/top32 shards all passed with
+  selected-action drops `0` and max absolute Q invariant error `0.0`.
+- Guarded checkpoint: step 7,250, `locked_val_total=5.8410`,
+  `locked_val_greedy_top1=0.69375`, `locked_val_mean_greedy_rank=1.8860`,
+  `locked_val_teacher_top1=0.13025`, and
+  `locked_val_teacher_advantage_over_greedy=2.1672`.
+- Final/SWA checkpoint was not selected because validation greedy retention
+  collapsed relative to the guarded checkpoint.
+- 100-game no-search benchmark:
+  - greedy mean `87.5575`, P90 `92.0000`;
+  - CascadiaFormer policy mean `87.7925`, P90 `92.0000`, paired delta
+    `+0.2350`, exact greedy-action match `70.1125%`;
+  - CascadiaFormer q mean `89.6175`, P90 `94.0000`, paired delta `+2.0600`,
+    exact greedy-action match `29.8125%`.
+
+Interpretation: EI-0 is the first CascadiaFormer run with positive no-search
+gameplay evidence against greedy. The q head is clearly useful without search,
+but promotion to full expert iteration still depends on the search-integrated
+gate: the model-ranked retained set must feed sampled search without unacceptable
+regret or decision-time overhead.
+
 ## 2026-07-01 - `cascadiaformer-k32-greedy-retention-v1`
 
 Status: completed, infrastructure pass, model is near-greedy but not a full
