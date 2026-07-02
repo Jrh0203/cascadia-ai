@@ -150,12 +150,24 @@ expected `12.5%` of non-shadow rollouts, and narrowed the K32 score gap by
 about half. The result does not prove a 100-point agent: over these 20 games,
 neither K56 nor full K64 produced a per-game mean score at or above `100`.
 
+20-game K64 rollout-depth ceiling follow-up on the same seed set:
+
+| Strategy | Rollouts/action | Mean | P50 | P90 | Delta vs K64/R16 | Mean Decision Seconds |
+|---|---:|---:|---:|---:|---:|---:|
+| Full K64 sampled search | 16 | 96.9750 | 97.0000 | 100.0000 | - | 8.8327 |
+| Full K64 sampled search | 32 | 96.8375 | 97.0000 | 100.0000 | -0.1375 | 18.4531 |
+
+Doubling samples per action did not improve this 20-seed mean and roughly
+doubled per-decision search time. K64/R32 produced no per-game mean at or above
+`100`, despite 12 of 80 individual seats scoring at least `100`.
+
 Interpretation: the q serving head is now the useful no-search policy, and it
 beats greedy by about two points on the first 100-game EI-0 gate. Search
 integration reaches a strong absolute mean above `95` and passes the timing
 gate. The K56 retained set is a better serving point than K32 on current
 evidence, but the current one-ply sampled-search setting itself still sits
 below the 100-point target. The benchmark is CPU rollout-bound rather than
-GPU-bound: model inference is tiny compared with terminal rollout search. The
-next ceiling test should increase search samples per action before broadening
-expert iteration.
+GPU-bound: model inference is tiny compared with terminal rollout search.
+However, K64/R32 shows that simply spending more samples per action is not
+enough; the next step should improve the policy/value/rollout target, not just
+increase rollout count.

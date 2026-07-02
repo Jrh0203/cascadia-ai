@@ -4,9 +4,64 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
-## 2026-07-01 - `cascadiaformer-ei0-k64-r32-game20`
+## 2026-07-01 - `cascadiaformer-ei1-model-state-k32-r4-v1`
 
 Status: running on john0.
+
+Purpose: start the first true model-state expert-iteration bootstrap. EI-0 was
+trained on greedy-state roots and reached useful no-search/search strength, but
+the search ceiling tests show that retained-set width and raw rollout count are
+not the immediate 100-point bottleneck. EI-1 should expose the model to states
+caused by its own q-policy while still labeling roots with sampled rollout
+search.
+
+Configuration:
+
+- Expert tensor mode: `model_state_search_bootstrap`.
+- Behavior policy: current EI-0 checkpoint q-head, advancing by model-selected
+  action.
+- Teacher: sampled greedy rollout mean per retained action.
+- Init manifest:
+  `checkpoints/full_v3_ei0_greedy_search_bootstrap/guarded_retention_safe_best.manifest.json`.
+- Train roots: `20,000` from 250 seeds x 80 plies.
+- Validation roots: `4,000` from 50 seeds x 80 plies.
+- Action menu: K32 greedy-ranked legal actions.
+- Rollouts/action: `4`.
+- Rollout top-k: `4`.
+- Objective: `expert`, with no greedy-retention loss.
+- Data mix: 70% new model-state roots, 30% EI-0 greedy-state bootstrap roots.
+- Selection metric: minimum `locked_val_final_q_regret`.
+- Training: 25,000 steps, batch size 192, LR `3e-5`, AdamW weight decay
+  `0.05`, cosine schedule, SWA final 20%.
+- Export parallelism: use a bounded `RAYON_THREADS=8` because the current
+  model-state exporter spawns one Python model service per parallel seed.
+  Future work should separate CPU rollout workers from model-service
+  concurrency before using all john0 threads for this mode.
+
+Artifacts:
+
+- Runbook report:
+  `reports/full_v3_ei1_model_state_k32_r4_runbook.json`.
+- Training report:
+  `reports/full_v3_ei1_model_state_k32_r4_train.json`.
+- Metrics:
+  `reports/full_v3_ei1_model_state_k32_r4_metrics.jsonl`.
+- Checkpoints:
+  `checkpoints/full_v3_ei1_model_state_k32_r4/`.
+
+Success readout:
+
+- Infrastructure success: tensor invariants pass with no selected-action drops
+  and no model fallback.
+- Training success: locked validation final-Q regret improves from the init
+  checkpoint on model-state validation roots without q/policy collapse.
+- Gameplay success after training: no-search q should beat EI-0 q's `89.6175`,
+  and search-integrated K56/K64 should move above the `96-97` band. The 100
+  target still requires gameplay evidence, not loss alone.
+
+## 2026-07-01 - `cascadiaformer-ei0-k64-r32-game20`
+
+Status: completed; negative search-depth result.
 
 Purpose: test whether the immediate 100-point bottleneck is sampled-search
 strength rather than model retained-set width. The completed K56 run narrowed
@@ -47,6 +102,32 @@ Success readout:
 - Negative signal: the mean remains in the `96-97` band, implying that more
   one-ply rollout samples alone are not enough and the next step should improve
   rollout policy/value training rather than just spend more CPU.
+
+Result:
+
+- K64/R32 mean seat score: `96.8375`.
+- K64/R32 P50/P90 seat scores: `97.0000` / `100.0000`.
+- Previous same-seed full K64/R16 control mean: `96.9750`.
+- Paired delta K64/R32 minus K64/R16: `-0.1375`.
+- Bootstrap 95% CI for paired delta: approximately `[-0.9750, 0.6375]`.
+- Mean total decision seconds: `18.4531`, versus K64/R16 at `8.8327`.
+- Per-game means at or above `100`: `0 / 20`.
+- Individual seats at or above `100`: `12 / 80`.
+- Candidate workers: `8`.
+- Wall-clock behavior: first wave completed around `27` minutes; total run was
+  about `74` minutes. The final tail underutilized john0 because only a few
+  game workers remained active.
+
+Decision:
+
+- Do not scale rollout count as the next 100-point path. Doubling samples per
+  action roughly doubled runtime and did not move the score mean upward.
+- For future CPU-bound search benchmarks on john0, use enough workers to fill
+  the machine for the intended game count, typically `16-20` workers for
+  20-game probes when thermals allow.
+- The next scientific step should improve the learned policy/value target or
+  rollout policy, then re-evaluate with K56/K64 search. Retained-set width and
+  raw rollout count are not the immediate bottlenecks on current evidence.
 
 ## 2026-07-01 - `cascadiaformer-ei0-search-trace-forensics-v1`
 
