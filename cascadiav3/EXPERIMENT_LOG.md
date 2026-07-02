@@ -4,6 +4,21 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-02 - `gumbel-cycle1-budget-sweep` + `gumbel-selfplay-cycle3-v1` (EI-4)
+
+Budget sweep on the cycle-1 champion (25 matched seeds, paired offline
+against the honest control 95.40): n=64 `94.53` (-0.87), n=128 `95.11`
+(-0.55), **n=256 `95.62` (-0.04 — statistical parity with the 10.9s/dec
+rollout control at 3.2s/dec)**. Verdict: budget-bound; the real-outcome
+value head converts simulations into strength monotonically. The Gumbel
+stack now matches the legacy search at ~3.4x less compute with headroom.
+
+Cycle 3 launched (~19:45): full scale 1,250+125 seeds on the optimized
+stack, teacher upgraded to n=128 labels, blend back at w=0.5, replay window
+cycles 2+1 at weights 0.5/0.25, warm start from the cycle-1 champion.
+ETA gates ~06:00. Next gates should also test the cycle-2 checkpoint at
+n=256 (its 4x-better regret may scale better with budget than n=64 showed).
+
 ## 2026-07-02 - `gumbel-selfplay-cycle2-v1` (EI-3) — RESULTS: rejected
 
 Cycle 2 (400+60 seeds, w=0.75, replay window, warm start from cycle 1) is a
