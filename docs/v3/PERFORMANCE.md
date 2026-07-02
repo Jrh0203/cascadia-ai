@@ -238,7 +238,8 @@ Three landed changes, all bit-parity-gated (golden-label test byte-identical,
    request merging. Was a regression while collate dominated; with packed
    features it becomes the intended high-parallelism serving path.
 
-Deployment: staged for cycle 3 on john0 (after cycle 2 completes on the
-old binary). First cycle-3 action: re-measure games/h at
-`--shared-model-session` with 12-24 parallel games and re-tune
-MODEL_SESSIONS.
+Deployed 2026-07-02 ~16:35: cycle 2 restarted on the optimized stack
+(`SHARED_MODEL_SESSION=1`, `MODEL_SESSIONS=16`). Measured steady
+generation: **278 games/h** (125 seeds / 27 min) versus the 40 games/h
+old-stack owned-6 baseline — a **~7x aggregate throughput improvement**.
+A full-scale 1,375-seed cycle is now a ~5h job.
