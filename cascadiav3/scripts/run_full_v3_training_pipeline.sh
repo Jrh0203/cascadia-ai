@@ -40,6 +40,7 @@ GUMBEL_BLEND_WEIGHT="${GUMBEL_BLEND_WEIGHT:-0.5}"
 GUMBEL_K_INTERIOR="${GUMBEL_K_INTERIOR:-16}"
 GUMBEL_MAX_ROOT_ACTIONS="${GUMBEL_MAX_ROOT_ACTIONS:-}"
 MODEL_SESSIONS="${MODEL_SESSIONS:-}"
+SHARED_MODEL_SESSION="${SHARED_MODEL_SESSION:-0}"
 
 MODEL_SIZE="${MODEL_SIZE:-S}"
 TRAIN_STEPS="${TRAIN_STEPS:-5000}"
@@ -212,6 +213,9 @@ generate_tensor_roots() {
         fi
         if [ -n '$MODEL_SESSIONS' ]; then
           mode_args+=(--model-sessions '$MODEL_SESSIONS')
+        fi
+        if [ '$SHARED_MODEL_SESSION' = '1' ]; then
+          mode_args+=(--shared-model-session)
         fi
         ;;
       *)

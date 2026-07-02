@@ -30,7 +30,10 @@ use feature_tensors::{
     PUBLIC_TOKEN_FEATURE_DIM, SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM, SHARD_VERSION,
     TensorShardData,
 };
-use model_bridge::{BridgeConfig, ModelEval, ModelServiceSession, uniform_model_eval};
+use model_bridge::{
+    BridgeConfig, ModelEval, ModelServiceSession, SharedBridge, SharedBridgeClient,
+    uniform_model_eval,
+};
 use npz_writer::NpzCompression;
 
 const SCHEMA_ID: &str = "cascadiav3.pre_gpu.v0";
@@ -84,6 +87,9 @@ struct Args {
     gumbel_root_menu: usize,
     k_interior: usize,
     model_sessions: Option<usize>,
+    /// One shared bridge (one CUDA context) with cross-chunk request
+    /// batching instead of one bridge per rayon chunk.
+    shared_model_session: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -327,6 +333,7 @@ fn parse_args() -> Result<Args> {
         gumbel_root_menu: 256,
         k_interior: 16,
         model_sessions: None,
+        shared_model_session: false,
     };
 
     let mut iter = std::env::args().skip(1);
@@ -401,6 +408,7 @@ fn parse_args() -> Result<Args> {
                 args.model_sessions =
                     Some(value()?.parse().context("invalid --model-sessions")?)
             }
+            "--shared-model-session" => args.shared_model_session = true,
             "--out" => args.out = PathBuf::from(value()?),
             "--in" => args.input = Some(PathBuf::from(value()?)),
             "--manifest" => args.manifest = PathBuf::from(value()?),
@@ -603,7 +611,10 @@ Options:
                            0 keeps the full legal set [256].
   --k-interior <n>         Interior-ply menu cap inside simulations [16].
   --model-sessions <n>     Cap on concurrent model bridge sessions for
-                           selfplay export chunks.
+                           selfplay export chunks (with --shared-model-session
+                           this is just the parallel game count).
+  --shared-model-session   One bridge process (one CUDA context) serving all
+                           chunks with cross-chunk request batching.
   --player-count <n>       Must be 4 for the current v3 schema [4]
   --rayon-threads <n>      Set the Rayon worker thread count explicitly
   --tensor-compression <deflate|stored>
@@ -2377,11 +2388,19 @@ fn eval_request_for_row(row: &gumbel::EvalRow) -> Result<Value> {
     }))
 }
 
+/// Per-worker bridge handle: either an owned session (one CUDA context per
+/// worker) or a client of the process-wide shared aggregator bridge (one
+/// CUDA context total, cross-worker batching).
+enum ChunkBridge {
+    Owned(Option<ModelServiceSession>),
+    Shared(SharedBridgeClient),
+}
+
 /// Batched leaf evaluator over the JSONL model bridge. Falls back to
 /// exact-afterstate-only values (uniform priors) when the bridge is
 /// unavailable and fallback is allowed.
 struct BridgeLeafEvaluator<'a> {
-    session: &'a mut Option<ModelServiceSession>,
+    bridge: &'a mut ChunkBridge,
     allow_model_fallback: bool,
 }
 
@@ -2391,26 +2410,31 @@ impl gumbel::LeafEvaluator for BridgeLeafEvaluator<'_> {
             .iter()
             .map(eval_request_for_row)
             .collect::<Result<Vec<_>>>()?;
-        let evals: Vec<ModelEval> = if let Some(session) = self.session.as_mut() {
-            match session.eval_batch(&requests) {
-                Ok(evals) => evals,
-                Err(error) if self.allow_model_fallback => {
-                    eprintln!(
-                        "model service batch eval failed; falling back to uniform priors: {error}"
-                    );
-                    *self.session = None;
+        let evals: Vec<ModelEval> = match self.bridge {
+            ChunkBridge::Shared(client) => client.eval_batch(&requests)?,
+            ChunkBridge::Owned(session_slot) => {
+                if let Some(session) = session_slot.as_mut() {
+                    match session.eval_batch(&requests) {
+                        Ok(evals) => evals,
+                        Err(error) if self.allow_model_fallback => {
+                            eprintln!(
+                                "model service batch eval failed; falling back to uniform priors: {error}"
+                            );
+                            *session_slot = None;
+                            rows.iter()
+                                .map(|row| uniform_model_eval(row.afterstates.len()))
+                                .collect()
+                        }
+                        Err(error) => return Err(error),
+                    }
+                } else if self.allow_model_fallback {
                     rows.iter()
                         .map(|row| uniform_model_eval(row.afterstates.len()))
                         .collect()
+                } else {
+                    bail!("gumbel search requires a model service or --allow-model-fallback");
                 }
-                Err(error) => return Err(error),
             }
-        } else if self.allow_model_fallback {
-            rows.iter()
-                .map(|row| uniform_model_eval(row.afterstates.len()))
-                .collect()
-        } else {
-            bail!("gumbel search requires a model service or --allow-model-fallback");
         };
         rows.iter()
             .zip(evals.into_iter())
@@ -2593,7 +2617,7 @@ fn backfill_final_outcome(records: &mut [Value], final_scores: &[ScoreBreakdown]
 fn play_gumbel_selfplay_seed(
     args: &Args,
     seed_u64: u64,
-    model_session: &mut Option<ModelServiceSession>,
+    bridge: &mut ChunkBridge,
 ) -> Result<Vec<Value>> {
     let config = GameConfig::research_aaaaa(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
@@ -2606,7 +2630,7 @@ fn play_gumbel_selfplay_seed(
         };
         let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
         let mut evaluator = BridgeLeafEvaluator {
-            session: model_session,
+            bridge,
             allow_model_fallback: args.allow_model_fallback,
         };
         let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
@@ -2646,13 +2670,32 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
         .unwrap_or_else(|| (rayon::current_num_threads() * 2).max(1))
         .max(1);
     let chunk_size = ((seeds.len() + target_chunks - 1) / target_chunks).max(1);
+    // Shared bridge: one CUDA context serving all chunks with cross-chunk
+    // request batching. `--model-sessions` then only controls how many games
+    // run in parallel.
+    let shared_bridge = if args.shared_model_session {
+        let command = args
+            .model_service
+            .as_ref()
+            .context("--shared-model-session requires --model-service")?;
+        Some(SharedBridge::spawn(
+            command,
+            &BridgeConfig::from_args(args),
+            192,
+        )?)
+    } else {
+        None
+    };
     let per_chunk = seeds
         .par_chunks(chunk_size)
         .map(|seed_chunk| {
-            let mut model_session = model_state_worker_session(args)?;
+            let mut chunk_bridge = match &shared_bridge {
+                Some(shared) => ChunkBridge::Shared(shared.client()),
+                None => ChunkBridge::Owned(model_state_worker_session(args)?),
+            };
             let mut chunk_shards = Vec::with_capacity(seed_chunk.len());
             for seed_u64 in seed_chunk.iter().copied() {
-                let records = play_gumbel_selfplay_seed(args, seed_u64, &mut model_session)
+                let records = play_gumbel_selfplay_seed(args, seed_u64, &mut chunk_bridge)
                     .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))?;
                 let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
                     format!("extracting gumbel selfplay tensor features for seed {seed_u64}")
@@ -2772,7 +2815,7 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
         .first_seed
         .checked_add(args.seed_count)
         .context("seed range overflow")?;
-    let mut model_session = model_state_worker_session(args)?;
+    let mut chunk_bridge = ChunkBridge::Owned(model_state_worker_session(args)?);
     let mut records = Vec::new();
     for seed_u64 in args.first_seed..seed_end {
         let config = GameConfig::research_aaaaa(args.player_count)?;
@@ -2787,7 +2830,7 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
             let decision_started = Instant::now();
             let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
             let mut evaluator = BridgeLeafEvaluator {
-                session: &mut model_session,
+                bridge: &mut chunk_bridge,
                 allow_model_fallback: args.allow_model_fallback,
             };
             let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
@@ -4542,6 +4585,7 @@ mod tests {
             gumbel_root_menu: 64,
             k_interior: 6,
             model_sessions: None,
+            shared_model_session: false,
         }
     }
 
@@ -4663,9 +4707,10 @@ mod tests {
         std::fs::create_dir_all(&tempdir).expect("tempdir");
         let args = gumbel_test_args(&tempdir);
 
-        let mut session = model_state_worker_session(&args).expect("mock session");
+        let session = model_state_worker_session(&args).expect("mock session");
         assert!(session.is_some(), "mock bridge session must spawn");
-        let records = play_gumbel_selfplay_seed(&args, 2_026_070_600, &mut session)
+        let mut bridge = ChunkBridge::Owned(session);
+        let records = play_gumbel_selfplay_seed(&args, 2_026_070_600, &mut bridge)
             .expect("selfplay seed plays");
         assert!(!records.is_empty());
 
@@ -4705,6 +4750,17 @@ mod tests {
         let written = export_gumbel_selfplay_tensor_corpus(&args).expect("export");
         assert!(written > 0);
         assert!(args.out.exists());
+
+        // Shared-bridge mode produces the same corpus shape through one
+        // aggregated session.
+        let mut shared_args = args.clone();
+        shared_args.shared_model_session = true;
+        shared_args.model_sessions = Some(2);
+        shared_args.out = tempdir.join("gumbel_tiny_shared.npz");
+        shared_args.manifest = tempdir.join("gumbel_tiny_shared_manifest.json");
+        let shared_written =
+            export_gumbel_selfplay_tensor_corpus(&shared_args).expect("shared export");
+        assert_eq!(shared_written, written);
         let manifest: Value = serde_json::from_str(
             &std::fs::read_to_string(&args.manifest).expect("manifest readable"),
         )

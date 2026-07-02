@@ -454,3 +454,152 @@ mod tests {
         session.shutdown();
     }
 }
+
+/// Shared bridge: one spawned Python bridge (one CUDA context) serving many
+/// worker threads. Workers submit eval jobs through a channel; an aggregator
+/// thread merges concurrently pending jobs into a single cross-worker
+/// eval_batch request (the Python side already chunks by memory budget) and
+/// demuxes the responses. This removes the N-CUDA-context thrash and buys
+/// large-batch GPU efficiency without a separate server process.
+struct AggregateJob {
+    requests: Vec<Value>,
+    reply: std::sync::mpsc::SyncSender<Result<Vec<ModelEval>, String>>,
+}
+
+pub struct SharedBridge {
+    tx: std::sync::mpsc::Sender<AggregateJob>,
+}
+
+#[derive(Clone)]
+pub struct SharedBridgeClient {
+    tx: std::sync::mpsc::Sender<AggregateJob>,
+}
+
+impl SharedBridge {
+    /// `max_rows` bounds how many rows one merged request may carry; the
+    /// gather window is short (2ms) so lone jobs are not delayed.
+    pub fn spawn(command: &str, config: &BridgeConfig, max_rows: usize) -> Result<Self> {
+        let mut session = ModelServiceSession::spawn(command, config)?;
+        let (tx, rx) = std::sync::mpsc::channel::<AggregateJob>();
+        std::thread::spawn(move || {
+            while let Ok(first) = rx.recv() {
+                let mut jobs = vec![first];
+                let mut rows = jobs[0].requests.len();
+                while rows < max_rows {
+                    match rx.recv_timeout(Duration::from_millis(2)) {
+                        Ok(job) => {
+                            rows += job.requests.len();
+                            jobs.push(job);
+                        }
+                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => break,
+                        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                    }
+                }
+                let merged: Vec<Value> = jobs
+                    .iter()
+                    .flat_map(|job| job.requests.iter().cloned())
+                    .collect();
+                match session.eval_batch(&merged) {
+                    Ok(mut evals) => {
+                        for job in jobs {
+                            let rest = evals.split_off(job.requests.len());
+                            let mine = std::mem::replace(&mut evals, rest);
+                            let _ = job.reply.send(Ok(mine));
+                        }
+                    }
+                    Err(error) => {
+                        let message = format!("{error:#}");
+                        for job in jobs {
+                            let _ = job.reply.send(Err(message.clone()));
+                        }
+                    }
+                }
+            }
+            session.shutdown();
+        });
+        Ok(Self { tx })
+    }
+
+    pub fn client(&self) -> SharedBridgeClient {
+        SharedBridgeClient {
+            tx: self.tx.clone(),
+        }
+    }
+}
+
+impl SharedBridgeClient {
+    pub fn eval_batch(&self, requests: &[Value]) -> Result<Vec<ModelEval>> {
+        if requests.is_empty() {
+            return Ok(Vec::new());
+        }
+        let (reply_tx, reply_rx) = std::sync::mpsc::sync_channel(1);
+        self.tx
+            .send(AggregateJob {
+                requests: requests.to_vec(),
+                reply: reply_tx,
+            })
+            .map_err(|_| anyhow::anyhow!("shared bridge aggregator has shut down"))?;
+        reply_rx
+            .recv()
+            .map_err(|_| anyhow::anyhow!("shared bridge dropped the reply channel"))?
+            .map_err(|message| anyhow::anyhow!("shared bridge eval failed: {message}"))
+    }
+}
+
+#[cfg(test)]
+mod shared_tests {
+    use super::*;
+
+    fn mock_command() -> String {
+        format!(
+            "python3 {}/../tests/mock_model_bridge.py",
+            env!("CARGO_MANIFEST_DIR")
+        )
+    }
+
+    fn config() -> BridgeConfig {
+        BridgeConfig {
+            model_manifest: None,
+            model_timeout_ms: 20_000,
+            allow_model_fallback: false,
+        }
+    }
+
+    fn request(tag: usize, actions: usize) -> Value {
+        let action_ids: Vec<String> = (0..actions).map(|i| format!("a{tag}-{i}")).collect();
+        json!({
+            "state_hash": format!("hash-{tag}"),
+            "action_ids": action_ids,
+            "legal_actions": action_ids.iter().map(|id| json!({"action_id": id})).collect::<Vec<_>>(),
+            "exact_afterstate_score_active": (0..actions).map(|i| (tag * 10 + i) as f64).collect::<Vec<_>>(),
+        })
+    }
+
+    #[test]
+    fn shared_bridge_demuxes_concurrent_jobs_correctly() {
+        let shared =
+            SharedBridge::spawn(&mock_command(), &config(), 64).expect("spawn shared bridge");
+        let mut handles = Vec::new();
+        for worker in 0..8usize {
+            let client = shared.client();
+            handles.push(std::thread::spawn(move || {
+                for round in 0..5usize {
+                    let tag = worker * 100 + round;
+                    let actions = 2 + (tag % 4);
+                    let requests = vec![request(tag, actions), request(tag + 50, actions)];
+                    let evals = client.eval_batch(&requests).expect("shared eval");
+                    assert_eq!(evals.len(), 2);
+                    // Mock returns q = exact + 1, so alignment errors are
+                    // detectable per request.
+                    let expected: Vec<f64> =
+                        (0..actions).map(|i| (tag * 10 + i) as f64 + 1.0).collect();
+                    assert_eq!(evals[0].q.as_ref().expect("q"), &expected);
+                    assert_eq!(evals[0].priors.len(), actions);
+                }
+            }));
+        }
+        for handle in handles {
+            handle.join().expect("worker thread");
+        }
+    }
+}
