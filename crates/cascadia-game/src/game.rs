@@ -475,16 +475,75 @@ impl GameState {
         mut prepare_tile: impl FnMut(&Board, TilePlacement, Tile) -> C,
         mut evaluate: impl FnMut(&Board, &C, Option<(Wildlife, HexCoord)>) -> T,
     ) -> Result<Vec<(TurnAction, T)>, RuleError> {
+        let mut evaluated: Vec<(TurnAction, T)> = Vec::new();
+        self.visit_legal_turn_actions_with_tile_context(
+            prelude,
+            &mut evaluated,
+            |_| true,
+            |evaluated, capacity| evaluated.reserve_exact(capacity),
+            &mut prepare_tile,
+            |evaluated, board, draft, tile_placement, tile_context, placed_wildlife| {
+                evaluated.push((
+                    TurnAction {
+                        replace_three_of_a_kind: prelude.replace_three_of_a_kind,
+                        wildlife_wipes: prelude.wildlife_wipes.clone(),
+                        draft,
+                        tile: tile_placement,
+                        wildlife: placed_wildlife.map(|(_, coord)| coord),
+                    },
+                    evaluate(board, tile_context, placed_wildlife),
+                ));
+            },
+        )?;
+        Ok(evaluated)
+    }
+
+    /// Visitor-based twin of
+    /// [`Self::evaluate_legal_turn_actions_with_tile_context`]: enumerates the
+    /// same legal compound turns in the same order but hands the action
+    /// components to `visit` instead of materializing a [`TurnAction`] (and
+    /// its cloned prelude) per action. `accept_draft` can drop whole draft
+    /// choices before their placements are enumerated, `on_capacity` receives
+    /// the exact number of visits ahead of time so callers can reserve
+    /// buffers, and `state` is threaded through both callbacks so one
+    /// accumulator can be shared between them.
+    pub fn visit_legal_turn_actions_with_tile_context<C, S>(
+        &self,
+        prelude: &MarketPrelude,
+        state: &mut S,
+        mut accept_draft: impl FnMut(DraftChoice) -> bool,
+        on_capacity: impl FnOnce(&mut S, usize),
+        mut prepare_tile: impl FnMut(&Board, TilePlacement, Tile) -> C,
+        mut visit: impl FnMut(
+            &mut S,
+            &Board,
+            DraftChoice,
+            TilePlacement,
+            &C,
+            Option<(Wildlife, HexCoord)>,
+        ),
+    ) -> Result<(), RuleError> {
         if self.is_game_over() {
-            return Ok(Vec::new());
+            return Ok(());
         }
 
-        let mut staged = self.clone();
-        staged.apply_market_prelude(prelude)?;
+        // A default prelude (no three-of-a-kind replacement, no paid wipes)
+        // leaves the state untouched, so the staging clone can be skipped on
+        // that hot path.
+        let staged_storage;
+        let staged = if prelude.replace_three_of_a_kind || !prelude.wildlife_wipes.is_empty() {
+            let mut staged = self.clone();
+            staged.apply_market_prelude(prelude)?;
+            staged_storage = staged;
+            &staged_storage
+        } else {
+            self
+        };
         let mut drafts: Vec<_> = MarketSlot::ALL
             .into_iter()
             .filter(|slot| staged.market.paired(*slot).is_some())
             .map(|slot| DraftChoice::Paired { slot })
+            .filter(|draft| accept_draft(*draft))
             .collect();
         if staged.boards[staged.current_player()].nature_tokens() > 0 {
             for tile_slot in MarketSlot::ALL {
@@ -492,20 +551,24 @@ impl GameState {
                     if staged.market.tiles[tile_slot.index()].is_some()
                         && staged.market.wildlife[wildlife_slot.index()].is_some()
                     {
-                        drafts.push(DraftChoice::Independent {
+                        let draft = DraftChoice::Independent {
                             tile_slot,
                             wildlife_slot,
-                        });
+                        };
+                        if accept_draft(draft) {
+                            drafts.push(draft);
+                        }
                     }
                 }
             }
         }
 
-        staged.evaluate_staged_drafts_with_tile_context(
-            prelude,
+        staged.visit_staged_drafts_with_tile_context(
             &drafts,
+            state,
+            on_capacity,
             &mut prepare_tile,
-            &mut evaluate,
+            &mut visit,
         )
     }
 
@@ -522,12 +585,26 @@ impl GameState {
         let mut staged = self.clone();
         staged.apply_market_prelude(prelude)?;
         staged.preview_draft(draft)?;
-        staged.evaluate_staged_drafts_with_tile_context(
-            prelude,
+        let mut evaluated: Vec<(TurnAction, T)> = Vec::new();
+        staged.visit_staged_drafts_with_tile_context(
             &[draft],
+            &mut evaluated,
+            |evaluated, capacity| evaluated.reserve_exact(capacity),
             &mut |_, _, _| (),
-            &mut |board, &(), _| evaluate(board),
-        )
+            &mut |evaluated, board, draft, tile_placement, &(), placed_wildlife| {
+                evaluated.push((
+                    TurnAction {
+                        replace_three_of_a_kind: prelude.replace_three_of_a_kind,
+                        wildlife_wipes: prelude.wildlife_wipes.clone(),
+                        draft,
+                        tile: tile_placement,
+                        wildlife: placed_wildlife.map(|(_, coord)| coord),
+                    },
+                    evaluate(board),
+                ));
+            },
+        )?;
+        Ok(evaluated)
     }
 
     pub fn preview_market_prelude(&self, prelude: &MarketPrelude) -> Result<Self, RuleError> {
@@ -557,19 +634,35 @@ impl GameState {
         }
     }
 
-    fn evaluate_staged_drafts_with_tile_context<C, T>(
+    fn visit_staged_drafts_with_tile_context<C, S>(
         &self,
-        prelude: &MarketPrelude,
         drafts: &[DraftChoice],
+        state: &mut S,
+        on_capacity: impl FnOnce(&mut S, usize),
         prepare_tile: &mut impl FnMut(&Board, TilePlacement, Tile) -> C,
-        evaluate: &mut impl FnMut(&Board, &C, Option<(Wildlife, HexCoord)>) -> T,
-    ) -> Result<Vec<(TurnAction, T)>, RuleError> {
+        visit: &mut impl FnMut(
+            &mut S,
+            &Board,
+            DraftChoice,
+            TilePlacement,
+            &C,
+            Option<(Wildlife, HexCoord)>,
+        ),
+    ) -> Result<(), RuleError> {
         let player = self.current_player();
         let mut board = self.boards[player].clone();
         let frontier = board.frontier();
         let wildlife_placements: [_; 5] =
             std::array::from_fn(|index| board.wildlife_placements(Wildlife::ALL[index]));
-        let mut evaluated = Vec::new();
+        let mut capacity = 0usize;
+        for &draft in drafts {
+            let (tile, wildlife) = self.preview_draft(draft)?;
+            let rotations = if tile.terrain_b.is_some() { 6 } else { 1 };
+            let placements = wildlife_placements[wildlife as usize].len()
+                + usize::from(tile.wildlife.contains(wildlife));
+            capacity += rotations * frontier.len() * (1 + placements);
+        }
+        on_capacity(state, capacity);
         for &draft in drafts {
             let (tile, wildlife) = self.preview_draft(draft)?;
             let independent = matches!(draft, DraftChoice::Independent { .. });
@@ -582,44 +675,41 @@ impl GameState {
                 &Rotation::ALL[..1]
             };
             for coord in &frontier {
+                let base_wildlife_placements = &wildlife_placements[wildlife as usize];
+                let placed_tile_hosts_wildlife = tile.wildlife.contains(wildlife);
                 for rotation in rotations {
                     let tile_delta = board.place_tile(*coord, tile, *rotation)?;
-                    let mut valid_wildlife_placements =
-                        wildlife_placements[wildlife as usize].clone();
-                    if tile.wildlife.contains(wildlife) {
-                        valid_wildlife_placements.push(*coord);
+                    #[cfg(debug_assertions)]
+                    {
+                        let mut valid_wildlife_placements = base_wildlife_placements.clone();
+                        if placed_tile_hosts_wildlife {
+                            valid_wildlife_placements.push(*coord);
+                        }
+                        debug_assert_eq!(
+                            valid_wildlife_placements,
+                            board.wildlife_placements(wildlife)
+                        );
                     }
-                    debug_assert_eq!(
-                        valid_wildlife_placements,
-                        board.wildlife_placements(wildlife)
-                    );
                     let tile_placement = TilePlacement {
                         coord: *coord,
                         rotation: *rotation,
                     };
                     let tile_context = prepare_tile(&board, tile_placement, tile);
-                    evaluated.push((
-                        TurnAction {
-                            replace_three_of_a_kind: prelude.replace_three_of_a_kind,
-                            wildlife_wipes: prelude.wildlife_wipes.clone(),
-                            draft,
-                            tile: tile_placement,
-                            wildlife: None,
-                        },
-                        evaluate(&board, &tile_context, None),
-                    ));
-                    for wildlife_coord in valid_wildlife_placements {
+                    visit(state, &board, draft, tile_placement, &tile_context, None);
+                    for wildlife_coord in base_wildlife_placements
+                        .iter()
+                        .copied()
+                        .chain(placed_tile_hosts_wildlife.then_some(*coord))
+                    {
                         let wildlife_delta = board.place_wildlife(wildlife_coord, wildlife)?;
-                        evaluated.push((
-                            TurnAction {
-                                replace_three_of_a_kind: prelude.replace_three_of_a_kind,
-                                wildlife_wipes: prelude.wildlife_wipes.clone(),
-                                draft,
-                                tile: tile_placement,
-                                wildlife: Some(wildlife_coord),
-                            },
-                            evaluate(&board, &tile_context, Some((wildlife, wildlife_coord))),
-                        ));
+                        visit(
+                            state,
+                            &board,
+                            draft,
+                            tile_placement,
+                            &tile_context,
+                            Some((wildlife, wildlife_coord)),
+                        );
                         board.undo(wildlife_delta)?;
                     }
                     board.undo(tile_delta)?;
@@ -629,7 +719,7 @@ impl GameState {
                 board.refund_nature_token();
             }
         }
-        Ok(evaluated)
+        Ok(())
     }
 
     pub fn preview_active_board(&self, action: &TurnAction) -> Result<Board, RuleError> {

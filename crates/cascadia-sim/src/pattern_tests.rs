@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cascadia_game::{
     Board, GameConfig, GameSeed, HexCoord, Rotation, STANDARD_TILES, ScoringCards,
 };
