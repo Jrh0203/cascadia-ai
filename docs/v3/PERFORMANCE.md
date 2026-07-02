@@ -216,3 +216,29 @@ sending precomputed feature arrays in eval requests, so the bridge only
 wraps tensors and runs forwards. The shared aggregated bridge is the right
 serving architecture once collate is cheap; until then owned 6-session is
 the production config.
+
+## Throughput Optimization Pass (2026-07-02 afternoon, merged)
+
+Three landed changes, all bit-parity-gated (golden-label test byte-identical,
+198 workspace tests, packed-vs-raw eval equivalence to 1e-4):
+
+1. **Packed-features eval protocol** (`e558315`): Rust computes token/action/
+   relation-tail features and base64-packs them into eval requests; the
+   bridge decodes with `np.frombuffer`. Bridge collate: **394ms -> 47ms per
+   32 full-menu roots (8.4x)**. Requests also shrink (no raw token/action
+   JSON).
+2. **Engine hot-path pass** (`0e31d0d`): visitor-based legal-action
+   enumeration without per-action materialization, cached neighbor/habitat
+   context, flat wildlife-score caches (FxHashMap), exact-parity O(n) top-k
+   selection. **rank_greedy_actions 2.1-3.6x faster, greedy rollouts
+   2.2-2.6x faster** on mid/late-game states (checksummed bit-parity across
+   45 bench sections; differential test vs a reference implementation).
+   End-to-end tiny selfplay export (mock bridge): 2.83 -> 4.32 seeds/s.
+3. **Shared aggregated bridge** (`7241e73`): one CUDA context, cross-chunk
+   request merging. Was a regression while collate dominated; with packed
+   features it becomes the intended high-parallelism serving path.
+
+Deployment: staged for cycle 3 on john0 (after cycle 2 completes on the
+old binary). First cycle-3 action: re-measure games/h at
+`--shared-model-session` with 12-24 parallel games and re-tune
+MODEL_SESSIONS.
