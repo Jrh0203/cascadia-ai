@@ -4,16 +4,36 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
-## 2026-07-02 - `gumbel-ceiling-probe-v1`
+## 2026-07-02 - `gumbel-selfplay-cycle1-v1` (EI-2)
 
-Status: running on john0.
+Status: running on john0 (relaunched 06:15 after throughput sizing).
 
-Purpose: Phase B — 512 simulations/decision, top-m 32, w=1.0 (pure value
-bootstrap, zero rollouts), full legal menus, 20 seeds, EI-1 checkpoint. At
-~8x the Phase A budget this is also roughly compute-matched with the 10.9s
-rollout-search control. Branches: >=100 -> search-budget problem; 97-100 ->
-model-bound but close; <97 -> model-bound, Phase C prioritizes value-target
-quality (expected, given the value/q heads were trained on rollout means).
+Purpose: first Gumbel self-play expert-iteration cycle. All-seat self-play
+with exploration, n=64/top-m 16/w=0.5/root-menu 256, warm start from EI-1
+best_locked_val, objective `gumbel-selfplay`, `MAX_EXAMPLE_PASSES=4`.
+
+Overnight sizing decisions:
+
+- Measured uncontended generation ~58 games/h at 6 sessions (~4.3s/decision
+  — self-play with record export is ~4x slower per decision than benchmark
+  games). A 1,375-seed cycle would take ~24h; resized to
+  `MODEL_SESSIONS=12`, `TRAIN_SEED_COUNT=280`, `VAL_SEED_COUNT=60`
+  (~22.4k train roots — EI-0 scale, far better labels) to land the full
+  generate->train loop before morning. Scale-up to 1,250 seeds is the next
+  daytime run once the loop is proven.
+- Phase B full probe DEFERRED: after the OOM fix, a verified single
+  512-sim w=1.0 game scored seat mean `94.75` at `8.84s`/decision (p50) —
+  provisional model-bound evidence consistent with Phase A. The full
+  20-seed probe reruns after cycle-1 training, where it measures the
+  retrained value head (more decision-relevant).
+- Operational lesson: the 512-sim probe and self-play generation strangle
+  each other through GPU round-trip queueing (28 games/h combined). Jobs on
+  john0 run strictly sequentially from now on.
+- CUDA OOM root cause fixed mid-night: late-game full legal menus reach
+  thousands of compound actions; the CGAB relation bias materializes
+  [rows, actions, seq, d] (a 35.26 GiB single allocation was attempted).
+  Fixes: `--gumbel-root-menu 256` enumeration cap, cell-budget-aware eval
+  chunking in the bridge, `expandable_segments` allocator config.
 
 ## 2026-07-02 - `gumbel-phase-a-gate-v1`
 
