@@ -31,9 +31,13 @@ The implementation package lives in
   CascadiaFormer-q scored `89.6175` versus greedy `87.5575` over 100 complete
   games.
 - EI-0 search-integrated K32 retained search reached `95.8000`, but trailed
-  matched full K64 search by `1.1750`; the next improvement should raise
-  full-search winner retention or evaluate a larger retained set before a broad
-  expert-iteration scale-up.
+  matched full K64 search by `1.1750`.
+- EI-0 K56 retained search narrowed the matched full-K64 gap to `0.5625` and
+  passed the timing gate with a `0.8834` treatment/control ratio, but both K56
+  and full K64 remained below the 100-point target on 20-game mean score.
+- The next improvement should test stronger all-action search settings before a
+  broad expert-iteration scale-up; retained width is no longer the most obvious
+  immediate bottleneck.
 
 ## Historical Recovery
 

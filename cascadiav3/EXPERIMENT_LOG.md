@@ -4,9 +4,54 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-01 - `cascadiaformer-ei0-k64-r32-game20`
+
+Status: running on john0.
+
+Purpose: test whether the immediate 100-point bottleneck is sampled-search
+strength rather than model retained-set width. The completed K56 run narrowed
+the retained-search gap but both K56 and full K64 at 16 rollouts/action stayed
+below the 100-point target. This run keeps the full K64 action set and doubles
+rollout samples per action.
+
+Configuration:
+
+- Manifest:
+  `checkpoints/full_v3_ei0_greedy_search_bootstrap/guarded_retention_safe_best.manifest.json`.
+- Seeds: same 20-game set as the K56/K64-R16 benchmark,
+  starting at `2026995000`.
+- Selection head: `q`.
+- Retain K: `64` of max `64`.
+- Rollouts/action: `32`.
+- Rollout top-k: `4`.
+- Candidate workers: `8`.
+- Shadow full search: disabled.
+- Full baseline: disabled; compare against the previous full K64
+  16-rollout control on the same seeds.
+
+Artifacts:
+
+- Report: `reports/cascadiaformer_ei0_k64_r32_game20.json`.
+- Decisions:
+  `reports/cascadiaformer_ei0_k64_r32_game20_decisions.jsonl`.
+- Summary: `reports/cascadiaformer_ei0_k64_r32_game20_summary.md`.
+- Remote log:
+  `/home/john0/cascadia/cascadiav3/logs/cascadiaformer_ei0_k64_r32_game20_job.log`.
+
+Success readout:
+
+- Primary: mean complete-game score moves materially toward `100` versus the
+  previous full K64 R16 mean of `96.9750`.
+- Strong signal: per-game means at or above `100` appear on this same seed set,
+  not merely isolated high-scoring seats.
+- Negative signal: the mean remains in the `96-97` band, implying that more
+  one-ply rollout samples alone are not enough and the next step should improve
+  rollout policy/value training rather than just spend more CPU.
+
 ## 2026-07-01 - `cascadiaformer-ei0-search-trace-forensics-v1`
 
-Status: completed; K56 non-shadow follow-up launched.
+Status: completed; K56 non-shadow follow-up completed; stronger K64 rollout
+ceiling test is the next step.
 
 Purpose: mine the completed EI-0 K32 shadow-search decision trace to choose the
 next retained-search width on evidence rather than guessing.
@@ -29,7 +74,7 @@ Evidence:
 - Forensics summary:
   `reports/cascadiaformer_ei0_search_game20_trace_forensics_summary.md`.
 - Follow-up K56 non-shadow benchmark:
-  `reports/cascadiaformer_ei0_k56_nonshadow_game20.json` once complete.
+  `reports/cascadiaformer_ei0_k56_nonshadow_game20.json`.
 
 Result:
 
@@ -60,9 +105,27 @@ Decision:
 - K56 is the next serious 100-point-path experiment because it clears `95%`
   retention in every phase while still reducing non-shadow rollout work to
   `87.5%` of K64.
-- Launched `cascadiaformer-ei0-k56-nonshadow-game20` on john0 with K56
-  non-shadow treatment and matched K64 full-search control. This tests actual
-  score and runtime, not just shadow retention.
+- `cascadiaformer-ei0-k56-nonshadow-game20` completed on john0 with K56
+  non-shadow treatment and matched K64 full-search control.
+- K56 scored `96.4125` mean / `100.0000` P90 over 20 games, versus full K64
+  control at `96.9750` mean / `100.0000` P90.
+- Mean paired delta was `-0.5625`, improving materially on K32's `-1.1750`.
+- Mean total decision seconds were `7.8031` for K56 and `8.8327` for full
+  K64, for a passing treatment/control ratio of `0.8834`.
+- K56 saved the expected `12.5%` of non-shadow rollout work.
+- Neither K56 nor full K64 produced a per-game mean at or above `100` in this
+  20-game sample, so this result supports K56 as a cheaper retained-search
+  serving width but not as the final 100-point path.
+
+Decision:
+
+- Do not spend the next compute block merely expanding K56 confidence. K56 is
+  close enough to full K64 that the immediate bottleneck is now search strength,
+  not retained-set width.
+- Launch the next ceiling test as all-action K64 with `32` rollouts/action and
+  rollout top-k `4` on the same 20 seeds, with no redundant matched control.
+  Compare it against the existing full K64 `16` rollouts/action control to see
+  whether more samples move the score distribution toward the 100-point target.
 
 ## 2026-07-01 - `cascadiaformer-ei0-greedy-search-bootstrap-v1`
 

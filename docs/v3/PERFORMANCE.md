@@ -138,12 +138,24 @@ EI-0 decision-trace forensics:
 | 56 | 96.8750% | 87.5% |
 | 64 | 100.0000% | 100.0% |
 
+20-game K56 non-shadow follow-up on the same seed set:
+
+| Strategy | Mean | P50 | P90 | Delta vs Control | Mean Decision Seconds |
+|---|---:|---:|---:|---:|---:|
+| CascadiaFormer-search K56 of K64 | 96.4125 | 97.0000 | 100.0000 | -0.5625 | 7.8031 |
+| Full-search K64 control | 96.9750 | 97.0000 | 100.0000 | - | 8.8327 |
+
+K56 passed the treatment/control timing gate with ratio `0.8834`, saved the
+expected `12.5%` of non-shadow rollouts, and narrowed the K32 score gap by
+about half. The result does not prove a 100-point agent: over these 20 games,
+neither K56 nor full K64 produced a per-game mean score at or above `100`.
+
 Interpretation: the q serving head is now the useful no-search policy, and it
 beats greedy by about two points on the first 100-game EI-0 gate. Search
 integration reaches a strong absolute mean above `95` and passes the timing
-gate, but the K32 retained set trails the matched K64 full-search control by
-`1.175` points. This is real bootstrap merit, not promotion proof for K32
-retained search. The benchmark is CPU rollout-bound rather than GPU-bound:
-model inference is tiny compared with terminal rollout search. K56 is the next
-measured serving point because it keeps `96.875%` of full-search winners while
-still saving `12.5%` of non-shadow rollout work.
+gate. The K56 retained set is a better serving point than K32 on current
+evidence, but the current one-ply sampled-search setting itself still sits
+below the 100-point target. The benchmark is CPU rollout-bound rather than
+GPU-bound: model inference is tiny compared with terminal rollout search. The
+next ceiling test should increase search samples per action before broadening
+expert iteration.
