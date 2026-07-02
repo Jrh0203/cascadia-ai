@@ -4,6 +4,30 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-02 - `gumbel-phase-a-gate-v1`
+
+Status: running on john0 (pid file `logs/gumbel_phase_a_gate_job.pid`).
+
+Purpose: Phase A gate of the Gumbel campaign — 100 paired games, Gumbel
+search (n=64, top-m 16, w=0.5, depth 1, 4 determinizations, full legal root
+menus) versus the honest full K64/R16 rollout-search control
+(`--rollout-determinize`, no hidden-order peek). Checkpoint: EI-1
+`full_v3_ei1_model_state_k32_r4/best_locked_val` (strongest incumbent:
+no-search q `90.065` over 500 games vs EI-0's `89.62`).
+
+Pre-launch smoke (1 game, same config, seed 2026994000): complete game via
+the batched cuda bridge, seat mean `94.0`, decision time `1.84s` at n=64 —
+about 4.8x faster per decision than the legacy 8.8s full rollout search.
+
+Gate: promote the Gumbel serving path iff the paired delta (gumbel minus
+honest control) is positive with the 95% CI excluding zero
+(`paired_delta_stats` in the report). Branches per
+`docs/v3/GUMBEL_SELFPLAY_CAMPAIGN.md` Phase A.
+
+Artifacts: `reports/gumbel_phase_a_gate.json`,
+`reports/gumbel_phase_a_gate_summary.md`,
+`logs/gumbel_phase_a_gate_job.log`.
+
 ## 2026-07-02 - `gumbel-selfplay-stack-implementation-v1`
 
 Status: implementation complete and locally verified; remote Phase A pending.
