@@ -4,7 +4,24 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
-## 2026-07-02 - `gumbel-selfplay-cycle2-v1` (EI-3)
+## 2026-07-02 - `gumbel-selfplay-cycle2-v1` (EI-3) — RESULTS: rejected
+
+Cycle 2 (400+60 seeds, w=0.75, replay window, warm start from cycle 1) is a
+**rejected candidate**: no-search `91.8475` (cycle 1: `91.705`, same seeds)
+and Gumbel n=64 `94.4725` (cycle 1: `94.53`; paired vs honest control
+`-0.9275`, CI `[-1.31, -0.54]`, n=100). Locked-val final-Q regret improved
+`0.7934 -> 0.2135` (866 steps over ~42k examples) without moving gameplay.
+Cycle 1 remains champion; cycle 2 joins the opponent pool.
+
+Interpretation branches under test: (a) serving budget n=64 may be
+saturated for this model class — budget sweep n=128/256 x25 seeds running
+on the champion; (b) the w=0.75 blend ramp may have degraded teacher
+labels — cycle 3 reverts generation to w=0.5 at full scale.
+
+Generated on the optimized stack at ~278 games/h (vs 40 baseline):
+generation 400+60 seeds took ~2h total including a restart.
+
+## 2026-07-02 - `gumbel-selfplay-cycle2-v1` (EI-3) — launch notes
 
 Status: running on john0 (relaunched 14:50 on owned 6-session after a
 shared-bridge throughput experiment regressed: one Python collate pipeline
