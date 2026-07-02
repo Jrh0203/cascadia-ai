@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 SHARD_VERSION = "cascadiav3.expert_tensor_shard.v1"
+SHARD_VERSION_V2 = "cascadiav3.expert_tensor_shard.v2"
+SUPPORTED_SHARD_VERSIONS = {SHARD_VERSION, SHARD_VERSION_V2}
 TOKEN_FEATURE_DIM = 41
 ACTION_FEATURE_DIM = 61
 
@@ -85,7 +87,7 @@ class ExpertTensorShard:
         self.path = path
         self._npz = np.load(path, allow_pickle=False)
         self.version = _scalar_string(self._npz["version"].item())
-        if self.version != SHARD_VERSION:
+        if self.version not in SUPPORTED_SHARD_VERSIONS:
             raise ValueError(f"unsupported expert tensor shard version {self.version!r}")
         self.metadata = json.loads(_scalar_string(self._npz["metadata_json"].item()))
         self.tokens = self._npz["tokens"]
@@ -108,6 +110,16 @@ class ExpertTensorShard:
         self.rank_vector = self._npz["rank_vector"]
         self.score_decomposition = self._npz["score_decomposition"]
         self.relation_tail = self._npz["relation_tail"] if "relation_tail" in self._npz.files else None
+        self.improved_policy = (
+            self._npz["improved_policy"] if "improved_policy" in self._npz.files else None
+        )
+        self.search_root_value = (
+            self._npz["search_root_value"] if "search_root_value" in self._npz.files else None
+        )
+        if self.version == SHARD_VERSION_V2 and (
+            self.improved_policy is None or self.search_root_value is None
+        ):
+            raise ValueError("v2 expert tensor shard requires improved_policy and search_root_value")
         self._validate_shapes()
 
     def _validate_shapes(self) -> None:
@@ -144,6 +156,10 @@ class ExpertTensorShard:
             raise ValueError("rank_vector shape mismatch")
         if self.score_decomposition.shape != (record_count, 3, 4):
             raise ValueError("score_decomposition shape mismatch")
+        if self.improved_policy is not None and self.improved_policy.shape[0] != total_actions:
+            raise ValueError("improved_policy length mismatch")
+        if self.search_root_value is not None and self.search_root_value.shape[0] != record_count:
+            raise ValueError("search_root_value length mismatch")
         if self.relation_tail is not None:
             if self.relation_tail.ndim != 3:
                 raise ValueError(f"relation_tail shape mismatch: {self.relation_tail.shape}")
@@ -184,6 +200,10 @@ class ExpertTensorShard:
         }
         if self.relation_tail is not None:
             example["relation_tail"] = self.relation_tail[index]
+        if self.improved_policy is not None:
+            example["improved_policy"] = self.improved_policy[action_start:action_end]
+        if self.search_root_value is not None:
+            example["search_root_value"] = float(self.search_root_value[index])
         return example
 
     def close(self) -> None:
@@ -335,13 +355,16 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
     rank_vector,
     score_decomposition,
     relation_tail=None,
+    improved_policy=None,
+    search_root_value=None,
 ) -> None:
     import numpy as np
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = out_path.with_name(f"{out_path.name}.tmp")
+    version = SHARD_VERSION_V2 if improved_policy is not None else SHARD_VERSION
     arrays = {
-        "version": _string_array(SHARD_VERSION),
+        "version": _string_array(version),
         "metadata_json": _string_array(json.dumps(metadata, sort_keys=True, separators=(",", ":"))),
         "tokens": tokens,
         "actions": actions,
@@ -365,6 +388,11 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
     }
     if relation_tail is not None:
         arrays["relation_tail"] = relation_tail
+    if improved_policy is not None:
+        arrays["improved_policy"] = improved_policy
+        if search_root_value is None:
+            raise ValueError("improved_policy requires search_root_value")
+        arrays["search_root_value"] = search_root_value
     with tmp_path.open("wb") as handle:
         np.savez(handle, **arrays)
     tmp_path.replace(out_path)
@@ -444,6 +472,7 @@ def filter_expert_tensor_shard(
         q_count_chunks = []
         truncated_count_chunks = []
         exact_afterstate_score_active_chunks = []
+        improved_policy_chunks = []
         relation_chunks = []
         action_offsets = [0]
         relation_offsets = [0]
@@ -494,6 +523,16 @@ def filter_expert_tensor_shard(
             q_count_chunks.append(shard.q_count[keep_global])
             truncated_count_chunks.append(shard.truncated_count[keep_global])
             exact_afterstate_score_active_chunks.append(shard.exact_afterstate_score_active[keep_global])
+            if shard.improved_policy is not None:
+                # Renormalize the retained slice of the improved-policy
+                # distribution so it remains a valid soft target.
+                retained_policy = shard.improved_policy[keep_global].astype(np.float64, copy=True)
+                mass = retained_policy.sum()
+                if mass > 0.0:
+                    retained_policy /= mass
+                else:
+                    retained_policy[:] = 1.0 / max(1, retained_policy.shape[0])
+                improved_policy_chunks.append(retained_policy.astype(np.float32, copy=False))
 
             remapped_edges = _remap_relation_edges_for_actions(
                 shard.relation_edges[relation_start:relation_end],
@@ -549,6 +588,12 @@ def filter_expert_tensor_shard(
             final_score_vector=shard.final_score_vector,
             rank_vector=shard.rank_vector,
             score_decomposition=shard.score_decomposition,
+            improved_policy=(
+                np.concatenate(improved_policy_chunks, axis=0)
+                if improved_policy_chunks
+                else None
+            ),
+            search_root_value=shard.search_root_value,
         )
     finally:
         shard.close()
@@ -626,6 +671,8 @@ def materialize_relation_tail_shard(
             rank_vector=shard.rank_vector,
             score_decomposition=shard.score_decomposition,
             relation_tail=relation_tail,
+            improved_policy=shard.improved_policy,
+            search_root_value=shard.search_root_value,
         )
     finally:
         shard.close()
@@ -719,6 +766,13 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
     exact_afterstate = torch.zeros((batch_size, max_actions), dtype=torch.float32)
     selected = torch.zeros((batch_size,), dtype=torch.long)
     greedy_selected = torch.zeros((batch_size,), dtype=torch.long)
+    has_improved_policy = all(example.get("improved_policy") is not None for example in examples)
+    improved_policy = (
+        torch.zeros((batch_size, max_actions), dtype=torch.float32) if has_improved_policy else None
+    )
+    search_root_value = (
+        torch.zeros((batch_size,), dtype=torch.float32) if has_improved_policy else None
+    )
     target_value = torch.zeros((batch_size, 4), dtype=torch.float32)
     target_rank = torch.zeros((batch_size, 4), dtype=torch.long)
     target_score = torch.zeros((batch_size, 3, 4), dtype=torch.float32)
@@ -745,6 +799,13 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
             dtype=torch.float32,
         )
         selected[batch_index] = int(example["selected_action_index"])
+        if improved_policy is not None:
+            improved_policy[batch_index, :action_count] = torch.as_tensor(
+                example["improved_policy"],
+                dtype=torch.float32,
+            )
+            assert search_root_value is not None
+            search_root_value[batch_index] = float(example.get("search_root_value", 0.0))
         target_value[batch_index] = torch.as_tensor(example["final_score_vector"], dtype=torch.float32)
         target_rank[batch_index] = torch.as_tensor(example["rank_vector"], dtype=torch.long) - 1
         target_score[batch_index] = torch.as_tensor(example["score_decomposition"], dtype=torch.float32)
@@ -792,11 +853,15 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
         "target_value": target_value,
         "target_rank": target_rank,
         "target_score": target_score,
-        "schema_ids": [SHARD_VERSION] * batch_size,
+        "schema_ids": [SHARD_VERSION_V2 if has_improved_policy else SHARD_VERSION] * batch_size,
         "state_hashes": ["packed-expert-tensor"] * batch_size,
         "token_counts": token_counts,
         "action_counts": action_counts,
+        "has_improved_policy": has_improved_policy,
     }
+    if has_improved_policy:
+        batch["improved_policy"] = improved_policy
+        batch["search_root_value"] = search_root_value
     if relation_tail is not None:
         batch["relation_tail"] = relation_tail
     else:

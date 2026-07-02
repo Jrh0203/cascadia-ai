@@ -4,9 +4,67 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-02 - `gumbel-selfplay-stack-implementation-v1`
+
+Status: implementation complete and locally verified; remote Phase A pending.
+
+Purpose: replace the one-ply sampled-greedy-rollout teacher with Gumbel
+AlphaZero-style search using batched neural leaf values, fix the
+serving-search hidden-information leak, remove greedy-ranked menu bias from
+labeling, and stand up self-play data generation at 5x corpus scale. Full
+plan: `docs/v3/GUMBEL_SELFPLAY_CAMPAIGN.md`.
+
+Implementation:
+
+- `real-root-exporter/src/gumbel.rs`: Gumbel top-m + sequential halving over
+  the full legal root menu, model priors + derived-final-Q leaf values,
+  hidden redeterminization before every simulated root action (no-peek by
+  construction, unit-tested), max^n interior advancement, blended
+  rollout/bootstrap leaf values, completed-Q + improved-policy outputs.
+- `real-root-exporter/src/model_bridge.rs`: extracted bridge with
+  `eval_batch` protocol (hello `protocol_features` detection, sequential
+  fallback); Python bridge answers `eval_batch_request` with one collated
+  forward per 32-root chunk and now returns the 4-seat `value` vector;
+  relation matrices build in numpy.
+- New exporter modes: `--gumbel-policy-game` (all-seat search games,
+  decision JSONL) and `--gumbel-selfplay-tensor-corpus` (schema
+  `cascadiav3.expert_tensor_shard.v2` with `improved_policy` +
+  `search_root_value`, real-outcome value labels backfilled at terminal).
+- `--rollout-determinize` makes the legacy rollout path
+  public-information-legal for honest rebaselines; afterstate reuse removes
+  the per-rollout clone+re-apply (golden-equality test keeps default-path
+  labels bit-identical).
+- Trainer: `gumbel-selfplay` objective (soft improved-policy targets,
+  up-weighted real-outcome value loss), `--max-example-passes` overfit
+  guard; loader/filter/materialize handle v2 alongside v1.
+- Evaluation: `torch_benchmark_stats.paired_delta_stats` (t + bootstrap CI)
+  wired into the search benchmark; new
+  `torch_cascadiaformer_gumbel_benchmark` paired harness; runners
+  `run_gumbel_phase_a_gate.sh`, `run_gumbel_ceiling_probe.sh`,
+  `run_gumbel_selfplay_cycle.sh`.
+
+Evidence:
+
+- `cargo test` (exporter): 18 tests including golden equality, no-peek
+  invariance for both rollout and Gumbel paths, determinism, sequential
+  halving budget accounting, v2 shard roundtrip, and a full mock-bridge
+  Gumbel game.
+- Python suite: 54 tests including batch-vs-single eval equivalence, numpy
+  relation-matrix equivalence, v2 load/filter/materialize, soft-target loss,
+  a CPU training smoke on the v2 fixture with the passes clamp firing
+  (50 -> 12 steps), and t-quantile/CI reference checks.
+- Fixtures: `cascadiav3/fixtures/gumbel_tiny_tensor.npz` (v2, mock bridge).
+
+Decision: EI-1 (`cascadiaformer-ei1-model-state-k32-r4-v1`) is terminated in
+favor of this line — it kept both binding constraints (greedy rollout labels,
+greedy-ranked K32 menus). Its partial artifacts are fetched and retained as
+teacher-comparison evidence only, not model-promotion evidence.
+
 ## 2026-07-01 - `cascadiaformer-ei1-model-state-k32-r4-v1`
 
-Status: running on john0.
+Status: terminated 2026-07-02 in favor of the Gumbel self-play campaign (see
+`gumbel-selfplay-stack-implementation-v1` above); partial artifacts fetched
+and retained as teacher-comparison evidence.
 
 Purpose: start the first true model-state expert-iteration bootstrap. EI-0 was
 trained on greedy-state roots and reached useful no-search/search strength, but

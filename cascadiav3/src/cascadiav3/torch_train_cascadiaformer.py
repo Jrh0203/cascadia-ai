@@ -75,6 +75,21 @@ def loss_weights_for_objective(objective: str) -> LossWeights:
             greedy_margin=0.25,
             greedy_margin_value=0.25,
         )
+    if objective == "gumbel-selfplay":
+        # Self-play search targets: soft improved-policy distillation, real
+        # final-outcome values (value up-weighted because search bootstraps on
+        # it), no greedy-retention terms.
+        return LossWeights(
+            policy=1.0,
+            q=0.5,
+            value=0.5,
+            score=0.05,
+            rank=0.02,
+            uncertainty=0.01,
+            greedy_policy=0.0,
+            greedy_margin=0.0,
+            greedy_margin_value=0.0,
+        )
     if objective == "k32-greedy-retention":
         return LossWeights(
             policy=0.10,
@@ -212,6 +227,18 @@ def collate_expert_roots(records: list[dict[str, Any]]) -> dict[str, Any]:
             "state_hashes": [record["state_hash"] for record in records],
         }
     )
+    has_improved_policy = all(record.get("improved_policy") is not None for record in records)
+    if has_improved_policy:
+        improved = torch.zeros((len(records), max_actions), dtype=torch.float32)
+        for batch_index, record in enumerate(records):
+            count = len(record["legal_actions"])
+            improved[batch_index, :count] = torch.tensor(record["improved_policy"], dtype=torch.float32)
+        batch["improved_policy"] = improved
+        batch["search_root_value"] = torch.tensor(
+            [float(record.get("search_root_value", 0.0)) for record in records],
+            dtype=torch.float32,
+        )
+    batch["has_improved_policy"] = has_improved_policy
     return batch
 
 
@@ -265,6 +292,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
     if greedy_target is None:
         greedy_target = torch.zeros_like(teacher_target)
     selected_policy = F.cross_entropy(logits, teacher_target)
+    improved_policy_target = batch.get("improved_policy") if batch.get("has_improved_policy") else None
     target_score_to_go = batch.get("target_score_to_go", batch["target_q"])
     exact_afterstate = batch.get("exact_afterstate_score_active")
     if exact_afterstate is None:
@@ -280,7 +308,17 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
     target_distribution = target_distribution / normalizer
     log_policy = torch.log_softmax(logits, dim=1)
     weighted_policy = -(target_distribution * log_policy).sum(dim=1).mean()
-    policy = 0.5 * selected_policy + 0.5 * weighted_policy
+    if improved_policy_target is not None:
+        # Gumbel self-play: soft-target cross-entropy against the search's
+        # improved policy (equivalent to KL up to the target entropy constant)
+        # replaces the selected-one-hot / softmax(Q) blend.
+        masked_target = improved_policy_target.masked_fill(~mask, 0.0)
+        target_normalizer = masked_target.sum(dim=1, keepdim=True).clamp_min(1.0e-8)
+        masked_target = masked_target / target_normalizer
+        policy = -(masked_target * log_policy).sum(dim=1).mean()
+        weighted_policy = policy
+    else:
+        policy = 0.5 * selected_policy + 0.5 * weighted_policy
     greedy_policy = F.cross_entropy(logits, greedy_target)
     greedy_one_hot = F.one_hot(greedy_target, num_classes=logits.shape[1]).to(dtype=torch.bool)
     greedy_competitor_mask = mask & ~greedy_one_hot
@@ -1032,6 +1070,7 @@ def run_training(
     early_stop_selection_guard_failures: int = 0,
     early_stop_after_step: int = 0,
     train_source_weights: list[float] | None = None,
+    max_example_passes: float = 0.0,
 ) -> dict[str, Any]:
     try:
         import torch
@@ -1098,6 +1137,21 @@ def run_training(
         val_format = "jsonl"
         train_source_lengths = None
         normalized_train_source_weights = None
+    if max_example_passes > 0.0 and not overfit_one_batch:
+        # Overfitting guard: the EI-0 corpus saw ~240 passes/example and its
+        # guarded checkpoint landed at step 7,250 of 25,000. Cap total passes
+        # so the schedule cannot silently loop a small corpus hundreds of
+        # times.
+        train_corpus_len = _corpus_len(train_records)
+        if train_corpus_len > 0:
+            max_steps = max(1, int((max_example_passes * train_corpus_len) / max(1, batch_size)))
+            if steps > max_steps:
+                print(
+                    f"[trainer] clamping steps {steps} -> {max_steps} to respect "
+                    f"max_example_passes={max_example_passes} over {train_corpus_len} examples",
+                    flush=True,
+                )
+                steps = max_steps
     weights = loss_weights or loss_weights_for_objective(objective)
     config = config_for_size(model_size)
     model = build_cascadiaformer(config).to(device)
@@ -1486,8 +1540,20 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=20260630)
     parser.add_argument(
         "--objective",
-        choices=["expert", "k32-greedy-retention", "pure-greedy-retention", "search-improved-greedy-retention"],
+        choices=[
+            "expert",
+            "k32-greedy-retention",
+            "pure-greedy-retention",
+            "search-improved-greedy-retention",
+            "gumbel-selfplay",
+        ],
         default="expert",
+    )
+    parser.add_argument(
+        "--max-example-passes",
+        type=float,
+        default=0.0,
+        help="Clamp steps so steps*batch/corpus stays at or below this many passes per example; 0 disables",
     )
     parser.add_argument("--selection-metric", default="locked_val_total")
     parser.add_argument("--selection-mode", choices=["min", "max"], default="min")
@@ -1580,6 +1646,7 @@ def main() -> int:
         overfit_one_batch=args.overfit_one_batch,
         val_max_batches=None if args.val_max_batches == 0 else args.val_max_batches,
         swa_fraction=args.swa_fraction,
+        max_example_passes=args.max_example_passes,
         objective=args.objective,
         loss_weights=loss_weights,
         selection_metric=args.selection_metric,

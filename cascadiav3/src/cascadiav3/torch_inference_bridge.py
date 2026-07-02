@@ -55,6 +55,10 @@ def _response(payload: dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
+PROTOCOL_FEATURES = ["eval_batch", "value_vector"]
+EVAL_BATCH_CHUNK_SIZE = 32
+
+
 def _uniform_eval(root: dict[str, Any], *, model_fallback: bool) -> dict[str, Any]:
     action_count = len(root["legal_actions"])
     if action_count == 0:
@@ -79,6 +83,7 @@ def _uniform_eval(root: dict[str, Any], *, model_fallback: bool) -> dict[str, An
         "q": q_values,
         "score_to_go": score_to_go,
         "uncertainty": [1.0] * action_count,
+        "value": [0.0, 0.0, 0.0, 0.0],
         "model_fallback": model_fallback,
     }
 
@@ -120,7 +125,7 @@ def collate_inference_roots(records: list[dict[str, Any]]) -> dict[str, Any]:
     import torch
 
     from .torch_public_token_merit import PUBLIC_TOKEN_FEATURE_DIM, public_token_features
-    from .torch_relation_bias_merit import combined_relation_ids, relation_counts
+    from .torch_relation_bias_merit import combined_relation_ids_array, relation_counts
     from .torch_semantic_relation_bias_merit import (
         SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM,
         semantic_public_token_action_features,
@@ -152,8 +157,8 @@ def collate_inference_roots(records: list[dict[str, Any]]) -> dict[str, Any]:
             dtype=torch.float32,
         )
         action_mask[batch_index, :action_count] = True
-        matrix = combined_relation_ids(record, action_offset=max_tokens, seq_len=seq_len)
-        relation_ids[batch_index] = torch.tensor(matrix, dtype=torch.long)
+        matrix = combined_relation_ids_array(record, action_offset=max_tokens, seq_len=seq_len)
+        relation_ids[batch_index] = torch.from_numpy(matrix)
         exact_afterstate[batch_index, :action_count] = torch.tensor(
             views[batch_index]["exact_afterstate_score_active"],
             dtype=torch.float32,
@@ -268,39 +273,64 @@ def _move_batch_to_device(batch: dict[str, Any], device):  # type: ignore[no-unt
     return {key: value.to(device) if hasattr(value, "to") else value for key, value in batch.items()}
 
 
-def _model_eval(model, root: dict[str, Any], *, device_name: str = "cpu") -> dict[str, Any]:  # type: ignore[no-untyped-def]
+def _model_eval_batch(
+    model,
+    roots: list[dict[str, Any]],
+    *,
+    device_name: str = "cpu",
+    chunk_size: int = EVAL_BATCH_CHUNK_SIZE,
+) -> list[dict[str, Any]]:  # type: ignore[no-untyped-def]
+    """One collated forward per chunk of roots. Chunking bounds the dense
+    relation_ids tensor (batch x seq x seq int64) at full action menus."""
     import torch
 
+    if not roots:
+        return []
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
-    batch = collate_inference_roots([root])
-    eval_batch = _move_batch_to_device(batch, device)
-    with torch.no_grad():
-        outputs = model(
-            eval_batch["tokens"],
-            eval_batch["token_mask"],
-            eval_batch["actions"],
-            eval_batch["action_mask"],
-            eval_batch.get("relation_ids"),
-        )
-        logits = outputs["logits"][0].masked_fill(~eval_batch["action_mask"][0], -1.0e9)
-        priors = torch.softmax(logits, dim=0)
-    action_count = batch["action_counts"][0]
-    score_to_go = outputs["q"][0, :action_count].cpu().tolist()
-    final_q = (
-        eval_batch["exact_afterstate_score_active"][0, :action_count].cpu()
-        + outputs["q"][0, :action_count].cpu()
-    ).tolist()
-    return {
-        "type": "eval_response",
-        "schema_id": root.get("schema_id"),
-        "state_hash": root.get("state_hash"),
-        "action_ids": batch["action_ids"][0],
-        "priors": priors[:action_count].cpu().tolist(),
-        "q": final_q,
-        "score_to_go": score_to_go,
-        "uncertainty": outputs["uncertainty"][0, :action_count].cpu().tolist(),
-        "model_fallback": False,
-    }
+    responses: list[dict[str, Any]] = []
+    for start in range(0, len(roots), max(1, chunk_size)):
+        chunk = roots[start : start + max(1, chunk_size)]
+        batch = collate_inference_roots(chunk)
+        eval_batch = _move_batch_to_device(batch, device)
+        with torch.no_grad():
+            outputs = model(
+                eval_batch["tokens"],
+                eval_batch["token_mask"],
+                eval_batch["actions"],
+                eval_batch["action_mask"],
+                eval_batch.get("relation_ids"),
+            )
+            masked_logits = outputs["logits"].masked_fill(~eval_batch["action_mask"], -1.0e9)
+            priors = torch.softmax(masked_logits, dim=1).cpu()
+        score_to_go_all = outputs["q"].cpu()
+        uncertainty_all = outputs["uncertainty"].cpu()
+        value_all = outputs["value_vector"].cpu()
+        exact_all = eval_batch["exact_afterstate_score_active"].cpu()
+        for row_index, root in enumerate(chunk):
+            action_count = batch["action_counts"][row_index]
+            score_to_go = score_to_go_all[row_index, :action_count].tolist()
+            final_q = (
+                exact_all[row_index, :action_count] + score_to_go_all[row_index, :action_count]
+            ).tolist()
+            responses.append(
+                {
+                    "type": "eval_response",
+                    "schema_id": root.get("schema_id"),
+                    "state_hash": root.get("state_hash"),
+                    "action_ids": batch["action_ids"][row_index],
+                    "priors": priors[row_index, :action_count].tolist(),
+                    "q": final_q,
+                    "score_to_go": score_to_go,
+                    "uncertainty": uncertainty_all[row_index, :action_count].tolist(),
+                    "value": value_all[row_index].tolist(),
+                    "model_fallback": False,
+                }
+            )
+    return responses
+
+
+def _model_eval(model, root: dict[str, Any], *, device_name: str = "cpu") -> dict[str, Any]:  # type: ignore[no-untyped-def]
+    return _model_eval_batch(model, [root], device_name=device_name)[0]
 
 
 def serve(
@@ -341,6 +371,7 @@ def serve(
             "model_loaded": loaded_model is not None,
             "allow_dry_run_fallback": allow_dry_run_fallback,
             "device": device_name,
+            "protocol_features": PROTOCOL_FEATURES,
         }
     )
     for line in sys.stdin:
@@ -360,6 +391,17 @@ def serve(
                     _response(_uniform_eval(root, model_fallback=True))
                 else:
                     _response(_model_eval(loaded_model, root, device_name=device_name))
+            elif message_type == "eval_batch_request":
+                roots = message["roots"]
+                if not isinstance(roots, list) or not roots:
+                    raise ValueError("eval_batch_request requires a non-empty roots list")
+                if loaded_model is None:
+                    if not allow_dry_run_fallback and not message.get("allow_model_fallback", False):
+                        raise RuntimeError("no model loaded and dry-run fallback is disabled")
+                    results = [_uniform_eval(root, model_fallback=True) for root in roots]
+                else:
+                    results = _model_eval_batch(loaded_model, roots, device_name=device_name)
+                _response({"type": "eval_batch_response", "results": results})
             else:
                 raise ValueError(f"unknown message type {message_type!r}")
         except Exception as exc:  # pragma: no cover - protocol errors are surfaced as JSON.

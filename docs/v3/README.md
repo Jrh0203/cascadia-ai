@@ -7,6 +7,9 @@ packed expert tensors with search-supervised action values.
 
 ## Canonical Docs
 
+- [Gumbel Self-Play Campaign](GUMBEL_SELFPLAY_CAMPAIGN.md): the active
+  100-point plan — Gumbel search with neural leaf values, self-play data
+  generation, phases, gates, and decision branches.
 - [Architecture](ARCHITECTURE.md): model shape, tokenization, relation bias,
   public-boundary rules, and literature basis.
 - [Training Pipeline](TRAINING_PIPELINE.md): data generation, objectives,
@@ -35,9 +38,17 @@ The implementation package lives in
 - EI-0 K56 retained search narrowed the matched full-K64 gap to `0.5625` and
   passed the timing gate with a `0.8834` treatment/control ratio, but both K56
   and full K64 remained below the 100-point target on 20-game mean score.
-- The next improvement should test stronger all-action search settings before a
-  broad expert-iteration scale-up; retained width is no longer the most obvious
-  immediate bottleneck.
+- K64/R32 showed that raw rollout count is not the bottleneck: the greedy
+  rollout policy itself caps the teacher.
+- All pre-2026-07-02 search-integrated numbers carry a hidden-information
+  leak (rollouts observed the true hidden tile/bag order) and are treated as
+  legacy-leaky; honest baselines use `--rollout-determinize`.
+- The active strategy is the Gumbel self-play campaign
+  ([GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md)): Gumbel top-m
+  search with batched model leaf values over determinized states, all-seat
+  self-play data with improved-policy targets and real-outcome value labels
+  (schema v2), and CI-gated promotion at 100+ paired games. EI-1 was
+  terminated in favor of this line.
 
 ## Historical Recovery
 

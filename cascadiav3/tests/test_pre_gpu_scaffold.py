@@ -120,6 +120,165 @@ class BridgeContractTest(unittest.TestCase):
         self.assertEqual(batch["action_mask"].shape[1], len(public_root["legal_actions"]))
         self.assertEqual(batch["action_ids"][0], view["action_ids"])
 
+    @staticmethod
+    def _public_fixture_roots(limit: int) -> list[dict]:
+        from cascadiav3.torch_inference_bridge import TRAINING_LABEL_KEYS
+
+        path = Path("cascadiav3/fixtures/expert_tiny.jsonl")
+        if not path.exists():
+            return []
+        roots = read_replay_jsonl(path)[:limit]
+        return [
+            {key: value for key, value in root.items() if key not in TRAINING_LABEL_KEYS}
+            for root in roots
+        ]
+
+    def test_combined_relation_ids_array_matches_legacy_reference(self) -> None:
+        try:
+            import numpy as np
+        except ModuleNotFoundError:
+            self.skipTest("numpy unavailable")
+        from cascadiav3.torch_relation_bias_merit import (
+            RELATION_TO_ID,
+            _coord_key,
+            _set_relation,
+            _token_indexes,
+            combined_relation_ids,
+            combined_relation_ids_array,
+            relation_counts,
+        )
+
+        def legacy_combined_relation_ids(root, *, action_offset=None, seq_len=None):
+            token_count = int(root["public_tokens"]["token_count"])
+            action_count = len(root["legal_actions"])
+            action_offset = token_count if action_offset is None else action_offset
+            seq_len = action_offset + action_count if seq_len is None else seq_len
+            matrix = [[0 for _ in range(seq_len)] for _ in range(seq_len)]
+            same_board_id = RELATION_TO_ID["same_owner_board"]
+            tokens_by_owner: dict[int, list[int]] = {}
+            for token in root["public_tokens"]["tokens"]:
+                kind = token.get("token_kind")
+                owner = token.get("owner_seat")
+                if owner is None or kind not in {"player", "placed_tile", "frontier"}:
+                    continue
+                tokens_by_owner.setdefault(int(owner), []).append(int(token["token_index"]))
+            for indexes in tokens_by_owner.values():
+                for source in indexes:
+                    for target in indexes:
+                        _set_relation(matrix, source, target, same_board_id)
+            for relation in root["public_tokens"].get("relations", []):
+                source = int(relation["source"])
+                target = int(relation["target"])
+                kind = relation.get("relation_kind")
+                if kind == "adjacent_hex":
+                    relation_id = (
+                        RELATION_TO_ID["terrain_match_adjacent"]
+                        if relation.get("terrain_matches")
+                        else RELATION_TO_ID["adjacent_hex"]
+                    )
+                    _set_relation(matrix, source, target, relation_id, overwrite=True)
+                elif kind == "same_market_slot":
+                    _set_relation(matrix, source, target, RELATION_TO_ID["same_market_slot"], overwrite=True)
+            indexes = _token_indexes(root)
+            for action_index, action in enumerate(root["legal_actions"]):
+                action_pos = action_offset + action_index
+                tile_slot = int(action.get("tile_slot", action.get("draft_slot", -1)))
+                wildlife_slot = int(action.get("wildlife_slot", action.get("draft_slot", -1)))
+                tile_token = indexes["market_tile"].get(tile_slot)
+                wildlife_token = indexes["market_wildlife"].get(wildlife_slot)
+                target_frontier = indexes["active_frontier"].get(_coord_key(action.get("target_coord_ref")))
+                wildlife_key = _coord_key(action.get("wildlife_coord_ref"))
+                wildlife_target = indexes["active_tile"].get(wildlife_key)
+                if wildlife_target is None:
+                    wildlife_target = indexes["active_frontier"].get(wildlife_key)
+                for target, relation_name in (
+                    (tile_token, "action_uses_tile_slot"),
+                    (wildlife_token, "action_uses_wildlife_slot"),
+                    (target_frontier, "action_targets_tile_frontier"),
+                    (wildlife_target, "action_targets_wildlife_cell"),
+                ):
+                    if target is None:
+                        continue
+                    relation_id = RELATION_TO_ID[relation_name]
+                    _set_relation(matrix, action_pos, target, relation_id, overwrite=True)
+                    _set_relation(matrix, target, action_pos, relation_id, overwrite=True)
+            return matrix
+
+        roots = self._public_fixture_roots(limit=4)
+        if not roots:
+            self.skipTest("expert tiny roots have not been generated")
+        for root in roots:
+            legacy = legacy_combined_relation_ids(root)
+            vectorized = combined_relation_ids_array(root)
+            self.assertTrue(np.array_equal(np.asarray(legacy), vectorized))
+            self.assertEqual(combined_relation_ids(root), legacy)
+            self.assertEqual(relation_counts(vectorized), relation_counts(legacy))
+
+    def test_model_eval_batch_matches_single_evals_and_reports_value(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_inference_bridge import _model_eval, _model_eval_batch
+
+        roots = self._public_fixture_roots(limit=3)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        torch.manual_seed(20260702)
+        model = build_cascadiaformer(config_for_size("tiny"))
+        model.eval()
+
+        batch_responses = _model_eval_batch(model, roots)
+        single_responses = [_model_eval(model, root) for root in roots]
+        self.assertEqual(len(batch_responses), len(roots))
+        for batch_response, single_response, root in zip(batch_responses, single_responses, roots):
+            self.assertEqual(batch_response["action_ids"], single_response["action_ids"])
+            self.assertEqual(len(batch_response["value"]), 4)
+            for key in ("priors", "q", "score_to_go", "uncertainty"):
+                for batched, single in zip(batch_response[key], single_response[key]):
+                    self.assertAlmostEqual(batched, single, places=4)
+            self.assertEqual(
+                len(batch_response["priors"]), len(root["legal_actions"])
+            )
+
+    def test_serve_answers_eval_batch_request_with_fallback(self) -> None:
+        import json as json_module
+        import subprocess
+        import sys
+
+        roots = self._public_fixture_roots(limit=2)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        process = subprocess.Popen(
+            [sys.executable, "-m", "cascadiav3.torch_inference_bridge", "--allow-dry-run-fallback"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+            env={"PYTHONPATH": "cascadiav3/src", "PATH": "/usr/bin:/bin"},
+        )
+        try:
+            hello = json_module.loads(process.stdout.readline())
+            self.assertEqual(hello["type"], "hello")
+            self.assertIn("eval_batch", hello.get("protocol_features", []))
+            request = {"type": "eval_batch_request", "roots": roots, "allow_model_fallback": True}
+            process.stdin.write(json_module.dumps(request) + "\n")
+            process.stdin.flush()
+            response = json_module.loads(process.stdout.readline())
+            self.assertEqual(response["type"], "eval_batch_response")
+            self.assertEqual(len(response["results"]), len(roots))
+            for result, root in zip(response["results"], roots):
+                self.assertEqual(result["type"], "eval_response")
+                self.assertTrue(result["model_fallback"])
+                self.assertEqual(len(result["priors"]), len(root["legal_actions"]))
+                self.assertEqual(len(result["value"]), 4)
+            process.stdin.write(json_module.dumps({"type": "shutdown"}) + "\n")
+            process.stdin.flush()
+        finally:
+            process.stdin.close()
+            process.stdout.close()
+            process.wait(timeout=30)
+
 
 class TrainerCursorContractTest(unittest.TestCase):
     def test_loader_cursor_points_to_next_unconsumed_microbatch(self) -> None:
@@ -1340,6 +1499,227 @@ class ModelSmokeTest(unittest.TestCase):
             cgab_edges=[],
         )
         validate_mock_output(output, action_count=len(root["legal_actions"]))
+
+
+class GumbelSelfplayContractTest(unittest.TestCase):
+    FIXTURE = Path("cascadiav3/fixtures/gumbel_tiny_tensor.npz")
+
+    def _require_numpy_and_fixture(self):  # type: ignore[no-untyped-def]
+        try:
+            import numpy as np  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("numpy unavailable")
+        if not self.FIXTURE.exists():
+            self.skipTest("gumbel tiny tensor fixture has not been generated")
+
+    def test_v2_shard_loads_with_improved_policy(self) -> None:
+        self._require_numpy_and_fixture()
+        import numpy as np
+
+        from cascadiav3.expert_tensor_shards import SHARD_VERSION_V2, ExpertTensorShard
+
+        shard = ExpertTensorShard(self.FIXTURE)
+        try:
+            self.assertEqual(shard.version, SHARD_VERSION_V2)
+            self.assertIsNotNone(shard.improved_policy)
+            self.assertIsNotNone(shard.search_root_value)
+            for index in range(len(shard)):
+                example = shard.example(index)
+                policy = np.asarray(example["improved_policy"], dtype=np.float64)
+                self.assertEqual(policy.shape[0], example["actions"].shape[0])
+                self.assertAlmostEqual(float(policy.sum()), 1.0, places=4)
+                visits = np.asarray(example["visits"], dtype=np.float64)
+                q_valid = np.asarray(example["q_valid"], dtype=bool)
+                self.assertTrue(np.array_equal(visits > 0, q_valid))
+        finally:
+            shard.close()
+
+    def test_v2_fields_survive_filter_and_relation_tail(self) -> None:
+        self._require_numpy_and_fixture()
+        import numpy as np
+
+        from cascadiav3.expert_tensor_shards import (
+            ExpertTensorShard,
+            filter_expert_tensor_shard,
+            materialize_relation_tail_shard,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            filtered = Path(tmp) / "filtered.npz"
+            filter_expert_tensor_shard(self.FIXTURE, filtered, top_k=8)
+            shard = ExpertTensorShard(filtered)
+            try:
+                self.assertIsNotNone(shard.improved_policy)
+                for index in range(len(shard)):
+                    example = shard.example(index)
+                    policy = np.asarray(example["improved_policy"], dtype=np.float64)
+                    self.assertAlmostEqual(float(policy.sum()), 1.0, places=4)
+            finally:
+                shard.close()
+
+            tailed = Path(tmp) / "tailed.npz"
+            materialize_relation_tail_shard(filtered, tailed)
+            shard = ExpertTensorShard(tailed)
+            try:
+                self.assertIsNotNone(shard.improved_policy)
+                self.assertIsNotNone(shard.relation_tail)
+            finally:
+                shard.close()
+
+    def test_gumbel_selfplay_objective_weights(self) -> None:
+        from cascadiav3.torch_train_cascadiaformer import loss_weights_for_objective
+
+        weights = loss_weights_for_objective("gumbel-selfplay")
+        self.assertEqual(weights.policy, 1.0)
+        self.assertEqual(weights.q, 0.5)
+        self.assertEqual(weights.value, 0.5)
+        self.assertEqual(weights.greedy_policy, 0.0)
+        self.assertEqual(weights.greedy_margin, 0.0)
+
+    def test_improved_policy_soft_target_loss(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_train_cascadiaformer import LossWeights, _loss_components
+
+        batch_size, actions = 2, 3
+        logits = torch.tensor([[2.0, 0.5, -1.0], [0.0, 1.0, 0.5]])
+        improved = torch.tensor([[0.1, 0.7, 0.2], [0.5, 0.25, 0.25]])
+        outputs = {
+            "logits": logits.clone(),
+            "q": torch.zeros((batch_size, actions)),
+            "uncertainty": torch.ones((batch_size, actions)),
+            "value_vector": torch.zeros((batch_size, 4)),
+            "rank_logits": torch.zeros((batch_size, 4, 4)),
+            "score_decomposition": torch.zeros((batch_size, 3, 4)),
+        }
+        batch = {
+            "action_mask": torch.ones((batch_size, actions), dtype=torch.bool),
+            "q_valid": torch.ones((batch_size, actions), dtype=torch.bool),
+            "target_q": torch.zeros((batch_size, actions)),
+            "target_score_to_go": torch.zeros((batch_size, actions)),
+            "exact_afterstate_score_active": torch.zeros((batch_size, actions)),
+            "selected_action_index": torch.zeros((batch_size,), dtype=torch.long),
+            "target_value": torch.zeros((batch_size, 4)),
+            "target_rank": torch.zeros((batch_size, 4), dtype=torch.long),
+            "target_score": torch.zeros((batch_size, 3, 4)),
+            "improved_policy": improved,
+            "has_improved_policy": True,
+        }
+        components = _loss_components(outputs, batch, LossWeights())
+        expected = -(improved * torch.log_softmax(logits, dim=1)).sum(dim=1).mean()
+        self.assertAlmostEqual(float(components["policy"]), float(expected), places=5)
+
+        batch_without = dict(batch)
+        batch_without["has_improved_policy"] = False
+        components_without = _loss_components(outputs, batch_without, LossWeights())
+        self.assertNotAlmostEqual(
+            float(components_without["policy"]), float(expected), places=5
+        )
+
+    def test_training_smoke_with_max_example_passes_clamp(self) -> None:
+        try:
+            import torch  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        self._require_numpy_and_fixture()
+        from cascadiav3.torch_train_cascadiaformer import run_training
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            report = run_training(
+                [self.FIXTURE],
+                [self.FIXTURE],
+                train_format="npz",
+                val_format="npz",
+                model_size="tiny",
+                steps=50,
+                batch_size=4,
+                lr=1.0e-3,
+                weight_decay=0.0,
+                device_name="cpu",
+                seed=7,
+                grad_accum=1,
+                warmup_fraction=0.1,
+                checkpoint_dir=tmp_path / "checkpoints",
+                metrics_jsonl=tmp_path / "metrics.jsonl",
+                out=tmp_path / "train.json",
+                overfit_one_batch=False,
+                val_max_batches=1,
+                swa_fraction=0.5,
+                objective="gumbel-selfplay",
+                max_example_passes=4.0,
+            )
+            # 12 records * 4 passes / batch 4 = 12 steps, clamped from 50.
+            self.assertEqual(report["steps"], 12)
+            self.assertEqual(report["objective"], "gumbel-selfplay")
+
+
+class BenchmarkStatsTest(unittest.TestCase):
+    def test_t_quantile_matches_reference_values(self) -> None:
+        from cascadiav3.torch_benchmark_stats import t_quantile
+
+        self.assertAlmostEqual(t_quantile(0.975, 10), 2.2281, places=3)
+        self.assertAlmostEqual(t_quantile(0.975, 1), 12.7062, places=2)
+        self.assertAlmostEqual(t_quantile(0.975, 100), 1.9840, places=3)
+        self.assertAlmostEqual(t_quantile(0.025, 10), -2.2281, places=3)
+
+    def test_paired_delta_stats_known_values(self) -> None:
+        from cascadiav3.torch_benchmark_stats import paired_delta_stats
+
+        stats = paired_delta_stats([1.0, 2.0, 3.0, 4.0, 5.0], seed=1)
+        self.assertEqual(stats["n"], 5)
+        self.assertAlmostEqual(stats["mean"], 3.0)
+        self.assertAlmostEqual(stats["se"], 0.70710678, places=6)
+        self.assertAlmostEqual(stats["t_ci_low"], 3.0 - 2.7764 * 0.70710678, places=3)
+        self.assertAlmostEqual(stats["t_ci_high"], 3.0 + 2.7764 * 0.70710678, places=3)
+        self.assertTrue(stats["ci_excludes_zero"])
+        self.assertLess(stats["bootstrap_ci_low"], stats["mean"])
+        self.assertGreater(stats["bootstrap_ci_high"], stats["mean"])
+
+        # Deterministic given the seed.
+        again = paired_delta_stats([1.0, 2.0, 3.0, 4.0, 5.0], seed=1)
+        self.assertEqual(stats, again)
+
+        # A noisy near-zero delta set must not claim significance.
+        noisy = paired_delta_stats([0.5, -0.75, 1.25, -1.0, 0.25, -0.25])
+        self.assertFalse(noisy["ci_excludes_zero"])
+
+        empty = paired_delta_stats([])
+        self.assertEqual(empty["n"], 0)
+        self.assertIsNone(empty["mean"])
+
+    def test_gumbel_benchmark_collects_canned_results(self) -> None:
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
+            _contiguous_runs,
+            collect_gumbel_results,
+        )
+
+        self.assertEqual(_contiguous_runs([5, 6, 7, 10, 12, 13]), [(5, 3), (10, 1), (12, 2)])
+
+        lines = [
+            {"type": "gumbel_decision", "seed": 5, "ply": 0, "decision_seconds": 0.5},
+            {"type": "gumbel_decision", "seed": 5, "ply": 1, "decision_seconds": 0.7},
+            {
+                "type": "gumbel_game_done",
+                "seed": 5,
+                "scores": [{"total": 90}, {"total": 95}, {"total": 88}, {"total": 92}],
+                "decision_count": 2,
+                "elapsed_seconds": 3.5,
+            },
+        ]
+        results = collect_gumbel_results(lines)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["seed"], 5)
+        self.assertEqual(len(results[0]["decisions"]), 2)
+        self.assertEqual(results[0]["done"]["scores"][1]["total"], 95)
+
+        from cascadiav3.torch_cascadiaformer_search_benchmark import summarize_game_results
+
+        summary = summarize_game_results(results)
+        self.assertEqual(summary["games"], 1)
+        self.assertAlmostEqual(summary["mean_seat_score"], (90 + 95 + 88 + 92) / 4)
 
 
 class ValidationCliTest(unittest.TestCase):

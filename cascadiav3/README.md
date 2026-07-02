@@ -77,6 +77,18 @@ Important runners:
 - `run_greedy_policy_pretrain.sh`
 - `run_cascadiaformer_greedy_k32_retention.sh`
 - `run_full_v3_training_pipeline.sh`
+- `run_gumbel_phase_a_gate.sh` (Gumbel vs honest rollout search, 100 paired games)
+- `run_gumbel_ceiling_probe.sh` (512-sim, w=1.0 model-ceiling probe)
+- `run_gumbel_selfplay_cycle.sh` (EI-2+ self-play generation + training)
+
+Gumbel exporter modes (see `--help`):
+
+- `--gumbel-policy-game`: all-seat Gumbel-search games, per-decision JSONL.
+- `--gumbel-selfplay-tensor-corpus`: schema-v2 self-play training shards with
+  completed-Q targets, improved-policy soft targets, and real-outcome value
+  labels.
+- `--rollout-determinize`: public-information-legal rollouts for the legacy
+  search path (honest baselines).
 
 ## Current Status
 
@@ -84,7 +96,8 @@ EI-0 is the first CascadiaFormer run with positive no-search gameplay evidence.
 The guarded EI-0 checkpoint scored `89.6175` with q-head serving versus greedy
 `87.5575` over 100 complete games.
 
-The search-integrated gate is strong but not promoted over full search:
-CascadiaFormer-search K32 of K64 scored `95.8000` versus matched full K64 search
-at `96.9750` over 20 games. See `docs/v3/PERFORMANCE.md` and
-`cascadiav3/EXPERIMENT_LOG.md` before choosing the next scale-up.
+The rollout-teacher line is retired: one-ply sampled-greedy labeling capped
+search strength near `97` (K64/R32 ceiling test), and its serving-time
+rollouts observed the true hidden draw order. The active plan is the Gumbel
+self-play campaign — see `docs/v3/GUMBEL_SELFPLAY_CAMPAIGN.md`,
+`docs/v3/PERFORMANCE.md`, and `cascadiav3/EXPERIMENT_LOG.md`.

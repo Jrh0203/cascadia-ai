@@ -2,16 +2,16 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 mod feature_tensors;
+mod gumbel;
+mod model_bridge;
 mod npz_writer;
 
 use std::fs::File;
 use std::io::{BufRead, BufWriter, Read, Write};
 use std::path::PathBuf;
-use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use anyhow::{Context, Result, bail};
 use cascadia_game::{
@@ -26,14 +26,17 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
 use feature_tensors::{
-    EXPERT_SHARD_VERSION, ExpertTensorShardData, PUBLIC_TOKEN_FEATURE_DIM,
-    SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM, SHARD_VERSION, TensorShardData,
+    EXPERT_SHARD_VERSION, EXPERT_SHARD_VERSION_V2, ExpertTensorShardData,
+    PUBLIC_TOKEN_FEATURE_DIM, SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM, SHARD_VERSION,
+    TensorShardData,
 };
+use model_bridge::{BridgeConfig, ModelEval, ModelServiceSession, uniform_model_eval};
 use npz_writer::NpzCompression;
 
 const SCHEMA_ID: &str = "cascadiav3.pre_gpu.v0";
 const EXPERT_ROOT_SCHEMA_ID: &str = "cascadiav3.expert_root.v1";
 const EXPERT_TENSOR_SCHEMA_ID: &str = "cascadiav3.expert_tensor_shard.v1";
+const EXPERT_TENSOR_SCHEMA_ID_V2: &str = "cascadiav3.expert_tensor_shard.v2";
 const GREEDY_TENSOR_SCHEMA_ID: &str = "greedy_policy_tensor_shard_v1";
 const ROOT_REPLAY_SCHEMA_ID: &str = "cascadiav3.root_replay.v1";
 const RULESET_ID: &str = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus";
@@ -44,6 +47,7 @@ const DEFAULT_MAX_ACTIONS: usize = 8;
 const DEFAULT_ROLLOUTS_PER_ACTION: usize = 1;
 const DEFAULT_ROLLOUT_TOP_K: usize = 1;
 const SOFTMAX_TEMPERATURE: f64 = 10.0;
+const HIDDEN_DETERMINIZATION_SALT: u64 = 0x5eed_c0de_d371_a11e;
 
 #[derive(Debug, Clone)]
 struct Args {
@@ -65,6 +69,16 @@ struct Args {
     model_service: Option<String>,
     model_manifest: Option<PathBuf>,
     model_timeout_ms: u64,
+    rollout_determinize: bool,
+    gumbel_n_simulations: usize,
+    gumbel_top_m: usize,
+    gumbel_depth_rounds: usize,
+    gumbel_determinizations: usize,
+    gumbel_blend_weight: f64,
+    gumbel_exploration: bool,
+    gumbel_max_root_actions: Option<usize>,
+    k_interior: usize,
+    model_sessions: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,6 +95,8 @@ enum Mode {
     ModelStateSearchBootstrapTensorCorpus,
     ExpertTensorCorpus,
     InteractivePolicyGame,
+    GumbelPolicyGame,
+    GumbelSelfplayTensorCorpus,
 }
 
 #[derive(Debug, Clone)]
@@ -107,15 +123,6 @@ struct ExpertActionEval {
     truncated_count: usize,
     rollout_seeds: Vec<u64>,
     score_means: Vec<ScoreMean>,
-}
-
-#[derive(Debug, Clone)]
-struct ModelEval {
-    priors: Vec<Value>,
-    q: Option<Vec<f64>>,
-    score_to_go: Option<Vec<f64>>,
-    model_fallback: bool,
-    response: Value,
 }
 
 #[derive(Debug, Clone)]
@@ -265,6 +272,21 @@ fn main() -> Result<()> {
         Mode::InteractivePolicyGame => {
             run_interactive_policy_game(&args)?;
         }
+        Mode::GumbelPolicyGame => {
+            run_gumbel_policy_game(&args)?;
+        }
+        Mode::GumbelSelfplayTensorCorpus => {
+            let written = export_gumbel_selfplay_tensor_corpus(&args)?;
+            if written == 0 {
+                bail!("gumbel selfplay tensor exporter produced no records");
+            }
+            eprintln!(
+                "wrote {} gumbel selfplay tensor roots to {} and manifest {}",
+                written,
+                args.out.display(),
+                args.manifest.display()
+            );
+        }
     }
     Ok(())
 }
@@ -289,6 +311,16 @@ fn parse_args() -> Result<Args> {
         model_service: None,
         model_manifest: None,
         model_timeout_ms: 10_000,
+        rollout_determinize: false,
+        gumbel_n_simulations: 64,
+        gumbel_top_m: 16,
+        gumbel_depth_rounds: 1,
+        gumbel_determinizations: 4,
+        gumbel_blend_weight: 0.5,
+        gumbel_exploration: false,
+        gumbel_max_root_actions: None,
+        k_interior: 16,
+        model_sessions: None,
     };
 
     let mut iter = std::env::args().skip(1);
@@ -313,11 +345,58 @@ fn parse_args() -> Result<Args> {
                 args.mode = Mode::ModelStateSearchBootstrapTensorCorpus
             }
             "--expert-tensor-corpus" => args.mode = Mode::ExpertTensorCorpus,
+            "--gumbel-policy-game" => args.mode = Mode::GumbelPolicyGame,
+            "--gumbel-selfplay-tensor-corpus" => {
+                args.mode = Mode::GumbelSelfplayTensorCorpus;
+                args.gumbel_exploration = true;
+            }
+            "--gumbel-n-simulations" => {
+                args.gumbel_n_simulations =
+                    value()?.parse().context("invalid --gumbel-n-simulations")?
+            }
+            "--gumbel-top-m" => {
+                args.gumbel_top_m = value()?.parse().context("invalid --gumbel-top-m")?
+            }
+            "--gumbel-depth-rounds" => {
+                args.gumbel_depth_rounds =
+                    value()?.parse().context("invalid --gumbel-depth-rounds")?
+            }
+            "--gumbel-determinizations" => {
+                args.gumbel_determinizations = value()?
+                    .parse()
+                    .context("invalid --gumbel-determinizations")?
+            }
+            "--gumbel-blend-weight" => {
+                args.gumbel_blend_weight =
+                    value()?.parse().context("invalid --gumbel-blend-weight")?
+            }
+            "--gumbel-exploration" => {
+                args.gumbel_exploration = match value()?.as_str() {
+                    "on" | "true" | "1" => true,
+                    "off" | "false" | "0" => false,
+                    other => bail!("invalid --gumbel-exploration {other}; use on|off"),
+                }
+            }
+            "--gumbel-max-root-actions" => {
+                args.gumbel_max_root_actions = Some(
+                    value()?
+                        .parse()
+                        .context("invalid --gumbel-max-root-actions")?,
+                )
+            }
+            "--k-interior" => {
+                args.k_interior = value()?.parse().context("invalid --k-interior")?
+            }
+            "--model-sessions" => {
+                args.model_sessions =
+                    Some(value()?.parse().context("invalid --model-sessions")?)
+            }
             "--out" => args.out = PathBuf::from(value()?),
             "--in" => args.input = Some(PathBuf::from(value()?)),
             "--manifest" => args.manifest = PathBuf::from(value()?),
             "--bench-out" => args.bench_out = Some(PathBuf::from(value()?)),
             "--allow-model-fallback" => args.allow_model_fallback = true,
+            "--rollout-determinize" => args.rollout_determinize = true,
             "--model-service" => args.model_service = Some(value()?),
             "--model-manifest" => args.model_manifest = Some(PathBuf::from(value()?)),
             "--model-timeout-ms" => {
@@ -389,12 +468,31 @@ fn parse_args() -> Result<Args> {
         Mode::ChanceMctsDryRun
             | Mode::ExpertTensorCorpus
             | Mode::ModelStateSearchBootstrapTensorCorpus
+            | Mode::GumbelPolicyGame
+            | Mode::GumbelSelfplayTensorCorpus
     ) && args.model_service.is_none()
         && !args.allow_model_fallback
     {
         bail!(
             "expert export requires --model-service for model priors, or --allow-model-fallback for dry-run uniform priors"
         );
+    }
+    if matches!(
+        args.mode,
+        Mode::GumbelPolicyGame | Mode::GumbelSelfplayTensorCorpus
+    ) {
+        if args.gumbel_n_simulations == 0 {
+            bail!("--gumbel-n-simulations must be positive");
+        }
+        if args.gumbel_top_m == 0 {
+            bail!("--gumbel-top-m must be positive");
+        }
+        if !(0.0..=1.0).contains(&args.gumbel_blend_weight) {
+            bail!("--gumbel-blend-weight must be in [0, 1]");
+        }
+        if args.k_interior == 0 {
+            bail!("--k-interior must be positive");
+        }
     }
     if args.model_service.is_some() && args.model_manifest.is_none() && !args.allow_model_fallback {
         bail!(
@@ -465,6 +563,35 @@ Options:
   --rollouts-per-action <n>
                            Terminal rollout samples per retained action [{DEFAULT_ROLLOUTS_PER_ACTION}]
   --rollout-top-k <n>      Sample each continuation from top-k greedy actions [{DEFAULT_ROLLOUT_TOP_K}]
+  --rollout-determinize    Resample hidden stack/bag order per rollout so
+                           search and labels never observe the true hidden
+                           draw order (public-information-legal search).
+  --gumbel-policy-game     Play seeds to terminal with all four seats driven
+                           by Gumbel search over model leaf values; emits
+                           per-decision JSONL plus a done record per seed.
+  --gumbel-selfplay-tensor-corpus
+                           All-seat Gumbel self-play; every visited root is
+                           exported as a v2 expert tensor record with
+                           completed-Q targets, improved policy, and real
+                           final-outcome value labels.
+  --gumbel-n-simulations <n>
+                           Total simulation budget per decision [64].
+  --gumbel-top-m <n>       Gumbel top-m root candidates [16].
+  --gumbel-depth-rounds <n>
+                           Root-seat re-entries before leaf valuation [1].
+  --gumbel-determinizations <n>
+                           Hidden-order determinizations cycled per action [4].
+  --gumbel-blend-weight <w>
+                           Leaf value = w*model bootstrap + (1-w)*greedy
+                           rollout [0.5].
+  --gumbel-exploration <on|off>
+                           Gumbel exploration noise at the root [off; selfplay
+                           mode defaults on].
+  --gumbel-max-root-actions <n>
+                           Optional model-prior-ranked cap on root candidates.
+  --k-interior <n>         Interior-ply menu cap inside simulations [16].
+  --model-sessions <n>     Cap on concurrent model bridge sessions for
+                           selfplay export chunks.
   --player-count <n>       Must be 4 for the current v3 schema [4]
   --rayon-threads <n>      Set the Rayon worker thread count explicitly
   --tensor-compression <deflate|stored>
@@ -620,12 +747,29 @@ fn build_expert_root_record(
             let rollout_seed = rollout_seed(seed_u64, ply_index, action_index, rollout_index);
             rollout_seeds.push(rollout_seed);
             let mut rng = ChaCha8Rng::seed_from_u64(rollout_seed);
-            let (terminal, truncated) = complete_with_sampled_greedy(
-                after.clone(),
-                args.max_actions,
-                args.rollout_top_k,
-                &mut rng,
-            )?;
+            let (terminal, truncated) = if args.rollout_determinize {
+                let (sim, apply_truncated) =
+                    determinized_afterstate(&staged, action, rollout_seed)?;
+                if apply_truncated {
+                    (sim, true)
+                } else {
+                    complete_with_sampled_greedy(
+                        sim,
+                        args.max_actions,
+                        args.rollout_top_k,
+                        &mut rng,
+                        None,
+                    )?
+                }
+            } else {
+                complete_with_sampled_greedy(
+                    after.clone(),
+                    args.max_actions,
+                    args.rollout_top_k,
+                    &mut rng,
+                    None,
+                )?
+            };
             truncated_count += usize::from(truncated);
             let terminal_scores = score_game(&terminal);
             active_samples.push(f64::from(terminal_scores[active_seat].total));
@@ -915,266 +1059,11 @@ fn model_eval_for_root(
     bail!("expert export requires --model-service or explicit --allow-model-fallback")
 }
 
-fn uniform_model_eval(action_count: usize) -> ModelEval {
-    let prior = 1.0 / action_count as f64;
-    ModelEval {
-        priors: vec![json!(prior); action_count],
-        q: Some(vec![0.0; action_count]),
-        score_to_go: Some(vec![0.0; action_count]),
-        model_fallback: true,
-        response: json!({
-            "type": "eval_response",
-            "model_fallback": true,
-            "source": "uniform_prior_fallback",
-        }),
-    }
-}
-
 fn call_model_service(command: &str, root_request: &Value, args: &Args) -> Result<ModelEval> {
-    let mut session = ModelServiceSession::spawn(command, args)?;
+    let mut session = ModelServiceSession::spawn(command, &BridgeConfig::from_args(args))?;
     let eval = session.eval(root_request)?;
     session.shutdown();
     Ok(eval)
-}
-
-struct ModelServiceSession {
-    child: Child,
-    stdin: ChildStdin,
-    line_rx: mpsc::Receiver<Result<String, String>>,
-    timeout: Duration,
-    allow_model_fallback: bool,
-}
-
-impl ModelServiceSession {
-    fn spawn(command: &str, args: &Args) -> Result<Self> {
-        if let Some(manifest) = &args.model_manifest {
-            if !manifest.exists() {
-                bail!("model manifest {} does not exist", manifest.display());
-            }
-        }
-        let mut child = Command::new("sh")
-            .arg("-c")
-            .arg(command)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .with_context(|| format!("spawning model service command {command:?}"))?;
-        let stdin = child
-            .stdin
-            .take()
-            .context("model service stdin unavailable")?;
-        let stdout = child
-            .stdout
-            .take()
-            .context("model service stdout unavailable")?;
-        let mut reader = std::io::BufReader::new(stdout);
-        let (line_tx, line_rx) = mpsc::channel::<Result<String, String>>();
-        std::thread::spawn(move || {
-            loop {
-                let mut line = String::new();
-                match reader.read_line(&mut line) {
-                    Ok(0) => break,
-                    Ok(_) => {
-                        if line_tx.send(Ok(line)).is_err() {
-                            break;
-                        }
-                    }
-                    Err(error) => {
-                        let _ = line_tx.send(Err(error.to_string()));
-                        break;
-                    }
-                }
-            }
-        });
-        let timeout = Duration::from_millis(args.model_timeout_ms);
-
-        let hello_line = recv_model_line(&line_rx, &mut child, timeout, "hello")?;
-        let hello: Value = serde_json::from_str(hello_line.trim())
-            .with_context(|| format!("invalid model service hello: {hello_line:?}"))?;
-        if hello.get("type").and_then(Value::as_str) == Some("error") {
-            bail!("model service hello error: {}", canonical_json(&hello));
-        }
-        if hello.get("type").and_then(Value::as_str) != Some("hello") {
-            bail!(
-                "model service did not send hello: {}",
-                canonical_json(&hello)
-            );
-        }
-        Ok(Self {
-            child,
-            stdin,
-            line_rx,
-            timeout,
-            allow_model_fallback: args.allow_model_fallback,
-        })
-    }
-
-    fn eval(&mut self, root_request: &Value) -> Result<ModelEval> {
-        let request = json!({
-            "type": "eval_request",
-            "root": root_request,
-                "allow_model_fallback": self.allow_model_fallback,
-                "timeout_ms": self.timeout.as_millis(),
-        });
-        writeln!(self.stdin, "{}", canonical_json(&request))
-            .context("writing model eval request")?;
-        self.stdin.flush().context("flushing model eval request")?;
-
-        let response_line = recv_model_line(
-            &self.line_rx,
-            &mut self.child,
-            self.timeout,
-            "eval_response",
-        )?;
-        let response: Value = serde_json::from_str(response_line.trim())
-            .with_context(|| format!("invalid model eval response: {response_line:?}"))?;
-        parse_model_response(root_request, response, self.allow_model_fallback)
-    }
-
-    fn shutdown(&mut self) {
-        let shutdown = json!({"type": "shutdown"});
-        let _ = writeln!(self.stdin, "{}", canonical_json(&shutdown));
-        let _ = self.stdin.flush();
-        let _ = self.child.wait();
-    }
-}
-
-impl Drop for ModelServiceSession {
-    fn drop(&mut self) {
-        let _ = writeln!(
-            self.stdin,
-            "{}",
-            canonical_json(&json!({"type": "shutdown"}))
-        );
-        let _ = self.stdin.flush();
-        if let Ok(None) = self.child.try_wait() {
-            let _ = self.child.kill();
-            let _ = self.child.wait();
-        }
-    }
-}
-
-fn recv_model_line(
-    line_rx: &mpsc::Receiver<Result<String, String>>,
-    child: &mut Child,
-    timeout: Duration,
-    label: &str,
-) -> Result<String> {
-    match line_rx.recv_timeout(timeout) {
-        Ok(Ok(line)) => Ok(line),
-        Ok(Err(error)) => bail!("reading model service {label} failed: {error}"),
-        Err(mpsc::RecvTimeoutError::Timeout) => {
-            let _ = child.kill();
-            bail!(
-                "model service timed out waiting for {label} after {:?}",
-                timeout
-            );
-        }
-        Err(mpsc::RecvTimeoutError::Disconnected) => {
-            let status = child.try_wait().ok().flatten();
-            bail!("model service closed stdout before {label}; status={status:?}");
-        }
-    }
-}
-
-fn parse_model_response(
-    root_request: &Value,
-    response: Value,
-    allow_model_fallback: bool,
-) -> Result<ModelEval> {
-    if response.get("type").and_then(Value::as_str) == Some("error") {
-        bail!("model service error: {}", canonical_json(&response));
-    }
-    if response.get("type").and_then(Value::as_str) != Some("eval_response") {
-        bail!(
-            "model service response is not eval_response: {}",
-            canonical_json(&response)
-        );
-    }
-    let service_model_fallback = response
-        .get("model_fallback")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    if service_model_fallback && !allow_model_fallback {
-        bail!("model service declared model_fallback=true but --allow-model-fallback was not set");
-    }
-    let expected_action_ids = root_request
-        .get("action_ids")
-        .and_then(Value::as_array)
-        .context("root request action_ids missing")?;
-    let response_action_ids = response
-        .get("action_ids")
-        .and_then(Value::as_array)
-        .context("model response action_ids missing")?;
-    if response_action_ids != expected_action_ids {
-        bail!("model response action_ids do not match root legal action order");
-    }
-    let raw_priors = response
-        .get("priors")
-        .and_then(Value::as_array)
-        .context("model response priors missing")?;
-    if raw_priors.len() != expected_action_ids.len() {
-        bail!("model response priors length mismatch");
-    }
-    let mut priors = Vec::with_capacity(raw_priors.len());
-    let mut sum = 0.0_f64;
-    for value in raw_priors {
-        let prior = value.as_f64().context("model prior must be numeric")?;
-        if !prior.is_finite() || prior < 0.0 {
-            bail!("model prior must be finite and non-negative");
-        }
-        priors.push(prior);
-        sum += prior;
-    }
-    if sum <= 0.0 || !sum.is_finite() {
-        bail!("model priors must have positive finite sum");
-    }
-    let priors = priors
-        .into_iter()
-        .map(|prior| json!(prior / sum))
-        .collect::<Vec<_>>();
-    let q = parse_optional_model_float_array(&response, "q", expected_action_ids.len())?;
-    let score_to_go =
-        parse_optional_model_float_array(&response, "score_to_go", expected_action_ids.len())?;
-    Ok(ModelEval {
-        priors,
-        q,
-        score_to_go,
-        model_fallback: service_model_fallback,
-        response,
-    })
-}
-
-fn parse_optional_model_float_array(
-    response: &Value,
-    key: &str,
-    expected_len: usize,
-) -> Result<Option<Vec<f64>>> {
-    let Some(raw) = response.get(key) else {
-        return Ok(None);
-    };
-    let values = raw
-        .as_array()
-        .with_context(|| format!("model response {key} must be an array"))?;
-    if values.len() != expected_len {
-        bail!(
-            "model response {key} length mismatch: got {}, expected {}",
-            values.len(),
-            expected_len
-        );
-    }
-    let mut parsed = Vec::with_capacity(values.len());
-    for (index, value) in values.iter().enumerate() {
-        let number = value
-            .as_f64()
-            .with_context(|| format!("model response {key}[{index}] must be numeric"))?;
-        if !number.is_finite() {
-            bail!("model response {key}[{index}] must be finite");
-        }
-        parsed.push(number);
-    }
-    Ok(Some(parsed))
 }
 
 fn validate_expert_reconstruction(args: &Args) -> Result<Value> {
@@ -1768,6 +1657,8 @@ fn export_expert_tensor_corpus(args: &Args) -> Result<usize> {
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
+            improved_policy: None,
+            search_root_value: None,
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
@@ -1854,6 +1745,8 @@ fn export_greedy_expert_tensor_corpus(args: &Args) -> Result<usize> {
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
+            improved_policy: None,
+            search_root_value: None,
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
@@ -1963,6 +1856,8 @@ fn export_greedy_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usi
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
+            improved_policy: None,
+            search_root_value: None,
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
@@ -2088,6 +1983,8 @@ fn export_model_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usiz
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
+            improved_policy: None,
+            search_root_value: None,
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
@@ -2208,7 +2105,7 @@ fn export_greedy_state_search_bootstrap_seed_records(
 
 fn model_state_worker_session(args: &Args) -> Result<Option<ModelServiceSession>> {
     match args.model_service.as_ref() {
-        Some(command) => match ModelServiceSession::spawn(command, args) {
+        Some(command) => match ModelServiceSession::spawn(command, &BridgeConfig::from_args(args)) {
             Ok(session) => Ok(Some(session)),
             Err(error) if args.allow_model_fallback => {
                 eprintln!("model service unavailable for worker; using fallback priors: {error}");
@@ -2407,6 +2304,520 @@ fn model_selected_action(
     ))
 }
 
+fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfig {
+    gumbel::GumbelConfig {
+        n_simulations: args.gumbel_n_simulations,
+        top_m: args.gumbel_top_m,
+        max_root_actions: args.gumbel_max_root_actions,
+        depth_rounds: args.gumbel_depth_rounds,
+        determinization_samples: args.gumbel_determinizations,
+        rollout_blend_weight: args.gumbel_blend_weight,
+        rollout_max_actions: args.max_actions,
+        rollout_top_k: args.rollout_top_k,
+        k_interior: args.k_interior,
+        exploration: args.gumbel_exploration,
+        search_seed,
+        ..gumbel::GumbelConfig::default()
+    }
+}
+
+fn gumbel_search_seed(seed_u64: u64, ply_index: usize) -> u64 {
+    gumbel::splitmix64(seed_u64 ^ gumbel::splitmix64(ply_index as u64 ^ 0x6706_2026))
+}
+
+fn eval_request_for_row(row: &gumbel::EvalRow) -> Result<Value> {
+    let staged = &row.staged;
+    let active_seat = staged.current_player();
+    let mut legal_actions = Vec::with_capacity(row.afterstates.len());
+    let mut action_ids = Vec::with_capacity(row.afterstates.len());
+    for (index, afterstate) in row.afterstates.iter().enumerate() {
+        legal_actions.push(action_token(
+            staged,
+            &row.prelude,
+            &afterstate.candidate.action,
+            afterstate.candidate.resulting_base_score,
+            active_seat,
+            index,
+        )?);
+        action_ids.push(json!(action_id(&afterstate.candidate.action)?));
+    }
+    let public_hash = staged.public_state().canonical_hash();
+    Ok(json!({
+        "schema_id": EXPERT_ROOT_SCHEMA_ID,
+        "state_hash": format!("blake3:{}", public_hash.to_hex()),
+        "active_seat": active_seat,
+        "legal_actions": legal_actions,
+        "action_ids": action_ids,
+        "exact_afterstate_score_active": row
+            .afterstates
+            .iter()
+            .map(|afterstate| json!(afterstate.exact_score_active))
+            .collect::<Vec<_>>(),
+        "public_tokens": public_tokens(staged, active_seat),
+    }))
+}
+
+/// Batched leaf evaluator over the JSONL model bridge. Falls back to
+/// exact-afterstate-only values (uniform priors) when the bridge is
+/// unavailable and fallback is allowed.
+struct BridgeLeafEvaluator<'a> {
+    session: &'a mut Option<ModelServiceSession>,
+    allow_model_fallback: bool,
+}
+
+impl gumbel::LeafEvaluator for BridgeLeafEvaluator<'_> {
+    fn evaluate_batch(&mut self, rows: &[gumbel::EvalRow]) -> Result<Vec<gumbel::EvalOut>> {
+        let requests = rows
+            .iter()
+            .map(eval_request_for_row)
+            .collect::<Result<Vec<_>>>()?;
+        let evals: Vec<ModelEval> = if let Some(session) = self.session.as_mut() {
+            match session.eval_batch(&requests) {
+                Ok(evals) => evals,
+                Err(error) if self.allow_model_fallback => {
+                    eprintln!(
+                        "model service batch eval failed; falling back to uniform priors: {error}"
+                    );
+                    *self.session = None;
+                    rows.iter()
+                        .map(|row| uniform_model_eval(row.afterstates.len()))
+                        .collect()
+                }
+                Err(error) => return Err(error),
+            }
+        } else if self.allow_model_fallback {
+            rows.iter()
+                .map(|row| uniform_model_eval(row.afterstates.len()))
+                .collect()
+        } else {
+            bail!("gumbel search requires a model service or --allow-model-fallback");
+        };
+        rows.iter()
+            .zip(evals.into_iter())
+            .map(|(row, eval)| {
+                let action_count = row.afterstates.len();
+                if eval.priors.len() != action_count {
+                    bail!("model priors misaligned with gumbel row menu");
+                }
+                let priors = eval
+                    .priors
+                    .iter()
+                    .map(|value| value.as_f64().context("model prior must be numeric"))
+                    .collect::<Result<Vec<_>>>()?;
+                // Prefer exact + score_to_go: identical to the bridge's own q
+                // for real models, and degrades to exact-afterstate values
+                // (score_to_go == 0) under uniform fallback.
+                let derived_final_q = if let Some(score_to_go) = &eval.score_to_go {
+                    if score_to_go.len() != action_count {
+                        bail!("model score_to_go misaligned with gumbel row menu");
+                    }
+                    row.afterstates
+                        .iter()
+                        .zip(score_to_go.iter())
+                        .map(|(afterstate, remaining)| afterstate.exact_score_active + remaining)
+                        .collect()
+                } else if let Some(q_values) = &eval.q {
+                    if q_values.len() != action_count {
+                        bail!("model q misaligned with gumbel row menu");
+                    }
+                    q_values.clone()
+                } else {
+                    row.afterstates
+                        .iter()
+                        .map(|afterstate| afterstate.exact_score_active)
+                        .collect()
+                };
+                Ok(gumbel::EvalOut {
+                    priors,
+                    derived_final_q,
+                })
+            })
+            .collect()
+    }
+}
+
+fn score_means_from_breakdowns(scores: &[ScoreBreakdown]) -> Vec<ScoreMean> {
+    scores
+        .iter()
+        .map(|score| ScoreMean {
+            wildlife: f64::from(score.wildlife.iter().sum::<u16>()),
+            habitat: f64::from(score.habitat.iter().sum::<u16>()),
+            nature_tokens: f64::from(score.nature_tokens),
+            total: f64::from(score.total),
+        })
+        .collect()
+}
+
+fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> Value {
+    json!({
+        "n_simulations": args.gumbel_n_simulations,
+        "top_m": args.gumbel_top_m,
+        "depth_rounds": args.gumbel_depth_rounds,
+        "determinization_samples": args.gumbel_determinizations,
+        "rollout_blend_weight": args.gumbel_blend_weight,
+        "exploration": args.gumbel_exploration,
+        "k_interior": args.k_interior,
+        "max_root_actions": args.gumbel_max_root_actions,
+        "simulations_run": result.simulations_run,
+    })
+}
+
+fn gumbel_selfplay_root_record(
+    row: &gumbel::EvalRow,
+    result: &gumbel::GumbelSearchResult,
+    seed_u64: u64,
+    ply_index: usize,
+    args: &Args,
+) -> Result<Value> {
+    let staged = &row.staged;
+    let active_seat = staged.current_player();
+    let action_count = row.afterstates.len();
+    let mut legal_actions = Vec::with_capacity(action_count);
+    for (index, afterstate) in row.afterstates.iter().enumerate() {
+        legal_actions.push(action_token(
+            staged,
+            &row.prelude,
+            &afterstate.candidate.action,
+            afterstate.candidate.resulting_base_score,
+            active_seat,
+            index,
+        )?);
+    }
+    let selected_action_id = action_id(&row.afterstates[result.chosen_index].candidate.action)?;
+    let exact_scores: Vec<f64> = row
+        .afterstates
+        .iter()
+        .map(|afterstate| afterstate.exact_score_active)
+        .collect();
+    let public_hash = staged.public_state().canonical_hash();
+    let placeholder_means = vec![
+        ScoreMean {
+            wildlife: 0.0,
+            habitat: 0.0,
+            nature_tokens: 0.0,
+            total: 0.0,
+        };
+        4
+    ];
+    Ok(json!({
+        "schema_id": SCHEMA_ID,
+        "state_hash": format!("blake3:{}", public_hash.to_hex()),
+        "active_seat": active_seat,
+        "legal_actions": legal_actions,
+        "priors": result.root_priors,
+        "visits": result.visit_counts,
+        "per_action_Q": result.completed_q,
+        "per_action_score_to_go": result
+            .completed_q
+            .iter()
+            .zip(exact_scores.iter())
+            .map(|(q_value, exact)| json!(q_value - exact))
+            .collect::<Vec<_>>(),
+        "per_action_Q_variance": result.value_variance,
+        "per_action_Q_count": result
+            .visit_counts
+            .iter()
+            .map(|visits| json!(visits))
+            .collect::<Vec<_>>(),
+        "per_action_truncated_count": vec![json!(0); action_count],
+        "exact_afterstate_score_active": exact_scores,
+        "per_action_Q_valid": result
+            .visit_counts
+            .iter()
+            .map(|visits| json!(*visits > 0))
+            .collect::<Vec<_>>(),
+        "selected_action": selected_action_id,
+        "improved_policy": result.improved_policy,
+        "search_root_value": result.root_value,
+        "chance_samples": [],
+        // Outcome labels are placeholders until the game finishes; see
+        // backfill_final_outcome.
+        "final_score_vector": vec![json!(0.0); 4],
+        "score_decomposition": score_decomposition(&placeholder_means),
+        "rank_vector": vec![json!(0); 4],
+        "public_tokens": public_tokens(staged, active_seat),
+        "metadata": {
+            "source": "gumbel_selfplay_tensor_corpus",
+            "scientific_eligibility": "gumbel_selfplay_expert_iteration",
+            "behavior_policy": "gumbel_search_all_seats_advance_chosen",
+            "teacher": "gumbel_completed_q_with_real_outcome_values",
+            "root_seed_u64": seed_u64,
+            "ply_index_for_seed": ply_index,
+            "completed_turns": staged.completed_turns(),
+            "turns_remaining": staged.turns_remaining(),
+            "retained_action_count": action_count,
+            "max_actions": args.max_actions,
+            "search": gumbel_search_metadata(args, result),
+        },
+    }))
+}
+
+fn backfill_final_outcome(records: &mut [Value], final_scores: &[ScoreBreakdown]) -> Result<()> {
+    let means = score_means_from_breakdowns(final_scores);
+    let final_score_vector: Vec<Value> = means.iter().map(|mean| json!(mean.total)).collect();
+    let decomposition = score_decomposition(&means);
+    let ranks: Vec<Value> = rank_vector(&means).into_iter().map(|rank| json!(rank)).collect();
+    for record in records.iter_mut() {
+        let object = record
+            .as_object_mut()
+            .context("selfplay record must be an object")?;
+        object.insert("final_score_vector".to_owned(), json!(final_score_vector));
+        object.insert("score_decomposition".to_owned(), decomposition.clone());
+        object.insert("rank_vector".to_owned(), json!(ranks));
+        attach_checksum(record)?;
+    }
+    Ok(())
+}
+
+fn play_gumbel_selfplay_seed(
+    args: &Args,
+    seed_u64: u64,
+    model_session: &mut Option<ModelServiceSession>,
+) -> Result<Vec<Value>> {
+    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
+        .with_context(|| format!("creating gumbel selfplay seed {seed_u64}"))?;
+    let mut records = Vec::new();
+    let mut ply_index = 0usize;
+    while !game.is_game_over() && ply_index < args.plies_per_seed {
+        let Some(row) = gumbel::eval_row_for_state(&game, None)? else {
+            break;
+        };
+        let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
+        let mut evaluator = BridgeLeafEvaluator {
+            session: model_session,
+            allow_model_fallback: args.allow_model_fallback,
+        };
+        let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
+            .with_context(|| format!("gumbel selfplay seed {seed_u64} ply {ply_index}"))?;
+        let record = gumbel_selfplay_root_record(&row, &result, seed_u64, ply_index, args)?;
+        records.push(record);
+        let chosen = &row.afterstates[result.chosen_index];
+        game = chosen.state.clone();
+        if chosen.apply_truncated {
+            break;
+        }
+        ply_index += 1;
+    }
+    let final_scores = score_game(&game);
+    backfill_final_outcome(&mut records, &final_scores)?;
+    Ok(records)
+}
+
+fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
+    if args.out.as_os_str() == "-" {
+        bail!("--gumbel-selfplay-tensor-corpus requires a file --out path");
+    }
+    if let Some(parent) = args.out.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let seed_end = args
+        .first_seed
+        .checked_add(args.seed_count)
+        .context("seed range overflow")?;
+    let started = Instant::now();
+    let total_seeds = seed_end - args.first_seed;
+    let completed_seeds = AtomicU64::new(0);
+    let completed_records = AtomicU64::new(0);
+    let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
+    let target_chunks = args
+        .model_sessions
+        .unwrap_or_else(|| (rayon::current_num_threads() * 2).max(1))
+        .max(1);
+    let chunk_size = ((seeds.len() + target_chunks - 1) / target_chunks).max(1);
+    let per_chunk = seeds
+        .par_chunks(chunk_size)
+        .map(|seed_chunk| {
+            let mut model_session = model_state_worker_session(args)?;
+            let mut chunk_shards = Vec::with_capacity(seed_chunk.len());
+            for seed_u64 in seed_chunk.iter().copied() {
+                let records = play_gumbel_selfplay_seed(args, seed_u64, &mut model_session)
+                    .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))?;
+                let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
+                    format!("extracting gumbel selfplay tensor features for seed {seed_u64}")
+                })?;
+                let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
+                let records_done =
+                    completed_records.fetch_add(shard.record_count as u64, Ordering::Relaxed)
+                        + shard.record_count as u64;
+                log_seed_export_progress(
+                    "gumbel selfplay tensor",
+                    done,
+                    total_seeds,
+                    records_done,
+                    started,
+                );
+                chunk_shards.push((seed_u64, shard));
+            }
+            Ok(chunk_shards)
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let mut per_seed = per_chunk
+        .into_iter()
+        .flatten()
+        .collect::<Vec<(u64, ExpertTensorShardData)>>();
+    per_seed.sort_by_key(|(seed, _)| *seed);
+
+    let mut shard = ExpertTensorShardData::new();
+    for (_, seed_shard) in per_seed {
+        shard.merge(seed_shard);
+    }
+    if shard.record_count == 0 {
+        bail!("gumbel selfplay tensor exporter produced no records");
+    }
+    if shard.improved_policy_records != shard.record_count {
+        bail!(
+            "gumbel selfplay shard has {} improved-policy records for {} records",
+            shard.improved_policy_records,
+            shard.record_count
+        );
+    }
+    let mut metadata = expert_tensor_shard_metadata(args, &shard);
+    if let Some(object) = metadata.as_object_mut() {
+        object.insert("version".to_owned(), json!(EXPERT_SHARD_VERSION_V2));
+        object.insert("schema_id".to_owned(), json!(EXPERT_TENSOR_SCHEMA_ID_V2));
+        object.insert("source".to_owned(), json!("gumbel_selfplay_tensor_corpus"));
+        object.insert(
+            "source_paths".to_owned(),
+            json!(["rust-native:gumbel_selfplay_tensor_corpus"]),
+        );
+        object.insert(
+            "behavior_policy".to_owned(),
+            json!("gumbel_search_all_seats_advance_chosen"),
+        );
+        object.insert(
+            "teacher".to_owned(),
+            json!("gumbel_completed_q_with_real_outcome_values"),
+        );
+        object.insert(
+            "search".to_owned(),
+            json!({
+                "n_simulations": args.gumbel_n_simulations,
+                "top_m": args.gumbel_top_m,
+                "depth_rounds": args.gumbel_depth_rounds,
+                "determinization_samples": args.gumbel_determinizations,
+                "rollout_blend_weight": args.gumbel_blend_weight,
+                "exploration": args.gumbel_exploration,
+                "k_interior": args.k_interior,
+                "max_root_actions": args.gumbel_max_root_actions,
+            }),
+        );
+    }
+    let metadata_json = canonical_json(&metadata);
+    npz_writer::write_expert_tensor_npz(
+        &args.out,
+        npz_writer::ExpertTensorNpz {
+            version: feature_tensors::EXPERT_SHARD_VERSION_V2,
+            metadata_json: &metadata_json,
+            tokens_f16_bits: &shard.tokens_f16_bits,
+            token_shape: [shard.total_token_count, PUBLIC_TOKEN_FEATURE_DIM],
+            actions_f16_bits: &shard.actions_f16_bits,
+            action_shape: [
+                shard.total_action_count,
+                SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM,
+            ],
+            token_offsets: &shard.token_offsets,
+            action_offsets: &shard.action_offsets,
+            relation_edges_i32: &shard.relation_edges_i32,
+            relation_edge_shape: [shard.total_relation_edge_count, 3],
+            relation_offsets: &shard.relation_offsets,
+            selected_action_index: &shard.selected_action_index,
+            target_q: &shard.target_q,
+            target_score_to_go: &shard.target_score_to_go,
+            q_valid: &shard.q_valid,
+            priors: &shard.priors,
+            visits: &shard.visits,
+            q_variance: &shard.q_variance,
+            q_count: &shard.q_count,
+            truncated_count: &shard.truncated_count,
+            exact_afterstate_score_active: &shard.exact_afterstate_score_active,
+            final_score_vector: &shard.final_score_vector,
+            rank_vector: &shard.rank_vector,
+            score_decomposition: &shard.score_decomposition,
+            improved_policy: Some(&shard.improved_policy),
+            search_root_value: Some(&shard.search_root_value),
+            record_count: shard.record_count,
+            compression: args.tensor_compression,
+        },
+    )?;
+    let checksum = sha256_file_hex(&args.out)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum)?;
+    Ok(shard.record_count)
+}
+
+fn run_gumbel_policy_game(args: &Args) -> Result<()> {
+    let seed_end = args
+        .first_seed
+        .checked_add(args.seed_count)
+        .context("seed range overflow")?;
+    let mut model_session = model_state_worker_session(args)?;
+    let mut records = Vec::new();
+    for seed_u64 in args.first_seed..seed_end {
+        let config = GameConfig::research_aaaaa(args.player_count)?;
+        let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
+            .with_context(|| format!("creating gumbel policy game seed {seed_u64}"))?;
+        let game_started = Instant::now();
+        let mut ply_index = 0usize;
+        while !game.is_game_over() {
+            let Some(row) = gumbel::eval_row_for_state(&game, None)? else {
+                break;
+            };
+            let decision_started = Instant::now();
+            let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
+            let mut evaluator = BridgeLeafEvaluator {
+                session: &mut model_session,
+                allow_model_fallback: args.allow_model_fallback,
+            };
+            let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
+                .with_context(|| format!("gumbel policy game seed {seed_u64} ply {ply_index}"))?;
+            let chosen = &row.afterstates[result.chosen_index];
+            records.push(json!({
+                "type": "gumbel_decision",
+                "seed": seed_u64,
+                "ply": ply_index,
+                "active_seat": row.staged.current_player(),
+                "action_count": row.afterstates.len(),
+                "chosen_action_id": action_id(&chosen.candidate.action)?,
+                "root_value": result.root_value,
+                "simulations_run": result.simulations_run,
+                "decision_seconds": decision_started.elapsed().as_secs_f64(),
+            }));
+            game = chosen.state.clone();
+            if chosen.apply_truncated {
+                break;
+            }
+            ply_index += 1;
+            if ply_index > 120 {
+                bail!("gumbel policy game exceeded expected turn guard");
+            }
+        }
+        let scores = score_game(&game);
+        records.push(json!({
+            "type": "gumbel_game_done",
+            "seed": seed_u64,
+            "scores": scores.iter().map(score_breakdown_json).collect::<Vec<_>>(),
+            "decision_count": ply_index,
+            "elapsed_seconds": game_started.elapsed().as_secs_f64(),
+            "search": {
+                "n_simulations": args.gumbel_n_simulations,
+                "top_m": args.gumbel_top_m,
+                "depth_rounds": args.gumbel_depth_rounds,
+                "determinization_samples": args.gumbel_determinizations,
+                "rollout_blend_weight": args.gumbel_blend_weight,
+                "exploration": args.gumbel_exploration,
+                "k_interior": args.k_interior,
+            },
+        }));
+        eprintln!(
+            "gumbel policy game seed {seed_u64} complete: {} decisions in {:.1}s",
+            ply_index,
+            game_started.elapsed().as_secs_f64()
+        );
+    }
+    write_jsonl(&args.out, &records)?;
+    Ok(())
+}
+
 fn build_greedy_policy_root_record(
     game: &GameState,
     seed_u64: u64,
@@ -2532,18 +2943,22 @@ fn build_root_record(
     if candidates.is_empty() {
         bail!("no legal greedy candidates for non-terminal root");
     }
-    let exact_afterstate_scores =
-        exact_afterstate_scores_for_candidates(&staged, &candidates, active_seat)?;
+    let afterstates = candidate_afterstates(&staged, &candidates, active_seat)?;
+    let exact_afterstate_scores: Vec<f64> = afterstates
+        .iter()
+        .map(|afterstate| afterstate.exact_score_active)
+        .collect();
 
     let rollouts = evaluate_candidate_rollouts(
         &staged,
-        &candidates,
+        &afterstates,
         active_seat,
         seed_u64,
         ply_index,
         args.max_actions,
         args.rollouts_per_action,
         args.rollout_top_k,
+        args.rollout_determinize,
     )?;
 
     let selected_index = best_rollout_index(&rollouts, |_| true)?;
@@ -2673,38 +3088,106 @@ fn exact_afterstate_scores_for_candidates(
         .collect()
 }
 
-fn evaluate_candidate_rollouts(
+/// One clone+apply per candidate, reused for exact afterstate scoring and as
+/// the rollout/search base state. Candidates whose apply hits a rollout
+/// truncation rule (empty bag/stack) are kept with `apply_truncated` set; the
+/// partially staged state then scores as its own terminal.
+#[derive(Debug, Clone)]
+struct CandidateAfterstate {
+    candidate: GreedyCandidate,
+    state: GameState,
+    exact_score_active: f64,
+    apply_truncated: bool,
+}
+
+fn candidate_afterstates(
     staged: &GameState,
     candidates: &[GreedyCandidate],
+    active_seat: usize,
+) -> Result<Vec<CandidateAfterstate>> {
+    candidates
+        .iter()
+        .enumerate()
+        .map(|(candidate_index, candidate)| {
+            let mut after = staged.clone();
+            let mut apply_truncated = false;
+            if let Err(error) = after.apply(&candidate.action) {
+                if is_rollout_truncation_rule_error(&error) {
+                    apply_truncated = true;
+                } else {
+                    return Err(error).with_context(|| {
+                        format!("applying candidate {candidate_index} for afterstate")
+                    });
+                }
+            }
+            let scores = score_game(&after);
+            Ok(CandidateAfterstate {
+                candidate: candidate.clone(),
+                state: after,
+                exact_score_active: f64::from(scores[active_seat].total),
+                apply_truncated,
+            })
+        })
+        .collect()
+}
+
+/// Public-information-legal afterstate: hidden stack/bag order is resampled
+/// before the root action is applied, so neither the action's own market
+/// refill nor the continuation can observe the true hidden order.
+fn determinized_afterstate(
+    staged: &GameState,
+    action: &TurnAction,
+    determinization_seed: u64,
+) -> Result<(GameState, bool)> {
+    let mut sim = staged.clone();
+    sim.redeterminize_hidden(GameSeed::from_u64(
+        determinization_seed ^ HIDDEN_DETERMINIZATION_SALT,
+    ));
+    let mut truncated = false;
+    if let Err(error) = sim.apply(action) {
+        if is_rollout_truncation_rule_error(&error) {
+            truncated = true;
+        } else {
+            return Err(error).context("applying root action after hidden determinization");
+        }
+    }
+    Ok((sim, truncated))
+}
+
+fn evaluate_candidate_rollouts(
+    staged: &GameState,
+    afterstates: &[CandidateAfterstate],
     active_seat: usize,
     seed_u64: u64,
     ply_index: usize,
     max_actions: usize,
     rollouts_per_action: usize,
     rollout_top_k: usize,
+    determinize: bool,
 ) -> Result<Vec<ActionRollout>> {
-    let mut rollouts = Vec::with_capacity(candidates.len());
-    for (candidate_index, candidate) in candidates.iter().enumerate() {
+    let mut rollouts = Vec::with_capacity(afterstates.len());
+    for (candidate_index, afterstate) in afterstates.iter().enumerate() {
         let mut score_samples = Vec::with_capacity(rollouts_per_action);
         let mut active_samples = Vec::with_capacity(rollouts_per_action);
         let mut truncated_count = 0usize;
         for rollout_index in 0..rollouts_per_action {
-            let mut next = staged.clone();
-            let mut truncated = false;
-            if let Err(error) = next.apply(&candidate.action) {
-                if is_rollout_truncation_rule_error(&error) {
-                    truncated = true;
-                } else {
-                    return Err(error).context("applying retained root action");
-                }
-            }
             let rollout_seed = rollout_seed(seed_u64, ply_index, candidate_index, rollout_index);
             let mut rng = ChaCha8Rng::seed_from_u64(rollout_seed);
+            let (next, mut truncated) = if determinize {
+                determinized_afterstate(staged, &afterstate.candidate.action, rollout_seed)?
+            } else {
+                (afterstate.state.clone(), afterstate.apply_truncated)
+            };
             let terminal = if truncated {
                 next
             } else {
-                let (terminal, continuation_truncated) =
-                    complete_with_sampled_greedy(next, max_actions, rollout_top_k, &mut rng)?;
+                let (terminal, continuation_truncated) = complete_with_sampled_greedy(
+                    next,
+                    max_actions,
+                    rollout_top_k,
+                    &mut rng,
+                    None,
+                )?;
                 truncated = continuation_truncated;
                 terminal
             };
@@ -2717,7 +3200,7 @@ fn evaluate_candidate_rollouts(
         let sample_count = active_samples.len();
         let score_means = mean_scores(&score_samples);
         rollouts.push(ActionRollout {
-            candidate: candidate.clone(),
+            candidate: afterstate.candidate.clone(),
             active_score,
             active_score_variance,
             sample_count,
@@ -3013,15 +3496,18 @@ fn apply_policy_request(
             .map(|(candidate, _)| candidate.clone())
             .collect::<Vec<_>>()
     };
+    let retained_afterstates =
+        candidate_afterstates(staged, &retained_candidates, staged.current_player())?;
     let rollouts = evaluate_candidate_rollouts(
         staged,
-        &retained_candidates,
+        &retained_afterstates,
         staged.current_player(),
         seed_u64,
         ply_index,
         args.max_actions,
         args.rollouts_per_action.max(1),
         args.rollout_top_k,
+        args.rollout_determinize,
     )?;
     let rollout_action_ids = rollouts
         .iter()
@@ -3090,14 +3576,21 @@ fn advance_selected_action(
     bail!("selected action id {selected_action_id} was not reproducible");
 }
 
+/// Plays sampled top-k greedy plies until terminal, a truncation rule error,
+/// or `max_plies` plies (when set). Callers distinguish a ply-capped stop from
+/// a true terminal via `state.is_game_over()`.
 fn complete_with_sampled_greedy(
     mut game: GameState,
     max_actions: usize,
     rollout_top_k: usize,
     rng: &mut ChaCha8Rng,
+    max_plies: Option<usize>,
 ) -> Result<(GameState, bool)> {
     let mut guard = 0usize;
     let mut truncated = false;
+    if max_plies == Some(0) {
+        return Ok((game, truncated));
+    }
     while !game.is_game_over() {
         let (_prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
         let candidates =
@@ -3131,6 +3624,11 @@ fn complete_with_sampled_greedy(
             return Err(error).context("applying sampled greedy rollout action");
         }
         guard += 1;
+        if let Some(cap) = max_plies {
+            if guard >= cap {
+                break;
+            }
+        }
         if guard > 100 {
             bail!("greedy rollout exceeded expected turn guard");
         }
@@ -3823,15 +4321,25 @@ fn write_expert_tensor_manifest(
             "expert_iteration_model_state_bootstrap",
             "Rust-native packed expert tensor shard from model-state roots; retained greedy-ranked actions are labeled by sampled greedy rollout means while real trajectories advance by model derived-Q or model prior.",
         ),
+        Mode::GumbelSelfplayTensorCorpus => (
+            "gumbel_selfplay_tensor_corpus",
+            "gumbel_selfplay_expert_iteration",
+            "Rust-native packed v2 expert tensor shard from all-seat Gumbel self-play over determinized hidden states; per-action targets are search completed-Q values, improved_policy is the Gumbel policy-improvement target, and value labels are real terminal outcomes.",
+        ),
         _ => (
             "expert_tensor_corpus",
             "expert_iteration_bootstrap_tensor_pretraining",
             "Rust-native packed expert tensor shard; JSONL audit can be generated separately, but trainer scale path reads this NPZ directly.",
         ),
     };
+    let (schema_id, version) = if args.mode == Mode::GumbelSelfplayTensorCorpus {
+        (EXPERT_TENSOR_SCHEMA_ID_V2, EXPERT_SHARD_VERSION_V2)
+    } else {
+        (EXPERT_TENSOR_SCHEMA_ID, EXPERT_SHARD_VERSION)
+    };
     let manifest = json!({
-        "schema_id": EXPERT_TENSOR_SCHEMA_ID,
-        "version": EXPERT_SHARD_VERSION,
+        "schema_id": schema_id,
+        "version": version,
         "source_generator": "cascadiav3-real-root-exporter",
         "seed_domain": format!(
             "first_seed={},seed_count={},plies_per_seed={},max_actions={},rollouts_per_action={},rollout_top_k={},mode={}",
@@ -3981,6 +4489,248 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
+    fn test_args() -> Args {
+        Args {
+            mode: Mode::ExportRoots,
+            out: PathBuf::from("/tmp/unused.jsonl"),
+            manifest: PathBuf::from("/tmp/unused_manifest.json"),
+            first_seed: 2_026_063_000,
+            seed_count: 1,
+            plies_per_seed: 2,
+            max_actions: 4,
+            rollouts_per_action: 2,
+            rollout_top_k: 2,
+            player_count: 4,
+            rayon_threads: None,
+            tensor_compression: NpzCompression::Stored,
+            input: None,
+            bench_out: None,
+            allow_model_fallback: true,
+            model_service: None,
+            model_manifest: None,
+            model_timeout_ms: 1_000,
+            rollout_determinize: false,
+            gumbel_n_simulations: 8,
+            gumbel_top_m: 4,
+            gumbel_depth_rounds: 1,
+            gumbel_determinizations: 2,
+            gumbel_blend_weight: 1.0,
+            gumbel_exploration: false,
+            gumbel_max_root_actions: None,
+            k_interior: 6,
+            model_sessions: None,
+        }
+    }
+
+    fn advanced_test_state(seed_u64: u64, plies: usize) -> GameState {
+        let config = GameConfig::research_aaaaa(4).expect("4p config");
+        let mut game = GameState::new(config, GameSeed::from_u64(seed_u64)).expect("game");
+        let mut rng = ChaCha8Rng::seed_from_u64(seed_u64 ^ 0xabcd);
+        for _ in 0..plies {
+            let (terminal, _) =
+                complete_with_sampled_greedy(game, 4, 2, &mut rng, Some(1)).expect("advance");
+            game = terminal;
+            if game.is_game_over() {
+                break;
+            }
+        }
+        game
+    }
+
+    #[test]
+    fn determinized_rollouts_never_observe_true_hidden_order() {
+        let game = advanced_test_state(2_026_063_100, 6);
+        let (_prelude, staged) = game
+            .preview_free_three_of_a_kind_if_feasible()
+            .expect("staged");
+        let candidates =
+            rank_greedy_actions(&staged, &MarketPrelude::default(), Some(4)).expect("candidates");
+        assert!(!candidates.is_empty());
+
+        // Same public state, permuted hidden stack/bag order.
+        let mut permuted = staged.clone();
+        permuted.redeterminize_hidden(GameSeed::from_u64(0xdead_beef));
+        assert_eq!(
+            staged.public_state().canonical_hash(),
+            permuted.public_state().canonical_hash(),
+            "redeterminization must preserve public state"
+        );
+
+        let evaluate = |root: &GameState| -> Vec<f64> {
+            let afterstates =
+                candidate_afterstates(root, &candidates, root.current_player()).expect("after");
+            evaluate_candidate_rollouts(root, &afterstates, root.current_player(), 7, 3, 4, 3, 2, true)
+                .expect("rollouts")
+                .iter()
+                .map(|rollout| rollout.active_score)
+                .collect()
+        };
+        assert_eq!(
+            evaluate(&staged),
+            evaluate(&permuted),
+            "determinized rollout labels must be invariant to true hidden order"
+        );
+    }
+
+    #[test]
+    fn sampled_greedy_respects_ply_cap() {
+        let game = advanced_test_state(2_026_063_200, 2);
+        let start_turns = game.completed_turns();
+        let mut rng = ChaCha8Rng::seed_from_u64(11);
+        let (capped, truncated) =
+            complete_with_sampled_greedy(game.clone(), 4, 2, &mut rng, Some(3)).expect("capped");
+        assert!(!truncated);
+        assert!(capped.completed_turns() <= start_turns + 3);
+        assert!(!capped.is_game_over());
+
+        let mut rng_zero = ChaCha8Rng::seed_from_u64(11);
+        let (unmoved, _) =
+            complete_with_sampled_greedy(game.clone(), 4, 2, &mut rng_zero, Some(0))
+                .expect("zero cap");
+        assert_eq!(unmoved.canonical_hash(), game.canonical_hash());
+    }
+
+    #[test]
+    fn golden_rollout_labels_are_stable() {
+        let args = test_args();
+        let records = export_seed_records(&args, args.first_seed).expect("golden seed exports");
+        assert_eq!(records.len(), args.plies_per_seed);
+        let mut hasher = Sha256::new();
+        for record in &records {
+            hasher.update(canonical_json(record).as_bytes());
+        }
+        assert_eq!(
+            format!("{:x}", hasher.finalize()),
+            "39bffaa912cab1a59fd309fbd3a8efc88210abcc9c50129c6b88ca6eb0dc3e39"
+        );
+    }
+
+    fn mock_bridge_command() -> String {
+        format!(
+            "python3 {}/../tests/mock_model_bridge.py",
+            env!("CARGO_MANIFEST_DIR")
+        )
+    }
+
+    fn gumbel_test_args(tempdir: &std::path::Path) -> Args {
+        let mut args = test_args();
+        args.mode = Mode::GumbelSelfplayTensorCorpus;
+        args.out = tempdir.join("gumbel_tiny.npz");
+        args.manifest = tempdir.join("gumbel_tiny_manifest.json");
+        args.model_service = Some(mock_bridge_command());
+        args.plies_per_seed = 3;
+        args.gumbel_n_simulations = 4;
+        args.gumbel_top_m = 2;
+        args.gumbel_depth_rounds = 1;
+        args.gumbel_determinizations = 2;
+        args.gumbel_blend_weight = 1.0;
+        args.gumbel_exploration = true;
+        args.gumbel_max_root_actions = None;
+        args.k_interior = 3;
+        args.model_sessions = Some(1);
+        args
+    }
+
+    #[test]
+    fn gumbel_selfplay_records_roundtrip_into_v2_shard() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-gumbel-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let args = gumbel_test_args(&tempdir);
+
+        let mut session = model_state_worker_session(&args).expect("mock session");
+        assert!(session.is_some(), "mock bridge session must spawn");
+        let records = play_gumbel_selfplay_seed(&args, 2_026_070_600, &mut session)
+            .expect("selfplay seed plays");
+        assert!(!records.is_empty());
+
+        let mut shared_final_score: Option<Value> = None;
+        for record in &records {
+            let action_count = record["legal_actions"].as_array().unwrap().len();
+            let improved = record["improved_policy"].as_array().unwrap();
+            assert_eq!(improved.len(), action_count);
+            let policy_sum: f64 = improved.iter().map(|value| value.as_f64().unwrap()).sum();
+            assert!((policy_sum - 1.0).abs() < 1e-6, "improved policy sums to 1");
+            let visits = record["visits"].as_array().unwrap();
+            let q_valid = record["per_action_Q_valid"].as_array().unwrap();
+            for (visit, valid) in visits.iter().zip(q_valid.iter()) {
+                assert_eq!(
+                    visit.as_u64().unwrap() > 0,
+                    valid.as_bool().unwrap(),
+                    "q_valid must equal visits > 0"
+                );
+            }
+            assert!(record["search_root_value"].as_f64().is_some());
+            let final_score = record["final_score_vector"].clone();
+            match &shared_final_score {
+                None => shared_final_score = Some(final_score),
+                Some(existing) => assert_eq!(
+                    existing, &final_score,
+                    "all records of a seed share the real outcome"
+                ),
+            }
+        }
+
+        let shard = ExpertTensorShardData::from_records(&records).expect("v2 shard");
+        assert_eq!(shard.improved_policy_records, shard.record_count);
+        assert_eq!(shard.improved_policy.len(), shard.total_action_count);
+        assert_eq!(shard.search_root_value.len(), shard.record_count);
+
+        // Full export path writes a v2 npz + manifest.
+        let written = export_gumbel_selfplay_tensor_corpus(&args).expect("export");
+        assert!(written > 0);
+        assert!(args.out.exists());
+        let manifest: Value = serde_json::from_str(
+            &std::fs::read_to_string(&args.manifest).expect("manifest readable"),
+        )
+        .expect("manifest json");
+        assert_eq!(
+            manifest["schema_id"].as_str(),
+            Some(EXPERT_TENSOR_SCHEMA_ID_V2)
+        );
+        assert_eq!(
+            manifest["version"].as_str(),
+            Some(feature_tensors::EXPERT_SHARD_VERSION_V2)
+        );
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
+    fn gumbel_policy_game_emits_decisions_and_done() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-gumbel-game-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let mut args = gumbel_test_args(&tempdir);
+        args.mode = Mode::GumbelPolicyGame;
+        args.out = tempdir.join("gumbel_game.jsonl");
+        args.seed_count = 1;
+        args.gumbel_exploration = false;
+
+        run_gumbel_policy_game(&args).expect("policy game runs");
+        let contents = std::fs::read_to_string(&args.out).expect("game jsonl");
+        let lines: Vec<Value> = contents
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("jsonl line"))
+            .collect();
+        assert!(lines.len() > 1);
+        let decisions = lines
+            .iter()
+            .filter(|line| line["type"] == "gumbel_decision")
+            .count();
+        let done = lines
+            .iter()
+            .find(|line| line["type"] == "gumbel_game_done")
+            .expect("done record");
+        assert!(decisions > 0);
+        assert_eq!(done["scores"].as_array().unwrap().len(), 4);
+        assert_eq!(done["decision_count"].as_u64().unwrap() as usize, decisions);
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
     #[test]
     fn radius6_matches_expected_count() {
         let mut seen = HashMap::new();
@@ -4004,6 +4754,8 @@ mod tests {
             r#"{"a":[true,{"c":"x","d":null}],"b":2}"#
         );
     }
+
+    use model_bridge::parse_model_response;
 
     #[test]
     fn model_response_parser_preserves_q_vectors() {

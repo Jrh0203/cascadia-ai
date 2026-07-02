@@ -171,3 +171,27 @@ GPU-bound: model inference is tiny compared with terminal rollout search.
 However, K64/R32 shows that simply spending more samples per action is not
 enough; the next step should improve the policy/value/rollout target, not just
 increase rollout count.
+
+## Leak Caveat (2026-07-02)
+
+All search-integrated numbers above were measured with rollouts that observed
+the true hidden tile/bag order. They remain internally comparable with each
+other but are **legacy-leaky**: honest baselines re-run with
+`--rollout-determinize`, and the Gumbel search path is public-information
+legal by construction. See GUMBEL_SELFPLAY_CAMPAIGN.md Phase A.
+
+## Gumbel Stack Engineering Facts (local, 2026-07-02)
+
+Measured on the local dev machine (debug/mock-bridge unless noted):
+
+- Afterstate reuse removes one full `GameState` clone + action re-apply per
+  rollout; the golden-equality test pins the refactor to bit-identical
+  labels with determinization off.
+- Tiny self-play export smoke (release build, mock bridge, 8 sims, K-interior
+  4, 2 seeds x 6 plies): `2.8 seeds/s`, `17.0 records/s` single-session.
+- The batched bridge collates up to 32 roots per forward; batch-of-N equals
+  N single evals to 1e-4 (unit-tested). Relation matrices build in numpy
+  instead of pure-Python lists.
+
+Real john0 GPU numbers (search decision seconds, selfplay roots/s, GPU
+utilization) get recorded here after the Phase A runs.

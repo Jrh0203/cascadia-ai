@@ -191,6 +191,9 @@ pub struct ExpertTensorNpz<'a> {
     pub final_score_vector: &'a [f32],
     pub rank_vector: &'a [i16],
     pub score_decomposition: &'a [f32],
+    /// v2-only arrays; omitted from the archive when `None`.
+    pub improved_policy: Option<&'a [f32]>,
+    pub search_root_value: Option<&'a [f32]>,
     pub record_count: usize,
     pub compression: NpzCompression,
 }
@@ -274,6 +277,15 @@ pub fn write_expert_tensor_npz(path: &Path, shard: ExpertTensorNpz<'_>) -> Resul
         shard.score_decomposition,
         &[shard.record_count, 3, 4],
     )?;
+
+    if let Some(improved_policy) = shard.improved_policy {
+        start_file(&mut zip, "improved_policy.npy", shard.compression)?;
+        write_f32_npy(&mut zip, improved_policy, &[improved_policy.len()])?;
+    }
+    if let Some(search_root_value) = shard.search_root_value {
+        start_file(&mut zip, "search_root_value.npy", shard.compression)?;
+        write_f32_npy(&mut zip, search_root_value, &[search_root_value.len()])?;
+    }
 
     zip.finish()?;
     Ok(())

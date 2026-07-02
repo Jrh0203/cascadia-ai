@@ -32,6 +32,14 @@ MODEL_SERVICE="${MODEL_SERVICE:-}"
 MODEL_MANIFEST="${MODEL_MANIFEST:-}"
 MODEL_TIMEOUT_MS="${MODEL_TIMEOUT_MS:-10000}"
 ALLOW_MODEL_FALLBACK="${ALLOW_MODEL_FALLBACK:-0}"
+GUMBEL_N_SIMULATIONS="${GUMBEL_N_SIMULATIONS:-64}"
+GUMBEL_TOP_M="${GUMBEL_TOP_M:-16}"
+GUMBEL_DEPTH_ROUNDS="${GUMBEL_DEPTH_ROUNDS:-1}"
+GUMBEL_DETERMINIZATIONS="${GUMBEL_DETERMINIZATIONS:-4}"
+GUMBEL_BLEND_WEIGHT="${GUMBEL_BLEND_WEIGHT:-0.5}"
+GUMBEL_K_INTERIOR="${GUMBEL_K_INTERIOR:-16}"
+GUMBEL_MAX_ROOT_ACTIONS="${GUMBEL_MAX_ROOT_ACTIONS:-}"
+MODEL_SESSIONS="${MODEL_SESSIONS:-}"
 
 MODEL_SIZE="${MODEL_SIZE:-S}"
 TRAIN_STEPS="${TRAIN_STEPS:-5000}"
@@ -48,6 +56,7 @@ EARLY_STOP_AFTER_STEP="${EARLY_STOP_AFTER_STEP:-0}"
 SWA_FRACTION="${SWA_FRACTION:-0.20}"
 SEED="${SEED:-20260630}"
 OBJECTIVE="${OBJECTIVE:-expert}"
+MAX_EXAMPLE_PASSES="${MAX_EXAMPLE_PASSES:-0}"
 SELECTION_METRIC="${SELECTION_METRIC:-locked_val_total}"
 SELECTION_MODE="${SELECTION_MODE:-min}"
 INIT_MANIFEST="${INIT_MANIFEST:-}"
@@ -180,6 +189,31 @@ generate_tensor_roots() {
         fi
         mode_args+=(--model-timeout-ms '$MODEL_TIMEOUT_MS')
         ;;
+      gumbel_selfplay)
+        mode_args=(--gumbel-selfplay-tensor-corpus)
+        if [ -n '$MODEL_SERVICE' ]; then
+          mode_args+=(--model-service '$MODEL_SERVICE')
+        fi
+        if [ -n '$MODEL_MANIFEST' ]; then
+          mode_args+=(--model-manifest '$MODEL_MANIFEST')
+        fi
+        if [ '$ALLOW_MODEL_FALLBACK' = '1' ]; then
+          mode_args+=(--allow-model-fallback)
+        fi
+        mode_args+=(--model-timeout-ms '$MODEL_TIMEOUT_MS')
+        mode_args+=(--gumbel-n-simulations '$GUMBEL_N_SIMULATIONS')
+        mode_args+=(--gumbel-top-m '$GUMBEL_TOP_M')
+        mode_args+=(--gumbel-depth-rounds '$GUMBEL_DEPTH_ROUNDS')
+        mode_args+=(--gumbel-determinizations '$GUMBEL_DETERMINIZATIONS')
+        mode_args+=(--gumbel-blend-weight '$GUMBEL_BLEND_WEIGHT')
+        mode_args+=(--k-interior '$GUMBEL_K_INTERIOR')
+        if [ -n '$GUMBEL_MAX_ROOT_ACTIONS' ]; then
+          mode_args+=(--gumbel-max-root-actions '$GUMBEL_MAX_ROOT_ACTIONS')
+        fi
+        if [ -n '$MODEL_SESSIONS' ]; then
+          mode_args+=(--model-sessions '$MODEL_SESSIONS')
+        fi
+        ;;
       *)
         echo "[full-v3] unknown EXPERT_TENSOR_MODE=$EXPERT_TENSOR_MODE" >&2
         exit 2
@@ -302,6 +336,7 @@ python -m cascadiav3.torch_train_cascadiaformer \
   --device cuda \
   --seed '$SEED' \
   --objective '$OBJECTIVE' \
+  --max-example-passes '$MAX_EXAMPLE_PASSES' \
   --selection-metric '$SELECTION_METRIC' \
   --selection-mode '$SELECTION_MODE' \
   --val-max-batches '$VAL_MAX_BATCHES' \
