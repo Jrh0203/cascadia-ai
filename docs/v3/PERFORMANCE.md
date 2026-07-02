@@ -193,5 +193,26 @@ Measured on the local dev machine (debug/mock-bridge unless noted):
   N single evals to 1e-4 (unit-tested). Relation matrices build in numpy
   instead of pure-Python lists.
 
-Real john0 GPU numbers (search decision seconds, selfplay roots/s, GPU
-utilization) get recorded here after the Phase A runs.
+## Self-Play Generation Throughput (john0, 2026-07-02)
+
+Measured aggregate self-play generation (n=64, k-interior 16, root menu
+256, full games, tensor export included):
+
+| Topology | Games/h | Note |
+|---|---:|---|
+| 6 owned bridge sessions | ~40 | stable reference config |
+| 12 owned sessions | ~stall | CUDA context thrash (near-zero progress) |
+| 20 games on 1 shared aggregated bridge | ~15-20 | REGRESSION: one Python collate pipeline replaces six |
+
+Benchmark (non-export) games run ~1.07s/decision; self-play decisions run
+~4.3s at 6 sessions. The dominant serial cost is the bridge's pure-Python
+per-row feature extraction (public-token + semantic-action features), not
+the GPU: merged cross-game batches did not help because collate is
+row-cost-bound and single-threaded per bridge process.
+
+Conclusion: the generation unlock is moving feature extraction to Rust
+(the builders already exist in `feature_tensors.rs` for shard export) and
+sending precomputed feature arrays in eval requests, so the bridge only
+wraps tensors and runs forwards. The shared aggregated bridge is the right
+serving architecture once collate is cheap; until then owned 6-session is
+the production config.

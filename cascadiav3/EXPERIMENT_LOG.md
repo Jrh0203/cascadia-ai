@@ -6,7 +6,11 @@ promotion evidence.
 
 ## 2026-07-02 - `gumbel-selfplay-cycle2-v1` (EI-3)
 
-Status: running on john0 (launched ~13:50).
+Status: running on john0 (relaunched 14:50 on owned 6-session after a
+shared-bridge throughput experiment regressed: one Python collate pipeline
+vs six — see PERFORMANCE.md "Self-Play Generation Throughput"). The shared
+aggregated bridge (`--shared-model-session`) is merged and tested but not
+production until feature extraction moves to Rust.
 
 Config: 400 train + 60 val seeds (fresh blocks 2026720000/2026820000),
 warm start from the cycle-1 checkpoint, `GUMBEL_BLEND_WEIGHT=0.75` (ramp
