@@ -6,7 +6,7 @@ promotion evidence.
 
 ## 2026-07-01 - `cascadiaformer-ei1-model-state-k32-r4-v1`
 
-Status: running on john0.
+Status: completed; positive no-search improvement, no K56 search breakthrough.
 
 Purpose: start the first true model-state expert-iteration bootstrap. EI-0 was
 trained on greedy-state roots and reached useful no-search/search strength, but
@@ -60,6 +60,59 @@ Success readout:
 - Gameplay success after training: no-search q should beat EI-0 q's `89.6175`,
   and search-integrated K56/K64 should move above the `96-97` band. The 100
   target still requires gameplay evidence, not loss alone.
+
+Training result:
+
+- Runbook status: `pass`.
+- Generated train/validation roots: `20,000` / `4,000`.
+- Generation throughput: `10.5309` roots/s and `1,347.9596` rollout evals/s.
+- Training throughput: `0.0978` seconds/step.
+- Selected checkpoint: `best_locked_val` at step `15,000`.
+- Best locked validation final-Q regret: `1.909125`.
+- Final step locked validation final-Q regret: `2.110875`, so the final
+  checkpoint regressed and should not be used for gameplay.
+
+100-game no-search result:
+
+- Report:
+  `reports/cascadiaformer_ei1_model_state_k32_r4_no_search_game100.json`.
+- Manifest:
+  `checkpoints/full_v3_ei1_model_state_k32_r4/best_locked_val.manifest.json`.
+- CascadiaFormer-q mean seat score: `90.7600`.
+- Greedy mean seat score on matched seeds: `87.5450`.
+- Mean paired delta versus greedy: `+3.2150`.
+- EI-1 q also exceeds EI-0 q's prior `89.6175` 100-game no-search mean.
+
+K56 search result:
+
+- Attempted report:
+  `reports/cascadiaformer_ei1_model_state_k32_r4_k56_search_game20.json`.
+- The long search benchmark exited before writing its final JSON report. No OOM
+  or disk-pressure evidence was found; the old harness only journaled decisions,
+  so the run was recoverable only as a partial/provisional result.
+- Recovered summary:
+  `reports/cascadiaformer_ei1_model_state_k32_r4_k56_search_game20_recovered_from_decisions.json`.
+- Recovery method: for each complete 80-ply game, use the final four decisions'
+  `selected_active_score` values as final seat scores. This is useful forensic
+  evidence, not a substitute for the normal benchmark `done` payload.
+- Recovered CascadiaFormer-search K56 mean: `96.4250` over all `20` candidate
+  games.
+- Recovered full-search K64 control mean: `96.765625` over the `16` completed
+  control games.
+- Recovered paired delta on the `16` completed pairs: `-0.453125`.
+
+Decision:
+
+- EI-1 did improve the no-search q policy, which means model-state expert
+  iteration has merit.
+- EI-1 did not move search-integrated play out of the existing `96-97` score
+  band. Do not scale this exact K32/R4 objective as the path to 100.
+- The benchmark harness now journals completed game rows to `*_games.jsonl`
+  files in addition to per-decision rows, so future long search runs preserve
+  score-grade completed-game evidence even if a final tail fails.
+- For future 16-worker CPU search probes, prefer game counts that are multiples
+  of 16, such as `32`, to reduce underutilized tail waves unless continuity
+  with a 20-game historical seed set is required.
 
 ## 2026-07-01 - `cascadiaformer-ei0-k64-r32-game20`
 

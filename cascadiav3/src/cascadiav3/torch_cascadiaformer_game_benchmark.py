@@ -270,6 +270,22 @@ def paired_score_deltas(model_results: list[dict[str, Any]], greedy_results: lis
     return rows
 
 
+def completed_game_result_row(result: dict[str, Any]) -> dict[str, Any]:
+    seat_scores = [float(score["total"]) for score in result["done"]["scores"]]
+    return {
+        "seed": result["seed"],
+        "strategy": result["strategy"],
+        "selection_head": result["selection_head"],
+        "scores": result["done"]["scores"],
+        "seat_scores": seat_scores,
+        "mean_score_per_seat": mean(seat_scores) if seat_scores else 0.0,
+        "turns": result["done"]["turns"],
+        "elapsed_seconds": result["done"]["elapsed_seconds"],
+        "decision_count": len(result["decisions"]),
+        "final_state_hash": result["done"]["final_state_hash"],
+    }
+
+
 def run_benchmark(
     *,
     binary: Path,
@@ -282,6 +298,7 @@ def run_benchmark(
     device_name: str,
     experiment_id: str,
     decision_rows_path: Path | None,
+    game_results_path: Path | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if baseline_workers <= 0:
         raise ValueError("--baseline-workers must be positive")
@@ -292,12 +309,18 @@ def run_benchmark(
     if decision_rows_path is not None:
         decision_rows_path.parent.mkdir(parents=True, exist_ok=True)
         decision_rows_path.write_text("", encoding="utf-8")
+    if game_results_path is not None:
+        game_results_path.parent.mkdir(parents=True, exist_ok=True)
+        game_results_path.write_text("", encoding="utf-8")
 
     def remember(result: dict[str, Any]) -> dict[str, Any]:
         if decision_rows_path is not None:
             with decision_rows_path.open("a", encoding="utf-8") as handle:
                 for decision in result["decisions"]:
                     handle.write(json.dumps(decision, sort_keys=True) + "\n")
+        if game_results_path is not None:
+            with game_results_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(completed_game_result_row(result), sort_keys=True) + "\n")
         return result
 
     model_results_by_head: dict[str, list[dict[str, Any]]] = {}
@@ -389,16 +412,7 @@ def run_benchmark(
         "paired_score_deltas": paired_by_head,
         "mean_paired_delta_cascadiaformer_minus_greedy": mean_delta_by_head,
         "games": [
-            {
-                "seed": result["seed"],
-                "strategy": result["strategy"],
-                "selection_head": result["selection_head"],
-                "scores": result["done"]["scores"],
-                "turns": result["done"]["turns"],
-                "elapsed_seconds": result["done"]["elapsed_seconds"],
-                "decision_count": len(result["decisions"]),
-                "final_state_hash": result["done"]["final_state_hash"],
-            }
+            completed_game_result_row(result)
             for result in all_model_results + greedy_results
         ],
     }, all_model_results + greedy_results
@@ -461,6 +475,7 @@ def main() -> int:
     parser.add_argument("--experiment-id", default="cascadiaformer-complete-game-benchmark-v1")
     parser.add_argument("--out", default="cascadiav3/reports/cascadiaformer_game_benchmark.json")
     parser.add_argument("--decisions-out", default="cascadiav3/reports/cascadiaformer_game_benchmark_decisions.jsonl")
+    parser.add_argument("--game-results-out", default="cascadiav3/reports/cascadiaformer_game_benchmark_games.jsonl")
     parser.add_argument("--summary-out", default="cascadiav3/reports/cascadiaformer_game_benchmark_summary.md")
     args = parser.parse_args()
 
@@ -480,6 +495,7 @@ def main() -> int:
         device_name=args.device,
         experiment_id=args.experiment_id,
         decision_rows_path=Path(args.decisions_out),
+        game_results_path=Path(args.game_results_out),
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

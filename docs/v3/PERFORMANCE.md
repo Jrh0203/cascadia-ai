@@ -161,6 +161,49 @@ Doubling samples per action did not improve this 20-seed mean and roughly
 doubled per-decision search time. K64/R32 produced no per-game mean at or above
 `100`, despite 12 of 80 individual seats scoring at least `100`.
 
+## EI-1 Model-State Expert Iteration
+
+EI-1 was the first model-state expert-iteration run: EI-0 q chose the behavior
+actions, sampled search labeled K32 action menus, and the trainer mixed `70%`
+new model-state roots with `30%` EI-0 greedy-state bootstrap roots.
+
+Training:
+
+- expert tensor mode: `model_state_search_bootstrap`;
+- train/validation roots: `20,000` / `4,000`;
+- rollouts/action during labeling: `4`;
+- objective: `expert`;
+- selection metric: minimum `locked_val_final_q_regret`;
+- selected checkpoint: `best_locked_val` at step `15,000`;
+- best locked validation final-Q regret: `1.909125`;
+- final step locked validation final-Q regret: `2.110875`;
+- generation throughput: `10.5309` roots/s;
+- training throughput: `0.0978` seconds/step.
+
+100-game no-search complete-game benchmark:
+
+| Strategy | Mean | P50 | P90 | Delta vs Greedy | Greedy Match |
+|---|---:|---:|---:|---:|---:|
+| Greedy | 87.5450 | 88.0000 | 92.0000 | - | - |
+| CascadiaFormer q | 90.7600 | 91.0000 | 94.0000 | +3.2150 | 30.6375% |
+
+This is a real no-search improvement: EI-1 q beat both matched greedy and EI-0
+q's prior `89.6175` 100-game mean.
+
+K56 search-integrated follow-up:
+
+| Strategy | Mean | P50 | P90 | Notes |
+|---|---:|---:|---:|---|
+| CascadiaFormer-search K56 of K64 | 96.4250 | 97.0000 | 100.0000 | recovered from 20 complete candidate games |
+| Full-search K64 control | 96.7656 | 97.0000 | 99.0000 | recovered from 16 complete control games |
+
+The K56 run exited before producing its normal final JSON report, so this is
+forensic evidence recovered from the decision stream rather than a promotion
+gate. It is still directionally clear: EI-1 search remained in the existing
+`96-97` band, with a recovered paired delta of `-0.453125` on the 16 completed
+control pairs. The harness now journals completed games to `*_games.jsonl` so a
+future long search tail cannot erase completed-game score evidence.
+
 Interpretation: the q serving head is now the useful no-search policy, and it
 beats greedy by about two points on the first 100-game EI-0 gate. Search
 integration reaches a strong absolute mean above `95` and passes the timing
@@ -169,5 +212,6 @@ evidence, but the current one-ply sampled-search setting itself still sits
 below the 100-point target. The benchmark is CPU rollout-bound rather than
 GPU-bound: model inference is tiny compared with terminal rollout search.
 However, K64/R32 shows that simply spending more samples per action is not
-enough; the next step should improve the policy/value/rollout target, not just
-increase rollout count.
+enough. EI-1 shows that model-state iteration can improve no-search play, but
+not yet search-integrated score. The next step should improve the
+policy/value/rollout target, not just increase rollout count.
