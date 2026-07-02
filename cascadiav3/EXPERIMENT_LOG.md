@@ -33,10 +33,12 @@ Configuration:
 - Selection metric: minimum `locked_val_final_q_regret`.
 - Training: 25,000 steps, batch size 192, LR `3e-5`, AdamW weight decay
   `0.05`, cosine schedule, SWA final 20%.
-- Export parallelism: use a bounded `RAYON_THREADS=8` because the current
-  model-state exporter spawns one Python model service per parallel seed.
-  Future work should separate CPU rollout workers from model-service
-  concurrency before using all john0 threads for this mode.
+- Export parallelism: relaunched with `RAYON_THREADS=16` after confirming GPU
+  memory headroom and CPU under-utilization in the first attempt. The first
+  attempt reached `50 / 250` train seeds at 8-way generation before restart.
+- Exporter implementation: model-state tensor export now chunks seeds so each
+  chunk can reuse a Python model service across multiple seeds, reducing model
+  startup churn in future runs.
 
 Artifacts:
 

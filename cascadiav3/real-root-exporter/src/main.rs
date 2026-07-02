@@ -371,8 +371,7 @@ fn parse_args() -> Result<Args> {
             | Mode::ExpertTensorCorpus
             | Mode::GreedyStateSearchBootstrapTensorCorpus
             | Mode::ModelStateSearchBootstrapTensorCorpus
-    )
-        && args.rollouts_per_action == 0
+    ) && args.rollouts_per_action == 0
     {
         bail!("--rollouts-per-action must be positive");
     }
@@ -387,9 +386,10 @@ fn parse_args() -> Result<Args> {
     }
     if matches!(
         args.mode,
-        Mode::ChanceMctsDryRun | Mode::ExpertTensorCorpus | Mode::ModelStateSearchBootstrapTensorCorpus
-    )
-        && args.model_service.is_none()
+        Mode::ChanceMctsDryRun
+            | Mode::ExpertTensorCorpus
+            | Mode::ModelStateSearchBootstrapTensorCorpus
+    ) && args.model_service.is_none()
         && !args.allow_model_fallback
     {
         bail!(
@@ -947,51 +947,51 @@ struct ModelServiceSession {
 
 impl ModelServiceSession {
     fn spawn(command: &str, args: &Args) -> Result<Self> {
-    if let Some(manifest) = &args.model_manifest {
-        if !manifest.exists() {
-            bail!("model manifest {} does not exist", manifest.display());
+        if let Some(manifest) = &args.model_manifest {
+            if !manifest.exists() {
+                bail!("model manifest {} does not exist", manifest.display());
+            }
         }
-    }
-    let mut child = Command::new("sh")
-        .arg("-c")
-        .arg(command)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .with_context(|| format!("spawning model service command {command:?}"))?;
+        let mut child = Command::new("sh")
+            .arg("-c")
+            .arg(command)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .with_context(|| format!("spawning model service command {command:?}"))?;
         let stdin = child
-        .stdin
-        .take()
-        .context("model service stdin unavailable")?;
-    let stdout = child
-        .stdout
-        .take()
-        .context("model service stdout unavailable")?;
-    let mut reader = std::io::BufReader::new(stdout);
-    let (line_tx, line_rx) = mpsc::channel::<Result<String, String>>();
-    std::thread::spawn(move || {
-        loop {
-            let mut line = String::new();
-            match reader.read_line(&mut line) {
-                Ok(0) => break,
-                Ok(_) => {
-                    if line_tx.send(Ok(line)).is_err() {
+            .stdin
+            .take()
+            .context("model service stdin unavailable")?;
+        let stdout = child
+            .stdout
+            .take()
+            .context("model service stdout unavailable")?;
+        let mut reader = std::io::BufReader::new(stdout);
+        let (line_tx, line_rx) = mpsc::channel::<Result<String, String>>();
+        std::thread::spawn(move || {
+            loop {
+                let mut line = String::new();
+                match reader.read_line(&mut line) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        if line_tx.send(Ok(line)).is_err() {
+                            break;
+                        }
+                    }
+                    Err(error) => {
+                        let _ = line_tx.send(Err(error.to_string()));
                         break;
                     }
                 }
-                Err(error) => {
-                    let _ = line_tx.send(Err(error.to_string()));
-                    break;
-                }
             }
-        }
-    });
+        });
         let timeout = Duration::from_millis(args.model_timeout_ms);
 
         let hello_line = recv_model_line(&line_rx, &mut child, timeout, "hello")?;
         let hello: Value = serde_json::from_str(hello_line.trim())
-        .with_context(|| format!("invalid model service hello: {hello_line:?}"))?;
+            .with_context(|| format!("invalid model service hello: {hello_line:?}"))?;
         if hello.get("type").and_then(Value::as_str) == Some("error") {
             bail!("model service hello error: {}", canonical_json(&hello));
         }
@@ -1012,17 +1012,23 @@ impl ModelServiceSession {
 
     fn eval(&mut self, root_request: &Value) -> Result<ModelEval> {
         let request = json!({
-        "type": "eval_request",
-        "root": root_request,
-            "allow_model_fallback": self.allow_model_fallback,
-            "timeout_ms": self.timeout.as_millis(),
-    });
-        writeln!(self.stdin, "{}", canonical_json(&request)).context("writing model eval request")?;
+            "type": "eval_request",
+            "root": root_request,
+                "allow_model_fallback": self.allow_model_fallback,
+                "timeout_ms": self.timeout.as_millis(),
+        });
+        writeln!(self.stdin, "{}", canonical_json(&request))
+            .context("writing model eval request")?;
         self.stdin.flush().context("flushing model eval request")?;
 
-        let response_line = recv_model_line(&self.line_rx, &mut self.child, self.timeout, "eval_response")?;
+        let response_line = recv_model_line(
+            &self.line_rx,
+            &mut self.child,
+            self.timeout,
+            "eval_response",
+        )?;
         let response: Value = serde_json::from_str(response_line.trim())
-        .with_context(|| format!("invalid model eval response: {response_line:?}"))?;
+            .with_context(|| format!("invalid model eval response: {response_line:?}"))?;
         parse_model_response(root_request, response, self.allow_model_fallback)
     }
 
@@ -1036,7 +1042,11 @@ impl ModelServiceSession {
 
 impl Drop for ModelServiceSession {
     fn drop(&mut self) {
-        let _ = writeln!(self.stdin, "{}", canonical_json(&json!({"type": "shutdown"})));
+        let _ = writeln!(
+            self.stdin,
+            "{}",
+            canonical_json(&json!({"type": "shutdown"}))
+        );
         let _ = self.stdin.flush();
         if let Ok(None) = self.child.try_wait() {
             let _ = self.child.kill();
@@ -1977,32 +1987,48 @@ fn export_model_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usiz
     let total_seeds = seed_end - args.first_seed;
     let completed_seeds = AtomicU64::new(0);
     let completed_records = AtomicU64::new(0);
-    let mut per_seed = (args.first_seed..seed_end)
-        .into_par_iter()
-        .map(|seed_u64| {
-            let records = export_model_state_search_bootstrap_seed_records(args, seed_u64)
+    let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
+    let target_chunks = (rayon::current_num_threads() * 2).max(1);
+    let chunk_size = ((seeds.len() + target_chunks - 1) / target_chunks).max(1);
+    let per_chunk = seeds
+        .par_chunks(chunk_size)
+        .map(|seed_chunk| {
+            let mut model_session = model_state_worker_session(args)?;
+            let mut chunk_shards = Vec::with_capacity(seed_chunk.len());
+            for seed_u64 in seed_chunk.iter().copied() {
+                let records = export_model_state_search_bootstrap_seed_records_with_session(
+                    args,
+                    seed_u64,
+                    &mut model_session,
+                )
                 .with_context(|| {
                     format!("exporting model-state search-bootstrap tensor seed {seed_u64}")
                 })?;
-            let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
-                format!(
-                    "extracting Rust model-state search-bootstrap tensor features for seed {seed_u64}"
-                )
-            })?;
-            let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
-            let records_done =
-                completed_records.fetch_add(shard.record_count as u64, Ordering::Relaxed)
-                    + shard.record_count as u64;
-            log_seed_export_progress(
-                "model-state search-bootstrap tensor",
-                done,
-                total_seeds,
-                records_done,
-                started,
-            );
-            Ok((seed_u64, shard))
+                let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
+                    format!(
+                        "extracting Rust model-state search-bootstrap tensor features for seed {seed_u64}"
+                    )
+                })?;
+                let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
+                let records_done =
+                    completed_records.fetch_add(shard.record_count as u64, Ordering::Relaxed)
+                        + shard.record_count as u64;
+                log_seed_export_progress(
+                    "model-state search-bootstrap tensor",
+                    done,
+                    total_seeds,
+                    records_done,
+                    started,
+                );
+                chunk_shards.push((seed_u64, shard));
+            }
+            Ok(chunk_shards)
         })
         .collect::<Result<Vec<_>>>()?;
+    let mut per_seed = per_chunk
+        .into_iter()
+        .flatten()
+        .collect::<Vec<(u64, ExpertTensorShardData)>>();
     per_seed.sort_by_key(|(seed, _)| *seed);
 
     let mut shard = ExpertTensorShardData::new();
@@ -2085,10 +2111,7 @@ fn log_seed_export_progress(
     } else {
         25
     };
-    if completed_seeds != 1
-        && completed_seeds != total_seeds
-        && completed_seeds % log_every != 0
-    {
+    if completed_seeds != 1 && completed_seeds != total_seeds && completed_seeds % log_every != 0 {
         return;
     }
     let elapsed = started.elapsed().as_secs_f64().max(1.0e-9);
@@ -2110,8 +2133,10 @@ fn export_greedy_state_search_bootstrap_seed_records(
     let mut records = Vec::new();
     let mut ply_index = 0usize;
     while !game.is_game_over() && ply_index < args.plies_per_seed {
-        let mut root_record = build_root_record(&game, seed_u64, ply_index, args)
-            .with_context(|| format!("greedy-state search-bootstrap seed {seed_u64} ply {ply_index}"))?;
+        let mut root_record =
+            build_root_record(&game, seed_u64, ply_index, args).with_context(|| {
+                format!("greedy-state search-bootstrap seed {seed_u64} ply {ply_index}")
+            })?;
         let greedy_action_id = root_record
             .get("legal_actions")
             .and_then(Value::as_array)
@@ -2160,7 +2185,10 @@ fn export_greedy_state_search_bootstrap_seed_records(
                 "behavior_policy".to_owned(),
                 json!("greedy_state_distribution_advance_greedy_action"),
             );
-            metadata.insert("greedy_action_id".to_owned(), json!(greedy_action_id.clone()));
+            metadata.insert(
+                "greedy_action_id".to_owned(),
+                json!(greedy_action_id.clone()),
+            );
             metadata.insert(
                 "selected_is_greedy".to_owned(),
                 json!(selected_action_id == greedy_action_id),
@@ -2178,39 +2206,43 @@ fn export_greedy_state_search_bootstrap_seed_records(
     Ok(records)
 }
 
-fn export_model_state_search_bootstrap_seed_records(
+fn model_state_worker_session(args: &Args) -> Result<Option<ModelServiceSession>> {
+    match args.model_service.as_ref() {
+        Some(command) => match ModelServiceSession::spawn(command, args) {
+            Ok(session) => Ok(Some(session)),
+            Err(error) if args.allow_model_fallback => {
+                eprintln!("model service unavailable for worker; using fallback priors: {error}");
+                Ok(None)
+            }
+            Err(error) => Err(error),
+        },
+        None => Ok(None),
+    }
+}
+
+fn export_model_state_search_bootstrap_seed_records_with_session(
     args: &Args,
     seed_u64: u64,
+    model_session: &mut Option<ModelServiceSession>,
 ) -> Result<Vec<Value>> {
     let config = GameConfig::research_aaaaa(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating model-state search-bootstrap seed {seed_u64}"))?;
-    let mut model_session = match args.model_service.as_ref() {
-        Some(command) => match ModelServiceSession::spawn(command, args) {
-            Ok(session) => Some(session),
-            Err(error) if args.allow_model_fallback => {
-                eprintln!(
-                    "model service unavailable for seed {seed_u64}; using fallback priors: {error}"
-                );
-                None
-            }
-            Err(error) => return Err(error),
-        },
-        None => None,
-    };
     let mut records = Vec::new();
     let mut ply_index = 0usize;
     while !game.is_game_over() && ply_index < args.plies_per_seed {
-        let mut root_record = build_root_record(&game, seed_u64, ply_index, args)
-            .with_context(|| format!("model-state search-bootstrap seed {seed_u64} ply {ply_index}"))?;
+        let mut root_record =
+            build_root_record(&game, seed_u64, ply_index, args).with_context(|| {
+                format!("model-state search-bootstrap seed {seed_u64} ply {ply_index}")
+            })?;
         let (model_request, action_ids) = model_request_for_tensor_root(&root_record)?;
         let model_eval = model_eval_for_root_with_optional_session(
             args,
             &model_request,
             action_ids.len(),
-            &mut model_session,
+            model_session,
         )
-            .with_context(|| format!("model-state eval seed {seed_u64} ply {ply_index}"))?;
+        .with_context(|| format!("model-state eval seed {seed_u64} ply {ply_index}"))?;
         let (model_action_id, model_selection_head, model_selection_score) =
             model_selected_action(&action_ids, &model_eval)?;
         let selected_action_id = root_record
@@ -2268,8 +2300,14 @@ fn export_model_state_search_bootstrap_seed_records(
                 "teacher_advantage_over_model_action".to_owned(),
                 json!(teacher_advantage_over_model),
             );
-            metadata.insert("model_fallback".to_owned(), json!(model_eval.model_fallback));
-            metadata.insert("model_q_available".to_owned(), json!(model_eval.q.is_some()));
+            metadata.insert(
+                "model_fallback".to_owned(),
+                json!(model_eval.model_fallback),
+            );
+            metadata.insert(
+                "model_q_available".to_owned(),
+                json!(model_eval.q.is_some()),
+            );
             metadata.insert(
                 "model_score_to_go_available".to_owned(),
                 json!(model_eval.score_to_go.is_some()),
@@ -2279,9 +2317,6 @@ fn export_model_state_search_bootstrap_seed_records(
         game = advance_selected_action(&game, args.max_actions, &model_action_id)?;
         records.push(root_record);
         ply_index += 1;
-    }
-    if let Some(session) = model_session.as_mut() {
-        session.shutdown();
     }
     Ok(records)
 }
@@ -2337,7 +2372,10 @@ fn model_request_for_tensor_root(root_record: &Value) -> Result<(Value, Vec<Stri
     Ok((request, action_ids))
 }
 
-fn model_selected_action(action_ids: &[String], model_eval: &ModelEval) -> Result<(String, String, f64)> {
+fn model_selected_action(
+    action_ids: &[String],
+    model_eval: &ModelEval,
+) -> Result<(String, String, f64)> {
     if action_ids.is_empty() {
         bail!("cannot select a model action from an empty action menu");
     }
@@ -2362,7 +2400,11 @@ fn model_selected_action(action_ids: &[String], model_eval: &ModelEval) -> Resul
             best_index = index;
         }
     }
-    Ok((action_ids[best_index].clone(), "prior".to_owned(), best_prior))
+    Ok((
+        action_ids[best_index].clone(),
+        "prior".to_owned(),
+        best_prior,
+    ))
 }
 
 fn build_greedy_policy_root_record(
@@ -2622,9 +2664,9 @@ fn exact_afterstate_scores_for_candidates(
         .enumerate()
         .map(|(candidate_index, candidate)| {
             let mut after = staged.clone();
-            after
-                .apply(&candidate.action)
-                .with_context(|| format!("applying candidate {candidate_index} for exact afterstate score"))?;
+            after.apply(&candidate.action).with_context(|| {
+                format!("applying candidate {candidate_index} for exact afterstate score")
+            })?;
             let scores = score_game(&after);
             Ok(f64::from(scores[active_seat].total))
         })

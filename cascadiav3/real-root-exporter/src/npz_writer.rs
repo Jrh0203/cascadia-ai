@@ -263,11 +263,7 @@ pub fn write_expert_tensor_npz(path: &Path, shard: ExpertTensorNpz<'_>) -> Resul
     write_u8_npy(&mut zip, shard.q_valid, &[shard.q_valid.len()])?;
 
     start_file(&mut zip, "final_score_vector.npy", shard.compression)?;
-    write_f32_npy(
-        &mut zip,
-        shard.final_score_vector,
-        &[shard.record_count, 4],
-    )?;
+    write_f32_npy(&mut zip, shard.final_score_vector, &[shard.record_count, 4])?;
 
     start_file(&mut zip, "rank_vector.npy", shard.compression)?;
     write_i16_npy(&mut zip, shard.rank_vector, &[shard.record_count, 4])?;

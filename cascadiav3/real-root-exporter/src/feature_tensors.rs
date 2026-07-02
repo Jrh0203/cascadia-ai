@@ -595,14 +595,7 @@ fn combined_relation_edges(
                 set_relation(&mut edges, source, target, relation_id, true, seq_len);
             }
             Some("same_market_slot") => {
-                set_relation(
-                    &mut edges,
-                    source,
-                    target,
-                    SAME_MARKET_SLOT,
-                    true,
-                    seq_len,
-                );
+                set_relation(&mut edges, source, target, SAME_MARKET_SLOT, true, seq_len);
             }
             _ => {}
         }
@@ -623,8 +616,13 @@ fn combined_relation_edges(
         );
         let target_frontier = relation_coord_key(field(action, "target_coord_ref"))
             .and_then(|key| active_frontier.get(&key).copied());
-        let wildlife_target = relation_coord_key(field(action, "wildlife_coord_ref"))
-            .and_then(|key| active_tile.get(&key).or_else(|| active_frontier.get(&key)).copied());
+        let wildlife_target =
+            relation_coord_key(field(action, "wildlife_coord_ref")).and_then(|key| {
+                active_tile
+                    .get(&key)
+                    .or_else(|| active_frontier.get(&key))
+                    .copied()
+            });
         for (target, relation_id) in [
             (market_tile.get(&tile_slot).copied(), ACTION_USES_TILE_SLOT),
             (
