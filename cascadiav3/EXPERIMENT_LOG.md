@@ -4,9 +4,39 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-02 - `gumbel-ceiling-probe-v1`
+
+Status: running on john0.
+
+Purpose: Phase B — 512 simulations/decision, top-m 32, w=1.0 (pure value
+bootstrap, zero rollouts), full legal menus, 20 seeds, EI-1 checkpoint. At
+~8x the Phase A budget this is also roughly compute-matched with the 10.9s
+rollout-search control. Branches: >=100 -> search-budget problem; 97-100 ->
+model-bound but close; <97 -> model-bound, Phase C prioritizes value-target
+quality (expected, given the value/q heads were trained on rollout means).
+
 ## 2026-07-02 - `gumbel-phase-a-gate-v1`
 
-Status: running on john0 (pid file `logs/gumbel_phase_a_gate_job.pid`).
+Status: complete — Gumbel loses at the serving budget; proceed per the lose
+branch (Phase B probe, then Phase C with the search infrastructure as the
+teacher). Two headline findings:
+
+- **Honest control = `95.4000`** (100 games, K64/R16 with
+  `--rollout-determinize`) versus the leaky `96.9750`: the hidden-order peek
+  inflated historical search numbers by roughly `1.6` points.
+- **Gumbel n=64/m=16/w=0.5: `93.3550`** (p50 `94.0`, p90 `97.0`), paired
+  delta `-2.045`, 95% CI `[-2.46, -1.63]`, n=100 — a real loss, but at
+  `1.07s`/decision versus the control's `10.91s`: 10x less compute for -2
+  points. Decision-time p50/p95: `0.956` / `1.204` s.
+
+Interpretation: the current q-head (trained on rollout-mean targets) is not
+yet strong enough to replace long rollouts at small budgets — exactly the
+weakness Phase C's real-outcome value training targets. The search
+infrastructure itself is sound and an order of magnitude cheaper per
+decision.
+
+Artifacts: `reports/gumbel_phase_a_gate.json` /
+`gumbel_phase_a_gate_summary.md`.
 
 Purpose: Phase A gate of the Gumbel campaign — 100 paired games, Gumbel
 search (n=64, top-m 16, w=0.5, depth 1, 4 determinizations, full legal root

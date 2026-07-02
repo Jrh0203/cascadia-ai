@@ -56,6 +56,7 @@ def run_gumbel_games(
     first_seed: int,
     seed_count: int,
     model_service: str,
+    model_manifest: Path,
     out_path: Path,
     n_simulations: int,
     top_m: int,
@@ -78,6 +79,8 @@ def run_gumbel_games(
         str(seed_count),
         "--model-service",
         model_service,
+        "--model-manifest",
+        str(model_manifest),
         # No --allow-model-fallback: a bridge/checkpoint failure must kill the
         # benchmark loudly, never silently degrade to uniform-prior search.
         "--model-timeout-ms",
@@ -189,6 +192,7 @@ def run_gumbel_benchmark(
                 first_seed=first_seed,
                 seed_count=count,
                 model_service=service,
+                model_manifest=manifest,
                 out_path=tmp_path / f"gumbel_{index}.jsonl",
                 n_simulations=n_simulations,
                 top_m=top_m,
