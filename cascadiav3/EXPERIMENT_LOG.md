@@ -4,6 +4,26 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-02 - `gumbel-selfplay-cycle2-v1` (EI-3)
+
+Status: running on john0 (launched ~13:50).
+
+Config: 400 train + 60 val seeds (fresh blocks 2026720000/2026820000),
+warm start from the cycle-1 checkpoint, `GUMBEL_BLEND_WEIGHT=0.75` (ramp
+per campaign; value head earned trust in cycle 1), replay window = cycle-1
+shard at weight 0.5 via `EXTRA_TRAIN_TAIL_TENSORS`. ETA ~11h at ~40
+games/h (6 sessions).
+
+## 2026-07-02 - `gumbel-cycle1-gumbel-gate-candidate-v1`
+
+Status: complete. **Cycle-1 checkpoint at Gumbel n=64/m=16/w=0.5:
+`94.53`** (p50 95.0, p90 98.0, `2.49s`/decision) on the Phase A seed set —
+versus EI-1's `93.36` on the same seeds and the stored honest control
+`95.40`. The search gap closed from `-2.05` to about `-0.87` in one small
+cycle while staying ~4.4x cheaper per decision than the rollout control.
+(Aggregate comparison; the harness now exports per-seed rows so future
+candidate-only runs pair offline.)
+
 ## 2026-07-02 - `gumbel-selfplay-cycle1-v1` (EI-2) — RESULTS
 
 Status: complete. First positive evidence for the real-outcome value

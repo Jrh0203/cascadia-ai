@@ -282,8 +282,17 @@ def run_gumbel_benchmark(
             "ci_excludes_zero": stats["ci_excludes_zero"],
             "promotable": bool(stats["mean"] > 0.0 and stats["ci_excludes_zero"]),
         }
+    candidate_per_seed = [
+        {
+            "seed": int(result["seed"]),
+            "mean_score_per_seat": mean(float(score["total"]) for score in result["done"]["scores"]),
+            "seat_scores": [float(score["total"]) for score in result["done"]["scores"]],
+        }
+        for result in candidate_results
+    ]
     return {
         "status": "pass",
+        "candidate_per_seed": candidate_per_seed,
         "scientific_eligibility": "gumbel_search_vs_rollout_search_paired_benchmark",
         "experiment_id": experiment_id,
         "binary": str(binary),
