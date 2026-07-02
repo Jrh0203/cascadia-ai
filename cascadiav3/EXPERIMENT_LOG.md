@@ -4,9 +4,31 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
-## 2026-07-02 - `gumbel-selfplay-cycle1-v1` (EI-2)
+## 2026-07-02 - `gumbel-selfplay-cycle1-v1` (EI-2) — RESULTS
 
-Status: running on john0 (relaunched 06:15 after throughput sizing).
+Status: complete. First positive evidence for the real-outcome value
+training direction.
+
+- Corpus: 120 train seeds x 80 plies = 9,600 v2 roots (+ 30 val seeds),
+  all-seat self-play at n=64/m=16/w=0.5, exploration on, root menu 256.
+- Training: warm start EI-1, `gumbel-selfplay` objective, steps clamped by
+  the 4-pass guard to 200 (batch 192), selection metric locked-val final-Q
+  regret `0.7934`.
+- **100-game no-search gate: q-head `91.705` vs greedy `87.85`
+  (+3.855)** — new best no-search score; EI-1 measured `90.76` (100g) /
+  `90.065` (500g) with greedy anchors ~87.5. One small cycle gained
+  roughly +1 point of no-search strength from 9.6k self-play roots and
+  ~4 minutes of training.
+- Gumbel gate (candidate side on the Phase A seed set, paired offline
+  against the stored honest control 95.40): running.
+- Generation throughput facts: ~40 games/h at 6 bridge sessions;
+  12 sessions near-stalled the box (CUDA context thrash) — the
+  shared-bridge server is the identified lever for full-scale cycles.
+
+## 2026-07-02 - `gumbel-selfplay-cycle1-v1` (EI-2) — launch notes
+
+Status: superseded by results above (relaunched 06:15 after throughput
+sizing).
 
 Purpose: first Gumbel self-play expert-iteration cycle. All-seat self-play
 with exploration, n=64/top-m 16/w=0.5/root-menu 256, warm start from EI-1
