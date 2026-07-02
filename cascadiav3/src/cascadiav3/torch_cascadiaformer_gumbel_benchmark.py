@@ -78,7 +78,8 @@ def run_gumbel_games(
         str(seed_count),
         "--model-service",
         model_service,
-        "--allow-model-fallback",
+        # No --allow-model-fallback: a bridge/checkpoint failure must kill the
+        # benchmark loudly, never silently degrade to uniform-prior search.
         "--model-timeout-ms",
         str(model_timeout_ms),
         "--gumbel-n-simulations",
@@ -104,10 +105,15 @@ def run_gumbel_games(
     ]
     if max_root_actions is not None:
         command.extend(["--gumbel-max-root-actions", str(max_root_actions)])
-    completed = subprocess.run(command, capture_output=True, text=True)
+    # Preserve the Rust/bridge stderr (per-seed progress, any bridge
+    # warnings) next to the decision JSONL for postmortems.
+    stderr_path = out_path.with_name(out_path.name + ".stderr.log")
+    with stderr_path.open("w", encoding="utf-8") as stderr_handle:
+        completed = subprocess.run(command, stdout=subprocess.PIPE, stderr=stderr_handle, text=True)
     if completed.returncode != 0:
+        stderr_tail = stderr_path.read_text(encoding="utf-8")[-4000:]
         raise RuntimeError(
-            f"gumbel policy game failed ({completed.returncode}): {completed.stderr[-4000:]}"
+            f"gumbel policy game failed ({completed.returncode}): {stderr_tail}"
         )
     lines = [json.loads(line) for line in out_path.read_text(encoding="utf-8").splitlines() if line]
     return lines
