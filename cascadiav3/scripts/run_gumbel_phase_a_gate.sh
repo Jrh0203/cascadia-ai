@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 # Phase A gate: 100 paired games, Gumbel search (serving budget) versus the
 # HONEST full rollout-search control (--rollout-determinize on, so the control

@@ -57,6 +57,34 @@ def _response(payload: dict[str, Any]) -> None:
 
 PROTOCOL_FEATURES = ["eval_batch", "value_vector"]
 EVAL_BATCH_CHUNK_SIZE = 32
+# The relation-bias layer materializes a [rows, actions, seq, d_model] tensor,
+# so chunking must bound rows * actions * seq, not just rows. 2^21 cells keeps
+# the peak CGAB intermediate near 3 GB for d_model 384.
+EVAL_BATCH_CELL_BUDGET = 2_097_152
+
+
+def _eval_batch_chunks(roots: list[dict[str, Any]], *, chunk_size: int) -> list[list[dict[str, Any]]]:
+    chunks: list[list[dict[str, Any]]] = []
+    current: list[dict[str, Any]] = []
+    max_actions = 0
+    max_seq = 0
+    for root in roots:
+        action_count = len(root.get("legal_actions", ())) or 1
+        token_count = int(root.get("public_tokens", {}).get("token_count", 0)) or 1
+        candidate_actions = max(max_actions, action_count)
+        candidate_seq = max(max_seq, token_count + action_count)
+        cells = (len(current) + 1) * candidate_actions * candidate_seq
+        if current and (len(current) >= chunk_size or cells > EVAL_BATCH_CELL_BUDGET):
+            chunks.append(current)
+            current = []
+            candidate_actions = action_count
+            candidate_seq = token_count + action_count
+        current.append(root)
+        max_actions = candidate_actions
+        max_seq = candidate_seq
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 def _uniform_eval(root: dict[str, Any], *, model_fallback: bool) -> dict[str, Any]:
@@ -288,8 +316,7 @@ def _model_eval_batch(
         return []
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     responses: list[dict[str, Any]] = []
-    for start in range(0, len(roots), max(1, chunk_size)):
-        chunk = roots[start : start + max(1, chunk_size)]
+    for chunk in _eval_batch_chunks(roots, chunk_size=max(1, chunk_size)):
         batch = collate_inference_roots(chunk)
         eval_batch = _move_batch_to_device(batch, device)
         with torch.no_grad():

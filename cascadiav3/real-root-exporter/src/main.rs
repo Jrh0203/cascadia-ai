@@ -77,6 +77,11 @@ struct Args {
     gumbel_blend_weight: f64,
     gumbel_exploration: bool,
     gumbel_max_root_actions: Option<usize>,
+    /// Root menu enumeration cap (immediate-score-ranked pre-filter before
+    /// the model-prior top-m). 0 = full legal set. Late-game legal menus can
+    /// exceed several thousand compound actions, which both bloats eval
+    /// requests and blows up the relation-bias memory (B x A x S x d).
+    gumbel_root_menu: usize,
     k_interior: usize,
     model_sessions: Option<usize>,
 }
@@ -319,6 +324,7 @@ fn parse_args() -> Result<Args> {
         gumbel_blend_weight: 0.5,
         gumbel_exploration: false,
         gumbel_max_root_actions: None,
+        gumbel_root_menu: 256,
         k_interior: 16,
         model_sessions: None,
     };
@@ -376,6 +382,10 @@ fn parse_args() -> Result<Args> {
                     "off" | "false" | "0" => false,
                     other => bail!("invalid --gumbel-exploration {other}; use on|off"),
                 }
+            }
+            "--gumbel-root-menu" => {
+                args.gumbel_root_menu =
+                    value()?.parse().context("invalid --gumbel-root-menu")?
             }
             "--gumbel-max-root-actions" => {
                 args.gumbel_max_root_actions = Some(
@@ -589,6 +599,8 @@ Options:
                            mode defaults on].
   --gumbel-max-root-actions <n>
                            Optional model-prior-ranked cap on root candidates.
+  --gumbel-root-menu <n>   Root menu enumeration cap before model ranking;
+                           0 keeps the full legal set [256].
   --k-interior <n>         Interior-ply menu cap inside simulations [16].
   --model-sessions <n>     Cap on concurrent model bridge sessions for
                            selfplay export chunks.
@@ -2304,6 +2316,14 @@ fn model_selected_action(
     ))
 }
 
+fn gumbel_root_menu_limit(args: &Args) -> Option<usize> {
+    if args.gumbel_root_menu == 0 {
+        None
+    } else {
+        Some(args.gumbel_root_menu)
+    }
+}
+
 fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfig {
     gumbel::GumbelConfig {
         n_simulations: args.gumbel_n_simulations,
@@ -2458,6 +2478,7 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
         "exploration": args.gumbel_exploration,
         "k_interior": args.k_interior,
         "max_root_actions": args.gumbel_max_root_actions,
+        "root_menu": args.gumbel_root_menu,
         "simulations_run": result.simulations_run,
     })
 }
@@ -2580,7 +2601,7 @@ fn play_gumbel_selfplay_seed(
     let mut records = Vec::new();
     let mut ply_index = 0usize;
     while !game.is_game_over() && ply_index < args.plies_per_seed {
-        let Some(row) = gumbel::eval_row_for_state(&game, None)? else {
+        let Some(row) = gumbel::eval_row_for_state(&game, gumbel_root_menu_limit(args))? else {
             break;
         };
         let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
@@ -2700,6 +2721,7 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                 "exploration": args.gumbel_exploration,
                 "k_interior": args.k_interior,
                 "max_root_actions": args.gumbel_max_root_actions,
+                "root_menu": args.gumbel_root_menu,
             }),
         );
     }
@@ -2759,7 +2781,7 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
         let game_started = Instant::now();
         let mut ply_index = 0usize;
         while !game.is_game_over() {
-            let Some(row) = gumbel::eval_row_for_state(&game, None)? else {
+            let Some(row) = gumbel::eval_row_for_state(&game, gumbel_root_menu_limit(args))? else {
                 break;
             };
             let decision_started = Instant::now();
@@ -4517,6 +4539,7 @@ mod tests {
             gumbel_blend_weight: 1.0,
             gumbel_exploration: false,
             gumbel_max_root_actions: None,
+            gumbel_root_menu: 64,
             k_interior: 6,
             model_sessions: None,
         }

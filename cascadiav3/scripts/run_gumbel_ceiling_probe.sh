@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 # Phase B ceiling probe: lavish Gumbel search budget, pure value bootstrap
 # (w=1.0), full legal root menus, no timing gate. Answers whether the current
