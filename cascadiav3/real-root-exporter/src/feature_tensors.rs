@@ -1399,3 +1399,28 @@ mod tests {
         assert_eq!(selected_action_index(&record).unwrap(), 1);
     }
 }
+
+/// Action-row relation matrix for packed eval requests: `A x (T + A)` u8,
+/// row-major, columns laid out token positions first then action positions
+/// (unpadded). Row `r` holds the relation ids for edges whose SOURCE is
+/// action `r` — exactly the rows the model's gated action bias consumes from
+/// the dense matrix (`relation_ids[:, -action_count:, :]`).
+pub fn action_relation_tail(
+    root: &Value,
+    token_count: usize,
+    action_count: usize,
+) -> Result<Vec<u8>> {
+    let seq_len = token_count + action_count;
+    let edges = combined_relation_edges(root, token_count, action_count)?;
+    let mut tail = vec![0u8; action_count * seq_len];
+    for [source, target, relation_id] in edges {
+        let source = source as usize;
+        let target = target as usize;
+        if source < token_count || source >= seq_len || target >= seq_len {
+            continue;
+        }
+        let row = source - token_count;
+        tail[row * seq_len + target] = relation_id.clamp(0, 255) as u8;
+    }
+    Ok(tail)
+}

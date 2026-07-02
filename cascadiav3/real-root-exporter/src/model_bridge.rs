@@ -153,6 +153,12 @@ impl ModelServiceSession {
         self.protocol_features.contains("eval_batch")
     }
 
+    /// Bridge accepts precomputed feature arrays in eval requests
+    /// ("packed_features"), skipping Python-side per-row extraction.
+    pub fn supports_packed_features(&self) -> bool {
+        self.protocol_features.contains("packed_features")
+    }
+
     pub fn eval(&mut self, root_request: &Value) -> Result<ModelEval> {
         let request = json!({
             "type": "eval_request",
@@ -468,11 +474,13 @@ struct AggregateJob {
 
 pub struct SharedBridge {
     tx: std::sync::mpsc::Sender<AggregateJob>,
+    packed_features: bool,
 }
 
 #[derive(Clone)]
 pub struct SharedBridgeClient {
     tx: std::sync::mpsc::Sender<AggregateJob>,
+    packed_features: bool,
 }
 
 impl SharedBridge {
@@ -480,6 +488,7 @@ impl SharedBridge {
     /// gather window is short (2ms) so lone jobs are not delayed.
     pub fn spawn(command: &str, config: &BridgeConfig, max_rows: usize) -> Result<Self> {
         let mut session = ModelServiceSession::spawn(command, config)?;
+        let packed_features = session.supports_packed_features();
         let (tx, rx) = std::sync::mpsc::channel::<AggregateJob>();
         std::thread::spawn(move || {
             while let Ok(first) = rx.recv() {
@@ -517,17 +526,25 @@ impl SharedBridge {
             }
             session.shutdown();
         });
-        Ok(Self { tx })
+        Ok(Self {
+            tx,
+            packed_features,
+        })
     }
 
     pub fn client(&self) -> SharedBridgeClient {
         SharedBridgeClient {
             tx: self.tx.clone(),
+            packed_features: self.packed_features,
         }
     }
 }
 
 impl SharedBridgeClient {
+    pub fn supports_packed_features(&self) -> bool {
+        self.packed_features
+    }
+
     pub fn eval_batch(&self, requests: &[Value]) -> Result<Vec<ModelEval>> {
         if requests.is_empty() {
             return Ok(Vec::new());

@@ -242,6 +242,73 @@ class BridgeContractTest(unittest.TestCase):
                 len(batch_response["priors"]), len(root["legal_actions"])
             )
 
+    @staticmethod
+    def _packed_variant(root: dict) -> dict:
+        import base64
+
+        import numpy as np
+
+        from cascadiav3.torch_public_token_merit import public_token_features
+        from cascadiav3.torch_relation_bias_merit import combined_relation_ids_array
+        from cascadiav3.torch_semantic_relation_bias_merit import (
+            semantic_public_token_action_features,
+        )
+
+        token_count = int(root["public_tokens"]["token_count"])
+        action_count = len(root["legal_actions"])
+        tokens = np.asarray(public_token_features(root), dtype="<f4")
+        actions = np.asarray(semantic_public_token_action_features(root), dtype="<f4")
+        matrix = combined_relation_ids_array(root)
+        tail = matrix[token_count:, :].astype(np.uint8)
+        return {
+            "schema_id": root.get("schema_id"),
+            "state_hash": root.get("state_hash"),
+            "active_seat": root.get("active_seat"),
+            "action_ids": [action["action_id"] for action in root["legal_actions"]],
+            "exact_afterstate_score_active": root["exact_afterstate_score_active"],
+            "packed_features": {
+                "token_count": token_count,
+                "action_count": action_count,
+                "token_feature_dim": int(tokens.shape[1]),
+                "action_feature_dim": int(actions.shape[1]),
+                "tokens_f32_b64": base64.b64encode(tokens.tobytes()).decode("ascii"),
+                "actions_f32_b64": base64.b64encode(actions.tobytes()).decode("ascii"),
+                "relation_tail_u8_b64": base64.b64encode(tail.tobytes()).decode("ascii"),
+            },
+        }
+
+    def test_packed_request_matches_raw_request_outputs(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_inference_bridge import _model_eval, _model_eval_batch
+
+        roots = self._public_fixture_roots(limit=3)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        torch.manual_seed(20260702)
+        model = build_cascadiaformer(config_for_size("tiny"))
+        model.eval()
+
+        packed_roots = [self._packed_variant(root) for root in roots]
+        for root, packed_root in zip(roots, packed_roots):
+            raw_response = _model_eval(model, root)
+            packed_response = _model_eval(model, packed_root)
+            self.assertEqual(raw_response["action_ids"], packed_response["action_ids"])
+            for key in ("priors", "q", "score_to_go", "uncertainty", "value"):
+                for raw_value, packed_value in zip(raw_response[key], packed_response[key]):
+                    self.assertAlmostEqual(
+                        raw_value,
+                        packed_value,
+                        places=4,
+                        msg=f"{key} diverged between raw and packed paths",
+                    )
+        # Batched packed requests collate through the relation_tail path.
+        batch_responses = _model_eval_batch(model, packed_roots)
+        self.assertEqual(len(batch_responses), len(packed_roots))
+
     def test_serve_answers_eval_batch_request_with_fallback(self) -> None:
         import json as json_module
         import subprocess

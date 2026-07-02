@@ -55,7 +55,7 @@ def _response(payload: dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
-PROTOCOL_FEATURES = ["eval_batch", "value_vector"]
+PROTOCOL_FEATURES = ["eval_batch", "value_vector", "packed_features"]
 EVAL_BATCH_CHUNK_SIZE = 32
 # The relation-bias layer materializes a [rows, actions, seq, d_model] tensor,
 # so chunking must bound rows * actions * seq, not just rows. 2^21 cells keeps
@@ -69,8 +69,13 @@ def _eval_batch_chunks(roots: list[dict[str, Any]], *, chunk_size: int) -> list[
     max_actions = 0
     max_seq = 0
     for root in roots:
-        action_count = len(root.get("legal_actions", ())) or 1
-        token_count = int(root.get("public_tokens", {}).get("token_count", 0)) or 1
+        packed = root.get("packed_features")
+        if packed is not None:
+            action_count = int(packed.get("action_count", 0)) or 1
+            token_count = int(packed.get("token_count", 0)) or 1
+        else:
+            action_count = len(root.get("legal_actions", ())) or 1
+            token_count = int(root.get("public_tokens", {}).get("token_count", 0)) or 1
         candidate_actions = max(max_actions, action_count)
         candidate_seq = max(max_seq, token_count + action_count)
         cells = (len(current) + 1) * candidate_actions * candidate_seq
@@ -87,8 +92,16 @@ def _eval_batch_chunks(roots: list[dict[str, Any]], *, chunk_size: int) -> list[
     return chunks
 
 
+def _request_action_ids(root: dict[str, Any]) -> list[str]:
+    action_ids = root.get("action_ids")
+    if isinstance(action_ids, list) and action_ids:
+        return [str(action_id) for action_id in action_ids]
+    return [action["action_id"] for action in root["legal_actions"]]
+
+
 def _uniform_eval(root: dict[str, Any], *, model_fallback: bool) -> dict[str, Any]:
-    action_count = len(root["legal_actions"])
+    action_ids = _request_action_ids(root)
+    action_count = len(action_ids)
     if action_count == 0:
         raise ValueError("eval_request root has no legal actions")
     prior = 1.0 / action_count
@@ -106,7 +119,7 @@ def _uniform_eval(root: dict[str, Any], *, model_fallback: bool) -> dict[str, An
         "type": "eval_response",
         "schema_id": root.get("schema_id"),
         "state_hash": root.get("state_hash"),
-        "action_ids": [action["action_id"] for action in root["legal_actions"]],
+        "action_ids": action_ids,
         "priors": [prior] * action_count,
         "q": q_values,
         "score_to_go": score_to_go,
@@ -149,6 +162,86 @@ def inference_request_view(root: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _collate_packed_inference_roots(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Collate eval requests that carry precomputed feature arrays (Rust-side
+    extraction). No per-row Python feature work: decode, reshape, pad. The
+    relation tail uses the training-shard column convention (token capacity
+    columns first, then action columns)."""
+    import base64
+
+    import numpy as np
+    import torch
+
+    token_counts = []
+    action_counts = []
+    decoded = []
+    for record in records:
+        packed = record["packed_features"]
+        token_count = int(packed["token_count"])
+        action_count = int(packed["action_count"])
+        token_dim = int(packed["token_feature_dim"])
+        action_dim = int(packed["action_feature_dim"])
+        tokens = np.frombuffer(
+            base64.b64decode(packed["tokens_f32_b64"]), dtype="<f4"
+        ).reshape(token_count, token_dim)
+        actions = np.frombuffer(
+            base64.b64decode(packed["actions_f32_b64"]), dtype="<f4"
+        ).reshape(action_count, action_dim)
+        tail = np.frombuffer(
+            base64.b64decode(packed["relation_tail_u8_b64"]), dtype=np.uint8
+        ).reshape(action_count, token_count + action_count)
+        token_counts.append(token_count)
+        action_counts.append(action_count)
+        decoded.append((tokens, actions, tail))
+
+    batch_size = len(records)
+    max_tokens = max(token_counts)
+    max_actions = max(action_counts)
+    token_dim = decoded[0][0].shape[1]
+    action_dim = decoded[0][1].shape[1]
+    seq_len = max_tokens + max_actions
+    tokens = torch.zeros((batch_size, max_tokens, token_dim), dtype=torch.float32)
+    token_mask = torch.zeros((batch_size, max_tokens), dtype=torch.bool)
+    actions = torch.zeros((batch_size, max_actions, action_dim), dtype=torch.float32)
+    action_mask = torch.zeros((batch_size, max_actions), dtype=torch.bool)
+    relation_tail = torch.zeros((batch_size, max_actions, seq_len), dtype=torch.uint8)
+    exact_afterstate = torch.zeros((batch_size, max_actions), dtype=torch.float32)
+    for batch_index, (record, (token_rows, action_rows, tail)) in enumerate(
+        zip(records, decoded)
+    ):
+        token_count = token_counts[batch_index]
+        action_count = action_counts[batch_index]
+        tokens[batch_index, :token_count] = torch.from_numpy(token_rows.copy())
+        token_mask[batch_index, :token_count] = True
+        actions[batch_index, :action_count] = torch.from_numpy(action_rows.copy())
+        action_mask[batch_index, :action_count] = True
+        # Column remap from unpadded T+A to padded max_tokens+max_actions.
+        tail_tensor = torch.from_numpy(tail.copy())
+        relation_tail[batch_index, :action_count, :token_count] = tail_tensor[:, :token_count]
+        relation_tail[
+            batch_index,
+            :action_count,
+            max_tokens : max_tokens + action_count,
+        ] = tail_tensor[:, token_count : token_count + action_count]
+        exact = record["exact_afterstate_score_active"]
+        if len(exact) != action_count:
+            raise ValueError("packed exact_afterstate_score_active misaligned")
+        exact_afterstate[batch_index, :action_count] = torch.tensor(exact, dtype=torch.float32)
+    return {
+        "tokens": tokens,
+        "token_mask": token_mask,
+        "actions": actions,
+        "action_mask": action_mask,
+        "relation_tail": relation_tail,
+        "combined_seq_len": seq_len,
+        "action_counts": action_counts,
+        "token_counts": token_counts,
+        "state_hashes": [record.get("state_hash") for record in records],
+        "action_ids": [_request_action_ids(record) for record in records],
+        "exact_afterstate_score_active": exact_afterstate,
+    }
+
+
 def collate_inference_roots(records: list[dict[str, Any]]) -> dict[str, Any]:
     import torch
 
@@ -161,6 +254,8 @@ def collate_inference_roots(records: list[dict[str, Any]]) -> dict[str, Any]:
 
     if not records:
         raise ValueError("collate_inference_roots requires at least one record")
+    if all("packed_features" in record for record in records):
+        return _collate_packed_inference_roots(records)
     views = [inference_request_view(record) for record in records]
     batch_size = len(views)
     action_counts = [len(view["legal_actions"]) for view in views]
@@ -325,7 +420,8 @@ def _model_eval_batch(
                 eval_batch["token_mask"],
                 eval_batch["actions"],
                 eval_batch["action_mask"],
-                eval_batch.get("relation_ids"),
+                relation_ids=eval_batch.get("relation_ids"),
+                relation_tail=eval_batch.get("relation_tail"),
             )
             masked_logits = outputs["logits"].masked_fill(~eval_batch["action_mask"], -1.0e9)
             priors = torch.softmax(masked_logits, dim=1).cpu()

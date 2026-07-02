@@ -2356,7 +2356,7 @@ fn gumbel_search_seed(seed_u64: u64, ply_index: usize) -> u64 {
     gumbel::splitmix64(seed_u64 ^ gumbel::splitmix64(ply_index as u64 ^ 0x6706_2026))
 }
 
-fn eval_request_for_row(row: &gumbel::EvalRow) -> Result<Value> {
+fn eval_request_for_row(row: &gumbel::EvalRow, packed: bool) -> Result<Value> {
     let staged = &row.staged;
     let active_seat = staged.current_player();
     let mut legal_actions = Vec::with_capacity(row.afterstates.len());
@@ -2373,7 +2373,7 @@ fn eval_request_for_row(row: &gumbel::EvalRow) -> Result<Value> {
         action_ids.push(json!(action_id(&afterstate.candidate.action)?));
     }
     let public_hash = staged.public_state().canonical_hash();
-    Ok(json!({
+    let mut request = json!({
         "schema_id": EXPERT_ROOT_SCHEMA_ID,
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
         "active_seat": active_seat,
@@ -2385,6 +2385,52 @@ fn eval_request_for_row(row: &gumbel::EvalRow) -> Result<Value> {
             .map(|afterstate| json!(afterstate.exact_score_active))
             .collect::<Vec<_>>(),
         "public_tokens": public_tokens(staged, active_seat),
+    });
+    if packed {
+        let packed_features = packed_features_for_request(&request)?;
+        let object = request
+            .as_object_mut()
+            .expect("eval request is always an object");
+        // The bridge builds tensors straight from the packed arrays; the raw
+        // token/action dictionaries would only duplicate megabytes per root.
+        object.remove("legal_actions");
+        object.remove("public_tokens");
+        object.insert("packed_features".to_owned(), packed_features);
+    }
+    Ok(request)
+}
+
+/// Precomputed model-input features for an eval request, base64-encoded
+/// little-endian arrays. Row-major shapes: tokens `T x 41` f32, actions
+/// `A x 61` f32, relation tail `A x (T + A)` u8 (token columns first).
+fn packed_features_for_request(request: &Value) -> Result<Value> {
+    use base64::Engine as _;
+
+    let token_rows = feature_tensors::public_token_features(request)?;
+    let action_rows = feature_tensors::semantic_public_token_action_features(request)?;
+    let token_count = token_rows.len();
+    let action_count = action_rows.len();
+    let relation_tail =
+        feature_tensors::action_relation_tail(request, token_count, action_count)?;
+
+    let mut token_bytes = Vec::with_capacity(token_count * PUBLIC_TOKEN_FEATURE_DIM * 4);
+    for value in token_rows.iter().flatten() {
+        token_bytes.extend_from_slice(&value.to_le_bytes());
+    }
+    let mut action_bytes =
+        Vec::with_capacity(action_count * SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM * 4);
+    for value in action_rows.iter().flatten() {
+        action_bytes.extend_from_slice(&value.to_le_bytes());
+    }
+    let engine = base64::engine::general_purpose::STANDARD;
+    Ok(json!({
+        "token_count": token_count,
+        "action_count": action_count,
+        "token_feature_dim": PUBLIC_TOKEN_FEATURE_DIM,
+        "action_feature_dim": SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM,
+        "tokens_f32_b64": engine.encode(&token_bytes),
+        "actions_f32_b64": engine.encode(&action_bytes),
+        "relation_tail_u8_b64": engine.encode(&relation_tail),
     }))
 }
 
@@ -2394,6 +2440,16 @@ fn eval_request_for_row(row: &gumbel::EvalRow) -> Result<Value> {
 enum ChunkBridge {
     Owned(Option<ModelServiceSession>),
     Shared(SharedBridgeClient),
+}
+
+impl ChunkBridge {
+    fn supports_packed_features(&self) -> bool {
+        match self {
+            ChunkBridge::Owned(Some(session)) => session.supports_packed_features(),
+            ChunkBridge::Owned(None) => false,
+            ChunkBridge::Shared(client) => client.supports_packed_features(),
+        }
+    }
 }
 
 /// Batched leaf evaluator over the JSONL model bridge. Falls back to
@@ -2406,9 +2462,10 @@ struct BridgeLeafEvaluator<'a> {
 
 impl gumbel::LeafEvaluator for BridgeLeafEvaluator<'_> {
     fn evaluate_batch(&mut self, rows: &[gumbel::EvalRow]) -> Result<Vec<gumbel::EvalOut>> {
+        let packed = self.bridge.supports_packed_features();
         let requests = rows
             .iter()
-            .map(eval_request_for_row)
+            .map(|row| eval_request_for_row(row, packed))
             .collect::<Result<Vec<_>>>()?;
         let evals: Vec<ModelEval> = match self.bridge {
             ChunkBridge::Shared(client) => client.eval_batch(&requests)?,
@@ -4774,6 +4831,57 @@ mod tests {
             Some(feature_tensors::EXPERT_SHARD_VERSION_V2)
         );
         let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
+    fn packed_eval_request_roundtrips_feature_arrays() {
+        use base64::Engine as _;
+
+        let game = advanced_test_state(2_026_070_700, 6);
+        let row = gumbel::eval_row_for_state(&game, Some(8))
+            .expect("row")
+            .expect("non-terminal");
+        let raw = eval_request_for_row(&row, false).expect("raw request");
+        let packed = eval_request_for_row(&row, true).expect("packed request");
+
+        assert!(packed.get("legal_actions").is_none());
+        assert!(packed.get("public_tokens").is_none());
+        assert_eq!(packed["action_ids"], raw["action_ids"]);
+        let features = packed.get("packed_features").expect("packed_features");
+        let token_count = features["token_count"].as_u64().unwrap() as usize;
+        let action_count = features["action_count"].as_u64().unwrap() as usize;
+        assert_eq!(action_count, row.afterstates.len());
+
+        let engine = base64::engine::general_purpose::STANDARD;
+        let token_bytes = engine
+            .decode(features["tokens_f32_b64"].as_str().unwrap())
+            .expect("token b64");
+        assert_eq!(token_bytes.len(), token_count * PUBLIC_TOKEN_FEATURE_DIM * 4);
+        let decoded_tokens: Vec<f32> = token_bytes
+            .chunks_exact(4)
+            .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+            .collect();
+        let expected_tokens: Vec<f32> = feature_tensors::public_token_features(&raw)
+            .expect("expected tokens")
+            .into_iter()
+            .flatten()
+            .collect();
+        assert_eq!(decoded_tokens, expected_tokens, "token features bit-equal");
+
+        let action_bytes = engine
+            .decode(features["actions_f32_b64"].as_str().unwrap())
+            .expect("action b64");
+        assert_eq!(
+            action_bytes.len(),
+            action_count * SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM * 4
+        );
+        let tail_bytes = engine
+            .decode(features["relation_tail_u8_b64"].as_str().unwrap())
+            .expect("tail b64");
+        assert_eq!(tail_bytes.len(), action_count * (token_count + action_count));
+        // The tail must contain at least one action-pointer relation on a
+        // real mid-game state.
+        assert!(tail_bytes.iter().any(|value| *value != 0));
     }
 
     #[test]

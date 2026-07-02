@@ -10,7 +10,11 @@ def emit(payload: dict) -> None:
 
 
 def eval_response(root: dict, *, model_fallback: bool) -> dict:
-    action_ids = [action["action_id"] for action in root["legal_actions"]]
+    raw_ids = root.get("action_ids")
+    if isinstance(raw_ids, list) and raw_ids:
+        action_ids = [str(action_id) for action_id in raw_ids]
+    else:
+        action_ids = [action["action_id"] for action in root["legal_actions"]]
     weights = [float(index + 1) for index in range(len(action_ids))]
     total = sum(weights)
     exact = root.get("exact_afterstate_score_active")
@@ -38,7 +42,7 @@ def main() -> int:
     no_batch = "--no-batch" in sys.argv[1:]
     hello: dict = {"type": "hello", "protocol": "cascadiav3.mock_model_bridge.v1"}
     if not no_batch:
-        hello["protocol_features"] = ["eval_batch", "value_vector"]
+        hello["protocol_features"] = ["eval_batch", "value_vector", "packed_features"]
     emit(hello)
     for line in sys.stdin:
         message = json.loads(line)
