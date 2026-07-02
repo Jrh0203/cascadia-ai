@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use cascadia_game::{
     DraftChoice, GameState, Market, MarketPrelude, ScoringCards, TurnAction, Wildlife,
     rescore_after_tile_with_habitat_analysis, score_board,
@@ -8,7 +6,7 @@ use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
 use super::{
-    GreedyCandidate, MatchResult, SimulationError, bear_pair_ready_slots,
+    GreedyCandidate, MatchResult, SimulationError, WildlifeScoreCache, bear_pair_ready_slots,
     is_dominated_same_slot_independent, play_match_with_selector,
     rescore_after_cached_wildlife_placement,
 };
@@ -481,7 +479,7 @@ fn rank_pattern_frontier_actions_with_wildlife_coverage(
     let baseline = score_board(active_board, cards);
     let habitat = active_board.habitat_analysis();
     let staged_market = game.preview_market_prelude(prelude)?.market().clone();
-    let mut wildlife_score_cache = HashMap::new();
+    let mut wildlife_score_cache = WildlifeScoreCache::default();
     let mut records = game
         .evaluate_legal_turn_actions_with_tile_context(
             prelude,

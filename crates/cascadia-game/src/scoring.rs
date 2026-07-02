@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Board, GameMode, GameState, HabitatAnalysis, HexCoord, MAX_BOARD_TILES, ScoringCards,
-    ScoringVariant, Terrain, Tile, TilePlacement, Wildlife,
+    ScoringVariant, Terrain, Tile, TileNeighborContext, TilePlacement, Wildlife,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -127,6 +127,23 @@ pub fn rescore_after_tile_with_habitat_analysis(
             placement.rotation,
             terrain,
         )
+    })
+}
+
+/// Equivalent of [`rescore_after_tile_with_habitat_analysis`] that reuses a
+/// prebuilt [`TileNeighborContext`] for the placement coordinate instead of
+/// re-reading the neighbor cells on every rotation and terrain probe.
+pub fn rescore_after_tile_with_neighbor_context(
+    board: &Board,
+    cards: ScoringCards,
+    baseline: ScoreBreakdown,
+    analysis: &HabitatAnalysis,
+    context: &TileNeighborContext,
+    rotation: crate::Rotation,
+    placed_tile: Tile,
+) -> ScoreBreakdown {
+    rescore_after_placement_with(board, cards, baseline, placed_tile, None, |terrain| {
+        analysis.largest_after_tile_with_context(context, placed_tile, rotation, terrain)
     })
 }
 
