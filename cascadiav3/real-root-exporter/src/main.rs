@@ -2373,7 +2373,7 @@ fn eval_request_for_row(row: &gumbel::EvalRow, packed: bool) -> Result<Value> {
         action_ids.push(json!(action_id(&afterstate.candidate.action)?));
     }
     let public_hash = staged.public_state().canonical_hash();
-    let mut request = json!({
+    let request = json!({
         "schema_id": EXPERT_ROOT_SCHEMA_ID,
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
         "active_seat": active_seat,
@@ -2387,16 +2387,25 @@ fn eval_request_for_row(row: &gumbel::EvalRow, packed: bool) -> Result<Value> {
         "public_tokens": public_tokens(staged, active_seat),
     });
     if packed {
-        let packed_features = packed_features_for_request(&request)?;
-        let object = request
-            .as_object_mut()
-            .expect("eval request is always an object");
-        // The bridge builds tensors straight from the packed arrays; the raw
-        // token/action dictionaries would only duplicate megabytes per root.
-        object.remove("legal_actions");
-        object.remove("public_tokens");
-        object.insert("packed_features".to_owned(), packed_features);
+        return pack_eval_request(request);
     }
+    Ok(request)
+}
+
+/// Converts a raw eval request into its packed-features form. This is a pure
+/// function of the raw request, so a raw request fully determines its packed
+/// twin (which lets the dedup path key on cheap raw payloads and pack only
+/// the unique rows it actually sends).
+fn pack_eval_request(mut request: Value) -> Result<Value> {
+    let packed_features = packed_features_for_request(&request)?;
+    let object = request
+        .as_object_mut()
+        .expect("eval request is always an object");
+    // The bridge builds tensors straight from the packed arrays; the raw
+    // token/action dictionaries would only duplicate megabytes per root.
+    object.remove("legal_actions");
+    object.remove("public_tokens");
+    object.insert("packed_features".to_owned(), packed_features);
     Ok(request)
 }
 
@@ -2452,88 +2461,248 @@ impl ChunkBridge {
     }
 }
 
-/// Batched leaf evaluator over the JSONL model bridge. Falls back to
+/// Rows-saved accounting for the dedup + cache eval path.
+#[derive(Debug, Default, Clone, Copy)]
+struct EvalDedupStats {
+    /// Rows the search asked to evaluate.
+    rows_requested: u64,
+    /// Unique rows actually sent to the model bridge.
+    rows_sent: u64,
+    /// Rows served from the cross-call cache.
+    cache_hits: u64,
+}
+
+impl EvalDedupStats {
+    fn accumulate_into(
+        &self,
+        rows_requested: &AtomicU64,
+        rows_sent: &AtomicU64,
+        cache_hits: &AtomicU64,
+    ) {
+        rows_requested.fetch_add(self.rows_requested, Ordering::Relaxed);
+        rows_sent.fetch_add(self.rows_sent, Ordering::Relaxed);
+        cache_hits.fetch_add(self.cache_hits, Ordering::Relaxed);
+    }
+}
+
+fn log_eval_dedup_summary(label: &str, rows_requested: u64, rows_sent: u64, cache_hits: u64) {
+    if rows_requested == 0 {
+        return;
+    }
+    let saved = rows_requested.saturating_sub(rows_sent);
+    eprintln!(
+        "[real-root-exporter] {label} eval dedup: {rows_requested} rows requested, {rows_sent} sent to bridge ({:.1}% saved), {cache_hits} cache hits",
+        100.0 * saved as f64 / rows_requested as f64,
+    );
+}
+
+/// Cache entries are cleared wholesale past this bound; at k_interior <= 64
+/// this stays well under ~60 MB per worker.
+const EVAL_ROW_CACHE_MAX_ENTRIES: usize = 50_000;
+
+/// Cross-call eval-output cache keyed by the blake3 hash of the full
+/// serialized eval request. The request payload (public tokens or packed
+/// feature bytes, action ids, exact afterstate scores) fully determines the
+/// bridge output, so identical keys are safe to reuse across simulations,
+/// plies, and games handled by one worker.
+struct EvalRowCache {
+    entries: HashMap<[u8; 32], gumbel::EvalOut>,
+    stats: EvalDedupStats,
+}
+
+impl EvalRowCache {
+    fn new() -> Self {
+        Self {
+            entries: HashMap::new(),
+            stats: EvalDedupStats::default(),
+        }
+    }
+}
+
+/// Dedup key: blake3 over the serialized raw (unpacked) request bytes plus a
+/// wire-format marker. The raw payload is an information superset of the
+/// packed payload (packing is a pure function of it), so it keys either form.
+fn eval_request_key(raw_request: &Value, packed: bool) -> Result<[u8; 32]> {
+    let bytes =
+        serde_json::to_vec(raw_request).context("serializing eval request for dedup key")?;
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(&[u8::from(packed)]);
+    hasher.update(&bytes);
+    Ok(*hasher.finalize().as_bytes())
+}
+
+/// Converts one bridge eval into search outputs for its row.
+fn eval_out_for_row(row: &gumbel::EvalRow, eval: &ModelEval) -> Result<gumbel::EvalOut> {
+    let action_count = row.afterstates.len();
+    if eval.priors.len() != action_count {
+        bail!("model priors misaligned with gumbel row menu");
+    }
+    let priors = eval
+        .priors
+        .iter()
+        .map(|value| value.as_f64().context("model prior must be numeric"))
+        .collect::<Result<Vec<_>>>()?;
+    // Prefer exact + score_to_go: identical to the bridge's own q
+    // for real models, and degrades to exact-afterstate values
+    // (score_to_go == 0) under uniform fallback.
+    let derived_final_q = if let Some(score_to_go) = &eval.score_to_go {
+        if score_to_go.len() != action_count {
+            bail!("model score_to_go misaligned with gumbel row menu");
+        }
+        row.afterstates
+            .iter()
+            .zip(score_to_go.iter())
+            .map(|(afterstate, remaining)| afterstate.exact_score_active + remaining)
+            .collect()
+    } else if let Some(q_values) = &eval.q {
+        if q_values.len() != action_count {
+            bail!("model q misaligned with gumbel row menu");
+        }
+        q_values.clone()
+    } else {
+        row.afterstates
+            .iter()
+            .map(|afterstate| afterstate.exact_score_active)
+            .collect()
+    };
+    Ok(gumbel::EvalOut {
+        priors,
+        derived_final_q,
+    })
+}
+
+/// Evaluates rows through `eval_unique` after deduplicating identical
+/// requests within the batch and serving repeats from `cache`. Results are
+/// fanned back out in the original row order. Rows with identical request
+/// payloads have identical menus (action ids and exact afterstate scores are
+/// part of the payload), so sharing one bridge eval across them is exact.
+fn evaluate_rows_deduped<F>(
+    rows: &[gumbel::EvalRow],
+    packed: bool,
+    cache: &mut EvalRowCache,
+    mut eval_unique: F,
+) -> Result<Vec<gumbel::EvalOut>>
+where
+    F: FnMut(&[Value], &[&gumbel::EvalRow]) -> Result<Vec<ModelEval>>,
+{
+    cache.stats.rows_requested += rows.len() as u64;
+    let mut outputs: Vec<Option<gumbel::EvalOut>> = Vec::with_capacity(rows.len());
+    // Per row: index into the unique batch, or None when cache-served.
+    let mut row_slots: Vec<Option<usize>> = Vec::with_capacity(rows.len());
+    let mut unique_requests: Vec<Value> = Vec::new();
+    let mut unique_rows: Vec<&gumbel::EvalRow> = Vec::new();
+    let mut unique_keys: Vec<[u8; 32]> = Vec::new();
+    let mut key_to_unique: HashMap<[u8; 32], usize> = HashMap::new();
+
+    for row in rows {
+        // Key on the cheap raw request; duplicate and cache-served rows never
+        // pay for feature packing.
+        let raw_request = eval_request_for_row(row, false)?;
+        let key = eval_request_key(&raw_request, packed)?;
+        if let Some(cached) = cache.entries.get(&key) {
+            cache.stats.cache_hits += 1;
+            outputs.push(Some(cached.clone()));
+            row_slots.push(None);
+            continue;
+        }
+        let unique_index = match key_to_unique.entry(key) {
+            std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let request = if packed {
+                    pack_eval_request(raw_request)?
+                } else {
+                    raw_request
+                };
+                unique_requests.push(request);
+                unique_rows.push(row);
+                unique_keys.push(key);
+                *entry.insert(unique_requests.len() - 1)
+            }
+        };
+        outputs.push(None);
+        row_slots.push(Some(unique_index));
+    }
+
+    if !unique_requests.is_empty() {
+        cache.stats.rows_sent += unique_requests.len() as u64;
+        let evals = eval_unique(&unique_requests, &unique_rows)?;
+        if evals.len() != unique_requests.len() {
+            bail!(
+                "model bridge returned {} results for {} unique rows",
+                evals.len(),
+                unique_requests.len()
+            );
+        }
+        let unique_outs = unique_rows
+            .iter()
+            .zip(evals.iter())
+            .map(|(row, eval)| eval_out_for_row(row, eval))
+            .collect::<Result<Vec<_>>>()?;
+        for (key, out) in unique_keys.iter().zip(unique_outs.iter()) {
+            if cache.entries.len() >= EVAL_ROW_CACHE_MAX_ENTRIES {
+                cache.entries.clear();
+            }
+            cache.entries.insert(*key, out.clone());
+        }
+        for (slot, output) in row_slots.iter().zip(outputs.iter_mut()) {
+            if let Some(unique_index) = slot {
+                *output = Some(unique_outs[*unique_index].clone());
+            }
+        }
+    }
+
+    outputs
+        .into_iter()
+        .map(|output| output.context("deduped eval left a row without output"))
+        .collect()
+}
+
+/// Batched leaf evaluator over the JSONL model bridge. Identical rows are
+/// deduplicated within each batch and served from a cross-call cache; only
+/// unique unseen rows pay a bridge round-trip. Falls back to
 /// exact-afterstate-only values (uniform priors) when the bridge is
 /// unavailable and fallback is allowed.
 struct BridgeLeafEvaluator<'a> {
     bridge: &'a mut ChunkBridge,
     allow_model_fallback: bool,
+    cache: &'a mut EvalRowCache,
 }
 
 impl gumbel::LeafEvaluator for BridgeLeafEvaluator<'_> {
     fn evaluate_batch(&mut self, rows: &[gumbel::EvalRow]) -> Result<Vec<gumbel::EvalOut>> {
         let packed = self.bridge.supports_packed_features();
-        let requests = rows
-            .iter()
-            .map(|row| eval_request_for_row(row, packed))
-            .collect::<Result<Vec<_>>>()?;
-        let evals: Vec<ModelEval> = match self.bridge {
-            ChunkBridge::Shared(client) => client.eval_batch(&requests)?,
-            ChunkBridge::Owned(session_slot) => {
-                if let Some(session) = session_slot.as_mut() {
-                    match session.eval_batch(&requests) {
-                        Ok(evals) => evals,
-                        Err(error) if self.allow_model_fallback => {
-                            eprintln!(
-                                "model service batch eval failed; falling back to uniform priors: {error}"
-                            );
-                            *session_slot = None;
-                            rows.iter()
-                                .map(|row| uniform_model_eval(row.afterstates.len()))
-                                .collect()
+        let bridge = &mut *self.bridge;
+        let allow_model_fallback = self.allow_model_fallback;
+        evaluate_rows_deduped(rows, packed, self.cache, |requests, unique_rows| {
+            match bridge {
+                ChunkBridge::Shared(client) => client.eval_batch(requests),
+                ChunkBridge::Owned(session_slot) => {
+                    if let Some(session) = session_slot.as_mut() {
+                        match session.eval_batch(requests) {
+                            Ok(evals) => Ok(evals),
+                            Err(error) if allow_model_fallback => {
+                                eprintln!(
+                                    "model service batch eval failed; falling back to uniform priors: {error}"
+                                );
+                                *session_slot = None;
+                                Ok(unique_rows
+                                    .iter()
+                                    .map(|row| uniform_model_eval(row.afterstates.len()))
+                                    .collect())
+                            }
+                            Err(error) => Err(error),
                         }
-                        Err(error) => return Err(error),
+                    } else if allow_model_fallback {
+                        Ok(unique_rows
+                            .iter()
+                            .map(|row| uniform_model_eval(row.afterstates.len()))
+                            .collect())
+                    } else {
+                        bail!("gumbel search requires a model service or --allow-model-fallback");
                     }
-                } else if self.allow_model_fallback {
-                    rows.iter()
-                        .map(|row| uniform_model_eval(row.afterstates.len()))
-                        .collect()
-                } else {
-                    bail!("gumbel search requires a model service or --allow-model-fallback");
                 }
             }
-        };
-        rows.iter()
-            .zip(evals.into_iter())
-            .map(|(row, eval)| {
-                let action_count = row.afterstates.len();
-                if eval.priors.len() != action_count {
-                    bail!("model priors misaligned with gumbel row menu");
-                }
-                let priors = eval
-                    .priors
-                    .iter()
-                    .map(|value| value.as_f64().context("model prior must be numeric"))
-                    .collect::<Result<Vec<_>>>()?;
-                // Prefer exact + score_to_go: identical to the bridge's own q
-                // for real models, and degrades to exact-afterstate values
-                // (score_to_go == 0) under uniform fallback.
-                let derived_final_q = if let Some(score_to_go) = &eval.score_to_go {
-                    if score_to_go.len() != action_count {
-                        bail!("model score_to_go misaligned with gumbel row menu");
-                    }
-                    row.afterstates
-                        .iter()
-                        .zip(score_to_go.iter())
-                        .map(|(afterstate, remaining)| afterstate.exact_score_active + remaining)
-                        .collect()
-                } else if let Some(q_values) = &eval.q {
-                    if q_values.len() != action_count {
-                        bail!("model q misaligned with gumbel row menu");
-                    }
-                    q_values.clone()
-                } else {
-                    row.afterstates
-                        .iter()
-                        .map(|afterstate| afterstate.exact_score_active)
-                        .collect()
-                };
-                Ok(gumbel::EvalOut {
-                    priors,
-                    derived_final_q,
-                })
-            })
-            .collect()
+        })
     }
 }
 
@@ -2675,6 +2844,7 @@ fn play_gumbel_selfplay_seed(
     args: &Args,
     seed_u64: u64,
     bridge: &mut ChunkBridge,
+    eval_cache: &mut EvalRowCache,
 ) -> Result<Vec<Value>> {
     let config = GameConfig::research_aaaaa(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
@@ -2689,6 +2859,7 @@ fn play_gumbel_selfplay_seed(
         let mut evaluator = BridgeLeafEvaluator {
             bridge,
             allow_model_fallback: args.allow_model_fallback,
+            cache: eval_cache,
         };
         let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
             .with_context(|| format!("gumbel selfplay seed {seed_u64} ply {ply_index}"))?;
@@ -2721,6 +2892,9 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     let total_seeds = seed_end - args.first_seed;
     let completed_seeds = AtomicU64::new(0);
     let completed_records = AtomicU64::new(0);
+    let eval_rows_requested = AtomicU64::new(0);
+    let eval_rows_sent = AtomicU64::new(0);
+    let eval_cache_hits = AtomicU64::new(0);
     let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
     let target_chunks = args
         .model_sessions
@@ -2750,10 +2924,14 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                 Some(shared) => ChunkBridge::Shared(shared.client()),
                 None => ChunkBridge::Owned(model_state_worker_session(args)?),
             };
+            // One eval cache per chunk: consecutive decisions (and adjacent
+            // seeds early-game) re-visit identical public rows.
+            let mut eval_cache = EvalRowCache::new();
             let mut chunk_shards = Vec::with_capacity(seed_chunk.len());
             for seed_u64 in seed_chunk.iter().copied() {
-                let records = play_gumbel_selfplay_seed(args, seed_u64, &mut chunk_bridge)
-                    .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))?;
+                let records =
+                    play_gumbel_selfplay_seed(args, seed_u64, &mut chunk_bridge, &mut eval_cache)
+                        .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))?;
                 let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
                     format!("extracting gumbel selfplay tensor features for seed {seed_u64}")
                 })?;
@@ -2770,9 +2948,20 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                 );
                 chunk_shards.push((seed_u64, shard));
             }
+            eval_cache.stats.accumulate_into(
+                &eval_rows_requested,
+                &eval_rows_sent,
+                &eval_cache_hits,
+            );
             Ok(chunk_shards)
         })
         .collect::<Result<Vec<_>>>()?;
+    log_eval_dedup_summary(
+        "gumbel selfplay tensor",
+        eval_rows_requested.load(Ordering::Relaxed),
+        eval_rows_sent.load(Ordering::Relaxed),
+        eval_cache_hits.load(Ordering::Relaxed),
+    );
     let mut per_seed = per_chunk
         .into_iter()
         .flatten()
@@ -2873,6 +3062,7 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
         .checked_add(args.seed_count)
         .context("seed range overflow")?;
     let mut chunk_bridge = ChunkBridge::Owned(model_state_worker_session(args)?);
+    let mut eval_cache = EvalRowCache::new();
     let mut records = Vec::new();
     for seed_u64 in args.first_seed..seed_end {
         let config = GameConfig::research_aaaaa(args.player_count)?;
@@ -2889,6 +3079,7 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
             let mut evaluator = BridgeLeafEvaluator {
                 bridge: &mut chunk_bridge,
                 allow_model_fallback: args.allow_model_fallback,
+                cache: &mut eval_cache,
             };
             let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
                 .with_context(|| format!("gumbel policy game seed {seed_u64} ply {ply_index}"))?;
@@ -2936,6 +3127,12 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
             game_started.elapsed().as_secs_f64()
         );
     }
+    log_eval_dedup_summary(
+        "gumbel policy game",
+        eval_cache.stats.rows_requested,
+        eval_cache.stats.rows_sent,
+        eval_cache.stats.cache_hits,
+    );
     write_jsonl(&args.out, &records)?;
     Ok(())
 }
@@ -4767,9 +4964,13 @@ mod tests {
         let session = model_state_worker_session(&args).expect("mock session");
         assert!(session.is_some(), "mock bridge session must spawn");
         let mut bridge = ChunkBridge::Owned(session);
-        let records = play_gumbel_selfplay_seed(&args, 2_026_070_600, &mut bridge)
-            .expect("selfplay seed plays");
+        let mut eval_cache = EvalRowCache::new();
+        let records =
+            play_gumbel_selfplay_seed(&args, 2_026_070_600, &mut bridge, &mut eval_cache)
+                .expect("selfplay seed plays");
         assert!(!records.is_empty());
+        assert!(eval_cache.stats.rows_requested > 0);
+        assert!(eval_cache.stats.rows_sent <= eval_cache.stats.rows_requested);
 
         let mut shared_final_score: Option<Value> = None;
         for record in &records {
@@ -4882,6 +5083,103 @@ mod tests {
         // The tail must contain at least one action-pointer relation on a
         // real mid-game state.
         assert!(tail_bytes.iter().any(|value| *value != 0));
+    }
+
+    /// Deterministic bridge stand-in: eval values derived purely from the
+    /// serialized request bytes, mirroring the real property that identical
+    /// request payloads produce identical model outputs.
+    fn synthetic_model_eval(request: &Value) -> ModelEval {
+        let digest = eval_request_key(request, false).expect("request key");
+        let action_count = request["action_ids"].as_array().expect("action ids").len();
+        let priors: Vec<Value> = (0..action_count)
+            .map(|index| json!((f64::from(digest[index % 32]) + 1.0) / 300.0))
+            .collect();
+        let score_to_go = (0..action_count)
+            .map(|index| f64::from(digest[(index + 7) % 32]) / 8.0)
+            .collect();
+        ModelEval {
+            priors,
+            q: None,
+            score_to_go: Some(score_to_go),
+            value: None,
+            model_fallback: false,
+            response: json!({"type": "eval_response"}),
+        }
+    }
+
+    /// Six rows over three distinct states: duplicates in mixed order.
+    fn dedup_test_rows() -> Vec<gumbel::EvalRow> {
+        let state_a = advanced_test_state(2_026_070_800, 2);
+        let state_b = advanced_test_state(2_026_070_801, 3);
+        let state_c = advanced_test_state(2_026_070_802, 4);
+        let row = |state: &GameState| {
+            gumbel::eval_row_for_state(state, Some(6))
+                .expect("row")
+                .expect("non-terminal")
+        };
+        vec![
+            row(&state_a),
+            row(&state_b),
+            row(&state_a),
+            row(&state_c),
+            row(&state_b),
+            row(&state_a),
+        ]
+    }
+
+    #[test]
+    fn deduped_eval_matches_undeduped_results_in_order() {
+        let rows = dedup_test_rows();
+        // Baseline: every row evaluated individually, no dedup or cache.
+        let baseline: Vec<gumbel::EvalOut> = rows
+            .iter()
+            .map(|row| {
+                let request = eval_request_for_row(row, false).expect("request");
+                eval_out_for_row(row, &synthetic_model_eval(&request)).expect("eval out")
+            })
+            .collect();
+
+        let mut cache = EvalRowCache::new();
+        let mut bridge_rows = 0usize;
+        let deduped = evaluate_rows_deduped(&rows, false, &mut cache, |requests, unique_rows| {
+            bridge_rows += requests.len();
+            assert_eq!(requests.len(), unique_rows.len());
+            Ok(requests.iter().map(synthetic_model_eval).collect())
+        })
+        .expect("deduped eval");
+
+        assert_eq!(deduped.len(), baseline.len());
+        for (dedup_out, baseline_out) in deduped.iter().zip(baseline.iter()) {
+            assert_eq!(dedup_out.priors, baseline_out.priors);
+            assert_eq!(dedup_out.derived_final_q, baseline_out.derived_final_q);
+        }
+        assert_eq!(bridge_rows, 3, "six rows contain three unique states");
+        assert_eq!(cache.stats.rows_requested, 6);
+        assert_eq!(cache.stats.rows_sent, 3);
+        assert_eq!(cache.stats.cache_hits, 0);
+    }
+
+    #[test]
+    fn eval_cache_serves_repeat_calls_without_bridge_traffic() {
+        let rows = dedup_test_rows();
+        let mut cache = EvalRowCache::new();
+        let first = evaluate_rows_deduped(&rows, false, &mut cache, |requests, _| {
+            Ok(requests.iter().map(synthetic_model_eval).collect())
+        })
+        .expect("first eval");
+        let second = evaluate_rows_deduped(&rows, false, &mut cache, |_, _| {
+            panic!("cache-served batch must not reach the bridge")
+        })
+        .expect("second eval");
+
+        assert_eq!(first.len(), second.len());
+        for (fresh, cached) in first.iter().zip(second.iter()) {
+            assert_eq!(fresh.priors, cached.priors);
+            assert_eq!(fresh.derived_final_q, cached.derived_final_q);
+        }
+        assert_eq!(cache.stats.rows_requested, 2 * rows.len() as u64);
+        assert_eq!(cache.stats.rows_sent, 3);
+        assert_eq!(cache.stats.cache_hits, rows.len() as u64);
     }
 
     #[test]
