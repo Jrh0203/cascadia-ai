@@ -23,6 +23,21 @@ not data-noise bound**. Gumbel at n=256 = 3.2 s/dec vs control 10.9 s/dec.
 
 ## In flight right now
 
+- **Cycle-3 gate battery** launched ~17:00 07-03 on john0
+  (`logs/cycle3_gates_job.{sh,log,pid}`, done marker `ALL_GATES_DONE`):
+  (1) no-search 100g seed 2026994000 -> `reports/gumbel_cycle3_no_search_game100.json`;
+  (2) Gumbel n=64 100g candidate-only seeds 2026995000 (batch runner)
+  -> `reports/gumbel_cycle3_gate_candidate.json`, pair offline vs stored
+  control per-seed in `reports/gumbel_phase_a_gate.json`;
+  (3) n=256 25g cycle-3 -> `reports/gumbel_cycle3_budget_n256.json`;
+  (4) n=256 25g cycle-2 -> `reports/gumbel_cycle2_budget_n256.json`.
+  First battery on the batch runner (one shared bridge, --jobs 12).
+- **Cycle 3 rerun COMPLETED 16:30 07-03**: generation 17,402s (~4.8h, 3.2x
+  pass-2 stack; production dedup 62.5% rows saved: 4.97M requested -> 1.87M
+  sent), training 337s, checkpoint
+  `checkpoints/full_v3_gumbel_selfplay_cycle3/best_locked_val.manifest.json`,
+  locked_val_final_q_regret 0.152 (new best; c1 0.79, c2 0.21).
+
 - **Cycle 3 (EI-4) RERUN** on john0: the first attempt completed all 1,250
   generation seeds (~15.6 h) then DIED writing the train tensor — a single
   npz array crossed the 4 GiB zip entry limit without zip64
