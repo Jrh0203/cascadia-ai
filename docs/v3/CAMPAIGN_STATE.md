@@ -35,9 +35,23 @@ not data-noise bound**. Gumbel at n=256 = 3.2 s/dec vs control 10.9 s/dec.
   Job: `logs/gumbel_selfplay_cycle3_job.{pid,log}` (pid 555312); completion
   when `reports/full_v3_gumbel_selfplay_cycle3_runbook.json` exists.
   Champion manifest: `checkpoints/full_v3_gumbel_selfplay_cycle/best_locked_val.manifest.json`.
-- Optimization pass 3 agents in flight locally (GPU forward
-  factoring/bucketing/compile investigation; batched shared-bridge benchmark
-  harness) — merge after they report; do NOT deploy mid-run to john0.
+- **Pass-2 production measurement (rerun, john0): 0.069-0.072 seeds/s vs
+  0.022 old stack = ~3.2x.** Generation ETA ~5h (start ~12:30 -> ~17:30),
+  checkpoint ~18:00, gates after.
+- Optimization pass 3 MERGED locally (not yet needed on john0 mid-run):
+  (1) batched benchmark harness — `--gumbel-benchmark-batch` Rust mode +
+  `--batch-runner` opt-in in torch_cascadiaformer_gumbel_benchmark.py; one
+  process + shared bridge for all seeds; per-seed outputs field-identical to
+  single-seed mode (test-enforced). USE THIS for the cycle-3 gate battery
+  candidate games. (2) forward-path knobs (all default-off):
+  `CASCADIA_BRIDGE_BUCKET=1` (shape bucketing; ~2e-7 drift class already
+  admitted by chunk padding), `CASCADIA_BRIDGE_COMPILE=1` (torch.compile +
+  CUDA warmup), `CASCADIA_BRIDGE_TIMING=1` (per-phase breakdown). Trunk
+  factoring verdict: forward is ALREADY factored (trunk runs once per root;
+  per-action cost only in cross-attn query + CGAB tail) — no exact win
+  available there; next non-exact idea is replacing the CGAB [B,A,S+A,d]
+  materialization with relation-count matmuls (reduction-order drift).
+  Tune BUCKET/COMPILE/TF32/gather/row-cap on john0 during the gate battery.
 
 ## Gate battery to run when cycle-3 lands (sequential, one job script)
 
