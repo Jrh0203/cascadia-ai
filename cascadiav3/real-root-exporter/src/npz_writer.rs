@@ -112,7 +112,11 @@ fn start_file<W: Write + std::io::Seek>(
     name: &str,
     compression: NpzCompression,
 ) -> zip::result::ZipResult<()> {
-    let options = FileOptions::default().compression_method(compression.method());
+    // large_file enables zip64 entries; required once a single array exceeds
+    // 4 GiB (first hit by the 100k-record cycle-3 corpus).
+    let options = FileOptions::default()
+        .compression_method(compression.method())
+        .large_file(true);
     zip.start_file(name, options)
 }
 
