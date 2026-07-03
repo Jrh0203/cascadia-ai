@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import warnings
 from pathlib import Path
 from typing import Any
@@ -63,6 +64,45 @@ EVAL_BATCH_CHUNK_SIZE = 32
 # the peak CGAB intermediate near 3 GB for d_model 384.
 EVAL_BATCH_CELL_BUDGET = 2_097_152
 
+# --- Shape bucketing (CASCADIA_BRIDGE_BUCKET=1, default off) -----------------
+#
+# Menus vary per chunk (actions from a handful to the full menu; token counts
+# drift over the game), so every chunk hands the GPU a fresh shape. Padding the
+# collated token/action capacities up to a small bucket set bounds the shape
+# vocabulary, which stabilizes kernel autotuner caches and makes
+# CASCADIA_BRIDGE_COMPILE recompiles finite.
+#
+# Semantics: padded token/action rows are fully masked (attention
+# key_padding_mask, action_mask fill, masked-mean pooling) and padded
+# relation-tail columns carry relation id 0, which both the embedding
+# padding_idx and the CGAB ne(0) mask treat as "no relation" — no padded value
+# can leak into a real row's output (test-enforced by garbage-invariance).
+# Bucketed outputs are still NOT bit-identical to unbucketed ones: CPU/GPU
+# reduction kernels block over the (padded) sequence length, so appending even
+# exact zeros can regroup the floating-point reduction of the real prefix
+# (measured ~2e-7 max drift on CPU). The default unbucketed path already
+# accepts the same class of drift, because rows are padded to the max of
+# whatever chunk they land in.
+EVAL_BUCKET_MIN = 8
+EVAL_BUCKET_CAP = 512
+EVAL_BUCKET_STEP_ABOVE_CAP = 128
+
+
+def _bucket_enabled() -> bool:
+    return os.environ.get("CASCADIA_BRIDGE_BUCKET") == "1"
+
+
+def _bucket_dim(size: int) -> int:
+    """Next power of two with a floor of EVAL_BUCKET_MIN; above EVAL_BUCKET_CAP
+    fall back to multiples of EVAL_BUCKET_STEP_ABOVE_CAP so huge menus do not
+    double their padding."""
+    if size <= EVAL_BUCKET_MIN:
+        return EVAL_BUCKET_MIN
+    if size > EVAL_BUCKET_CAP:
+        step = EVAL_BUCKET_STEP_ABOVE_CAP
+        return -(-size // step) * step
+    return 1 << (size - 1).bit_length()
+
 
 def pack_f64_b64(values: Any) -> str:
     """Base64 little-endian f64 packing for packed_response payloads.
@@ -92,9 +132,11 @@ def _packed_response_fields(
 
 
 def _eval_batch_chunks(roots: list[dict[str, Any]], *, chunk_size: int) -> list[list[dict[str, Any]]]:
+    bucketed = _bucket_enabled()
     chunks: list[list[dict[str, Any]]] = []
     current: list[dict[str, Any]] = []
     max_actions = 0
+    max_tokens = 0
     max_seq = 0
     for root in roots:
         packed = root.get("packed_features")
@@ -105,15 +147,23 @@ def _eval_batch_chunks(roots: list[dict[str, Any]], *, chunk_size: int) -> list[
             action_count = len(root.get("legal_actions", ())) or 1
             token_count = int(root.get("public_tokens", {}).get("token_count", 0)) or 1
         candidate_actions = max(max_actions, action_count)
+        candidate_tokens = max(max_tokens, token_count)
         candidate_seq = max(max_seq, token_count + action_count)
-        cells = (len(current) + 1) * candidate_actions * candidate_seq
+        if bucketed:
+            # Cost the chunk at the shape collate will actually pad to.
+            padded_actions = _bucket_dim(candidate_actions)
+            cells = (len(current) + 1) * padded_actions * (_bucket_dim(candidate_tokens) + padded_actions)
+        else:
+            cells = (len(current) + 1) * candidate_actions * candidate_seq
         if current and (len(current) >= chunk_size or cells > EVAL_BATCH_CELL_BUDGET):
             chunks.append(current)
             current = []
             candidate_actions = action_count
+            candidate_tokens = token_count
             candidate_seq = token_count + action_count
         current.append(root)
         max_actions = candidate_actions
+        max_tokens = candidate_tokens
         max_seq = candidate_seq
     if current:
         chunks.append(current)
@@ -225,6 +275,9 @@ def _collate_packed_inference_roots(records: list[dict[str, Any]]) -> dict[str, 
     batch_size = len(records)
     max_tokens = max(token_counts)
     max_actions = max(action_counts)
+    if _bucket_enabled():
+        max_tokens = _bucket_dim(max_tokens)
+        max_actions = _bucket_dim(max_actions)
     token_dim = decoded[0][0].shape[1]
     action_dim = decoded[0][1].shape[1]
     seq_len = max_tokens + max_actions
@@ -291,6 +344,9 @@ def collate_inference_roots(records: list[dict[str, Any]]) -> dict[str, Any]:
     token_counts = [int(view["public_tokens"].get("token_count", len(view["public_tokens"]["tokens"]))) for view in views]
     max_actions = max(action_counts)
     max_tokens = max(token_counts)
+    if _bucket_enabled():
+        max_tokens = _bucket_dim(max_tokens)
+        max_actions = _bucket_dim(max_actions)
     tokens = torch.zeros((batch_size, max_tokens, PUBLIC_TOKEN_FEATURE_DIM), dtype=torch.float32)
     token_mask = torch.zeros((batch_size, max_tokens), dtype=torch.bool)
     actions = torch.zeros((batch_size, max_actions, SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM), dtype=torch.float32)
@@ -419,7 +475,60 @@ def _load_model(
     model.load_state_dict(state)
     model.to(device)
     model.eval()
+    if os.environ.get("CASCADIA_BRIDGE_COMPILE") == "1":
+        model = _maybe_compile_model(model, device)
     return model
+
+
+def _maybe_compile_model(model, device):  # type: ignore[no-untyped-def]
+    """CASCADIA_BRIDGE_COMPILE=1 wraps the model in torch.compile (default off).
+
+    Default mode is used for portability; on the CUDA box mode="reduce-overhead"
+    (CUDA graphs) is worth benchmarking once shapes are bounded. Pair with
+    CASCADIA_BRIDGE_BUCKET=1 so the recompile set stays finite — without
+    bucketing every fresh (tokens, actions) shape triggers a recompile. Falls
+    back to the eager model if torch.compile is unavailable or fails.
+    """
+    import torch
+
+    if not hasattr(torch, "compile"):
+        print("bridge: torch.compile unavailable; serving eager", file=sys.stderr)
+        return model
+    try:
+        compiled = torch.compile(model)
+    except Exception as exc:  # pragma: no cover - depends on local toolchain
+        print(f"bridge: torch.compile failed ({exc}); serving eager", file=sys.stderr)
+        return model
+    if device.type == "cuda":
+        _warmup_compiled_model(compiled, device)
+    return compiled
+
+
+def _warmup_compiled_model(model, device) -> None:  # type: ignore[no-untyped-def]
+    """Pre-trigger compilation for a few representative bucketed shapes so the
+    first real chunks do not pay compile latency. CUDA-only: on CPU the compile
+    cost outweighs the warmup benefit for a serving process."""
+    import torch
+
+    cfg = getattr(model, "config", None)
+    if cfg is None:
+        return
+    shapes = [(64, 32), (64, 256)] if _bucket_enabled() else [(64, 32)]
+    try:
+        with torch.inference_mode():
+            for token_count, action_count in shapes:
+                seq_len = token_count + action_count
+                model(
+                    torch.zeros(1, token_count, cfg.token_feature_dim, device=device),
+                    torch.ones(1, token_count, dtype=torch.bool, device=device),
+                    torch.zeros(1, action_count, cfg.action_feature_dim, device=device),
+                    torch.ones(1, action_count, dtype=torch.bool, device=device),
+                    relation_tail=torch.zeros(
+                        1, action_count, seq_len, dtype=torch.uint8, device=device
+                    ),
+                )
+    except Exception as exc:  # pragma: no cover - warmup must never block serving
+        print(f"bridge: compile warmup skipped ({exc})", file=sys.stderr)
 
 
 def _move_batch_to_device(batch: dict[str, Any], device):  # type: ignore[no-untyped-def]
@@ -473,6 +582,75 @@ def _autocast_bf16_requested() -> bool:
     return os.environ.get("CASCADIA_BRIDGE_AUTOCAST", "").strip().lower() == "bf16"
 
 
+_TIMING_EMIT_EVERY = 50
+
+
+class _BridgeTiming:
+    """Per-phase wall-time accumulator for CASCADIA_BRIDGE_TIMING=1.
+
+    Tracks decode/collate, H2D transfer, forward, D2H (+post-ops), and response
+    encode per chunk, plus rows/actions processed. Emits a one-line summary to
+    stderr every _TIMING_EMIT_EVERY chunks and at interpreter shutdown. When the
+    env knob is off the module global stays None and _model_eval_batch pays only
+    a couple of `is not None` checks per chunk.
+    """
+
+    __slots__ = ("chunks", "rows", "actions", "collate_s", "h2d_s", "forward_s", "d2h_s", "encode_s")
+
+    def __init__(self) -> None:
+        self.chunks = 0
+        self.rows = 0
+        self.actions = 0
+        self.collate_s = 0.0
+        self.h2d_s = 0.0
+        self.forward_s = 0.0
+        self.d2h_s = 0.0
+        self.encode_s = 0.0
+
+    def record_chunk(
+        self,
+        *,
+        rows: int,
+        actions: int,
+        collate_s: float,
+        h2d_s: float,
+        forward_s: float,
+        d2h_s: float,
+        encode_s: float,
+    ) -> None:
+        self.chunks += 1
+        self.rows += rows
+        self.actions += actions
+        self.collate_s += collate_s
+        self.h2d_s += h2d_s
+        self.forward_s += forward_s
+        self.d2h_s += d2h_s
+        self.encode_s += encode_s
+        if self.chunks % _TIMING_EMIT_EVERY == 0:
+            self.emit("periodic")
+
+    def emit(self, tag: str) -> None:
+        if not self.chunks:
+            return
+        total = self.collate_s + self.h2d_s + self.forward_s + self.d2h_s + self.encode_s
+        print(
+            f"[bridge-timing {tag}] chunks={self.chunks} rows={self.rows} actions={self.actions}"
+            f" collate={self.collate_s:.3f}s h2d={self.h2d_s:.3f}s forward={self.forward_s:.3f}s"
+            f" d2h={self.d2h_s:.3f}s encode={self.encode_s:.3f}s total={total:.3f}s"
+            f" rows/s={self.rows / total if total > 0 else 0.0:.1f}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+
+_BRIDGE_TIMING: _BridgeTiming | None = None
+if os.environ.get("CASCADIA_BRIDGE_TIMING") == "1":
+    import atexit
+
+    _BRIDGE_TIMING = _BridgeTiming()
+    atexit.register(_BRIDGE_TIMING.emit, "final")
+
+
 def _model_eval_batch(
     model,
     roots: list[dict[str, Any]],
@@ -482,7 +660,16 @@ def _model_eval_batch(
     packed_response: bool = False,
 ) -> list[dict[str, Any]]:  # type: ignore[no-untyped-def]
     """One collated forward per chunk of roots. Chunking bounds the dense
-    relation_ids tensor (batch x seq x seq int64) at full action menus."""
+    relation_ids tensor (batch x seq x seq int64) at full action menus.
+
+    Trunk-factoring note (2026-07-03 investigation): the CascadiaFormer forward
+    is already root-factored. The batch layout is one row per root — the public
+    tokens [B, S] run through token_proj and the full state_encoder stack
+    exactly once per root, independent of the A candidate actions; action
+    conditioning first enters at action_proj / the cross-attention queries, and
+    the per-action relation structure only in the CGAB tail. There is no
+    per-action recomputation of the public-token trunk to factor out.
+    """
     import contextlib
 
     import torch
@@ -491,10 +678,20 @@ def _model_eval_batch(
         return []
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     autocast_bf16 = _autocast_bf16_requested() and device.type == "cuda"
+    timing = _BRIDGE_TIMING
+    cuda_sync = torch.cuda.synchronize if (timing is not None and device.type == "cuda") else None
     responses: list[dict[str, Any]] = []
     for chunk in _eval_batch_chunks(roots, chunk_size=max(1, chunk_size)):
+        if timing is not None:
+            t_chunk_start = time.perf_counter()
         batch = collate_inference_roots(chunk)
+        if timing is not None:
+            t_collated = time.perf_counter()
         inputs = _model_inputs_to_device(batch, device)
+        if timing is not None:
+            if cuda_sync is not None:
+                cuda_sync()
+            t_transferred = time.perf_counter()
         with torch.inference_mode():
             forward_context = (
                 torch.autocast("cuda", dtype=torch.bfloat16)
@@ -510,6 +707,10 @@ def _model_eval_batch(
                     relation_ids=inputs.get("relation_ids"),
                     relation_tail=inputs.get("relation_tail"),
                 )
+            if timing is not None:
+                if cuda_sync is not None:
+                    cuda_sync()
+                t_forwarded = time.perf_counter()
             masked_logits = outputs["logits"].float().masked_fill(~inputs["action_mask"], -1.0e9)
             priors = torch.softmax(masked_logits, dim=1).cpu()
             # One device->host copy per output tensor per chunk; the rows are
@@ -525,6 +726,8 @@ def _model_eval_batch(
         final_q_np = final_q_all.numpy()
         uncertainty_np = uncertainty_all.numpy()
         value_np = value_all.numpy()
+        if timing is not None:
+            t_copied = time.perf_counter()
         for row_index, root in enumerate(chunk):
             action_count = batch["action_counts"][row_index]
             response: dict[str, Any] = {
@@ -549,6 +752,16 @@ def _model_eval_batch(
                 response["uncertainty"] = uncertainty_np[row_index, :action_count].tolist()
                 response["value"] = value_np[row_index].tolist()
             responses.append(response)
+        if timing is not None:
+            timing.record_chunk(
+                rows=len(chunk),
+                actions=sum(batch["action_counts"]),
+                collate_s=t_collated - t_chunk_start,
+                h2d_s=t_transferred - t_collated,
+                forward_s=t_forwarded - t_transferred,
+                d2h_s=t_copied - t_forwarded,
+                encode_s=time.perf_counter() - t_copied,
+            )
     return responses
 
 

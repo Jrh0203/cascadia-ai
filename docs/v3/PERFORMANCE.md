@@ -277,3 +277,43 @@ drift in labels is possible on real GPUs (byte-pinning holds under the
 deterministic mock). Expected production effect: evals dominate, so ~44% row
 reduction plus response savings should compound to roughly ~1.7-2x generation
 throughput at n=128; measure on john0 after cycle 3 lands before quoting.
+
+## Forward-Path Pass 3 (2026-07-03, bridge forward knobs, default off)
+
+Findings and knobs from the CascadiaFormer forward-path pass in
+`torch_inference_bridge.py`. All knobs default off; with them unset the bridge
+behavior is unchanged (legacy chunker parity is unit-test pinned).
+
+1. **Trunk-factoring verdict: already factored.** The forward runs the public
+   tokens `[B, S]` through `token_proj` and the whole `state_encoder` stack
+   once per root; action conditioning first enters at `action_proj` / the
+   cross-attention queries, and per-action relation structure only in the CGAB
+   tail. The shared trunk is the dominant FLOP share (roughly 85% at
+   S=64/A=256 and ~95% at small menus, CascadiaFormer-S) and is computed
+   exactly once — there is no per-action recomputation to remove, so no
+   factored path was added.
+2. **`CASCADIA_BRIDGE_BUCKET=1` shape bucketing.** Collate pads token/action
+   capacities to power-of-two buckets (floor 8, cap 512, then multiples of
+   128), bounding the shape vocabulary for kernel caches and torch.compile.
+   The chunker costs chunks at the padded shape so the CGAB cell budget still
+   holds. Mask integrity is exact: filling padded rows with garbage instead of
+   zeros leaves every real output bit-identical (test-enforced). Bucketed vs
+   unbucketed outputs are NOT bit-identical (~2e-7 max drift, tolerance-gated
+   test): CPU/GPU reduction kernels block over the padded length, so appending
+   even exact zeros regroups the floating-point reduction of the real prefix —
+   the SDPA MATH backend shows the same, and the default chunk-max padding
+   already admits this drift class. CPU cost: 32 mixed-menu rows,
+   CascadiaFormer-S: 657ms -> 675ms min (~3% padding overhead); the intended
+   win is CUDA kernel-cache stability and a finite compile shape set.
+3. **`CASCADIA_BRIDGE_COMPILE=1` torch.compile.** Wraps the loaded model
+   (default mode; `mode="reduce-overhead"` worth benchmarking on the CUDA
+   box). Pair with bucketing so recompiles are finite. Falls back to eager on
+   failure; CUDA-only warmup over representative bucket shapes at load time.
+   CPU smoke-tested (tiny config, tolerance-gated vs eager).
+4. **`CASCADIA_BRIDGE_TIMING=1` per-phase timing.** Accumulates per-chunk wall
+   time for collate/H2D/forward/D2H/encode plus rows and actions, emits a
+   one-line stderr summary every 50 chunks and at shutdown, e.g.
+   `[bridge-timing final] chunks=1 rows=4 actions=2097 collate=0.052s
+   h2d=0.000s forward=0.307s d2h=0.000s encode=0.000s total=0.360s
+   rows/s=11.1`. Zero-cost when off. Use this on john0 to direct the next
+   pass.
