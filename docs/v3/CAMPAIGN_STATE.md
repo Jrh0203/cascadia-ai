@@ -63,6 +63,11 @@ the opponent pool; champion stays.
 
 - Generation: n=64 labels ~278 games/h; n=128 labels ~80 games/h (evals
   dominate post-optimization; budget costs ~3.5x not 2x).
+- Optimization pass 2 (2026-07-03, merged locally, NOT yet on john0): eval
+  dedup+cache (43.7% of eval rows eliminated at production shape) + packed
+  responses (7.7x encode / 2.9x decode) + TF32/bf16/shared-bridge env knobs.
+  See PERFORMANCE.md "Pass 2". Deploy to john0 AFTER cycle-3 job completes,
+  BEFORE the gate battery; measure real throughput there.
 - Optimizations landed (all bit-parity gated): packed-features protocol
   (8.4x collate), engine pass (2-3.6x rank, 2.2-2.6x rollouts), shared
   aggregated bridge (`SHARED_MODEL_SESSION=1`, MODEL_SESSIONS=16 = parallel

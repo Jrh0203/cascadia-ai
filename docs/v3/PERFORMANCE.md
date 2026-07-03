@@ -243,3 +243,37 @@ Deployed 2026-07-02 ~16:35: cycle 2 restarted on the optimized stack
 generation: **278 games/h** (125 seeds / 27 min) versus the 40 games/h
 old-stack owned-6 baseline — a **~7x aggregate throughput improvement**.
 A full-scale 1,375-seed cycle is now a ~5h job.
+
+## Throughput Optimization Pass 2 (2026-07-03, merged, not yet deployed)
+
+Model evals dominate post-pass-1 (n=128 labels cost ~3.5x n=64). Two landed
+changes targeting the eval path, both parity-gated (golden test byte-identical;
+packed==JSON and dedup==no-dedup exact-equality tests; byte-identical mock
+selfplay corpus sha256):
+
+1. **Eval-row dedup + per-chunk eval cache** (merge of `8b90c5c`): eval
+   features are public-information-only, so simulations sharing a root action
+   produce identical rows for early interior plies and argmax opponent
+   advances repeat states. `evaluate_rows_deduped()` collapses within-batch
+   duplicates and serves cross-call repeats from a blake3-keyed per-worker
+   cache (50k-entry cap). Measured at production search shape (n=64, top_m 16,
+   k_interior 16, menu 256, det 4): **43.7% of model eval rows eliminated**
+   (39,840 requested -> 22,438 sent; savings almost entirely from the
+   cross-call cache). Cache-hit rows also skip packed-feature construction.
+   Counters (`rows_requested/rows_sent/cache_hits`) print in export summaries.
+2. **Packed-response protocol + serving-path pass** (merge of `59bc3a7`):
+   negotiated `packed_response` feature — bridge returns base64 f64 LE arrays
+   instead of per-action JSON float lists (f32->f64 widening is exact: bit-
+   parity with JSON path, test-enforced). Python response encode **11.93ms ->
+   1.54ms per 32x256 batch (7.7x)**; Rust decode **1.60ms -> 0.55ms (2.9x)**.
+   Forward path: `torch.inference_mode`, one `.cpu()` per output tensor per
+   chunk, zero-copy collate, pinned non-blocking H2D, `final_q` on host.
+   New env knobs: `CASCADIA_BRIDGE_TF32=1` / `CASCADIA_BRIDGE_AUTOCAST=bf16`
+   (default off; NOT bit-parity), `CASCADIA_SHARED_GATHER_US` /
+   `CASCADIA_SHARED_ROW_CAP` (defaults 2000/192 = old behavior).
+
+Caveat: removing rows changes GPU batch composition, so float-reduction-order
+drift in labels is possible on real GPUs (byte-pinning holds under the
+deterministic mock). Expected production effect: evals dominate, so ~44% row
+reduction plus response savings should compound to roughly ~1.7-2x generation
+throughput at n=128; measure on john0 after cycle 3 lands before quoting.
