@@ -3,10 +3,15 @@ values) versus the legacy full rollout search control.
 
 The candidate side spawns `--gumbel-policy-game` processes; each Rust process
 owns its own model bridge session, so parallelism is process-level via
---jobs. The control side reuses the interactive full-search path from the
-search benchmark. Both sides play the same seeds; the control runs with
---rollout-determinize by default so the comparison is against the honest
-(no hidden-order peek) baseline.
+--jobs. With --batch-runner it instead invokes one `--gumbel-benchmark-batch`
+Rust process for the whole seed list: --jobs parallel games inside one
+process against one shared aggregated bridge (one CUDA context), the same
+topology self-play generation uses. Per-seed outputs and downstream report
+structures are identical either way; the default stays subprocess-per-seed
+for comparability with in-flight gate batteries. The control side reuses the
+interactive full-search path from the search benchmark. Both sides play the
+same seeds; the control runs with --rollout-determinize by default so the
+comparison is against the honest (no hidden-order peek) baseline.
 """
 
 from __future__ import annotations
@@ -122,6 +127,110 @@ def run_gumbel_games(
     return lines
 
 
+def _batch_seed_output_path(output_dir: Path, seed: int) -> Path:
+    """Per-seed JSONL path contract shared with --gumbel-benchmark-batch."""
+    return output_dir / f"gumbel_game_seed_{seed}.jsonl"
+
+
+def read_batch_seed_lines(output_dir: Path, seeds: list[int]) -> list[dict[str, Any]]:
+    """Reads --gumbel-benchmark-batch per-seed JSONL outputs back into the
+    same flat line list run_gumbel_games returns. Fails loudly on any seed
+    whose output file is missing or empty."""
+    lines: list[dict[str, Any]] = []
+    for seed in seeds:
+        seed_path = _batch_seed_output_path(output_dir, seed)
+        if not seed_path.exists():
+            raise RuntimeError(f"gumbel benchmark batch left no output for seed {seed}: {seed_path}")
+        seed_lines = [
+            json.loads(line) for line in seed_path.read_text(encoding="utf-8").splitlines() if line
+        ]
+        if not any(line.get("type") == "gumbel_game_done" for line in seed_lines):
+            raise RuntimeError(f"gumbel benchmark batch output for seed {seed} has no done record")
+        lines.extend(seed_lines)
+    return lines
+
+
+def run_gumbel_games_batch(
+    binary: Path,
+    *,
+    seeds: list[int],
+    model_service: str,
+    model_manifest: Path,
+    output_dir: Path,
+    jobs: int,
+    n_simulations: int,
+    top_m: int,
+    depth_rounds: int,
+    determinizations: int,
+    blend_weight: float,
+    k_interior: int,
+    max_root_actions: int | None,
+    rollout_max_actions: int,
+    rollout_top_k: int,
+    model_timeout_ms: int,
+    exploration: bool,
+) -> list[dict[str, Any]]:
+    """Runs the full seed list through --gumbel-benchmark-batch: one Rust
+    process per contiguous seed run (one process total for the usual
+    first_seed..first_seed+games battery), `--model-sessions jobs` parallel
+    games inside it, all against one shared aggregated model bridge."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for index, (first_seed, count) in enumerate(_contiguous_runs(seeds)):
+        command = [
+            str(binary),
+            "--gumbel-benchmark-batch",
+            "--first-seed",
+            str(first_seed),
+            "--seed-count",
+            str(count),
+            "--model-service",
+            model_service,
+            "--model-manifest",
+            str(model_manifest),
+            # No --allow-model-fallback: a bridge/checkpoint failure must kill
+            # the benchmark loudly, never silently degrade to uniform priors.
+            "--model-timeout-ms",
+            str(model_timeout_ms),
+            "--gumbel-n-simulations",
+            str(n_simulations),
+            "--gumbel-top-m",
+            str(top_m),
+            "--gumbel-depth-rounds",
+            str(depth_rounds),
+            "--gumbel-determinizations",
+            str(determinizations),
+            "--gumbel-blend-weight",
+            str(blend_weight),
+            "--gumbel-exploration",
+            "on" if exploration else "off",
+            "--k-interior",
+            str(k_interior),
+            "--max-actions",
+            str(rollout_max_actions),
+            "--rollout-top-k",
+            str(rollout_top_k),
+            "--model-sessions",
+            str(max(1, jobs)),
+            "--shared-model-session",
+            "--output-dir",
+            str(output_dir),
+        ]
+        if max_root_actions is not None:
+            command.extend(["--gumbel-max-root-actions", str(max_root_actions)])
+        stderr_path = output_dir / f"gumbel_batch_{index}.stderr.log"
+        with stderr_path.open("w", encoding="utf-8") as stderr_handle:
+            completed = subprocess.run(
+                command, stdout=subprocess.PIPE, stderr=stderr_handle, text=True
+            )
+        if completed.returncode != 0:
+            stderr_tail = stderr_path.read_text(encoding="utf-8")[-4000:]
+            raise RuntimeError(
+                f"gumbel benchmark batch failed ({completed.returncode}) for seeds "
+                f"{first_seed}..{first_seed + count - 1}: {stderr_tail}"
+            )
+    return read_batch_seed_lines(output_dir, seeds)
+
+
 def collect_gumbel_results(lines: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Groups gumbel_decision/gumbel_game_done rows into search-benchmark-shaped results."""
     decisions_by_seed: dict[int, list[dict[str, Any]]] = {}
@@ -171,29 +280,25 @@ def run_gumbel_benchmark(
     rollout_determinize: bool,
     model_timeout_ms: int,
     experiment_id: str,
+    batch_runner: bool = False,
 ) -> dict[str, Any]:
     service = model_service or default_model_service_command(manifest, device_name)
 
-    # Chunk seeds across jobs first, then split each chunk into contiguous
-    # runs (one --gumbel-policy-game invocation per run).
-    job_count = max(1, jobs)
-    chunk_size = (len(seeds) + job_count - 1) // job_count
-    runs: list[tuple[int, int]] = []
-    for start in range(0, len(seeds), max(1, chunk_size)):
-        runs.extend(_contiguous_runs(seeds[start : start + chunk_size]))
     candidate_lines: list[dict[str, Any]] = []
     started = time.perf_counter()
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
 
-        def run_slice(index: int, first_seed: int, count: int) -> list[dict[str, Any]]:
-            return run_gumbel_games(
+        if batch_runner:
+            # One Rust process for the whole battery: --jobs parallel games
+            # inside it against one shared aggregated bridge.
+            candidate_lines = run_gumbel_games_batch(
                 binary,
-                first_seed=first_seed,
-                seed_count=count,
+                seeds=seeds,
                 model_service=service,
                 model_manifest=manifest,
-                out_path=tmp_path / f"gumbel_{index}.jsonl",
+                output_dir=tmp_path / "gumbel_batch",
+                jobs=jobs,
                 n_simulations=n_simulations,
                 top_m=top_m,
                 depth_rounds=depth_rounds,
@@ -206,18 +311,47 @@ def run_gumbel_benchmark(
                 model_timeout_ms=model_timeout_ms,
                 exploration=False,
             )
-
-        if jobs <= 1 or len(runs) == 1:
-            for index, (first_seed, count) in enumerate(runs):
-                candidate_lines.extend(run_slice(index, first_seed, count))
         else:
-            with ThreadPoolExecutor(max_workers=jobs) as executor:
-                futures = [
-                    executor.submit(run_slice, index, first_seed, count)
-                    for index, (first_seed, count) in enumerate(runs)
-                ]
-                for future in as_completed(futures):
-                    candidate_lines.extend(future.result())
+            # Chunk seeds across jobs first, then split each chunk into
+            # contiguous runs (one --gumbel-policy-game invocation per run).
+            job_count = max(1, jobs)
+            chunk_size = (len(seeds) + job_count - 1) // job_count
+            runs: list[tuple[int, int]] = []
+            for start in range(0, len(seeds), max(1, chunk_size)):
+                runs.extend(_contiguous_runs(seeds[start : start + chunk_size]))
+
+            def run_slice(index: int, first_seed: int, count: int) -> list[dict[str, Any]]:
+                return run_gumbel_games(
+                    binary,
+                    first_seed=first_seed,
+                    seed_count=count,
+                    model_service=service,
+                    model_manifest=manifest,
+                    out_path=tmp_path / f"gumbel_{index}.jsonl",
+                    n_simulations=n_simulations,
+                    top_m=top_m,
+                    depth_rounds=depth_rounds,
+                    determinizations=determinizations,
+                    blend_weight=blend_weight,
+                    k_interior=k_interior,
+                    max_root_actions=max_root_actions,
+                    rollout_max_actions=control_max_actions,
+                    rollout_top_k=control_rollout_top_k,
+                    model_timeout_ms=model_timeout_ms,
+                    exploration=False,
+                )
+
+            if jobs <= 1 or len(runs) == 1:
+                for index, (first_seed, count) in enumerate(runs):
+                    candidate_lines.extend(run_slice(index, first_seed, count))
+            else:
+                with ThreadPoolExecutor(max_workers=jobs) as executor:
+                    futures = [
+                        executor.submit(run_slice, index, first_seed, count)
+                        for index, (first_seed, count) in enumerate(runs)
+                    ]
+                    for future in as_completed(futures):
+                        candidate_lines.extend(future.result())
     candidate_elapsed = time.perf_counter() - started
     candidate_results = sorted(collect_gumbel_results(candidate_lines), key=lambda r: r["seed"])
 
@@ -382,6 +516,15 @@ def main() -> int:
     parser.add_argument("--first-seed", type=int, default=2026995000)
     parser.add_argument("--games", type=int, default=100)
     parser.add_argument("--jobs", type=int, default=2)
+    parser.add_argument(
+        "--batch-runner",
+        action="store_true",
+        help=(
+            "Run all candidate seeds in one --gumbel-benchmark-batch Rust process "
+            "(--jobs parallel games, one shared model bridge) instead of one "
+            "--gumbel-policy-game subprocess per seed slice"
+        ),
+    )
     parser.add_argument("--gumbel-n-simulations", type=int, default=64)
     parser.add_argument("--gumbel-top-m", type=int, default=16)
     parser.add_argument("--gumbel-depth-rounds", type=int, default=1)
@@ -428,6 +571,7 @@ def main() -> int:
         rollout_determinize=not args.no_rollout_determinize,
         model_timeout_ms=args.model_timeout_ms,
         experiment_id=args.experiment_id,
+        batch_runner=args.batch_runner,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
