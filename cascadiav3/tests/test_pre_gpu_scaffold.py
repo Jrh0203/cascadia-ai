@@ -418,6 +418,317 @@ class BridgeContractTest(unittest.TestCase):
             process.wait(timeout=30)
 
 
+class BridgeForwardOptimizationTest(unittest.TestCase):
+    """CASCADIA_BRIDGE_BUCKET / _COMPILE / _TIMING forward-path knobs.
+
+    All knobs default off; the default path must stay byte-identical, which the
+    chunker-parity test pins and the pre-existing bridge tests cover.
+    """
+
+    @staticmethod
+    def _public_fixture_roots(limit: int) -> list[dict]:
+        return BridgeContractTest._public_fixture_roots(limit)
+
+    @staticmethod
+    def _truncated_root(root: dict, action_count: int) -> dict:
+        trimmed = copy.deepcopy(root)
+        for key in ("legal_actions", "exact_afterstate_score_active", "action_ids"):
+            if key in trimmed:
+                trimmed[key] = trimmed[key][:action_count]
+        return trimmed
+
+    def _tiny_model(self):
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+
+        torch.manual_seed(20260703)
+        model = build_cascadiaformer(config_for_size("tiny"))
+        model.eval()
+        return model
+
+    def _varied_shape_roots(self) -> list[dict]:
+        roots = self._public_fixture_roots(limit=3)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        return [
+            self._truncated_root(roots[0], 5),
+            self._truncated_root(roots[1], 17),
+            self._truncated_root(roots[0], 33),
+            self._truncated_root(roots[1], 130),
+            roots[2],
+        ]
+
+    def test_bucket_dim_contract(self) -> None:
+        from cascadiav3.torch_inference_bridge import (
+            EVAL_BUCKET_CAP,
+            EVAL_BUCKET_MIN,
+            EVAL_BUCKET_STEP_ABOVE_CAP,
+            _bucket_dim,
+        )
+
+        self.assertEqual(_bucket_dim(1), EVAL_BUCKET_MIN)
+        self.assertEqual(_bucket_dim(EVAL_BUCKET_MIN), EVAL_BUCKET_MIN)
+        self.assertEqual(_bucket_dim(9), 16)
+        self.assertEqual(_bucket_dim(61), 64)
+        self.assertEqual(_bucket_dim(64), 64)
+        self.assertEqual(_bucket_dim(65), 128)
+        self.assertEqual(_bucket_dim(EVAL_BUCKET_CAP), EVAL_BUCKET_CAP)
+        for size in (EVAL_BUCKET_CAP + 1, 648, 1000):
+            padded = _bucket_dim(size)
+            self.assertGreaterEqual(padded, size)
+            self.assertEqual(padded % EVAL_BUCKET_STEP_ABOVE_CAP, 0)
+            self.assertLess(padded - size, EVAL_BUCKET_STEP_ABOVE_CAP)
+
+    def test_default_chunker_matches_legacy_behavior(self) -> None:
+        import os
+        import random
+        from unittest import mock
+
+        from cascadiav3.torch_inference_bridge import (
+            EVAL_BATCH_CELL_BUDGET,
+            _eval_batch_chunks,
+        )
+
+        def legacy_chunks(roots: list[dict], chunk_size: int) -> list[list[dict]]:
+            chunks: list[list[dict]] = []
+            current: list[dict] = []
+            max_actions = 0
+            max_seq = 0
+            for root in roots:
+                packed = root["packed_features"]
+                action_count = int(packed.get("action_count", 0)) or 1
+                token_count = int(packed.get("token_count", 0)) or 1
+                candidate_actions = max(max_actions, action_count)
+                candidate_seq = max(max_seq, token_count + action_count)
+                cells = (len(current) + 1) * candidate_actions * candidate_seq
+                if current and (len(current) >= chunk_size or cells > EVAL_BATCH_CELL_BUDGET):
+                    chunks.append(current)
+                    current = []
+                    candidate_actions = action_count
+                    candidate_seq = token_count + action_count
+                current.append(root)
+                max_actions = candidate_actions
+                max_seq = candidate_seq
+            if current:
+                chunks.append(current)
+            return chunks
+
+        rng = random.Random(20260703)
+        roots = [
+            {
+                "packed_features": {
+                    "action_count": rng.choice([1, 5, 33, 256, 648]),
+                    "token_count": rng.choice([9, 61, 64]),
+                }
+            }
+            for _ in range(200)
+        ]
+        with mock.patch.dict(os.environ):
+            os.environ.pop("CASCADIA_BRIDGE_BUCKET", None)
+            self.assertEqual(_eval_batch_chunks(roots, chunk_size=32), legacy_chunks(roots, 32))
+
+    def test_bucketed_chunker_bounds_padded_cells(self) -> None:
+        import os
+        from unittest import mock
+
+        from cascadiav3.torch_inference_bridge import (
+            EVAL_BATCH_CELL_BUDGET,
+            _bucket_dim,
+            _eval_batch_chunks,
+        )
+
+        roots = [
+            {"packed_features": {"action_count": actions, "token_count": tokens}}
+            for actions, tokens in [(648, 64), (405, 61), (256, 64), (33, 61)] * 12
+        ]
+        with mock.patch.dict(os.environ, {"CASCADIA_BRIDGE_BUCKET": "1"}):
+            chunks = _eval_batch_chunks(roots, chunk_size=32)
+        self.assertEqual(sum(len(chunk) for chunk in chunks), len(roots))
+        for chunk in chunks:
+            max_actions = _bucket_dim(max(r["packed_features"]["action_count"] for r in chunk))
+            max_tokens = _bucket_dim(max(r["packed_features"]["token_count"] for r in chunk))
+            padded_cells = len(chunk) * max_actions * (max_tokens + max_actions)
+            if len(chunk) > 1:
+                self.assertLessEqual(padded_cells, EVAL_BATCH_CELL_BUDGET)
+
+    def test_bucketed_collate_pads_capacities_to_buckets(self) -> None:
+        import os
+        from unittest import mock
+
+        try:
+            import torch  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_inference_bridge import _bucket_dim, collate_inference_roots
+
+        roots = self._varied_shape_roots()[:3]
+        packed_roots = [BridgeContractTest._packed_variant(root) for root in roots]
+        token_bucket = _bucket_dim(max(int(root["public_tokens"]["token_count"]) for root in roots))
+        action_bucket = _bucket_dim(max(len(root["legal_actions"]) for root in roots))
+        with mock.patch.dict(os.environ, {"CASCADIA_BRIDGE_BUCKET": "1"}):
+            raw_batch = collate_inference_roots(roots)
+            packed_batch = collate_inference_roots(packed_roots)
+        for batch in (raw_batch, packed_batch):
+            self.assertEqual(batch["tokens"].shape[1], token_bucket)
+            self.assertEqual(batch["actions"].shape[1], action_bucket)
+            self.assertEqual(batch["combined_seq_len"], token_bucket + action_bucket)
+            for row, root in enumerate(roots):
+                self.assertEqual(
+                    int(batch["token_mask"][row].sum()), int(root["public_tokens"]["token_count"])
+                )
+                self.assertEqual(int(batch["action_mask"][row].sum()), len(root["legal_actions"]))
+        self.assertEqual(raw_batch["relation_ids"].shape[1], token_bucket + action_bucket)
+        self.assertEqual(packed_batch["relation_tail"].shape[1], action_bucket)
+        self.assertEqual(packed_batch["relation_tail"].shape[2], token_bucket + action_bucket)
+
+    def test_bucketed_padding_is_garbage_invariant(self) -> None:
+        """Exactness of mask handling: padded token/action feature rows must not
+        influence real rows at a fixed bucketed shape. Filling the padded region
+        with garbage instead of zeros must leave every real output bit-identical
+        (relation-id padding stays 0 by contract: id 0 = "no relation" via
+        padding_idx and the CGAB ne(0) mask)."""
+        import os
+        from unittest import mock
+
+        model = self._tiny_model()
+        import torch
+
+        from cascadiav3.torch_inference_bridge import collate_inference_roots
+
+        roots = self._varied_shape_roots()[:4]
+        packed_roots = [BridgeContractTest._packed_variant(root) for root in roots]
+        with mock.patch.dict(os.environ, {"CASCADIA_BRIDGE_BUCKET": "1"}):
+            batches = [collate_inference_roots(roots), collate_inference_roots(packed_roots)]
+        generator = torch.Generator().manual_seed(20260703)
+        for batch in batches:
+            tokens_garbage = batch["tokens"].clone()
+            pad_tokens = ~batch["token_mask"]
+            tokens_garbage[pad_tokens] = torch.randn(
+                (int(pad_tokens.sum()), tokens_garbage.shape[-1]), generator=generator
+            )
+            actions_garbage = batch["actions"].clone()
+            pad_actions = ~batch["action_mask"]
+            actions_garbage[pad_actions] = torch.randn(
+                (int(pad_actions.sum()), actions_garbage.shape[-1]), generator=generator
+            )
+            with torch.inference_mode():
+                reference = model(
+                    batch["tokens"],
+                    batch["token_mask"],
+                    batch["actions"],
+                    batch["action_mask"],
+                    relation_ids=batch.get("relation_ids"),
+                    relation_tail=batch.get("relation_tail"),
+                )
+                garbage = model(
+                    tokens_garbage,
+                    batch["token_mask"],
+                    actions_garbage,
+                    batch["action_mask"],
+                    relation_ids=batch.get("relation_ids"),
+                    relation_tail=batch.get("relation_tail"),
+                )
+            self.assertTrue(torch.equal(reference["value_vector"], garbage["value_vector"]))
+            for key in ("logits", "q", "uncertainty"):
+                for row, action_count in enumerate(batch["action_counts"]):
+                    self.assertTrue(
+                        torch.equal(
+                            reference[key][row, :action_count],
+                            garbage[key][row, :action_count],
+                        ),
+                        msg=f"{key} row {row} leaked padding",
+                    )
+
+    def test_bucketed_eval_matches_unbucketed_within_reduction_tolerance(self) -> None:
+        """Bucketed vs unbucketed responses. Bit-exact equality is impossible on
+        this stack: CPU attention/sum kernels block reductions over the padded
+        length, so appending exact zeros regroups the floating-point reduction of
+        the real prefix (measured ~2e-7; the SDPA MATH backend shows the same).
+        The default chunk-max padding already admits the same drift class, so
+        the gate here is a tight tolerance, not torch.equal."""
+        import os
+        from unittest import mock
+
+        model = self._tiny_model()
+        import numpy as np
+
+        from cascadiav3.torch_inference_bridge import _model_eval_batch
+
+        roots = self._varied_shape_roots()
+        packed_roots = [BridgeContractTest._packed_variant(root) for root in roots]
+        for request_roots in (roots, packed_roots):
+            baseline = _model_eval_batch(model, request_roots)
+            with mock.patch.dict(os.environ, {"CASCADIA_BRIDGE_BUCKET": "1"}):
+                bucketed = _model_eval_batch(model, request_roots)
+            self.assertEqual(len(baseline), len(bucketed))
+            for base_row, bucket_row in zip(baseline, bucketed):
+                self.assertEqual(base_row["action_ids"], bucket_row["action_ids"])
+                for key in ("priors", "q", "score_to_go", "uncertainty", "value"):
+                    self.assertEqual(len(base_row[key]), len(bucket_row[key]))
+                    self.assertTrue(
+                        np.allclose(base_row[key], bucket_row[key], rtol=1e-4, atol=1e-5),
+                        msg=(
+                            f"{key} drifted beyond reduction tolerance: "
+                            f"{np.max(np.abs(np.asarray(base_row[key]) - np.asarray(bucket_row[key])))}"
+                        ),
+                    )
+
+    def test_compile_knob_smoke_on_cpu(self) -> None:
+        model = self._tiny_model()
+        import torch
+
+        from cascadiav3.torch_inference_bridge import _maybe_compile_model, _model_eval_batch
+
+        if not hasattr(torch, "compile"):
+            self.skipTest("torch.compile unavailable")
+        roots = [self._truncated_root(root, 5) for root in self._public_fixture_roots(limit=2)]
+        baseline = _model_eval_batch(model, roots)
+        try:
+            compiled = _maybe_compile_model(model, torch.device("cpu"))
+            responses = _model_eval_batch(compiled, roots)
+        except Exception as exc:  # pragma: no cover - depends on local toolchain
+            self.skipTest(f"torch.compile unusable in this environment: {exc}")
+        import numpy as np
+
+        self.assertEqual(len(responses), len(baseline))
+        for base_row, compiled_row in zip(baseline, responses):
+            self.assertEqual(base_row["action_ids"], compiled_row["action_ids"])
+            for key in ("priors", "q", "score_to_go", "uncertainty", "value"):
+                self.assertTrue(
+                    np.allclose(base_row[key], compiled_row[key], rtol=1e-4, atol=1e-5),
+                    msg=f"{key} diverged under torch.compile",
+                )
+
+    def test_timing_knob_defaults_off_and_accumulates_when_patched(self) -> None:
+        import contextlib
+        import io
+        from unittest import mock
+
+        model = self._tiny_model()
+        from cascadiav3 import torch_inference_bridge as bridge
+
+        self.assertIsNone(bridge._BRIDGE_TIMING)
+        roots = [self._truncated_root(root, 9) for root in self._public_fixture_roots(limit=2)]
+        timing = bridge._BridgeTiming()
+        with mock.patch.object(bridge, "_BRIDGE_TIMING", timing):
+            bridge._model_eval_batch(model, roots)
+        self.assertGreaterEqual(timing.chunks, 1)
+        self.assertEqual(timing.rows, len(roots))
+        self.assertEqual(timing.actions, 9 * len(roots))
+        self.assertGreater(timing.collate_s + timing.forward_s, 0.0)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            timing.emit("test")
+        summary = stderr.getvalue()
+        self.assertIn("[bridge-timing test]", summary)
+        self.assertIn(f"rows={len(roots)}", summary)
+        for phase in ("collate=", "h2d=", "forward=", "d2h=", "encode="):
+            self.assertIn(phase, summary)
+
+
 class TrainerCursorContractTest(unittest.TestCase):
     def test_loader_cursor_points_to_next_unconsumed_microbatch(self) -> None:
         from cascadiav3.torch_train_cascadiaformer import (
