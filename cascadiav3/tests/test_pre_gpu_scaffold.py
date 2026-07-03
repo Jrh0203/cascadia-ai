@@ -1860,6 +1860,120 @@ class BenchmarkStatsTest(unittest.TestCase):
         self.assertAlmostEqual(summary["mean_seat_score"], (90 + 95 + 88 + 92) / 4)
 
 
+class GumbelBatchRunnerTest(unittest.TestCase):
+    """Contract tests for the --gumbel-benchmark-batch per-seed JSONL path."""
+
+    @staticmethod
+    def _canned_seed_lines(seed: int) -> list[dict]:
+        return [
+            {"type": "gumbel_decision", "seed": seed, "ply": 0, "decision_seconds": 0.5},
+            {"type": "gumbel_decision", "seed": seed, "ply": 1, "decision_seconds": 0.7},
+            {
+                "type": "gumbel_game_done",
+                "seed": seed,
+                "scores": [
+                    {"total": 90 + seed % 7},
+                    {"total": 95},
+                    {"total": 88},
+                    {"total": 92},
+                ],
+                "decision_count": 2,
+                "elapsed_seconds": 3.5,
+            },
+        ]
+
+    def test_batch_seed_files_produce_identical_results(self) -> None:
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
+            collect_gumbel_results,
+            read_batch_seed_lines,
+        )
+
+        seeds = [5, 6]
+        flat_lines = [line for seed in seeds for line in self._canned_seed_lines(seed)]
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            for seed in seeds:
+                path = output_dir / f"gumbel_game_seed_{seed}.jsonl"
+                path.write_text(
+                    "".join(json.dumps(line) + "\n" for line in self._canned_seed_lines(seed)),
+                    encoding="utf-8",
+                )
+            batch_lines = read_batch_seed_lines(output_dir, seeds)
+
+        self.assertEqual(batch_lines, flat_lines)
+        # Downstream report structures are identical to the per-seed
+        # subprocess path.
+        self.assertEqual(
+            collect_gumbel_results(batch_lines), collect_gumbel_results(flat_lines)
+        )
+
+    def test_batch_seed_files_fail_loudly_when_missing_or_incomplete(self) -> None:
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import read_batch_seed_lines
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            path = output_dir / "gumbel_game_seed_5.jsonl"
+            path.write_text(
+                "".join(json.dumps(line) + "\n" for line in self._canned_seed_lines(5)),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "seed 6"):
+                read_batch_seed_lines(output_dir, [5, 6])
+            # A decisions-only file (crashed game) must not pass silently.
+            truncated = output_dir / "gumbel_game_seed_7.jsonl"
+            truncated.write_text(
+                json.dumps({"type": "gumbel_decision", "seed": 7, "ply": 0}) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "seed 7.*no done record"):
+                read_batch_seed_lines(output_dir, [7])
+
+    def test_batch_runner_mock_bridge_integration(self) -> None:
+        import sys
+
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
+            collect_gumbel_results,
+            run_gumbel_games_batch,
+        )
+
+        binary = Path(
+            "cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter"
+        )
+        if not binary.exists():
+            self.skipTest("real-root-exporter release binary has not been built")
+        mock_bridge = Path("cascadiav3/tests/mock_model_bridge.py").resolve()
+        seeds = [2026070600, 2026070601]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            manifest = tmp_path / "mock_manifest.json"
+            manifest.write_text("{}\n", encoding="utf-8")
+            lines = run_gumbel_games_batch(
+                binary,
+                seeds=seeds,
+                model_service=f"{sys.executable} {mock_bridge}",
+                model_manifest=manifest,
+                output_dir=tmp_path / "batch",
+                jobs=2,
+                n_simulations=4,
+                top_m=2,
+                depth_rounds=1,
+                determinizations=2,
+                blend_weight=1.0,
+                k_interior=3,
+                max_root_actions=None,
+                rollout_max_actions=4,
+                rollout_top_k=2,
+                model_timeout_ms=120_000,
+                exploration=False,
+            )
+        results = collect_gumbel_results(lines)
+        self.assertEqual([result["seed"] for result in results], seeds)
+        for result in results:
+            self.assertEqual(len(result["done"]["scores"]), 4)
+            self.assertGreater(len(result["decisions"]), 0)
+            self.assertEqual(result["done"]["turns"], len(result["decisions"]))
+
+
 class ValidationCliTest(unittest.TestCase):
     def test_run_validation_passes(self) -> None:
         result = run_validation()

@@ -90,6 +90,8 @@ struct Args {
     /// One shared bridge (one CUDA context) with cross-chunk request
     /// batching instead of one bridge per rayon chunk.
     shared_model_session: bool,
+    /// Per-seed JSONL output directory for --gumbel-benchmark-batch.
+    output_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,6 +109,7 @@ enum Mode {
     ExpertTensorCorpus,
     InteractivePolicyGame,
     GumbelPolicyGame,
+    GumbelBenchmarkBatch,
     GumbelSelfplayTensorCorpus,
 }
 
@@ -286,6 +289,9 @@ fn main() -> Result<()> {
         Mode::GumbelPolicyGame => {
             run_gumbel_policy_game(&args)?;
         }
+        Mode::GumbelBenchmarkBatch => {
+            run_gumbel_benchmark_batch(&args)?;
+        }
         Mode::GumbelSelfplayTensorCorpus => {
             let written = export_gumbel_selfplay_tensor_corpus(&args)?;
             if written == 0 {
@@ -334,6 +340,7 @@ fn parse_args() -> Result<Args> {
         k_interior: 16,
         model_sessions: None,
         shared_model_session: false,
+        output_dir: None,
     };
 
     let mut iter = std::env::args().skip(1);
@@ -359,6 +366,8 @@ fn parse_args() -> Result<Args> {
             }
             "--expert-tensor-corpus" => args.mode = Mode::ExpertTensorCorpus,
             "--gumbel-policy-game" => args.mode = Mode::GumbelPolicyGame,
+            "--gumbel-benchmark-batch" => args.mode = Mode::GumbelBenchmarkBatch,
+            "--output-dir" => args.output_dir = Some(PathBuf::from(value()?)),
             "--gumbel-selfplay-tensor-corpus" => {
                 args.mode = Mode::GumbelSelfplayTensorCorpus;
                 args.gumbel_exploration = true;
@@ -487,6 +496,7 @@ fn parse_args() -> Result<Args> {
             | Mode::ExpertTensorCorpus
             | Mode::ModelStateSearchBootstrapTensorCorpus
             | Mode::GumbelPolicyGame
+            | Mode::GumbelBenchmarkBatch
             | Mode::GumbelSelfplayTensorCorpus
     ) && args.model_service.is_none()
         && !args.allow_model_fallback
@@ -497,7 +507,7 @@ fn parse_args() -> Result<Args> {
     }
     if matches!(
         args.mode,
-        Mode::GumbelPolicyGame | Mode::GumbelSelfplayTensorCorpus
+        Mode::GumbelPolicyGame | Mode::GumbelBenchmarkBatch | Mode::GumbelSelfplayTensorCorpus
     ) {
         if args.gumbel_n_simulations == 0 {
             bail!("--gumbel-n-simulations must be positive");
@@ -511,6 +521,9 @@ fn parse_args() -> Result<Args> {
         if args.k_interior == 0 {
             bail!("--k-interior must be positive");
         }
+    }
+    if args.mode == Mode::GumbelBenchmarkBatch && args.output_dir.is_none() {
+        bail!("--gumbel-benchmark-batch requires --output-dir <dir> for per-seed JSONL outputs");
     }
     if args.model_service.is_some() && args.model_manifest.is_none() && !args.allow_model_fallback {
         bail!(
@@ -587,6 +600,13 @@ Options:
   --gumbel-policy-game     Play seeds to terminal with all four seats driven
                            by Gumbel search over model leaf values; emits
                            per-decision JSONL plus a done record per seed.
+  --gumbel-benchmark-batch Play many seeds' complete Gumbel policy games in
+                           one process (rayon chunks, optional shared bridge).
+                           Per seed the search/record behavior is identical to
+                           --gumbel-policy-game; writes one JSONL file per seed
+                           (gumbel_game_seed_<seed>.jsonl) into --output-dir.
+  --output-dir <dir>       Per-seed JSONL output directory for
+                           --gumbel-benchmark-batch.
   --gumbel-selfplay-tensor-corpus
                            All-seat Gumbel self-play; every visited root is
                            exported as a v2 expert tensor record with
@@ -3056,6 +3076,82 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     Ok(shard.record_count)
 }
 
+/// Plays one seed to terminal with all four seats driven by Gumbel search,
+/// returning the per-decision records plus the final `gumbel_game_done`
+/// record. This is the shared per-seed core of `--gumbel-policy-game` and
+/// `--gumbel-benchmark-batch`: any change here changes both modes
+/// identically, which is what keeps their outputs equivalent.
+fn play_gumbel_policy_game_seed(
+    args: &Args,
+    seed_u64: u64,
+    chunk_bridge: &mut ChunkBridge,
+    eval_cache: &mut EvalRowCache,
+) -> Result<Vec<Value>> {
+    let mut records = Vec::new();
+    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
+        .with_context(|| format!("creating gumbel policy game seed {seed_u64}"))?;
+    let game_started = Instant::now();
+    let mut ply_index = 0usize;
+    while !game.is_game_over() {
+        let Some(row) = gumbel::eval_row_for_state(&game, gumbel_root_menu_limit(args))? else {
+            break;
+        };
+        let decision_started = Instant::now();
+        let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
+        let mut evaluator = BridgeLeafEvaluator {
+            bridge: chunk_bridge,
+            allow_model_fallback: args.allow_model_fallback,
+            cache: eval_cache,
+        };
+        let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
+            .with_context(|| format!("gumbel policy game seed {seed_u64} ply {ply_index}"))?;
+        let chosen = &row.afterstates[result.chosen_index];
+        records.push(json!({
+            "type": "gumbel_decision",
+            "seed": seed_u64,
+            "ply": ply_index,
+            "active_seat": row.staged.current_player(),
+            "action_count": row.afterstates.len(),
+            "chosen_action_id": action_id(&chosen.candidate.action)?,
+            "root_value": result.root_value,
+            "simulations_run": result.simulations_run,
+            "decision_seconds": decision_started.elapsed().as_secs_f64(),
+        }));
+        game = chosen.state.clone();
+        if chosen.apply_truncated {
+            break;
+        }
+        ply_index += 1;
+        if ply_index > 120 {
+            bail!("gumbel policy game exceeded expected turn guard");
+        }
+    }
+    let scores = score_game(&game);
+    records.push(json!({
+        "type": "gumbel_game_done",
+        "seed": seed_u64,
+        "scores": scores.iter().map(score_breakdown_json).collect::<Vec<_>>(),
+        "decision_count": ply_index,
+        "elapsed_seconds": game_started.elapsed().as_secs_f64(),
+        "search": {
+            "n_simulations": args.gumbel_n_simulations,
+            "top_m": args.gumbel_top_m,
+            "depth_rounds": args.gumbel_depth_rounds,
+            "determinization_samples": args.gumbel_determinizations,
+            "rollout_blend_weight": args.gumbel_blend_weight,
+            "exploration": args.gumbel_exploration,
+            "k_interior": args.k_interior,
+        },
+    }));
+    eprintln!(
+        "gumbel policy game seed {seed_u64} complete: {} decisions in {:.1}s",
+        ply_index,
+        game_started.elapsed().as_secs_f64()
+    );
+    Ok(records)
+}
+
 fn run_gumbel_policy_game(args: &Args) -> Result<()> {
     let seed_end = args
         .first_seed
@@ -3065,67 +3161,12 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
     let mut eval_cache = EvalRowCache::new();
     let mut records = Vec::new();
     for seed_u64 in args.first_seed..seed_end {
-        let config = GameConfig::research_aaaaa(args.player_count)?;
-        let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
-            .with_context(|| format!("creating gumbel policy game seed {seed_u64}"))?;
-        let game_started = Instant::now();
-        let mut ply_index = 0usize;
-        while !game.is_game_over() {
-            let Some(row) = gumbel::eval_row_for_state(&game, gumbel_root_menu_limit(args))? else {
-                break;
-            };
-            let decision_started = Instant::now();
-            let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
-            let mut evaluator = BridgeLeafEvaluator {
-                bridge: &mut chunk_bridge,
-                allow_model_fallback: args.allow_model_fallback,
-                cache: &mut eval_cache,
-            };
-            let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
-                .with_context(|| format!("gumbel policy game seed {seed_u64} ply {ply_index}"))?;
-            let chosen = &row.afterstates[result.chosen_index];
-            records.push(json!({
-                "type": "gumbel_decision",
-                "seed": seed_u64,
-                "ply": ply_index,
-                "active_seat": row.staged.current_player(),
-                "action_count": row.afterstates.len(),
-                "chosen_action_id": action_id(&chosen.candidate.action)?,
-                "root_value": result.root_value,
-                "simulations_run": result.simulations_run,
-                "decision_seconds": decision_started.elapsed().as_secs_f64(),
-            }));
-            game = chosen.state.clone();
-            if chosen.apply_truncated {
-                break;
-            }
-            ply_index += 1;
-            if ply_index > 120 {
-                bail!("gumbel policy game exceeded expected turn guard");
-            }
-        }
-        let scores = score_game(&game);
-        records.push(json!({
-            "type": "gumbel_game_done",
-            "seed": seed_u64,
-            "scores": scores.iter().map(score_breakdown_json).collect::<Vec<_>>(),
-            "decision_count": ply_index,
-            "elapsed_seconds": game_started.elapsed().as_secs_f64(),
-            "search": {
-                "n_simulations": args.gumbel_n_simulations,
-                "top_m": args.gumbel_top_m,
-                "depth_rounds": args.gumbel_depth_rounds,
-                "determinization_samples": args.gumbel_determinizations,
-                "rollout_blend_weight": args.gumbel_blend_weight,
-                "exploration": args.gumbel_exploration,
-                "k_interior": args.k_interior,
-            },
-        }));
-        eprintln!(
-            "gumbel policy game seed {seed_u64} complete: {} decisions in {:.1}s",
-            ply_index,
-            game_started.elapsed().as_secs_f64()
-        );
+        records.extend(play_gumbel_policy_game_seed(
+            args,
+            seed_u64,
+            &mut chunk_bridge,
+            &mut eval_cache,
+        )?);
     }
     log_eval_dedup_summary(
         "gumbel policy game",
@@ -3134,6 +3175,106 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
         eval_cache.stats.cache_hits,
     );
     write_jsonl(&args.out, &records)?;
+    Ok(())
+}
+
+/// Many complete Gumbel policy games in one process sharing model bridge
+/// capacity: rayon seed chunks, `--model-sessions` parallel games, and with
+/// `--shared-model-session` one aggregated bridge (one CUDA context) serving
+/// every chunk. Per-seed search/record behavior is identical to
+/// `--gumbel-policy-game` (exploration stays off unless explicitly enabled);
+/// each seed's decisions + done records land in
+/// `<output-dir>/gumbel_game_seed_<seed>.jsonl`. Any seed failure aborts the
+/// whole run with the failing seed named in the error.
+fn run_gumbel_benchmark_batch(args: &Args) -> Result<()> {
+    let output_dir = args
+        .output_dir
+        .as_ref()
+        .context("--gumbel-benchmark-batch requires --output-dir")?;
+    std::fs::create_dir_all(output_dir)
+        .with_context(|| format!("creating --output-dir {}", output_dir.display()))?;
+    let seed_end = args
+        .first_seed
+        .checked_add(args.seed_count)
+        .context("seed range overflow")?;
+    let started = Instant::now();
+    let total_seeds = args.seed_count;
+    let completed_seeds = AtomicU64::new(0);
+    let completed_records = AtomicU64::new(0);
+    let eval_rows_requested = AtomicU64::new(0);
+    let eval_rows_sent = AtomicU64::new(0);
+    let eval_cache_hits = AtomicU64::new(0);
+    let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
+    let target_chunks = args
+        .model_sessions
+        .unwrap_or_else(|| (rayon::current_num_threads() * 2).max(1))
+        .max(1);
+    let chunk_size = ((seeds.len() + target_chunks - 1) / target_chunks).max(1);
+    let shared_bridge = if args.shared_model_session {
+        let command = args
+            .model_service
+            .as_ref()
+            .context("--shared-model-session requires --model-service")?;
+        Some(SharedBridge::spawn(
+            command,
+            &BridgeConfig::from_args(args),
+            model_bridge::shared_row_cap(),
+        )?)
+    } else {
+        None
+    };
+    seeds
+        .par_chunks(chunk_size)
+        .map(|seed_chunk| {
+            let mut chunk_bridge = match &shared_bridge {
+                Some(shared) => ChunkBridge::Shared(shared.client()),
+                None => ChunkBridge::Owned(model_state_worker_session(args)?),
+            };
+            let mut eval_cache = EvalRowCache::new();
+            for seed_u64 in seed_chunk.iter().copied() {
+                let records = play_gumbel_policy_game_seed(
+                    args,
+                    seed_u64,
+                    &mut chunk_bridge,
+                    &mut eval_cache,
+                )
+                .with_context(|| format!("gumbel benchmark batch seed {seed_u64} failed"))?;
+                let seed_path = output_dir.join(format!("gumbel_game_seed_{seed_u64}.jsonl"));
+                write_jsonl(&seed_path, &records).with_context(|| {
+                    format!("writing gumbel benchmark batch seed {seed_u64} output")
+                })?;
+                let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
+                let records_done = completed_records
+                    .fetch_add(records.len() as u64, Ordering::Relaxed)
+                    + records.len() as u64;
+                log_seed_export_progress(
+                    "gumbel benchmark batch",
+                    done,
+                    total_seeds,
+                    records_done,
+                    started,
+                );
+            }
+            eval_cache.stats.accumulate_into(
+                &eval_rows_requested,
+                &eval_rows_sent,
+                &eval_cache_hits,
+            );
+            Ok(())
+        })
+        .collect::<Result<Vec<()>>>()?;
+    log_eval_dedup_summary(
+        "gumbel benchmark batch",
+        eval_rows_requested.load(Ordering::Relaxed),
+        eval_rows_sent.load(Ordering::Relaxed),
+        eval_cache_hits.load(Ordering::Relaxed),
+    );
+    let elapsed = started.elapsed().as_secs_f64().max(1.0e-9);
+    eprintln!(
+        "[real-root-exporter] gumbel benchmark batch: {total_seeds} seeds complete in {elapsed:.1}s ({:.2} games/h) into {}",
+        total_seeds as f64 * 3600.0 / elapsed,
+        output_dir.display(),
+    );
     Ok(())
 }
 
@@ -4840,6 +4981,7 @@ mod tests {
             k_interior: 6,
             model_sessions: None,
             shared_model_session: false,
+            output_dir: None,
         }
     }
 
@@ -5213,6 +5355,91 @@ mod tests {
         assert!(decisions > 0);
         assert_eq!(done["scores"].as_array().unwrap().len(), 4);
         assert_eq!(done["decision_count"].as_u64().unwrap() as usize, decisions);
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    /// Strips wall-clock timing fields so record content can be compared
+    /// across runs. Everything else in the decision/done records is a pure
+    /// function of args + seed + bridge outputs.
+    fn normalize_game_records(lines: &[Value]) -> Vec<Value> {
+        lines
+            .iter()
+            .cloned()
+            .map(|mut line| {
+                if let Some(object) = line.as_object_mut() {
+                    object.remove("decision_seconds");
+                    object.remove("elapsed_seconds");
+                }
+                line
+            })
+            .collect()
+    }
+
+    fn read_jsonl_values(path: &std::path::Path) -> Vec<Value> {
+        std::fs::read_to_string(path)
+            .unwrap_or_else(|error| panic!("reading {}: {error}", path.display()))
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("jsonl line"))
+            .collect()
+    }
+
+    #[test]
+    fn gumbel_benchmark_batch_matches_single_seed_policy_games() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-gumbel-batch-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let first_seed = 2_026_070_600u64;
+
+        // Reference: one --gumbel-policy-game run per seed, each owning its
+        // bridge session, exactly like the current Python harness default.
+        let mut single_lines_by_seed: HashMap<u64, Vec<Value>> = HashMap::new();
+        for seed_u64 in first_seed..first_seed + 2 {
+            let mut single_args = gumbel_test_args(&tempdir);
+            single_args.mode = Mode::GumbelPolicyGame;
+            single_args.gumbel_exploration = false;
+            single_args.first_seed = seed_u64;
+            single_args.seed_count = 1;
+            single_args.out = tempdir.join(format!("single_seed_{seed_u64}.jsonl"));
+            run_gumbel_policy_game(&single_args).expect("single-seed policy game");
+            single_lines_by_seed.insert(seed_u64, read_jsonl_values(&single_args.out));
+        }
+
+        // Candidate: both seeds through one batch run over the shared
+        // aggregated bridge (two parallel game chunks, one bridge process).
+        let mut batch_args = gumbel_test_args(&tempdir);
+        batch_args.mode = Mode::GumbelBenchmarkBatch;
+        batch_args.gumbel_exploration = false;
+        batch_args.first_seed = first_seed;
+        batch_args.seed_count = 2;
+        batch_args.model_sessions = Some(2);
+        batch_args.shared_model_session = true;
+        let batch_dir = tempdir.join("batch_out");
+        batch_args.output_dir = Some(batch_dir.clone());
+        run_gumbel_benchmark_batch(&batch_args).expect("benchmark batch runs");
+
+        for seed_u64 in first_seed..first_seed + 2 {
+            let batch_path = batch_dir.join(format!("gumbel_game_seed_{seed_u64}.jsonl"));
+            assert!(
+                batch_path.exists(),
+                "batch mode must write per-seed JSONL for seed {seed_u64}"
+            );
+            let batch_lines = read_jsonl_values(&batch_path);
+            let single_lines = &single_lines_by_seed[&seed_u64];
+            assert_eq!(
+                normalize_game_records(&batch_lines),
+                normalize_game_records(single_lines),
+                "seed {seed_u64}: batch records must equal single-seed records \
+                 field-for-field (timing fields excluded)"
+            );
+            // The done record must really be a played game, not a stub.
+            let done = batch_lines
+                .iter()
+                .find(|line| line["type"] == "gumbel_game_done")
+                .expect("done record");
+            assert!(done["decision_count"].as_u64().unwrap() > 0);
+        }
         let _ = std::fs::remove_dir_all(&tempdir);
     }
 
