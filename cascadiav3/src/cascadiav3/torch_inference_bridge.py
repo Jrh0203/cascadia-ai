@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
 import warnings
@@ -55,12 +56,39 @@ def _response(payload: dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
-PROTOCOL_FEATURES = ["eval_batch", "value_vector", "packed_features"]
+PROTOCOL_FEATURES = ["eval_batch", "value_vector", "packed_features", "packed_response"]
 EVAL_BATCH_CHUNK_SIZE = 32
 # The relation-bias layer materializes a [rows, actions, seq, d_model] tensor,
 # so chunking must bound rows * actions * seq, not just rows. 2^21 cells keeps
 # the peak CGAB intermediate near 3 GB for d_model 384.
 EVAL_BATCH_CELL_BUDGET = 2_097_152
+
+
+def pack_f64_b64(values: Any) -> str:
+    """Base64 little-endian f64 packing for packed_response payloads.
+
+    The float64 widening of a float32 array is exact, so packed values are
+    bit-identical to what the JSON float-list path would deliver after
+    ``.tolist()`` + ``json.dumps`` round-trip (Python floats are f64 and
+    repr round-trips exactly).
+    """
+    import base64
+
+    import numpy as np
+
+    return base64.b64encode(np.asarray(values, dtype="<f8").tobytes()).decode("ascii")
+
+
+def _packed_response_fields(
+    priors: Any, q: Any, score_to_go: Any, uncertainty: Any, value: Any
+) -> dict[str, str]:
+    return {
+        "priors_f64_b64": pack_f64_b64(priors),
+        "q_f64_b64": pack_f64_b64(q),
+        "score_to_go_f64_b64": pack_f64_b64(score_to_go),
+        "uncertainty_f64_b64": pack_f64_b64(uncertainty),
+        "value_f64_b64": pack_f64_b64(value),
+    }
 
 
 def _eval_batch_chunks(roots: list[dict[str, Any]], *, chunk_size: int) -> list[list[dict[str, Any]]]:
@@ -200,45 +228,46 @@ def _collate_packed_inference_roots(records: list[dict[str, Any]]) -> dict[str, 
     token_dim = decoded[0][0].shape[1]
     action_dim = decoded[0][1].shape[1]
     seq_len = max_tokens + max_actions
-    tokens = torch.zeros((batch_size, max_tokens, token_dim), dtype=torch.float32)
-    token_mask = torch.zeros((batch_size, max_tokens), dtype=torch.bool)
-    actions = torch.zeros((batch_size, max_actions, action_dim), dtype=torch.float32)
-    action_mask = torch.zeros((batch_size, max_actions), dtype=torch.bool)
-    relation_tail = torch.zeros((batch_size, max_actions, seq_len), dtype=torch.uint8)
-    exact_afterstate = torch.zeros((batch_size, max_actions), dtype=torch.float32)
+    # Pad in numpy and hand each buffer to torch once (zero-copy from_numpy);
+    # per-row torch.from_numpy(...).copy() round-trips are measurably slower.
+    tokens_np = np.zeros((batch_size, max_tokens, token_dim), dtype=np.float32)
+    token_mask_np = np.zeros((batch_size, max_tokens), dtype=bool)
+    actions_np = np.zeros((batch_size, max_actions, action_dim), dtype=np.float32)
+    action_mask_np = np.zeros((batch_size, max_actions), dtype=bool)
+    relation_tail_np = np.zeros((batch_size, max_actions, seq_len), dtype=np.uint8)
+    exact_afterstate_np = np.zeros((batch_size, max_actions), dtype=np.float32)
     for batch_index, (record, (token_rows, action_rows, tail)) in enumerate(
         zip(records, decoded)
     ):
         token_count = token_counts[batch_index]
         action_count = action_counts[batch_index]
-        tokens[batch_index, :token_count] = torch.from_numpy(token_rows.copy())
-        token_mask[batch_index, :token_count] = True
-        actions[batch_index, :action_count] = torch.from_numpy(action_rows.copy())
-        action_mask[batch_index, :action_count] = True
+        tokens_np[batch_index, :token_count] = token_rows
+        token_mask_np[batch_index, :token_count] = True
+        actions_np[batch_index, :action_count] = action_rows
+        action_mask_np[batch_index, :action_count] = True
         # Column remap from unpadded T+A to padded max_tokens+max_actions.
-        tail_tensor = torch.from_numpy(tail.copy())
-        relation_tail[batch_index, :action_count, :token_count] = tail_tensor[:, :token_count]
-        relation_tail[
+        relation_tail_np[batch_index, :action_count, :token_count] = tail[:, :token_count]
+        relation_tail_np[
             batch_index,
             :action_count,
             max_tokens : max_tokens + action_count,
-        ] = tail_tensor[:, token_count : token_count + action_count]
+        ] = tail[:, token_count : token_count + action_count]
         exact = record["exact_afterstate_score_active"]
         if len(exact) != action_count:
             raise ValueError("packed exact_afterstate_score_active misaligned")
-        exact_afterstate[batch_index, :action_count] = torch.tensor(exact, dtype=torch.float32)
+        exact_afterstate_np[batch_index, :action_count] = np.asarray(exact, dtype=np.float32)
     return {
-        "tokens": tokens,
-        "token_mask": token_mask,
-        "actions": actions,
-        "action_mask": action_mask,
-        "relation_tail": relation_tail,
+        "tokens": torch.from_numpy(tokens_np),
+        "token_mask": torch.from_numpy(token_mask_np),
+        "actions": torch.from_numpy(actions_np),
+        "action_mask": torch.from_numpy(action_mask_np),
+        "relation_tail": torch.from_numpy(relation_tail_np),
         "combined_seq_len": seq_len,
         "action_counts": action_counts,
         "token_counts": token_counts,
         "state_hashes": [record.get("state_hash") for record in records],
         "action_ids": [_request_action_ids(record) for record in records],
-        "exact_afterstate_score_active": exact_afterstate,
+        "exact_afterstate_score_active": torch.from_numpy(exact_afterstate_np),
     }
 
 
@@ -367,6 +396,7 @@ def _load_model(
     import torch
     from .torch_cascadiaformer import build_cascadiaformer
 
+    _apply_precision_env()
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     payload = manifest_payload
     if payload is None and checkpoint.suffix == ".json":
@@ -396,64 +426,142 @@ def _move_batch_to_device(batch: dict[str, Any], device):  # type: ignore[no-unt
     return {key: value.to(device) if hasattr(value, "to") else value for key, value in batch.items()}
 
 
+# Model forward inputs. Everything else in the collated batch (afterstate
+# scores, action ids, counts) stays on the host; shipping it to the device
+# only to pull it straight back was wasted PCIe traffic.
+_MODEL_INPUT_KEYS = ("tokens", "token_mask", "actions", "action_mask", "relation_ids", "relation_tail")
+
+
+def _model_inputs_to_device(batch: dict[str, Any], device):  # type: ignore[no-untyped-def]
+    inputs: dict[str, Any] = {}
+    pin = device.type == "cuda"
+    for key in _MODEL_INPUT_KEYS:
+        value = batch.get(key)
+        if value is None:
+            continue
+        if pin:
+            # Pinned staging enables an async H2D copy (single transfer per
+            # tensor per chunk); no-op path on cpu/mps.
+            value = value.pin_memory().to(device, non_blocking=True)
+        elif device.type != "cpu":
+            value = value.to(device)
+        inputs[key] = value
+    return inputs
+
+
+def _apply_precision_env() -> None:
+    """Optional GPU throughput knobs, default OFF.
+
+    CASCADIA_BRIDGE_TF32=1 enables TF32 matmul/cudnn kernels on Ampere+.
+    WARNING: NOT bit-parity with the default fp32 path -- TF32 rounds matmul
+    inputs to 10-bit mantissas. Leave unset whenever exact reproducibility
+    matters. Harmless no-op on cpu/mps builds.
+    """
+    if os.environ.get("CASCADIA_BRIDGE_TF32") == "1":
+        import torch
+
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+
+
+def _autocast_bf16_requested() -> bool:
+    """CASCADIA_BRIDGE_AUTOCAST=bf16 wraps the forward in bf16 autocast.
+
+    WARNING: NOT bit-parity with the default fp32 path. Default OFF; only
+    applied on CUDA devices (no-op on cpu/mps).
+    """
+    return os.environ.get("CASCADIA_BRIDGE_AUTOCAST", "").strip().lower() == "bf16"
+
+
 def _model_eval_batch(
     model,
     roots: list[dict[str, Any]],
     *,
     device_name: str = "cpu",
     chunk_size: int = EVAL_BATCH_CHUNK_SIZE,
+    packed_response: bool = False,
 ) -> list[dict[str, Any]]:  # type: ignore[no-untyped-def]
     """One collated forward per chunk of roots. Chunking bounds the dense
     relation_ids tensor (batch x seq x seq int64) at full action menus."""
+    import contextlib
+
     import torch
 
     if not roots:
         return []
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
+    autocast_bf16 = _autocast_bf16_requested() and device.type == "cuda"
     responses: list[dict[str, Any]] = []
     for chunk in _eval_batch_chunks(roots, chunk_size=max(1, chunk_size)):
         batch = collate_inference_roots(chunk)
-        eval_batch = _move_batch_to_device(batch, device)
-        with torch.no_grad():
-            outputs = model(
-                eval_batch["tokens"],
-                eval_batch["token_mask"],
-                eval_batch["actions"],
-                eval_batch["action_mask"],
-                relation_ids=eval_batch.get("relation_ids"),
-                relation_tail=eval_batch.get("relation_tail"),
+        inputs = _model_inputs_to_device(batch, device)
+        with torch.inference_mode():
+            forward_context = (
+                torch.autocast("cuda", dtype=torch.bfloat16)
+                if autocast_bf16
+                else contextlib.nullcontext()
             )
-            masked_logits = outputs["logits"].masked_fill(~eval_batch["action_mask"], -1.0e9)
+            with forward_context:
+                outputs = model(
+                    inputs["tokens"],
+                    inputs["token_mask"],
+                    inputs["actions"],
+                    inputs["action_mask"],
+                    relation_ids=inputs.get("relation_ids"),
+                    relation_tail=inputs.get("relation_tail"),
+                )
+            masked_logits = outputs["logits"].float().masked_fill(~inputs["action_mask"], -1.0e9)
             priors = torch.softmax(masked_logits, dim=1).cpu()
-        score_to_go_all = outputs["q"].cpu()
-        uncertainty_all = outputs["uncertainty"].cpu()
-        value_all = outputs["value_vector"].cpu()
-        exact_all = eval_batch["exact_afterstate_score_active"].cpu()
+            # One device->host copy per output tensor per chunk; the rows are
+            # sliced host-side below. (.float() is a no-op without autocast.)
+            score_to_go_all = outputs["q"].float().cpu()
+            uncertainty_all = outputs["uncertainty"].float().cpu()
+            value_all = outputs["value_vector"].float().cpu()
+            # exact_afterstate never left the host; f32 add matches the
+            # previous device-round-trip path bit for bit.
+            final_q_all = batch["exact_afterstate_score_active"] + score_to_go_all
+        priors_np = priors.numpy()
+        score_to_go_np = score_to_go_all.numpy()
+        final_q_np = final_q_all.numpy()
+        uncertainty_np = uncertainty_all.numpy()
+        value_np = value_all.numpy()
         for row_index, root in enumerate(chunk):
             action_count = batch["action_counts"][row_index]
-            score_to_go = score_to_go_all[row_index, :action_count].tolist()
-            final_q = (
-                exact_all[row_index, :action_count] + score_to_go_all[row_index, :action_count]
-            ).tolist()
-            responses.append(
-                {
-                    "type": "eval_response",
-                    "schema_id": root.get("schema_id"),
-                    "state_hash": root.get("state_hash"),
-                    "action_ids": batch["action_ids"][row_index],
-                    "priors": priors[row_index, :action_count].tolist(),
-                    "q": final_q,
-                    "score_to_go": score_to_go,
-                    "uncertainty": uncertainty_all[row_index, :action_count].tolist(),
-                    "value": value_all[row_index].tolist(),
-                    "model_fallback": False,
-                }
-            )
+            response: dict[str, Any] = {
+                "type": "eval_response",
+                "schema_id": root.get("schema_id"),
+                "state_hash": root.get("state_hash"),
+                "action_ids": batch["action_ids"][row_index],
+                "model_fallback": False,
+            }
+            if packed_response:
+                response["packed"] = _packed_response_fields(
+                    priors_np[row_index, :action_count],
+                    final_q_np[row_index, :action_count],
+                    score_to_go_np[row_index, :action_count],
+                    uncertainty_np[row_index, :action_count],
+                    value_np[row_index],
+                )
+            else:
+                response["priors"] = priors_np[row_index, :action_count].tolist()
+                response["q"] = final_q_np[row_index, :action_count].tolist()
+                response["score_to_go"] = score_to_go_np[row_index, :action_count].tolist()
+                response["uncertainty"] = uncertainty_np[row_index, :action_count].tolist()
+                response["value"] = value_np[row_index].tolist()
+            responses.append(response)
     return responses
 
 
-def _model_eval(model, root: dict[str, Any], *, device_name: str = "cpu") -> dict[str, Any]:  # type: ignore[no-untyped-def]
-    return _model_eval_batch(model, [root], device_name=device_name)[0]
+def _model_eval(
+    model,
+    root: dict[str, Any],
+    *,
+    device_name: str = "cpu",
+    packed_response: bool = False,
+) -> dict[str, Any]:  # type: ignore[no-untyped-def]
+    return _model_eval_batch(
+        model, [root], device_name=device_name, packed_response=packed_response
+    )[0]
 
 
 def serve(
@@ -508,14 +616,25 @@ def serve(
                 return 0
             elif message_type == "eval_request":
                 root = message["root"]
+                packed_response = bool(message.get("packed_response", False))
                 if loaded_model is None:
                     if not allow_dry_run_fallback and not message.get("allow_model_fallback", False):
                         raise RuntimeError("no model loaded and dry-run fallback is disabled")
+                    # Uniform fallback stays JSON; consumers key packed
+                    # decoding on the per-response "packed" field.
                     _response(_uniform_eval(root, model_fallback=True))
                 else:
-                    _response(_model_eval(loaded_model, root, device_name=device_name))
+                    _response(
+                        _model_eval(
+                            loaded_model,
+                            root,
+                            device_name=device_name,
+                            packed_response=packed_response,
+                        )
+                    )
             elif message_type == "eval_batch_request":
                 roots = message["roots"]
+                packed_response = bool(message.get("packed_response", False))
                 if not isinstance(roots, list) or not roots:
                     raise ValueError("eval_batch_request requires a non-empty roots list")
                 if loaded_model is None:
@@ -523,7 +642,12 @@ def serve(
                         raise RuntimeError("no model loaded and dry-run fallback is disabled")
                     results = [_uniform_eval(root, model_fallback=True) for root in roots]
                 else:
-                    results = _model_eval_batch(loaded_model, roots, device_name=device_name)
+                    results = _model_eval_batch(
+                        loaded_model,
+                        roots,
+                        device_name=device_name,
+                        packed_response=packed_response,
+                    )
                 _response({"type": "eval_batch_response", "results": results})
             else:
                 raise ValueError(f"unknown message type {message_type!r}")

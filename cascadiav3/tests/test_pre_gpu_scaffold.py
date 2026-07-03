@@ -309,6 +309,77 @@ class BridgeContractTest(unittest.TestCase):
         batch_responses = _model_eval_batch(model, packed_roots)
         self.assertEqual(len(batch_responses), len(packed_roots))
 
+    def test_pack_f64_b64_is_bit_exact_with_json_float_path(self) -> None:
+        import base64
+        import json as json_module
+        import struct
+
+        try:
+            import numpy as np
+        except ModuleNotFoundError:
+            self.skipTest("numpy unavailable")
+        from cascadiav3.torch_inference_bridge import pack_f64_b64
+
+        # f32 model outputs widened to f64: exact, so the packed bytes must
+        # equal what the JSON float-list wire path delivers after round-trip.
+        values = np.array([0.1, 1.0 / 3.0, -2.5e-7, 80.0, 1e30], dtype=np.float32)
+        encoded = pack_f64_b64(values)
+        decoded = list(struct.unpack("<5d", base64.b64decode(encoded)))
+        json_wire = json_module.loads(json_module.dumps(values.tolist()))
+        self.assertEqual(decoded, json_wire)
+        self.assertEqual(
+            np.frombuffer(base64.b64decode(encoded), dtype="<f8").tolist(), json_wire
+        )
+        # Plain Python floats (f64) also round-trip bit-exactly.
+        floats = [0.1, -1.0 / 7.0, 3.141592653589793]
+        self.assertEqual(
+            list(struct.unpack("<3d", base64.b64decode(pack_f64_b64(floats)))),
+            json_module.loads(json_module.dumps(floats)),
+        )
+
+    def test_packed_response_decodes_to_exact_json_response_values(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        import base64
+        import json as json_module
+
+        import numpy as np
+
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_inference_bridge import _model_eval_batch
+
+        roots = self._public_fixture_roots(limit=3)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        torch.manual_seed(20260702)
+        model = build_cascadiaformer(config_for_size("tiny"))
+        model.eval()
+
+        json_rows = _model_eval_batch(model, roots)
+        packed_rows = _model_eval_batch(model, roots, packed_response=True)
+        self.assertEqual(len(json_rows), len(packed_rows))
+        field_map = {
+            "priors": "priors_f64_b64",
+            "q": "q_f64_b64",
+            "score_to_go": "score_to_go_f64_b64",
+            "uncertainty": "uncertainty_f64_b64",
+            "value": "value_f64_b64",
+        }
+        for json_row, packed_row in zip(json_rows, packed_rows):
+            self.assertEqual(json_row["action_ids"], packed_row["action_ids"])
+            self.assertIn("packed", packed_row)
+            for key in field_map:
+                self.assertNotIn(key, packed_row)
+            packed = packed_row["packed"]
+            for key, field in field_map.items():
+                decoded = np.frombuffer(base64.b64decode(packed[field]), dtype="<f8").tolist()
+                wire = json_module.loads(json_module.dumps(json_row[key]))
+                self.assertEqual(
+                    decoded, wire, msg=f"packed {key} diverged from the JSON path"
+                )
+
     def test_serve_answers_eval_batch_request_with_fallback(self) -> None:
         import json as json_module
         import subprocess
