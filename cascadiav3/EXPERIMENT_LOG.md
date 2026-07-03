@@ -2629,3 +2629,37 @@ Decision:
 - Next credible branch: test K24 in the same non-shadow complete-game setup, or
   train a stronger search-aware/retention-aware model whose gate is calibrated
   directly against gameplay loss, not only sampled-teacher root recall.
+
+## 2026-07-03 — Cycle-3 export crash (zip64) and relaunch on optimized stack
+
+Failure:
+
+- Cycle 3 (EI-4) generation completed all 1,250 train seeds / 100,000 records
+  in 56,085 s (~15.6 h, 0.022 seeds/s), then the train-tensor npz write died
+  with the zip crate error "Large file option has not been set": one array
+  exceeded the 4 GiB zip entry limit and `large_file(true)` (zip64) was never
+  set. The partial 8.5 GB archive has no central directory; the mode writes
+  no JSONL sidecar, so the search data is unrecoverable. Validation
+  generation and training never started.
+- Root cause is scale-triggered: the 100k-record corpus is ~10x cycle 1;
+  no earlier corpus crossed 4 GiB per entry.
+
+Fixes and changes deployed with the relaunch:
+
+- `npz_writer.rs` now sets `.large_file(true)` on every entry (zip64;
+  numpy/zipfile read these transparently). Commit `5e84d7b`.
+- Optimization pass 2 (merged earlier today, commits `bb9d00c`/`a087f53`):
+  eval-row dedup + per-chunk cache (43.7% of model eval rows eliminated at
+  production search shape under the mock) and packed f64 responses (7.7x
+  encode / 2.9x decode), both parity-gated. Dedup counters now appear in
+  generation progress lines.
+
+Relaunch:
+
+- Same configuration and seeds as the failed run (train 2026730000 x 1250,
+  val 2026830000 x 125, n=128, w=0.5, shared bridge, 16 sessions, replay
+  tail cycles 2+1 at weights 1.0/0.5/0.25, warm start from cycle-1 champion).
+- Labels will differ from the lost run at float precision (GPU batch
+  composition changes with dedup); this is expected and acceptable.
+- The rerun doubles as the production measurement of optimization pass 2:
+  prior stack measured 0.022 seeds/s (~80 games/h) at n=128.

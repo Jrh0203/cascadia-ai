@@ -23,13 +23,21 @@ not data-noise bound**. Gumbel at n=256 = 3.2 s/dec vs control 10.9 s/dec.
 
 ## In flight right now
 
-- **Cycle 3 (EI-4)** on john0: 1,250+125 seeds, n=128 teacher labels,
-  w=0.5, replay window cycles 2+1 (weights 1.0,0.5,0.25), warm start from
-  cycle-1 champion. Started 19:45 on 07-02; ~80 games/h measured; 1175/1250
-  at 10:25. ETA: generation ~13:00, checkpoint ~13:30, gates ~16:00-16:30.
-  Job: `logs/gumbel_selfplay_cycle3_job.{pid,log}`; completion when
-  `reports/full_v3_gumbel_selfplay_cycle3_runbook.json` exists.
+- **Cycle 3 (EI-4) RERUN** on john0: the first attempt completed all 1,250
+  generation seeds (~15.6 h) then DIED writing the train tensor — a single
+  npz array crossed the 4 GiB zip entry limit without zip64
+  ("Large file option has not been set"); data unrecoverable, fixed by
+  `.large_file(true)` in npz_writer.rs (`5e84d7b`). Relaunched 2026-07-03
+  ~12:30 with identical seeds/config (1,250+125 seeds, n=128, w=0.5, replay
+  cycles 2+1 at 1.0/0.5/0.25, warm start cycle-1 champion) on the
+  optimization-pass-2 stack (eval dedup+cache, packed responses) — the rerun
+  doubles as pass-2's production measurement (prior stack: 0.022 seeds/s).
+  Job: `logs/gumbel_selfplay_cycle3_job.{pid,log}` (pid 555312); completion
+  when `reports/full_v3_gumbel_selfplay_cycle3_runbook.json` exists.
   Champion manifest: `checkpoints/full_v3_gumbel_selfplay_cycle/best_locked_val.manifest.json`.
+- Optimization pass 3 agents in flight locally (GPU forward
+  factoring/bucketing/compile investigation; batched shared-bridge benchmark
+  harness) — merge after they report; do NOT deploy mid-run to john0.
 
 ## Gate battery to run when cycle-3 lands (sequential, one job script)
 
