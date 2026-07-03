@@ -159,12 +159,20 @@ impl ModelServiceSession {
         self.protocol_features.contains("packed_features")
     }
 
+    /// Bridge can return per-row outputs as base64 little-endian f64 arrays
+    /// ("packed_response") instead of JSON float lists. Values are bit
+    /// identical to the JSON path; only the encoding changes.
+    pub fn supports_packed_response(&self) -> bool {
+        self.protocol_features.contains("packed_response")
+    }
+
     pub fn eval(&mut self, root_request: &Value) -> Result<ModelEval> {
         let request = json!({
             "type": "eval_request",
             "root": root_request,
             "allow_model_fallback": self.allow_model_fallback,
             "timeout_ms": self.timeout.as_millis(),
+            "packed_response": self.supports_packed_response(),
         });
         writeln!(self.stdin, "{}", canonical_json(&request))
             .context("writing model eval request")?;
@@ -198,6 +206,7 @@ impl ModelServiceSession {
             "roots": root_requests,
             "allow_model_fallback": self.allow_model_fallback,
             "timeout_ms": self.timeout.as_millis(),
+            "packed_response": self.supports_packed_response(),
         });
         writeln!(self.stdin, "{}", canonical_json(&request))
             .context("writing model eval batch request")?;
@@ -321,34 +330,52 @@ pub fn parse_model_response(
     if response_action_ids != expected_action_ids {
         bail!("model response action_ids do not match root legal action order");
     }
-    let raw_priors = response
-        .get("priors")
-        .and_then(Value::as_array)
-        .context("model response priors missing")?;
-    if raw_priors.len() != expected_action_ids.len() {
-        bail!("model response priors length mismatch");
-    }
-    let mut priors = Vec::with_capacity(raw_priors.len());
+    let action_count = expected_action_ids.len();
+    // Packed responses ("packed_response" protocol feature) carry base64
+    // little-endian f64 arrays; values decode bit-identically to what the
+    // JSON float-list path yields (serde_json has float_roundtrip enabled).
+    let (raw_priors, q, score_to_go, value) = if let Some(packed) = response.get("packed") {
+        let priors = parse_packed_model_float_array(packed, "priors_f64_b64", action_count)?
+            .context("model response priors missing")?;
+        (
+            priors,
+            parse_packed_model_float_array(packed, "q_f64_b64", action_count)?,
+            parse_packed_model_float_array(packed, "score_to_go_f64_b64", action_count)?,
+            parse_packed_model_float_array(packed, "value_f64_b64", 4)?,
+        )
+    } else {
+        let priors_json = response
+            .get("priors")
+            .and_then(Value::as_array)
+            .context("model response priors missing")?;
+        if priors_json.len() != action_count {
+            bail!("model response priors length mismatch");
+        }
+        let mut priors = Vec::with_capacity(priors_json.len());
+        for value in priors_json {
+            priors.push(value.as_f64().context("model prior must be numeric")?);
+        }
+        (
+            priors,
+            parse_optional_model_float_array(&response, "q", action_count)?,
+            parse_optional_model_float_array(&response, "score_to_go", action_count)?,
+            parse_optional_model_float_array(&response, "value", 4)?,
+        )
+    };
     let mut sum = 0.0_f64;
-    for value in raw_priors {
-        let prior = value.as_f64().context("model prior must be numeric")?;
+    for &prior in &raw_priors {
         if !prior.is_finite() || prior < 0.0 {
             bail!("model prior must be finite and non-negative");
         }
-        priors.push(prior);
         sum += prior;
     }
     if sum <= 0.0 || !sum.is_finite() {
         bail!("model priors must have positive finite sum");
     }
-    let priors = priors
+    let priors = raw_priors
         .into_iter()
         .map(|prior| json!(prior / sum))
         .collect::<Vec<_>>();
-    let q = parse_optional_model_float_array(&response, "q", expected_action_ids.len())?;
-    let score_to_go =
-        parse_optional_model_float_array(&response, "score_to_go", expected_action_ids.len())?;
-    let value = parse_optional_model_float_array(&response, "value", 4)?;
     Ok(ModelEval {
         priors,
         q,
@@ -384,6 +411,43 @@ pub fn parse_optional_model_float_array(
             .with_context(|| format!("model response {key}[{index}] must be numeric"))?;
         if !number.is_finite() {
             bail!("model response {key}[{index}] must be finite");
+        }
+        parsed.push(number);
+    }
+    Ok(Some(parsed))
+}
+
+/// Decodes one base64 little-endian f64 array from a packed response object.
+/// Mirrors `parse_optional_model_float_array` semantics (optional key,
+/// exact length, finite values).
+pub fn parse_packed_model_float_array(
+    packed: &Value,
+    key: &str,
+    expected_len: usize,
+) -> Result<Option<Vec<f64>>> {
+    use base64::Engine as _;
+
+    let Some(raw) = packed.get(key) else {
+        return Ok(None);
+    };
+    let encoded = raw
+        .as_str()
+        .with_context(|| format!("model response packed {key} must be a base64 string"))?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .with_context(|| format!("model response packed {key} is not valid base64"))?;
+    if bytes.len() != expected_len * 8 {
+        bail!(
+            "model response packed {key} length mismatch: got {} bytes, expected {}",
+            bytes.len(),
+            expected_len * 8
+        );
+    }
+    let mut parsed = Vec::with_capacity(expected_len);
+    for (index, chunk) in bytes.chunks_exact(8).enumerate() {
+        let number = f64::from_le_bytes(chunk.try_into().expect("8-byte chunk"));
+        if !number.is_finite() {
+            bail!("model response packed {key}[{index}] must be finite");
         }
         parsed.push(number);
     }
@@ -459,6 +523,204 @@ mod tests {
         assert!(session.eval_batch(&[]).expect("empty batch").is_empty());
         session.shutdown();
     }
+
+    #[test]
+    fn packed_response_matches_json_response_exactly() {
+        let roots: Vec<Value> = (0..4).map(root_request).collect();
+
+        let mut packed_session =
+            ModelServiceSession::spawn(&mock_bridge_command(""), &test_config())
+                .expect("spawn packed mock");
+        assert!(packed_session.supports_packed_response());
+        let packed_evals = packed_session.eval_batch(&roots).expect("packed evals");
+        let packed_single = packed_session.eval(&roots[0]).expect("packed single eval");
+        packed_session.shutdown();
+
+        let mut json_session =
+            ModelServiceSession::spawn(&mock_bridge_command("--no-packed-response"), &test_config())
+                .expect("spawn json mock");
+        assert!(!json_session.supports_packed_response());
+        assert!(json_session.supports_eval_batch());
+        let json_evals = json_session.eval_batch(&roots).expect("json evals");
+        let json_single = json_session.eval(&roots[0]).expect("json single eval");
+        json_session.shutdown();
+
+        // The packed session really used the packed encoding and the json
+        // session really did not.
+        assert!(packed_evals[0].response.get("packed").is_some());
+        assert!(json_evals[0].response.get("packed").is_none());
+        assert!(packed_single.response.get("packed").is_some());
+        assert!(json_single.response.get("packed").is_none());
+
+        // Exact equality: packed base64 f64 must decode bit-identically to
+        // the JSON float-list path.
+        for (packed_eval, json_eval) in packed_evals
+            .iter()
+            .chain(std::iter::once(&packed_single))
+            .zip(json_evals.iter().chain(std::iter::once(&json_single)))
+        {
+            assert_eq!(packed_eval.priors, json_eval.priors);
+            assert_eq!(packed_eval.q, json_eval.q);
+            assert_eq!(packed_eval.score_to_go, json_eval.score_to_go);
+            assert_eq!(packed_eval.value, json_eval.value);
+            assert_eq!(packed_eval.model_fallback, json_eval.model_fallback);
+        }
+        assert_eq!(packed_evals[0].q, Some(vec![6.0, 8.0, 4.5]));
+        assert_eq!(packed_evals[0].value, Some(vec![80.0, 80.0, 80.0, 80.0]));
+    }
+
+    #[test]
+    fn packed_array_decoder_validates_shape_and_encoding() {
+        use base64::Engine as _;
+
+        let engine = base64::engine::general_purpose::STANDARD;
+        let values = [0.125_f64, -3.5, 1.0e-12];
+        let mut bytes = Vec::new();
+        for value in values {
+            bytes.extend_from_slice(&value.to_le_bytes());
+        }
+        let packed = json!({"q_f64_b64": engine.encode(&bytes)});
+        let decoded = parse_packed_model_float_array(&packed, "q_f64_b64", 3)
+            .expect("decode")
+            .expect("present");
+        assert_eq!(decoded, values.to_vec());
+        // Missing key is None, wrong length and bad base64 are errors.
+        assert!(
+            parse_packed_model_float_array(&packed, "missing_f64_b64", 3)
+                .expect("missing key ok")
+                .is_none()
+        );
+        assert!(parse_packed_model_float_array(&packed, "q_f64_b64", 4).is_err());
+        assert!(
+            parse_packed_model_float_array(&json!({"q_f64_b64": "@@not-base64@@"}), "q_f64_b64", 3)
+                .is_err()
+        );
+        let nan_bytes = f64::NAN.to_le_bytes();
+        assert!(
+            parse_packed_model_float_array(
+                &json!({"q_f64_b64": engine.encode(nan_bytes)}),
+                "q_f64_b64",
+                1
+            )
+            .is_err()
+        );
+    }
+
+    /// Micro-benchmark: response decode (serde_json parse + parse_model_response)
+    /// for the JSON float-list encoding vs the packed base64 f64 encoding at a
+    /// realistic 32 rows x 256 actions. Run with:
+    /// `cargo test response_decode_microbench -- --nocapture`
+    #[test]
+    fn response_decode_microbench() {
+        use base64::Engine as _;
+        use std::fmt::Write as _;
+
+        let rows = 32usize;
+        let actions = 256usize;
+        let engine = base64::engine::general_purpose::STANDARD;
+
+        let mut roots = Vec::with_capacity(rows);
+        let mut json_lines = Vec::with_capacity(rows);
+        let mut packed_lines = Vec::with_capacity(rows);
+        for row in 0..rows {
+            let action_ids: Vec<String> = (0..actions).map(|i| format!("a{row}-{i}")).collect();
+            let priors: Vec<f64> = (0..actions).map(|i| 1.0 / (i + 1) as f64).collect();
+            let q: Vec<f64> = (0..actions).map(|i| (row * actions + i) as f64 * 0.37 + 0.001).collect();
+            let score_to_go: Vec<f64> = q.iter().map(|value| value - 11.25).collect();
+            let value = vec![80.5, 79.25, 63.0, 41.125];
+            roots.push(json!({
+                "state_hash": format!("hash-{row}"),
+                "action_ids": action_ids,
+            }));
+            json_lines.push(
+                serde_json::to_string(&json!({
+                    "type": "eval_response",
+                    "state_hash": format!("hash-{row}"),
+                    "action_ids": roots[row]["action_ids"],
+                    "priors": priors,
+                    "q": q,
+                    "score_to_go": score_to_go,
+                    "uncertainty": vec![1.0; actions],
+                    "value": value,
+                    "model_fallback": false,
+                }))
+                .expect("json response"),
+            );
+            let pack = |values: &[f64]| {
+                let mut bytes = Vec::with_capacity(values.len() * 8);
+                for value in values {
+                    bytes.extend_from_slice(&value.to_le_bytes());
+                }
+                engine.encode(&bytes)
+            };
+            packed_lines.push(
+                serde_json::to_string(&json!({
+                    "type": "eval_response",
+                    "state_hash": format!("hash-{row}"),
+                    "action_ids": roots[row]["action_ids"],
+                    "packed": {
+                        "priors_f64_b64": pack(&priors),
+                        "q_f64_b64": pack(&q),
+                        "score_to_go_f64_b64": pack(&score_to_go),
+                        "uncertainty_f64_b64": pack(&vec![1.0; actions]),
+                        "value_f64_b64": pack(&value),
+                    },
+                    "model_fallback": false,
+                }))
+                .expect("packed response"),
+            );
+        }
+
+        let decode_all = |lines: &[String]| -> Vec<ModelEval> {
+            lines
+                .iter()
+                .zip(roots.iter())
+                .map(|(line, root)| {
+                    let response: Value = serde_json::from_str(line).expect("parse line");
+                    parse_model_response(root, response, false).expect("parse response")
+                })
+                .collect()
+        };
+
+        // Parity first: identical parsed values on both encodings.
+        let json_evals = decode_all(&json_lines);
+        let packed_evals = decode_all(&packed_lines);
+        for (json_eval, packed_eval) in json_evals.iter().zip(packed_evals.iter()) {
+            assert_eq!(json_eval.priors, packed_eval.priors);
+            assert_eq!(json_eval.q, packed_eval.q);
+            assert_eq!(json_eval.score_to_go, packed_eval.score_to_go);
+            assert_eq!(json_eval.value, packed_eval.value);
+        }
+
+        let iterations = 30usize;
+        let time = |lines: &[String]| {
+            let start = std::time::Instant::now();
+            for _ in 0..iterations {
+                std::hint::black_box(decode_all(lines));
+            }
+            start.elapsed() / iterations as u32
+        };
+        let json_time = time(&json_lines);
+        let packed_time = time(&packed_lines);
+        let json_bytes: usize = json_lines.iter().map(String::len).sum();
+        let packed_bytes: usize = packed_lines.iter().map(String::len).sum();
+        let mut report = String::new();
+        writeln!(
+            report,
+            "response decode microbench ({rows} rows x {actions} actions, mean of {iterations}):"
+        )
+        .unwrap();
+        writeln!(report, "  json:   {json_time:>10.2?}  payload {json_bytes} bytes").unwrap();
+        writeln!(report, "  packed: {packed_time:>10.2?}  payload {packed_bytes} bytes").unwrap();
+        writeln!(
+            report,
+            "  speedup: {:.2}x, payload {:.2}x smaller",
+            json_time.as_secs_f64() / packed_time.as_secs_f64(),
+            json_bytes as f64 / packed_bytes as f64
+        )
+        .unwrap();
+        eprintln!("{report}");
+    }
 }
 
 /// Shared bridge: one spawned Python bridge (one CUDA context) serving many
@@ -470,6 +732,26 @@ mod tests {
 struct AggregateJob {
     requests: Vec<Value>,
     reply: std::sync::mpsc::SyncSender<Result<Vec<ModelEval>, String>>,
+}
+
+fn env_usize(name: &str, default: usize) -> usize {
+    std::env::var(name)
+        .ok()
+        .and_then(|raw| raw.trim().parse::<usize>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(default)
+}
+
+/// How long the aggregator waits for more jobs before dispatching a merged
+/// batch. `CASCADIA_SHARED_GATHER_US` (microseconds), default 2000 (2ms).
+pub fn shared_gather_window() -> Duration {
+    Duration::from_micros(env_usize("CASCADIA_SHARED_GATHER_US", 2_000) as u64)
+}
+
+/// Row cap for one merged shared-bridge request.
+/// `CASCADIA_SHARED_ROW_CAP`, default 192.
+pub fn shared_row_cap() -> usize {
+    env_usize("CASCADIA_SHARED_ROW_CAP", 192)
 }
 
 pub struct SharedBridge {
@@ -485,17 +767,19 @@ pub struct SharedBridgeClient {
 
 impl SharedBridge {
     /// `max_rows` bounds how many rows one merged request may carry; the
-    /// gather window is short (2ms) so lone jobs are not delayed.
+    /// gather window is short (default 2ms, `CASCADIA_SHARED_GATHER_US`) so
+    /// lone jobs are not delayed.
     pub fn spawn(command: &str, config: &BridgeConfig, max_rows: usize) -> Result<Self> {
         let mut session = ModelServiceSession::spawn(command, config)?;
         let packed_features = session.supports_packed_features();
+        let gather_window = shared_gather_window();
         let (tx, rx) = std::sync::mpsc::channel::<AggregateJob>();
         std::thread::spawn(move || {
             while let Ok(first) = rx.recv() {
                 let mut jobs = vec![first];
                 let mut rows = jobs[0].requests.len();
                 while rows < max_rows {
-                    match rx.recv_timeout(Duration::from_millis(2)) {
+                    match rx.recv_timeout(gather_window) {
                         Ok(job) => {
                             rows += job.requests.len();
                             jobs.push(job);

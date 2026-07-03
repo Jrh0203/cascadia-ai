@@ -2738,7 +2738,7 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
         Some(SharedBridge::spawn(
             command,
             &BridgeConfig::from_args(args),
-            192,
+            model_bridge::shared_row_cap(),
         )?)
     } else {
         None
