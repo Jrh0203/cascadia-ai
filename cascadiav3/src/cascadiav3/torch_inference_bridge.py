@@ -64,6 +64,32 @@ EVAL_BATCH_CHUNK_SIZE = 32
 # the peak CGAB intermediate near 3 GB for d_model 384.
 EVAL_BATCH_CELL_BUDGET = 2_097_152
 
+
+def _eval_cell_budget() -> int:
+    """CASCADIA_EVAL_CELL_BUDGET overrides the rows*actions*seq chunking budget
+    (default EVAL_BATCH_CELL_BUDGET). The default budget is sized for the
+    materialized CGAB relation tail; with CASCADIA_CGAB_FUSED=1 the tail never
+    builds the [rows, actions, seq, d_model] tensor, so the same budget
+    over-estimates cost by ~d_model x and the box can raise it to serve bigger
+    chunks. Invalid or non-positive values fall back to the default."""
+    raw = os.environ.get("CASCADIA_EVAL_CELL_BUDGET", "").strip()
+    if raw:
+        try:
+            value = int(raw)
+        except ValueError:
+            print(
+                f"bridge: ignoring invalid CASCADIA_EVAL_CELL_BUDGET={raw!r}",
+                file=sys.stderr,
+            )
+        else:
+            if value > 0:
+                return value
+            print(
+                f"bridge: ignoring non-positive CASCADIA_EVAL_CELL_BUDGET={value}",
+                file=sys.stderr,
+            )
+    return EVAL_BATCH_CELL_BUDGET
+
 # --- Shape bucketing (CASCADIA_BRIDGE_BUCKET=1, default off) -----------------
 #
 # Menus vary per chunk (actions from a handful to the full menu; token counts
@@ -133,6 +159,7 @@ def _packed_response_fields(
 
 def _eval_batch_chunks(roots: list[dict[str, Any]], *, chunk_size: int) -> list[list[dict[str, Any]]]:
     bucketed = _bucket_enabled()
+    cell_budget = _eval_cell_budget()
     chunks: list[list[dict[str, Any]]] = []
     current: list[dict[str, Any]] = []
     max_actions = 0
@@ -155,7 +182,7 @@ def _eval_batch_chunks(roots: list[dict[str, Any]], *, chunk_size: int) -> list[
             cells = (len(current) + 1) * padded_actions * (_bucket_dim(candidate_tokens) + padded_actions)
         else:
             cells = (len(current) + 1) * candidate_actions * candidate_seq
-        if current and (len(current) >= chunk_size or cells > EVAL_BATCH_CELL_BUDGET):
+        if current and (len(current) >= chunk_size or cells > cell_budget):
             chunks.append(current)
             current = []
             candidate_actions = action_count

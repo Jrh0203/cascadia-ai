@@ -640,6 +640,9 @@ _TRUTHY_ENV = {"1", "true", "yes", "on"}
 #   --fused-optimizer                                 fused AdamW (CUDA only)
 #   --compile / CASCADIA_TRAIN_COMPILE=1              torch.compile the model
 #   --grad-checkpoint {auto,on,off}                   auto = legacy no-op
+#   --cgab-fused / CASCADIA_CGAB_FUSED=1              fused CGAB relation tail
+#                                                     (count-matmul; equivalent
+#                                                     math, not bit-identical)
 #   CASCADIA_TRAIN_SDPA=flash|mem_efficient|math|cudnn (comma list = priority)
 #   CASCADIA_TRAIN_SDPA_LOG=1                         log attention backend info
 #   CASCADIA_TRAIN_TIMING=1 [CASCADIA_TRAIN_TIMING_EVERY=K]
@@ -1378,6 +1381,7 @@ def run_training(
     fused_optimizer: bool = False,
     compile_model: bool = False,
     grad_checkpoint: str = "auto",
+    cgab_fused: bool = False,
 ) -> dict[str, Any]:
     try:
         import torch
@@ -1420,6 +1424,7 @@ def run_training(
         raise ValueError("grad_checkpoint must be one of auto, on, off")
     tf32 = tf32 or _env_flag("CASCADIA_TRAIN_TF32")
     compile_model = compile_model or _env_flag("CASCADIA_TRAIN_COMPILE")
+    cgab_fused = cgab_fused or _env_flag("CASCADIA_CGAB_FUSED")
     sdpa_spec = os.environ.get("CASCADIA_TRAIN_SDPA", "").strip() or None
     sdpa_context = _sdpa_context_factory(sdpa_spec)
     timing_enabled = _env_flag("CASCADIA_TRAIN_TIMING")
@@ -1483,6 +1488,10 @@ def run_training(
     weights = loss_weights or loss_weights_for_objective(objective)
     config = config_for_size(model_size)
     model = build_cascadiaformer(config).to(device)
+    if cgab_fused:
+        # Fused CGAB relation tail (count-matmul); mathematically equivalent
+        # but NOT bit-identical (floating-point reassociation, ~1e-7 in fp32).
+        model.set_cgab_fused(True)
     grad_checkpoint_applied = False
     if grad_checkpoint == "on":
         model.set_gradient_checkpointing(True)
@@ -1906,6 +1915,7 @@ def run_training(
             "compile": compile_applied,
             "grad_checkpoint": grad_checkpoint,
             "grad_checkpoint_applied": grad_checkpoint_applied,
+            "cgab_fused": cgab_fused,
             "sdpa": sdpa_spec,
             "timing": timing_enabled,
         },
@@ -2090,6 +2100,12 @@ def main() -> int:
         help="Activation checkpointing for the state encoder; auto preserves legacy behavior "
         "(never applied, even for model sizes whose config requests it)",
     )
+    parser.add_argument(
+        "--cgab-fused",
+        action="store_true",
+        help="Fused CGAB relation tail (also CASCADIA_CGAB_FUSED=1): count-matmul instead of the "
+        "materialized [B, A, seq, d_model] intermediate; mathematically equivalent, not bit-identical",
+    )
     args = parser.parse_args()
     if args.val_max_batches < 0:
         parser.error("--val-max-batches must be >= 0")
@@ -2157,6 +2173,7 @@ def main() -> int:
         fused_optimizer=args.fused_optimizer,
         compile_model=args.compile,
         grad_checkpoint=args.grad_checkpoint,
+        cgab_fused=args.cgab_fused,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["status"] == "pass" else 1

@@ -406,6 +406,7 @@ Opt-in knobs (defaults preserve bit-identity):
 | `CASCADIA_TRAIN_SDPA=flash\|mem_efficient\|math\|cudnn` | restricts SDPA backends around train forward/backward and eval (comma list = priority) | selection only; flash rejects our merged key-padding attn_mask |
 | `CASCADIA_TRAIN_SDPA_LOG=1` | logs enabled SDPA backends + per-shape usability verdicts (`can_use_flash/efficient_attention` with debug reasons) on the first CUDA batch | log only |
 | `CASCADIA_TRAIN_TIMING=1` (`_EVERY=K`) | per-phase wall times (data/h2d/forward/backward/optimizer/eval), line every K steps + summary + report `phase_timing`; synchronizes CUDA at phase boundaries, so it slightly perturbs throughput | measurement only |
+| `--cgab-fused` / `CASCADIA_CGAB_FUSED=1` | fused CGAB relation tail: count-matmul instead of the `[B, A, seq, d_model]` intermediate (see "Fused CGAB Relation Tail" below) | equivalent math, not bit-identical (~2.4e-7 max dev fp32) |
 
 SDPA reality for this encoder: training never uses the fused/nested
 TransformerEncoder path (inference-only), so attention always goes through
@@ -413,3 +414,43 @@ TransformerEncoder path (inference-only), so attention always goes through
 flash rejects arbitrary attn_masks, leaving mem_efficient vs math — use
 `CASCADIA_TRAIN_SDPA_LOG=1` on john0 to see which one actually runs for the
 M shapes, and `CASCADIA_TRAIN_SDPA` to force alternatives.
+
+## Fused CGAB Relation Tail (2026-07-04, local CPU)
+
+The Forward-Path Pass 3 finding stands: the top memory-bound op is the CGAB
+relation tail, which materializes `[B, A, seq, d_model]` (embedding lookup +
+mask product both live at peak) just to take a masked mean over relation ids.
+That mean is exactly `(counts_per_relation_id / valid_positions) @
+embedding_table`, so the fused path builds a `[B, A, 32]` count matrix
+(scatter_add, id-0 column zeroed to honor the `padding_idx=0` + `ne(0)`
+contract) and one dense matmul instead. Fully expressible — there is no
+position-dependent weighting or attention in the tail; gradients are
+equivalent too (padding row still gets zero grad).
+
+Knobs (defaults preserve the materialized path bit for bit):
+
+- `CASCADIA_CGAB_FUSED=1` — read at model construction (trainer, bridge, any
+  consumer); also `--cgab-fused` on the trainer and
+  `model.set_cgab_fused(True)`. NOT bit-identical: floating-point
+  reassociation, measured max deviation `2.4e-7` abs across all heads
+  (fp32, tiny/S), grads agree to `rtol 1e-5 / atol 1e-6`.
+- `CASCADIA_EVAL_CELL_BUDGET=N` — overrides the bridge's rows×actions×seq
+  chunking budget (default `EVAL_BATCH_CELL_BUDGET = 2^21`, unchanged). The
+  default budget is sized for the materialized tail; with the fused tail it
+  over-estimates CGAB cost by ~`d_model`×, so serving can raise it to run
+  bigger chunks.
+
+Local CPU measurements (Mac mini, fp32, B=32 rows, A=256 full menu, S=64
+tokens, seq=320, warm best-of-5, peak-RSS delta per fresh process):
+
+| Path | Full forward S | Full forward M | CGAB tail S | CGAB tail M (B=25) |
+|---|---|---|---|---|
+| materialized | 497 ms / 7.9 GiB | 3590 ms / 12.1 GiB | 881 ms / 6.9 GiB | 2040 ms / 9.5 GiB |
+| fused | 112 ms / 0.23 GiB | 399 ms / 0.35 GiB | 6.4 ms / 0.08 GiB | 13 ms / 0.13 GiB |
+
+Analytic dominant-intermediate ratio: `seq * d_model / vocab` = 3840× (S) /
+7680× (M) at these shapes. The CPU speedup (4.4× S / 9.0× M end-to-end) is
+mostly avoided memory traffic; the expected GPU win is memory-bandwidth plus
+the ability to raise `CASCADIA_EVAL_CELL_BUDGET` for larger serving chunks.
+Equivalence, padding contract, and default-off behavior are pinned by
+`cascadiav3/tests/test_cgab_fused.py`.
