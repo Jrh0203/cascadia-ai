@@ -61,6 +61,12 @@ MAX_EXAMPLE_PASSES="${MAX_EXAMPLE_PASSES:-0}"
 SELECTION_METRIC="${SELECTION_METRIC:-locked_val_total}"
 SELECTION_MODE="${SELECTION_MODE:-min}"
 INIT_MANIFEST="${INIT_MANIFEST:-}"
+# "none" = explicit from-scratch init even when a wrapper defaults
+# INIT_MANIFEST to the incumbent (S weights cannot warm-start M).
+if [ "$INIT_MANIFEST" = "none" ]; then INIT_MANIFEST=""; fi
+# Extra trainer flags appended verbatim (perf knobs: --data-workers 4
+# --tf32 --fused-optimizer --cgab-fused --grad-checkpoint on ...).
+TRAINER_EXTRA_ARGS="${TRAINER_EXTRA_ARGS:-}"
 RESUME_MANIFEST="${RESUME_MANIFEST:-}"
 TRAIN_SOURCE_WEIGHTS="${TRAIN_SOURCE_WEIGHTS:-}"
 EXTRA_TRAIN_TAIL_TENSORS="${EXTRA_TRAIN_TAIL_TENSORS:-}"
@@ -353,7 +359,8 @@ python -m cascadiav3.torch_train_cascadiaformer \
   --metrics-jsonl '$METRICS' \
   --out '$REPORT' \
   "\${TRAINER_INIT_ARGS[@]}" \
-  "\${TRAINER_MIX_ARGS[@]}"
+  "\${TRAINER_MIX_ARGS[@]}" \
+  $TRAINER_EXTRA_ARGS
 TRAINING_SECONDS="\$(( \$(date +%s) - TRAINING_STARTED ))"
 
 python -m cascadiav3.torch_inference_bridge \
