@@ -7,6 +7,7 @@ closed for real training when Torch is unavailable.
 
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -66,6 +67,13 @@ def config_for_size(model_size: str) -> CascadiaFormerConfig:
     raise ValueError("model_size must be one of tiny, S, M")
 
 
+def cgab_fused_default() -> bool:
+    """CASCADIA_CGAB_FUSED=1 selects the fused (count-matmul) CGAB relation
+    tail at model construction. Default OFF preserves the materialized path
+    bit for bit."""
+    return os.environ.get("CASCADIA_CGAB_FUSED") == "1"
+
+
 def _masked_mean(tensor, mask):  # type: ignore[no-untyped-def]
     mask_f = mask.to(tensor.dtype).unsqueeze(-1)
     return (tensor * mask_f).sum(dim=1) / mask_f.sum(dim=1).clamp_min(1.0)
@@ -87,6 +95,31 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
                 nn.Linear(cfg.d_model, cfg.d_model),
                 nn.Sigmoid(),
             )
+            # CASCADIA_CGAB_FUSED=1 (or model.set_cgab_fused(True)) replaces
+            # the materialized [B, A, seq, d_model] relation-tail intermediate
+            # with a [B, A, vocab] count matrix + one dense matmul. Same
+            # masked mean, reassociated floating-point order (not
+            # bit-identical; agrees to ~1e-7 in fp32). Default OFF keeps the
+            # legacy path untouched.
+            self.fused = cgab_fused_default()
+
+        def _fused_relation_context(self, rel_tail, out_dtype):  # type: ignore[no-untyped-def]
+            # Masked mean over embedding rows == (counts / valid_count) @ table.
+            # counts[b, a, v] = number of tail positions carrying relation id v;
+            # column 0 is zeroed to honor the padding contract (padding_idx=0 +
+            # ne(0) mask): id-0 positions contribute nothing to numerator or
+            # denominator. No [B, A, seq, d_model] tensor is ever built.
+            weight = self.relation_embed.weight
+            counts = torch.zeros(
+                (*rel_tail.shape[:2], weight.shape[0]),
+                dtype=weight.dtype,
+                device=rel_tail.device,
+            )
+            counts.scatter_add_(2, rel_tail, torch.ones_like(rel_tail, dtype=weight.dtype))
+            counts[..., 0] = 0
+            denom = counts.sum(dim=2, keepdim=True).clamp_min(1)
+            rel_context = (counts / denom) @ weight
+            return rel_context.to(out_dtype)
 
         def forward(self, action_h, relation_ids=None, relation_tail=None):  # type: ignore[no-untyped-def]
             if relation_tail is None and relation_ids is None:
@@ -97,9 +130,12 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             else:
                 rel_tail = relation_tail[:, :action_count, :]
             rel_tail = rel_tail.clamp_min(0).to(dtype=torch.long)
-            rel_mask = rel_tail.ne(0).unsqueeze(-1)
-            rel_emb = self.relation_embed(rel_tail) * rel_mask.to(action_h.dtype)
-            rel_context = rel_emb.sum(dim=2) / rel_mask.sum(dim=2).clamp_min(1).to(action_h.dtype)
+            if self.fused:
+                rel_context = self._fused_relation_context(rel_tail, action_h.dtype)
+            else:
+                rel_mask = rel_tail.ne(0).unsqueeze(-1)
+                rel_emb = self.relation_embed(rel_tail) * rel_mask.to(action_h.dtype)
+                rel_context = rel_emb.sum(dim=2) / rel_mask.sum(dim=2).clamp_min(1).to(action_h.dtype)
             bias = self.gate(rel_context) * rel_context
             return action_h + bias, bias
 
@@ -153,6 +189,9 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
 
         def set_gradient_checkpointing(self, enabled: bool) -> None:
             self.gradient_checkpointing_enabled = bool(enabled)
+
+        def set_cgab_fused(self, enabled: bool) -> None:
+            self.cgab.fused = bool(enabled)
 
         def _encode_state(self, token_h, token_padding):  # type: ignore[no-untyped-def]
             if (

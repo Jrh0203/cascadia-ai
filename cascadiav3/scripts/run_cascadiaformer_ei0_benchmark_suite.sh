@@ -44,10 +44,12 @@ RUN_SEARCH="${RUN_SEARCH:-1}"
 
 NO_SEARCH_REPORT="${NO_SEARCH_REPORT:-cascadiav3/reports/cascadiaformer_ei0_no_search_game100.json}"
 NO_SEARCH_DECISIONS="${NO_SEARCH_DECISIONS:-cascadiav3/reports/cascadiaformer_ei0_no_search_game100_decisions.jsonl}"
+NO_SEARCH_GAME_RESULTS="${NO_SEARCH_GAME_RESULTS:-cascadiav3/reports/cascadiaformer_ei0_no_search_game100_games.jsonl}"
 NO_SEARCH_SUMMARY="${NO_SEARCH_SUMMARY:-cascadiav3/reports/cascadiaformer_ei0_no_search_game100_summary.md}"
 NO_SEARCH_EXPERIMENT_ID="${NO_SEARCH_EXPERIMENT_ID:-cascadiaformer-ei0-no-search-game100}"
 SEARCH_REPORT="${SEARCH_REPORT:-cascadiav3/reports/cascadiaformer_ei0_search_game20.json}"
 SEARCH_DECISIONS="${SEARCH_DECISIONS:-cascadiav3/reports/cascadiaformer_ei0_search_game20_decisions.jsonl}"
+SEARCH_GAME_RESULTS="${SEARCH_GAME_RESULTS:-cascadiav3/reports/cascadiaformer_ei0_search_game20_games.jsonl}"
 SEARCH_SUMMARY="${SEARCH_SUMMARY:-cascadiav3/reports/cascadiaformer_ei0_search_game20_summary.md}"
 SEARCH_EXPERIMENT_ID="${SEARCH_EXPERIMENT_ID:-cascadiaformer-ei0-search-game20}"
 
@@ -73,7 +75,9 @@ cd '$REMOTE_ROOT'
 . '$REMOTE_VENV/bin/activate'
 export LD_LIBRARY_PATH=/usr/lib/wsl/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
 export PYTHONDONTWRITEBYTECODE=1
+export PYTHONUNBUFFERED=1
 export PYTHONPATH=cascadiav3/src
+trap 'status=\$?; if [ "\$status" -ne 0 ]; then echo "[ei0-bench] failed exit_code=\$status \$(date -Is)" >&2; fi' EXIT
 
 echo "[ei0-bench] started \$(date -Is)"
 echo "[ei0-bench] manifest=$MANIFEST"
@@ -99,6 +103,7 @@ if [ '$RUN_NO_SEARCH' = '1' ]; then
     --experiment-id '$NO_SEARCH_EXPERIMENT_ID' \
     --out '$NO_SEARCH_REPORT' \
     --decisions-out '$NO_SEARCH_DECISIONS' \
+    --game-results-out '$NO_SEARCH_GAME_RESULTS' \
     --summary-out '$NO_SEARCH_SUMMARY'
 else
   echo "[ei0-bench] skipping no-search benchmark"
@@ -130,6 +135,7 @@ if [ '$RUN_SEARCH' = '1' ]; then
     --experiment-id '$SEARCH_EXPERIMENT_ID' \
     --out '$SEARCH_REPORT' \
     --decisions-out '$SEARCH_DECISIONS' \
+    --game-results-out '$SEARCH_GAME_RESULTS' \
     --summary-out '$SEARCH_SUMMARY'
 
   if [ '$SEARCH_INCLUDE_FULL_SEARCH_BASELINE' = '1' ]; then
@@ -175,7 +181,7 @@ ps -eo pid=,ppid=,psr=,nlwp=,pcpu=,pmem=,etime=,args= | awk '
   /torch_cascadiaformer_(game|search)_benchmark/ && !/awk/ {print \"matching benchmark pid \" \$1 \" ppid \" \$2 \" psr \" \$3 \" threads \" \$4 \" cpu \" \$5 \" mem \" \$6 \" elapsed \" \$7}
   /cascadiav3-real-root-exporter/ && /interactive-policy-game/ && !/awk/ {print \"matching interactive simulator pid \" \$1 \" ppid \" \$2 \" psr \" \$3 \" threads \" \$4 \" cpu \" \$5 \" mem \" \$6 \" elapsed \" \$7}
 '
-for f in '$NO_SEARCH_REPORT' '$NO_SEARCH_SUMMARY' '$SEARCH_REPORT' '$SEARCH_SUMMARY' '$NO_SEARCH_DECISIONS' '$SEARCH_DECISIONS'; do
+for f in '$NO_SEARCH_REPORT' '$NO_SEARCH_SUMMARY' '$SEARCH_REPORT' '$SEARCH_SUMMARY' '$NO_SEARCH_DECISIONS' '$SEARCH_DECISIONS' '$NO_SEARCH_GAME_RESULTS' '$SEARCH_GAME_RESULTS'; do
   [ -e \"\$f\" ] && ls -lh \"\$f\"
 done
 tail -n 120 '$REMOTE_LOG' 2>/dev/null || true"
@@ -185,8 +191,8 @@ fetch_artifacts() {
   cd "$LOCAL_ROOT"
   mkdir -p cascadiav3/reports cascadiav3/logs
   for rel in \
-    "$NO_SEARCH_REPORT" "$NO_SEARCH_DECISIONS" "$NO_SEARCH_SUMMARY" \
-    "$SEARCH_REPORT" "$SEARCH_DECISIONS" "$SEARCH_SUMMARY" \
+    "$NO_SEARCH_REPORT" "$NO_SEARCH_DECISIONS" "$NO_SEARCH_GAME_RESULTS" "$NO_SEARCH_SUMMARY" \
+    "$SEARCH_REPORT" "$SEARCH_DECISIONS" "$SEARCH_GAME_RESULTS" "$SEARCH_SUMMARY" \
     "cascadiav3/logs/${JOB_SLUG}_job.log"
   do
     if ssh -p "$SSH_PORT" "$REMOTE" "[ -e '$REMOTE_ROOT/$rel' ]"; then

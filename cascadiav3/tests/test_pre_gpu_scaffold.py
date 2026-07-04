@@ -808,12 +808,31 @@ class CascadiaFormerBenchmarkContractTest(unittest.TestCase):
     def test_game_benchmark_contract_helpers(self) -> None:
         import inspect
 
+        from cascadiav3.torch_cascadiaformer_game_benchmark import completed_game_result_row
         from cascadiav3.torch_cascadiaformer_game_benchmark import run_benchmark
         from cascadiav3.torch_cascadiaformer_game_benchmark import parse_seeds, summarize_game_results
 
         self.assertIn("treatment_workers", inspect.signature(run_benchmark).parameters)
+        self.assertIn("game_results_path", inspect.signature(run_benchmark).parameters)
         self.assertEqual(parse_seeds(seeds="7, 9", first_seed=1, games=3), [7, 9])
         self.assertEqual(parse_seeds(seeds="", first_seed=10, games=3), [10, 11, 12])
+        completed = completed_game_result_row(
+            {
+                "seed": 10,
+                "strategy": "cascadiaformer",
+                "selection_head": "q",
+                "done": {
+                    "scores": [{"total": 80}, {"total": 90}, {"total": 100}, {"total": 110}],
+                    "turns": 80,
+                    "elapsed_seconds": 12.5,
+                    "final_state_hash": "state",
+                },
+                "decisions": [{}, {}],
+            }
+        )
+        self.assertEqual(completed["mean_score_per_seat"], 95)
+        self.assertEqual(completed["decision_count"], 2)
+        self.assertEqual(completed["seat_scores"], [80.0, 90.0, 100.0, 110.0])
         summary = summarize_game_results(
             [
                 {
@@ -847,6 +866,7 @@ class CascadiaFormerBenchmarkContractTest(unittest.TestCase):
         from cascadiav3.validate_runbook_performance import validate_time_ratio
 
         self.assertIn("candidate_workers", inspect.signature(run_search_benchmark).parameters)
+        self.assertIn("game_results_path", inspect.signature(run_search_benchmark).parameters)
         candidate = [
             {
                 "seed": 1,
@@ -1935,6 +1955,12 @@ class ModelSmokeTest(unittest.TestCase):
         self.assertIn('SEARCH_CPU_WORKERS="${SEARCH_CPU_WORKERS:-16}"', text)
         self.assertIn('SEARCH_CANDIDATE_WORKERS="${SEARCH_CANDIDATE_WORKERS:-$SEARCH_CPU_WORKERS}"', text)
         self.assertIn('SEARCH_BASELINE_WORKERS="${SEARCH_BASELINE_WORKERS:-$SEARCH_CPU_WORKERS}"', text)
+        self.assertIn("NO_SEARCH_GAME_RESULTS", text)
+        self.assertIn("SEARCH_GAME_RESULTS", text)
+        self.assertIn("--game-results-out '$NO_SEARCH_GAME_RESULTS'", text)
+        self.assertIn("--game-results-out '$SEARCH_GAME_RESULTS'", text)
+        self.assertIn("PYTHONUNBUFFERED=1", text)
+        self.assertIn("[ei0-bench] failed exit_code=", text)
         self.assertIn("search_extra_flags+=(--shadow-full-search)", text)
         self.assertIn("search_extra_flags+=(--include-full-search-baseline)", text)
         self.assertIn('"\\${search_extra_flags[@]}"', text)

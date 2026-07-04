@@ -21,7 +21,7 @@ from statistics import mean
 from typing import Any
 
 from .torch_benchmark_stats import paired_delta_stats
-from .torch_cascadiaformer_game_benchmark import load_cascadiaformer_manifest, rank_root_with_model
+from .torch_cascadiaformer_game_benchmark import completed_game_result_row, load_cascadiaformer_manifest, rank_root_with_model
 
 
 def parse_seeds(*, seeds: str, first_seed: int, games: int) -> list[int]:
@@ -290,6 +290,7 @@ def run_search_benchmark(
     device_name: str,
     experiment_id: str,
     decision_rows_path: Path | None,
+    game_results_path: Path | None = None,
     rollout_determinize: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if selection_head not in {"policy", "q"}:
@@ -304,12 +305,18 @@ def run_search_benchmark(
     if decision_rows_path is not None:
         decision_rows_path.parent.mkdir(parents=True, exist_ok=True)
         decision_rows_path.write_text("", encoding="utf-8")
+    if game_results_path is not None:
+        game_results_path.parent.mkdir(parents=True, exist_ok=True)
+        game_results_path.write_text("", encoding="utf-8")
 
     def remember(result: dict[str, Any]) -> dict[str, Any]:
         if decision_rows_path is not None:
             with decision_rows_path.open("a", encoding="utf-8") as handle:
                 for decision in result["decisions"]:
                     handle.write(json.dumps(decision, sort_keys=True) + "\n")
+        if game_results_path is not None:
+            with game_results_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(completed_game_result_row(result), sort_keys=True) + "\n")
         return result
 
     model_lock = threading.Lock()
@@ -422,16 +429,7 @@ def run_search_benchmark(
         "control_mean_decision_seconds": full_summary["mean_total_decision_seconds"] if full_summary else None,
         "treatment_control_time_ratio": timing_ratio,
         "games": [
-            {
-                "seed": result["seed"],
-                "strategy": result["strategy"],
-                "selection_head": result["selection_head"],
-                "scores": result["done"]["scores"],
-                "turns": result["done"]["turns"],
-                "elapsed_seconds": result["done"]["elapsed_seconds"],
-                "decision_count": len(result["decisions"]),
-                "final_state_hash": result["done"]["final_state_hash"],
-            }
+            completed_game_result_row(result)
             for result in candidate_results + full_results
         ],
     }, candidate_results + full_results
@@ -517,6 +515,7 @@ def main() -> int:
     parser.add_argument("--experiment-id", default="cascadiaformer-search-integrated-benchmark-v1")
     parser.add_argument("--out", default="cascadiav3/reports/cascadiaformer_search_benchmark.json")
     parser.add_argument("--decisions-out", default="cascadiav3/reports/cascadiaformer_search_benchmark_decisions.jsonl")
+    parser.add_argument("--game-results-out", default="cascadiav3/reports/cascadiaformer_search_benchmark_games.jsonl")
     parser.add_argument("--summary-out", default="cascadiav3/reports/cascadiaformer_search_benchmark_summary.md")
     args = parser.parse_args()
 
@@ -537,6 +536,7 @@ def main() -> int:
         device_name=args.device,
         experiment_id=args.experiment_id,
         decision_rows_path=Path(args.decisions_out),
+        game_results_path=Path(args.game_results_out),
         rollout_determinize=args.rollout_determinize,
     )
     out_path = Path(args.out)

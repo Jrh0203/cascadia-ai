@@ -161,6 +161,49 @@ Doubling samples per action did not improve this 20-seed mean and roughly
 doubled per-decision search time. K64/R32 produced no per-game mean at or above
 `100`, despite 12 of 80 individual seats scoring at least `100`.
 
+## EI-1 Model-State Expert Iteration
+
+EI-1 was the first model-state expert-iteration run: EI-0 q chose the behavior
+actions, sampled search labeled K32 action menus, and the trainer mixed `70%`
+new model-state roots with `30%` EI-0 greedy-state bootstrap roots.
+
+Training:
+
+- expert tensor mode: `model_state_search_bootstrap`;
+- train/validation roots: `20,000` / `4,000`;
+- rollouts/action during labeling: `4`;
+- objective: `expert`;
+- selection metric: minimum `locked_val_final_q_regret`;
+- selected checkpoint: `best_locked_val` at step `15,000`;
+- best locked validation final-Q regret: `1.909125`;
+- final step locked validation final-Q regret: `2.110875`;
+- generation throughput: `10.5309` roots/s;
+- training throughput: `0.0978` seconds/step.
+
+100-game no-search complete-game benchmark:
+
+| Strategy | Mean | P50 | P90 | Delta vs Greedy | Greedy Match |
+|---|---:|---:|---:|---:|---:|
+| Greedy | 87.5450 | 88.0000 | 92.0000 | - | - |
+| CascadiaFormer q | 90.7600 | 91.0000 | 94.0000 | +3.2150 | 30.6375% |
+
+This is a real no-search improvement: EI-1 q beat both matched greedy and EI-0
+q's prior `89.6175` 100-game mean.
+
+K56 search-integrated follow-up:
+
+| Strategy | Mean | P50 | P90 | Notes |
+|---|---:|---:|---:|---|
+| CascadiaFormer-search K56 of K64 | 96.4250 | 97.0000 | 100.0000 | recovered from 20 complete candidate games |
+| Full-search K64 control | 96.7656 | 97.0000 | 99.0000 | recovered from 16 complete control games |
+
+The K56 run exited before producing its normal final JSON report, so this is
+forensic evidence recovered from the decision stream rather than a promotion
+gate. It is still directionally clear: EI-1 search remained in the existing
+`96-97` band, with a recovered paired delta of `-0.453125` on the 16 completed
+control pairs. The harness now journals completed games to `*_games.jsonl` so a
+future long search tail cannot erase completed-game score evidence.
+
 Interpretation: the q serving head is now the useful no-search policy, and it
 beats greedy by about two points on the first 100-game EI-0 gate. Search
 integration reaches a strong absolute mean above `95` and passes the timing
@@ -169,8 +212,9 @@ evidence, but the current one-ply sampled-search setting itself still sits
 below the 100-point target. The benchmark is CPU rollout-bound rather than
 GPU-bound: model inference is tiny compared with terminal rollout search.
 However, K64/R32 shows that simply spending more samples per action is not
-enough; the next step should improve the policy/value/rollout target, not just
-increase rollout count.
+enough. EI-1 shows that model-state iteration can improve no-search play, but
+not yet search-integrated score. The next step should improve the
+policy/value/rollout target, not just increase rollout count.
 
 ## Leak Caveat (2026-07-02)
 
@@ -362,6 +406,7 @@ Opt-in knobs (defaults preserve bit-identity):
 | `CASCADIA_TRAIN_SDPA=flash\|mem_efficient\|math\|cudnn` | restricts SDPA backends around train forward/backward and eval (comma list = priority) | selection only; flash rejects our merged key-padding attn_mask |
 | `CASCADIA_TRAIN_SDPA_LOG=1` | logs enabled SDPA backends + per-shape usability verdicts (`can_use_flash/efficient_attention` with debug reasons) on the first CUDA batch | log only |
 | `CASCADIA_TRAIN_TIMING=1` (`_EVERY=K`) | per-phase wall times (data/h2d/forward/backward/optimizer/eval), line every K steps + summary + report `phase_timing`; synchronizes CUDA at phase boundaries, so it slightly perturbs throughput | measurement only |
+| `--cgab-fused` / `CASCADIA_CGAB_FUSED=1` | fused CGAB relation tail: count-matmul instead of the `[B, A, seq, d_model]` intermediate (see "Fused CGAB Relation Tail" below) | equivalent math, not bit-identical (~2.4e-7 max dev fp32) |
 
 SDPA reality for this encoder: training never uses the fused/nested
 TransformerEncoder path (inference-only), so attention always goes through
@@ -369,3 +414,43 @@ TransformerEncoder path (inference-only), so attention always goes through
 flash rejects arbitrary attn_masks, leaving mem_efficient vs math — use
 `CASCADIA_TRAIN_SDPA_LOG=1` on john0 to see which one actually runs for the
 M shapes, and `CASCADIA_TRAIN_SDPA` to force alternatives.
+
+## Fused CGAB Relation Tail (2026-07-04, local CPU)
+
+The Forward-Path Pass 3 finding stands: the top memory-bound op is the CGAB
+relation tail, which materializes `[B, A, seq, d_model]` (embedding lookup +
+mask product both live at peak) just to take a masked mean over relation ids.
+That mean is exactly `(counts_per_relation_id / valid_positions) @
+embedding_table`, so the fused path builds a `[B, A, 32]` count matrix
+(scatter_add, id-0 column zeroed to honor the `padding_idx=0` + `ne(0)`
+contract) and one dense matmul instead. Fully expressible — there is no
+position-dependent weighting or attention in the tail; gradients are
+equivalent too (padding row still gets zero grad).
+
+Knobs (defaults preserve the materialized path bit for bit):
+
+- `CASCADIA_CGAB_FUSED=1` — read at model construction (trainer, bridge, any
+  consumer); also `--cgab-fused` on the trainer and
+  `model.set_cgab_fused(True)`. NOT bit-identical: floating-point
+  reassociation, measured max deviation `2.4e-7` abs across all heads
+  (fp32, tiny/S), grads agree to `rtol 1e-5 / atol 1e-6`.
+- `CASCADIA_EVAL_CELL_BUDGET=N` — overrides the bridge's rows×actions×seq
+  chunking budget (default `EVAL_BATCH_CELL_BUDGET = 2^21`, unchanged). The
+  default budget is sized for the materialized tail; with the fused tail it
+  over-estimates CGAB cost by ~`d_model`×, so serving can raise it to run
+  bigger chunks.
+
+Local CPU measurements (Mac mini, fp32, B=32 rows, A=256 full menu, S=64
+tokens, seq=320, warm best-of-5, peak-RSS delta per fresh process):
+
+| Path | Full forward S | Full forward M | CGAB tail S | CGAB tail M (B=25) |
+|---|---|---|---|---|
+| materialized | 497 ms / 7.9 GiB | 3590 ms / 12.1 GiB | 881 ms / 6.9 GiB | 2040 ms / 9.5 GiB |
+| fused | 112 ms / 0.23 GiB | 399 ms / 0.35 GiB | 6.4 ms / 0.08 GiB | 13 ms / 0.13 GiB |
+
+Analytic dominant-intermediate ratio: `seq * d_model / vocab` = 3840× (S) /
+7680× (M) at these shapes. The CPU speedup (4.4× S / 9.0× M end-to-end) is
+mostly avoided memory traffic; the expected GPU win is memory-bandwidth plus
+the ability to raise `CASCADIA_EVAL_CELL_BUDGET` for larger serving chunks.
+Equivalence, padding contract, and default-off behavior are pinned by
+`cascadiav3/tests/test_cgab_fused.py`.

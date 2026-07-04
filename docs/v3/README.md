@@ -38,6 +38,12 @@ The implementation package lives in
 - EI-0 K56 retained search narrowed the matched full-K64 gap to `0.5625` and
   passed the timing gate with a `0.8834` treatment/control ratio, but both K56
   and full K64 remained below the 100-point target on 20-game mean score.
+- EI-1 model-state expert iteration improved no-search q play to `90.7600`
+  over 100 games, beating matched greedy by `3.2150` and EI-0 q's `89.6175`.
+- EI-1 K56 search remained in the `96-97` score band on recovered evidence:
+  `96.4250` over 20 complete candidate games, with no 100-point breakthrough.
+- The next improvement should change the policy/value/rollout target, not just
+  increase retained width, rollout count, or this exact EI-1 objective.
 - K64/R32 showed that raw rollout count is not the bottleneck: the greedy
   rollout policy itself caps the teacher.
 - All pre-2026-07-02 search-integrated numbers carry a hidden-information
