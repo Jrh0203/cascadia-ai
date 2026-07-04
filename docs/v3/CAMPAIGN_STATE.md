@@ -5,6 +5,19 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
+## CHAMPION (2026-07-04 evening): CascadiaFormer-M cycle3 step_0010000
+
+`checkpoints/full_v3_gumbel_selfplay_cycle3_m/step_0010000.manifest.json`
+(regret-selected, regret 0.1559). First CI-significant wins of the campaign:
+n=64 95.24/95.54 (+0.59/+0.89 vs S, both excl-0), **n=256 97.11** (+1.44
+excl-0). S is saturated (n512 flat, depth2 flat, 3 data cycles flat).
+M no-search q is WEAKER than S (90.88) — M's strength expresses via search.
+In flight: fused-CGAB GPU A/B on M (logs/cgab_ab_job.*, marker AB_DONE,
+seeds 2026997000). Next: power the 97-gate (n=256, 100+ games, vs S
+incumbent, needs +0.25 at 250-500 pairs per TRAINING_PIPELINE.md); deploy
+trainer knobs; cycle 4 = EI on M teacher (fused forward makes M labels
+affordable). Optimization stack pass 4+5 DEPLOYED to john0 (28/28 remote).
+
 ## Scoreboard (all honest / no hidden-order peek)
 
 | Agent | No-search q (100g) | Gumbel n=64 (100g) | Gumbel n=256 (25g) |
