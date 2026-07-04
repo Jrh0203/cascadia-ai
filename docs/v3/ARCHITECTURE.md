@@ -120,6 +120,22 @@ This is mandatory because exact immediate score can differ across legal
 afterstates. A synthetic rank-flip test must fail if serving ranks by raw
 score-to-go alone.
 
+## Search Semantics
+
+The serving-strength search is Gumbel top-m + sequential halving
+(`real-root-exporter/src/gumbel.rs`) with the model at both ends: policy
+priors select root candidates from the full legal set, and leaf values are
+derived final Q from batched model evaluations. Interior plies advance every
+seat by its own argmax derived final Q (max^n). A blend weight `w` mixes the
+value bootstrap with sampled greedy terminal rollouts while the value head
+earns trust; `w = 1.0` removes CPU rollouts entirely.
+
+**No-peek contract:** search may never observe the true hidden tile-stack or
+bag order. Every simulation redeterminizes hidden state before the root
+action is applied; the legacy rollout path honors the same contract behind
+`--rollout-determinize`. Benchmarks that violate this contract are marked
+legacy-leaky and are not promotion evidence.
+
 ## Promotion Philosophy
 
 Validation loss, imitation accuracy, and greedy top-1 retention are diagnostics.

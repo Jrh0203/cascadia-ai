@@ -59,6 +59,15 @@ pub struct HabitatAnalysis {
     matching_edges: u16,
 }
 
+/// Per-edge neighbor habitat facts for one candidate tile cell; see
+/// [`HabitatAnalysis::tile_neighbor_context`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TileNeighborContext {
+    /// For each edge: the neighbor tile's facing terrain, its component id
+    /// for that terrain, and that component's size.
+    edges: [Option<(Terrain, u8, u8)>; 6],
+}
+
 impl HabitatAnalysis {
     pub fn largest(&self, terrain: Terrain) -> u8 {
         self.largest[terrain as usize]
@@ -109,6 +118,70 @@ impl HabitatAnalysis {
             connected_components[connected_count] = component;
             connected_count += 1;
             component_size += self.component_sizes[terrain_index][usize::from(component)];
+        }
+        self.largest(terrain).max(component_size)
+    }
+
+    /// Captures, for one candidate cell, the habitat facts of the six
+    /// neighboring tiles that [`Self::largest_after_tile`] reads: the terrain
+    /// each neighbor shows on the facing edge plus that terrain's component id
+    /// and size. The context only depends on the neighboring cells, so it can
+    /// be computed once per candidate coordinate and reused across every
+    /// tile, rotation, and terrain probed there.
+    pub fn tile_neighbor_context(&self, board: &Board, coord: HexCoord) -> TileNeighborContext {
+        let mut edges = [None; 6];
+        for (edge, slot) in edges.iter_mut().enumerate() {
+            let Some(neighbor_index) = coord.neighbor(edge).to_index() else {
+                continue;
+            };
+            let Some(neighbor_tile) = board.cells[neighbor_index] else {
+                continue;
+            };
+            let facing = neighbor_tile
+                .tile
+                .terrain_on_edge(neighbor_tile.rotation, (edge + 3) % 6);
+            let component = self.component_ids[facing as usize][neighbor_index];
+            *slot = Some((
+                facing,
+                component,
+                self.component_sizes[facing as usize][usize::from(component)],
+            ));
+        }
+        TileNeighborContext { edges }
+    }
+
+    /// Equivalent of [`Self::largest_after_tile`] evaluated against a
+    /// prebuilt [`TileNeighborContext`] for the same board and coordinate.
+    pub fn largest_after_tile_with_context(
+        &self,
+        context: &TileNeighborContext,
+        tile: Tile,
+        rotation: Rotation,
+        terrain: Terrain,
+    ) -> u8 {
+        if !tile.contains_terrain(terrain) {
+            return self.largest(terrain);
+        }
+
+        let mut connected_components = [0u8; 6];
+        let mut connected_count = 0usize;
+        let mut component_size = 1u8;
+        for edge in 0..6 {
+            if tile.terrain_on_edge(rotation, edge) != terrain {
+                continue;
+            }
+            let Some((facing, component, size)) = context.edges[edge] else {
+                continue;
+            };
+            if facing != terrain
+                || component == 0
+                || connected_components[..connected_count].contains(&component)
+            {
+                continue;
+            }
+            connected_components[connected_count] = component;
+            connected_count += 1;
+            component_size += size;
         }
         self.largest(terrain).max(component_size)
     }

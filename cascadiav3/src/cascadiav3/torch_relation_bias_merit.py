@@ -111,17 +111,24 @@ def _token_indexes(root: dict[str, Any]) -> dict[str, dict[Any, int]]:
     }
 
 
-def combined_relation_ids(
+def combined_relation_ids_array(
     root: dict[str, Any],
     *,
     action_offset: int | None = None,
     seq_len: int | None = None,
-) -> list[list[int]]:
+):
+    """Vectorized relation-id matrix (numpy int64), semantics-identical to the
+    legacy list-of-lists builder. The dense O(seq_len^2) allocation and the
+    same-owner block fill dominate matrix cost; both are numpy here. The sparse
+    relation/action-pointer passes stay sequential scalar assignments so that
+    duplicate-edge overwrite order matches the legacy builder exactly."""
+    import numpy as np
+
     token_count = int(root["public_tokens"]["token_count"])
     action_count = len(root["legal_actions"])
     action_offset = token_count if action_offset is None else action_offset
     seq_len = action_offset + action_count if seq_len is None else seq_len
-    matrix = [[0 for _ in range(seq_len)] for _ in range(seq_len)]
+    matrix = np.zeros((seq_len, seq_len), dtype=np.int64)
 
     same_board_id = RELATION_TO_ID["same_owner_board"]
     tokens_by_owner: dict[int, list[int]] = {}
@@ -132,9 +139,20 @@ def combined_relation_ids(
             continue
         tokens_by_owner.setdefault(int(owner), []).append(int(token["token_index"]))
     for indexes in tokens_by_owner.values():
-        for source in indexes:
-            for target in indexes:
-                _set_relation(matrix, source, target, same_board_id)
+        in_range = [index for index in indexes if 0 <= index < seq_len]
+        if not in_range:
+            continue
+        block = np.asarray(in_range, dtype=np.intp)
+        matrix[np.ix_(block, block)] = same_board_id
+        matrix[block, block] = 0
+
+    def _assign(source: int, target: int, relation_id: int, *, overwrite: bool) -> None:
+        if source < 0 or target < 0 or source >= seq_len or target >= seq_len:
+            return
+        if source == target:
+            return
+        if overwrite or matrix[source, target] == 0:
+            matrix[source, target] = relation_id
 
     for relation in root["public_tokens"].get("relations", []):
         source = int(relation["source"])
@@ -146,9 +164,9 @@ def combined_relation_ids(
                 if relation.get("terrain_matches")
                 else RELATION_TO_ID["adjacent_hex"]
             )
-            _set_relation(matrix, source, target, relation_id, overwrite=True)
+            _assign(source, target, relation_id, overwrite=True)
         elif kind == "same_market_slot":
-            _set_relation(matrix, source, target, RELATION_TO_ID["same_market_slot"], overwrite=True)
+            _assign(source, target, RELATION_TO_ID["same_market_slot"], overwrite=True)
 
     indexes = _token_indexes(root)
     for action_index, action in enumerate(root["legal_actions"]):
@@ -172,17 +190,32 @@ def combined_relation_ids(
             if target is None:
                 continue
             relation_id = RELATION_TO_ID[relation_name]
-            _set_relation(matrix, action_pos, target, relation_id, overwrite=True)
-            _set_relation(matrix, target, action_pos, relation_id, overwrite=True)
+            _assign(action_pos, target, relation_id, overwrite=True)
+            _assign(target, action_pos, relation_id, overwrite=True)
     return matrix
 
 
-def relation_counts(matrix: list[list[int]]) -> dict[str, int]:
-    counts = {name: 0 for name in RELATION_KINDS}
-    for row in matrix:
-        for relation_id in row:
-            counts[RELATION_KINDS[relation_id]] += 1
-    return {name: count for name, count in counts.items() if count}
+def combined_relation_ids(
+    root: dict[str, Any],
+    *,
+    action_offset: int | None = None,
+    seq_len: int | None = None,
+) -> list[list[int]]:
+    return combined_relation_ids_array(
+        root, action_offset=action_offset, seq_len=seq_len
+    ).tolist()
+
+
+def relation_counts(matrix) -> dict[str, int]:
+    import numpy as np
+
+    array = np.asarray(matrix, dtype=np.int64)
+    totals = np.bincount(array.ravel(), minlength=len(RELATION_KINDS))
+    return {
+        name: int(count)
+        for name, count in zip(RELATION_KINDS, totals.tolist())
+        if count
+    }
 
 
 def collate_relation_bias_roots(records: list[dict[str, Any]]) -> dict[str, Any]:

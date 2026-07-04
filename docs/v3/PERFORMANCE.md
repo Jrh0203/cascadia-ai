@@ -215,3 +215,201 @@ However, K64/R32 shows that simply spending more samples per action is not
 enough. EI-1 shows that model-state iteration can improve no-search play, but
 not yet search-integrated score. The next step should improve the
 policy/value/rollout target, not just increase rollout count.
+
+## Leak Caveat (2026-07-02)
+
+All search-integrated numbers above were measured with rollouts that observed
+the true hidden tile/bag order. They remain internally comparable with each
+other but are **legacy-leaky**: honest baselines re-run with
+`--rollout-determinize`, and the Gumbel search path is public-information
+legal by construction. See GUMBEL_SELFPLAY_CAMPAIGN.md Phase A.
+
+## Gumbel Stack Engineering Facts (local, 2026-07-02)
+
+Measured on the local dev machine (debug/mock-bridge unless noted):
+
+- Afterstate reuse removes one full `GameState` clone + action re-apply per
+  rollout; the golden-equality test pins the refactor to bit-identical
+  labels with determinization off.
+- Tiny self-play export smoke (release build, mock bridge, 8 sims, K-interior
+  4, 2 seeds x 6 plies): `2.8 seeds/s`, `17.0 records/s` single-session.
+- The batched bridge collates up to 32 roots per forward; batch-of-N equals
+  N single evals to 1e-4 (unit-tested). Relation matrices build in numpy
+  instead of pure-Python lists.
+
+## Self-Play Generation Throughput (john0, 2026-07-02)
+
+Measured aggregate self-play generation (n=64, k-interior 16, root menu
+256, full games, tensor export included):
+
+| Topology | Games/h | Note |
+|---|---:|---|
+| 6 owned bridge sessions | ~40 | stable reference config |
+| 12 owned sessions | ~stall | CUDA context thrash (near-zero progress) |
+| 20 games on 1 shared aggregated bridge | ~15-20 | REGRESSION: one Python collate pipeline replaces six |
+
+Benchmark (non-export) games run ~1.07s/decision; self-play decisions run
+~4.3s at 6 sessions. The dominant serial cost is the bridge's pure-Python
+per-row feature extraction (public-token + semantic-action features), not
+the GPU: merged cross-game batches did not help because collate is
+row-cost-bound and single-threaded per bridge process.
+
+Conclusion: the generation unlock is moving feature extraction to Rust
+(the builders already exist in `feature_tensors.rs` for shard export) and
+sending precomputed feature arrays in eval requests, so the bridge only
+wraps tensors and runs forwards. The shared aggregated bridge is the right
+serving architecture once collate is cheap; until then owned 6-session is
+the production config.
+
+## Throughput Optimization Pass (2026-07-02 afternoon, merged)
+
+Three landed changes, all bit-parity-gated (golden-label test byte-identical,
+198 workspace tests, packed-vs-raw eval equivalence to 1e-4):
+
+1. **Packed-features eval protocol** (`e558315`): Rust computes token/action/
+   relation-tail features and base64-packs them into eval requests; the
+   bridge decodes with `np.frombuffer`. Bridge collate: **394ms -> 47ms per
+   32 full-menu roots (8.4x)**. Requests also shrink (no raw token/action
+   JSON).
+2. **Engine hot-path pass** (`0e31d0d`): visitor-based legal-action
+   enumeration without per-action materialization, cached neighbor/habitat
+   context, flat wildlife-score caches (FxHashMap), exact-parity O(n) top-k
+   selection. **rank_greedy_actions 2.1-3.6x faster, greedy rollouts
+   2.2-2.6x faster** on mid/late-game states (checksummed bit-parity across
+   45 bench sections; differential test vs a reference implementation).
+   End-to-end tiny selfplay export (mock bridge): 2.83 -> 4.32 seeds/s.
+3. **Shared aggregated bridge** (`7241e73`): one CUDA context, cross-chunk
+   request merging. Was a regression while collate dominated; with packed
+   features it becomes the intended high-parallelism serving path.
+
+Deployed 2026-07-02 ~16:35: cycle 2 restarted on the optimized stack
+(`SHARED_MODEL_SESSION=1`, `MODEL_SESSIONS=16`). Measured steady
+generation: **278 games/h** (125 seeds / 27 min) versus the 40 games/h
+old-stack owned-6 baseline — a **~7x aggregate throughput improvement**.
+A full-scale 1,375-seed cycle is now a ~5h job.
+
+## Throughput Optimization Pass 2 (2026-07-03, merged, not yet deployed)
+
+Model evals dominate post-pass-1 (n=128 labels cost ~3.5x n=64). Two landed
+changes targeting the eval path, both parity-gated (golden test byte-identical;
+packed==JSON and dedup==no-dedup exact-equality tests; byte-identical mock
+selfplay corpus sha256):
+
+1. **Eval-row dedup + per-chunk eval cache** (merge of `8b90c5c`): eval
+   features are public-information-only, so simulations sharing a root action
+   produce identical rows for early interior plies and argmax opponent
+   advances repeat states. `evaluate_rows_deduped()` collapses within-batch
+   duplicates and serves cross-call repeats from a blake3-keyed per-worker
+   cache (50k-entry cap). Measured at production search shape (n=64, top_m 16,
+   k_interior 16, menu 256, det 4): **43.7% of model eval rows eliminated**
+   (39,840 requested -> 22,438 sent; savings almost entirely from the
+   cross-call cache). Cache-hit rows also skip packed-feature construction.
+   Counters (`rows_requested/rows_sent/cache_hits`) print in export summaries.
+2. **Packed-response protocol + serving-path pass** (merge of `59bc3a7`):
+   negotiated `packed_response` feature — bridge returns base64 f64 LE arrays
+   instead of per-action JSON float lists (f32->f64 widening is exact: bit-
+   parity with JSON path, test-enforced). Python response encode **11.93ms ->
+   1.54ms per 32x256 batch (7.7x)**; Rust decode **1.60ms -> 0.55ms (2.9x)**.
+   Forward path: `torch.inference_mode`, one `.cpu()` per output tensor per
+   chunk, zero-copy collate, pinned non-blocking H2D, `final_q` on host.
+   New env knobs: `CASCADIA_BRIDGE_TF32=1` / `CASCADIA_BRIDGE_AUTOCAST=bf16`
+   (default off; NOT bit-parity), `CASCADIA_SHARED_GATHER_US` /
+   `CASCADIA_SHARED_ROW_CAP` (defaults 2000/192 = old behavior).
+
+Caveat: removing rows changes GPU batch composition, so float-reduction-order
+drift in labels is possible on real GPUs (byte-pinning holds under the
+deterministic mock). Expected production effect: evals dominate, so ~44% row
+reduction plus response savings should compound to roughly ~1.7-2x generation
+throughput at n=128; measure on john0 after cycle 3 lands before quoting.
+
+## Forward-Path Pass 3 (2026-07-03, bridge forward knobs, default off)
+
+Findings and knobs from the CascadiaFormer forward-path pass in
+`torch_inference_bridge.py`. All knobs default off; with them unset the bridge
+behavior is unchanged (legacy chunker parity is unit-test pinned).
+
+1. **Trunk-factoring verdict: already factored.** The forward runs the public
+   tokens `[B, S]` through `token_proj` and the whole `state_encoder` stack
+   once per root; action conditioning first enters at `action_proj` / the
+   cross-attention queries, and per-action relation structure only in the CGAB
+   tail. The shared trunk is the dominant FLOP share (roughly 85% at
+   S=64/A=256 and ~95% at small menus, CascadiaFormer-S) and is computed
+   exactly once — there is no per-action recomputation to remove, so no
+   factored path was added.
+2. **`CASCADIA_BRIDGE_BUCKET=1` shape bucketing.** Collate pads token/action
+   capacities to power-of-two buckets (floor 8, cap 512, then multiples of
+   128), bounding the shape vocabulary for kernel caches and torch.compile.
+   The chunker costs chunks at the padded shape so the CGAB cell budget still
+   holds. Mask integrity is exact: filling padded rows with garbage instead of
+   zeros leaves every real output bit-identical (test-enforced). Bucketed vs
+   unbucketed outputs are NOT bit-identical (~2e-7 max drift, tolerance-gated
+   test): CPU/GPU reduction kernels block over the padded length, so appending
+   even exact zeros regroups the floating-point reduction of the real prefix —
+   the SDPA MATH backend shows the same, and the default chunk-max padding
+   already admits this drift class. CPU cost: 32 mixed-menu rows,
+   CascadiaFormer-S: 657ms -> 675ms min (~3% padding overhead); the intended
+   win is CUDA kernel-cache stability and a finite compile shape set.
+3. **`CASCADIA_BRIDGE_COMPILE=1` torch.compile.** Wraps the loaded model
+   (default mode; `mode="reduce-overhead"` worth benchmarking on the CUDA
+   box). Pair with bucketing so recompiles are finite. Falls back to eager on
+   failure; CUDA-only warmup over representative bucket shapes at load time.
+   CPU smoke-tested (tiny config, tolerance-gated vs eager).
+4. **`CASCADIA_BRIDGE_TIMING=1` per-phase timing.** Accumulates per-chunk wall
+   time for collate/H2D/forward/D2H/encode plus rows and actions, emits a
+   one-line stderr summary every 50 chunks and at shutdown, e.g.
+   `[bridge-timing final] chunks=1 rows=4 actions=2097 collate=0.052s
+   h2d=0.000s forward=0.307s d2h=0.000s encode=0.000s total=0.360s
+   rows/s=11.1`. Zero-cost when off. Use this on john0 to direct the next
+   pass.
+
+## CascadiaFormer Trainer Perf Knobs (2026-07-04)
+
+Efficiency pass on `cascadiav3.torch_train_cascadiaformer` motivated by the
+CascadiaFormer-M run measuring 2.39 s/step at batch 192 on the RTX 5090 (GPU
+99% util at only 189 W, trainer pegging one CPU core). Hard contract, pinned
+by `cascadiav3/tests/test_trainer_perf_knobs.py`: with no knobs set, training
+is bit-identical to the pre-pass trainer (verified 3-step CPU runs on npz
+unweighted, npz weighted 2-source, and jsonl fixtures — all 45 state-dict
+tensors `torch.equal`, metrics JSONL byte-identical).
+
+Root causes found in the default path (all fixed exactly-safely, no knob
+needed):
+
+1. **Per-microbatch O(corpus) Python shuffle.** Unweighted sampling rebuilt
+   and Fisher-Yates-shuffled the full epoch order for EVERY micro-batch
+   (`_deterministic_order`): 19 ms at 100k records, 266 ms at 1M records of
+   pure single-core Python per micro-batch. Now LRU-cached per
+   (record_count, seed, epoch) — cache hit ~0.1 us, identical indices.
+2. **17 separate GPU syncs per micro-batch.** `float(loss.detach().cpu())`
+   per aggregate key after each backward (and per eval batch). Now one
+   stacked fp64 transfer (`_loss_scalars`), bit-identical values.
+3. **`enable_nested_tensor` warning.** The nested-tensor encoder fast path is
+   inference-only (requires eval mode + no grad) and additionally disqualified
+   by `norm_first=True`; the encoder is now built with
+   `enable_nested_tensor=False` — zero numeric change, warning gone.
+4. **`gradient_checkpointing` config flag was a silent no-op.** The M config
+   requests it but no trainer ever applied it; the observed M run was NOT
+   checkpointing. Now implemented behind `--grad-checkpoint on` (auto/off
+   preserve legacy no-checkpoint behavior; CPU test shows on/off bit-identical
+   losses and grads).
+
+Opt-in knobs (defaults preserve bit-identity):
+
+| Knob | Semantics | Parity |
+|---|---|---|
+| `--data-workers N` (+`CASCADIA_TRAIN_DATA_WORKERS`) | DataLoader workers; seeded index lists stay in the main process, workers only fetch+collate; persistent workers, prefetch (`--prefetch-factor`), pin_memory + non-blocking H2D on CUDA | bit-identical batches/order (test-enforced); CPU bench: data-wait 31.4 -> 1.6 ms per b192 batch with 2 workers |
+| `--autocast {auto,off,bf16}` | auto = legacy (bf16 autocast on CUDA, fp32 CPU); off forces fp32; locked-val eval always runs fp32 | train metrics under bf16 not comparable to fp32 runs |
+| `--tf32` / `CASCADIA_TRAIN_TF32=1` | TF32 matmul+cudnn on CUDA | changes fp32 numerics |
+| `--fused-optimizer` | fused AdamW, CUDA only | different update kernel, not bit-identical |
+| `--compile` / `CASCADIA_TRAIN_COMPILE=1` | torch.compile (default mode), eager fallback | numeric drift possible |
+| `--grad-checkpoint {auto,on,off}` | activation checkpointing on the state encoder | bit-identical on deterministic kernels |
+| `CASCADIA_TRAIN_SDPA=flash\|mem_efficient\|math\|cudnn` | restricts SDPA backends around train forward/backward and eval (comma list = priority) | selection only; flash rejects our merged key-padding attn_mask |
+| `CASCADIA_TRAIN_SDPA_LOG=1` | logs enabled SDPA backends + per-shape usability verdicts (`can_use_flash/efficient_attention` with debug reasons) on the first CUDA batch | log only |
+| `CASCADIA_TRAIN_TIMING=1` (`_EVERY=K`) | per-phase wall times (data/h2d/forward/backward/optimizer/eval), line every K steps + summary + report `phase_timing`; synchronizes CUDA at phase boundaries, so it slightly perturbs throughput | measurement only |
+
+SDPA reality for this encoder: training never uses the fused/nested
+TransformerEncoder path (inference-only), so attention always goes through
+`F.scaled_dot_product_attention` with a merged key-padding float attn_mask;
+flash rejects arbitrary attn_masks, leaving mem_efficient vs math — use
+`CASCADIA_TRAIN_SDPA_LOG=1` on john0 to see which one actually runs for the
+M shapes, and `CASCADIA_TRAIN_SDPA` to force alternatives.

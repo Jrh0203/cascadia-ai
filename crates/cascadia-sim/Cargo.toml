@@ -10,6 +10,7 @@ blake3.workspace = true
 cascadia-game = { path = "../cascadia-game" }
 rand.workspace = true
 rand_chacha.workspace = true
+rustc-hash.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 
