@@ -1410,6 +1410,119 @@ pub fn action_relation_tail(
     token_count: usize,
     action_count: usize,
 ) -> Result<Vec<u8>> {
+    const ACTION_USES_TILE_SLOT: u8 = 5;
+    const ACTION_USES_WILDLIFE_SLOT: u8 = 6;
+    const ACTION_TARGETS_TILE_FRONTIER: u8 = 7;
+    const ACTION_TARGETS_WILDLIFE_CELL: u8 = 8;
+
+    // Fast path equivalent to filtering `combined_relation_edges` down to
+    // action-source rows: only the action loop there emits edges whose
+    // source is an action position, so the token-token edge kinds
+    // (same-owner board, adjacency, market pairing) never reach the tail
+    // and their quadratic edge-map construction is skipped entirely.
+    let seq_len = token_count + action_count;
+    let tokens = field(root, "public_tokens")
+        .and_then(|public_tokens| field(public_tokens, "tokens"))
+        .and_then(Value::as_array)
+        .context("root is missing public tokens")?;
+    field(root, "public_tokens")
+        .and_then(|public_tokens| field(public_tokens, "relations"))
+        .and_then(Value::as_array)
+        .context("root is missing public token relations")?;
+    let active_seat = safe_i64(field(root, "active_seat"), 0);
+    let mut market_tile: HashMap<i64, i32> = HashMap::new();
+    let mut market_wildlife: HashMap<i64, i32> = HashMap::new();
+    let mut active_frontier: HashMap<String, i32> = HashMap::new();
+    let mut active_tile: HashMap<String, i32> = HashMap::new();
+
+    for token in tokens {
+        let index = safe_i64(field(token, "token_index"), -1) as i32;
+        match field(token, "token_kind").and_then(Value::as_str) {
+            Some("market_tile") => {
+                market_tile.insert(safe_i64(field(token, "market_slot"), -1), index);
+            }
+            Some("market_wildlife") => {
+                market_wildlife.insert(safe_i64(field(token, "market_slot"), -1), index);
+            }
+            Some("frontier") if safe_i64(field(token, "owner_seat"), -1) == active_seat => {
+                if let Some(key) = relation_coord_key(field(token, "coord_ref")) {
+                    active_frontier.insert(key, index);
+                }
+            }
+            Some("placed_tile") if safe_i64(field(token, "owner_seat"), -1) == active_seat => {
+                if let Some(key) = relation_coord_key(field(token, "coord_ref")) {
+                    active_tile.insert(key, index);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let actions = field(root, "legal_actions")
+        .and_then(Value::as_array)
+        .context("root is missing legal_actions")?;
+    let mut tail = vec![0u8; action_count * seq_len];
+    for (action_index, action) in actions.iter().enumerate() {
+        if action_index >= action_count {
+            break;
+        }
+        let action_pos = (token_count + action_index) as i32;
+        let tile_slot = safe_i64(
+            field(action, "tile_slot").or_else(|| field(action, "draft_slot")),
+            -1,
+        );
+        let wildlife_slot = safe_i64(
+            field(action, "wildlife_slot").or_else(|| field(action, "draft_slot")),
+            -1,
+        );
+        let target_frontier = relation_coord_key(field(action, "target_coord_ref"))
+            .and_then(|key| active_frontier.get(&key).copied());
+        let wildlife_target =
+            relation_coord_key(field(action, "wildlife_coord_ref")).and_then(|key| {
+                active_tile
+                    .get(&key)
+                    .or_else(|| active_frontier.get(&key))
+                    .copied()
+            });
+        for (target, relation_id) in [
+            (market_tile.get(&tile_slot).copied(), ACTION_USES_TILE_SLOT),
+            (
+                market_wildlife.get(&wildlife_slot).copied(),
+                ACTION_USES_WILDLIFE_SLOT,
+            ),
+            (target_frontier, ACTION_TARGETS_TILE_FRONTIER),
+            (wildlife_target, ACTION_TARGETS_WILDLIFE_CELL),
+        ] {
+            let Some(target) = target else {
+                continue;
+            };
+            // Same guards as `set_relation` (later writes win, matching its
+            // overwrite semantics through the write order here).
+            if target < 0 || target >= seq_len as i32 || target == action_pos {
+                continue;
+            }
+            tail[action_index * seq_len + target as usize] = relation_id;
+            // The combined edge list also stores the mirrored
+            // `(target, action_pos)` edge; it reaches the tail only when the
+            // target itself sits in the action range (never true for
+            // well-formed token indexes, mirrored here for exactness).
+            if target as usize >= token_count {
+                tail[(target as usize - token_count) * seq_len + action_pos as usize] =
+                    relation_id;
+            }
+        }
+    }
+    Ok(tail)
+}
+
+/// Reference implementation of `action_relation_tail` via the full combined
+/// edge list; kept for the equivalence test.
+#[cfg(test)]
+pub fn action_relation_tail_reference(
+    root: &Value,
+    token_count: usize,
+    action_count: usize,
+) -> Result<Vec<u8>> {
     let seq_len = token_count + action_count;
     let edges = combined_relation_edges(root, token_count, action_count)?;
     let mut tail = vec![0u8; action_count * seq_len];
