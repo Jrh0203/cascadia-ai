@@ -118,7 +118,20 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
                 activation="gelu",
                 norm_first=True,
             )
-            self.state_encoder = nn.TransformerEncoder(encoder_layer, num_layers=cfg.layers)
+            # enable_nested_tensor=False is a zero-change setting: the
+            # nested-tensor "fast path" is inference-only (it is disabled
+            # whenever the module is training or grads are enabled) and is
+            # additionally disqualified by norm_first=True. Passing False
+            # silences the spurious torch warning without touching numerics.
+            self.state_encoder = nn.TransformerEncoder(
+                encoder_layer,
+                num_layers=cfg.layers,
+                enable_nested_tensor=False,
+            )
+            # Opt-in activation checkpointing (see set_gradient_checkpointing).
+            # NOTE: cfg.gradient_checkpointing was historically never applied
+            # by any trainer; the default here preserves that behavior.
+            self.gradient_checkpointing_enabled = False
             self.action_cross_attn = nn.MultiheadAttention(
                 cfg.d_model,
                 cfg.heads,
@@ -138,6 +151,36 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             self.opponent_aux_head = nn.Linear(cfg.d_model, cfg.opponent_aux_dim)
             self.market_aux_head = nn.Linear(cfg.d_model, cfg.market_aux_dim)
 
+        def set_gradient_checkpointing(self, enabled: bool) -> None:
+            self.gradient_checkpointing_enabled = bool(enabled)
+
+        def _encode_state(self, token_h, token_padding):  # type: ignore[no-untyped-def]
+            if (
+                self.gradient_checkpointing_enabled
+                and self.training
+                and torch.is_grad_enabled()
+            ):
+                from torch.utils.checkpoint import checkpoint
+
+                # Manual per-layer loop so each TransformerEncoderLayer can be
+                # recomputed in backward. TransformerEncoder.forward only adds
+                # inference-time fast-path plumbing around the same loop, so
+                # this matches the non-checkpointed path numerically (layers
+                # canonicalize the bool padding mask identically).
+                encoded = token_h
+                for layer in self.state_encoder.layers:
+                    encoded = checkpoint(
+                        layer,
+                        encoded,
+                        None,
+                        token_padding,
+                        use_reentrant=False,
+                    )
+                if self.state_encoder.norm is not None:
+                    encoded = self.state_encoder.norm(encoded)
+                return encoded
+            return self.state_encoder(token_h, src_key_padding_mask=token_padding)
+
         def forward(  # type: ignore[no-untyped-def]
             self,
             tokens,
@@ -149,7 +192,7 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
         ):
             token_h = self.token_proj(tokens)
             token_padding = ~token_mask
-            encoded = self.state_encoder(token_h, src_key_padding_mask=token_padding)
+            encoded = self._encode_state(token_h, token_padding)
             action_h = self.action_proj(actions)
             decoded, _ = self.action_cross_attn(
                 query=action_h,
