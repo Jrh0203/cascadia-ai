@@ -120,6 +120,614 @@ class BridgeContractTest(unittest.TestCase):
         self.assertEqual(batch["action_mask"].shape[1], len(public_root["legal_actions"]))
         self.assertEqual(batch["action_ids"][0], view["action_ids"])
 
+    @staticmethod
+    def _public_fixture_roots(limit: int) -> list[dict]:
+        from cascadiav3.torch_inference_bridge import TRAINING_LABEL_KEYS
+
+        path = Path("cascadiav3/fixtures/expert_tiny.jsonl")
+        if not path.exists():
+            return []
+        roots = read_replay_jsonl(path)[:limit]
+        return [
+            {key: value for key, value in root.items() if key not in TRAINING_LABEL_KEYS}
+            for root in roots
+        ]
+
+    def test_combined_relation_ids_array_matches_legacy_reference(self) -> None:
+        try:
+            import numpy as np
+        except ModuleNotFoundError:
+            self.skipTest("numpy unavailable")
+        from cascadiav3.torch_relation_bias_merit import (
+            RELATION_TO_ID,
+            _coord_key,
+            _set_relation,
+            _token_indexes,
+            combined_relation_ids,
+            combined_relation_ids_array,
+            relation_counts,
+        )
+
+        def legacy_combined_relation_ids(root, *, action_offset=None, seq_len=None):
+            token_count = int(root["public_tokens"]["token_count"])
+            action_count = len(root["legal_actions"])
+            action_offset = token_count if action_offset is None else action_offset
+            seq_len = action_offset + action_count if seq_len is None else seq_len
+            matrix = [[0 for _ in range(seq_len)] for _ in range(seq_len)]
+            same_board_id = RELATION_TO_ID["same_owner_board"]
+            tokens_by_owner: dict[int, list[int]] = {}
+            for token in root["public_tokens"]["tokens"]:
+                kind = token.get("token_kind")
+                owner = token.get("owner_seat")
+                if owner is None or kind not in {"player", "placed_tile", "frontier"}:
+                    continue
+                tokens_by_owner.setdefault(int(owner), []).append(int(token["token_index"]))
+            for indexes in tokens_by_owner.values():
+                for source in indexes:
+                    for target in indexes:
+                        _set_relation(matrix, source, target, same_board_id)
+            for relation in root["public_tokens"].get("relations", []):
+                source = int(relation["source"])
+                target = int(relation["target"])
+                kind = relation.get("relation_kind")
+                if kind == "adjacent_hex":
+                    relation_id = (
+                        RELATION_TO_ID["terrain_match_adjacent"]
+                        if relation.get("terrain_matches")
+                        else RELATION_TO_ID["adjacent_hex"]
+                    )
+                    _set_relation(matrix, source, target, relation_id, overwrite=True)
+                elif kind == "same_market_slot":
+                    _set_relation(matrix, source, target, RELATION_TO_ID["same_market_slot"], overwrite=True)
+            indexes = _token_indexes(root)
+            for action_index, action in enumerate(root["legal_actions"]):
+                action_pos = action_offset + action_index
+                tile_slot = int(action.get("tile_slot", action.get("draft_slot", -1)))
+                wildlife_slot = int(action.get("wildlife_slot", action.get("draft_slot", -1)))
+                tile_token = indexes["market_tile"].get(tile_slot)
+                wildlife_token = indexes["market_wildlife"].get(wildlife_slot)
+                target_frontier = indexes["active_frontier"].get(_coord_key(action.get("target_coord_ref")))
+                wildlife_key = _coord_key(action.get("wildlife_coord_ref"))
+                wildlife_target = indexes["active_tile"].get(wildlife_key)
+                if wildlife_target is None:
+                    wildlife_target = indexes["active_frontier"].get(wildlife_key)
+                for target, relation_name in (
+                    (tile_token, "action_uses_tile_slot"),
+                    (wildlife_token, "action_uses_wildlife_slot"),
+                    (target_frontier, "action_targets_tile_frontier"),
+                    (wildlife_target, "action_targets_wildlife_cell"),
+                ):
+                    if target is None:
+                        continue
+                    relation_id = RELATION_TO_ID[relation_name]
+                    _set_relation(matrix, action_pos, target, relation_id, overwrite=True)
+                    _set_relation(matrix, target, action_pos, relation_id, overwrite=True)
+            return matrix
+
+        roots = self._public_fixture_roots(limit=4)
+        if not roots:
+            self.skipTest("expert tiny roots have not been generated")
+        for root in roots:
+            legacy = legacy_combined_relation_ids(root)
+            vectorized = combined_relation_ids_array(root)
+            self.assertTrue(np.array_equal(np.asarray(legacy), vectorized))
+            self.assertEqual(combined_relation_ids(root), legacy)
+            self.assertEqual(relation_counts(vectorized), relation_counts(legacy))
+
+    def test_model_eval_batch_matches_single_evals_and_reports_value(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_inference_bridge import _model_eval, _model_eval_batch
+
+        roots = self._public_fixture_roots(limit=3)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        torch.manual_seed(20260702)
+        model = build_cascadiaformer(config_for_size("tiny"))
+        model.eval()
+
+        batch_responses = _model_eval_batch(model, roots)
+        single_responses = [_model_eval(model, root) for root in roots]
+        self.assertEqual(len(batch_responses), len(roots))
+        for batch_response, single_response, root in zip(batch_responses, single_responses, roots):
+            self.assertEqual(batch_response["action_ids"], single_response["action_ids"])
+            self.assertEqual(len(batch_response["value"]), 4)
+            for key in ("priors", "q", "score_to_go", "uncertainty"):
+                for batched, single in zip(batch_response[key], single_response[key]):
+                    self.assertAlmostEqual(batched, single, places=4)
+            self.assertEqual(
+                len(batch_response["priors"]), len(root["legal_actions"])
+            )
+
+    @staticmethod
+    def _packed_variant(root: dict) -> dict:
+        import base64
+
+        import numpy as np
+
+        from cascadiav3.torch_public_token_merit import public_token_features
+        from cascadiav3.torch_relation_bias_merit import combined_relation_ids_array
+        from cascadiav3.torch_semantic_relation_bias_merit import (
+            semantic_public_token_action_features,
+        )
+
+        token_count = int(root["public_tokens"]["token_count"])
+        action_count = len(root["legal_actions"])
+        tokens = np.asarray(public_token_features(root), dtype="<f4")
+        actions = np.asarray(semantic_public_token_action_features(root), dtype="<f4")
+        matrix = combined_relation_ids_array(root)
+        tail = matrix[token_count:, :].astype(np.uint8)
+        return {
+            "schema_id": root.get("schema_id"),
+            "state_hash": root.get("state_hash"),
+            "active_seat": root.get("active_seat"),
+            "action_ids": [action["action_id"] for action in root["legal_actions"]],
+            "exact_afterstate_score_active": root["exact_afterstate_score_active"],
+            "packed_features": {
+                "token_count": token_count,
+                "action_count": action_count,
+                "token_feature_dim": int(tokens.shape[1]),
+                "action_feature_dim": int(actions.shape[1]),
+                "tokens_f32_b64": base64.b64encode(tokens.tobytes()).decode("ascii"),
+                "actions_f32_b64": base64.b64encode(actions.tobytes()).decode("ascii"),
+                "relation_tail_u8_b64": base64.b64encode(tail.tobytes()).decode("ascii"),
+            },
+        }
+
+    def test_packed_request_matches_raw_request_outputs(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_inference_bridge import _model_eval, _model_eval_batch
+
+        roots = self._public_fixture_roots(limit=3)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        torch.manual_seed(20260702)
+        model = build_cascadiaformer(config_for_size("tiny"))
+        model.eval()
+
+        packed_roots = [self._packed_variant(root) for root in roots]
+        for root, packed_root in zip(roots, packed_roots):
+            raw_response = _model_eval(model, root)
+            packed_response = _model_eval(model, packed_root)
+            self.assertEqual(raw_response["action_ids"], packed_response["action_ids"])
+            for key in ("priors", "q", "score_to_go", "uncertainty", "value"):
+                for raw_value, packed_value in zip(raw_response[key], packed_response[key]):
+                    self.assertAlmostEqual(
+                        raw_value,
+                        packed_value,
+                        places=4,
+                        msg=f"{key} diverged between raw and packed paths",
+                    )
+        # Batched packed requests collate through the relation_tail path.
+        batch_responses = _model_eval_batch(model, packed_roots)
+        self.assertEqual(len(batch_responses), len(packed_roots))
+
+    def test_pack_f64_b64_is_bit_exact_with_json_float_path(self) -> None:
+        import base64
+        import json as json_module
+        import struct
+
+        try:
+            import numpy as np
+        except ModuleNotFoundError:
+            self.skipTest("numpy unavailable")
+        from cascadiav3.torch_inference_bridge import pack_f64_b64
+
+        # f32 model outputs widened to f64: exact, so the packed bytes must
+        # equal what the JSON float-list wire path delivers after round-trip.
+        values = np.array([0.1, 1.0 / 3.0, -2.5e-7, 80.0, 1e30], dtype=np.float32)
+        encoded = pack_f64_b64(values)
+        decoded = list(struct.unpack("<5d", base64.b64decode(encoded)))
+        json_wire = json_module.loads(json_module.dumps(values.tolist()))
+        self.assertEqual(decoded, json_wire)
+        self.assertEqual(
+            np.frombuffer(base64.b64decode(encoded), dtype="<f8").tolist(), json_wire
+        )
+        # Plain Python floats (f64) also round-trip bit-exactly.
+        floats = [0.1, -1.0 / 7.0, 3.141592653589793]
+        self.assertEqual(
+            list(struct.unpack("<3d", base64.b64decode(pack_f64_b64(floats)))),
+            json_module.loads(json_module.dumps(floats)),
+        )
+
+    def test_packed_response_decodes_to_exact_json_response_values(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        import base64
+        import json as json_module
+
+        import numpy as np
+
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_inference_bridge import _model_eval_batch
+
+        roots = self._public_fixture_roots(limit=3)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        torch.manual_seed(20260702)
+        model = build_cascadiaformer(config_for_size("tiny"))
+        model.eval()
+
+        json_rows = _model_eval_batch(model, roots)
+        packed_rows = _model_eval_batch(model, roots, packed_response=True)
+        self.assertEqual(len(json_rows), len(packed_rows))
+        field_map = {
+            "priors": "priors_f64_b64",
+            "q": "q_f64_b64",
+            "score_to_go": "score_to_go_f64_b64",
+            "uncertainty": "uncertainty_f64_b64",
+            "value": "value_f64_b64",
+        }
+        for json_row, packed_row in zip(json_rows, packed_rows):
+            self.assertEqual(json_row["action_ids"], packed_row["action_ids"])
+            self.assertIn("packed", packed_row)
+            for key in field_map:
+                self.assertNotIn(key, packed_row)
+            packed = packed_row["packed"]
+            for key, field in field_map.items():
+                decoded = np.frombuffer(base64.b64decode(packed[field]), dtype="<f8").tolist()
+                wire = json_module.loads(json_module.dumps(json_row[key]))
+                self.assertEqual(
+                    decoded, wire, msg=f"packed {key} diverged from the JSON path"
+                )
+
+    def test_serve_answers_eval_batch_request_with_fallback(self) -> None:
+        import json as json_module
+        import subprocess
+        import sys
+
+        roots = self._public_fixture_roots(limit=2)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        process = subprocess.Popen(
+            [sys.executable, "-m", "cascadiav3.torch_inference_bridge", "--allow-dry-run-fallback"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+            env={"PYTHONPATH": "cascadiav3/src", "PATH": "/usr/bin:/bin"},
+        )
+        try:
+            hello = json_module.loads(process.stdout.readline())
+            self.assertEqual(hello["type"], "hello")
+            self.assertIn("eval_batch", hello.get("protocol_features", []))
+            request = {"type": "eval_batch_request", "roots": roots, "allow_model_fallback": True}
+            process.stdin.write(json_module.dumps(request) + "\n")
+            process.stdin.flush()
+            response = json_module.loads(process.stdout.readline())
+            self.assertEqual(response["type"], "eval_batch_response")
+            self.assertEqual(len(response["results"]), len(roots))
+            for result, root in zip(response["results"], roots):
+                self.assertEqual(result["type"], "eval_response")
+                self.assertTrue(result["model_fallback"])
+                self.assertEqual(len(result["priors"]), len(root["legal_actions"]))
+                self.assertEqual(len(result["value"]), 4)
+            process.stdin.write(json_module.dumps({"type": "shutdown"}) + "\n")
+            process.stdin.flush()
+        finally:
+            process.stdin.close()
+            process.stdout.close()
+            process.wait(timeout=30)
+
+
+class BridgeForwardOptimizationTest(unittest.TestCase):
+    """CASCADIA_BRIDGE_BUCKET / _COMPILE / _TIMING forward-path knobs.
+
+    All knobs default off; the default path must stay byte-identical, which the
+    chunker-parity test pins and the pre-existing bridge tests cover.
+    """
+
+    @staticmethod
+    def _public_fixture_roots(limit: int) -> list[dict]:
+        return BridgeContractTest._public_fixture_roots(limit)
+
+    @staticmethod
+    def _truncated_root(root: dict, action_count: int) -> dict:
+        trimmed = copy.deepcopy(root)
+        for key in ("legal_actions", "exact_afterstate_score_active", "action_ids"):
+            if key in trimmed:
+                trimmed[key] = trimmed[key][:action_count]
+        return trimmed
+
+    def _tiny_model(self):
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+
+        torch.manual_seed(20260703)
+        model = build_cascadiaformer(config_for_size("tiny"))
+        model.eval()
+        return model
+
+    def _varied_shape_roots(self) -> list[dict]:
+        roots = self._public_fixture_roots(limit=3)
+        if len(roots) < 2:
+            self.skipTest("expert tiny roots have not been generated")
+        return [
+            self._truncated_root(roots[0], 5),
+            self._truncated_root(roots[1], 17),
+            self._truncated_root(roots[0], 33),
+            self._truncated_root(roots[1], 130),
+            roots[2],
+        ]
+
+    def test_bucket_dim_contract(self) -> None:
+        from cascadiav3.torch_inference_bridge import (
+            EVAL_BUCKET_CAP,
+            EVAL_BUCKET_MIN,
+            EVAL_BUCKET_STEP_ABOVE_CAP,
+            _bucket_dim,
+        )
+
+        self.assertEqual(_bucket_dim(1), EVAL_BUCKET_MIN)
+        self.assertEqual(_bucket_dim(EVAL_BUCKET_MIN), EVAL_BUCKET_MIN)
+        self.assertEqual(_bucket_dim(9), 16)
+        self.assertEqual(_bucket_dim(61), 64)
+        self.assertEqual(_bucket_dim(64), 64)
+        self.assertEqual(_bucket_dim(65), 128)
+        self.assertEqual(_bucket_dim(EVAL_BUCKET_CAP), EVAL_BUCKET_CAP)
+        for size in (EVAL_BUCKET_CAP + 1, 648, 1000):
+            padded = _bucket_dim(size)
+            self.assertGreaterEqual(padded, size)
+            self.assertEqual(padded % EVAL_BUCKET_STEP_ABOVE_CAP, 0)
+            self.assertLess(padded - size, EVAL_BUCKET_STEP_ABOVE_CAP)
+
+    def test_default_chunker_matches_legacy_behavior(self) -> None:
+        import os
+        import random
+        from unittest import mock
+
+        from cascadiav3.torch_inference_bridge import (
+            EVAL_BATCH_CELL_BUDGET,
+            _eval_batch_chunks,
+        )
+
+        def legacy_chunks(roots: list[dict], chunk_size: int) -> list[list[dict]]:
+            chunks: list[list[dict]] = []
+            current: list[dict] = []
+            max_actions = 0
+            max_seq = 0
+            for root in roots:
+                packed = root["packed_features"]
+                action_count = int(packed.get("action_count", 0)) or 1
+                token_count = int(packed.get("token_count", 0)) or 1
+                candidate_actions = max(max_actions, action_count)
+                candidate_seq = max(max_seq, token_count + action_count)
+                cells = (len(current) + 1) * candidate_actions * candidate_seq
+                if current and (len(current) >= chunk_size or cells > EVAL_BATCH_CELL_BUDGET):
+                    chunks.append(current)
+                    current = []
+                    candidate_actions = action_count
+                    candidate_seq = token_count + action_count
+                current.append(root)
+                max_actions = candidate_actions
+                max_seq = candidate_seq
+            if current:
+                chunks.append(current)
+            return chunks
+
+        rng = random.Random(20260703)
+        roots = [
+            {
+                "packed_features": {
+                    "action_count": rng.choice([1, 5, 33, 256, 648]),
+                    "token_count": rng.choice([9, 61, 64]),
+                }
+            }
+            for _ in range(200)
+        ]
+        with mock.patch.dict(os.environ):
+            os.environ.pop("CASCADIA_BRIDGE_BUCKET", None)
+            self.assertEqual(_eval_batch_chunks(roots, chunk_size=32), legacy_chunks(roots, 32))
+
+    def test_bucketed_chunker_bounds_padded_cells(self) -> None:
+        import os
+        from unittest import mock
+
+        from cascadiav3.torch_inference_bridge import (
+            EVAL_BATCH_CELL_BUDGET,
+            _bucket_dim,
+            _eval_batch_chunks,
+        )
+
+        roots = [
+            {"packed_features": {"action_count": actions, "token_count": tokens}}
+            for actions, tokens in [(648, 64), (405, 61), (256, 64), (33, 61)] * 12
+        ]
+        with mock.patch.dict(os.environ, {"CASCADIA_BRIDGE_BUCKET": "1"}):
+            chunks = _eval_batch_chunks(roots, chunk_size=32)
+        self.assertEqual(sum(len(chunk) for chunk in chunks), len(roots))
+        for chunk in chunks:
+            max_actions = _bucket_dim(max(r["packed_features"]["action_count"] for r in chunk))
+            max_tokens = _bucket_dim(max(r["packed_features"]["token_count"] for r in chunk))
+            padded_cells = len(chunk) * max_actions * (max_tokens + max_actions)
+            if len(chunk) > 1:
+                self.assertLessEqual(padded_cells, EVAL_BATCH_CELL_BUDGET)
+
+    def test_bucketed_collate_pads_capacities_to_buckets(self) -> None:
+        import os
+        from unittest import mock
+
+        try:
+            import torch  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_inference_bridge import _bucket_dim, collate_inference_roots
+
+        roots = self._varied_shape_roots()[:3]
+        packed_roots = [BridgeContractTest._packed_variant(root) for root in roots]
+        token_bucket = _bucket_dim(max(int(root["public_tokens"]["token_count"]) for root in roots))
+        action_bucket = _bucket_dim(max(len(root["legal_actions"]) for root in roots))
+        with mock.patch.dict(os.environ, {"CASCADIA_BRIDGE_BUCKET": "1"}):
+            raw_batch = collate_inference_roots(roots)
+            packed_batch = collate_inference_roots(packed_roots)
+        for batch in (raw_batch, packed_batch):
+            self.assertEqual(batch["tokens"].shape[1], token_bucket)
+            self.assertEqual(batch["actions"].shape[1], action_bucket)
+            self.assertEqual(batch["combined_seq_len"], token_bucket + action_bucket)
+            for row, root in enumerate(roots):
+                self.assertEqual(
+                    int(batch["token_mask"][row].sum()), int(root["public_tokens"]["token_count"])
+                )
+                self.assertEqual(int(batch["action_mask"][row].sum()), len(root["legal_actions"]))
+        self.assertEqual(raw_batch["relation_ids"].shape[1], token_bucket + action_bucket)
+        self.assertEqual(packed_batch["relation_tail"].shape[1], action_bucket)
+        self.assertEqual(packed_batch["relation_tail"].shape[2], token_bucket + action_bucket)
+
+    def test_bucketed_padding_is_garbage_invariant(self) -> None:
+        """Exactness of mask handling: padded token/action feature rows must not
+        influence real rows at a fixed bucketed shape. Filling the padded region
+        with garbage instead of zeros must leave every real output bit-identical
+        (relation-id padding stays 0 by contract: id 0 = "no relation" via
+        padding_idx and the CGAB ne(0) mask)."""
+        import os
+        from unittest import mock
+
+        model = self._tiny_model()
+        import torch
+
+        from cascadiav3.torch_inference_bridge import collate_inference_roots
+
+        roots = self._varied_shape_roots()[:4]
+        packed_roots = [BridgeContractTest._packed_variant(root) for root in roots]
+        with mock.patch.dict(os.environ, {"CASCADIA_BRIDGE_BUCKET": "1"}):
+            batches = [collate_inference_roots(roots), collate_inference_roots(packed_roots)]
+        generator = torch.Generator().manual_seed(20260703)
+        for batch in batches:
+            tokens_garbage = batch["tokens"].clone()
+            pad_tokens = ~batch["token_mask"]
+            tokens_garbage[pad_tokens] = torch.randn(
+                (int(pad_tokens.sum()), tokens_garbage.shape[-1]), generator=generator
+            )
+            actions_garbage = batch["actions"].clone()
+            pad_actions = ~batch["action_mask"]
+            actions_garbage[pad_actions] = torch.randn(
+                (int(pad_actions.sum()), actions_garbage.shape[-1]), generator=generator
+            )
+            with torch.inference_mode():
+                reference = model(
+                    batch["tokens"],
+                    batch["token_mask"],
+                    batch["actions"],
+                    batch["action_mask"],
+                    relation_ids=batch.get("relation_ids"),
+                    relation_tail=batch.get("relation_tail"),
+                )
+                garbage = model(
+                    tokens_garbage,
+                    batch["token_mask"],
+                    actions_garbage,
+                    batch["action_mask"],
+                    relation_ids=batch.get("relation_ids"),
+                    relation_tail=batch.get("relation_tail"),
+                )
+            self.assertTrue(torch.equal(reference["value_vector"], garbage["value_vector"]))
+            for key in ("logits", "q", "uncertainty"):
+                for row, action_count in enumerate(batch["action_counts"]):
+                    self.assertTrue(
+                        torch.equal(
+                            reference[key][row, :action_count],
+                            garbage[key][row, :action_count],
+                        ),
+                        msg=f"{key} row {row} leaked padding",
+                    )
+
+    def test_bucketed_eval_matches_unbucketed_within_reduction_tolerance(self) -> None:
+        """Bucketed vs unbucketed responses. Bit-exact equality is impossible on
+        this stack: CPU attention/sum kernels block reductions over the padded
+        length, so appending exact zeros regroups the floating-point reduction of
+        the real prefix (measured ~2e-7; the SDPA MATH backend shows the same).
+        The default chunk-max padding already admits the same drift class, so
+        the gate here is a tight tolerance, not torch.equal."""
+        import os
+        from unittest import mock
+
+        model = self._tiny_model()
+        import numpy as np
+
+        from cascadiav3.torch_inference_bridge import _model_eval_batch
+
+        roots = self._varied_shape_roots()
+        packed_roots = [BridgeContractTest._packed_variant(root) for root in roots]
+        for request_roots in (roots, packed_roots):
+            baseline = _model_eval_batch(model, request_roots)
+            with mock.patch.dict(os.environ, {"CASCADIA_BRIDGE_BUCKET": "1"}):
+                bucketed = _model_eval_batch(model, request_roots)
+            self.assertEqual(len(baseline), len(bucketed))
+            for base_row, bucket_row in zip(baseline, bucketed):
+                self.assertEqual(base_row["action_ids"], bucket_row["action_ids"])
+                for key in ("priors", "q", "score_to_go", "uncertainty", "value"):
+                    self.assertEqual(len(base_row[key]), len(bucket_row[key]))
+                    self.assertTrue(
+                        np.allclose(base_row[key], bucket_row[key], rtol=1e-4, atol=1e-5),
+                        msg=(
+                            f"{key} drifted beyond reduction tolerance: "
+                            f"{np.max(np.abs(np.asarray(base_row[key]) - np.asarray(bucket_row[key])))}"
+                        ),
+                    )
+
+    def test_compile_knob_smoke_on_cpu(self) -> None:
+        model = self._tiny_model()
+        import torch
+
+        from cascadiav3.torch_inference_bridge import _maybe_compile_model, _model_eval_batch
+
+        if not hasattr(torch, "compile"):
+            self.skipTest("torch.compile unavailable")
+        roots = [self._truncated_root(root, 5) for root in self._public_fixture_roots(limit=2)]
+        baseline = _model_eval_batch(model, roots)
+        try:
+            compiled = _maybe_compile_model(model, torch.device("cpu"))
+            responses = _model_eval_batch(compiled, roots)
+        except Exception as exc:  # pragma: no cover - depends on local toolchain
+            self.skipTest(f"torch.compile unusable in this environment: {exc}")
+        import numpy as np
+
+        self.assertEqual(len(responses), len(baseline))
+        for base_row, compiled_row in zip(baseline, responses):
+            self.assertEqual(base_row["action_ids"], compiled_row["action_ids"])
+            for key in ("priors", "q", "score_to_go", "uncertainty", "value"):
+                self.assertTrue(
+                    np.allclose(base_row[key], compiled_row[key], rtol=1e-4, atol=1e-5),
+                    msg=f"{key} diverged under torch.compile",
+                )
+
+    def test_timing_knob_defaults_off_and_accumulates_when_patched(self) -> None:
+        import contextlib
+        import io
+        from unittest import mock
+
+        model = self._tiny_model()
+        from cascadiav3 import torch_inference_bridge as bridge
+
+        self.assertIsNone(bridge._BRIDGE_TIMING)
+        roots = [self._truncated_root(root, 9) for root in self._public_fixture_roots(limit=2)]
+        timing = bridge._BridgeTiming()
+        with mock.patch.object(bridge, "_BRIDGE_TIMING", timing):
+            bridge._model_eval_batch(model, roots)
+        self.assertGreaterEqual(timing.chunks, 1)
+        self.assertEqual(timing.rows, len(roots))
+        self.assertEqual(timing.actions, 9 * len(roots))
+        self.assertGreater(timing.collate_s + timing.forward_s, 0.0)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            timing.emit("test")
+        summary = stderr.getvalue()
+        self.assertIn("[bridge-timing test]", summary)
+        self.assertIn(f"rows={len(roots)}", summary)
+        for phase in ("collate=", "h2d=", "forward=", "d2h=", "encode="):
+            self.assertIn(phase, summary)
+
 
 class TrainerCursorContractTest(unittest.TestCase):
     def test_loader_cursor_points_to_next_unconsumed_microbatch(self) -> None:
@@ -1366,6 +1974,341 @@ class ModelSmokeTest(unittest.TestCase):
             cgab_edges=[],
         )
         validate_mock_output(output, action_count=len(root["legal_actions"]))
+
+
+class GumbelSelfplayContractTest(unittest.TestCase):
+    FIXTURE = Path("cascadiav3/fixtures/gumbel_tiny_tensor.npz")
+
+    def _require_numpy_and_fixture(self):  # type: ignore[no-untyped-def]
+        try:
+            import numpy as np  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("numpy unavailable")
+        if not self.FIXTURE.exists():
+            self.skipTest("gumbel tiny tensor fixture has not been generated")
+
+    def test_v2_shard_loads_with_improved_policy(self) -> None:
+        self._require_numpy_and_fixture()
+        import numpy as np
+
+        from cascadiav3.expert_tensor_shards import SHARD_VERSION_V2, ExpertTensorShard
+
+        shard = ExpertTensorShard(self.FIXTURE)
+        try:
+            self.assertEqual(shard.version, SHARD_VERSION_V2)
+            self.assertIsNotNone(shard.improved_policy)
+            self.assertIsNotNone(shard.search_root_value)
+            for index in range(len(shard)):
+                example = shard.example(index)
+                policy = np.asarray(example["improved_policy"], dtype=np.float64)
+                self.assertEqual(policy.shape[0], example["actions"].shape[0])
+                self.assertAlmostEqual(float(policy.sum()), 1.0, places=4)
+                visits = np.asarray(example["visits"], dtype=np.float64)
+                q_valid = np.asarray(example["q_valid"], dtype=bool)
+                self.assertTrue(np.array_equal(visits > 0, q_valid))
+        finally:
+            shard.close()
+
+    def test_v2_fields_survive_filter_and_relation_tail(self) -> None:
+        self._require_numpy_and_fixture()
+        import numpy as np
+
+        from cascadiav3.expert_tensor_shards import (
+            ExpertTensorShard,
+            filter_expert_tensor_shard,
+            materialize_relation_tail_shard,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            filtered = Path(tmp) / "filtered.npz"
+            filter_expert_tensor_shard(self.FIXTURE, filtered, top_k=8)
+            shard = ExpertTensorShard(filtered)
+            try:
+                self.assertIsNotNone(shard.improved_policy)
+                for index in range(len(shard)):
+                    example = shard.example(index)
+                    policy = np.asarray(example["improved_policy"], dtype=np.float64)
+                    self.assertAlmostEqual(float(policy.sum()), 1.0, places=4)
+            finally:
+                shard.close()
+
+            tailed = Path(tmp) / "tailed.npz"
+            materialize_relation_tail_shard(filtered, tailed)
+            shard = ExpertTensorShard(tailed)
+            try:
+                self.assertIsNotNone(shard.improved_policy)
+                self.assertIsNotNone(shard.relation_tail)
+            finally:
+                shard.close()
+
+    def test_gumbel_selfplay_objective_weights(self) -> None:
+        from cascadiav3.torch_train_cascadiaformer import loss_weights_for_objective
+
+        weights = loss_weights_for_objective("gumbel-selfplay")
+        self.assertEqual(weights.policy, 1.0)
+        self.assertEqual(weights.q, 0.5)
+        self.assertEqual(weights.value, 0.5)
+        self.assertEqual(weights.greedy_policy, 0.0)
+        self.assertEqual(weights.greedy_margin, 0.0)
+
+    def test_improved_policy_soft_target_loss(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        from cascadiav3.torch_train_cascadiaformer import LossWeights, _loss_components
+
+        batch_size, actions = 2, 3
+        logits = torch.tensor([[2.0, 0.5, -1.0], [0.0, 1.0, 0.5]])
+        improved = torch.tensor([[0.1, 0.7, 0.2], [0.5, 0.25, 0.25]])
+        outputs = {
+            "logits": logits.clone(),
+            "q": torch.zeros((batch_size, actions)),
+            "uncertainty": torch.ones((batch_size, actions)),
+            "value_vector": torch.zeros((batch_size, 4)),
+            "rank_logits": torch.zeros((batch_size, 4, 4)),
+            "score_decomposition": torch.zeros((batch_size, 3, 4)),
+        }
+        batch = {
+            "action_mask": torch.ones((batch_size, actions), dtype=torch.bool),
+            "q_valid": torch.ones((batch_size, actions), dtype=torch.bool),
+            "target_q": torch.zeros((batch_size, actions)),
+            "target_score_to_go": torch.zeros((batch_size, actions)),
+            "exact_afterstate_score_active": torch.zeros((batch_size, actions)),
+            "selected_action_index": torch.zeros((batch_size,), dtype=torch.long),
+            "target_value": torch.zeros((batch_size, 4)),
+            "target_rank": torch.zeros((batch_size, 4), dtype=torch.long),
+            "target_score": torch.zeros((batch_size, 3, 4)),
+            "improved_policy": improved,
+            "has_improved_policy": True,
+        }
+        components = _loss_components(outputs, batch, LossWeights())
+        expected = -(improved * torch.log_softmax(logits, dim=1)).sum(dim=1).mean()
+        self.assertAlmostEqual(float(components["policy"]), float(expected), places=5)
+
+        batch_without = dict(batch)
+        batch_without["has_improved_policy"] = False
+        components_without = _loss_components(outputs, batch_without, LossWeights())
+        self.assertNotAlmostEqual(
+            float(components_without["policy"]), float(expected), places=5
+        )
+
+    def test_training_smoke_with_max_example_passes_clamp(self) -> None:
+        try:
+            import torch  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        self._require_numpy_and_fixture()
+        from cascadiav3.torch_train_cascadiaformer import run_training
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            report = run_training(
+                [self.FIXTURE],
+                [self.FIXTURE],
+                train_format="npz",
+                val_format="npz",
+                model_size="tiny",
+                steps=50,
+                batch_size=4,
+                lr=1.0e-3,
+                weight_decay=0.0,
+                device_name="cpu",
+                seed=7,
+                grad_accum=1,
+                warmup_fraction=0.1,
+                checkpoint_dir=tmp_path / "checkpoints",
+                metrics_jsonl=tmp_path / "metrics.jsonl",
+                out=tmp_path / "train.json",
+                overfit_one_batch=False,
+                val_max_batches=1,
+                swa_fraction=0.5,
+                objective="gumbel-selfplay",
+                max_example_passes=4.0,
+            )
+            # 12 records * 4 passes / batch 4 = 12 steps, clamped from 50.
+            self.assertEqual(report["steps"], 12)
+            self.assertEqual(report["objective"], "gumbel-selfplay")
+
+
+class BenchmarkStatsTest(unittest.TestCase):
+    def test_t_quantile_matches_reference_values(self) -> None:
+        from cascadiav3.torch_benchmark_stats import t_quantile
+
+        self.assertAlmostEqual(t_quantile(0.975, 10), 2.2281, places=3)
+        self.assertAlmostEqual(t_quantile(0.975, 1), 12.7062, places=2)
+        self.assertAlmostEqual(t_quantile(0.975, 100), 1.9840, places=3)
+        self.assertAlmostEqual(t_quantile(0.025, 10), -2.2281, places=3)
+
+    def test_paired_delta_stats_known_values(self) -> None:
+        from cascadiav3.torch_benchmark_stats import paired_delta_stats
+
+        stats = paired_delta_stats([1.0, 2.0, 3.0, 4.0, 5.0], seed=1)
+        self.assertEqual(stats["n"], 5)
+        self.assertAlmostEqual(stats["mean"], 3.0)
+        self.assertAlmostEqual(stats["se"], 0.70710678, places=6)
+        self.assertAlmostEqual(stats["t_ci_low"], 3.0 - 2.7764 * 0.70710678, places=3)
+        self.assertAlmostEqual(stats["t_ci_high"], 3.0 + 2.7764 * 0.70710678, places=3)
+        self.assertTrue(stats["ci_excludes_zero"])
+        self.assertLess(stats["bootstrap_ci_low"], stats["mean"])
+        self.assertGreater(stats["bootstrap_ci_high"], stats["mean"])
+
+        # Deterministic given the seed.
+        again = paired_delta_stats([1.0, 2.0, 3.0, 4.0, 5.0], seed=1)
+        self.assertEqual(stats, again)
+
+        # A noisy near-zero delta set must not claim significance.
+        noisy = paired_delta_stats([0.5, -0.75, 1.25, -1.0, 0.25, -0.25])
+        self.assertFalse(noisy["ci_excludes_zero"])
+
+        empty = paired_delta_stats([])
+        self.assertEqual(empty["n"], 0)
+        self.assertIsNone(empty["mean"])
+
+    def test_gumbel_benchmark_collects_canned_results(self) -> None:
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
+            _contiguous_runs,
+            collect_gumbel_results,
+        )
+
+        self.assertEqual(_contiguous_runs([5, 6, 7, 10, 12, 13]), [(5, 3), (10, 1), (12, 2)])
+
+        lines = [
+            {"type": "gumbel_decision", "seed": 5, "ply": 0, "decision_seconds": 0.5},
+            {"type": "gumbel_decision", "seed": 5, "ply": 1, "decision_seconds": 0.7},
+            {
+                "type": "gumbel_game_done",
+                "seed": 5,
+                "scores": [{"total": 90}, {"total": 95}, {"total": 88}, {"total": 92}],
+                "decision_count": 2,
+                "elapsed_seconds": 3.5,
+            },
+        ]
+        results = collect_gumbel_results(lines)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["seed"], 5)
+        self.assertEqual(len(results[0]["decisions"]), 2)
+        self.assertEqual(results[0]["done"]["scores"][1]["total"], 95)
+
+        from cascadiav3.torch_cascadiaformer_search_benchmark import summarize_game_results
+
+        summary = summarize_game_results(results)
+        self.assertEqual(summary["games"], 1)
+        self.assertAlmostEqual(summary["mean_seat_score"], (90 + 95 + 88 + 92) / 4)
+
+
+class GumbelBatchRunnerTest(unittest.TestCase):
+    """Contract tests for the --gumbel-benchmark-batch per-seed JSONL path."""
+
+    @staticmethod
+    def _canned_seed_lines(seed: int) -> list[dict]:
+        return [
+            {"type": "gumbel_decision", "seed": seed, "ply": 0, "decision_seconds": 0.5},
+            {"type": "gumbel_decision", "seed": seed, "ply": 1, "decision_seconds": 0.7},
+            {
+                "type": "gumbel_game_done",
+                "seed": seed,
+                "scores": [
+                    {"total": 90 + seed % 7},
+                    {"total": 95},
+                    {"total": 88},
+                    {"total": 92},
+                ],
+                "decision_count": 2,
+                "elapsed_seconds": 3.5,
+            },
+        ]
+
+    def test_batch_seed_files_produce_identical_results(self) -> None:
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
+            collect_gumbel_results,
+            read_batch_seed_lines,
+        )
+
+        seeds = [5, 6]
+        flat_lines = [line for seed in seeds for line in self._canned_seed_lines(seed)]
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            for seed in seeds:
+                path = output_dir / f"gumbel_game_seed_{seed}.jsonl"
+                path.write_text(
+                    "".join(json.dumps(line) + "\n" for line in self._canned_seed_lines(seed)),
+                    encoding="utf-8",
+                )
+            batch_lines = read_batch_seed_lines(output_dir, seeds)
+
+        self.assertEqual(batch_lines, flat_lines)
+        # Downstream report structures are identical to the per-seed
+        # subprocess path.
+        self.assertEqual(
+            collect_gumbel_results(batch_lines), collect_gumbel_results(flat_lines)
+        )
+
+    def test_batch_seed_files_fail_loudly_when_missing_or_incomplete(self) -> None:
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import read_batch_seed_lines
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp)
+            path = output_dir / "gumbel_game_seed_5.jsonl"
+            path.write_text(
+                "".join(json.dumps(line) + "\n" for line in self._canned_seed_lines(5)),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "seed 6"):
+                read_batch_seed_lines(output_dir, [5, 6])
+            # A decisions-only file (crashed game) must not pass silently.
+            truncated = output_dir / "gumbel_game_seed_7.jsonl"
+            truncated.write_text(
+                json.dumps({"type": "gumbel_decision", "seed": 7, "ply": 0}) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "seed 7.*no done record"):
+                read_batch_seed_lines(output_dir, [7])
+
+    def test_batch_runner_mock_bridge_integration(self) -> None:
+        import sys
+
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
+            collect_gumbel_results,
+            run_gumbel_games_batch,
+        )
+
+        binary = Path(
+            "cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter"
+        )
+        if not binary.exists():
+            self.skipTest("real-root-exporter release binary has not been built")
+        mock_bridge = Path("cascadiav3/tests/mock_model_bridge.py").resolve()
+        seeds = [2026070600, 2026070601]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            manifest = tmp_path / "mock_manifest.json"
+            manifest.write_text("{}\n", encoding="utf-8")
+            lines = run_gumbel_games_batch(
+                binary,
+                seeds=seeds,
+                model_service=f"{sys.executable} {mock_bridge}",
+                model_manifest=manifest,
+                output_dir=tmp_path / "batch",
+                jobs=2,
+                n_simulations=4,
+                top_m=2,
+                depth_rounds=1,
+                determinizations=2,
+                blend_weight=1.0,
+                k_interior=3,
+                max_root_actions=None,
+                rollout_max_actions=4,
+                rollout_top_k=2,
+                model_timeout_ms=120_000,
+                exploration=False,
+            )
+        results = collect_gumbel_results(lines)
+        self.assertEqual([result["seed"] for result in results], seeds)
+        for result in results:
+            self.assertEqual(len(result["done"]["scores"]), 4)
+            self.assertGreater(len(result["decisions"]), 0)
+            self.assertEqual(result["done"]["turns"], len(result["decisions"]))
 
 
 class ValidationCliTest(unittest.TestCase):

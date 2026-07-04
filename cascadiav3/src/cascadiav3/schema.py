@@ -19,6 +19,7 @@ PRE_GPU_SCHEMA_ID = "cascadiav3.pre_gpu.v0"
 EXPERT_ROOT_SCHEMA_ID = "cascadiav3.expert_root.v1"
 GREEDY_TENSOR_SHARD_SCHEMA_ID = "greedy_policy_tensor_shard_v1"
 EXPERT_TENSOR_SHARD_SCHEMA_ID = "cascadiav3.expert_tensor_shard.v1"
+EXPERT_TENSOR_SHARD_SCHEMA_ID_V2 = "cascadiav3.expert_tensor_shard.v2"
 
 # Backward-compatible name used by the original scaffold and tests.
 SCHEMA_ID = PRE_GPU_SCHEMA_ID
@@ -83,10 +84,25 @@ SCHEMA_REGISTRY: dict[str, SchemaDefinition] = {
             "cascadiav3.torch_train_cascadiaformer",
         ),
     ),
+    EXPERT_TENSOR_SHARD_SCHEMA_ID_V2: SchemaDefinition(
+        schema_id=EXPERT_TENSOR_SHARD_SCHEMA_ID_V2,
+        artifact_kind="expert_tensor_shard",
+        version=2,
+        status="active",
+        description="v1 expert tensor shard plus Gumbel self-play targets: action-aligned improved_policy soft targets and per-record search_root_value, with real terminal-outcome value labels.",
+        compatible_readers=(
+            "cascadiav3.expert_tensor_shards",
+            "cascadiav3.torch_train_cascadiaformer",
+        ),
+    ),
 }
 
 REPLAY_JSONL_SCHEMA_IDS = {PRE_GPU_SCHEMA_ID, EXPERT_ROOT_SCHEMA_ID}
-TENSOR_SCHEMA_IDS = {GREEDY_TENSOR_SHARD_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID}
+TENSOR_SCHEMA_IDS = {
+    GREEDY_TENSOR_SHARD_SCHEMA_ID,
+    EXPERT_TENSOR_SHARD_SCHEMA_ID,
+    EXPERT_TENSOR_SHARD_SCHEMA_ID_V2,
+}
 
 
 class SchemaError(ValueError):
@@ -116,7 +132,11 @@ def registry_report(*, include_legacy: bool = True, include_expert: bool = True)
     for schema_id in SCHEMA_REGISTRY:
         if schema_id == PRE_GPU_SCHEMA_ID and not include_legacy:
             continue
-        if schema_id in {EXPERT_ROOT_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID} and not include_expert:
+        if (
+            schema_id
+            in {EXPERT_ROOT_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID_V2}
+            and not include_expert
+        ):
             continue
         schema_ids.append(schema_id)
     missing = []

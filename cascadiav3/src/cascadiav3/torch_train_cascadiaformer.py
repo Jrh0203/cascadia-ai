@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 from dataclasses import asdict, dataclass, replace
+import functools
 import hashlib
 import json
 import math
+import os
 import random
 import shutil
 import tempfile
@@ -74,6 +77,21 @@ def loss_weights_for_objective(objective: str) -> LossWeights:
             greedy_policy=0.75,
             greedy_margin=0.25,
             greedy_margin_value=0.25,
+        )
+    if objective == "gumbel-selfplay":
+        # Self-play search targets: soft improved-policy distillation, real
+        # final-outcome values (value up-weighted because search bootstraps on
+        # it), no greedy-retention terms.
+        return LossWeights(
+            policy=1.0,
+            q=0.5,
+            value=0.5,
+            score=0.05,
+            rank=0.02,
+            uncertainty=0.01,
+            greedy_policy=0.0,
+            greedy_margin=0.0,
+            greedy_margin_value=0.0,
         )
     if objective == "k32-greedy-retention":
         return LossWeights(
@@ -212,17 +230,43 @@ def collate_expert_roots(records: list[dict[str, Any]]) -> dict[str, Any]:
             "state_hashes": [record["state_hash"] for record in records],
         }
     )
+    has_improved_policy = all(record.get("improved_policy") is not None for record in records)
+    if has_improved_policy:
+        improved = torch.zeros((len(records), max_actions), dtype=torch.float32)
+        for batch_index, record in enumerate(records):
+            count = len(record["legal_actions"])
+            improved[batch_index, :count] = torch.tensor(record["improved_policy"], dtype=torch.float32)
+        batch["improved_policy"] = improved
+        batch["search_root_value"] = torch.tensor(
+            [float(record.get("search_root_value", 0.0)) for record in records],
+            dtype=torch.float32,
+        )
+    batch["has_improved_policy"] = has_improved_policy
     return batch
 
 
-def _move_to_device(batch: dict[str, Any], device):  # type: ignore[no-untyped-def]
+def _move_to_device(batch: dict[str, Any], device, *, non_blocking: bool = False):  # type: ignore[no-untyped-def]
     moved = {}
     for key, value in batch.items():
         if hasattr(value, "to"):
-            moved[key] = value.to(device)
+            moved[key] = value.to(device, non_blocking=non_blocking)
         else:
             moved[key] = value
     return moved
+
+
+def _loss_scalars(losses: dict[str, Any], keys: tuple[str, ...]) -> dict[str, float]:
+    """Fetch scalar loss values with a single device->host synchronization.
+
+    Exactly-safe replacement for per-key ``float(loss.detach().cpu())``: each
+    scalar is upcast to float64 (exact for bf16/fp16/fp32) on-device, stacked,
+    and transferred once. Values are bit-identical to the per-key transfers;
+    on CUDA this turns len(keys) synchronizations into one.
+    """
+    import torch
+
+    stacked = torch.stack([losses[key].detach().to(dtype=torch.float64) for key in keys])
+    return dict(zip(keys, stacked.cpu().tolist()))
 
 
 def _load_corpus(paths: list[Path], *, corpus_format: str) -> Any:
@@ -265,6 +309,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
     if greedy_target is None:
         greedy_target = torch.zeros_like(teacher_target)
     selected_policy = F.cross_entropy(logits, teacher_target)
+    improved_policy_target = batch.get("improved_policy") if batch.get("has_improved_policy") else None
     target_score_to_go = batch.get("target_score_to_go", batch["target_q"])
     exact_afterstate = batch.get("exact_afterstate_score_active")
     if exact_afterstate is None:
@@ -280,7 +325,17 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
     target_distribution = target_distribution / normalizer
     log_policy = torch.log_softmax(logits, dim=1)
     weighted_policy = -(target_distribution * log_policy).sum(dim=1).mean()
-    policy = 0.5 * selected_policy + 0.5 * weighted_policy
+    if improved_policy_target is not None:
+        # Gumbel self-play: soft-target cross-entropy against the search's
+        # improved policy (equivalent to KL up to the target entropy constant)
+        # replaces the selected-one-hot / softmax(Q) blend.
+        masked_target = improved_policy_target.masked_fill(~mask, 0.0)
+        target_normalizer = masked_target.sum(dim=1, keepdim=True).clamp_min(1.0e-8)
+        masked_target = masked_target / target_normalizer
+        policy = -(masked_target * log_policy).sum(dim=1).mean()
+        weighted_policy = policy
+    else:
+        policy = 0.5 * selected_policy + 0.5 * weighted_policy
     greedy_policy = F.cross_entropy(logits, greedy_target)
     greedy_one_hot = F.one_hot(greedy_target, num_classes=logits.shape[1]).to(dtype=torch.bool)
     greedy_competitor_mask = mask & ~greedy_one_hot
@@ -387,12 +442,22 @@ def _manifest_path(path: Path, checkpoint_dir: Path) -> str:
         return str(path)
 
 
-def _deterministic_order(record_count: int, *, seed: int, epoch: int, shuffle: bool) -> list[int]:
+@functools.lru_cache(maxsize=8)
+def _cached_epoch_order(record_count: int, seed: int, epoch: int) -> tuple[int, ...]:
     order = list(range(record_count))
+    rng = random.Random(seed + epoch * 1_000_003)
+    rng.shuffle(order)
+    return tuple(order)
+
+
+def _deterministic_order(record_count: int, *, seed: int, epoch: int, shuffle: bool):  # type: ignore[no-untyped-def]
+    # Exactly-safe hotspot fix: the shuffled epoch order used to be rebuilt
+    # (an O(record_count) Fisher-Yates in pure Python) for EVERY micro-batch.
+    # The order is a pure function of (record_count, seed, epoch), so cache
+    # it; callers only slice the returned sequence.
     if shuffle:
-        rng = random.Random(seed + epoch * 1_000_003)
-        rng.shuffle(order)
-    return order
+        return _cached_epoch_order(record_count, seed, epoch)
+    return range(record_count)
 
 
 def _batch_indices_for_global_batch(
@@ -565,6 +630,278 @@ def _loader_cursor_for_next_weighted_batch(
     }
 
 
+_TRUTHY_ENV = {"1", "true", "yes", "on"}
+
+# Perf knobs (all opt-in; defaults preserve bit-identical training):
+#   --data-workers N / CASCADIA_TRAIN_DATA_WORKERS   background batch loading
+#   --tf32 / CASCADIA_TRAIN_TF32=1                    TF32 matmul+cudnn (CUDA)
+#   --autocast {auto,off,bf16}                        auto = legacy behavior
+#                                                     (bf16 on CUDA, off on CPU)
+#   --fused-optimizer                                 fused AdamW (CUDA only)
+#   --compile / CASCADIA_TRAIN_COMPILE=1              torch.compile the model
+#   --grad-checkpoint {auto,on,off}                   auto = legacy no-op
+#   CASCADIA_TRAIN_SDPA=flash|mem_efficient|math|cudnn (comma list = priority)
+#   CASCADIA_TRAIN_SDPA_LOG=1                         log attention backend info
+#   CASCADIA_TRAIN_TIMING=1 [CASCADIA_TRAIN_TIMING_EVERY=K]
+#                                                     per-phase wall timing
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in _TRUTHY_ENV
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    return int(raw) if raw else default
+
+
+_SDPA_BACKEND_ALIASES = {
+    "flash": "FLASH_ATTENTION",
+    "mem_efficient": "EFFICIENT_ATTENTION",
+    "efficient": "EFFICIENT_ATTENTION",
+    "math": "MATH",
+    "cudnn": "CUDNN_ATTENTION",
+}
+
+
+def _sdpa_context_factory(spec: str | None):  # type: ignore[no-untyped-def]
+    """Return a zero-arg factory of context managers restricting SDPA backends.
+
+    ``spec`` is a comma list from CASCADIA_TRAIN_SDPA (order = priority).
+    ``None``/empty returns nullcontext (current behavior)."""
+    if not spec:
+        return contextlib.nullcontext
+    from torch.nn.attention import SDPBackend, sdpa_kernel
+
+    backends = []
+    for part in spec.split(","):
+        key = part.strip().lower()
+        if key not in _SDPA_BACKEND_ALIASES:
+            raise ValueError(
+                f"unsupported CASCADIA_TRAIN_SDPA backend {part!r}; "
+                f"expected one of {sorted(set(_SDPA_BACKEND_ALIASES))}"
+            )
+        backends.append(getattr(SDPBackend, _SDPA_BACKEND_ALIASES[key]))
+    import inspect
+
+    if "set_priority" in inspect.signature(sdpa_kernel).parameters:
+        return lambda: sdpa_kernel(backends, set_priority=True)
+    return lambda: sdpa_kernel(backends)
+
+
+def _log_attention_backend_info(device, *, autocast_enabled: bool, sample_batch=None, heads: int = 0, d_model: int = 0) -> None:  # type: ignore[no-untyped-def]
+    """Log which SDPA backends are enabled/usable for the encoder's shapes.
+
+    The nn.TransformerEncoder fused/nested fast path never applies during
+    training (it requires eval mode + no grad), so training attention always
+    goes through F.scaled_dot_product_attention with a merged key-padding
+    attn_mask; flash rejects arbitrary attn_masks, so the practical choice is
+    mem_efficient vs math. This logs the flags plus, when a sample batch is
+    provided on CUDA, the per-backend usability verdict for our real shapes.
+    """
+    import torch
+
+    parts = [f"torch={torch.__version__}", f"device={device.type}", f"autocast_bf16={autocast_enabled}"]
+    if device.type == "cuda":
+        backend_flags = torch.backends.cuda
+        parts.append(
+            "enabled_backends="
+            f"flash:{backend_flags.flash_sdp_enabled()},"
+            f"mem_efficient:{backend_flags.mem_efficient_sdp_enabled()},"
+            f"math:{backend_flags.math_sdp_enabled()},"
+            f"cudnn:{backend_flags.cudnn_sdp_enabled()}"
+        )
+    print("[trainer] sdpa " + " ".join(parts), flush=True)
+    if sample_batch is None or device.type != "cuda":
+        return
+    try:
+        token_mask = sample_batch["token_mask"]
+        batch_size, seq_len = token_mask.shape
+        head_dim = d_model // max(1, heads)
+        dtype = torch.bfloat16 if autocast_enabled else torch.float32
+        query = torch.empty((batch_size, heads, seq_len, head_dim), dtype=dtype, device=device)
+        attn_mask = torch.zeros((batch_size, heads, seq_len, seq_len), dtype=dtype, device=device)
+        params = torch.backends.cuda.SDPAParams(query, query, query, attn_mask, 0.0, False, False)
+        verdicts = {
+            "flash": torch.backends.cuda.can_use_flash_attention(params, True),
+            "mem_efficient": torch.backends.cuda.can_use_efficient_attention(params, True),
+        }
+        print(
+            f"[trainer] sdpa shape-probe b={batch_size} s={seq_len} h={heads} d={head_dim} "
+            f"dtype={dtype} usable={verdicts} (debug reasons above if rejected)",
+            flush=True,
+        )
+    except Exception as error:  # instrumentation must never break training
+        print(f"[trainer] sdpa shape-probe unavailable: {error}", flush=True)
+
+
+class _PhaseTimer:
+    """Accumulates per-phase wall time. Near-zero overhead when disabled.
+
+    When enabled on CUDA it synchronizes at phase boundaries so GPU phases are
+    meaningful; this itself slightly perturbs throughput (timing mode is a
+    measurement tool, not a production default).
+    """
+
+    def __init__(self, enabled: bool, device_type: str) -> None:
+        self.enabled = enabled
+        self._cuda = device_type == "cuda"
+        self.totals: dict[str, float] = {}
+        self.counts: dict[str, int] = {}
+        self._window_totals: dict[str, float] = {}
+        self._window_steps = 0
+
+    def _sync(self) -> None:
+        if self._cuda:
+            import torch
+
+            torch.cuda.synchronize()
+
+    def start(self) -> float:
+        if not self.enabled:
+            return 0.0
+        self._sync()
+        return time.perf_counter()
+
+    def stop(self, name: str, started: float) -> None:
+        if not self.enabled:
+            return
+        self._sync()
+        elapsed = time.perf_counter() - started
+        self.totals[name] = self.totals.get(name, 0.0) + elapsed
+        self.counts[name] = self.counts.get(name, 0) + 1
+        self._window_totals[name] = self._window_totals.get(name, 0.0) + elapsed
+
+    def step_done(self, step: int, every: int) -> None:
+        if not self.enabled:
+            return
+        self._window_steps += 1
+        if self._window_steps < every:
+            return
+        line = " ".join(
+            f"{name}={self._window_totals.get(name, 0.0) / self._window_steps:.4f}s/step"
+            for name in sorted(self._window_totals)
+        )
+        print(f"[trainer] timing step={step} window={self._window_steps} {line}", flush=True)
+        self._window_totals = {}
+        self._window_steps = 0
+
+    def report(self) -> dict[str, Any]:
+        return {
+            "totals_s": {name: round(value, 6) for name, value in sorted(self.totals.items())},
+            "counts": dict(sorted(self.counts.items())),
+        }
+
+    def summary(self) -> None:
+        if not self.enabled or not self.totals:
+            return
+        line = " ".join(f"{name}={value:.3f}s" for name, value in sorted(self.totals.items()))
+        print(f"[trainer] timing summary {line}", flush=True)
+
+
+class _LazyCorpusDataset:
+    """Picklable map-style dataset that opens the corpus lazily per process.
+
+    Used only when --data-workers > 0. Each DataLoader worker re-opens the
+    shard files itself (NPZ handles are not picklable / fork-safe)."""
+
+    def __init__(self, paths: list[Path], corpus_format: str) -> None:
+        self.paths = [str(path) for path in paths]
+        self.corpus_format = corpus_format
+        self._corpus: Any = None
+
+    def _ensure(self) -> Any:
+        if self._corpus is None:
+            self._corpus = _load_corpus([Path(p) for p in self.paths], corpus_format=self.corpus_format)
+        return self._corpus
+
+    def __getitem__(self, index: int) -> Any:
+        return _corpus_examples(self._ensure(), [index], corpus_format=self.corpus_format)[0]
+
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        state["_corpus"] = None
+        return state
+
+
+class _GlobalBatchIndexSampler:
+    """Yields the exact per-global-batch index lists the trainer would build.
+
+    The seeded index generation stays in the main process, so multi-worker
+    loading preserves batch composition and order bit-for-bit; workers only
+    fetch examples and collate."""
+
+    def __init__(
+        self,
+        *,
+        first_global_batch: int,
+        last_global_batch: int,
+        batch_size: int,
+        record_count: int,
+        seed: int,
+        shuffle: bool,
+        source_lengths: list[int] | None,
+        source_weights: list[float] | None,
+    ) -> None:
+        self.first_global_batch = first_global_batch
+        self.last_global_batch = last_global_batch
+        self.batch_size = batch_size
+        self.record_count = record_count
+        self.seed = seed
+        self.shuffle = shuffle
+        self.source_lengths = source_lengths
+        self.source_weights = source_weights
+
+    def _indices(self, global_batch: int) -> list[int]:
+        if self.source_weights is not None:
+            assert self.source_lengths is not None
+            indices, _ = _weighted_batch_indices_for_global_batch(
+                global_batch=global_batch,
+                batch_size=self.batch_size,
+                source_lengths=self.source_lengths,
+                source_weights=self.source_weights,
+                seed=self.seed,
+            )
+        else:
+            indices, _ = _batch_indices_for_global_batch(
+                global_batch=global_batch,
+                batch_size=self.batch_size,
+                record_count=self.record_count,
+                seed=self.seed,
+                shuffle=self.shuffle,
+            )
+        return indices
+
+    def __iter__(self):  # type: ignore[no-untyped-def]
+        for global_batch in range(self.first_global_batch, self.last_global_batch + 1):
+            yield self._indices(global_batch)
+
+    def __len__(self) -> int:
+        return max(0, self.last_global_batch - self.first_global_batch + 1)
+
+
+def _build_train_loader(  # type: ignore[no-untyped-def]
+    *,
+    train_paths: list[Path],
+    train_format: str,
+    sampler: _GlobalBatchIndexSampler,
+    data_workers: int,
+    prefetch_factor: int,
+    pin_memory: bool,
+):
+    from torch.utils.data import DataLoader
+
+    return DataLoader(
+        _LazyCorpusDataset(train_paths, train_format),
+        batch_sampler=sampler,
+        num_workers=data_workers,
+        collate_fn=functools.partial(_collate_examples, corpus_format=train_format),
+        pin_memory=pin_memory,
+        persistent_workers=True,
+        prefetch_factor=prefetch_factor,
+    )
+
+
 def _evaluate_records(  # type: ignore[no-untyped-def]
     *,
     model,
@@ -597,8 +934,9 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
             losses = _loss_components(outputs, batch, weights)
             batch_weight = len(batch_records)
             record_total += batch_weight
+            loss_values = _loss_scalars(losses, AGGREGATE_KEYS)
             for key in totals:
-                totals[key] += float(losses[key].detach().cpu()) * batch_weight
+                totals[key] += loss_values[key] * batch_weight
     if was_training:
         model.train()
     metrics = {f"locked_val_{key}": value / record_total for key, value in totals.items()}
@@ -1032,6 +1370,14 @@ def run_training(
     early_stop_selection_guard_failures: int = 0,
     early_stop_after_step: int = 0,
     train_source_weights: list[float] | None = None,
+    max_example_passes: float = 0.0,
+    data_workers: int = 0,
+    prefetch_factor: int = 2,
+    autocast_mode: str = "auto",
+    tf32: bool = False,
+    fused_optimizer: bool = False,
+    compile_model: bool = False,
+    grad_checkpoint: str = "auto",
 ) -> dict[str, Any]:
     try:
         import torch
@@ -1063,6 +1409,27 @@ def run_training(
 
     if init_manifest is not None and resume is not None:
         raise ValueError("--init-manifest and --resume are mutually exclusive")
+
+    # ---- opt-in performance knobs (defaults preserve bit-identical runs) ----
+    data_workers = max(0, int(data_workers or _env_int("CASCADIA_TRAIN_DATA_WORKERS", 0)))
+    if prefetch_factor <= 0:
+        raise ValueError("prefetch_factor must be positive")
+    if autocast_mode not in {"auto", "off", "bf16"}:
+        raise ValueError("autocast_mode must be one of auto, off, bf16")
+    if grad_checkpoint not in {"auto", "on", "off"}:
+        raise ValueError("grad_checkpoint must be one of auto, on, off")
+    tf32 = tf32 or _env_flag("CASCADIA_TRAIN_TF32")
+    compile_model = compile_model or _env_flag("CASCADIA_TRAIN_COMPILE")
+    sdpa_spec = os.environ.get("CASCADIA_TRAIN_SDPA", "").strip() or None
+    sdpa_context = _sdpa_context_factory(sdpa_spec)
+    timing_enabled = _env_flag("CASCADIA_TRAIN_TIMING")
+    timing_every = max(1, _env_int("CASCADIA_TRAIN_TIMING_EVERY", 50))
+    sdpa_log = _env_flag("CASCADIA_TRAIN_SDPA_LOG") or sdpa_spec is not None or timing_enabled
+    if tf32:
+        # TF32 changes fp32 matmul numerics on CUDA; opt-in only. Harmless no-op on CPU.
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+
     random.seed(seed)
     torch.manual_seed(seed)
     if selection_mode not in {"min", "max"}:
@@ -1098,9 +1465,36 @@ def run_training(
         val_format = "jsonl"
         train_source_lengths = None
         normalized_train_source_weights = None
+    if max_example_passes > 0.0 and not overfit_one_batch:
+        # Overfitting guard: the EI-0 corpus saw ~240 passes/example and its
+        # guarded checkpoint landed at step 7,250 of 25,000. Cap total passes
+        # so the schedule cannot silently loop a small corpus hundreds of
+        # times.
+        train_corpus_len = _corpus_len(train_records)
+        if train_corpus_len > 0:
+            max_steps = max(1, int((max_example_passes * train_corpus_len) / max(1, batch_size)))
+            if steps > max_steps:
+                print(
+                    f"[trainer] clamping steps {steps} -> {max_steps} to respect "
+                    f"max_example_passes={max_example_passes} over {train_corpus_len} examples",
+                    flush=True,
+                )
+                steps = max_steps
     weights = loss_weights or loss_weights_for_objective(objective)
     config = config_for_size(model_size)
     model = build_cascadiaformer(config).to(device)
+    grad_checkpoint_applied = False
+    if grad_checkpoint == "on":
+        model.set_gradient_checkpointing(True)
+        grad_checkpoint_applied = True
+    elif grad_checkpoint == "auto" and config.gradient_checkpointing:
+        # Historical behavior: config.gradient_checkpointing was never applied
+        # by the trainer, so "auto" preserves the (no-checkpoint) status quo.
+        print(
+            "[trainer] model config requests gradient_checkpointing but the trainer "
+            "has never applied it; pass --grad-checkpoint on to actually enable it",
+            flush=True,
+        )
     init_payload: dict[str, Any] | None = None
     resume_payload: dict[str, Any] | None = None
     if init_manifest is not None:
@@ -1108,12 +1502,35 @@ def run_training(
         init_config = init_payload.get("config")
         if init_config and init_config != config.to_dict():
             raise ValueError("--init-manifest config does not match requested model config")
+    fused_optimizer_applied = False
+    optimizer_extra_kwargs: dict[str, Any] = {}
+    if fused_optimizer:
+        if device.type == "cuda":
+            optimizer_extra_kwargs["fused"] = True
+            fused_optimizer_applied = True
+        else:
+            print("[trainer] --fused-optimizer requires CUDA; ignoring on this device", flush=True)
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=lr,
         betas=(0.9, 0.95),
         weight_decay=weight_decay,
+        **optimizer_extra_kwargs,
     )
+    train_model = model
+    compile_applied = False
+    if compile_model:
+        try:
+            import torch._dynamo
+
+            # Fall back to eager per-graph instead of crashing the run.
+            torch._dynamo.config.suppress_errors = True
+            train_model = torch.compile(model)
+            compile_applied = True
+            print("[trainer] torch.compile enabled (default mode, eager fallback on graph errors)", flush=True)
+        except Exception as error:
+            train_model = model
+            print(f"[trainer] torch.compile failed ({error}); continuing eager", flush=True)
     warmup_steps = max(1, int(steps * warmup_fraction))
 
     def lr_lambda(step: int) -> float:
@@ -1211,6 +1628,43 @@ def run_training(
                 f"resume checkpoint step {start_step - 1} is already beyond requested --steps {steps}"
             )
 
+    autocast_enabled = (device.type == "cuda") if autocast_mode == "auto" else (autocast_mode == "bf16")
+    pin_memory = device.type == "cuda" and data_workers > 0
+    use_train_loader = data_workers > 0 and not overfit_one_batch
+    if data_workers > 0 and overfit_one_batch:
+        print("[trainer] --data-workers ignored with --overfit-one-batch", flush=True)
+    train_loader_iter = None
+    if use_train_loader:
+        loader_sampler = _GlobalBatchIndexSampler(
+            first_global_batch=(start_step - 1) * grad_accum + 1,
+            last_global_batch=steps * grad_accum,
+            batch_size=batch_size,
+            record_count=_corpus_len(train_records),
+            seed=seed,
+            shuffle=shuffle_train,
+            source_lengths=train_source_lengths if normalized_train_source_weights is not None else None,
+            source_weights=normalized_train_source_weights,
+        )
+        train_loader_iter = iter(
+            _build_train_loader(
+                train_paths=train_paths,
+                train_format=train_format,
+                sampler=loader_sampler,
+                data_workers=data_workers,
+                prefetch_factor=prefetch_factor,
+                pin_memory=pin_memory,
+            )
+        )
+        print(
+            f"[trainer] data loader: workers={data_workers} prefetch_factor={prefetch_factor} "
+            f"pin_memory={pin_memory} persistent_workers=True",
+            flush=True,
+        )
+    timer = _PhaseTimer(timing_enabled, device.type)
+    if sdpa_log:
+        _log_attention_backend_info(device, autocast_enabled=autocast_enabled)
+    sdpa_probe_pending = sdpa_log and device.type == "cuda"
+
     model.train()
     optimizer.zero_grad(set_to_none=True)
     completed_steps = start_step - 1
@@ -1240,31 +1694,61 @@ def run_training(
                     seed=seed,
                     shuffle=shuffle_train,
                 )
-            batch_examples = _corpus_examples(train_records, indices, corpus_format=train_format)
-            batch = _move_to_device(_collate_examples(batch_examples, corpus_format=train_format), device)
-            use_autocast = device.type == "cuda"
-            with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=use_autocast):
-                outputs = _model_forward(model, batch)
+            phase_started = timer.start()
+            if train_loader_iter is not None:
+                host_batch = next(train_loader_iter)
+            else:
+                batch_examples = _corpus_examples(train_records, indices, corpus_format=train_format)
+                host_batch = _collate_examples(batch_examples, corpus_format=train_format)
+            timer.stop("data", phase_started)
+            phase_started = timer.start()
+            batch = _move_to_device(host_batch, device, non_blocking=pin_memory)
+            timer.stop("h2d", phase_started)
+            if sdpa_probe_pending:
+                sdpa_probe_pending = False
+                _log_attention_backend_info(
+                    device,
+                    autocast_enabled=autocast_enabled,
+                    sample_batch=batch,
+                    heads=config.heads,
+                    d_model=config.d_model,
+                )
+            phase_started = timer.start()
+            with sdpa_context(), torch.autocast(
+                device_type=device.type,
+                dtype=torch.bfloat16,
+                enabled=autocast_enabled,
+            ):
+                outputs = _model_forward(train_model, batch)
                 losses = _loss_components(outputs, batch, weights)
                 loss = losses["total"] / grad_accum
+            timer.stop("forward", phase_started)
+            phase_started = timer.start()
             loss.backward()
+            timer.stop("backward", phase_started)
+            loss_values = _loss_scalars(losses, AGGREGATE_KEYS)
             for key in train_totals:
-                train_totals[key] += float(losses[key].detach().cpu()) / grad_accum
+                train_totals[key] += loss_values[key] / grad_accum
+        phase_started = timer.start()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
         scheduler.step()
         optimizer.zero_grad(set_to_none=True)
+        timer.stop("optimizer", phase_started)
 
         if step == 1 or step == steps or step % eval_every_steps == 0:
-            val_metrics = _evaluate_records(
-                model=model,
-                records=val_records,
-                corpus_format=val_format,
-                weights=weights,
-                device=device,
-                batch_size=batch_size,
-                max_batches=val_max_batches,
-            )
+            phase_started = timer.start()
+            with sdpa_context():
+                val_metrics = _evaluate_records(
+                    model=train_model,
+                    records=val_records,
+                    corpus_format=val_format,
+                    weights=weights,
+                    device=device,
+                    batch_size=batch_size,
+                    max_batches=val_max_batches,
+                )
+            timer.stop("eval", phase_started)
             loader_cursor = {
                 **last_cursor,
                 "overfit_one_batch": overfit_one_batch,
@@ -1354,9 +1838,12 @@ def run_training(
                     overfit_one_batch=overfit_one_batch,
                 ),
             )
+        timer.step_done(step, timing_every)
         if stop_after_checkpoint:
             break
 
+    train_loader_iter = None  # release DataLoader workers promptly
+    timer.summary()
     if swa_state is None:
         swa_state, swa_count = _update_swa_state(swa_state, model, swa_count)
     final_cursor = (
@@ -1407,6 +1894,22 @@ def run_training(
         "effective_batch_size": batch_size * grad_accum,
         "optimizer": {"name": "AdamW", "betas": [0.9, 0.95], "lr": lr, "weight_decay": weight_decay},
         "scheduler": {"name": "warmup_cosine", "warmup_fraction": warmup_fraction, "min_lr_fraction": 0.10},
+        "perf_knobs": {
+            "data_workers": data_workers,
+            "prefetch_factor": prefetch_factor if use_train_loader else None,
+            "pin_memory": pin_memory,
+            "autocast_mode": autocast_mode,
+            "autocast_enabled": autocast_enabled,
+            "autocast_dtype": "bfloat16" if autocast_enabled else None,
+            "tf32": tf32,
+            "fused_optimizer": fused_optimizer_applied,
+            "compile": compile_applied,
+            "grad_checkpoint": grad_checkpoint,
+            "grad_checkpoint_applied": grad_checkpoint_applied,
+            "sdpa": sdpa_spec,
+            "timing": timing_enabled,
+        },
+        "phase_timing": timer.report() if timing_enabled else None,
         "eval_every_steps": eval_every_steps,
         "objective": objective,
         "selection_metric": selection_metric,
@@ -1486,8 +1989,20 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=20260630)
     parser.add_argument(
         "--objective",
-        choices=["expert", "k32-greedy-retention", "pure-greedy-retention", "search-improved-greedy-retention"],
+        choices=[
+            "expert",
+            "k32-greedy-retention",
+            "pure-greedy-retention",
+            "search-improved-greedy-retention",
+            "gumbel-selfplay",
+        ],
         default="expert",
+    )
+    parser.add_argument(
+        "--max-example-passes",
+        type=float,
+        default=0.0,
+        help="Clamp steps so steps*batch/corpus stays at or below this many passes per example; 0 disables",
     )
     parser.add_argument("--selection-metric", default="locked_val_total")
     parser.add_argument("--selection-mode", choices=["min", "max"], default="min")
@@ -1532,6 +2047,49 @@ def main() -> int:
         help="Do not apply selection-guard early stopping before this optimizer step",
     )
     parser.add_argument("--swa-fraction", type=float, default=0.20)
+    parser.add_argument(
+        "--data-workers",
+        type=int,
+        default=0,
+        help="Background DataLoader workers for train batches (0 = legacy in-process path; "
+        "batch composition/order is bit-identical either way)",
+    )
+    parser.add_argument(
+        "--prefetch-factor",
+        type=int,
+        default=2,
+        help="Batches prefetched per data worker (only used when --data-workers > 0)",
+    )
+    parser.add_argument(
+        "--autocast",
+        choices=["auto", "off", "bf16"],
+        default="auto",
+        help="auto = legacy behavior (bf16 autocast on CUDA, fp32 on CPU); off forces fp32; "
+        "bf16 forces bf16 autocast. Locked-val eval always runs fp32, but train_* metrics "
+        "under autocast are not comparable to --autocast off runs",
+    )
+    parser.add_argument(
+        "--tf32",
+        action="store_true",
+        help="Allow TF32 matmul/cudnn on CUDA (also CASCADIA_TRAIN_TF32=1); changes fp32 numerics",
+    )
+    parser.add_argument(
+        "--fused-optimizer",
+        action="store_true",
+        help="Use fused AdamW (CUDA only; ignored with a warning elsewhere)",
+    )
+    parser.add_argument(
+        "--compile",
+        action="store_true",
+        help="torch.compile the model for training (also CASCADIA_TRAIN_COMPILE=1); eager fallback on failure",
+    )
+    parser.add_argument(
+        "--grad-checkpoint",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="Activation checkpointing for the state encoder; auto preserves legacy behavior "
+        "(never applied, even for model sizes whose config requests it)",
+    )
     args = parser.parse_args()
     if args.val_max_batches < 0:
         parser.error("--val-max-batches must be >= 0")
@@ -1580,6 +2138,7 @@ def main() -> int:
         overfit_one_batch=args.overfit_one_batch,
         val_max_batches=None if args.val_max_batches == 0 else args.val_max_batches,
         swa_fraction=args.swa_fraction,
+        max_example_passes=args.max_example_passes,
         objective=args.objective,
         loss_weights=loss_weights,
         selection_metric=args.selection_metric,
@@ -1591,6 +2150,13 @@ def main() -> int:
         early_stop_selection_guard_failures=args.early_stop_selection_guard_failures,
         early_stop_after_step=args.early_stop_after_step,
         train_source_weights=_parse_optional_float_list(args.train_source_weights),
+        data_workers=args.data_workers,
+        prefetch_factor=args.prefetch_factor,
+        autocast_mode=args.autocast,
+        tf32=args.tf32,
+        fused_optimizer=args.fused_optimizer,
+        compile_model=args.compile,
+        grad_checkpoint=args.grad_checkpoint,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["status"] == "pass" else 1

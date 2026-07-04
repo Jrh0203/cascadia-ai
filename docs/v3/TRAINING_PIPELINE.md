@@ -9,8 +9,13 @@ Use packed tensor shards for real training:
 
 - `greedy_policy_tensor_shard_v1`: compact greedy behavior-cloning shards.
 - `cascadiav3.expert_tensor_shard.v1`: packed expert roots from Rust.
+- `cascadiav3.expert_tensor_shard.v2`: v1 plus Gumbel self-play targets —
+  action-aligned `improved_policy` soft targets and per-record
+  `search_root_value`, with `final_score_vector`/`rank_vector`/decomposition
+  labeled from real terminal outcomes instead of rollout means.
 - `relation_tail` shards: filtered fixed-capacity action relation caches used
-  by the GPU trainer.
+  by the GPU trainer (v2 fields pass through filtering and materialization;
+  retained improved-policy slices are renormalized).
 
 Use JSONL only for tiny audit fixtures that need human-readable reconstruction
 and public-boundary validation.
@@ -147,29 +152,35 @@ greedy_margin_value: 0.25
 Teacher confidence should use Q variance/counts, standard-error weighting, and
 clamping in `[0.25, 4.0]`.
 
-## Stage 3: Expert Iteration
+## Stage 3: Rollout-Teacher Expert Iteration (superseded)
 
-Expert iteration starts only after EI-0 passes gameplay smoke and
-search-integrated gates.
+The original Stage 3 (10 cycles of rollout-labeled roots) is superseded by
+Stage 4. Its labels inherited the greedy-rollout teacher ceiling that the
+K64/R32 test exposed; EI-1 was terminated mid-run on 2026-07-02. Rejected or
+inconclusive candidates still do not halt any campaign: the incumbent remains
+champion, and rejected models remain opponent-diversity material.
 
-Cycle shape:
+## Stage 4: Gumbel Self-Play Expert Iteration (active)
 
-- 10 cycles;
-- 10k games/cycle;
-- newest model occupies one rotated focal seat;
-- opponents are frozen control/champion plus prior v3 pool;
-- cycle 1 uses all frozen control opponents;
-- label 10k roots/cycle for cycles 1-3;
-- label 20k roots/cycle for cycles 4-10;
-- exploration by cycle:
-  `0.10, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.02`;
-- train two origins per cycle;
-- pass LRs: `3e-5`, `3e-5`, `1e-5`;
-- data mix: 50% current cycle, 30% prior three cycles, 20% bootstrap/older.
+Canonical plan: [GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md).
+Summary:
 
-Rejected or inconclusive candidates do not halt the campaign. The incumbent
-remains champion and the rejected model may still be retained as historical
-opponent diversity.
+- Exporter mode: `--gumbel-selfplay-tensor-corpus` (schema v2). All four
+  seats play via Gumbel top-m search with batched model leaf values over
+  hidden-redeterminized states; every visited root exports completed-Q
+  targets, `improved_policy`, `search_root_value`, and real-outcome value
+  labels. Root menus are the full legal action set — never greedy-ranked.
+- Trainer objective: `gumbel-selfplay` — soft-target policy loss against
+  `improved_policy`, up-weighted value loss on real outcomes, no
+  greedy-retention terms, `--max-example-passes 4` overfit guard.
+- Cycle shape: ~1,250 train seeds x 80 plies (~100k roots) per cycle,
+  125 validation seeds, warm start from the incumbent, LR `1e-4`, batch 192,
+  SWA final 20%; replay window over the last 2-3 cycles via
+  `TRAIN_SOURCE_WEIGHTS` (e.g. `1.0,0.5,0.25`).
+- Leaf-value blend ramp `w`: 0.5 -> 0.75 -> 1.0 across cycles as the value
+  head is retrained on real outcomes.
+- Runner: `cascadiav3/scripts/run_gumbel_selfplay_cycle.sh` (delegates to
+  the full pipeline with `EXPERT_TENSOR_MODE=gumbel_selfplay`).
 
 ## Checkpoint Contract
 
@@ -200,7 +211,12 @@ grad accumulation, objective, optimizer, seed, or loss weights.
 
 ## Gameplay Gates
 
-Do not promote on loss alone.
+Do not promote on loss alone, and do not promote on point deltas alone:
+every gate comparison runs at least 100 paired games and requires the paired
+delta's 95% confidence interval (`torch_benchmark_stats.paired_delta_stats`,
+reported by the benchmark harnesses) to exclude zero. Twenty-game runs are
+smoke tests. Search must be public-information-legal (`--rollout-determinize`
+for the legacy rollout path; the Gumbel path determinizes by construction).
 
 Gates:
 

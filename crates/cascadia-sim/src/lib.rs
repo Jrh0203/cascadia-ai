@@ -2,10 +2,7 @@
 
 mod pattern;
 
-use std::{
-    collections::HashMap,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use blake3::Hasher;
 use cascadia_game::{
@@ -17,6 +14,7 @@ use cascadia_game::{
 use cascadia_game::{rescore_after_placement, rescore_after_placement_with_habitat_analysis};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -94,8 +92,12 @@ pub struct GreedyCandidate {
 }
 
 fn is_dominated_same_slot_independent(action: &TurnAction) -> bool {
+    is_dominated_same_slot_independent_draft(action.draft)
+}
+
+fn is_dominated_same_slot_independent_draft(draft: cascadia_game::DraftChoice) -> bool {
     matches!(
-        action.draft,
+        draft,
         cascadia_game::DraftChoice::Independent {
             tile_slot,
             wildlife_slot,
@@ -103,16 +105,41 @@ fn is_dominated_same_slot_independent(action: &TurnAction) -> bool {
     )
 }
 
-fn rescore_after_cached_wildlife_placement(
+/// Cache of post-placement wildlife score arrays keyed by the placed
+/// `(Wildlife, HexCoord)` pair. Wildlife scores depend only on wildlife token
+/// positions, so the cache is shared across tile placements within one
+/// enumeration pass. Keys are packed into a `u32` (cell index and species) and
+/// hashed with `FxHashMap`: this is a pure lookup-speed change, the cached
+/// values and cache-hit semantics are identical to the previous
+/// `HashMap<(Wildlife, HexCoord), [u16; 5]>`.
+#[derive(Default)]
+pub(crate) struct WildlifeScoreCache {
+    scores: FxHashMap<u32, [u16; 5]>,
+}
+
+impl WildlifeScoreCache {
+    fn key(placed_wildlife: (Wildlife, cascadia_game::HexCoord)) -> u32 {
+        let cell = placed_wildlife
+            .1
+            .to_index()
+            .expect("wildlife placements target on-board cells") as u32;
+        cell * 5 + placed_wildlife.0 as u32
+    }
+}
+
+pub(crate) fn rescore_after_cached_wildlife_placement(
     board: &Board,
     cards: cascadia_game::ScoringCards,
     after_tile: ScoreBreakdown,
     placed_wildlife: (Wildlife, cascadia_game::HexCoord),
-    cache: &mut HashMap<(Wildlife, cascadia_game::HexCoord), [u16; 5]>,
+    cache: &mut WildlifeScoreCache,
 ) -> ScoreBreakdown {
-    let wildlife_scores = *cache.entry(placed_wildlife).or_insert_with(|| {
-        rescore_after_wildlife_placement(board, cards, after_tile, placed_wildlife.0).wildlife
-    });
+    let wildlife_scores = *cache
+        .scores
+        .entry(WildlifeScoreCache::key(placed_wildlife))
+        .or_insert_with(|| {
+            rescore_after_wildlife_placement(board, cards, after_tile, placed_wildlife.0).wildlife
+        });
     rescore_with_wildlife_scores(board, after_tile, wildlife_scores)
 }
 
@@ -125,45 +152,148 @@ pub fn rank_greedy_actions(
     let active_board = &game.boards()[game.current_player()];
     let baseline = score_board(active_board, cards);
     let habitat = active_board.habitat_analysis();
-    let mut wildlife_score_cache = HashMap::new();
-    let mut candidates: Vec<_> = game
-        .evaluate_legal_turn_actions_with_tile_context(
-            prelude,
-            |board, placement, tile| {
-                rescore_after_tile_with_habitat_analysis(
-                    board, cards, baseline, &habitat, placement, tile,
-                )
-            },
-            |board, after_tile, placed_wildlife| {
-                placed_wildlife
-                    .map_or(*after_tile, |placed_wildlife| {
-                        rescore_after_cached_wildlife_placement(
+    // Caches the summed wildlife score per placed `(Wildlife, HexCoord)`.
+    // `rescore_with_wildlife_scores(board, after_tile, scores).base_total`
+    // equals `sum(after_tile.habitat) + sum(scores) + nature_tokens`, so
+    // caching the wildlife sum reproduces the historical per-action
+    // `ScoreBreakdown` rebuild bit for bit while doing two additions per
+    // action instead. The cache is a flat table indexed by
+    // `cell * 5 + wildlife` (wildlife sums never reach the `u16::MAX`
+    // sentinel).
+    let mut wildlife_sum_cache = vec![u16::MAX; cascadia_game::GRID_SIZE * 5];
+    // Neighbor habitat context per candidate cell, reused across the drafts,
+    // rotations, and terrains probed at that cell.
+    let mut neighbor_contexts: FxHashMap<u32, cascadia_game::TileNeighborContext> =
+        FxHashMap::default();
+    let mut evaluated: Vec<CompactGreedyAction> = Vec::new();
+    game.visit_legal_turn_actions_with_tile_context(
+        prelude,
+        &mut evaluated,
+        // Same-slot independent drafts are dominated and were always filtered
+        // out below; dropping the whole draft up front skips enumerating them.
+        |draft| !is_dominated_same_slot_independent_draft(draft),
+        |evaluated, capacity| evaluated.reserve_exact(capacity),
+        |board, placement, tile| {
+            let cell = placement
+                .coord
+                .to_index()
+                .expect("tile placements target on-board cells") as u32;
+            let context = neighbor_contexts
+                .entry(cell)
+                .or_insert_with(|| habitat.tile_neighbor_context(board, placement.coord));
+            let after_tile = cascadia_game::rescore_after_tile_with_neighbor_context(
+                board,
+                cards,
+                baseline,
+                &habitat,
+                context,
+                placement.rotation,
+                tile,
+            );
+            let habitat_sum = after_tile.habitat.iter().sum::<u16>();
+            (after_tile, habitat_sum)
+        },
+        |evaluated, board, draft, placement, &(after_tile, habitat_sum), placed_wildlife| {
+            let resulting_base_score = match placed_wildlife {
+                None => after_tile.base_total,
+                Some(placed_wildlife) => {
+                    let slot =
+                        &mut wildlife_sum_cache[WildlifeScoreCache::key(placed_wildlife) as usize];
+                    if *slot == u16::MAX {
+                        *slot = rescore_after_wildlife_placement(
                             board,
                             cards,
-                            *after_tile,
-                            placed_wildlife,
-                            &mut wildlife_score_cache,
+                            after_tile,
+                            placed_wildlife.0,
                         )
-                    })
-                    .base_total
+                        .wildlife
+                        .iter()
+                        .sum();
+                    }
+                    habitat_sum + *slot + u16::from(board.nature_tokens())
+                }
+            };
+            evaluated.push((
+                resulting_base_score,
+                draft,
+                placement,
+                placed_wildlife.map(|(_, coord)| coord),
+            ));
+        },
+    )?;
+    Ok(select_top_greedy_candidates(evaluated, prelude, limit))
+}
+
+/// Compact, `Copy` representation of one evaluated greedy action: resulting
+/// base score plus the action components that vary per candidate. The shared
+/// prelude fields are reattached when the retained candidates are
+/// materialized.
+type CompactGreedyAction = (
+    u16,
+    cascadia_game::DraftChoice,
+    cascadia_game::TilePlacement,
+    Option<cascadia_game::HexCoord>,
+);
+
+/// Orders evaluated actions exactly like the historical
+/// `sort_by(score descending)` stable sort and keeps the first `limit`
+/// entries.
+///
+/// A stable sort by score descending is equivalent to a total sort by
+/// `(score descending, enumeration index ascending)`; that key has no
+/// duplicates, so when only the top `k` candidates are requested an O(n)
+/// selection over the total order followed by sorting the selected prefix
+/// reproduces the full stable sort prefix (candidates, order, and
+/// `immediate_rank`) bit for bit.
+fn select_top_greedy_candidates(
+    evaluated: Vec<CompactGreedyAction>,
+    prelude: &MarketPrelude,
+    limit: Option<usize>,
+) -> Vec<GreedyCandidate> {
+    let materialize = |compact: CompactGreedyAction, immediate_rank: usize| {
+        let (resulting_base_score, draft, tile, wildlife) = compact;
+        GreedyCandidate {
+            action: TurnAction {
+                replace_three_of_a_kind: prelude.replace_three_of_a_kind,
+                wildlife_wipes: prelude.wildlife_wipes.clone(),
+                draft,
+                tile,
+                wildlife,
             },
-        )?
-        .into_iter()
-        .filter(|(action, _)| !is_dominated_same_slot_independent(action))
-        .map(|(action, resulting_base_score)| GreedyCandidate {
-            action,
             resulting_base_score,
-            immediate_rank: 0,
-        })
-        .collect();
-    candidates.sort_by(|left, right| right.resulting_base_score.cmp(&left.resulting_base_score));
-    for (index, candidate) in candidates.iter_mut().enumerate() {
-        candidate.immediate_rank = index + 1;
+            immediate_rank,
+        }
+    };
+    let ordering = |left: &(u16, u32), right: &(u16, u32)| {
+        right.0.cmp(&left.0).then_with(|| left.1.cmp(&right.1))
+    };
+    match limit {
+        Some(0) => Vec::new(),
+        Some(limit) if limit < evaluated.len() => {
+            let mut keyed: Vec<(u16, u32)> = evaluated
+                .iter()
+                .enumerate()
+                .map(|(index, (score, ..))| (*score, index as u32))
+                .collect();
+            keyed.select_nth_unstable_by(limit - 1, ordering);
+            keyed.truncate(limit);
+            keyed.sort_unstable_by(ordering);
+            keyed
+                .into_iter()
+                .enumerate()
+                .map(|(rank, (_, index))| materialize(evaluated[index as usize], rank + 1))
+                .collect()
+        }
+        _ => {
+            let mut evaluated = evaluated;
+            evaluated.sort_by(|(left, ..), (right, ..)| right.cmp(left));
+            evaluated
+                .into_iter()
+                .enumerate()
+                .map(|(index, compact)| materialize(compact, index + 1))
+                .collect()
+        }
     }
-    if let Some(limit) = limit {
-        candidates.truncate(limit);
-    }
-    Ok(candidates)
 }
 
 pub fn rank_bear_setup_actions(
@@ -175,7 +305,7 @@ pub fn rank_bear_setup_actions(
     let active_board = &game.boards()[game.current_player()];
     let baseline = score_board(active_board, cards);
     let habitat = active_board.habitat_analysis();
-    let mut wildlife_score_cache = HashMap::new();
+    let mut wildlife_score_cache = WildlifeScoreCache::default();
     let mut candidates: Vec<_> = game
         .evaluate_legal_turn_actions_with_tile_context(
             prelude,
@@ -253,7 +383,7 @@ pub fn rank_habitat_setup_actions(
     let active_board = &game.boards()[game.current_player()];
     let baseline = score_board(active_board, cards);
     let habitat = active_board.habitat_analysis();
-    let mut wildlife_score_cache = HashMap::new();
+    let mut wildlife_score_cache = WildlifeScoreCache::default();
     let mut candidates: Vec<_> = game
         .evaluate_legal_turn_actions_with_tile_context(
             prelude,
@@ -646,6 +776,121 @@ mod tests {
         assert_eq!(result.scores.len(), 1);
     }
 
+    /// Straightforward re-implementation of the pre-optimization
+    /// `rank_greedy_actions` (full evaluation of every legal action, filter,
+    /// stable sort by score descending, rank, truncate) used to pin the
+    /// optimized selection path to bit-identical behavior.
+    fn rank_greedy_actions_reference(
+        game: &GameState,
+        prelude: &MarketPrelude,
+        limit: Option<usize>,
+    ) -> Result<Vec<GreedyCandidate>, SimulationError> {
+        let cards = game.config().scoring_cards;
+        let active_board = &game.boards()[game.current_player()];
+        let baseline = score_board(active_board, cards);
+        let habitat = active_board.habitat_analysis();
+        let mut wildlife_score_cache = WildlifeScoreCache::default();
+        let mut candidates: Vec<_> = game
+            .evaluate_legal_turn_actions_with_tile_context(
+                prelude,
+                |board, placement, tile| {
+                    rescore_after_tile_with_habitat_analysis(
+                        board, cards, baseline, &habitat, placement, tile,
+                    )
+                },
+                |board, after_tile, placed_wildlife| {
+                    placed_wildlife
+                        .map_or(*after_tile, |placed_wildlife| {
+                            rescore_after_cached_wildlife_placement(
+                                board,
+                                cards,
+                                *after_tile,
+                                placed_wildlife,
+                                &mut wildlife_score_cache,
+                            )
+                        })
+                        .base_total
+                },
+            )?
+            .into_iter()
+            .filter(|(action, _)| !is_dominated_same_slot_independent(action))
+            .map(|(action, resulting_base_score)| GreedyCandidate {
+                action,
+                resulting_base_score,
+                immediate_rank: 0,
+            })
+            .collect();
+        candidates
+            .sort_by(|left, right| right.resulting_base_score.cmp(&left.resulting_base_score));
+        for (index, candidate) in candidates.iter_mut().enumerate() {
+            candidate.immediate_rank = index + 1;
+        }
+        if let Some(limit) = limit {
+            candidates.truncate(limit);
+        }
+        Ok(candidates)
+    }
+
+    #[test]
+    fn optimized_greedy_ranking_matches_reference_across_variants_and_preludes() {
+        let card_sets = [
+            ScoringCards::AAAAA,
+            ScoringCards {
+                bear: ScoringVariant::B,
+                elk: ScoringVariant::C,
+                salmon: ScoringVariant::D,
+                hawk: ScoringVariant::D,
+                fox: ScoringVariant::B,
+            },
+            ScoringCards {
+                bear: ScoringVariant::D,
+                elk: ScoringVariant::B,
+                salmon: ScoringVariant::B,
+                hawk: ScoringVariant::C,
+                fox: ScoringVariant::D,
+            },
+        ];
+        for (offset, cards) in card_sets.into_iter().enumerate() {
+            let mut config = GameConfig::standard(4, cards).unwrap();
+            config.habitat_bonuses = false;
+            let mut game =
+                GameState::new(config, GameSeed::from_u64(3_000 + offset as u64)).unwrap();
+            let mut rng = ChaCha8Rng::seed_from_u64(4_000 + offset as u64);
+            for ply in 0..60 {
+                let (free_prelude, staged) =
+                    game.preview_free_three_of_a_kind_if_feasible().unwrap();
+                // Preludes are ranked against the pre-staged state so the
+                // three-of-a-kind replacement and paid-wipe staging paths are
+                // both exercised.
+                let mut preludes = vec![MarketPrelude::default(), free_prelude];
+                if game.boards()[game.current_player()].nature_tokens() > 0 {
+                    preludes.push(MarketPrelude {
+                        replace_three_of_a_kind: false,
+                        wildlife_wipes: vec![WildlifeWipe {
+                            slots: vec![cascadia_game::MarketSlot::ZERO],
+                        }],
+                    });
+                }
+                if ply % 3 == 0 {
+                    for prelude in preludes {
+                        for limit in [None, Some(0), Some(1), Some(7), Some(16), Some(10_000)] {
+                            assert_eq!(
+                                rank_greedy_actions(&game, &prelude, limit).unwrap(),
+                                rank_greedy_actions_reference(&game, &prelude, limit).unwrap(),
+                                "cards {cards:?} ply {ply} limit {limit:?}"
+                            );
+                        }
+                    }
+                }
+                let candidates =
+                    rank_greedy_actions(&staged, &MarketPrelude::default(), Some(8)).unwrap();
+                let action = candidates[rng.gen_range(0..candidates.len())].action.clone();
+                game = staged;
+                game.apply(&action).unwrap();
+            }
+        }
+    }
+
     #[test]
     fn ranked_greedy_candidates_are_descending_and_legal() {
         let game = GameState::new(
@@ -853,7 +1098,7 @@ mod tests {
         let active_board = &game.boards()[game.current_player()];
         let baseline = score_board(active_board, cards);
         let habitat = active_board.habitat_analysis();
-        let mut wildlife_score_cache = HashMap::new();
+        let mut wildlife_score_cache = WildlifeScoreCache::default();
         let evaluations = game
             .evaluate_legal_turn_actions_with_tile_context(
                 prelude,

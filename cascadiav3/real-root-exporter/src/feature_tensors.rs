@@ -6,6 +6,7 @@ use serde_json::Value;
 
 pub const SHARD_VERSION: &str = "greedy_policy_tensor_shard_v1";
 pub const EXPERT_SHARD_VERSION: &str = "cascadiav3.expert_tensor_shard.v1";
+pub const EXPERT_SHARD_VERSION_V2: &str = "cascadiav3.expert_tensor_shard.v2";
 pub const PUBLIC_TOKEN_FEATURE_DIM: usize = 41;
 pub const MERIT_ACTION_FEATURE_DIM: usize = 25;
 pub const PUBLIC_TOKEN_ACTION_FEATURE_DIM: usize = 33;
@@ -63,6 +64,11 @@ pub struct ExpertTensorShardData {
     pub final_score_vector: Vec<f32>,
     pub rank_vector: Vec<i16>,
     pub score_decomposition: Vec<f32>,
+    /// v2 fields: action-aligned improved policy targets and per-record search
+    /// root values. Present only when every record carries them.
+    pub improved_policy: Vec<f32>,
+    pub search_root_value: Vec<f32>,
+    pub improved_policy_records: usize,
     pub record_count: usize,
     pub total_token_count: usize,
     pub total_action_count: usize,
@@ -142,6 +148,9 @@ impl ExpertTensorShardData {
         self.final_score_vector.extend(other.final_score_vector);
         self.rank_vector.extend(other.rank_vector);
         self.score_decomposition.extend(other.score_decomposition);
+        self.improved_policy.extend(other.improved_policy);
+        self.search_root_value.extend(other.search_root_value);
+        self.improved_policy_records += other.improved_policy_records;
         self.record_count += other.record_count;
         self.total_token_count += other.total_token_count;
         self.total_action_count += other.total_action_count;
@@ -208,6 +217,16 @@ impl ExpertTensorShardData {
         self.final_score_vector.extend(final_score);
         self.rank_vector.extend(rank);
         self.score_decomposition.extend(score_decomposition);
+        if record.get("improved_policy").is_some() {
+            let improved = f32_array(record, "improved_policy", action_count)?;
+            let root_value = record
+                .get("search_root_value")
+                .and_then(Value::as_f64)
+                .context("record with improved_policy is missing search_root_value")?;
+            self.improved_policy.extend(improved);
+            self.search_root_value.push(root_value as f32);
+            self.improved_policy_records += 1;
+        }
 
         self.record_count += 1;
         self.total_token_count += token_rows.len();
@@ -1379,4 +1398,29 @@ mod tests {
         });
         assert_eq!(selected_action_index(&record).unwrap(), 1);
     }
+}
+
+/// Action-row relation matrix for packed eval requests: `A x (T + A)` u8,
+/// row-major, columns laid out token positions first then action positions
+/// (unpadded). Row `r` holds the relation ids for edges whose SOURCE is
+/// action `r` — exactly the rows the model's gated action bias consumes from
+/// the dense matrix (`relation_ids[:, -action_count:, :]`).
+pub fn action_relation_tail(
+    root: &Value,
+    token_count: usize,
+    action_count: usize,
+) -> Result<Vec<u8>> {
+    let seq_len = token_count + action_count;
+    let edges = combined_relation_edges(root, token_count, action_count)?;
+    let mut tail = vec![0u8; action_count * seq_len];
+    for [source, target, relation_id] in edges {
+        let source = source as usize;
+        let target = target as usize;
+        if source < token_count || source >= seq_len || target >= seq_len {
+            continue;
+        }
+        let row = source - token_count;
+        tail[row * seq_len + target] = relation_id.clamp(0, 255) as u8;
+    }
+    Ok(tail)
 }

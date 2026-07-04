@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 anyhow = "1.0"
+base64 = "0.22"
 blake3 = "1.8"
 cascadia-game = { path = "../../crates/cascadia-game" }
 cascadia-sim = { path = "../../crates/cascadia-sim" }

@@ -4,9 +4,220 @@ This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.
 
+## 2026-07-02 - `gumbel-cycle1-budget-sweep` + `gumbel-selfplay-cycle3-v1` (EI-4)
+
+Budget sweep on the cycle-1 champion (25 matched seeds, paired offline
+against the honest control 95.40): n=64 `94.53` (-0.87), n=128 `95.11`
+(-0.55), **n=256 `95.62` (-0.04 — statistical parity with the 10.9s/dec
+rollout control at 3.2s/dec)**. Verdict: budget-bound; the real-outcome
+value head converts simulations into strength monotonically. The Gumbel
+stack now matches the legacy search at ~3.4x less compute with headroom.
+
+Cycle 3 launched (~19:45): full scale 1,250+125 seeds on the optimized
+stack, teacher upgraded to n=128 labels, blend back at w=0.5, replay window
+cycles 2+1 at weights 0.5/0.25, warm start from the cycle-1 champion.
+ETA gates ~06:00. Next gates should also test the cycle-2 checkpoint at
+n=256 (its 4x-better regret may scale better with budget than n=64 showed).
+
+## 2026-07-02 - `gumbel-selfplay-cycle2-v1` (EI-3) — RESULTS: rejected
+
+Cycle 2 (400+60 seeds, w=0.75, replay window, warm start from cycle 1) is a
+**rejected candidate**: no-search `91.8475` (cycle 1: `91.705`, same seeds)
+and Gumbel n=64 `94.4725` (cycle 1: `94.53`; paired vs honest control
+`-0.9275`, CI `[-1.31, -0.54]`, n=100). Locked-val final-Q regret improved
+`0.7934 -> 0.2135` (866 steps over ~42k examples) without moving gameplay.
+Cycle 1 remains champion; cycle 2 joins the opponent pool.
+
+Interpretation branches under test: (a) serving budget n=64 may be
+saturated for this model class — budget sweep n=128/256 x25 seeds running
+on the champion; (b) the w=0.75 blend ramp may have degraded teacher
+labels — cycle 3 reverts generation to w=0.5 at full scale.
+
+Generated on the optimized stack at ~278 games/h (vs 40 baseline):
+generation 400+60 seeds took ~2h total including a restart.
+
+## 2026-07-02 - `gumbel-selfplay-cycle2-v1` (EI-3) — launch notes
+
+Status: running on john0 (relaunched 14:50 on owned 6-session after a
+shared-bridge throughput experiment regressed: one Python collate pipeline
+vs six — see PERFORMANCE.md "Self-Play Generation Throughput"). The shared
+aggregated bridge (`--shared-model-session`) is merged and tested but not
+production until feature extraction moves to Rust.
+
+Config: 400 train + 60 val seeds (fresh blocks 2026720000/2026820000),
+warm start from the cycle-1 checkpoint, `GUMBEL_BLEND_WEIGHT=0.75` (ramp
+per campaign; value head earned trust in cycle 1), replay window = cycle-1
+shard at weight 0.5 via `EXTRA_TRAIN_TAIL_TENSORS`. ETA ~11h at ~40
+games/h (6 sessions).
+
+## 2026-07-02 - `gumbel-cycle1-gumbel-gate-candidate-v1`
+
+Status: complete. **Cycle-1 checkpoint at Gumbel n=64/m=16/w=0.5:
+`94.53`** (p50 95.0, p90 98.0, `2.49s`/decision) on the Phase A seed set —
+versus EI-1's `93.36` on the same seeds and the stored honest control
+`95.40`. The search gap closed from `-2.05` to about `-0.87` in one small
+cycle while staying ~4.4x cheaper per decision than the rollout control.
+(Aggregate comparison; the harness now exports per-seed rows so future
+candidate-only runs pair offline.)
+
+## 2026-07-02 - `gumbel-selfplay-cycle1-v1` (EI-2) — RESULTS
+
+Status: complete. First positive evidence for the real-outcome value
+training direction.
+
+- Corpus: 120 train seeds x 80 plies = 9,600 v2 roots (+ 30 val seeds),
+  all-seat self-play at n=64/m=16/w=0.5, exploration on, root menu 256.
+- Training: warm start EI-1, `gumbel-selfplay` objective, steps clamped by
+  the 4-pass guard to 200 (batch 192), selection metric locked-val final-Q
+  regret `0.7934`.
+- **100-game no-search gate: q-head `91.705` vs greedy `87.85`
+  (+3.855)** — new best no-search score; EI-1 measured `90.76` (100g) /
+  `90.065` (500g) with greedy anchors ~87.5. One small cycle gained
+  roughly +1 point of no-search strength from 9.6k self-play roots and
+  ~4 minutes of training.
+- Gumbel gate (candidate side on the Phase A seed set, paired offline
+  against the stored honest control 95.40): running.
+- Generation throughput facts: ~40 games/h at 6 bridge sessions;
+  12 sessions near-stalled the box (CUDA context thrash) — the
+  shared-bridge server is the identified lever for full-scale cycles.
+
+## 2026-07-02 - `gumbel-selfplay-cycle1-v1` (EI-2) — launch notes
+
+Status: superseded by results above (relaunched 06:15 after throughput
+sizing).
+
+Purpose: first Gumbel self-play expert-iteration cycle. All-seat self-play
+with exploration, n=64/top-m 16/w=0.5/root-menu 256, warm start from EI-1
+best_locked_val, objective `gumbel-selfplay`, `MAX_EXAMPLE_PASSES=4`.
+
+Overnight sizing decisions:
+
+- Measured uncontended generation ~58 games/h at 6 sessions (~4.3s/decision
+  — self-play with record export is ~4x slower per decision than benchmark
+  games). A 1,375-seed cycle would take ~24h; resized to
+  `MODEL_SESSIONS=12`, `TRAIN_SEED_COUNT=280`, `VAL_SEED_COUNT=60`
+  (~22.4k train roots — EI-0 scale, far better labels) to land the full
+  generate->train loop before morning. Scale-up to 1,250 seeds is the next
+  daytime run once the loop is proven.
+- Phase B full probe DEFERRED: after the OOM fix, a verified single
+  512-sim w=1.0 game scored seat mean `94.75` at `8.84s`/decision (p50) —
+  provisional model-bound evidence consistent with Phase A. The full
+  20-seed probe reruns after cycle-1 training, where it measures the
+  retrained value head (more decision-relevant).
+- Operational lesson: the 512-sim probe and self-play generation strangle
+  each other through GPU round-trip queueing (28 games/h combined). Jobs on
+  john0 run strictly sequentially from now on.
+- CUDA OOM root cause fixed mid-night: late-game full legal menus reach
+  thousands of compound actions; the CGAB relation bias materializes
+  [rows, actions, seq, d] (a 35.26 GiB single allocation was attempted).
+  Fixes: `--gumbel-root-menu 256` enumeration cap, cell-budget-aware eval
+  chunking in the bridge, `expandable_segments` allocator config.
+
+## 2026-07-02 - `gumbel-phase-a-gate-v1`
+
+Status: complete — Gumbel loses at the serving budget; proceed per the lose
+branch (Phase B probe, then Phase C with the search infrastructure as the
+teacher). Two headline findings:
+
+- **Honest control = `95.4000`** (100 games, K64/R16 with
+  `--rollout-determinize`) versus the leaky `96.9750`: the hidden-order peek
+  inflated historical search numbers by roughly `1.6` points.
+- **Gumbel n=64/m=16/w=0.5: `93.3550`** (p50 `94.0`, p90 `97.0`), paired
+  delta `-2.045`, 95% CI `[-2.46, -1.63]`, n=100 — a real loss, but at
+  `1.07s`/decision versus the control's `10.91s`: 10x less compute for -2
+  points. Decision-time p50/p95: `0.956` / `1.204` s.
+
+Interpretation: the current q-head (trained on rollout-mean targets) is not
+yet strong enough to replace long rollouts at small budgets — exactly the
+weakness Phase C's real-outcome value training targets. The search
+infrastructure itself is sound and an order of magnitude cheaper per
+decision.
+
+Artifacts: `reports/gumbel_phase_a_gate.json` /
+`gumbel_phase_a_gate_summary.md`.
+
+Purpose: Phase A gate of the Gumbel campaign — 100 paired games, Gumbel
+search (n=64, top-m 16, w=0.5, depth 1, 4 determinizations, full legal root
+menus) versus the honest full K64/R16 rollout-search control
+(`--rollout-determinize`, no hidden-order peek). Checkpoint: EI-1
+`full_v3_ei1_model_state_k32_r4/best_locked_val` (strongest incumbent:
+no-search q `90.065` over 500 games vs EI-0's `89.62`).
+
+Pre-launch smoke (1 game, same config, seed 2026994000): complete game via
+the batched cuda bridge, seat mean `94.0`, decision time `1.84s` at n=64 —
+about 4.8x faster per decision than the legacy 8.8s full rollout search.
+
+Gate: promote the Gumbel serving path iff the paired delta (gumbel minus
+honest control) is positive with the 95% CI excluding zero
+(`paired_delta_stats` in the report). Branches per
+`docs/v3/GUMBEL_SELFPLAY_CAMPAIGN.md` Phase A.
+
+Artifacts: `reports/gumbel_phase_a_gate.json`,
+`reports/gumbel_phase_a_gate_summary.md`,
+`logs/gumbel_phase_a_gate_job.log`.
+
+## 2026-07-02 - `gumbel-selfplay-stack-implementation-v1`
+
+Status: implementation complete and locally verified; remote Phase A pending.
+
+Purpose: replace the one-ply sampled-greedy-rollout teacher with Gumbel
+AlphaZero-style search using batched neural leaf values, fix the
+serving-search hidden-information leak, remove greedy-ranked menu bias from
+labeling, and stand up self-play data generation at 5x corpus scale. Full
+plan: `docs/v3/GUMBEL_SELFPLAY_CAMPAIGN.md`.
+
+Implementation:
+
+- `real-root-exporter/src/gumbel.rs`: Gumbel top-m + sequential halving over
+  the full legal root menu, model priors + derived-final-Q leaf values,
+  hidden redeterminization before every simulated root action (no-peek by
+  construction, unit-tested), max^n interior advancement, blended
+  rollout/bootstrap leaf values, completed-Q + improved-policy outputs.
+- `real-root-exporter/src/model_bridge.rs`: extracted bridge with
+  `eval_batch` protocol (hello `protocol_features` detection, sequential
+  fallback); Python bridge answers `eval_batch_request` with one collated
+  forward per 32-root chunk and now returns the 4-seat `value` vector;
+  relation matrices build in numpy.
+- New exporter modes: `--gumbel-policy-game` (all-seat search games,
+  decision JSONL) and `--gumbel-selfplay-tensor-corpus` (schema
+  `cascadiav3.expert_tensor_shard.v2` with `improved_policy` +
+  `search_root_value`, real-outcome value labels backfilled at terminal).
+- `--rollout-determinize` makes the legacy rollout path
+  public-information-legal for honest rebaselines; afterstate reuse removes
+  the per-rollout clone+re-apply (golden-equality test keeps default-path
+  labels bit-identical).
+- Trainer: `gumbel-selfplay` objective (soft improved-policy targets,
+  up-weighted real-outcome value loss), `--max-example-passes` overfit
+  guard; loader/filter/materialize handle v2 alongside v1.
+- Evaluation: `torch_benchmark_stats.paired_delta_stats` (t + bootstrap CI)
+  wired into the search benchmark; new
+  `torch_cascadiaformer_gumbel_benchmark` paired harness; runners
+  `run_gumbel_phase_a_gate.sh`, `run_gumbel_ceiling_probe.sh`,
+  `run_gumbel_selfplay_cycle.sh`.
+
+Evidence:
+
+- `cargo test` (exporter): 18 tests including golden equality, no-peek
+  invariance for both rollout and Gumbel paths, determinism, sequential
+  halving budget accounting, v2 shard roundtrip, and a full mock-bridge
+  Gumbel game.
+- Python suite: 54 tests including batch-vs-single eval equivalence, numpy
+  relation-matrix equivalence, v2 load/filter/materialize, soft-target loss,
+  a CPU training smoke on the v2 fixture with the passes clamp firing
+  (50 -> 12 steps), and t-quantile/CI reference checks.
+- Fixtures: `cascadiav3/fixtures/gumbel_tiny_tensor.npz` (v2, mock bridge).
+
+Decision: EI-1 (`cascadiaformer-ei1-model-state-k32-r4-v1`) is terminated in
+favor of this line — it kept both binding constraints (greedy rollout labels,
+greedy-ranked K32 menus). Its partial artifacts are fetched and retained as
+teacher-comparison evidence only, not model-promotion evidence.
+
 ## 2026-07-01 - `cascadiaformer-ei1-model-state-k32-r4-v1`
 
-Status: completed; positive no-search improvement, no K56 search breakthrough.
+Status: completed with positive no-search improvement but no K56 search
+breakthrough; terminated 2026-07-02 in favor of the Gumbel self-play campaign
+(see `gumbel-selfplay-stack-implementation-v1` above); partial artifacts
+fetched and retained as teacher-comparison evidence.
 
 Purpose: start the first true model-state expert-iteration bootstrap. EI-0 was
 trained on greedy-state roots and reached useful no-search/search strength, but
@@ -2472,3 +2683,73 @@ Decision:
 - Next credible branch: test K24 in the same non-shadow complete-game setup, or
   train a stronger search-aware/retention-aware model whose gate is calibrated
   directly against gameplay loss, not only sampled-teacher root recall.
+
+## 2026-07-03 — Cycle-3 export crash (zip64) and relaunch on optimized stack
+
+Failure:
+
+- Cycle 3 (EI-4) generation completed all 1,250 train seeds / 100,000 records
+  in 56,085 s (~15.6 h, 0.022 seeds/s), then the train-tensor npz write died
+  with the zip crate error "Large file option has not been set": one array
+  exceeded the 4 GiB zip entry limit and `large_file(true)` (zip64) was never
+  set. The partial 8.5 GB archive has no central directory; the mode writes
+  no JSONL sidecar, so the search data is unrecoverable. Validation
+  generation and training never started.
+- Root cause is scale-triggered: the 100k-record corpus is ~10x cycle 1;
+  no earlier corpus crossed 4 GiB per entry.
+
+Fixes and changes deployed with the relaunch:
+
+- `npz_writer.rs` now sets `.large_file(true)` on every entry (zip64;
+  numpy/zipfile read these transparently). Commit `5e84d7b`.
+- Optimization pass 2 (merged earlier today, commits `bb9d00c`/`a087f53`):
+  eval-row dedup + per-chunk cache (43.7% of model eval rows eliminated at
+  production search shape under the mock) and packed f64 responses (7.7x
+  encode / 2.9x decode), both parity-gated. Dedup counters now appear in
+  generation progress lines.
+
+Relaunch:
+
+- Same configuration and seeds as the failed run (train 2026730000 x 1250,
+  val 2026830000 x 125, n=128, w=0.5, shared bridge, 16 sessions, replay
+  tail cycles 2+1 at weights 1.0/0.5/0.25, warm start from cycle-1 champion).
+- Labels will differ from the lost run at float precision (GPU batch
+  composition changes with dedup); this is expected and acceptable.
+- The rerun doubles as the production measurement of optimization pass 2:
+  prior stack measured 0.022 seeds/s (~80 games/h) at n=128.
+
+## 2026-07-03 — Cycle-3 (EI-4) gate battery: flat at all budgets -> model-class bound
+
+Battery ran 16:36-17:15 (39 min for 250 games — first battery on the batched
+shared-bridge harness `--batch-runner`; the cycle-2 battery took ~3 h).
+
+| Metric | Cycle 1 | Cycle 2 | Cycle 3 |
+|---|---:|---:|---:|
+| No-search q (100g, seeds 2026994000) | 91.71 | 91.85 | 91.805 |
+| Gumbel n=64 (100g, seeds 2026995000) | 94.53 | 94.4725 | 94.6475 |
+| Gumbel n=256 (25g) | 95.62 | 95.79 | 95.67 |
+| locked_val_final_q_regret | 0.79 | 0.21 | 0.152 |
+
+Paired stats (cascadiav3.torch_benchmark_stats.paired_delta_stats):
+
+- c3 vs c2, n=64, n=100 pairs: mean +0.175, t-CI95 [-0.1325, +0.4825] — ns.
+- c3 vs c2, n=256, 25 pairs: mean -0.12, CI [-1.1775, +0.9375] — ns.
+- c3 vs c1, n=256, 25 pairs: mean +0.05, CI [-0.6668, +0.7668] — ns.
+- c2 vs c1, n=256, 25 pairs: mean +0.17, CI [-0.8361, +1.1761] — ns.
+
+Interpretation:
+
+- Three EI cycles with 10x data growth, stronger labels (n=128), a replay
+  window, and a 5x value-regret improvement produced NO gameplay movement at
+  any search budget. Cycle-2's regret gain did not convert at n=256 either.
+- Conclusion: the campaign is **model-class bound at CascadiaFormer-S**, the
+  explicit branch-3 outcome in CAMPAIGN_STATE.md's decision tree. Value-head
+  quality and data scale are no longer the levers.
+- Methodology gap found: the honest control's per-seed scores were never
+  persisted (only aggregate 95.40 + paired deltas vs the EI-1 candidate), so
+  control comparisons for c2/c3 are mean-only. Persist control per-seed on
+  the next control re-run.
+
+Decision: train CascadiaFormer-M from scratch on the existing cycle-3 corpus
+(no new generation needed), same objective and selection; then a battery of
+no-search / n=64 / n=256 plus first n=512 and depth_rounds=2 probes.

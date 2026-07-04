@@ -20,6 +20,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
+from .torch_benchmark_stats import paired_delta_stats
 from .torch_cascadiaformer_game_benchmark import completed_game_result_row, load_cascadiaformer_manifest, rank_root_with_model
 
 
@@ -56,8 +57,9 @@ def _binary_command(
     max_actions: int,
     rollouts_per_action: int,
     rollout_top_k: int,
+    rollout_determinize: bool = False,
 ) -> list[str]:
-    return [
+    command = [
         str(binary),
         "--interactive-policy-game",
         "--first-seed",
@@ -69,6 +71,9 @@ def _binary_command(
         "--rollout-top-k",
         str(rollout_top_k),
     ]
+    if rollout_determinize:
+        command.append("--rollout-determinize")
+    return command
 
 
 def run_interactive_game(
@@ -84,6 +89,7 @@ def run_interactive_game(
     rollout_top_k: int,
     shadow_full_search: bool,
     model_lock: threading.Lock | None = None,
+    rollout_determinize: bool = False,
 ) -> dict[str, Any]:
     process = subprocess.Popen(
         _binary_command(
@@ -92,6 +98,7 @@ def run_interactive_game(
             max_actions=max_actions,
             rollouts_per_action=rollouts_per_action,
             rollout_top_k=rollout_top_k,
+            rollout_determinize=rollout_determinize,
         ),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -284,6 +291,7 @@ def run_search_benchmark(
     experiment_id: str,
     decision_rows_path: Path | None,
     game_results_path: Path | None = None,
+    rollout_determinize: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if selection_head not in {"policy", "q"}:
         raise ValueError("selection_head must be policy or q")
@@ -326,6 +334,7 @@ def run_search_benchmark(
             rollout_top_k=rollout_top_k,
             shadow_full_search=shadow_full_search,
             model_lock=model_lock,
+            rollout_determinize=rollout_determinize,
         )
 
     candidate_results: list[dict[str, Any]] = []
@@ -351,6 +360,7 @@ def run_search_benchmark(
             rollouts_per_action=rollouts_per_action,
             rollout_top_k=rollout_top_k,
             shadow_full_search=False,
+            rollout_determinize=rollout_determinize,
         )
 
     full_results: list[dict[str, Any]] = []
@@ -409,8 +419,12 @@ def run_search_benchmark(
             "cascadiaformer-search": candidate_summary,
             "full-search": full_summary,
         },
+        "rollout_determinize": rollout_determinize,
         "paired_score_deltas": paired_deltas,
         "mean_paired_delta_candidate_minus_full_search": mean_delta,
+        "paired_delta_stats": paired_delta_stats(
+            [row["delta_candidate_minus_full_search"] for row in paired_deltas]
+        ),
         "treatment_mean_decision_seconds": candidate_summary["mean_total_decision_seconds"],
         "control_mean_decision_seconds": full_summary["mean_total_decision_seconds"] if full_summary else None,
         "treatment_control_time_ratio": timing_ratio,
@@ -460,6 +474,9 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
                 f"- Decisions: `{full['decisions']}`",
                 f"- Mean total decision seconds: `{full['mean_total_decision_seconds']:.4f}`",
                 f"- Mean paired delta candidate-control: `{report['mean_paired_delta_candidate_minus_full_search']}`",
+                f"- Paired delta 95% t-CI: `[{report['paired_delta_stats'].get('t_ci_low')}, {report['paired_delta_stats'].get('t_ci_high')}]`"
+                f" (n={report['paired_delta_stats'].get('n')}, se={report['paired_delta_stats'].get('se')})",
+                f"- CI excludes zero: `{report['paired_delta_stats'].get('ci_excludes_zero')}`",
                 f"- Treatment/control time ratio: `{report['treatment_control_time_ratio']}`",
             ]
         )
@@ -486,6 +503,11 @@ def main() -> int:
     parser.add_argument("--rollouts-per-action", type=int, default=16)
     parser.add_argument("--rollout-top-k", type=int, default=4)
     parser.add_argument("--device", default="cuda")
+    parser.add_argument(
+        "--rollout-determinize",
+        action="store_true",
+        help="Public-information-legal rollouts: resample hidden order per rollout",
+    )
     parser.add_argument("--shadow-full-search", action="store_true")
     parser.add_argument("--include-full-search-baseline", action="store_true")
     parser.add_argument("--candidate-workers", type=int, default=1)
@@ -515,6 +537,7 @@ def main() -> int:
         experiment_id=args.experiment_id,
         decision_rows_path=Path(args.decisions_out),
         game_results_path=Path(args.game_results_out),
+        rollout_determinize=args.rollout_determinize,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
