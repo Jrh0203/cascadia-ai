@@ -2663,3 +2663,39 @@ Relaunch:
   composition changes with dedup); this is expected and acceptable.
 - The rerun doubles as the production measurement of optimization pass 2:
   prior stack measured 0.022 seeds/s (~80 games/h) at n=128.
+
+## 2026-07-03 — Cycle-3 (EI-4) gate battery: flat at all budgets -> model-class bound
+
+Battery ran 16:36-17:15 (39 min for 250 games — first battery on the batched
+shared-bridge harness `--batch-runner`; the cycle-2 battery took ~3 h).
+
+| Metric | Cycle 1 | Cycle 2 | Cycle 3 |
+|---|---:|---:|---:|
+| No-search q (100g, seeds 2026994000) | 91.71 | 91.85 | 91.805 |
+| Gumbel n=64 (100g, seeds 2026995000) | 94.53 | 94.4725 | 94.6475 |
+| Gumbel n=256 (25g) | 95.62 | 95.79 | 95.67 |
+| locked_val_final_q_regret | 0.79 | 0.21 | 0.152 |
+
+Paired stats (cascadiav3.torch_benchmark_stats.paired_delta_stats):
+
+- c3 vs c2, n=64, n=100 pairs: mean +0.175, t-CI95 [-0.1325, +0.4825] — ns.
+- c3 vs c2, n=256, 25 pairs: mean -0.12, CI [-1.1775, +0.9375] — ns.
+- c3 vs c1, n=256, 25 pairs: mean +0.05, CI [-0.6668, +0.7668] — ns.
+- c2 vs c1, n=256, 25 pairs: mean +0.17, CI [-0.8361, +1.1761] — ns.
+
+Interpretation:
+
+- Three EI cycles with 10x data growth, stronger labels (n=128), a replay
+  window, and a 5x value-regret improvement produced NO gameplay movement at
+  any search budget. Cycle-2's regret gain did not convert at n=256 either.
+- Conclusion: the campaign is **model-class bound at CascadiaFormer-S**, the
+  explicit branch-3 outcome in CAMPAIGN_STATE.md's decision tree. Value-head
+  quality and data scale are no longer the levers.
+- Methodology gap found: the honest control's per-seed scores were never
+  persisted (only aggregate 95.40 + paired deltas vs the EI-1 candidate), so
+  control comparisons for c2/c3 are mean-only. Persist control per-seed on
+  the next control re-run.
+
+Decision: train CascadiaFormer-M from scratch on the existing cycle-3 corpus
+(no new generation needed), same objective and selection; then a battery of
+no-search / n=64 / n=256 plus first n=512 and depth_rounds=2 probes.
