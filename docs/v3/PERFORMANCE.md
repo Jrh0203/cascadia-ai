@@ -317,3 +317,55 @@ behavior is unchanged (legacy chunker parity is unit-test pinned).
    h2d=0.000s forward=0.307s d2h=0.000s encode=0.000s total=0.360s
    rows/s=11.1`. Zero-cost when off. Use this on john0 to direct the next
    pass.
+
+## CascadiaFormer Trainer Perf Knobs (2026-07-04)
+
+Efficiency pass on `cascadiav3.torch_train_cascadiaformer` motivated by the
+CascadiaFormer-M run measuring 2.39 s/step at batch 192 on the RTX 5090 (GPU
+99% util at only 189 W, trainer pegging one CPU core). Hard contract, pinned
+by `cascadiav3/tests/test_trainer_perf_knobs.py`: with no knobs set, training
+is bit-identical to the pre-pass trainer (verified 3-step CPU runs on npz
+unweighted, npz weighted 2-source, and jsonl fixtures — all 45 state-dict
+tensors `torch.equal`, metrics JSONL byte-identical).
+
+Root causes found in the default path (all fixed exactly-safely, no knob
+needed):
+
+1. **Per-microbatch O(corpus) Python shuffle.** Unweighted sampling rebuilt
+   and Fisher-Yates-shuffled the full epoch order for EVERY micro-batch
+   (`_deterministic_order`): 19 ms at 100k records, 266 ms at 1M records of
+   pure single-core Python per micro-batch. Now LRU-cached per
+   (record_count, seed, epoch) — cache hit ~0.1 us, identical indices.
+2. **17 separate GPU syncs per micro-batch.** `float(loss.detach().cpu())`
+   per aggregate key after each backward (and per eval batch). Now one
+   stacked fp64 transfer (`_loss_scalars`), bit-identical values.
+3. **`enable_nested_tensor` warning.** The nested-tensor encoder fast path is
+   inference-only (requires eval mode + no grad) and additionally disqualified
+   by `norm_first=True`; the encoder is now built with
+   `enable_nested_tensor=False` — zero numeric change, warning gone.
+4. **`gradient_checkpointing` config flag was a silent no-op.** The M config
+   requests it but no trainer ever applied it; the observed M run was NOT
+   checkpointing. Now implemented behind `--grad-checkpoint on` (auto/off
+   preserve legacy no-checkpoint behavior; CPU test shows on/off bit-identical
+   losses and grads).
+
+Opt-in knobs (defaults preserve bit-identity):
+
+| Knob | Semantics | Parity |
+|---|---|---|
+| `--data-workers N` (+`CASCADIA_TRAIN_DATA_WORKERS`) | DataLoader workers; seeded index lists stay in the main process, workers only fetch+collate; persistent workers, prefetch (`--prefetch-factor`), pin_memory + non-blocking H2D on CUDA | bit-identical batches/order (test-enforced); CPU bench: data-wait 31.4 -> 1.6 ms per b192 batch with 2 workers |
+| `--autocast {auto,off,bf16}` | auto = legacy (bf16 autocast on CUDA, fp32 CPU); off forces fp32; locked-val eval always runs fp32 | train metrics under bf16 not comparable to fp32 runs |
+| `--tf32` / `CASCADIA_TRAIN_TF32=1` | TF32 matmul+cudnn on CUDA | changes fp32 numerics |
+| `--fused-optimizer` | fused AdamW, CUDA only | different update kernel, not bit-identical |
+| `--compile` / `CASCADIA_TRAIN_COMPILE=1` | torch.compile (default mode), eager fallback | numeric drift possible |
+| `--grad-checkpoint {auto,on,off}` | activation checkpointing on the state encoder | bit-identical on deterministic kernels |
+| `CASCADIA_TRAIN_SDPA=flash\|mem_efficient\|math\|cudnn` | restricts SDPA backends around train forward/backward and eval (comma list = priority) | selection only; flash rejects our merged key-padding attn_mask |
+| `CASCADIA_TRAIN_SDPA_LOG=1` | logs enabled SDPA backends + per-shape usability verdicts (`can_use_flash/efficient_attention` with debug reasons) on the first CUDA batch | log only |
+| `CASCADIA_TRAIN_TIMING=1` (`_EVERY=K`) | per-phase wall times (data/h2d/forward/backward/optimizer/eval), line every K steps + summary + report `phase_timing`; synchronizes CUDA at phase boundaries, so it slightly perturbs throughput | measurement only |
+
+SDPA reality for this encoder: training never uses the fused/nested
+TransformerEncoder path (inference-only), so attention always goes through
+`F.scaled_dot_product_attention` with a merged key-padding float attn_mask;
+flash rejects arbitrary attn_masks, leaving mem_efficient vs math — use
+`CASCADIA_TRAIN_SDPA_LOG=1` on john0 to see which one actually runs for the
+M shapes, and `CASCADIA_TRAIN_SDPA` to force alternatives.
