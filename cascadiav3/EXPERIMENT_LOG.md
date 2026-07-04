@@ -2753,3 +2753,34 @@ Interpretation:
 Decision: train CascadiaFormer-M from scratch on the existing cycle-3 corpus
 (no new generation needed), same objective and selection; then a battery of
 no-search / n=64 / n=256 plus first n=512 and depth_rounds=2 probes.
+
+## 2026-07-04 — CascadiaFormer-M battery: first significant gameplay win; S saturation confirmed
+
+M trained from scratch on the cycle-3 corpus (25k steps, batch 192, ~16.6h on
+the pre-optimization trainer). Selection slip: run selected on
+locked_val_total (step 5500); regret-optimal saved checkpoint is step 10000
+(regret 0.1559 ~= S's 0.152). Both heads benchmarked.
+
+| Benchmark | S (c3) | M total (s5500) | M regret (s10000) |
+|---|---:|---:|---:|
+| No-search q 100g | 91.805 | 86.9325 | 90.8775 |
+| Gumbel n=64 100g | 94.6475 | 95.54 | 95.2375 |
+| Gumbel n=256 25g | 95.67 | 96.63 | **97.11** |
+
+Paired (same seeds, paired_delta_stats): M-total vs S at n=64 +0.8925
+CI95 [0.5294, 1.2556]; M-regret vs S at n=64 +0.59 [0.2293, 0.9507];
+M-regret vs S at n=256 +1.44 [0.4969, 2.3831] — ALL CI-excluding-zero, the
+first significant gameplay improvements of the campaign. M n=64 (95.54 @
+~1.9 s/dec) also exceeds the honest rollout control (95.40 @ 10.9 s/dec) on
+mean. S-champion probes: n=512 vs n=256 -0.01 [-0.8576, 0.8376] (budget
+saturated); depth2/n=64 -0.65 [-1.5020, 0.2020] (no depth win at S).
+
+Conclusions: capacity was the binding constraint, exactly as the cycle-3
+flat battery indicated. M's strength expresses through search (its no-search
+q play is weaker than S — and total-loss selection is unusable no-search at
+86.93: regret selection vindicated). New campaign best 97.11 (M-regret,
+n=256, 25g). NEW CHAMPION: cycle3_m step_0010000 (regret-selected).
+
+Next: deploy trainer+serving optimization stack; GPU A/B of fused CGAB;
+power the 97-gate properly (n=256 at 100+ games); then cycle 4 = EI on M
+(M teacher labels now affordable with fused forward + optimized stack).
