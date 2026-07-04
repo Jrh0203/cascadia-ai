@@ -2376,7 +2376,19 @@ fn gumbel_search_seed(seed_u64: u64, ply_index: usize) -> u64 {
     gumbel::splitmix64(seed_u64 ^ gumbel::splitmix64(ply_index as u64 ^ 0x6706_2026))
 }
 
+#[cfg(test)]
 fn eval_request_for_row(row: &gumbel::EvalRow, packed: bool) -> Result<Value> {
+    let public_hash = row.staged.public_state().canonical_hash();
+    eval_request_for_row_with_public_hash(row, packed, &public_hash)
+}
+
+/// `eval_request_for_row` with the (already computed) public-state hash
+/// passed in, so the dedup path hashes each row's public state exactly once.
+fn eval_request_for_row_with_public_hash(
+    row: &gumbel::EvalRow,
+    packed: bool,
+    public_hash: &blake3::Hash,
+) -> Result<Value> {
     let staged = &row.staged;
     let active_seat = staged.current_player();
     let mut legal_actions = Vec::with_capacity(row.afterstates.len());
@@ -2392,7 +2404,6 @@ fn eval_request_for_row(row: &gumbel::EvalRow, packed: bool) -> Result<Value> {
         )?);
         action_ids.push(json!(action_id(&afterstate.candidate.action)?));
     }
-    let public_hash = staged.public_state().canonical_hash();
     let request = json!({
         "schema_id": EXPERT_ROOT_SCHEMA_ID,
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
@@ -2520,11 +2531,12 @@ fn log_eval_dedup_summary(label: &str, rows_requested: u64, rows_sent: u64, cach
 /// this stays well under ~60 MB per worker.
 const EVAL_ROW_CACHE_MAX_ENTRIES: usize = 50_000;
 
-/// Cross-call eval-output cache keyed by the blake3 hash of the full
-/// serialized eval request. The request payload (public tokens or packed
-/// feature bytes, action ids, exact afterstate scores) fully determines the
-/// bridge output, so identical keys are safe to reuse across simulations,
-/// plies, and games handled by one worker.
+/// Cross-call eval-output cache keyed by `eval_row_key`, a blake3 hash over
+/// the semantic inputs that fully determine the serialized eval request
+/// (public state, public supply, prelude cleanup projection, and the action
+/// menu with its scores). The request payload fully determines the bridge
+/// output, so identical keys are safe to reuse across simulations, plies,
+/// and games handled by one worker.
 struct EvalRowCache {
     entries: HashMap<[u8; 32], gumbel::EvalOut>,
     stats: EvalDedupStats,
@@ -2539,9 +2551,13 @@ impl EvalRowCache {
     }
 }
 
-/// Dedup key: blake3 over the serialized raw (unpacked) request bytes plus a
-/// wire-format marker. The raw payload is an information superset of the
-/// packed payload (packing is a pure function of it), so it keys either form.
+/// Reference dedup key: blake3 over the serialized raw (unpacked) request
+/// bytes plus a wire-format marker. The raw payload is an information
+/// superset of the packed payload (packing is a pure function of it), so it
+/// keys either form. Superseded on the hot path by `eval_row_key`, which
+/// hashes the same semantic inputs without building the request; kept as the
+/// ground-truth definition of request equality for tests.
+#[cfg(test)]
 fn eval_request_key(raw_request: &Value, packed: bool) -> Result<[u8; 32]> {
     let bytes =
         serde_json::to_vec(raw_request).context("serializing eval request for dedup key")?;
@@ -2549,6 +2565,73 @@ fn eval_request_key(raw_request: &Value, packed: bool) -> Result<[u8; 32]> {
     hasher.update(&[u8::from(packed)]);
     hasher.update(&bytes);
     Ok(*hasher.finalize().as_bytes())
+}
+
+/// Cheap dedup key over exactly the semantic inputs `eval_request_for_row`
+/// consumes, so cache-hit rows never pay full request construction. Returns
+/// the key plus the row's public-state hash (reused as the request's
+/// `state_hash` when the row turns out to be unique).
+///
+/// Completeness argument (equal key <=> byte-identical raw request):
+/// - `public_state().canonical_hash()` covers config (incl. scoring cards),
+///   boards, market, current player, and completed turns — everything
+///   `public_tokens`, `score_game`, `market_components`, and the request's
+///   own `state_hash`/`active_seat` fields read from the staged state.
+/// - `public_supply()` is NOT determined by the public state (discards are
+///   outside `PublicGameState`) and feeds the supply token, so it is hashed
+///   separately. It is invariant under `redeterminize_hidden`, keeping dedup
+///   across determinizations intact.
+/// - The prelude enters the request only through per-action
+///   `cleanup_choice()`, so exactly that projection (three-of-a-kind flag +
+///   wipe slot lists) is hashed, and only when the menu is non-empty.
+/// - Per afterstate: the canonical action serialization (the request embeds
+///   its sha256 as `action_id`, and every other action-derived token field
+///   is a function of these bytes), the immediate base score, and the exact
+///   afterstate score. Non-finite scores all collapse to JSON `null`, so
+///   they hash as one marker; finite scores hash by bit pattern, matching
+///   JSON f64 formatting equality.
+/// The leading domain byte separates this scheme from `eval_request_key`,
+/// and every variable-length field is length-prefixed to keep the framing
+/// injective.
+fn eval_row_key(row: &gumbel::EvalRow, packed: bool) -> Result<([u8; 32], blake3::Hash)> {
+    let staged = &row.staged;
+    let public_hash = staged.public_state().canonical_hash();
+    let supply = staged.public_supply();
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(&[0xE1, u8::from(packed)]);
+    hasher.update(public_hash.as_bytes());
+    hasher.update(&supply.wildlife_bag);
+    hasher.update(&supply.unseen_tile_terrain_capacity);
+    hasher.update(&supply.unseen_tile_wildlife_capacity);
+    hasher.update(&supply.unseen_keystones_by_terrain);
+    hasher.update(&supply.unseen_dual_terrain_pairs);
+    hasher.update(&(row.afterstates.len() as u64).to_le_bytes());
+    if !row.afterstates.is_empty() {
+        hasher.update(&[u8::from(row.prelude.replace_three_of_a_kind)]);
+        hasher.update(&(row.prelude.wildlife_wipes.len() as u64).to_le_bytes());
+        for wipe in &row.prelude.wildlife_wipes {
+            hasher.update(&(wipe.slots.len() as u64).to_le_bytes());
+            for slot in &wipe.slots {
+                hasher.update(&[slot.index() as u8]);
+            }
+        }
+        for afterstate in &row.afterstates {
+            let action_bytes = serde_json::to_vec(&afterstate.candidate.action)
+                .context("serializing action for dedup key")?;
+            hasher.update(&(action_bytes.len() as u64).to_le_bytes());
+            hasher.update(&action_bytes);
+            hasher.update(&afterstate.candidate.resulting_base_score.to_le_bytes());
+            let exact = afterstate.exact_score_active;
+            if exact.is_finite() {
+                hasher.update(&[1]);
+                hasher.update(&exact.to_bits().to_le_bytes());
+            } else {
+                // serde_json renders every non-finite float as `null`.
+                hasher.update(&[0]);
+            }
+        }
+    }
+    Ok((*hasher.finalize().as_bytes(), public_hash))
 }
 
 /// Converts one bridge eval into search outputs for its row.
@@ -2615,10 +2698,10 @@ where
     let mut key_to_unique: HashMap<[u8; 32], usize> = HashMap::new();
 
     for row in rows {
-        // Key on the cheap raw request; duplicate and cache-served rows never
-        // pay for feature packing.
-        let raw_request = eval_request_for_row(row, false)?;
-        let key = eval_request_key(&raw_request, packed)?;
+        // Key on a cheap structural hash of the request's semantic inputs;
+        // duplicate and cache-served rows never pay request construction or
+        // feature packing.
+        let (key, public_hash) = eval_row_key(row, packed)?;
         if let Some(cached) = cache.entries.get(&key) {
             cache.stats.cache_hits += 1;
             outputs.push(Some(cached.clone()));
@@ -2628,11 +2711,7 @@ where
         let unique_index = match key_to_unique.entry(key) {
             std::collections::hash_map::Entry::Occupied(entry) => *entry.get(),
             std::collections::hash_map::Entry::Vacant(entry) => {
-                let request = if packed {
-                    pack_eval_request(raw_request)?
-                } else {
-                    raw_request
-                };
+                let request = eval_request_for_row_with_public_hash(row, packed, &public_hash)?;
                 unique_requests.push(request);
                 unique_rows.push(row);
                 unique_keys.push(key);
@@ -5227,6 +5306,33 @@ mod tests {
         assert!(tail_bytes.iter().any(|value| *value != 0));
     }
 
+    #[test]
+    fn action_relation_tail_fast_path_matches_reference() {
+        for (seed, plies, menu) in [
+            (2_026_070_700_u64, 2usize, 8usize),
+            (2_026_070_700, 6, 8),
+            (2_026_070_701, 10, 12),
+            (2_026_070_702, 20, 6),
+        ] {
+            let state = advanced_test_state(seed, plies);
+            let row = gumbel::eval_row_for_state(&state, Some(menu))
+                .expect("row")
+                .expect("non-terminal");
+            let raw = eval_request_for_row(&row, false).expect("raw request");
+            let token_count = feature_tensors::public_token_features(&raw)
+                .expect("token features")
+                .len();
+            let action_count = row.afterstates.len();
+            let fast = feature_tensors::action_relation_tail(&raw, token_count, action_count)
+                .expect("fast tail");
+            let reference =
+                feature_tensors::action_relation_tail_reference(&raw, token_count, action_count)
+                    .expect("reference tail");
+            assert_eq!(fast, reference, "tail mismatch for seed {seed} plies {plies}");
+            assert!(fast.iter().any(|value| *value != 0));
+        }
+    }
+
     /// Deterministic bridge stand-in: eval values derived purely from the
     /// serialized request bytes, mirroring the real property that identical
     /// request payloads produce identical model outputs.
@@ -5322,6 +5428,125 @@ mod tests {
         assert_eq!(cache.stats.rows_requested, 2 * rows.len() as u64);
         assert_eq!(cache.stats.rows_sent, 3);
         assert_eq!(cache.stats.cache_hits, rows.len() as u64);
+    }
+
+    fn clone_eval_row(row: &gumbel::EvalRow) -> gumbel::EvalRow {
+        gumbel::EvalRow {
+            staged: row.staged.clone(),
+            prelude: row.prelude.clone(),
+            afterstates: row.afterstates.clone(),
+        }
+    }
+
+    /// Corpus of rows with deliberate near-duplicates: identical rows,
+    /// redeterminized hidden state, shared states with different menus, and
+    /// single-field perturbations of every request-visible input.
+    fn key_completeness_corpus() -> Vec<gumbel::EvalRow> {
+        let mut rows = Vec::new();
+        for (seed, plies) in [(2_026_070_900_u64, 2usize), (2_026_070_901, 4), (2_026_070_902, 7)] {
+            let state = advanced_test_state(seed, plies);
+            for menu in [4usize, 6] {
+                rows.push(
+                    gumbel::eval_row_for_state(&state, Some(menu))
+                        .expect("row")
+                        .expect("non-terminal"),
+                );
+            }
+        }
+
+        let base = clone_eval_row(&rows[0]);
+
+        // Byte-identical duplicate.
+        rows.push(clone_eval_row(&base));
+
+        // Same public state, permuted hidden order: requests stay identical.
+        let mut redet = clone_eval_row(&base);
+        redet.staged.redeterminize_hidden(GameSeed::from_u64(0xfeed_f00d));
+        rows.push(redet);
+
+        // Exact afterstate score perturbation.
+        let mut scored = clone_eval_row(&base);
+        scored.afterstates[0].exact_score_active += 0.5;
+        rows.push(scored);
+
+        // Immediate base-score perturbation.
+        let mut base_scored = clone_eval_row(&base);
+        base_scored.afterstates[0].candidate.resulting_base_score += 1;
+        rows.push(base_scored);
+
+        // Prelude projection perturbation (feeds every cleanup_choice field).
+        let mut prelude_flip = clone_eval_row(&base);
+        prelude_flip.prelude.replace_three_of_a_kind = !prelude_flip.prelude.replace_three_of_a_kind;
+        rows.push(prelude_flip);
+
+        // Action identity perturbation (only the serialized action changes).
+        let mut action_flip = clone_eval_row(&base);
+        action_flip.afterstates[0].candidate.action.replace_three_of_a_kind =
+            !action_flip.afterstates[0].candidate.action.replace_three_of_a_kind;
+        rows.push(action_flip);
+
+        // Menu order perturbation.
+        let mut swapped = clone_eval_row(&base);
+        swapped.afterstates.swap(0, 1);
+        rows.push(swapped);
+
+        // Menu subset perturbation.
+        let mut truncated = clone_eval_row(&base);
+        truncated.afterstates.pop();
+        rows.push(truncated);
+
+        // All non-finite exact scores collapse to JSON null: NaN and +inf
+        // rows must produce identical requests AND identical keys.
+        let mut nan_row = clone_eval_row(&base);
+        nan_row.afterstates[0].exact_score_active = f64::NAN;
+        rows.push(nan_row);
+        let mut inf_row = clone_eval_row(&base);
+        inf_row.afterstates[0].exact_score_active = f64::INFINITY;
+        rows.push(inf_row);
+
+        rows
+    }
+
+    #[test]
+    fn eval_row_key_matches_full_request_equality() {
+        let rows = key_completeness_corpus();
+        let fingerprints: Vec<([u8; 32], [u8; 32], Vec<u8>)> = rows
+            .iter()
+            .map(|row| {
+                let raw_key = eval_row_key(row, false).expect("raw key").0;
+                let packed_key = eval_row_key(row, true).expect("packed key").0;
+                let request = eval_request_for_row(row, false).expect("request");
+                let bytes = serde_json::to_vec(&request).expect("request bytes");
+                assert_ne!(raw_key, packed_key, "wire marker must split key spaces");
+                (raw_key, packed_key, bytes)
+            })
+            .collect();
+
+        let mut equal_pairs = 0usize;
+        for left in 0..fingerprints.len() {
+            for right in left + 1..fingerprints.len() {
+                let requests_equal = fingerprints[left].2 == fingerprints[right].2;
+                assert_eq!(
+                    fingerprints[left].0 == fingerprints[right].0,
+                    requests_equal,
+                    "raw key equality must match request byte equality for rows {left} and {right}"
+                );
+                assert_eq!(
+                    fingerprints[left].1 == fingerprints[right].1,
+                    requests_equal,
+                    "packed key equality must match request byte equality for rows {left} and {right}"
+                );
+                if requests_equal {
+                    equal_pairs += 1;
+                }
+            }
+        }
+        // The corpus must exercise the equal side too: the duplicate, the
+        // redeterminized twin, and the NaN/inf pair.
+        assert!(
+            equal_pairs >= 4,
+            "expected at least 4 request-equal pairs, found {equal_pairs}"
+        );
     }
 
     #[test]
