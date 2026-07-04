@@ -23,6 +23,26 @@ not data-noise bound**. Gumbel at n=256 = 3.2 s/dec vs control 10.9 s/dec.
 
 ## In flight right now
 
+- **CascadiaFormer-M from-scratch training** on john0 (launched ~22:40 07-03,
+  pid 607806, `logs/gumbel_selfplay_cycle3_m_job.{log}`): MODEL_SIZE=M,
+  scratch init (INIT_MANIFEST empty — S weights can't warm-start M; called
+  run_full_v3_training_pipeline.sh directly because the cycle wrapper forces
+  INIT_MANIFEST=$MODEL_MANIFEST), REGENERATE_ROOTS=0 reusing cycle-3 tensors
+  via `fixtures/full_v3_gumbel_selfplay_cycle3_m_*` SYMLINKS to the cycle3
+  files; same steps/batch/objective/selection as cycle 3 for comparability.
+  Checkpoint dir `checkpoints/full_v3_gumbel_selfplay_cycle3_m/`. When done:
+  battery = no-search 100g (2026994000), Gumbel n=64 100g + n=256 25g
+  (2026995000, --batch-runner), PLUS first n=512 25g probe and a
+  depth_rounds=2 n=64 25g probe (search-scaling ceiling questions).
+- **DECIDED 07-03 evening (cycle-3 gates)**: flat at all budgets — no-search
+  91.805 / n64 94.6475 (+0.175 vs c2, ns) / n256 95.67 (all c1/c2/c3 n256
+  within noise). Regret 0.152 (best ever) did not convert. MODEL-CLASS BOUND
+  at CascadiaFormer-S -> branch 3: model scaling before more data cycles.
+  Methodology gap: honest control per-seed never persisted (mean 95.40 only)
+  — persist per-seed on the next control re-run.
+
+## Previous in-flight (done)
+
 - **Cycle-3 gate battery** launched ~17:00 07-03 on john0
   (`logs/cycle3_gates_job.{sh,log,pid}`, done marker `ALL_GATES_DONE`):
   (1) no-search 100g seed 2026994000 -> `reports/gumbel_cycle3_no_search_game100.json`;
