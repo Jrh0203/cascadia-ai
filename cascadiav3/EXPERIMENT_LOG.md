@@ -2849,3 +2849,31 @@ w=1.0 cycle 5.
 Next: CascadiaFormer-L added (d1024/16L/16H, 207.0M params vs M 88.2M,
 S 15.0M; suite green). L from-scratch training on the cycle-4 corpus
 launches after the GPU knob-tuning sweep completes.
+
+## 2026-07-05 — Fleet incorporation (john1-4) + serving env finalized
+
+GPU knob sweep on john0 (M champion, 20g n=64 each, timing signal only):
+base p50 1.533s / TF32 1.124s (1.36x, ADOPTED for generation; batteries
+stay TF32-off for historical comparability) / bucketing 1.586s (no win
+without compile; skipped) / compile FAILED (triton needs a C compiler WSL
+lacks; fixable via CC=zig-cc, deferred) / bigger gather+row-cap neutral.
+Trainer probe (M, 300 steps, full knobs): 1.69 s/step wall (backward 1.15,
+forward 0.52, data 0.003 — worker fix confirmed), 17.9GB, SDPA verdict:
+flash structurally rejected (float mask), mem_efficient USABLE and
+selected — no forcing needed. Note: runbook train_step_seconds (0.047 for
+cycle 4) measures a narrower quantity than wall step time.
+
+Fleet (john1-4, Apple M4 10-core 16GB each): provisioned (rust 1.96,
+python 3.12 venv via uv, torch 2.12.1 cpu+mps, source + cycle-4 champion
+weights). MPS serves the fused-CGAB M forward cleanly on all hosts.
+Calibration (4 seeds each, n=128, w=0.75, 3 sessions, MPS): ~19 seeds/h
+per mini, +/-1% across hosts; fleet ~76 seeds/h ~= 1,800 seeds/day
+continuous. Policy: fleet generates TRAINING DATA ONLY (MPS numeric drift
+acceptable for self-play labels); all paired evaluation stays on john0.
+
+Fleet production run launched: 1,000 supplementary seeds (2026750000 x250
+per host, n=128, w=0.75, cycle-4 champion teacher) -> fleet_shard_johnN.npz
+on each host, ~13h. Destined for the next training cycle's replay mix.
+
+In flight on john0: CascadiaFormer-L (207M, d1024/16L) from scratch on the
+cycle-4 corpus, full trainer knobs + grad-checkpoint on, ETA ~5-7h.
