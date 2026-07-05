@@ -117,6 +117,20 @@ impl Tile {
             terrain_b
         }
     }
+
+    /// 6-bit masks of the edges showing `terrain_a` (`.0`) and `terrain_b`
+    /// (`.1`, empty for keystone tiles) under `rotation`. Bit `e` of a mask is
+    /// set exactly when [`Self::terrain_on_edge`]`(rotation, e)` returns that
+    /// terrain: dual tiles show `terrain_a` on edges with rotation offset
+    /// `0..3` and `terrain_b` on the rest.
+    pub fn terrain_edge_masks(self, rotation: Rotation) -> (u8, u8) {
+        if self.terrain_b.is_none() {
+            return (0b11_1111, 0);
+        }
+        let rotation = u32::from(rotation.get());
+        let mask_a = ((0b111u8 << rotation) | (0b111u8 >> (6 - rotation))) & 0b11_1111;
+        (mask_a, !mask_a & 0b11_1111)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

@@ -68,6 +68,34 @@ pub struct TileNeighborContext {
     edges: [Option<(Terrain, u8, u8)>; 6],
 }
 
+/// Precomputed answer structure for repeated
+/// [`HabitatAnalysis::largest_after_tile_with_context`] probes at one cell:
+/// for each terrain, the distinct neighboring components facing the cell as
+/// `(edge_mask, size)` pairs. See [`HabitatAnalysis::cell_habitat_query`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CellHabitatQuery {
+    components: [ArrayVec<(u8, u8), 6>; 5],
+    largest: [u8; 5],
+}
+
+impl CellHabitatQuery {
+    /// Largest habitat corridor for `terrain` after placing a tile at this
+    /// cell that shows `terrain` on the edges of `edge_mask`. Equivalent to
+    /// [`HabitatAnalysis::largest_after_tile_with_context`] for a tile that
+    /// contains `terrain`: every distinct neighboring component of `terrain`
+    /// reachable through one of the masked edges contributes its size once.
+    #[inline]
+    pub fn largest_after_terrain_edges(&self, terrain: Terrain, edge_mask: u8) -> u8 {
+        let mut size = 1u8;
+        for &(mask, component_size) in &self.components[terrain as usize] {
+            if mask & edge_mask != 0 {
+                size += component_size;
+            }
+        }
+        self.largest[terrain as usize].max(size)
+    }
+}
+
 impl HabitatAnalysis {
     pub fn largest(&self, terrain: Terrain) -> u8 {
         self.largest[terrain as usize]
@@ -184,6 +212,39 @@ impl HabitatAnalysis {
             component_size += size;
         }
         self.largest(terrain).max(component_size)
+    }
+
+    /// Builds a [`CellHabitatQuery`] for one candidate cell: the distinct
+    /// neighboring habitat components per terrain, each with the 6-bit mask
+    /// of edges on which it faces the cell and its size. Combined with
+    /// [`Tile::terrain_edge_mask`] this answers
+    /// [`Self::largest_after_tile_with_context`] with a couple of mask tests
+    /// instead of a per-call edge scan; the produced sizes are bit-identical.
+    pub fn cell_habitat_query(&self, context: &TileNeighborContext) -> CellHabitatQuery {
+        let mut components: [ArrayVec<(u8, u8, u8), 6>; 5] = Default::default();
+        for (edge, slot) in context.edges.iter().enumerate() {
+            let Some((facing, component, size)) = *slot else {
+                continue;
+            };
+            if component == 0 {
+                continue;
+            }
+            let bucket = &mut components[facing as usize];
+            if let Some(entry) = bucket.iter_mut().find(|(id, ..)| *id == component) {
+                entry.1 |= 1 << edge;
+            } else {
+                bucket.push((component, 1 << edge, size));
+            }
+        }
+        CellHabitatQuery {
+            components: components.map(|bucket| {
+                bucket
+                    .into_iter()
+                    .map(|(_, edge_mask, size)| (edge_mask, size))
+                    .collect()
+            }),
+            largest: self.largest,
+        }
     }
 
     pub fn matching_edges_after_tile(
@@ -320,6 +381,52 @@ impl Board {
         });
         self.placed_indices.push(index as u16);
         Ok(BoardDelta::TilePlaced { index })
+    }
+
+    /// [`Self::place_tile`] for coordinates already known to touch the
+    /// existing environment (the frontier of this board): skips only the
+    /// neighbor attachment scan, which by construction succeeds for frontier
+    /// cells. All other checks and the resulting board state are identical.
+    pub(crate) fn place_tile_attached(
+        &mut self,
+        coord: HexCoord,
+        tile: Tile,
+        rotation: Rotation,
+    ) -> Result<BoardDelta, BoardError> {
+        let index = coord.to_index().ok_or(BoardError::OutOfBounds(coord))?;
+        if self.cells[index].is_some() {
+            return Err(BoardError::Occupied(coord));
+        }
+        if self.placed_indices.len() == MAX_BOARD_TILES {
+            return Err(BoardError::TileLimitReached);
+        }
+        debug_assert!(
+            self.placed_indices.is_empty()
+                || coord.neighbors().into_iter().any(|neighbor| {
+                    neighbor
+                        .to_index()
+                        .is_some_and(|neighbor_index| self.cells[neighbor_index].is_some())
+                }),
+            "place_tile_attached requires a frontier coordinate"
+        );
+        self.cells[index] = Some(PlacedTile {
+            tile,
+            rotation,
+            wildlife: None,
+        });
+        self.placed_indices.push(index as u16);
+        Ok(BoardDelta::TilePlaced { index })
+    }
+
+    /// Rewrites the stored rotation of the tile at `index`. Used by the legal
+    /// action visitor to probe every rotation of a candidate tile without
+    /// re-running the placement checks per rotation; the board state is
+    /// identical to removing the tile and re-placing it with `rotation`.
+    pub(crate) fn set_placed_rotation(&mut self, index: usize, rotation: Rotation) {
+        self.cells[index]
+            .as_mut()
+            .expect("rotation updates target an occupied cell")
+            .rotation = rotation;
     }
 
     pub fn place_wildlife(
@@ -672,6 +779,72 @@ mod tests {
 
         assert_eq!(board.largest_habitat(Terrain::Forest), 2);
         assert_eq!(board.largest_habitat(Terrain::River), 1);
+    }
+
+    #[test]
+    fn terrain_edge_masks_match_terrain_on_edge() {
+        for tile in STANDARD_TILES.iter() {
+            for rotation in Rotation::ALL {
+                let (mask_a, mask_b) = tile.terrain_edge_masks(rotation);
+                assert_eq!(mask_a | mask_b, 0b11_1111);
+                assert_eq!(mask_a & mask_b, 0);
+                for edge in 0..6 {
+                    // Dual tiles never repeat a terrain in the catalog, so
+                    // the edge terrain decides mask membership; keystone
+                    // tiles show terrain_a everywhere.
+                    let terrain = tile.terrain_on_edge(rotation, edge);
+                    assert_eq!(
+                        mask_a & (1 << edge) != 0,
+                        terrain == tile.terrain_a,
+                        "tile {:?} rotation {rotation:?} edge {edge}",
+                        tile.id
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn cell_habitat_query_matches_context_probe_on_grown_boards() {
+        for (cluster_index, starter) in STARTER_CLUSTERS.iter().enumerate() {
+            let mut board = Board::from_starter(starter);
+            // Grow the board deterministically so queries see multi-tile
+            // components approached from several edges.
+            for step in 0..12usize {
+                let frontier = board.frontier();
+                let coord = frontier[(step * 7 + cluster_index) % frontier.len()];
+                let tile = STANDARD_TILES[(step * 11 + cluster_index * 3) % STANDARD_TILES.len()];
+                let rotation = Rotation::ALL[step % 6];
+                board.place_tile(coord, tile, rotation).unwrap();
+            }
+            let analysis = board.habitat_analysis();
+            for coord in board.frontier() {
+                let context = analysis.tile_neighbor_context(&board, coord);
+                let query = analysis.cell_habitat_query(&context);
+                for tile in STANDARD_TILES.iter().take(30) {
+                    for rotation in Rotation::ALL {
+                        let (mask_a, mask_b) = tile.terrain_edge_masks(rotation);
+                        assert_eq!(
+                            query.largest_after_terrain_edges(tile.terrain_a, mask_a),
+                            analysis.largest_after_tile_with_context(
+                                &context,
+                                *tile,
+                                rotation,
+                                tile.terrain_a
+                            ),
+                        );
+                        if let Some(terrain_b) = tile.terrain_b {
+                            assert_eq!(
+                                query.largest_after_terrain_edges(terrain_b, mask_b),
+                                analysis.largest_after_tile_with_context(
+                                    &context, *tile, rotation, terrain_b
+                                ),
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]

@@ -72,6 +72,35 @@ pub fn score_board(board: &Board, cards: ScoringCards) -> ScoreBreakdown {
     score
 }
 
+/// Equivalent of [`score_board`] that reuses a prebuilt [`HabitatAnalysis`]
+/// of the same board instead of re-running the five per-terrain component
+/// searches: `analysis.largest(terrain)` is the size of the largest
+/// connected `terrain` corridor, exactly what
+/// [`Board::largest_habitat`] computes.
+pub fn score_board_with_habitat_analysis(
+    board: &Board,
+    cards: ScoringCards,
+    analysis: &HabitatAnalysis,
+) -> ScoreBreakdown {
+    let mut score = ScoreBreakdown::default();
+    for terrain in Terrain::ALL {
+        score.habitat[terrain as usize] = u16::from(analysis.largest(terrain));
+    }
+    score.wildlife = [
+        score_bears(board, cards.bear),
+        score_elk(board, cards.elk),
+        score_salmon(board, cards.salmon),
+        score_hawks(board, cards.hawk),
+        score_foxes(board, cards.fox),
+    ];
+    score.nature_tokens = u16::from(board.nature_tokens());
+    score.base_total = score.habitat.iter().sum::<u16>()
+        + score.wildlife.iter().sum::<u16>()
+        + score.nature_tokens;
+    score.total = score.base_total;
+    score
+}
+
 pub fn rescore_after_placement(
     board: &Board,
     cards: ScoringCards,

@@ -13,7 +13,7 @@ mod tile_catalog;
 mod types;
 
 pub use board::{
-    Board, BoardDelta, BoardError, HabitatAnalysis, MAX_BOARD_TILES, PlacedTile,
+    Board, BoardDelta, BoardError, CellHabitatQuery, HabitatAnalysis, MAX_BOARD_TILES, PlacedTile,
     TileNeighborContext,
 };
 pub use game::{
@@ -26,7 +26,8 @@ pub use replay::{Replay, ReplayError};
 pub use scoring::{
     ScoreBreakdown, rescore_after_placement, rescore_after_placement_with_habitat_analysis,
     rescore_after_tile_with_habitat_analysis, rescore_after_tile_with_neighbor_context,
-    rescore_after_wildlife_placement, rescore_with_wildlife_scores, score_board, score_game,
+    rescore_after_wildlife_placement, rescore_with_wildlife_scores, score_board,
+    score_board_with_habitat_analysis, score_game,
 };
 pub use tile_catalog::{STANDARD_TILES, STARTER_CLUSTERS, StarterPlacement};
 pub use types::{

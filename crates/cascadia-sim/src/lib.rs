@@ -8,7 +8,8 @@ use blake3::Hasher;
 use cascadia_game::{
     Board, GameConfig, GameSeed, GameState, MarketPrelude, Replay, RuleError, ScoreBreakdown,
     TurnAction, Wildlife, rescore_after_tile_with_habitat_analysis,
-    rescore_after_wildlife_placement, rescore_with_wildlife_scores, score_board, score_game,
+    rescore_after_wildlife_placement, rescore_with_wildlife_scores, score_board,
+    score_board_with_habitat_analysis, score_game,
 };
 #[cfg(test)]
 use cascadia_game::{rescore_after_placement, rescore_after_placement_with_habitat_analysis};
@@ -143,32 +144,66 @@ pub(crate) fn rescore_after_cached_wildlife_placement(
     rescore_with_wildlife_scores(board, after_tile, wildlife_scores)
 }
 
+/// Reusable buffers for [`rank_greedy_actions_with_scratch`]: rollout loops
+/// rank one menu per ply, and reusing the evaluation, cache, and selection
+/// buffers across plies removes the per-call allocations. A fresh scratch is
+/// behaviorally identical to a reused one.
+#[derive(Default)]
+pub struct GreedyRankScratch {
+    /// Summed wildlife score per placed `(Wildlife, HexCoord)`, indexed by
+    /// `cell * 5 + wildlife` with a `u16::MAX` empty sentinel (wildlife sums
+    /// never reach it).
+    wildlife_sum_cache: Vec<u16>,
+    /// Per-cell habitat component summaries, reused across the drafts,
+    /// rotations, and terrains probed at that cell.
+    cell_queries: FxHashMap<u32, cascadia_game::CellHabitatQuery>,
+    evaluated: Vec<CompactGreedyAction>,
+    keyed: Vec<(u16, u32)>,
+}
+
 pub fn rank_greedy_actions(
     game: &GameState,
     prelude: &MarketPrelude,
     limit: Option<usize>,
 ) -> Result<Vec<GreedyCandidate>, SimulationError> {
+    rank_greedy_actions_with_scratch(game, prelude, limit, &mut GreedyRankScratch::default())
+}
+
+/// [`rank_greedy_actions`] with caller-owned scratch buffers. Candidates,
+/// order, and ranks are bit-identical to the historical implementation
+/// (full per-action `ScoreBreakdown` rebuild + stable sort by score
+/// descending): per candidate the resulting base score decomposes into
+/// `habitat_sum + wildlife_sum + nature_tokens`, each term of which is
+/// reproduced exactly from cached components.
+pub fn rank_greedy_actions_with_scratch(
+    game: &GameState,
+    prelude: &MarketPrelude,
+    limit: Option<usize>,
+    scratch: &mut GreedyRankScratch,
+) -> Result<Vec<GreedyCandidate>, SimulationError> {
     let cards = game.config().scoring_cards;
     let active_board = &game.boards()[game.current_player()];
-    let baseline = score_board(active_board, cards);
     let habitat = active_board.habitat_analysis();
-    // Caches the summed wildlife score per placed `(Wildlife, HexCoord)`.
-    // `rescore_with_wildlife_scores(board, after_tile, scores).base_total`
-    // equals `sum(after_tile.habitat) + sum(scores) + nature_tokens`, so
-    // caching the wildlife sum reproduces the historical per-action
-    // `ScoreBreakdown` rebuild bit for bit while doing two additions per
-    // action instead. The cache is a flat table indexed by
-    // `cell * 5 + wildlife` (wildlife sums never reach the `u16::MAX`
-    // sentinel).
-    let mut wildlife_sum_cache = vec![u16::MAX; cascadia_game::GRID_SIZE * 5];
-    // Neighbor habitat context per candidate cell, reused across the drafts,
-    // rotations, and terrains probed at that cell.
-    let mut neighbor_contexts: FxHashMap<u32, cascadia_game::TileNeighborContext> =
-        FxHashMap::default();
-    let mut evaluated: Vec<CompactGreedyAction> = Vec::new();
+    // `analysis.largest` equals `Board::largest_habitat` per terrain, so the
+    // baseline reuses the analysis instead of re-running the searches.
+    let baseline = score_board_with_habitat_analysis(active_board, cards, &habitat);
+    let baseline_habitat_sum = baseline.habitat.iter().sum::<u16>();
+    let baseline_wildlife_sum = baseline.wildlife.iter().sum::<u16>();
+
+    let GreedyRankScratch {
+        wildlife_sum_cache,
+        cell_queries,
+        evaluated,
+        keyed,
+    } = scratch;
+    wildlife_sum_cache.clear();
+    wildlife_sum_cache.resize(cascadia_game::GRID_SIZE * 5, u16::MAX);
+    cell_queries.clear();
+    evaluated.clear();
+
     game.visit_legal_turn_actions_with_tile_context(
         prelude,
-        &mut evaluated,
+        evaluated,
         // Same-slot independent drafts are dominated and were always filtered
         // out below; dropping the whole draft up front skips enumerating them.
         |draft| !is_dominated_same_slot_independent_draft(draft),
@@ -178,32 +213,55 @@ pub fn rank_greedy_actions(
                 .coord
                 .to_index()
                 .expect("tile placements target on-board cells") as u32;
-            let context = neighbor_contexts
-                .entry(cell)
-                .or_insert_with(|| habitat.tile_neighbor_context(board, placement.coord));
-            let after_tile = cascadia_game::rescore_after_tile_with_neighbor_context(
-                board,
-                cards,
-                baseline,
-                &habitat,
-                context,
-                placement.rotation,
-                tile,
-            );
-            let habitat_sum = after_tile.habitat.iter().sum::<u16>();
-            (after_tile, habitat_sum)
+            let query = cell_queries.entry(cell).or_insert_with(|| {
+                habitat.cell_habitat_query(&habitat.tile_neighbor_context(board, placement.coord))
+            });
+            // Habitat sum after the tile: the placement can only change the
+            // largest-corridor entries of the tile's own terrains, and each
+            // new value is >= the baseline entry, so the sum is updated by
+            // the two non-negative deltas. This reproduces
+            // `rescore_after_tile_with_neighbor_context(..).habitat.sum()`
+            // exactly.
+            let (mask_a, mask_b) = tile.terrain_edge_masks(placement.rotation);
+            let mut habitat_sum = baseline_habitat_sum;
+            match tile.terrain_b {
+                // A hypothetical dual tile showing one terrain twice updates
+                // a single habitat entry, probed with all six edges.
+                Some(terrain_b) if terrain_b == tile.terrain_a => {
+                    let new = query.largest_after_terrain_edges(tile.terrain_a, 0b11_1111);
+                    habitat_sum += u16::from(new) - baseline.habitat[tile.terrain_a as usize];
+                }
+                terrain_b => {
+                    let new_a = query.largest_after_terrain_edges(tile.terrain_a, mask_a);
+                    habitat_sum += u16::from(new_a) - baseline.habitat[tile.terrain_a as usize];
+                    if let Some(terrain_b) = terrain_b {
+                        let new_b = query.largest_after_terrain_edges(terrain_b, mask_b);
+                        habitat_sum += u16::from(new_b) - baseline.habitat[terrain_b as usize];
+                    }
+                }
+            }
+            // Base total of the wildlife-free candidate; equals
+            // `finish_score` over (updated habitat, baseline wildlife) with
+            // the pre-wildlife nature token count.
+            let base_total = habitat_sum + baseline_wildlife_sum + u16::from(board.nature_tokens());
+            (habitat_sum, base_total)
         },
-        |evaluated, board, draft, placement, &(after_tile, habitat_sum), placed_wildlife| {
+        |evaluated, board, draft, placement, &(habitat_sum, base_total), placed_wildlife| {
             let resulting_base_score = match placed_wildlife {
-                None => after_tile.base_total,
+                None => base_total,
                 Some(placed_wildlife) => {
                     let slot =
                         &mut wildlife_sum_cache[WildlifeScoreCache::key(placed_wildlife) as usize];
                     if *slot == u16::MAX {
+                        // Wildlife scores depend only on wildlife token
+                        // positions, and the untouched entries of the
+                        // historical `after_tile` breakdown equal the
+                        // baseline entries, so filling the cache from
+                        // `baseline` reproduces the historical sums exactly.
                         *slot = rescore_after_wildlife_placement(
                             board,
                             cards,
-                            after_tile,
+                            baseline,
                             placed_wildlife.0,
                         )
                         .wildlife
@@ -221,7 +279,7 @@ pub fn rank_greedy_actions(
             ));
         },
     )?;
-    Ok(select_top_greedy_candidates(evaluated, prelude, limit))
+    Ok(select_top_greedy_candidates(evaluated, keyed, prelude, limit))
 }
 
 /// Compact, `Copy` representation of one evaluated greedy action: resulting
@@ -246,7 +304,8 @@ type CompactGreedyAction = (
 /// reproduces the full stable sort prefix (candidates, order, and
 /// `immediate_rank`) bit for bit.
 fn select_top_greedy_candidates(
-    evaluated: Vec<CompactGreedyAction>,
+    evaluated: &mut Vec<CompactGreedyAction>,
+    keyed: &mut Vec<(u16, u32)>,
     prelude: &MarketPrelude,
     limit: Option<usize>,
 ) -> Vec<GreedyCandidate> {
@@ -270,27 +329,28 @@ fn select_top_greedy_candidates(
     match limit {
         Some(0) => Vec::new(),
         Some(limit) if limit < evaluated.len() => {
-            let mut keyed: Vec<(u16, u32)> = evaluated
-                .iter()
-                .enumerate()
-                .map(|(index, (score, ..))| (*score, index as u32))
-                .collect();
+            keyed.clear();
+            keyed.extend(
+                evaluated
+                    .iter()
+                    .enumerate()
+                    .map(|(index, (score, ..))| (*score, index as u32)),
+            );
             keyed.select_nth_unstable_by(limit - 1, ordering);
             keyed.truncate(limit);
             keyed.sort_unstable_by(ordering);
             keyed
-                .into_iter()
+                .iter()
                 .enumerate()
-                .map(|(rank, (_, index))| materialize(evaluated[index as usize], rank + 1))
+                .map(|(rank, (_, index))| materialize(evaluated[*index as usize], rank + 1))
                 .collect()
         }
         _ => {
-            let mut evaluated = evaluated;
             evaluated.sort_by(|(left, ..), (right, ..)| right.cmp(left));
             evaluated
-                .into_iter()
+                .iter()
                 .enumerate()
-                .map(|(index, compact)| materialize(compact, index + 1))
+                .map(|(index, compact)| materialize(*compact, index + 1))
                 .collect()
         }
     }

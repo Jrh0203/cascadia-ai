@@ -18,7 +18,10 @@ use cascadia_game::{
     DraftChoice, GameConfig, GameSeed, GameState, HexCoord, MarketPrelude, MarketSlot, RuleError,
     ScoreBreakdown, Tile, TurnAction, Wildlife, score_game,
 };
-use cascadia_sim::{GreedyCandidate, SimulationError, rank_greedy_actions};
+use cascadia_sim::{
+    GreedyCandidate, GreedyRankScratch, SimulationError, rank_greedy_actions,
+    rank_greedy_actions_with_scratch,
+};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use rayon::prelude::*;
@@ -4130,17 +4133,34 @@ fn complete_with_sampled_greedy(
     if max_plies == Some(0) {
         return Ok((game, truncated));
     }
+    // Ranking buffers reused across every ply of this rollout.
+    let mut scratch = GreedyRankScratch::default();
     while !game.is_game_over() {
-        let (_prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
-        let candidates =
-            match rank_greedy_actions(&staged, &MarketPrelude::default(), Some(max_actions)) {
-                Ok(candidates) => candidates,
-                Err(SimulationError::Rules(error)) if is_rollout_truncation_rule_error(&error) => {
-                    truncated = true;
-                    break;
-                }
-                Err(error) => return Err(error).context("ranking sampled greedy rollout actions"),
-            };
+        // `preview_free_three_of_a_kind_if_feasible` returns `(default
+        // prelude, self.clone())` when the market holds no three of a kind,
+        // so the staging (and its state clone) is only performed when a
+        // replacement is actually available; otherwise `game` is ranked
+        // directly. Trajectories and truncation states are identical either
+        // way: `staged` replaces `game` exactly where the historical loop
+        // assigned `game = staged` (after a successful ranking).
+        let staged = if game.market().three_of_a_kind().is_some() {
+            Some(game.preview_free_three_of_a_kind_if_feasible()?.1)
+        } else {
+            None
+        };
+        let candidates = match rank_greedy_actions_with_scratch(
+            staged.as_ref().unwrap_or(&game),
+            &MarketPrelude::default(),
+            Some(max_actions),
+            &mut scratch,
+        ) {
+            Ok(candidates) => candidates,
+            Err(SimulationError::Rules(error)) if is_rollout_truncation_rule_error(&error) => {
+                truncated = true;
+                break;
+            }
+            Err(error) => return Err(error).context("ranking sampled greedy rollout actions"),
+        };
         if candidates.is_empty() {
             bail!(
                 "no legal action before game over at turn {}",
@@ -4154,7 +4174,9 @@ fn complete_with_sampled_greedy(
             rng.gen_range(0..sample_limit)
         };
         let best = &candidates[sampled_index];
-        game = staged;
+        if let Some(staged) = staged {
+            game = staged;
+        }
         if let Err(error) = game.apply(&best.action) {
             if is_rollout_truncation_rule_error(&error) {
                 truncated = true;
