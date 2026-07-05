@@ -2835,3 +2835,17 @@ n=512 50g and depth_rounds=2 at n=256 50g (seeds 2026995000).
 Decision: probes CI+ -> budget/depth push toward 98+, plan the 1,000-game
 100-gate; probes flat -> CascadiaFormer-L (repeat the capacity jump) and/or
 w=1.0 cycle 5.
+
+## 2026-07-05 — Cycle-4 champion probes: budget lever alive on M; depth dead
+
+- n=512 (50g): mean 97.47, p50 97.0, p90 101.0 — paired vs n=256 +0.575
+  CI95 [0.0301, 1.1199], EXCL0. M keeps scaling with budget where S was flat.
+- depth_rounds=2 at n=256 (50g): 96.87, paired -0.025 [-0.4756, 0.4256] —
+  ns at 1.8x cost. Depth lever closed (matches the S result).
+- Budget curve on cycle-4 M (n=64/256/512): 95.77 / 96.95 / 97.47 —
+  ~+0.5 per doubling, decelerating. Budget alone will not reach 100; the
+  playbook is capacity jump (shift the curve) + EI (compress it downward).
+
+Next: CascadiaFormer-L added (d1024/16L/16H, 207.0M params vs M 88.2M,
+S 15.0M; suite green). L from-scratch training on the cycle-4 corpus
+launches after the GPU knob-tuning sweep completes.
