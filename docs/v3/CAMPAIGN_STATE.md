@@ -12,11 +12,22 @@ the in-flight picture changes.
 n=64 95.24/95.54 (+0.59/+0.89 vs S, both excl-0), **n=256 97.11** (+1.44
 excl-0). S is saturated (n512 flat, depth2 flat, 3 data cycles flat).
 M no-search q is WEAKER than S (90.88) — M's strength expresses via search.
-In flight: fused-CGAB GPU A/B on M (logs/cgab_ab_job.*, marker AB_DONE,
-seeds 2026997000). Next: power the 97-gate (n=256, 100+ games, vs S
-incumbent, needs +0.25 at 250-500 pairs per TRAINING_PIPELINE.md); deploy
-trainer knobs; cycle 4 = EI on M teacher (fused forward makes M labels
-affordable). Optimization stack pass 4+5 DEPLOYED to john0 (28/28 remote).
+**97-GATE PASSED at power (07-04 ~20:30)**: M vs S at n=256, 100 pairs:
+96.9125 vs 95.7175, paired +1.1950 CI [0.8306, 1.5594] — promoted. M p90 =
+100.0; 2/100 games >= 100 mean seat. Fused-CGAB A/B: EXACT parity (paired
+delta 0.0 on 25 games), serving ~6% faster at n=64 (CPU-bound there).
+**IN FLIGHT: Cycle 4 (EI-5)** launched 07-04 ~21:00, pid 718264,
+`logs/gumbel_selfplay_cycle4_job.*`, completion marker
+`reports/full_v3_gumbel_selfplay_cycle4_runbook.json`: M teacher
+(step_0010000), n=256 labels, w=0.75, seeds 2026740000x1250 /
+2026840000x125, tails c3+c2 (1.0/0.5/0.25), MODEL_SIZE=M warm start,
+regret selection, TRAINER_EXTRA_ARGS="--data-workers 4 --prefetch-factor 4
+--tf32 --fused-optimizer --cgab-fused", bridge fused via MODEL_SERVICE env
+prefix + 8x cell budget. Gen ETA ~7-10h (measure from progress lines).
+When done: battery vs M champion (no-search, n=64, n=256 100g paired) —
+promotion = CI+ vs M; then 100-point confirmation run planning (1,000
+games) if means approach 100. Engine pass 2 deployed (rollouts +76%).
+All optimization passes 1-5 + engine pass 2 now LIVE on john0.
 
 ## Scoreboard (all honest / no hidden-order peek)
 
