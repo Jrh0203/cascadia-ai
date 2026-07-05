@@ -2784,3 +2784,27 @@ n=256, 25g). NEW CHAMPION: cycle3_m step_0010000 (regret-selected).
 Next: deploy trainer+serving optimization stack; GPU A/B of fused CGAB;
 power the 97-gate properly (n=256 at 100+ games); then cycle 4 = EI on M
 (M teacher labels now affordable with fused forward + optimized stack).
+
+## 2026-07-04 — 97-gate passed at power: M formally promoted; cycle 4 launched
+
+Powered gate (n=256, 100 paired games, seeds 2026995000, both sides on the
+fused-CGAB serving stack after the 25-game A/B showed EXACT score parity —
+paired delta identically 0.0 across 25 games):
+
+- M champion (cycle3_m step_0010000): mean 96.9125, p50 97.0, p90 100.0;
+  2/100 games at mean seat >= 100.
+- S incumbent (cycle3 best_locked_val): mean 95.7175, p50 96.0, p90 99.0.
+- Paired M-S: +1.1950, CI95 [0.8306, 1.5594], n=100 — CI lower bound 3.3x
+  the +0.25 promotion bar. PROMOTED.
+
+Also merged today: engine hot-path pass 2 (habitat delta queries, sum-only
+greedy ranking, scratch reuse): rollouts +76% throughput, 1.70x end-to-end
+export CPU, byte-identical corpora; deployed to john0 (28/28 remote).
+
+Cycle 4 (EI-5) launched on the full optimized stack: M teacher
+(step_0010000), n=256 labels, w=0.75 (trust ramp), 1,250+125 seeds
+(2026740000 / 2026840000), replay tails cycles 3+2 (1.0/0.5/0.25),
+MODEL_SIZE=M warm-started from the champion, regret selection (wrapper
+default), trainer knobs: --data-workers 4 --prefetch-factor 4 --tf32
+--fused-optimizer --cgab-fused; bridge served with CASCADIA_CGAB_FUSED=1
+and 8x cell budget via MODEL_SERVICE env prefix.
