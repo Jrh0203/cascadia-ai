@@ -454,3 +454,60 @@ mostly avoided memory traffic; the expected GPU win is memory-bandwidth plus
 the ability to raise `CASCADIA_EVAL_CELL_BUDGET` for larger serving chunks.
 Equivalence, padding contract, and default-off behavior are pinned by
 `cascadiav3/tests/test_cgab_fused.py`.
+
+## Engine Hot-Path Pass 2 (2026-07-04, rollout/menu ranking)
+
+Production profiling post-eval-path work attributed ~59% of worker CPU to
+`complete_with_sampled_greedy` (greedy terminal rollouts) and ~14% to interior
+menu building — both bottoming out in `rank_greedy_actions`. Sampling profile
+of the rollout loop before this pass: ~28% `largest_after_tile_with_context`
+(per-candidate habitat probe), ~32% enumeration + per-candidate
+`ScoreBreakdown` assembly, ~10% `place_tile`, ~8% memmove (state clones), ~5%
+top-k select, ~4% `GameState::validate`, ~8% wildlife scorers (already cached).
+
+Landed changes, all exact-parity-gated:
+
+1. **Precomputed per-cell habitat queries** (`cascadia-game`):
+   `HabitatAnalysis::cell_habitat_query` collapses a cell's
+   `TileNeighborContext` into per-terrain distinct `(edge_mask, size)`
+   component lists; `Tile::terrain_edge_masks` gives the 6-bit terrain edge
+   masks per rotation. A candidate's habitat probe becomes a couple of mask
+   tests instead of a 6-edge scan with component dedupe per (tile, rotation,
+   cell, terrain).
+2. **Sum-only candidate scoring** (`cascadia-sim`): `rank_greedy_actions` no
+   longer rebuilds a `ScoreBreakdown` per placement; resulting base score is
+   assembled as `habitat_sum + wildlife_sum + nature_tokens` from the baseline
+   sums, the habitat delta above, and the pass-1 wildlife-sum cache (cache
+   fill now feeds off `baseline` — untouched entries provably equal the
+   historical `after_tile` entries).
+3. **Rotation-hoisted placement + attach-skip** (`cascadia-game` visitor):
+   the candidate tile is placed once per cell (placement checks are
+   rotation-independent) and only its stored rotation is rewritten per probe;
+   frontier coordinates skip the attachment scan (`place_tile_attached`).
+4. **Scratch reuse** (`rank_greedy_actions_with_scratch` +
+   `GreedyRankScratch`): evaluation vec, wildlife-sum cache, cell-query map,
+   and top-k key buffer are reusable across plies; `complete_with_sampled_greedy`
+   and the bench thread one scratch through the rollout loop.
+5. **Staged-clone skip** (exporter rollout loop): the free three-of-a-kind
+   preview only clones the `GameState` when the market actually holds a
+   three of a kind; otherwise ranking runs directly on the rollout state.
+   Also: `score_board_with_habitat_analysis` reuses the analysis' largest
+   components for the per-ply baseline instead of 5 extra BFS passes.
+
+Rejected: top-k-aware pruning of enumeration (no admissible bound available
+that provably preserves the top-k set and its enumeration-order tie-breaks;
+the expensive per-candidate work is now cache-amortized anyway) and
+apply+undo rollout plies (truncation errors must leave the pre-apply state
+observable; the transactional clone stays).
+
+Measured (Mac mini dev box, `bench_hot_paths`, bit-parity checksums across
+all 45 sections): `rank_greedy_actions Some(16)` 38.8→21.8µs, 112.5→59.3µs,
+110.1→57.8µs (seeds 11; plies 10/40/70), similar across seeds (~1.8-2.0x);
+rollout-to-terminal sections 6926→4225µs, 6034→3179µs, 8122→4184µs
+(~1.6-1.9x). Sampled rollout loop: 131.4 → 231.7 rollouts/s (+76%).
+End-to-end greedy-state-search-bootstrap export (6 seeds × 10 plies,
+rollouts_per_action 3, 4 threads): 8.00s → 4.71s wall, 24.0 → 14.1 CPU-s
+(**1.70x**), npz sha256 byte-identical to an unmodified-baseline build; the
+gumbel-selfplay mock-bridge export is byte-identical too. Golden rollout
+label hash unchanged; 28/28 exporter tests; pass-1 greedy-ranking
+differential test still pins the optimized path to the reference.

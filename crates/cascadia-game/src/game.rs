@@ -677,8 +677,20 @@ impl GameState {
             for coord in &frontier {
                 let base_wildlife_placements = &wildlife_placements[wildlife as usize];
                 let placed_tile_hosts_wildlife = tile.wildlife.contains(wildlife);
-                for rotation in rotations {
-                    let tile_delta = board.place_tile(*coord, tile, *rotation)?;
+                // The placement checks (bounds, occupancy, attachment, tile
+                // limit) are rotation-independent, so the tile is placed once
+                // per cell and only its stored rotation is rewritten while
+                // the rotations are probed. Board state at every visit is
+                // identical to placing the tile with that rotation directly.
+                // Frontier coordinates touch the environment by construction,
+                // so the attachment scan is skipped.
+                let tile_delta = board.place_tile_attached(*coord, tile, rotations[0])?;
+                for (rotation_index, rotation) in rotations.iter().enumerate() {
+                    if rotation_index > 0 {
+                        if let crate::BoardDelta::TilePlaced { index } = tile_delta {
+                            board.set_placed_rotation(index, *rotation);
+                        }
+                    }
                     #[cfg(debug_assertions)]
                     {
                         let mut valid_wildlife_placements = base_wildlife_placements.clone();
@@ -712,8 +724,8 @@ impl GameState {
                         );
                         board.undo(wildlife_delta)?;
                     }
-                    board.undo(tile_delta)?;
                 }
+                board.undo(tile_delta)?;
             }
             if independent {
                 board.refund_nature_token();
