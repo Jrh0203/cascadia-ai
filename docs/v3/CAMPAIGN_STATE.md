@@ -16,7 +16,19 @@ M no-search q is WEAKER than S (90.88) — M's strength expresses via search.
 96.9125 vs 95.7175, paired +1.1950 CI [0.8306, 1.5594] — promoted. M p90 =
 100.0; 2/100 games >= 100 mean seat. Fused-CGAB A/B: EXACT parity (paired
 delta 0.0 on 25 games), serving ~6% faster at n=64 (CPU-bound there).
-**IN FLIGHT: Cycle 4 (EI-5)** launched 07-04 ~21:00, pid 718264,
+**IN FLIGHT (07-05 evening)**: (1) CascadiaFormer-L (207M) from-scratch on
+cycle-4 corpus, john0, `logs/gumbel_selfplay_cycle4_l_job.*`, runbook
+marker `full_v3_gumbel_selfplay_cycle4_l_runbook.json`, ETA ~5-7h — the
+capacity-repeat experiment; battery vs cycle-4 champion decides the road
+to 100. (2) Fleet john1-4 (M4 minis, provisioned, MPS serving, ~19
+seeds/h each): 1,000 supplementary n=128 seeds (2026750000, 250/host,
+w=0.75, c4 champion teacher) -> `~/cascadia/fleet_shard_johnN.npz`, ~13h;
+fetch + fold into next cycle's replay mix. Fleet = training data only.
+Serving env adopted for generation: fused CGAB + 8x cell budget + TF32
+(batteries keep TF32 OFF). Cycle-4 M promoted champion earlier today
+(n64 95.77 CI+; n256 96.95; probes: n512 97.47 CI+, depth2 dead).
+
+**PREVIOUS: Cycle 4 (EI-5)** launched 07-04 ~21:00, pid 718264,
 `logs/gumbel_selfplay_cycle4_job.*`, completion marker
 `reports/full_v3_gumbel_selfplay_cycle4_runbook.json`: M teacher
 (step_0010000), n=256 labels, w=0.75, seeds 2026740000x1250 /
