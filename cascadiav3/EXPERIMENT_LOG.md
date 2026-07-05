@@ -2808,3 +2808,30 @@ MODEL_SIZE=M warm-started from the champion, regret selection (wrapper
 default), trainer knobs: --data-workers 4 --prefetch-factor 4 --tf32
 --fused-optimizer --cgab-fused; bridge served with CASCADIA_CGAB_FUSED=1
 and 8x cell budget via MODEL_SERVICE env prefix.
+
+## 2026-07-05 — Cycle-4 battery: EI-on-M works at low budget; ceiling unmoved. PROMOTED.
+
+Cycle 4 end-to-end: 8.1h (gen 26,743s at n=256 labels + M teacher; training
+1,180s at 0.0472 s/step — the optimized trainer's first production run, ~50x
+the first M run's step time; example-pass clamp correctly limited to 4,833
+steps / 4 passes over 232k records). Generation dedup at n=256: 75.0%
+(9.93M rows -> 2.48M sent).
+
+| Benchmark (100g each) | M champ (c3m s10000) | Cycle-4 M | Paired |
+|---|---:|---:|---|
+| No-search q | 90.8775 | 91.1775 | — |
+| Gumbel n=64 | 95.2375 | 95.77 | +0.5325 CI [0.1524, 0.9126] EXCL0 |
+| Gumbel n=256 | 96.9125 | 96.95 | +0.0375 CI [-0.2996, 0.3746] ns |
+
+PROMOTED (dominates: CI+ at n=64, parity at n=256, better no-search).
+NEW CHAMPION: cycle4 best_locked_val. Locked regret 0.2576 (not comparable
+across cycles — val distribution changed with n=256/w=0.75 labels).
+
+Pattern: EI compresses the teacher's search strength into the prior
+(low-budget play rises); the high-budget ceiling stays ~96.9-97.0. M's own
+budget/depth scaling never probed (earlier probes were on saturated S; M
+scaled +1.67 from n=64->256). Probes launched on cycle-4 champion:
+n=512 50g and depth_rounds=2 at n=256 50g (seeds 2026995000).
+Decision: probes CI+ -> budget/depth push toward 98+, plan the 1,000-game
+100-gate; probes flat -> CascadiaFormer-L (repeat the capacity jump) and/or
+w=1.0 cycle 5.
