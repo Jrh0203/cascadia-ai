@@ -211,3 +211,17 @@ the opponent pool; champion stays.
 - Distillation/retention (Phase D) only after a >=97 checkpoint.
 - Benchmark-side shared-bridge support (gates still owned-bridge; fine).
 - EI-1 corpus is v1 schema; only v2 shards join replay windows.
+
+## Monitor discipline (learned 07-05/06, the hard way)
+
+- NEVER end a monitor's remote ssh command with `pgrep`/`grep` whose
+  nonzero exit (no match) makes the ssh look failed — a `|| retry` wrapper
+  then skips the completion check forever. End remote pipelines with
+  `| tail -1` (exit 0) or capture output without exit-code coupling.
+- One consolidated watchdog per work-wave, not one monitor per job.
+- Error patterns: case-matters (`error: ` for argparse), exclude benign
+  matches (`*_invariant_error` metric keys, preflight BrokenPipeError).
+- Monitors die with the session: on ANY session resume, first action is
+  checking every in-flight job log listed here.
+- pkill/pgrep -f self-match: quote patterns that appear in your own
+  command line (kill by pid file, chain jobs on done-marker files).
