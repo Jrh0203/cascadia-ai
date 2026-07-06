@@ -1,9 +1,58 @@
-# Campaign Working State (2026-07-03 morning)
+# Campaign Working State (updated 2026-07-06 morning)
 
 Live working notes for the Gumbel self-play campaign. Companion to
 [GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md) (strategy) and
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
+
+## RESUME HERE (07-06)
+
+**Champion: cycle-4 M** (`checkpoints/full_v3_gumbel_selfplay_cycle4/
+best_locked_val.manifest.json`), promoted 07-05: no-search 91.18 / n64
+95.77 / n256 96.95 / n512 97.47 (probe, CI+). Best-ever number: 97.11
+(c3m at n256). Depth-2 dead at S and M. Budget curve decelerating ~+0.5
+per doubling.
+
+**In flight right now:**
+1. **L-v2 training** on john0 (pid file `logs/gumbel_selfplay_cycle4_l_job
+   .pid`, launched ~07-06 morning, ETA ~3h from launch): CascadiaFormer-L
+   (207M, config added to torch_cascadiaformer.py + argparse) from scratch,
+   MAX_EXAMPLE_PASSES=16 (~19.3k steps). Context: L-v1 at the default
+   4-pass clamp was FLAT vs c4-M (n64 -0.35 ns, n256 -0.16 ns) but that
+   was optimization-starved (successful from-scratch c3-M had ~34 passes).
+   Runbook marker `reports/full_v3_gumbel_selfplay_cycle4_l_runbook.json`
+   (v1's archived as *_runbook_v1_4pass.json). When done: battery
+   (no-search + n64 + n256, 100g, seeds 2026994000/2026995000, batch
+   runner, CASCADIA_CGAB_FUSED=1 + 8x cell budget, TF32 OFF) paired vs
+   c4-M reports gumbel_cycle4_gate_n{64,256}.json.
+   - L-v2 beats c4-M (CI+) -> capacity lever reopened: cycle 5 = L-taught
+     EI (n=256 labels, w=0.75->1.0) + fleet corpus in the mix.
+   - L-v2 flat -> capacity closed at this data scale: cycle 5 = M-taught,
+     doubled data (fleet corpus + john0 generation), consider w=1.0
+     (rollout-free generation, ~2x CPU savings) and n=512 labels.
+2. **Fleet corpus** john1-4 (~06:30-07:00 finish): 1,000 seeds n=128
+   w=0.75 c4-champion teacher -> `~/cascadia/fleet_shard_john{1..4}.npz`
+   on each mini. FETCH via scp to
+   `cascadiav3/fixtures/fleet_shard_john{1..4}.npz` (john0), then filter/
+   materialize like any v2 shard and add to EXTRA_TRAIN_TAIL_TENSORS.
+   Fleet policy: training data ONLY (MPS numerics; never for gates).
+
+**Fleet ops (john1-4, no -p flag, different usernames — john1=johnherrick,
+john3=john3):** repo at ~/cascadia, venv at ~/cascadia/venv (python3.12 via
+uv, torch 2.12.1 with MPS), release binary built, cycle-4 champion weights
+present. ~19 seeds/h per mini at n=128/MPS/3 sessions. Launch pattern in
+EXPERIMENT_LOG 07-05 entry.
+
+**Serving env (generation):** CASCADIA_CGAB_FUSED=1
+CASCADIA_EVAL_CELL_BUDGET=16777216 CASCADIA_BRIDGE_TF32=1. Batteries:
+fused yes, TF32 NO. Trainer knobs: --data-workers 4 --prefetch-factor 4
+--tf32 --fused-optimizer --cgab-fused (+ --grad-checkpoint on for L).
+SDPA already mem_efficient; compile broken on WSL (no cc; try zig-cc).
+M wall step 1.69s b192; L-ckpt ~0.57s b192 (46-min 4-pass run).
+
+**100-gate context:** target = mean seat >=100 over 1,000 games.
+Current best 97.11. A 1,000-game n256 confirmation ~20h on john0 —
+plan only when a champion hits ~99+ at n256/n512 on 100g.
 
 ## CHAMPION (2026-07-04 evening): CascadiaFormer-M cycle3 step_0010000
 
