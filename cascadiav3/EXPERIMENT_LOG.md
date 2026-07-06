@@ -3047,3 +3047,29 @@ too. With shard-mmap + 4 workers the M trainer is now GPU-bound at
 ~0.23 s/step: full 25k-step budgets now cost ~1.6h, and the 4-pass
 clamped cycles train in ~25 min. Battery for the ablation launched
 (reports gumbel_c5nf_*).
+
+## 2026-07-06 13:42 — Ablation verdict: fleet n=128 data was the poison; w=1.0 exonerated
+
+Nofleet retrain (identical to cycle-5 minus the 4 fleet shards) vs c4-M,
+100g paired: no-search +0.4475 [-0.0107, +0.9057] ns (a hair from CI+;
+91.63 = best M-line no-search yet); n64 -0.0925 [-0.48, +0.29] ns (the
+with-fleet CI- is GONE); n256 +0.035 ns.
+
+Conclusions:
+1. Fleet n=128/MPS labels at weight 0.75 caused cycle-5's n64 CI-.
+   Fleet regime must change before its data re-enters training (options:
+   much lower weight, higher label budget, or value-only usage). Wave-2
+   left running (minis otherwise idle; data may still serve low-weight
+   or value-only trials).
+2. w=1.0 (rollout-free) labels are fine — generation keeps the ~2x CPU
+   saving.
+3. Still NOT promotable (no CI+ leg). The M-class ~97 plateau at n256
+   now stands across: data 1x->3x, labels n256->n512, capacity M->L.
+   EI compresses the teacher into the prior but the search ceiling
+   itself is the binding constraint.
+
+Next lever (unexplored): serving-side search shape. Probe sweep
+launched on c4-M champion, 25g paired vs default-config control at the
+same budget: determinizations 8 and 16 (vs 4) at n256, top_m 32 (vs 16)
+at n512, k_interior 32 (vs 16) at n256, and an n=1024 ceiling probe.
+Any CI+/promising delta gets a 100g confirm.
