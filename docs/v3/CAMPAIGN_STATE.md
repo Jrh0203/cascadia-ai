@@ -5,64 +5,54 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-06, post L-v2 verdict)
+## RESUME HERE (07-06 evening)
 
 **Champion: cycle-4 M** (`checkpoints/full_v3_gumbel_selfplay_cycle4/
-best_locked_val.manifest.json`): no-search 91.18 / n64 95.77 / n256 96.95
-/ n512 97.47 (probe, CI+). Depth-2 dead at S and M. Budget curve
-decelerating ~+0.5 per doubling.
+best_locked_val.manifest.json`) at **NEW SERVING CONFIG n512/top_m16/
+w0.5/d8: 97.845 on 100g** (+0.895 CI+ [0.56,1.23] vs old n256-d4
+config; 4/100 games >=100; 5.5 s/dec). Gap to 100-gate: -2.16.
 
-**L-v2 verdict (07-06 04:40): FLAT at all budgets** (no-search -0.215 ns,
-n64 -0.223 ns, n256 -0.020 ns; 100g paired; reports gumbel_l2_*).
-Clean result — 16 passes, regret bottomed at step 7000/19333. Capacity
-is NOT binding at ~100k-root scale; lever = data volume + label quality.
+**07-06 findings (all 100g-paired unless noted, see EXPERIMENT_LOG):**
+- L-v2 (207M, 16-pass): FLAT everywhere -> capacity closed at this
+  data scale.
+- Cycle-5 (n512 w1.0 labels + fleet mix): n64 CI-; nofleet ablation
+  proved **fleet n=128/MPS data at 0.75 weight was the poison**; w=1.0
+  exonerated (keeps ~2x CPU savings). Neither promotable; M-class ~97
+  plateau held across capacity/data/label-budget levers.
+- SERVING BREAKTHROUGH: **determinizations 4->8** is the live lever
+  (probes CI+ at 25g; n512_d8 confirmed CI+ at 100g). k_interior gains
+  don't stack; d16=d8; n256_d8 fades to ns at power (needs >=64 sims
+  per world). Trainer now GPU-bound 0.23 s/step (mmap fix ca5c387 +
+  4 workers): full cycles train in ~25 min.
 
 **In flight right now:**
-1. **Cycle 5** on john0 (`logs/gumbel_selfplay_cycle5_job.*`, pid 904648,
-   launched 04:55, completion marker
-   `reports/full_v3_gumbel_selfplay_cycle5_runbook.json`): M-taught EI,
-   c4-M warm start, **n=512 labels, w=1.0 (first rollout-free cycle)**,
-   seeds 2026770000x1250 / 2026870000x125, replay mix cycle5(1.0) +
-   fleet john1-4 (0.75 each) + cycle4(0.5) + cycle3(0.25). Gen ETA
-   ~8-12h then ~1h train. When done: battery vs c4-M (no-search/n64/n256
-   100g, seeds 2026994000/2026995000, batch runner, fused CGAB + 8x cell
-   budget, TF32 OFF), verdict + branch:
-   - CI+ -> promote, consider n=512 serving battery leg and 100-gate
-     planning if n256 mean approaches 99.
-   - flat -> data-scale hypothesis weakens; next levers are serving
-     budget (n512 already CI+) and a much larger fleet corpus regime.
-2. **Fleet wave-1: DONE and folded in** (07-06 06:45): 4x 20k records
-   fetched, filtered, materialized to
-   `fixtures/fleet_shard_johnN_top64_relation_tail.npz` (invariants
-   PASS). Cycle-5 trainer dependency satisfied.
-3. **Fleet wave-2 in flight** john1-4 (launched ~06:45, ETA ~19:45):
-   seeds 2026780000 x250/host, n=128 w=0.75 (rollout anchor kept on MPS
-   deliberately), outputs `~/cascadia/fleet2_shard_johnN.npz` + logs
-   `fleet2_shard_johnN.log`. Destined for cycle-6. Same fetch/process
-   recipe as wave-1 (process script pattern:
-   `logs/fleet_process_job.sh` on john0, adapt names to fleet2_).
+1. **Cycle 6** on john0 (`logs/gumbel_selfplay_cycle6_job.*`, pid
+   956506, launched ~18:05, marker
+   `reports/full_v3_gumbel_selfplay_cycle6_runbook.json`): teacher =
+   c4-M champion with the CONFIRMED d8 search (n=512, top_m 16, d8,
+   w=1.0), seeds 2026790000x1250 / 2026890000x125, replay
+   c6(1.0)/c5(0.5)/c4(0.25), NO fleet data, trainer 4 workers + mmap.
+   Gen ETA ~8-10h (d8 roughly doubles leaf evals; dedup offsets some),
+   train ~25 min. When done: battery vs champion — no-search + n64 +
+   n256 100g (standard spec) PLUS an n512-d8 100g leg (compare against
+   gumbel_confirm_n512_d8.json, same seed block). Promote on any CI+
+   with no CI-.
+2. **Fleet wave-2** john1-4 (ETA ~19:45): fleet2_shard_johnN.npz,
+   seeds 2026780000. FETCH + process (top64 + relation tail) but DO
+   NOT fold into training — wave-1's n=128 labels at weight 0.75
+   caused a n64 CI- (see 07-06 ablation). Store for low-weight or
+   value-only trials. Fleet regime needs redesign before wave-3.
 
-**UNATTENDED PLAN (user away 07-06 ~08:00-20:00):**
-1. Cycle-5 done -> battery vs c4-M: no-search/n64/n256, 100g, seeds
-   2026994000/2026995000, batch runner, fused CGAB + 8x cell budget,
-   TF32 OFF; report names gumbel_cycle5_gate_n{64,256}.json +
-   gumbel_cycle5_no_search_game100.json; paired verdict via
-   /tmp/l2_verdict.py pattern (nosearch: paired_score_deltas["q"] ->
-   cascadiaformer_mean_score_per_seat; gumbel: candidate_per_seed).
-2. CI+ -> promote (update champion refs here + EXPERIMENT_LOG), run
-   n512 25g serving probe vs new champion baseline; if n256 mean >= 98,
-   draft 1,000-game 100-gate plan. Flat -> log capacity+data verdict,
-   next levers: serving budget as the product lever, bigger fleet
-   regime, engine pass 3.
-3. Either way: launch cycle 6 when john0 frees (teacher = battery
-   winner; same recipe as cycle 5; fresh seed block 2026790000 x1250 /
-   2026890000 x125; fold fleet2 tails when processed).
-4. Fleet wave-2 done -> fetch + process to
-   fixtures/fleet2_shard_johnN_top64_relation_tail.npz, stage for the
-   in-flight or next training's EXTRA_TRAIN_TAIL_TENSORS.
-Watchdog: bcbs4aud5 (cycle-5 terminal/error/30-min-stall + fleet2
-done/error). Jobs on john0 strictly sequential — battery only after
-cycle-5 job fully exits.
+**Queued next:**
+- n1024_d8 and n1024_d16 probes (25g) once cycle-6 gen is off the GPU
+  (or interleave — probes are CPU-light but share the GPU; keep
+  sequential per john0 policy).
+- If cycle-6 promotes and/or n1024_d8 lands ~98.5: draft the
+  1,000-game 100-gate confirmation plan (at 5.5 s/dec, 1000 games ~
+  12-13h with batch runner).
+Watchdog: bger035og (cycle-6 terminal/error/stall + fleet2). Verdict
+scripts: /tmp/c5_verdict.py pattern on john0 (gumbel:
+candidate_per_seed; no-search: paired_score_deltas["q"]).
 
 **Fleet ops (john1-4, no -p flag, different usernames — john1=johnherrick,
 john3=john3):** repo at ~/cascadia, venv at ~/cascadia/venv (python3.12 via
