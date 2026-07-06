@@ -5,37 +5,40 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-06)
+## RESUME HERE (07-06, post L-v2 verdict)
 
 **Champion: cycle-4 M** (`checkpoints/full_v3_gumbel_selfplay_cycle4/
-best_locked_val.manifest.json`), promoted 07-05: no-search 91.18 / n64
-95.77 / n256 96.95 / n512 97.47 (probe, CI+). Best-ever number: 97.11
-(c3m at n256). Depth-2 dead at S and M. Budget curve decelerating ~+0.5
-per doubling.
+best_locked_val.manifest.json`): no-search 91.18 / n64 95.77 / n256 96.95
+/ n512 97.47 (probe, CI+). Depth-2 dead at S and M. Budget curve
+decelerating ~+0.5 per doubling.
+
+**L-v2 verdict (07-06 04:40): FLAT at all budgets** (no-search -0.215 ns,
+n64 -0.223 ns, n256 -0.020 ns; 100g paired; reports gumbel_l2_*).
+Clean result — 16 passes, regret bottomed at step 7000/19333. Capacity
+is NOT binding at ~100k-root scale; lever = data volume + label quality.
 
 **In flight right now:**
-1. **L-v2 training** on john0 (pid file `logs/gumbel_selfplay_cycle4_l_job
-   .pid`, launched ~07-06 morning, ETA ~3h from launch): CascadiaFormer-L
-   (207M, config added to torch_cascadiaformer.py + argparse) from scratch,
-   MAX_EXAMPLE_PASSES=16 (~19.3k steps). Context: L-v1 at the default
-   4-pass clamp was FLAT vs c4-M (n64 -0.35 ns, n256 -0.16 ns) but that
-   was optimization-starved (successful from-scratch c3-M had ~34 passes).
-   Runbook marker `reports/full_v3_gumbel_selfplay_cycle4_l_runbook.json`
-   (v1's archived as *_runbook_v1_4pass.json). When done: battery
-   (no-search + n64 + n256, 100g, seeds 2026994000/2026995000, batch
-   runner, CASCADIA_CGAB_FUSED=1 + 8x cell budget, TF32 OFF) paired vs
-   c4-M reports gumbel_cycle4_gate_n{64,256}.json.
-   - L-v2 beats c4-M (CI+) -> capacity lever reopened: cycle 5 = L-taught
-     EI (n=256 labels, w=0.75->1.0) + fleet corpus in the mix.
-   - L-v2 flat -> capacity closed at this data scale: cycle 5 = M-taught,
-     doubled data (fleet corpus + john0 generation), consider w=1.0
-     (rollout-free generation, ~2x CPU savings) and n=512 labels.
-2. **Fleet corpus** john1-4 (~06:30-07:00 finish): 1,000 seeds n=128
-   w=0.75 c4-champion teacher -> `~/cascadia/fleet_shard_john{1..4}.npz`
-   on each mini. FETCH via scp to
-   `cascadiav3/fixtures/fleet_shard_john{1..4}.npz` (john0), then filter/
-   materialize like any v2 shard and add to EXTRA_TRAIN_TAIL_TENSORS.
-   Fleet policy: training data ONLY (MPS numerics; never for gates).
+1. **Cycle 5** on john0 (`logs/gumbel_selfplay_cycle5_job.*`, pid 904648,
+   launched 04:55, completion marker
+   `reports/full_v3_gumbel_selfplay_cycle5_runbook.json`): M-taught EI,
+   c4-M warm start, **n=512 labels, w=1.0 (first rollout-free cycle)**,
+   seeds 2026770000x1250 / 2026870000x125, replay mix cycle5(1.0) +
+   fleet john1-4 (0.75 each) + cycle4(0.5) + cycle3(0.25). Gen ETA
+   ~8-12h then ~1h train. When done: battery vs c4-M (no-search/n64/n256
+   100g, seeds 2026994000/2026995000, batch runner, fused CGAB + 8x cell
+   budget, TF32 OFF), verdict + branch:
+   - CI+ -> promote, consider n=512 serving battery leg and 100-gate
+     planning if n256 mean approaches 99.
+   - flat -> data-scale hypothesis weakens; next levers are serving
+     budget (n512 already CI+) and a much larger fleet corpus regime.
+2. **Fleet corpus** john1-4 (ETA ~06:00-07:30): 1,000 seeds n=128 w=0.75
+   c4-teacher -> `~/cascadia/fleet_shard_john{1..4}.npz`. ON COMPLETION
+   (before cycle-5 trainer stage!): scp each to john0
+   `cascadiav3/fixtures/fleet_shard_johnN.npz`, then filter top-64 +
+   materialize relation tails to
+   `cascadiav3/fixtures/fleet_shard_johnN_top64_relation_tail.npz`
+   (exact paths baked into cycle-5 EXTRA_TRAIN_TAIL_TENSORS; trainer
+   test -s will fail if absent). Fleet policy: training data ONLY.
 
 **Fleet ops (john1-4, no -p flag, different usernames — john1=johnherrick,
 john3=john3):** repo at ~/cascadia, venv at ~/cascadia/venv (python3.12 via
