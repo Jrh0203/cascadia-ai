@@ -2877,3 +2877,25 @@ on each host, ~13h. Destined for the next training cycle's replay mix.
 
 In flight on john0: CascadiaFormer-L (207M, d1024/16L) from scratch on the
 cycle-4 corpus, full trainer knobs + grad-checkpoint on, ETA ~5-7h.
+
+## 2026-07-06 — L (4-pass) battery: flat vs cycle-4 M; relaunched with 16 passes
+
+L-v1 (from scratch, 4-pass clamp = 4,833 steps, 46 min train): no-search
+90.7775; n=64 95.42 (-0.35 [-0.7249, +0.0249] vs c4-M, ns-negative);
+n=256 96.79 (-0.16 [-0.5092, +0.1892], ns). NOT promoted.
+
+Interpretation caveat before concluding capacity-exhausted: the 4-pass
+example clamp was designed for warm-started EI cycles; the successful
+from-scratch M run (cycle 3) effectively trained ~34 passes. From-scratch
+L at 4 passes is optimization-starved, not a clean capacity test.
+L-v2 relaunched with MAX_EXAMPLE_PASSES=16 (~19.3k steps, ~3h); v1 runbook
+archived as *_runbook_v1_4pass.json. If v2 is also flat, the capacity
+lever is genuinely closed at current data scale and the plan shifts to
+data volume (fleet corpus, in flight: 1,000 n=128 seeds, ~06:30 ETA) and
+teacher-quality levers (w=1.0, n=512 labels).
+
+Ops: overnight monitors died with the session — L-v1 battery finished
+23:19 but nothing woke the shepherd; box idled ~7h. Mitigations: single
+consolidated watchdog monitor per work-wave + on any session resume,
+IMMEDIATELY check all in-flight job logs before anything else (this is
+now standing procedure in CAMPAIGN_STATE.md).
