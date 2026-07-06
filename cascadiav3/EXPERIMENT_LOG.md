@@ -3073,3 +3073,27 @@ launched on c4-M champion, 25g paired vs default-config control at the
 same budget: determinizations 8 and 16 (vs 4) at n256, top_m 32 (vs 16)
 at n512, k_interior 32 (vs 16) at n256, and an n=1024 ceiling probe.
 Any CI+/promising delta gets a 100g confirm.
+
+## 2026-07-06 15:02 — SERVING BREAKTHROUGH: determinizations + k_interior are live levers
+
+Probe sweep on c4-M champion (25g paired vs default d4/k16 controls,
+same seed block):
+
+| config | mean | delta vs ctrl | CI95 | p50 s/dec | verdict |
+|---|---:|---:|---|---:|---|
+| n256 d8 | 97.60 | +0.93 | [+0.20, +1.66] | 3.2 | **CI+** |
+| n256 d16 | 97.60 | +0.93 | [+0.37, +1.49] | 4.7 | **CI+** |
+| n256 k32 | 97.28 | +0.61 | [+0.21, +1.01] | 2.5 | **CI+** |
+| n512 m32 | 98.01 | +0.18 vs n512 | [-0.45, +0.81] | 4.7 | ns |
+| n1024 | 97.49 | +0.82 vs n256 | [-0.01, +1.65] | 4.7 | ns |
+
+Search was starved of DETERMINIZATIONS (hidden-world samples), not
+simulations: d16@n256 costs the same wall-clock as n1024@d4 and beats
+it. d8 saturates the gain at 2/3 the cost. k_interior 32 adds +0.61
+nearly free. First CI+ moves at the ~97 plateau after capacity, data,
+and label-budget all came up flat.
+
+Combined probes launched (n256_d8_k32, n256_d16_k32, n512_d16_k32,
+25g each). If gains stack, n512_d16_k32 could land ~98.5; then a 100g
+confirm and the 100-gate math changes materially. Also note n512_m32's
+98.01 = highest 25g mean yet recorded.
