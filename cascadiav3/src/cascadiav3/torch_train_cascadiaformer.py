@@ -1980,7 +1980,7 @@ def _parse_optional_float_list(raw: str | None) -> list[float] | None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model-size", choices=["tiny", "S", "M"], default="S")
+    parser.add_argument("--model-size", choices=["tiny", "S", "M", "L"], default="S")
     parser.add_argument("--train", required=True)
     parser.add_argument("--val", required=True)
     parser.add_argument(

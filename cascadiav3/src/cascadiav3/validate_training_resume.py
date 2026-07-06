@@ -110,7 +110,7 @@ def main() -> int:
     parser.add_argument("--steps-after-resume", type=int, default=8)
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--seed", type=int, default=20260630)
-    parser.add_argument("--model-size", default="tiny", choices=["tiny", "S", "M"])
+    parser.add_argument("--model-size", default="tiny", choices=["tiny", "S", "M", "L"])
     parser.add_argument("--objective", default="search-improved-greedy-retention")
     parser.add_argument("--expect-exact-final-weight-match", action="store_true")
     parser.add_argument("--expect-mismatch-refusal", default="")
