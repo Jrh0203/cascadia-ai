@@ -3036,3 +3036,14 @@ mix shape). REGENERATE_ROOTS=0, profile gumbel_selfplay_cycle5_nofleet,
 - nofleet still CI- at n64 -> w=1.0 labels are the poison -> cycle 6
   reverts to w=0.75 (or 0.9) labels; fleet data gets a separate trial.
 First training run with the shard-mmap fix deployed (workers back to 4).
+
+## 2026-07-06 12:45 — Nofleet ablation trained; mmap fix = 5.5x trainer speedup
+
+Nofleet retrain: 6,250 steps in 1,426s = **0.228 s/step wall** (M, b192,
+4 workers + mmap). This morning's cycle-5 run did 7,916 steps at ~1.26
+s/step with --data-workers 1 — i.e. the single-worker fallback was
+DATA-BOUND, and the "M wall step 1.69s" probe from 07-05 evidently was
+too. With shard-mmap + 4 workers the M trainer is now GPU-bound at
+~0.23 s/step: full 25k-step budgets now cost ~1.6h, and the 4-pass
+clamped cycles train in ~25 min. Battery for the ablation launched
+(reports gumbel_c5nf_*).
