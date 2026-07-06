@@ -3112,3 +3112,22 @@ inverse: d8 = d16 at 2/3 the cost).
 (gumbel_confirm_n{256,512}_d8.json). If n512_d8 lands ~98+ CI+, it
 becomes the new serving config, cycle-6 teacher labels adopt d8, and
 the 100-gate plan gets drafted against the new curve.
+
+## 2026-07-06 17:58 — n512_d8 CONFIRMED at 100g: new serving config, 97.845
+
+100g paired vs promoted n256-d4 champion config (seed block 2026995000):
+- n256_d8: 97.25, +0.30 [-0.07, +0.67] ns (25g's +0.93 shrank at power)
+- **n512_d8: 97.845, +0.895 [+0.5636, +1.2264] CI+** — 4/100 games at
+  >=100 mean seat, p50 5.51 s/dec (2.4x the old config's cost).
+
+SERVING CONFIG PROMOTED: champion = c4-M at n512/top_m16/w0.5/d8.
+Best-ever 100g mean: 97.845 (previous 96.95). Gap to the 100-gate:
+-2.16. Determinizations only pay at high sim budget — at n256 the
+per-world sim count gets too thin (256/8=32 sims/world vs 512/8=64).
+
+Cycle-6 launched overnight: teacher c4-M with **n=512 d8 w=1.0 labels**
+(the confirmed-stronger search now generates the training targets),
+seeds 2026790000x1250 / 2026890000x125, replay c6(1.0)/c5(0.5)/c4(0.25),
+NO fleet data, 4 workers + mmap. Gen ETA ~8-10h, train ~25 min. Battery
+vs champion (incl. an n512_d8-leg) in the morning. Queued after: n1024_d8
+and d16-at-n1024 probes if cycle-6 compresses the prior further.
