@@ -2919,3 +2919,46 @@ batch runner, fused CGAB + 8x cell budget, TF32 off; reports
 
 Fleet meanwhile at 175-200/250 seeds per host (~0.42 rec/s each),
 ETA ~05:30-06:30 for all four shards.
+
+## 2026-07-06 04:40 — L-v2 verdict: FLAT at all budgets. Capacity closed at this data scale
+
+L-v2 (16-pass, best step 7000 regret-selected) vs cycle-4 M champion,
+100 paired games each leg:
+
+| leg | L-v2 | c4-M | paired delta | CI95 | verdict |
+|---|---:|---:|---:|---|---|
+| no-search | 90.96 | 91.18 | -0.215 | [-0.68, +0.25] | ns |
+| n=64 | 95.55 | 95.77 | -0.223 | [-0.62, +0.18] | ns |
+| n=256 | 96.93 | 96.95 | -0.020 | [-0.33, +0.29] | ns |
+
+With the optimization-starvation confound removed (regret bottomed at
+step 7000 of 19,333 and never recovered — the model had all the
+optimization it could use), 207M matches 88M exactly on the same corpus.
+**Conclusion: model capacity is NOT the binding constraint at ~100k-root
+data scale. The lever is data volume + teacher label quality.** This
+mirrors the standard scaling result: model size only pays when data
+scales with it. NOT promoted; c4-M remains champion.
+
+## 2026-07-06 04:55 — Cycle 5 launched: M-taught EI, n=512 labels, w=1.0, doubled data
+
+Per the documented branch: `logs/gumbel_selfplay_cycle5_job.*`, pid 904648.
+- Teacher/incumbent: c4-M champion (best_locked_val, warm start).
+- Labels: n=512 sims (the strongest teacher we've measured: 97.47 CI+
+  probe), top_m 16, determinizations 4, k_interior 16.
+- **w=1.0** — first rollout-free generation cycle (leaf = pure value
+  bootstrap; verified code short-circuits rollouts at w>=1.0). Value head
+  has had two cycles of real-outcome targets; probes show search trusts
+  it. ~2x CPU savings offsets the 2x sim budget.
+- Seeds: train 2026770000 x1250, val 2026870000 x125 (fresh blocks).
+- Replay mix: cycle5 (1.0) + fleet shards john1-4 (0.75 each) + cycle4
+  (0.5) + cycle3 (0.25) -> ~2.4x the fresh+replay data of cycle 4.
+  Fleet tails must be filtered/materialized on john0 BEFORE the trainer
+  stage reaches its test -s check (fleet ETA ~1-2h, generation ~8-12h;
+  ample margin).
+- Trainer: M warm start, 25k steps, b192, MAX_EXAMPLE_PASSES=4, regret
+  selection, full perf knobs. Bridge: fused CGAB + 8x cell budget + TF32.
+
+When done: standard battery vs c4-M (no-search/n64/n256, 100g paired).
+If flat again with 2.4x data, data-scale hypothesis weakens too and the
+next levers are search-side (n=512 serving budget is already CI+) and a
+bigger fleet corpus regime.
