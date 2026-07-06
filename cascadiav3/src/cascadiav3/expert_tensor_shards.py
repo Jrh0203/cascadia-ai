@@ -23,6 +23,93 @@ def _scalar_string(value: Any) -> str:
     return str(value)
 
 
+def _shard_mmap_default() -> bool:
+    """CASCADIA_SHARD_MMAP=0 disables memory-mapped shard loading. Default ON:
+    every training process (main + each DataLoader worker) then shares one
+    page-cache copy of the shard arrays instead of materializing a private
+    ~O(corpus) copy each, which is what OOM-killed the cycle-5 trainer at a
+    7-source / ~380k-record mix."""
+    import os
+
+    return os.environ.get("CASCADIA_SHARD_MMAP", "1") != "0"
+
+
+class _MmapNpz:
+    """Read-only npz view that memory-maps ZIP_STORED (uncompressed) members.
+
+    Behaves like the subset of numpy's NpzFile the shard reader uses
+    (`files`, `__getitem__`, `__contains__`, `close`). Construction raises
+    ValueError when any .npy member is compressed or has an object dtype;
+    callers fall back to np.load for those shards."""
+
+    def __init__(self, path: Path) -> None:
+        import struct
+        import zipfile
+
+        import numpy as np
+        from numpy.lib import format as npformat
+
+        self.path = Path(path)
+        self._arrays: dict[str, Any] = {}
+        with zipfile.ZipFile(self.path) as archive, self.path.open("rb") as raw:
+            for info in archive.infolist():
+                if not info.filename.endswith(".npy"):
+                    continue
+                if info.compress_type != zipfile.ZIP_STORED:
+                    raise ValueError(f"compressed npz member {info.filename!r}")
+                raw.seek(info.header_offset)
+                local_header = raw.read(30)
+                if local_header[:4] != b"PK\x03\x04":
+                    raise ValueError(f"bad local file header for {info.filename!r}")
+                name_length, extra_length = struct.unpack("<HH", local_header[26:30])
+                raw.seek(info.header_offset + 30 + name_length + extra_length)
+                version = npformat.read_magic(raw)
+                if version == (1, 0):
+                    shape, fortran_order, dtype = npformat.read_array_header_1_0(raw)
+                elif version == (2, 0):
+                    shape, fortran_order, dtype = npformat.read_array_header_2_0(raw)
+                else:
+                    raise ValueError(f"unsupported npy header version {version}")
+                if dtype.hasobject:
+                    raise ValueError(f"object dtype in npz member {info.filename!r}")
+                name = info.filename[: -len(".npy")]
+                if int(np.prod(shape, dtype=np.int64)) == 0:
+                    self._arrays[name] = np.empty(shape, dtype=dtype)
+                    continue
+                self._arrays[name] = np.memmap(
+                    self.path,
+                    dtype=dtype,
+                    mode="r",
+                    offset=raw.tell(),
+                    shape=shape,
+                    order="F" if fortran_order else "C",
+                )
+
+    @property
+    def files(self) -> list[str]:
+        return list(self._arrays)
+
+    def __contains__(self, name: str) -> bool:
+        return name in self._arrays
+
+    def __getitem__(self, name: str) -> Any:
+        return self._arrays[name]
+
+    def close(self) -> None:
+        self._arrays.clear()
+
+
+def _open_shard_arrays(path: Path) -> Any:
+    import numpy as np
+
+    if _shard_mmap_default():
+        try:
+            return _MmapNpz(path)
+        except ValueError:
+            pass
+    return np.load(path, allow_pickle=False)
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -82,10 +169,8 @@ class ExpertTensorSummary:
 
 class ExpertTensorShard:
     def __init__(self, path: Path) -> None:
-        import numpy as np
-
         self.path = path
-        self._npz = np.load(path, allow_pickle=False)
+        self._npz = _open_shard_arrays(path)
         self.version = _scalar_string(self._npz["version"].item())
         if self.version not in SUPPORTED_SHARD_VERSIONS:
             raise ValueError(f"unsupported expert tensor shard version {self.version!r}")
