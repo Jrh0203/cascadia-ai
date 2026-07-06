@@ -2899,3 +2899,23 @@ Ops: overnight monitors died with the session — L-v1 battery finished
 consolidated watchdog monitor per work-wave + on any session resume,
 IMMEDIATELY check all in-flight job logs before anything else (this is
 now standing procedure in CAMPAIGN_STATE.md).
+
+## 2026-07-06 03:00 — L-v2 (16-pass) training complete; battery launched
+
+L-v2 trained to completion (19,333 steps, MAX_EXAMPLE_PASSES=16, grad
+checkpointing, 0.418 s/step; runbook marker pass at 03:00:47).
+best_locked_val = **step 7000** (regret-selected,
+locked_val_final_q_regret) — regret bottomed at ~36% of the run and never
+improved after; the 16-pass budget was more than enough optimization, so
+a flat verdict now WOULD be a clean capacity result (v1's starvation
+confound removed).
+
+Battery launched 03:08 (`logs/l2_gates_job.{sh,log,pid}`, pid 894830):
+no-search 100g seed 2026994000; Gumbel n=64 + n=256 100g seed 2026995000,
+batch runner, fused CGAB + 8x cell budget, TF32 off; reports
+`gumbel_l2_no_search_game100.json`, `gumbel_l2_gate_n{64,256}.json`
+(v2-specific names, v1 reports preserved). Compare paired vs cycle-4 M
+(`gumbel_cycle4_gate_n{64,256}.json`, `gumbel_cycle4_no_search_game100.json`).
+
+Fleet meanwhile at 175-200/250 seeds per host (~0.42 rec/s each),
+ETA ~05:30-06:30 for all four shards.
