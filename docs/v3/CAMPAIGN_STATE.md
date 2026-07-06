@@ -31,14 +31,38 @@ is NOT binding at ~100k-root scale; lever = data volume + label quality.
      planning if n256 mean approaches 99.
    - flat -> data-scale hypothesis weakens; next levers are serving
      budget (n512 already CI+) and a much larger fleet corpus regime.
-2. **Fleet corpus** john1-4 (ETA ~06:00-07:30): 1,000 seeds n=128 w=0.75
-   c4-teacher -> `~/cascadia/fleet_shard_john{1..4}.npz`. ON COMPLETION
-   (before cycle-5 trainer stage!): scp each to john0
-   `cascadiav3/fixtures/fleet_shard_johnN.npz`, then filter top-64 +
-   materialize relation tails to
-   `cascadiav3/fixtures/fleet_shard_johnN_top64_relation_tail.npz`
-   (exact paths baked into cycle-5 EXTRA_TRAIN_TAIL_TENSORS; trainer
-   test -s will fail if absent). Fleet policy: training data ONLY.
+2. **Fleet wave-1: DONE and folded in** (07-06 06:45): 4x 20k records
+   fetched, filtered, materialized to
+   `fixtures/fleet_shard_johnN_top64_relation_tail.npz` (invariants
+   PASS). Cycle-5 trainer dependency satisfied.
+3. **Fleet wave-2 in flight** john1-4 (launched ~06:45, ETA ~19:45):
+   seeds 2026780000 x250/host, n=128 w=0.75 (rollout anchor kept on MPS
+   deliberately), outputs `~/cascadia/fleet2_shard_johnN.npz` + logs
+   `fleet2_shard_johnN.log`. Destined for cycle-6. Same fetch/process
+   recipe as wave-1 (process script pattern:
+   `logs/fleet_process_job.sh` on john0, adapt names to fleet2_).
+
+**UNATTENDED PLAN (user away 07-06 ~08:00-20:00):**
+1. Cycle-5 done -> battery vs c4-M: no-search/n64/n256, 100g, seeds
+   2026994000/2026995000, batch runner, fused CGAB + 8x cell budget,
+   TF32 OFF; report names gumbel_cycle5_gate_n{64,256}.json +
+   gumbel_cycle5_no_search_game100.json; paired verdict via
+   /tmp/l2_verdict.py pattern (nosearch: paired_score_deltas["q"] ->
+   cascadiaformer_mean_score_per_seat; gumbel: candidate_per_seed).
+2. CI+ -> promote (update champion refs here + EXPERIMENT_LOG), run
+   n512 25g serving probe vs new champion baseline; if n256 mean >= 98,
+   draft 1,000-game 100-gate plan. Flat -> log capacity+data verdict,
+   next levers: serving budget as the product lever, bigger fleet
+   regime, engine pass 3.
+3. Either way: launch cycle 6 when john0 frees (teacher = battery
+   winner; same recipe as cycle 5; fresh seed block 2026790000 x1250 /
+   2026890000 x125; fold fleet2 tails when processed).
+4. Fleet wave-2 done -> fetch + process to
+   fixtures/fleet2_shard_johnN_top64_relation_tail.npz, stage for the
+   in-flight or next training's EXTRA_TRAIN_TAIL_TENSORS.
+Watchdog: bcbs4aud5 (cycle-5 terminal/error/30-min-stall + fleet2
+done/error). Jobs on john0 strictly sequential — battery only after
+cycle-5 job fully exits.
 
 **Fleet ops (john1-4, no -p flag, different usernames — john1=johnherrick,
 john3=john3):** repo at ~/cascadia, venv at ~/cascadia/venv (python3.12 via
