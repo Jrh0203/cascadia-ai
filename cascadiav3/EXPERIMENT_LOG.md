@@ -3131,3 +3131,25 @@ seeds 2026790000x1250 / 2026890000x125, replay c6(1.0)/c5(0.5)/c4(0.25),
 NO fleet data, 4 workers + mmap. Gen ETA ~8-10h, train ~25 min. Battery
 vs champion (incl. an n512_d8-leg) in the morning. Queued after: n1024_d8
 and d16-at-n1024 probes if cycle-6 compresses the prior further.
+
+## 2026-07-06 19:00 — Generation knob tuning: NEGATIVE result; bf16 labels unsafe
+
+Cycle-6 gen showed john0 underutilized (load ~11/32 cores, GPU 55-60%,
+exporter ~4 cores, bridge ~4 cores) -> hypothesized eval-batching
+starvation. Swept CASCADIA_SHARED_GATHER_US {2ms,4ms,8ms} x ROW_CAP
+{192,768,1536} x bf16 autocast, at 8-seed and saturated 32-seed scale
+(n512/d8/w1.0 production config):
+- ALL configs within noise (104s/104s/101s at saturation; bf16 only
+  ~3%). GPU forward is NOT the bottleneck; the loop is bound by per-ply
+  lockstep cadence + search-side work that env knobs cannot reach.
+- bf16 label-drift check (identical seeds, record-aligned): selected
+  actions match fp32 only ~26%, max|dQ| ~4 — bf16 materially changes
+  search decisions. NOT adopted for teacher labels (fleet lesson).
+  fp32 configs agree 100% on actions across batching settings.
+
+Cost of the detour: ~1.5h (killed cycle-6 at 55/1250 seeds + tuning).
+Cycle-6 relaunched stock (pid 961106), gen ETA ~07:30-08:00, verdict
+~12:00-12:30. ENGINEERING QUEUE: structural generation throughput —
+partition game workers across 2-3 bridge processes (GPU and CPU both
+half-idle; two bridges should approach ~2x), and/or intra-ply
+pipelining so workers don't block on the gather window.
