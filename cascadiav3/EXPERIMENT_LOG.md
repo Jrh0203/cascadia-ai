@@ -2997,3 +2997,14 @@ Slight step-time risk vs 4 workers; acceptable (data time was ~0.003
 s/step). FUTURE: teach the dataset to mmap/share tensors across workers
 before scaling the mix further (cycle-6 with fleet2 will be ~460k
 records — 1 worker still fits, ~74GB, but headroom shrinks).
+
+## 2026-07-06 ~13:15 — Shard mmap fix landed (the OOM root-cause fix)
+
+`ExpertTensorShard` now memory-maps ZIP_STORED npz members
+(`_MmapNpz`; default ON, `CASCADIA_SHARD_MMAP=0` reverts, automatic
+np.load fallback for compressed/object shards). All processes share one
+page-cache copy of the corpus; anonymous RSS per worker drops from
+~O(corpus) (~35GB at cycle-5 scale) to ~0. Bit-equality tests green
+(4 new tests; full suite 98 OK). Deploys to john0 with the next
+pipeline rsync — cycle-6 can go back to --data-workers 4 and scale the
+mix without RAM ceiling concerns.
