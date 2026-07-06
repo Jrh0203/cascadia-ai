@@ -2981,3 +2981,19 @@ Cycle-5 generation pace: 425/1250 seeds at 6,664s (0.064 seeds/s) —
 **n=512 w=1.0 generates FASTER than cycle-4's n=256 w=0.75** (rollout
 elimination + eval dedup at high budget more than pay for 2x sims).
 Train-gen ETA ~10:30, battery ~14:00.
+
+## 2026-07-06 ~12:30 — Cycle-5 trainer OOM-killed; relaunched with 1 data worker
+
+Generation, filtering, and materialization all completed (train corpus
+100k roots at n=512/w=1.0 in ~5.4h, val 125 seeds). The TRAINER then
+died: kernel OOM-killed a pt_data_worker (anon-rss ~35GB each). Root
+cause: the 7-source mix (~380k records, ~37GB of relation-tail tensors)
+is fully materialized PER DataLoader worker; 4 workers + main = ~175GB >
+121GB RAM. This never bit before because prior mixes were ~2.5x smaller.
+
+Fix: relaunched with REGENERATE_ROOTS=0 (reuses all tensors; only
+training reruns) and --data-workers 1 --prefetch-factor 2 (~70GB peak).
+Slight step-time risk vs 4 workers; acceptable (data time was ~0.003
+s/step). FUTURE: teach the dataset to mmap/share tensors across workers
+before scaling the mix further (cycle-6 with fleet2 will be ~460k
+records — 1 worker still fits, ~74GB, but headroom shrinks).
