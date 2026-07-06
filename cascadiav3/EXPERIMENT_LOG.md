@@ -3008,3 +3008,31 @@ page-cache copy of the corpus; anonymous RSS per worker drops from
 (4 new tests; full suite 98 OK). Deploys to john0 with the next
 pipeline rsync — cycle-6 can go back to --data-workers 4 and scale the
 mix without RAM ceiling concerns.
+
+## 2026-07-06 12:16 — Cycle-5 battery: NOT promoted (n64 CI-); ablation launched
+
+Cycle-5 (M warm start, n=512 w=1.0 labels, fleet n=128 mix, best step
+7250/7916) vs cycle-4 M champion, 100g paired:
+
+| leg | c5 | c4-M | delta | CI95 | verdict |
+|---|---:|---:|---:|---|---|
+| no-search | 91.46 | 91.18 | +0.283 | [-0.20, +0.76] | ns |
+| n=64 | 95.39 | 95.77 | **-0.383** | [-0.75, -0.02] | **CI-** |
+| n=256 | 97.08 | 96.95 | +0.130 | [-0.24, +0.50] | ns |
+
+Pattern: q/value slightly better (no-search up), search guidance worse
+at low budget (n64 relies most on prior quality via Gumbel top-m), flat
+at n256 (97.08 is nominally the best 100g n256 mean ever recorded, ns).
+Two confounded changes vs cycle 4: (a) w=1.0 value-only labels, (b)
+fleet n=128/MPS data at weight 0.75. One of them poisoned the prior.
+
+**Ablation (launched now, cheap since tensors exist): retrain identical
+except NO fleet shards** (c5 fresh 1.0 / c4 0.5 / c3 0.25 — cycle-4's
+mix shape). REGENERATE_ROOTS=0, profile gumbel_selfplay_cycle5_nofleet,
+~1.5h train + 40min battery.
+- nofleet beats c4-M or at least kills the n64 CI- -> fleet n=128 data
+  was the poison -> fleet regime must change (higher-budget labels or
+  value-only usage), w=1.0 exonerated.
+- nofleet still CI- at n64 -> w=1.0 labels are the poison -> cycle 6
+  reverts to w=0.75 (or 0.9) labels; fleet data gets a separate trial.
+First training run with the shard-mmap fix deployed (workers back to 4).
