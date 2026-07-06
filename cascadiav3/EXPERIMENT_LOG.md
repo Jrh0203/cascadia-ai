@@ -2962,3 +2962,22 @@ When done: standard battery vs c4-M (no-search/n64/n256, 100g paired).
 If flat again with 2.4x data, data-scale hypothesis weakens too and the
 next levers are search-side (n=512 serving budget is already CI+) and a
 bigger fleet corpus regime.
+
+## 2026-07-06 06:45 — Fleet wave-1 folded in; wave-2 launched
+
+Wave-1 shards (4x 20,000 records, 80k roots total) fetched to john0,
+filtered top-64 + relation tails materialized
+(`fixtures/fleet_shard_johnN_top64_relation_tail.npz`, invariants PASS,
+~97.4KB/record). Cycle-5's EXTRA_TRAIN_TAIL_TENSORS dependency satisfied
+well before its trainer stage.
+
+Fleet wave-2 launched on john1-4: seeds 2026780000 x250/host (fresh
+block), same measured config (n=128, top_m 16, w=0.75 — rollout anchor
+kept on MPS deliberately; value-only leaves would inherit MPS numeric
+drift), 3 shared sessions, fused CGAB. Outputs `fleet2_shard_johnN.npz`,
+ETA ~13h. Destined for cycle-6.
+
+Cycle-5 generation pace: 425/1250 seeds at 6,664s (0.064 seeds/s) —
+**n=512 w=1.0 generates FASTER than cycle-4's n=256 w=0.75** (rollout
+elimination + eval dedup at high budget more than pay for 2x sims).
+Train-gen ETA ~10:30, battery ~14:00.
