@@ -3097,3 +3097,18 @@ Combined probes launched (n256_d8_k32, n256_d16_k32, n512_d16_k32,
 25g each). If gains stack, n512_d16_k32 could land ~98.5; then a 100g
 confirm and the 100-gate math changes materially. Also note n512_m32's
 98.01 = highest 25g mean yet recorded.
+
+## 2026-07-06 16:04 — Combined probes: gains do NOT stack; d8/d16 is the lever
+
+n256_d8_k32 +0.54 ns (97.21); n256_d16_k32 +0.86 CI+ (97.53) = same as
+d16 alone; n512_d16_k32 97.52, -0.31 ns vs n512-d4 control (97.83).
+k_interior adds nothing on top of determinizations; 25g noise (~±0.7)
+explains the combined-config scatter. The replicated, isolated signal is
+determinizations 4 -> 8 (saturates by 8; d16 = d8 at 2/3 the cost... 
+inverse: d8 = d16 at 2/3 the cost).
+
+100g confirmations launched vs the promoted n256-d4 champion config
+(same 2026995000 seed block): n256_d8 and n512_d8
+(gumbel_confirm_n{256,512}_d8.json). If n512_d8 lands ~98+ CI+, it
+becomes the new serving config, cycle-6 teacher labels adopt d8, and
+the 100-gate plan gets drafted against the new curve.
