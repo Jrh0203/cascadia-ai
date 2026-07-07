@@ -3161,9 +3161,12 @@ fetched to john0 fixtures/fleet2_shard_johnN.npz — ARCHIVED, not folded
 into training (wave-1's n=128 labels caused the cycle-5 n64 CI-).
 Reserved for low-weight/value-only trials.
 
-Wave-3 launched (seeds 2026781000 x250/host): **n=256, d8, w=0.75** —
-the strongest labels the minis can produce (4x the eval budget of
-waves 1-2, and d8 now confirmed CI+ on john0). ETA ~2.4 days/shard.
-Hypothesis: fleet data poisoned training because the LABELS were weak
-(n=128 d4), not because of MPS numerics per se; wave-3 tests whether
-near-teacher-grade fleet labels can safely enter the mix at low weight.
+Wave-3 REVISED after a sizing review (first launch at n256/d8 x250
+was mis-sized: d8 does not pay at n=256 per the 100g confirm, and a
+safety trial does not need 1,000 seeds): relaunched as **n=256, d4,
+w=0.75, 100 seeds/host** (seeds 2026781000/100-spaced), ~11h. Purpose:
+test whether higher-grade fleet labels (2x the eval budget of waves
+1-2) can enter the training mix at low weight without the n64
+regression. Scale to production volume only if the trial passes.
+Hypothesis unchanged: weak LABELS (n=128 d4) poisoned cycle-5, not MPS
+numerics per se.
