@@ -3153,3 +3153,17 @@ Cycle-6 relaunched stock (pid 961106), gen ETA ~07:30-08:00, verdict
 partition game workers across 2-3 bridge processes (GPU and CPU both
 half-idle; two bridges should approach ~2x), and/or intra-ply
 pipelining so workers don't block on the gather window.
+
+## 2026-07-06 19:30 — Fleet wave-2 archived; wave-3 launched at n256/d8
+
+Wave-2 (4x 20k records, n=128 d4 w=0.75, seeds 2026780000) complete and
+fetched to john0 fixtures/fleet2_shard_johnN.npz — ARCHIVED, not folded
+into training (wave-1's n=128 labels caused the cycle-5 n64 CI-).
+Reserved for low-weight/value-only trials.
+
+Wave-3 launched (seeds 2026781000 x250/host): **n=256, d8, w=0.75** —
+the strongest labels the minis can produce (4x the eval budget of
+waves 1-2, and d8 now confirmed CI+ on john0). ETA ~2.4 days/shard.
+Hypothesis: fleet data poisoned training because the LABELS were weak
+(n=128 d4), not because of MPS numerics per se; wave-3 tests whether
+near-teacher-grade fleet labels can safely enter the mix at low weight.
