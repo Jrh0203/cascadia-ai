@@ -5,12 +5,23 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-06 evening)
+## RESUME HERE (07-07 afternoon)
 
 **Champion: cycle-4 M** (`checkpoints/full_v3_gumbel_selfplay_cycle4/
-best_locked_val.manifest.json`) at **NEW SERVING CONFIG n512/top_m16/
-w0.5/d8: 97.845 on 100g** (+0.895 CI+ [0.56,1.23] vs old n256-d4
-config; 4/100 games >=100; 5.5 s/dec). Gap to 100-gate: -2.16.
+best_locked_val.manifest.json`) at **SERVING CONFIG n1024/top_m16/
+w0.5/d16: 98.28 on 100g** (+0.435 CI+ vs n512d8; 11/100 games >=100;
+10.6 s/dec). Gap to 100-gate: -1.72.
+
+**KEY INSIGHT (07-07, oracle experiment):** peeking at the true hidden
+state LOSES to honest multi-world search (-0.35 CI-) — determinization
+gains are ensemble variance-reduction over noisy value estimates, NOT
+hidden-info approximation. Eval noise is the binding constraint. Push
+ensembling/value-noise reduction, not belief modeling. Worlds axis
+peaks ~16 (n2048_d32 CI-). EI at M fully saturated (cycle-6 flat incl.
+n512d8 leg). Fleet n256/d4 data at 0.25 weight is SAFE but has no
+customer while EI is saturated (minis idle). OPEN QUESTION for user:
+gate-aligned table-total objective (all 4 seats are ours; denial moves
+lower the gate metric) — potentially several points if allowed.
 
 **07-06 findings (all 100g-paired unless noted, see EXPERIMENT_LOG):**
 - L-v2 (207M, 16-pass): FLAT everywhere -> capacity closed at this
