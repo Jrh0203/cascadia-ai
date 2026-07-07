@@ -3232,3 +3232,14 @@ Strategy update: push ensemble quality, not belief modeling. Launched
 probe5 peak-refinement (25g each vs n1024_d16): n1024_d12, n1024_d24,
 n1536_d16, n1024_d16_m32. Also still open: the user question on
 table-total (gate-aligned) objective.
+
+## 2026-07-07 17:45 — Probe5: n1024_d16 IS the peak; search-shape tuning exhausted
+
+vs n1024_d16 (25g paired): d12 -0.68 ns, d24 -0.24 ns, n1536_d16
+-0.49 ns, m32 -0.09 ns. Nothing beats the confirmed config. Serving
+optimum stands at **n1024/d16/m16/w0.5 = 98.28 (100g)**.
+
+Next actionable prediction of the eval-noise theory: ensemble the VALUE
+ESTIMATOR (checkpoint ensembling at the leaves), same mechanism as
+world-ensembling. Implementing bridge-side multi-manifest ensembling
+(opt-in), probes: champion+swa and champion+c6-best at n512_d8 25g.
