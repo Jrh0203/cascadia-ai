@@ -804,6 +804,46 @@ def _model_eval(
     )[0]
 
 
+class _EnsembleModel:
+    """Averages the head outputs of N independently trained checkpoints.
+
+    Leaf-value ensembling: the same variance-reduction mechanism that makes
+    multi-world determinization pay (see 2026-07-07 oracle experiment) applied
+    to the model itself. Enabled via CASCADIA_BRIDGE_ENSEMBLE_MANIFESTS
+    (comma-separated extra manifest paths). Forward cost scales linearly with
+    ensemble size."""
+
+    def __init__(self, models) -> None:  # type: ignore[no-untyped-def]
+        if not models:
+            raise ValueError("ensemble requires at least one model")
+        self.models = list(models)
+
+    def __call__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+        import torch
+
+        outputs = [model(*args, **kwargs) for model in self.models]
+        first = outputs[0]
+        if len(outputs) == 1:
+            return first
+        averaged = {}
+        for key, value in first.items():
+            if isinstance(value, torch.Tensor):
+                averaged[key] = torch.stack([out[key] for out in outputs], dim=0).mean(dim=0)
+            else:
+                averaged[key] = value
+        return averaged
+
+    def eval(self):  # type: ignore[no-untyped-def]
+        for model in self.models:
+            model.eval()
+        return self
+
+
+def _ensemble_manifest_paths() -> list[Path]:
+    raw = os.environ.get("CASCADIA_BRIDGE_ENSEMBLE_MANIFESTS", "").strip()
+    return [Path(part.strip()) for part in raw.split(",") if part.strip()]
+
+
 def serve(
     *,
     checkpoint: Path | None,
@@ -832,6 +872,23 @@ def serve(
             if not allow_dry_run_fallback:
                 _response({"type": "error", "error": f"checkpoint_load_failed: {exc}", "checkpoint": str(load_checkpoint)})
                 return 2
+
+    ensemble_paths = _ensemble_manifest_paths()
+    if loaded_model is not None and ensemble_paths:
+        try:
+            extra_models = [
+                _load_model(
+                    path,
+                    manifest_path=path,
+                    manifest_payload=json.loads(path.read_text(encoding="utf-8")),
+                    device_name=device_name,
+                )
+                for path in ensemble_paths
+            ]
+        except Exception as exc:
+            _response({"type": "error", "error": f"ensemble_load_failed: {exc}"})
+            return 2
+        loaded_model = _EnsembleModel([loaded_model, *extra_models])
 
     _response(
         {
