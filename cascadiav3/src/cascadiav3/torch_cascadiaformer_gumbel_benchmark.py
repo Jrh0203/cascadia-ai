@@ -285,6 +285,7 @@ def run_gumbel_benchmark(
     model_timeout_ms: int,
     experiment_id: str,
     batch_runner: bool = False,
+    peek: bool = False,
 ) -> dict[str, Any]:
     service = model_service or default_model_service_command(manifest, device_name)
 
@@ -314,7 +315,7 @@ def run_gumbel_benchmark(
                 rollout_top_k=control_rollout_top_k,
                 model_timeout_ms=model_timeout_ms,
                 exploration=False,
-                peek=bool(getattr(args, "gumbel_peek", False)),
+                peek=peek,
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -344,7 +345,7 @@ def run_gumbel_benchmark(
                     rollout_top_k=control_rollout_top_k,
                     model_timeout_ms=model_timeout_ms,
                     exploration=False,
-                    peek=bool(getattr(args, "gumbel_peek", False)),
+                    peek=peek,
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -583,6 +584,7 @@ def main() -> int:
         model_timeout_ms=args.model_timeout_ms,
         experiment_id=args.experiment_id,
         batch_runner=args.batch_runner,
+        peek=args.gumbel_peek,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
