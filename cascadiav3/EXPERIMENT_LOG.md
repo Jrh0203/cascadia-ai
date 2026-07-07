@@ -3188,3 +3188,24 @@ n256/d4 shards at weight 0.25) -> probe wave: n1024_d8, n1024_d16,
 and the never-swept serving blend weight w=0.75/1.0 at n512d8 (gates
 have always used w=0.5) -> fleet-trial n64+n256 100g battery (checks
 for the wave-1-style regression with higher-grade fleet labels).
+
+## 2026-07-07 11:19 — Probe wave 3: the WORLDS axis scales; blend answered; fleet safe
+
+- **n1024_d16: 98.51, +0.92 CI+ [+0.43, +1.41] over n512_d8** (25g,
+  8.1 s/dec). n1024_d8 flat (-0.07 ns). The pattern: hold ~64 sims per
+  world and scale the NUMBER of determinized worlds — 8->16 worlds gave
+  +0.9, same as 4->8 did. The worlds axis decays far slower than the
+  sims axis.
+- Serving blend: w=0.5 optimal. w=0.75 -0.75 ns; **w=1.0 -2.94 CI-**
+  (serving rollouts carry real signal even though w=1.0 is fine for
+  training labels).
+- Fleet trial: SAFE. c6-corpus + fleet3 (n256/d4) at weight 0.25 vs
+  the nofleet c6: n64 -0.07 ns (no wave-1-style regression), n256
+  +0.03 ns. Upgraded fleet labels don't poison — but with EI saturated
+  they have no customer yet; minis idle pending a data consumer.
+
+Launched (probe4, chained): n1024_d16 100g CONFIRM, n2048_d32 25g
+(32 worlds — worlds-axis extrapolation ~99.2+), and the ORACLE PEEK
+run (new --gumbel-peek mode, commit 777ed98): n512_d8 100g with true
+hidden state = information ceiling; decides whether 100 is reachable
+by any honest agent.
