@@ -3209,3 +3209,26 @@ Launched (probe4, chained): n1024_d16 100g CONFIRM, n2048_d32 25g
 run (new --gumbel-peek mode, commit 777ed98): n512_d8 100g with true
 hidden state = information ceiling; decides whether 100 is reachable
 by any honest agent.
+
+## 2026-07-07 15:04 — n1024_d16 CONFIRMED (98.28); worlds axis peaks; ORACLE SHOCK
+
+- **n1024_d16 at 100g: 98.28, +0.435 CI+ [+0.113, +0.757] vs n512_d8.
+  NEW SERVING CONFIG. 11/100 games >=100 mean seat. 10.6 s/dec.**
+  Gap to the 100-gate: -1.72.
+- n2048_d32 (25g): 97.76, **-0.75 CI- vs n1024_d16** — the worlds axis
+  saturates/reverses past ~16 worlds. No more free doublings.
+- **ORACLE PEEK (n512_d8 + true hidden state, 100g): 97.50, -0.35 CI-
+  vs HONEST n512_d8.** Perfect foresight LOSES to honest 8-world
+  averaging. With peek, every determinization is the same (true) world,
+  so d8 collapses to d1-truth — and d1-truth < d8-sampled. Conclusion:
+  determinization gains were NEVER about approximating the hidden-state
+  posterior; they are ENSEMBLE VARIANCE-REDUCTION over noisy value/
+  rollout estimates. Hidden information is not the binding constraint;
+  EVALUATION NOISE is. (Corollary: the intended "information ceiling"
+  measurement is unmeasurable by peek — peek inherently destroys world
+  diversity — and also unnecessary, since info was not the deficit.)
+
+Strategy update: push ensemble quality, not belief modeling. Launched
+probe5 peak-refinement (25g each vs n1024_d16): n1024_d12, n1024_d24,
+n1536_d16, n1024_d16_m32. Also still open: the user question on
+table-total (gate-aligned) objective.
