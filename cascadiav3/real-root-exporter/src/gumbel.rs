@@ -63,6 +63,11 @@ pub struct GumbelConfig {
     /// Hidden-determinization stream seed. `None` derives it from
     /// `search_seed`; pin it for common-random-number paired comparisons.
     pub determinization_seed: Option<u64>,
+    /// ORACLE MODE: simulate on the true hidden state instead of
+    /// redeterminizing. Leaks hidden information — only valid for
+    /// measuring the information ceiling, never for honest gates or
+    /// training labels.
+    pub peek_true_hidden: bool,
 }
 
 impl Default for GumbelConfig {
@@ -82,6 +87,7 @@ impl Default for GumbelConfig {
             c_scale: 1.0,
             search_seed: 0,
             determinization_seed: None,
+            peek_true_hidden: false,
         }
     }
 }
@@ -393,7 +399,9 @@ pub fn gumbel_search(
                     det_stream ^ DETERMINIZATION_STREAM_SALT ^ splitmix64(det_index),
                 );
                 let mut state = root.staged.clone();
-                state.redeterminize_hidden(GameSeed::from_u64(det_seed));
+                if !cfg.peek_true_hidden {
+                    state.redeterminize_hidden(GameSeed::from_u64(det_seed));
+                }
                 let action = &root.afterstates[action_index].candidate.action;
                 let rollout_seed = splitmix64(
                     cfg.search_seed
@@ -712,6 +720,37 @@ mod tests {
         let original_blended = run_blended(&staged);
         let permuted_blended = run_blended(&permuted_game);
         assert_eq!(original_blended.completed_q, permuted_blended.completed_q);
+    }
+
+    #[test]
+    fn peek_mode_observes_true_hidden_order() {
+        // Inverse of the no-peek invariance test: with peek_true_hidden the
+        // rollout leaves run on the true hidden order, so permuting it must
+        // change the search result. Guards against the flag silently becoming
+        // a no-op (which would invalidate ceiling measurements).
+        let game = test_state(2_026_070_300, 6);
+        let (_prelude, staged) = game
+            .preview_free_three_of_a_kind_if_feasible()
+            .expect("staged");
+        let mut permuted_game = staged.clone();
+        permuted_game.redeterminize_hidden(GameSeed::from_u64(0xfeed_f00d));
+
+        let run_peek = |state: &GameState| {
+            let root = eval_row_for_state(state, None)
+                .expect("root row")
+                .expect("non-terminal root");
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(9);
+            cfg.rollout_blend_weight = 0.0; // leaf = pure rollout on the (peeked) state
+            cfg.peek_true_hidden = true;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search")
+        };
+        let original = run_peek(&staged);
+        let permuted = run_peek(&permuted_game);
+        assert_ne!(
+            original.completed_q, permuted.completed_q,
+            "peek search must depend on the true hidden order"
+        );
     }
 
     #[test]

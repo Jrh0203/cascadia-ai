@@ -74,6 +74,7 @@ def run_gumbel_games(
     rollout_top_k: int,
     model_timeout_ms: int,
     exploration: bool,
+    peek: bool = False,
 ) -> list[dict[str, Any]]:
     command = [
         str(binary),
@@ -102,6 +103,7 @@ def run_gumbel_games(
         str(blend_weight),
         "--gumbel-exploration",
         "on" if exploration else "off",
+        *(["--gumbel-peek"] if peek else []),
         "--k-interior",
         str(k_interior),
         "--max-actions",
@@ -169,6 +171,7 @@ def run_gumbel_games_batch(
     rollout_top_k: int,
     model_timeout_ms: int,
     exploration: bool,
+    peek: bool = False,
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
     process per contiguous seed run (one process total for the usual
@@ -203,6 +206,7 @@ def run_gumbel_games_batch(
             str(blend_weight),
             "--gumbel-exploration",
             "on" if exploration else "off",
+            *(["--gumbel-peek"] if peek else []),
             "--k-interior",
             str(k_interior),
             "--max-actions",
@@ -310,6 +314,7 @@ def run_gumbel_benchmark(
                 rollout_top_k=control_rollout_top_k,
                 model_timeout_ms=model_timeout_ms,
                 exploration=False,
+                peek=bool(getattr(args, "gumbel_peek", False)),
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -339,6 +344,7 @@ def run_gumbel_benchmark(
                     rollout_top_k=control_rollout_top_k,
                     model_timeout_ms=model_timeout_ms,
                     exploration=False,
+                    peek=bool(getattr(args, "gumbel_peek", False)),
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -529,6 +535,11 @@ def main() -> int:
     parser.add_argument("--gumbel-top-m", type=int, default=16)
     parser.add_argument("--gumbel-depth-rounds", type=int, default=1)
     parser.add_argument("--gumbel-determinizations", type=int, default=4)
+    parser.add_argument(
+        "--gumbel-peek",
+        action="store_true",
+        help="ORACLE ONLY: search on the true hidden state (ceiling measurement)",
+    )
     parser.add_argument("--gumbel-blend-weight", type=float, default=0.5)
     parser.add_argument("--k-interior", type=int, default=16)
     parser.add_argument("--gumbel-max-root-actions", type=int, default=0, help="0 keeps the full legal set")

@@ -82,6 +82,7 @@ struct Args {
     gumbel_determinizations: usize,
     gumbel_blend_weight: f64,
     gumbel_exploration: bool,
+    gumbel_peek: bool,
     gumbel_max_root_actions: Option<usize>,
     /// Root menu enumeration cap (immediate-score-ranked pre-filter before
     /// the model-prior top-m). 0 = full legal set. Late-game legal menus can
@@ -338,6 +339,7 @@ fn parse_args() -> Result<Args> {
         gumbel_determinizations: 4,
         gumbel_blend_weight: 0.5,
         gumbel_exploration: false,
+        gumbel_peek: false,
         gumbel_max_root_actions: None,
         gumbel_root_menu: 256,
         k_interior: 16,
@@ -385,6 +387,9 @@ fn parse_args() -> Result<Args> {
             "--gumbel-depth-rounds" => {
                 args.gumbel_depth_rounds =
                     value()?.parse().context("invalid --gumbel-depth-rounds")?
+            }
+            "--gumbel-peek" => {
+                args.gumbel_peek = true;
             }
             "--gumbel-determinizations" => {
                 args.gumbel_determinizations = value()?
@@ -620,6 +625,9 @@ Options:
   --gumbel-top-m <n>       Gumbel top-m root candidates [16].
   --gumbel-depth-rounds <n>
                            Root-seat re-entries before leaf valuation [1].
+  --gumbel-peek                ORACLE ONLY: search on the true hidden state
+                               (leaks hidden info; ceiling measurement, never
+                               honest gates or labels)
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
   --gumbel-blend-weight <w>
@@ -2370,6 +2378,7 @@ fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfi
         rollout_top_k: args.rollout_top_k,
         k_interior: args.k_interior,
         exploration: args.gumbel_exploration,
+        peek_true_hidden: args.gumbel_peek,
         search_seed,
         ..gumbel::GumbelConfig::default()
     }
@@ -5053,6 +5062,7 @@ mod tests {
     fn test_args() -> Args {
         Args {
             mode: Mode::ExportRoots,
+            gumbel_peek: false,
             out: PathBuf::from("/tmp/unused.jsonl"),
             manifest: PathBuf::from("/tmp/unused_manifest.json"),
             first_seed: 2_026_063_000,
