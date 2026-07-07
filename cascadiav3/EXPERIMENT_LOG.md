@@ -3170,3 +3170,21 @@ test whether higher-grade fleet labels (2x the eval budget of waves
 regression. Scale to production volume only if the trial passes.
 Hypothesis unchanged: weak LABELS (n=128 d4) poisoned cycle-5, not MPS
 numerics per se.
+
+## 2026-07-07 08:26 — Cycle-6 battery: FLAT on all four legs. EI at M is saturated
+
+Cycle-6 (d8-taught labels, no fleet, best step 5000) vs c4-M champion,
+100g paired: no-search +0.03 ns; n64 -0.05 ns; n256 +0.07 ns;
+**n512d8 97.62 vs 97.845, -0.225 [-0.54, +0.09] ns** (5/100 games
+>=100). The d8 teacher gain did NOT compress into the prior.
+
+EI-saturation picture complete: at M capacity the prior has absorbed
+all it can — better labels (n256->n512->n512d8), more data (1x->3x),
+more capacity (L), all flat. c4-M REMAINS champion. Road to 100 =
+serving-side search + structural throughput.
+
+Launched (chained on one GPU): fleet-trial retrain (c6 corpus + fleet3
+n256/d4 shards at weight 0.25) -> probe wave: n1024_d8, n1024_d16,
+and the never-swept serving blend weight w=0.75/1.0 at n512d8 (gates
+have always used w=0.5) -> fleet-trial n64+n256 100g battery (checks
+for the wave-1-style regression with higher-grade fleet labels).
