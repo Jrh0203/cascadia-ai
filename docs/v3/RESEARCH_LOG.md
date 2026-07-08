@@ -83,6 +83,24 @@ playing strength is **noise in the value estimates**, not hidden
 information, capacity, or data. Every direction in the active program
 attacks value noise or sidesteps the competitive objective.
 
+## 3b. Decision-SNR measurement (2026-07-08)
+
+From the cycle-6 selfplay shard (n512/d8 w1.0 search, 20k sampled roots):
+per-decision signal = top-2 completed-Q gap, noise = pairwise SE from the
+exported per-action simulation variances.
+
+- top1−top2 gap: median **0.049** points (p25 0.013, p75 0.146)
+- pairwise SE: median **0.051** points
+- decision SNR: median **1.06** — **46% of decisions are flippable by
+  simulation noise (SNR < 1); 62% are marginal (SNR < 2).**
+
+The argmax at the root is a coin flip for nearly half of all plies. This
+is the per-decision mechanism behind the worlds scaling law (+0.9 per
+doubling ≈ SE ÷ √2) and the headroom estimate for every variance lever
+(softmix, TTA, budget shape). Caveat: observed gaps are inflated by the
+same noise, so the true flippable fraction is, if anything, higher;
+near-tie flips cost little individually but compound over ~80 plies.
+
 ---
 
 ## 4. Active program (2026-07-08, ranked by expected value)
@@ -102,9 +120,18 @@ argmax (approximation; noted).
 
 **Experiment.** 100-game candidate arm at n256/d4 w=0.5, paired seeds
 2026995000+, verdict vs the existing own-seat n256/d4 baseline (96.95).
-If CI+ → confirm at champion n1024/d16.
 
-**Status.** Implementing. Results TBD.
+**Result (v1): CI− — 95.30 vs 96.95, delta −1.65, CI95 [−2.00, −1.30].**
+Diagnosis: v1 recomputed the other-seats bootstrap shift from the value
+head at every leaf. The value head was never load-bearing (own-seat
+search reads only q/score-to-go), so its per-leaf variation injected
+unvalidated eval noise straight into the across-action Q comparison —
+exactly the quantity the campaign proved is the binding constraint.
+
+**v2 (running):** shift computed once at the root — constant across
+leaves, zero added variance; the cooperation signal flows through the
+honest table-scoring rollout and terminal halves. Fleet table
+generation and cycle-7 HELD pending this verdict.
 
 ### 4.2 Softened leaf bootstrap (max-bias correction) — IN PROGRESS
 
@@ -154,10 +181,25 @@ distributional head" ablation against a known-flat control.
 `full_v3_distq_k8`, then a 100g battery at n256/d4 vs 96.95.
 Smoke-tested end-to-end (init-skip, pinball loss, bridge load). Results TBD.
 
-### 4.5 Market-refill chance-node expectimax — BACKLOG
+### 4.5 Market-refill chance-node expectimax — DEPRIORITIZED (evidence)
 
-Model the refill chance node explicitly instead of averaging it through
-determinized worlds; surgical variance reduction where randomness enters.
+The oracle experiment already bounds this: an oracle on the true hidden
+state has ZERO chance-sampling variance, and it still lost to honest
+multi-world search. So chance variance is not the binding noise term —
+model eval error (decorrelated by input perturbation) is. Explicit
+chance nodes would attack a non-binding constraint. Killed before
+implementation; reasoning recorded so it isn't re-proposed.
+
+### 4.5b Symmetry test-time augmentation (TTA) — INVESTIGATING
+
+The one lever family that measurably paid (+0.9/doubling of worlds) is
+input-space perturbation that decorrelates model eval error, and it caps
+at d=16. Hex-board symmetries (rotations/reflections) are an orthogonal
+perturbation axis: evaluate the model on a symmetry-transformed state and
+average — same decorrelation mechanism, no change to hidden sampling.
+Scoring is symmetry-invariant, so exact afterstate scores give a strong
+correctness oracle for the transform. Feasibility depends on a
+state-level transform in the game crate.
 
 ### 4.6 Multi-bridge generation throughput — BACKLOG (enabler)
 
