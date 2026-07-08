@@ -83,6 +83,7 @@ struct Args {
     gumbel_blend_weight: f64,
     gumbel_exploration: bool,
     gumbel_peek: bool,
+    gumbel_table_total: bool,
     gumbel_max_root_actions: Option<usize>,
     /// Root menu enumeration cap (immediate-score-ranked pre-filter before
     /// the model-prior top-m). 0 = full legal set. Late-game legal menus can
@@ -340,6 +341,7 @@ fn parse_args() -> Result<Args> {
         gumbel_blend_weight: 0.5,
         gumbel_exploration: false,
         gumbel_peek: false,
+        gumbel_table_total: false,
         gumbel_max_root_actions: None,
         gumbel_root_menu: 256,
         k_interior: 16,
@@ -390,6 +392,9 @@ fn parse_args() -> Result<Args> {
             }
             "--gumbel-peek" => {
                 args.gumbel_peek = true;
+            }
+            "--gumbel-table-total" => {
+                args.gumbel_table_total = true;
             }
             "--gumbel-determinizations" => {
                 args.gumbel_determinizations = value()?
@@ -628,6 +633,9 @@ Options:
   --gumbel-peek                ORACLE ONLY: search on the true hidden state
                                (leaks hidden info; ceiling measurement, never
                                honest gates or labels)
+  --gumbel-table-total         Value simulations by the table total (sum of
+                               all seats) instead of the root seat's own
+                               score. Gate-aligned cooperative objective.
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
   --gumbel-blend-weight <w>
@@ -2379,6 +2387,7 @@ fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfi
         k_interior: args.k_interior,
         exploration: args.gumbel_exploration,
         peek_true_hidden: args.gumbel_peek,
+        table_total: args.gumbel_table_total,
         search_seed,
         ..gumbel::GumbelConfig::default()
     }
@@ -2683,6 +2692,7 @@ fn eval_out_for_row(row: &gumbel::EvalRow, eval: &ModelEval) -> Result<gumbel::E
     Ok(gumbel::EvalOut {
         priors,
         derived_final_q,
+        value_vector: eval.value.clone(),
     })
 }
 
@@ -2840,6 +2850,7 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
         "k_interior": args.k_interior,
         "max_root_actions": args.gumbel_max_root_actions,
         "root_menu": args.gumbel_root_menu,
+        "table_total": args.gumbel_table_total,
         "simulations_run": result.simulations_run,
     })
 }
@@ -5063,6 +5074,7 @@ mod tests {
         Args {
             mode: Mode::ExportRoots,
             gumbel_peek: false,
+            gumbel_table_total: false,
             out: PathBuf::from("/tmp/unused.jsonl"),
             manifest: PathBuf::from("/tmp/unused_manifest.json"),
             first_seed: 2_026_063_000,

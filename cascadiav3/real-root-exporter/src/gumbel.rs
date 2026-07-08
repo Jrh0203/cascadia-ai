@@ -68,6 +68,13 @@ pub struct GumbelConfig {
     /// measuring the information ceiling, never for honest gates or
     /// training labels.
     pub peek_true_hidden: bool,
+    /// Value simulations by the TABLE TOTAL (sum of all four seats' final
+    /// scores) instead of the root seat's own score. Gate-aligned
+    /// cooperative objective: the formal gate averages every seat of our
+    /// own self-play, so denial moves that buy own-seat rank by burning
+    /// other seats' points lower the gate metric. Interior plies remain
+    /// selfish argmax (an approximation of the other searchers).
+    pub table_total: bool,
 }
 
 impl Default for GumbelConfig {
@@ -88,6 +95,7 @@ impl Default for GumbelConfig {
             search_seed: 0,
             determinization_seed: None,
             peek_true_hidden: false,
+            table_total: false,
         }
     }
 }
@@ -106,6 +114,9 @@ pub struct EvalOut {
     pub priors: Vec<f64>,
     /// Derived final Q per action: exact afterstate score + score-to-go.
     pub derived_final_q: Vec<f64>,
+    /// Predicted final score per seat (absolute seat order), when the
+    /// model's value head is available. Used only by table-total search.
+    pub value_vector: Option<Vec<f64>>,
 }
 
 pub trait LeafEvaluator {
@@ -200,6 +211,39 @@ fn minmax_normalize(values: &[f64]) -> Vec<f64> {
     values.iter().map(|value| (value - min) / (max - min)).collect()
 }
 
+/// Terminal simulation value: root seat's score, or the table sum in
+/// table-total mode.
+fn terminal_simulation_value(state: &GameState, root_seat: usize, table_total: bool) -> f64 {
+    let scores = score_game(state);
+    if table_total {
+        scores.iter().map(|score| f64::from(score.total)).sum()
+    } else {
+        f64::from(scores[root_seat].total)
+    }
+}
+
+/// Σ of the other seats' predicted final scores (value head, absolute seat
+/// order). Falls back to their exact current scores when the head is
+/// unavailable (uniform-fallback bridges) — a grounded underestimate.
+fn other_seats_final_estimate(eval: &EvalOut, state: &GameState, active_seat: usize) -> f64 {
+    if let Some(values) = &eval.value_vector {
+        if values.len() > active_seat {
+            return values
+                .iter()
+                .enumerate()
+                .filter(|(seat, _)| *seat != active_seat)
+                .map(|(_, value)| *value)
+                .sum();
+        }
+    }
+    score_game(state)
+        .iter()
+        .enumerate()
+        .filter(|(seat, _)| *seat != active_seat)
+        .map(|(_, score)| f64::from(score.total))
+        .sum()
+}
+
 fn softmax(logits: &[f64]) -> Vec<f64> {
     let max = logits.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let exps: Vec<f64> = logits.iter().map(|logit| (logit - max).exp()).collect();
@@ -247,8 +291,11 @@ fn advance_simulations(
         let mut model_row_sims = Vec::new();
         for (&sim_index, row) in live_indexes.iter().zip(rows.into_iter()) {
             if row.afterstates.is_empty() {
-                let scores = score_game(&simulations[sim_index].state);
-                simulations[sim_index].value = Some(f64::from(scores[root_seat].total));
+                simulations[sim_index].value = Some(terminal_simulation_value(
+                    &simulations[sim_index].state,
+                    root_seat,
+                    cfg.table_total,
+                ));
             } else {
                 model_rows.push(row);
                 model_row_sims.push(sim_index);
@@ -290,7 +337,15 @@ fn advance_simulations(
                 simulation.rounds_left = simulation.rounds_left.saturating_sub(1);
                 if simulation.rounds_left == 0 {
                     // Leaf: blend max-Q bootstrap with an optional terminal rollout.
-                    let bootstrap = eval.derived_final_q[best_index];
+                    // Table-total mode keeps the exact-grounded own-seat Q and adds
+                    // the other seats' predicted final scores; the rollout branch
+                    // scores the whole terminal table.
+                    let bootstrap = if cfg.table_total {
+                        eval.derived_final_q[best_index]
+                            + other_seats_final_estimate(&eval, &row.staged, active_seat)
+                    } else {
+                        eval.derived_final_q[best_index]
+                    };
                     let w = cfg.rollout_blend_weight.clamp(0.0, 1.0);
                     let value = if w >= 1.0 {
                         bootstrap
@@ -302,7 +357,8 @@ fn advance_simulations(
                             &mut simulation.rollout_rng,
                             None,
                         )?;
-                        let rollout = f64::from(score_game(&terminal)[root_seat].total);
+                        let rollout =
+                            terminal_simulation_value(&terminal, root_seat, cfg.table_total);
                         w * bootstrap + (1.0 - w) * rollout
                     };
                     simulation.value = Some(value);
@@ -340,6 +396,15 @@ pub fn gumbel_search(
         bail!("root evaluator output misaligned with root menu");
     }
     let action_count = root.afterstates.len();
+    // Table-total mode: model derived Q is own-seat scale; simulation values
+    // are table scale. Shift every model-Q fallback by the other seats'
+    // predicted finals so visited and unvisited actions are comparable
+    // (constant additive shift — ranking among fallbacks is unchanged).
+    let root_q_shift = if cfg.table_total {
+        other_seats_final_estimate(&root_eval, &root.staged, root_seat)
+    } else {
+        0.0
+    };
     let logits: Vec<f64> = root_eval
         .priors
         .iter()
@@ -418,8 +483,11 @@ pub fn gumbel_search(
                 };
                 if let Err(error) = simulation.state.apply(action) {
                     if crate::is_rollout_truncation_rule_error(&error) {
-                        let scores = score_game(&simulation.state);
-                        simulation.value = Some(f64::from(scores[root_seat].total));
+                        simulation.value = Some(terminal_simulation_value(
+                            &simulation.state,
+                            root_seat,
+                            cfg.table_total,
+                        ));
                     } else {
                         return Err(error).context("applying root action in gumbel simulation");
                     }
@@ -446,7 +514,7 @@ pub fn gumbel_search(
             .iter()
             .map(|&action_index| {
                 if visit_counts[action_index] == 0 {
-                    root_eval.derived_final_q[action_index]
+                    root_eval.derived_final_q[action_index] + root_q_shift
                 } else {
                     value_sums[action_index] / f64::from(visit_counts[action_index])
                 }
@@ -484,7 +552,7 @@ pub fn gumbel_search(
     let completed_q: Vec<f64> = (0..action_count)
         .map(|action_index| {
             if visit_counts[action_index] == 0 {
-                root_eval.derived_final_q[action_index]
+                root_eval.derived_final_q[action_index] + root_q_shift
             } else {
                 value_sums[action_index] / f64::from(visit_counts[action_index])
             }
@@ -549,6 +617,7 @@ mod tests {
     struct MockEvaluator {
         calls: usize,
         rows_seen: usize,
+        value_vector: Option<Vec<f64>>,
     }
 
     impl MockEvaluator {
@@ -556,6 +625,7 @@ mod tests {
             Self {
                 calls: 0,
                 rows_seen: 0,
+                value_vector: None,
             }
         }
     }
@@ -584,6 +654,7 @@ mod tests {
                     EvalOut {
                         priors,
                         derived_final_q,
+                        value_vector: self.value_vector.clone(),
                     }
                 })
                 .collect())
@@ -751,6 +822,88 @@ mod tests {
             original.completed_q, permuted.completed_q,
             "peek search must depend on the true hidden order"
         );
+    }
+
+    #[test]
+    fn table_total_shifts_model_fallbacks_onto_table_scale() {
+        // With w=1.0 (no rollouts) and no terminals in reach, every value in
+        // table mode is the own-seat value plus the other seats' predicted
+        // finals — for unvisited fallbacks by construction, for visited leaf
+        // bootstraps because the evaluator is deterministic across runs.
+        let game = test_state(2_026_070_500, 5);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let root_seat = root.staged.current_player();
+        let values = vec![10.0, 20.0, 30.0, 40.0];
+        let shift: f64 = values
+            .iter()
+            .enumerate()
+            .filter(|(seat, _)| *seat != root_seat)
+            .map(|(_, value)| *value)
+            .sum();
+
+        let run = |table_total: bool| {
+            let mut evaluator = MockEvaluator::new();
+            evaluator.value_vector = Some(values.clone());
+            let mut cfg = test_config(11);
+            cfg.top_m = 1;
+            cfg.table_total = table_total;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search")
+        };
+        let own = run(false);
+        let table = run(true);
+        assert_eq!(own.visit_counts, table.visit_counts);
+        assert_eq!(own.chosen_index, table.chosen_index);
+        let mut unvisited_checked = 0;
+        for index in 0..own.completed_q.len() {
+            let expected = own.completed_q[index] + shift;
+            assert!(
+                (table.completed_q[index] - expected).abs() < 1e-9,
+                "action {index}: table Q {} must equal own Q {} + shift {shift}",
+                table.completed_q[index],
+                own.completed_q[index]
+            );
+            if own.visit_counts[index] == 0 {
+                unvisited_checked += 1;
+            }
+        }
+        assert!(unvisited_checked > 0, "test requires unvisited fallbacks");
+    }
+
+    #[test]
+    fn table_total_rollout_values_score_the_whole_table() {
+        // Pure-rollout leaves (w=0.0) in table mode score every seat's
+        // terminal total, so visited Q strictly exceeds the own-seat variant
+        // (identical rollout rng streams → identical terminal states).
+        let game = test_state(2_026_070_600, 8);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |table_total: bool| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(13);
+            cfg.rollout_blend_weight = 0.0;
+            cfg.table_total = table_total;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search")
+        };
+        let own = run(false);
+        let table = run(true);
+        // Table mode may allocate visits differently (the objective changed;
+        // rollout table totals are not a constant shift of own-seat totals),
+        // so only compare actions visited under both objectives: each rollout
+        // terminal's table sum strictly exceeds the root seat's component.
+        let mut visited_checked = 0;
+        for index in 0..own.completed_q.len() {
+            if own.visit_counts[index] > 0 && table.visit_counts[index] > 0 {
+                assert!(
+                    table.completed_q[index] > own.completed_q[index],
+                    "visited action {index}: table Q must exceed own-seat Q"
+                );
+                visited_checked += 1;
+            }
+        }
+        assert!(visited_checked > 0, "test requires commonly visited actions");
     }
 
     #[test]
