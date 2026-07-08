@@ -3243,3 +3243,19 @@ Next actionable prediction of the eval-noise theory: ensemble the VALUE
 ESTIMATOR (checkpoint ensembling at the leaves), same mechanism as
 world-ensembling. Implementing bridge-side multi-manifest ensembling
 (opt-in), probes: champion+swa and champion+c6-best at n512_d8 25g.
+
+## 2026-07-07 20:25 — Checkpoint-ensemble probes: correlated members don't pay
+
+25g vs solo controls: champion+swa n512d8 +0.38 ns; champion+c6 n512d8
+-0.12 ns; champion+c6 n1024d16 -0.10 ns (98.41 vs 98.28 solo, ns).
+Interpretation: c6 is EI-taught BY c4 (and swa is the same run) — their
+errors are correlated, and ensembles only cancel uncorrelated noise.
+The world-ensemble mechanism needs member DIVERSITY.
+
+Overnight chain launched (probe7): (1) champion+c3-M (different data
+era, from-scratch) and champion+L-v2 (different architecture+init)
+25g probes at n512d8; (2) train two fresh from-scratch M's on the
+pooled c6-era corpus with different trainer seeds (16-pass, ~2h each
+at the new 0.23 s/step); (3) 4-way diverse ensemble probe (champion +
+c3m + freshA + freshB) at n512d8, then n1024d16. Morning readout
+decides whether diversity-ensembling is the next confirmed lever.
