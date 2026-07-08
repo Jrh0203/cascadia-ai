@@ -3280,3 +3280,21 @@ optimum of this architecture+search. Remaining moves: (1) user ruling
 on table-total objective; (2) 1,000-game certification of 98.28
 (~24h at 10.6 s/dec); (3) new-research directions (distributional
 value head, market-refill chance nodes) with uncertain payoff.
+
+## 2026-07-08 03:41 — Fresh-M solo replicates saturation; overnight program complete
+
+ens_m_seed_a solo (from scratch, 3x pooled corpus, 16-pass, regret-
+selected step 18500) at n256, 100g paired vs c4-M: 96.83, -0.125
+[-0.50, +0.25] ns. Third independent replication of the training-side
+plateau (L-v2, cycle-6, now fresh-M): at this architecture and
+objective, ~97.0 at n256 is where trained M's land regardless of data
+scale, initialization, or teacher strength.
+
+CAMPAIGN POSITION (morning 07-08): honest measured optimum =
+**98.28 mean seat, 100g, c4-M at n1024/d16/m16/w0.5** (11% of games
+>=100). All tuning levers measured and closed: capacity, data, labels,
+EI, search shape, worlds axis, blend, ensembles. The -1.72 gap needs
+either the gate-aligned table-total objective (user decision pending),
+or new research (distributional value head, market-refill chance
+nodes), or a redefinition of done. John0 and fleet idle pending
+direction.
