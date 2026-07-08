@@ -63,6 +63,57 @@ pub fn uniform_model_eval(action_count: usize) -> ModelEval {
     }
 }
 
+/// Elementwise mean of several evals of the same action menu (symmetry TTA
+/// variants). A mean of normalized prior vectors stays normalized, so no
+/// re-normalization is needed. Optional arrays are averaged only when every
+/// variant provides them (a partially available head cannot be averaged
+/// consistently). The first variant's raw response is kept for provenance;
+/// `model_fallback` is OR-ed so a fallback in any variant stays visible.
+pub fn average_model_evals(evals: &[&ModelEval]) -> Result<ModelEval> {
+    let first = *evals
+        .first()
+        .context("averaging requires at least one eval")?;
+    if evals.len() == 1 {
+        return Ok(first.clone());
+    }
+    let action_count = first.priors.len();
+    let variant_count = evals.len() as f64;
+    let mut priors = vec![0.0_f64; action_count];
+    for eval in evals {
+        if eval.priors.len() != action_count {
+            bail!("TTA variant menu size mismatch");
+        }
+        for (slot, value) in eval.priors.iter().enumerate() {
+            priors[slot] += value.as_f64().context("model prior must be numeric")? / variant_count;
+        }
+    }
+    let average_optional = |field: &dyn Fn(&ModelEval) -> Option<&Vec<f64>>,
+                            expected_len: usize|
+     -> Result<Option<Vec<f64>>> {
+        let mut sums = vec![0.0_f64; expected_len];
+        for eval in evals {
+            let Some(values) = field(eval) else {
+                return Ok(None);
+            };
+            if values.len() != expected_len {
+                bail!("TTA variant array length mismatch");
+            }
+            for (slot, value) in values.iter().enumerate() {
+                sums[slot] += value / variant_count;
+            }
+        }
+        Ok(Some(sums))
+    };
+    Ok(ModelEval {
+        priors: priors.into_iter().map(|prior| json!(prior)).collect(),
+        q: average_optional(&|eval| eval.q.as_ref(), action_count)?,
+        score_to_go: average_optional(&|eval| eval.score_to_go.as_ref(), action_count)?,
+        value: average_optional(&|eval| eval.value.as_ref(), 4)?,
+        model_fallback: evals.iter().any(|eval| eval.model_fallback),
+        response: first.response.clone(),
+    })
+}
+
 pub struct ModelServiceSession {
     child: Child,
     stdin: ChildStdin,

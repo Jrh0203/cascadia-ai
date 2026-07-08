@@ -35,7 +35,7 @@ use feature_tensors::{
 };
 use model_bridge::{
     BridgeConfig, ModelEval, ModelServiceSession, SharedBridge, SharedBridgeClient,
-    uniform_model_eval,
+    average_model_evals, uniform_model_eval,
 };
 use npz_writer::NpzCompression;
 
@@ -86,6 +86,7 @@ struct Args {
     gumbel_table_total: bool,
     gumbel_table_native_q: bool,
     gumbel_leaf_softmix: Option<f64>,
+    gumbel_tta: u8,
     gumbel_max_root_actions: Option<usize>,
     /// Root menu enumeration cap (immediate-score-ranked pre-filter before
     /// the model-prior top-m). 0 = full legal set. Late-game legal menus can
@@ -346,6 +347,7 @@ fn parse_args() -> Result<Args> {
         gumbel_table_total: false,
         gumbel_table_native_q: false,
         gumbel_leaf_softmix: None,
+        gumbel_tta: 1,
         gumbel_max_root_actions: None,
         gumbel_root_menu: 256,
         k_interior: 16,
@@ -406,6 +408,12 @@ fn parse_args() -> Result<Args> {
             "--gumbel-leaf-softmix" => {
                 args.gumbel_leaf_softmix =
                     Some(value()?.parse().context("invalid --gumbel-leaf-softmix")?);
+            }
+            "--gumbel-tta" => {
+                args.gumbel_tta = value()?.parse().context("invalid --gumbel-tta")?;
+                if args.gumbel_tta < 1 || args.gumbel_tta > 6 {
+                    bail!("--gumbel-tta must be in 1..=6");
+                }
             }
             "--gumbel-determinizations" => {
                 args.gumbel_determinizations = value()?
@@ -652,6 +660,9 @@ Options:
   --gumbel-table-native-q      The model's q head predicts table-scale
                                score-to-go (table-total-trained cycle):
                                table terminals/rollouts, no value shift.
+  --gumbel-tta <k>             Symmetry test-time augmentation: average
+                               model evals over k rotated board frames
+                               (1 = off, max 6). k× eval cost.
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
   --gumbel-blend-weight <w>
@@ -2796,15 +2807,84 @@ where
         .collect()
 }
 
+/// The rotation-transformed twin of an eval row: every board rotated,
+/// every candidate action expressed in the rotated frame. Exact afterstate
+/// scores are rotation-invariant and copied verbatim, so the transformed
+/// row's derived Q differs from the original only through the model's
+/// score-to-go/prior outputs — which is exactly the decorrelation TTA wants.
+fn rotated_eval_row(row: &gumbel::EvalRow, steps: u8) -> gumbel::EvalRow {
+    gumbel::EvalRow {
+        staged: row.staged.with_rotated_boards(steps),
+        prelude: row.prelude.clone(),
+        afterstates: row
+            .afterstates
+            .iter()
+            .map(|afterstate| CandidateAfterstate {
+                candidate: GreedyCandidate {
+                    action: afterstate.candidate.action.rotated(steps),
+                    resulting_base_score: afterstate.candidate.resulting_base_score,
+                    immediate_rank: afterstate.candidate.immediate_rank,
+                },
+                state: afterstate.state.with_rotated_boards(steps),
+                exact_score_active: afterstate.exact_score_active,
+                apply_truncated: afterstate.apply_truncated,
+            })
+            .collect(),
+    }
+}
+
+/// Sends one request batch through the chunk bridge with the standard
+/// uniform-prior fallback semantics. `action_counts` sizes the fallback
+/// evals (one per request, aligned).
+fn chunk_bridge_eval_batch(
+    bridge: &mut ChunkBridge,
+    allow_model_fallback: bool,
+    requests: &[Value],
+    action_counts: &[usize],
+) -> Result<Vec<ModelEval>> {
+    match bridge {
+        ChunkBridge::Shared(client) => client.eval_batch(requests),
+        ChunkBridge::Owned(session_slot) => {
+            if let Some(session) = session_slot.as_mut() {
+                match session.eval_batch(requests) {
+                    Ok(evals) => Ok(evals),
+                    Err(error) if allow_model_fallback => {
+                        eprintln!(
+                            "model service batch eval failed; falling back to uniform priors: {error}"
+                        );
+                        *session_slot = None;
+                        Ok(action_counts
+                            .iter()
+                            .map(|count| uniform_model_eval(*count))
+                            .collect())
+                    }
+                    Err(error) => Err(error),
+                }
+            } else if allow_model_fallback {
+                Ok(action_counts
+                    .iter()
+                    .map(|count| uniform_model_eval(*count))
+                    .collect())
+            } else {
+                bail!("gumbel search requires a model service or --allow-model-fallback");
+            }
+        }
+    }
+}
+
 /// Batched leaf evaluator over the JSONL model bridge. Identical rows are
 /// deduplicated within each batch and served from a cross-call cache; only
 /// unique unseen rows pay a bridge round-trip. Falls back to
 /// exact-afterstate-only values (uniform priors) when the bridge is
-/// unavailable and fallback is allowed.
+/// unavailable and fallback is allowed. With `tta_rotations > 1`, each
+/// unique row is additionally evaluated on rotated board frames and the
+/// model outputs are averaged (symmetry test-time augmentation); the cache
+/// stores the averaged result.
 struct BridgeLeafEvaluator<'a> {
     bridge: &'a mut ChunkBridge,
     allow_model_fallback: bool,
     cache: &'a mut EvalRowCache,
+    tta_rotations: u8,
 }
 
 impl gumbel::LeafEvaluator for BridgeLeafEvaluator<'_> {
@@ -2812,35 +2892,41 @@ impl gumbel::LeafEvaluator for BridgeLeafEvaluator<'_> {
         let packed = self.bridge.supports_packed_features();
         let bridge = &mut *self.bridge;
         let allow_model_fallback = self.allow_model_fallback;
+        let tta_rotations = self.tta_rotations.clamp(1, 6);
         evaluate_rows_deduped(rows, packed, self.cache, |requests, unique_rows| {
-            match bridge {
-                ChunkBridge::Shared(client) => client.eval_batch(requests),
-                ChunkBridge::Owned(session_slot) => {
-                    if let Some(session) = session_slot.as_mut() {
-                        match session.eval_batch(requests) {
-                            Ok(evals) => Ok(evals),
-                            Err(error) if allow_model_fallback => {
-                                eprintln!(
-                                    "model service batch eval failed; falling back to uniform priors: {error}"
-                                );
-                                *session_slot = None;
-                                Ok(unique_rows
-                                    .iter()
-                                    .map(|row| uniform_model_eval(row.afterstates.len()))
-                                    .collect())
-                            }
-                            Err(error) => Err(error),
-                        }
-                    } else if allow_model_fallback {
-                        Ok(unique_rows
-                            .iter()
-                            .map(|row| uniform_model_eval(row.afterstates.len()))
-                            .collect())
-                    } else {
-                        bail!("gumbel search requires a model service or --allow-model-fallback");
-                    }
-                }
+            let action_counts: Vec<usize> = unique_rows
+                .iter()
+                .map(|row| row.afterstates.len())
+                .collect();
+            let base =
+                chunk_bridge_eval_batch(bridge, allow_model_fallback, requests, &action_counts)?;
+            if tta_rotations <= 1 {
+                return Ok(base);
             }
+            let mut variants: Vec<Vec<ModelEval>> = vec![base];
+            for steps in 1..tta_rotations {
+                let rotated_rows: Vec<gumbel::EvalRow> = unique_rows
+                    .iter()
+                    .map(|row| rotated_eval_row(row, steps))
+                    .collect();
+                let rotated_requests = rotated_rows
+                    .iter()
+                    .map(|row| eval_request_for_row(row, packed))
+                    .collect::<Result<Vec<_>>>()?;
+                variants.push(chunk_bridge_eval_batch(
+                    bridge,
+                    allow_model_fallback,
+                    &rotated_requests,
+                    &action_counts,
+                )?);
+            }
+            (0..unique_rows.len())
+                .map(|row_index| {
+                    let per_row: Vec<&ModelEval> =
+                        variants.iter().map(|batch| &batch[row_index]).collect();
+                    average_model_evals(&per_row)
+                })
+                .collect()
         })
     }
 }
@@ -2871,6 +2957,7 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
         "table_total": args.gumbel_table_total,
         "table_native_q": args.gumbel_table_native_q,
         "leaf_softmix": args.gumbel_leaf_softmix,
+        "tta_rotations": args.gumbel_tta,
         "simulations_run": result.simulations_run,
     })
 }
@@ -3002,6 +3089,7 @@ fn play_gumbel_selfplay_seed(
             bridge,
             allow_model_fallback: args.allow_model_fallback,
             cache: eval_cache,
+            tta_rotations: args.gumbel_tta,
         };
         let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
             .with_context(|| format!("gumbel selfplay seed {seed_u64} ply {ply_index}"))?;
@@ -3225,6 +3313,7 @@ fn play_gumbel_policy_game_seed(
             bridge: chunk_bridge,
             allow_model_fallback: args.allow_model_fallback,
             cache: eval_cache,
+            tta_rotations: args.gumbel_tta,
         };
         let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
             .with_context(|| format!("gumbel policy game seed {seed_u64} ply {ply_index}"))?;
@@ -5097,6 +5186,7 @@ mod tests {
             gumbel_table_total: false,
             gumbel_table_native_q: false,
             gumbel_leaf_softmix: None,
+            gumbel_tta: 1,
             out: PathBuf::from("/tmp/unused.jsonl"),
             manifest: PathBuf::from("/tmp/unused_manifest.json"),
             first_seed: 2_026_063_000,
@@ -5613,6 +5703,90 @@ mod tests {
             equal_pairs >= 4,
             "expected at least 4 request-equal pairs, found {equal_pairs}"
         );
+    }
+
+    #[test]
+    fn rotated_eval_rows_preserve_menus_and_exact_scores() {
+        let state = advanced_test_state(2_026_070_901, 6);
+        let row = gumbel::eval_row_for_state(&state, Some(8))
+            .expect("row")
+            .expect("non-terminal");
+        for steps in 1..6u8 {
+            let rotated = rotated_eval_row(&row, steps);
+            assert_eq!(rotated.afterstates.len(), row.afterstates.len());
+            for (original, transformed) in row.afterstates.iter().zip(rotated.afterstates.iter()) {
+                assert_eq!(
+                    original.exact_score_active, transformed.exact_score_active,
+                    "exact scoring is rotation-invariant"
+                );
+                assert_eq!(original.apply_truncated, transformed.apply_truncated);
+                assert_eq!(
+                    original.candidate.resulting_base_score,
+                    transformed.candidate.resulting_base_score
+                );
+            }
+            // Both frames must build valid eval requests with equal menu sizes.
+            let original_request = eval_request_for_row(&row, false).expect("request");
+            let rotated_request = eval_request_for_row(&rotated, false).expect("rotated request");
+            assert_eq!(
+                original_request["action_ids"].as_array().unwrap().len(),
+                rotated_request["action_ids"].as_array().unwrap().len()
+            );
+            // Different frame -> different public state hash (the whole point).
+            assert_ne!(original_request["state_hash"], rotated_request["state_hash"]);
+        }
+    }
+
+    #[test]
+    fn average_model_evals_takes_elementwise_means() {
+        let make = |prior: f64, stg: f64| ModelEval {
+            priors: vec![json!(prior), json!(1.0 - prior)],
+            q: Some(vec![stg + 1.0, stg + 2.0]),
+            score_to_go: Some(vec![stg, stg * 2.0]),
+            value: Some(vec![stg; 4]),
+            model_fallback: false,
+            response: json!({}),
+        };
+        let a = make(0.25, 1.0);
+        let b = make(0.75, 3.0);
+        let averaged = average_model_evals(&[&a, &b]).expect("average");
+        assert_eq!(averaged.priors[0].as_f64().unwrap(), 0.5);
+        assert_eq!(averaged.priors[1].as_f64().unwrap(), 0.5);
+        assert_eq!(averaged.score_to_go.as_ref().unwrap()[0], 2.0);
+        assert_eq!(averaged.score_to_go.as_ref().unwrap()[1], 4.0);
+        assert_eq!(averaged.q.as_ref().unwrap()[0], 3.0);
+        assert_eq!(averaged.value.as_ref().unwrap()[2], 2.0);
+        // Missing optional in any variant -> None.
+        let mut c = make(0.5, 2.0);
+        c.value = None;
+        let partial = average_model_evals(&[&a, &c]).expect("average");
+        assert!(partial.value.is_none());
+        assert!(partial.score_to_go.is_some());
+    }
+
+    #[test]
+    fn gumbel_policy_game_runs_with_tta_rotations() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-gumbel-tta-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let mut args = gumbel_test_args(&tempdir);
+        args.mode = Mode::GumbelPolicyGame;
+        args.out = tempdir.join("gumbel_tta_game.jsonl");
+        args.seed_count = 1;
+        args.gumbel_exploration = false;
+        args.gumbel_tta = 3;
+
+        run_gumbel_policy_game(&args).expect("tta policy game runs");
+        let contents = std::fs::read_to_string(&args.out).expect("game jsonl");
+        let done = contents
+            .lines()
+            .map(|line| serde_json::from_str::<Value>(line).expect("jsonl line"))
+            .find(|line| line["type"] == "gumbel_game_done")
+            .expect("done record");
+        assert_eq!(done["scores"].as_array().unwrap().len(), 4);
+        let _ = std::fs::remove_dir_all(&tempdir);
     }
 
     #[test]

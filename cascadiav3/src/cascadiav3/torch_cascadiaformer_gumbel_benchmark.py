@@ -78,6 +78,7 @@ def run_gumbel_games(
     table_total: bool = False,
     table_native_q: bool = False,
     leaf_softmix: float | None = None,
+    tta_rotations: int = 1,
 ) -> list[dict[str, Any]]:
     command = [
         str(binary),
@@ -110,6 +111,7 @@ def run_gumbel_games(
         *(["--gumbel-table-total"] if table_total else []),
         *(["--gumbel-table-native-q"] if table_native_q else []),
         *(["--gumbel-leaf-softmix", str(leaf_softmix)] if leaf_softmix is not None else []),
+        *(["--gumbel-tta", str(tta_rotations)] if tta_rotations > 1 else []),
         "--k-interior",
         str(k_interior),
         "--max-actions",
@@ -181,6 +183,7 @@ def run_gumbel_games_batch(
     table_total: bool = False,
     table_native_q: bool = False,
     leaf_softmix: float | None = None,
+    tta_rotations: int = 1,
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
     process per contiguous seed run (one process total for the usual
@@ -219,6 +222,7 @@ def run_gumbel_games_batch(
             *(["--gumbel-table-total"] if table_total else []),
             *(["--gumbel-table-native-q"] if table_native_q else []),
             *(["--gumbel-leaf-softmix", str(leaf_softmix)] if leaf_softmix is not None else []),
+            *(["--gumbel-tta", str(tta_rotations)] if tta_rotations > 1 else []),
             "--k-interior",
             str(k_interior),
             "--max-actions",
@@ -301,6 +305,7 @@ def run_gumbel_benchmark(
     table_total: bool = False,
     table_native_q: bool = False,
     leaf_softmix: float | None = None,
+    tta_rotations: int = 1,
 ) -> dict[str, Any]:
     service = model_service or default_model_service_command(manifest, device_name)
 
@@ -334,6 +339,7 @@ def run_gumbel_benchmark(
                 table_total=table_total,
                 table_native_q=table_native_q,
                 leaf_softmix=leaf_softmix,
+                tta_rotations=tta_rotations,
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -367,6 +373,7 @@ def run_gumbel_benchmark(
                     table_total=table_total,
                     table_native_q=table_native_q,
                     leaf_softmix=leaf_softmix,
+                    tta_rotations=tta_rotations,
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -573,6 +580,12 @@ def main() -> int:
         help="Model q head is table-scale (table-total-trained cycle)",
     )
     parser.add_argument(
+        "--gumbel-tta",
+        type=int,
+        default=1,
+        help="Symmetry TTA: average model evals over k rotated frames (1=off, max 6)",
+    )
+    parser.add_argument(
         "--gumbel-leaf-softmix",
         type=float,
         default=None,
@@ -625,6 +638,7 @@ def main() -> int:
         table_total=args.gumbel_table_total,
         table_native_q=args.gumbel_table_native_q,
         leaf_softmix=args.gumbel_leaf_softmix,
+        tta_rotations=args.gumbel_tta,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
