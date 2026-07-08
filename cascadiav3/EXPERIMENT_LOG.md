@@ -3345,3 +3345,24 @@ leaf takes a max over a similar interior menu), and common-mode bias
 cancels in the argmax comparison; the per-leaf variance reduction is
 small next to determinization/rollout noise. Lever closed. Probes now
 run ~33 min/100g on warm GPU (pace note for planning).
+
+## 2026-07-08 12:15 — DISTRIBUTIONAL Q HEAD IS CI+ (+0.43): first training-side win since saturation
+
+distq_k8_n256: cand=97.3775 vs scalar-head control 96.9500,
+delta=+0.4275 CI95=[+0.0863,+0.7687] n=100 CI+.
+
+full_v3_distq_k8: M, --q-quantiles 8 (pinball loss, serving q = quantile
+mean), warm start from champion with --init-skip-mismatched (fresh q
+head), otherwise the exact cycle-6 recipe (same corpora, guard-clamped
+6250 steps over 300k examples) — the known-flat cycle-6 is the control,
+so the quantile head is the only variable. EI at M was saturated for
+the SCALAR head; the distributional head un-sticks the training side.
+Follow-up armed: n1024/d16 100g confirm vs champion 98.28 (chained after
+tta probe). If CI+ there → new champion line + distq EI cycle overnight.
+
+Ops cost note: tablev2+tta chain died silently at 12:14 (eval_request_for_row
+was #[cfg(test)]-gated; production TTA path used it; cargo check
+--workspace does NOT cover the exporter workspace, and job scripts sent
+build output to /dev/null). Fixed, relaunched 13:59. Lesson: always
+`cargo build --release --manifest-path cascadiav3/real-root-exporter/...`
+as preflight, never silence its output in job scripts.

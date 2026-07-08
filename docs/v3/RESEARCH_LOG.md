@@ -167,7 +167,7 @@ Requires a `table_native_q` serving flag (table terminals/rollouts, no
 shift). Fleet (john1-4, idle) can generate this corpus without touching
 john0.
 
-### 4.4 Distributional (quantile) score-to-go head — IN PROGRESS
+### 4.4 Distributional (quantile) score-to-go head — **CI+ at n256/d4**
 
 **Hypothesis.** Reduce per-eval variance at the source. The head search
 actually consumes is the **q / score-to-go head** (not the value head), so
@@ -181,9 +181,13 @@ champion, fresh q-head). Recipe otherwise identical to cycle-6 (same data,
 same steps/LR/selection) — so the run is a clean "same everything,
 distributional head" ablation against a known-flat control.
 
-**Experiment.** Chained on john0 after the softmix probes: train
-`full_v3_distq_k8`, then a 100g battery at n256/d4 vs 96.95.
-Smoke-tested end-to-end (init-skip, pinball loss, bridge load). Results TBD.
+**Result: CI+ — 97.38 vs 96.95, delta +0.43, CI95 [+0.09, +0.77].**
+The first training-side win of the campaign, against a control (cycle-6
+recipe, scalar head) that was measured flat three ways. EI at M was
+saturated for the scalar q head; the distributional head un-sticks it.
+Champion-config confirm (n1024/d16 vs 98.28) is chained; if it holds,
+distq becomes the champion line and a distq EI cycle is the overnight
+long-runner.
 
 ### 4.5 Market-refill chance-node expectimax — DEPRIORITIZED (evidence)
 
