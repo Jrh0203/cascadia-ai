@@ -1117,7 +1117,7 @@ def _checkpoint_member_path(manifest_path: Path, member: str) -> Path:
     return path if path.is_absolute() else manifest_path.parent / path
 
 
-def _load_weights_from_manifest(model, manifest_path: Path):  # type: ignore[no-untyped-def]
+def _load_weights_from_manifest(model, manifest_path: Path, *, skip_mismatched: bool = False):  # type: ignore[no-untyped-def]
     import torch
 
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -1128,7 +1128,22 @@ def _load_weights_from_manifest(model, manifest_path: Path):  # type: ignore[no-
         state = load_file(weights_path)
     else:
         state = torch.load(weights_path, map_location="cpu", weights_only=False)
-    model.load_state_dict(state)
+    if skip_mismatched:
+        # Warm start across head-shape changes (e.g. scalar -> quantile q
+        # head): drop checkpoint tensors whose shapes no longer match and
+        # leave those modules at fresh init.
+        model_state = model.state_dict()
+        skipped = sorted(
+            key
+            for key, tensor in state.items()
+            if key not in model_state or model_state[key].shape != tensor.shape
+        )
+        if skipped:
+            print(f"[trainer] init skipping shape-mismatched tensors: {skipped}", flush=True)
+            state = {key: tensor for key, tensor in state.items() if key not in skipped}
+        model.load_state_dict(state, strict=False)
+    else:
+        model.load_state_dict(state)
     return payload
 
 
@@ -1216,6 +1231,7 @@ def _torch_unavailable_overfit_fallback(
     selection_metric: str = "locked_val_total",
     selection_mode: str = "min",
     init_manifest: Path | None = None,
+    init_skip_mismatched: bool = False,
     resume: Path | None = None,
     eval_every_steps: int = 250,
     min_selection_greedy_top1: float = 0.0,
@@ -1381,6 +1397,7 @@ def run_training(
     selection_metric: str = "locked_val_total",
     selection_mode: str = "min",
     init_manifest: Path | None = None,
+    init_skip_mismatched: bool = False,
     resume: Path | None = None,
     eval_every_steps: int = 250,
     min_selection_greedy_top1: float = 0.0,
@@ -1416,6 +1433,7 @@ def run_training(
                 val_max_batches=val_max_batches,
                 swa_fraction=swa_fraction,
                 init_manifest=init_manifest,
+                init_skip_mismatched=init_skip_mismatched,
                 resume=resume,
                 eval_every_steps=eval_every_steps,
                 min_selection_greedy_top1=min_selection_greedy_top1,
@@ -1525,7 +1543,9 @@ def run_training(
     init_payload: dict[str, Any] | None = None
     resume_payload: dict[str, Any] | None = None
     if init_manifest is not None:
-        init_payload = _load_weights_from_manifest(model, init_manifest)
+        init_payload = _load_weights_from_manifest(
+            model, init_manifest, skip_mismatched=init_skip_mismatched
+        )
         init_config = init_payload.get("config")
         if init_config and init_config != config.to_dict():
             raise ValueError("--init-manifest config does not match requested model config")
@@ -2000,6 +2020,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-size", choices=["tiny", "S", "M", "L"], default="S")
     parser.add_argument(
+        "--init-skip-mismatched",
+        action="store_true",
+        help="When --init-checkpoint head shapes changed, skip mismatched tensors instead of failing",
+    )
+    parser.add_argument(
         "--q-quantiles",
         type=int,
         default=1,
@@ -2185,6 +2210,7 @@ def main() -> int:
         selection_metric=args.selection_metric,
         selection_mode=args.selection_mode,
         init_manifest=Path(args.init_manifest) if args.init_manifest else None,
+        init_skip_mismatched=args.init_skip_mismatched,
         resume=Path(args.resume) if args.resume else None,
         eval_every_steps=args.eval_every_steps,
         min_selection_greedy_top1=args.min_selection_greedy_top1,
