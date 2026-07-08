@@ -1,34 +1,35 @@
 :root {
   color-scheme: dark;
-  font-family:
-    "Avenir Next", Avenir, "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* Legacy v1 skin: deep-navy/purple palette + terminal monospace, ported
+     from legacy/crates/cascadia-web (archive branch). */
+  font-family: "SF Mono", "Consolas", "Monaco", "Menlo", monospace;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --ink-950: #0d120f;
-  --ink-900: #111713;
-  --ink-850: #151d18;
-  --ink-800: #1a241e;
-  --ink-700: #263229;
-  --ink-600: #38463c;
-  --paper: #edf0e7;
-  --paper-muted: #aab4aa;
-  --paper-faint: #77857b;
-  --line: #2b3930;
-  --line-strong: #45594b;
-  --accent: #88b88f;
-  --accent-strong: #b5d7a7;
-  --danger: #d37b6e;
+  --ink-950: #1a1a2e;
+  --ink-900: #16213e;
+  --ink-850: #14203a;
+  --ink-800: #0f3460;
+  --ink-700: #1d3a66;
+  --ink-600: #2e4a7d;
+  --paper: #e0e0e0;
+  --paper-muted: #8899b8;
+  --paper-faint: #66739b;
+  --line: #0f3460;
+  --line-strong: #533483;
+  --accent: #e94560;
+  --accent-strong: #ff7a8f;
+  --danger: #e94560;
   --warning: #d8b660;
-  --mountain: #7e8791;
-  --forest: #3f7b55;
-  --prairie: #c3a856;
-  --wetland: #4d8c7b;
-  --river: #4d83a8;
-  --bear: #9b6d4f;
-  --elk: #bd8b53;
-  --salmon: #d97864;
-  --hawk: #8696aa;
-  --fox: #c06c48;
+  --mountain: #6b6b6b;
+  --forest: #2d5a27;
+  --prairie: #c4a035;
+  --wetland: #2a7a7a;
+  --river: #2660a4;
+  --bear: #8b4513;
+  --elk: #daa520;
+  --salmon: #ff6b6b;
+  --hawk: #4169e1;
+  --fox: #ff8c00;
 }
 
 * {
@@ -124,7 +125,7 @@ h3 {
 
 .brand-block h1 {
   overflow: hidden;
-  font-family: Iowan Old Style, "Palatino Linotype", Georgia, serif;
+  font-family: inherit;
   font-size: 19px;
   line-height: 1.05;
   text-overflow: ellipsis;
@@ -394,7 +395,7 @@ h3 {
 }
 
 .section-heading strong {
-  font-family: Iowan Old Style, Georgia, serif;
+  font-family: inherit;
   font-size: 23px;
 }
 
@@ -487,7 +488,7 @@ h3 {
 
 .board-caption h2 {
   margin-top: 2px;
-  font-family: Iowan Old Style, Georgia, serif;
+  font-family: inherit;
   font-size: 18px;
 }
 
@@ -504,7 +505,7 @@ h3 {
 }
 
 .board-score strong {
-  font-family: Iowan Old Style, Georgia, serif;
+  font-family: inherit;
   font-size: 26px;
 }
 
@@ -1248,7 +1249,7 @@ h3 {
 
 .dialog-heading h2 {
   margin-top: 2px;
-  font-family: Iowan Old Style, Georgia, serif;
+  font-family: inherit;
   font-size: 21px;
 }
 
@@ -1430,7 +1431,7 @@ select {
 
 .final-banner h2 {
   margin-top: 2px;
-  font-family: Iowan Old Style, Georgia, serif;
+  font-family: inherit;
   font-size: 22px;
 }
 
@@ -1814,7 +1815,7 @@ select {
 }
 
 .cluster-wordmark strong {
-  font-family: Iowan Old Style, "Palatino Linotype", Georgia, serif;
+  font-family: inherit;
   font-size: 17px;
   line-height: 1.05;
 }
@@ -2371,7 +2372,7 @@ select {
 
 .node-identity h2 {
   overflow: hidden;
-  font-family: Iowan Old Style, "Palatino Linotype", Georgia, serif;
+  font-family: inherit;
   font-size: 22px;
   text-overflow: ellipsis;
   white-space: nowrap;
