@@ -3319,3 +3319,17 @@ deliverable doc). Implemented and launched, strictly sequential on john0:
 
 Ops: local builds need RUSTC pin (Homebrew rustc 1.85 shadows rustup 1.96);
 john0 builds need zig-cc linker env; new pair_verdict.py on john0:/tmp.
+
+## 2026-07-08 10:15 — Table-total v1 probe: CI− (-1.65). Value-head noise suspected; v2 (constant root shift) queued
+
+table_total_n256: cand=95.3025 vs own-seat base=96.9500, delta=-1.6475
+CI95=[-1.9959,-1.2991] n=100 CI−. The gate-aligned cooperative objective
+LOST at n256/d4 w0.5. Suspected mechanism: v1 computes the other-seats
+bootstrap shift from the value head AT EVERY LEAF; the value head has
+never been load-bearing (own-seat search reads only q/score-to-go), so
+its per-leaf variation injects unvalidated noise directly into the
+across-action Q comparison — swamping any cooperation signal. The
+rollout half (honest table sums) is unaffected. v2 = compute the shift
+once at the root (constant across leaves, zero added variance; within a
+depth-1 search the other seats' expected finals barely move). Fleet4
+table generation and cycle-7 stay HELD pending the v2 verdict.

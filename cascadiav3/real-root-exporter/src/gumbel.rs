@@ -294,6 +294,7 @@ fn softmax(logits: &[f64]) -> Vec<f64> {
 fn advance_simulations(
     simulations: &mut [Simulation],
     root_seat: usize,
+    root_table_shift: f64,
     evaluator: &mut dyn LeafEvaluator,
     cfg: &GumbelConfig,
 ) -> Result<()> {
@@ -377,13 +378,16 @@ fn advance_simulations(
                     // Leaf: blend a Q bootstrap (max or softmix aggregation)
                     // with an optional terminal rollout. Table-total mode
                     // keeps the exact-grounded own-seat Q and adds the other
-                    // seats' predicted final scores; the rollout branch
-                    // scores the whole terminal table.
+                    // seats' predicted finals as a CONSTANT root-level shift:
+                    // per-leaf value-head estimates re-introduce eval noise
+                    // into the across-action comparison (measured CI− on
+                    // 2026-07-08), while within one search the other seats'
+                    // expected finals barely move. The rollout branch scores
+                    // the whole terminal table exactly.
                     let own_bootstrap =
                         leaf_bootstrap_value(&eval.derived_final_q, cfg.leaf_softmix_temp);
                     let bootstrap = if cfg.table_total {
-                        own_bootstrap
-                            + other_seats_final_estimate(&eval, &row.staged, active_seat)
+                        own_bootstrap + root_table_shift
                     } else {
                         own_bootstrap
                     };
@@ -542,7 +546,7 @@ pub fn gumbel_search(
                 simulations.push(simulation);
             }
         }
-        advance_simulations(&mut simulations, root_seat, evaluator, cfg)?;
+        advance_simulations(&mut simulations, root_seat, root_q_shift, evaluator, cfg)?;
         for simulation in &simulations {
             let value = simulation
                 .value
