@@ -828,7 +828,14 @@ class _EnsembleModel:
         averaged = {}
         for key, value in first.items():
             if isinstance(value, torch.Tensor):
-                averaged[key] = torch.stack([out[key] for out in outputs], dim=0).mean(dim=0)
+                members = [out[key] for out in outputs]
+                if any(m.shape != value.shape for m in members):
+                    # d_model-dependent extras (e.g. cgab_bias) cannot be
+                    # averaged across architectures; serving responses never
+                    # read them, so keep the primary model's tensor.
+                    averaged[key] = value
+                else:
+                    averaged[key] = torch.stack(members, dim=0).mean(dim=0)
             else:
                 averaged[key] = value
         return averaged
