@@ -121,20 +121,38 @@ max and mean, changes search values end-to-end).
 **Experiment.** 100g at n256/d4 w=0.5 τ∈{2,4} vs the 96.95 baseline,
 after the table-total probe (john0 sequential). Results TBD.
 
-### 4.3 Reanalyze value targets — QUEUED
+### 4.3 Table-native q head (cycle-7 design, contingent on 4.1) — DESIGNED
 
-**Hypothesis.** EI saturation was measured on the *policy* prior. The
-value head still trains on single noisy game outcomes. Training it toward
-search root values (completed-Q at n1024/d16 — a far lower-variance
-estimator) is a different label family; the saturation evidence does not
-cover it. Lower value noise → better leaf bootstraps → the same +0.9/
-doubling mechanism that made worlds pay.
+If the table-total serving probe pays, the clean EI follow-up is: generate
+selfplay labels **with** `--gumbel-table-total` — the exported
+`score_to_go` (completed-Q − own exact afterstate) then natively embeds
+the other seats' expected finals, so a cycle-7 q-head learns **table-Q**
+directly. At serving, search runs table-mode without the value-vector
+shift (dfq is already table scale), and even interior plies become
+cooperative (argmax table-Q) instead of the selfish approximation. This
+supersedes the earlier "reanalyze value targets" idea for the table path:
+the q head does everything and the value head is no longer load-bearing.
+Requires a `table_native_q` serving flag (table terminals/rollouts, no
+shift). Fleet (john1-4, idle) can generate this corpus without touching
+john0.
 
-### 4.4 Distributional value head — QUEUED
+### 4.4 Distributional (quantile) score-to-go head — IN PROGRESS
 
-**Hypothesis.** Reduce per-eval variance at the source with a
-quantile/categorical value head; serving uses the mean (later:
-variance-aware world weighting). Attacks the proven constraint directly.
+**Hypothesis.** Reduce per-eval variance at the source. The head search
+actually consumes is the **q / score-to-go head** (not the value head), so
+that is where the distribution goes: K=8 quantiles trained with pinball
+loss; serving "q" = quantile mean, so bridges and search need no changes.
+Multi-quantile trunks regularize the conditional mean (the C51/QR-DQN
+effect) and the head sees the target's spread instead of collapsing it.
+
+**Design.** `--q-quantiles 8` + `--init-skip-mismatched` (warm start from
+champion, fresh q-head). Recipe otherwise identical to cycle-6 (same data,
+same steps/LR/selection) — so the run is a clean "same everything,
+distributional head" ablation against a known-flat control.
+
+**Experiment.** Chained on john0 after the softmix probes: train
+`full_v3_distq_k8`, then a 100g battery at n256/d4 vs 96.95.
+Smoke-tested end-to-end (init-skip, pinball loss, bridge load). Results TBD.
 
 ### 4.5 Market-refill chance-node expectimax — BACKLOG
 

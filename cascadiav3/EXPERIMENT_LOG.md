@@ -3298,3 +3298,24 @@ either the gate-aligned table-total objective (user decision pending),
 or new research (distributional value head, market-refill chance
 nodes), or a redefinition of done. John0 and fleet idle pending
 direction.
+
+## 2026-07-08 12:15 — Research program launch: table-total, leaf softmix, distributional q (chain on john0)
+
+User approved the post-saturation research agenda (RESEARCH_LOG.md is the
+deliverable doc). Implemented and launched, strictly sequential on john0:
+
+1. **--gumbel-table-total** (51e049e): search values = table sum (terminals,
+   rollouts); leaf bootstrap = own exact-grounded Q + Σ others' value-head
+   finals; unvisited fallbacks shifted onto table scale. Probe: 100g n256/d4
+   w0.5 seeds 2026995000+ vs gumbel_cycle4_gate_n256 (96.95).
+2. **--gumbel-leaf-softmix τ** (a8e9c32): leaf bootstrap softmax(q/τ)-weighted
+   mean instead of max-Q (max of noisy estimates is upward-biased; eval noise
+   is the binding constraint). Probes at τ=2, τ=4, same seeds/baseline.
+3. **--q-quantiles 8** distributional score-to-go head (pinball loss; serving
+   q = quantile mean, bridge unchanged) + **--init-skip-mismatched** warm
+   start. Training run full_v3_distq_k8 clones the cycle-6 recipe/data
+   exactly (a known-flat control) so the head is the only variable; then a
+   100g n256/d4 battery.
+
+Ops: local builds need RUSTC pin (Homebrew rustc 1.85 shadows rustup 1.96);
+john0 builds need zig-cc linker env; new pair_verdict.py on john0:/tmp.

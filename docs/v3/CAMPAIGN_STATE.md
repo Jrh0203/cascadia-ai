@@ -1,11 +1,38 @@
-# Campaign Working State (updated 2026-07-06 morning)
+# Campaign Working State (updated 2026-07-08 midday)
 
 Live working notes for the Gumbel self-play campaign. Companion to
 [GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md) (strategy) and
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-08 morning — tuning program COMPLETE, awaiting direction)
+## RESUME HERE (07-08 midday — RESEARCH PROGRAM RUNNING, user granted 12h autonomy)
+
+**User ruling (07-08 ~09:30): research agenda approved** — table-total,
+value-noise reduction, lean into what pays, kick off a long experiment at
+the end. Deliverable: `docs/v3/RESEARCH_LOG.md` (keep updated).
+
+**In flight on john0 (strictly sequential chain, each waits on the prior
+pid file under `cascadiav3/logs/`):**
+1. `table_probe_job` (pid file, started 09:38) — 100g n256/d4 w0.5
+   **--gumbel-table-total** candidate arm, seeds 2026995000+, report
+   `reports/gumbel_table_total_n256.json`. Verdict: `/tmp/pair_verdict.py
+   <cand> <base> <label>` vs `reports/gumbel_cycle4_gate_n256.json`
+   (96.95). ~2h.
+2. `softmix_probe_job` — rebuilds exporter, then 100g each
+   **--gumbel-leaf-softmix** τ=2 and τ=4 (n256/d4 w0.5), reports
+   `gumbel_softmix_t{2,4}_n256.json`. ~4h.
+3. `distq_job` — trains `full_v3_distq_k8` (M, **--q-quantiles 8**,
+   warm start champion via --init-skip-mismatched, cycle-6 recipe/data =
+   clean ablation vs known-flat control), then 100g battery
+   `gumbel_distq_k8_n256.json`. Smoke-tested end-to-end.
+
+**Decision tree on verdicts:** table-total CI+ → confirm at n1024/d16 +
+launch fleet table-native corpus generation (RESEARCH_LOG §4.3); softmix
+CI+ → stack with best config; distq CI+ → it becomes the new champion
+line. Anything CI− → record and drop. New code this session: 51e049e
+(table-total), a8e9c32 (softmix), distributional head + init-skip commits.
+
+## PREVIOUS RESUME (07-08 morning — tuning program COMPLETE)
 
 **Honest measured optimum: 98.28 mean seat (100g), c4-M champion at
 n1024/top_m16/w0.5/d16, 10.6 s/dec, 11/100 games >=100.** Every tuning
