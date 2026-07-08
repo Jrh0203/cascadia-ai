@@ -3372,7 +3372,7 @@ as preflight, never silence its output in job scripts.
 table_v2_n256: cand=95.9000 vs 96.9500, delta=-1.0500 CI95=[-1.408,-0.692] n=100 CI−.
 
 v2 (constant root shift) removed the value-head noise and recovered 0.6
-of v1's −1.65, but the objective still loses ~1 point.残 mechanism:
+of v1's −1.65, but the objective still loses ~1 point.Residual mechanism:
 with a constant bootstrap shift the ranking is bootstrap-identical to
 own-seat search; the only live difference is rollout/terminal leaves
 scoring the WHOLE table — ~4× outcome variance per leaf at unchanged
