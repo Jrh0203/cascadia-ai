@@ -3400,3 +3400,24 @@ Future variance-reduction levers must perturb the problem, not the
 representation. The rotation machinery (game-crate transforms +
 --gumbel-tta) stays in-tree: correctness-tested and reusable for
 training-time augmentation if data diversity is ever the constraint.
+
+## 2026-07-08 18:15 — Distq at champion config: 98.40, +0.12 ns vs 98.28. EI-1 launched overnight
+
+distq_n1024_d16_vs_champion: cand=98.3975 base=98.2800 delta=+0.1175
+CI95=[-0.215,+0.450] n=100 ns. 9/100 games >=100.
+
+The +0.43 CI+ at n256/d4 compresses to +0.12 ns at n1024/d16: the
+quantile head and the 16-world ensemble are overlapping variance
+reducers — where search already denoises, the better head is partly
+redundant. distq_k8 is champion-equal at high budget, strictly better
+at low budget (and cheaper to serve well: 97.38 at 2.8 s/dec).
+
+**distq EI-1 launched** (pid file logs/gumbel_selfplay_distq_ei1_job.pid):
+generation with the distq model n512/d8 w1.0, seeds 2026810000x1250 +
+2026910000x125, then --q-quantiles 8 training on new+c6+c5 at
+1.0/0.5/0.25, init from distq_k8 (same shape). The open question it
+answers: does better-search-from-a-better-head yield better LABELS
+(compounding), now that the scalar-head saturation is broken?
+Fleet5 (distq model, n256/d4, seeds 2026815000+, 150/host) generating
+supplementary shards on john1-4 — stored for a safety-tested low-weight
+fold-in, NOT auto-folded (cycle-5 lesson).
