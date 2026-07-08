@@ -75,6 +75,13 @@ pub struct GumbelConfig {
     /// other seats' points lower the gate metric. Interior plies remain
     /// selfish argmax (an approximation of the other searchers).
     pub table_total: bool,
+    /// The model's q head already predicts TABLE-scale score-to-go (a
+    /// cycle trained on table-total selfplay labels). Search then values
+    /// simulations by the table (terminals, rollouts) like `table_total`,
+    /// but derived Q needs no value-vector shift — and interior plies
+    /// become natively cooperative (argmax table-Q). Mutually exclusive
+    /// with `table_total` (which is for own-Q models).
+    pub table_native_q: bool,
     /// Leaf bootstrap aggregation temperature. `None` keeps the classic
     /// max-Q bootstrap. `Some(tau)` replaces it with a softmax(q/tau)-
     /// weighted mean over the leaf menu: the max of N noisy estimates is
@@ -104,6 +111,7 @@ impl Default for GumbelConfig {
             determinization_seed: None,
             peek_true_hidden: false,
             table_total: false,
+            table_native_q: false,
             leaf_softmix_temp: None,
         }
     }
@@ -324,7 +332,7 @@ fn advance_simulations(
                 simulations[sim_index].value = Some(terminal_simulation_value(
                     &simulations[sim_index].state,
                     root_seat,
-                    cfg.table_total,
+                    cfg.table_total || cfg.table_native_q,
                 ));
             } else {
                 model_rows.push(row);
@@ -390,8 +398,11 @@ fn advance_simulations(
                             &mut simulation.rollout_rng,
                             None,
                         )?;
-                        let rollout =
-                            terminal_simulation_value(&terminal, root_seat, cfg.table_total);
+                        let rollout = terminal_simulation_value(
+                            &terminal,
+                            root_seat,
+                            cfg.table_total || cfg.table_native_q,
+                        );
                         w * bootstrap + (1.0 - w) * rollout
                     };
                     simulation.value = Some(value);
@@ -416,6 +427,9 @@ pub fn gumbel_search(
         bail!("gumbel_search requires at least one root action");
     }
     let root_seat = root.staged.current_player();
+    if cfg.table_total && cfg.table_native_q {
+        bail!("table_total and table_native_q are mutually exclusive");
+    }
 
     // Root model evaluation: priors + initial per-action Q estimates.
     let root_eval = evaluator
@@ -519,7 +533,7 @@ pub fn gumbel_search(
                         simulation.value = Some(terminal_simulation_value(
                             &simulation.state,
                             root_seat,
-                            cfg.table_total,
+                            cfg.table_total || cfg.table_native_q,
                         ));
                     } else {
                         return Err(error).context("applying root action in gumbel simulation");
@@ -855,6 +869,55 @@ mod tests {
             original.completed_q, permuted.completed_q,
             "peek search must depend on the true hidden order"
         );
+    }
+
+    #[test]
+    fn table_native_q_scores_tables_without_shift() {
+        // Native mode must match table_total's terminal/rollout scale but
+        // apply NO fallback shift: with w=0.0 (pure rollout, bootstrap
+        // unused) and top_m=1, unvisited fallbacks stay at raw model Q
+        // while the visited action's rollout value matches table mode.
+        let game = test_state(2_026_070_800, 8);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |table_total: bool, native: bool| {
+            let mut evaluator = MockEvaluator::new();
+            evaluator.value_vector = Some(vec![10.0, 20.0, 30.0, 40.0]);
+            let mut cfg = test_config(19);
+            cfg.top_m = 1;
+            cfg.rollout_blend_weight = 0.0;
+            cfg.table_total = table_total;
+            cfg.table_native_q = native;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search")
+        };
+        let own = run(false, false);
+        let table = run(true, false);
+        let native = run(false, true);
+        assert_eq!(own.visit_counts, native.visit_counts);
+        for index in 0..own.completed_q.len() {
+            if own.visit_counts[index] == 0 {
+                // No shift in native mode; table mode shifts.
+                assert_eq!(native.completed_q[index], own.completed_q[index]);
+                assert!(table.completed_q[index] > own.completed_q[index]);
+            } else {
+                // Identical rollout streams: table-scale values match.
+                assert!((native.completed_q[index] - table.completed_q[index]).abs() < 1e-9);
+            }
+        }
+    }
+
+    #[test]
+    fn table_flags_are_mutually_exclusive() {
+        let game = test_state(2_026_070_800, 4);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let mut evaluator = MockEvaluator::new();
+        let mut cfg = test_config(21);
+        cfg.table_total = true;
+        cfg.table_native_q = true;
+        assert!(gumbel_search(&root, &mut evaluator, &cfg).is_err());
     }
 
     #[test]

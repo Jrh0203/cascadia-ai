@@ -84,6 +84,7 @@ struct Args {
     gumbel_exploration: bool,
     gumbel_peek: bool,
     gumbel_table_total: bool,
+    gumbel_table_native_q: bool,
     gumbel_leaf_softmix: Option<f64>,
     gumbel_max_root_actions: Option<usize>,
     /// Root menu enumeration cap (immediate-score-ranked pre-filter before
@@ -343,6 +344,7 @@ fn parse_args() -> Result<Args> {
         gumbel_exploration: false,
         gumbel_peek: false,
         gumbel_table_total: false,
+        gumbel_table_native_q: false,
         gumbel_leaf_softmix: None,
         gumbel_max_root_actions: None,
         gumbel_root_menu: 256,
@@ -397,6 +399,9 @@ fn parse_args() -> Result<Args> {
             }
             "--gumbel-table-total" => {
                 args.gumbel_table_total = true;
+            }
+            "--gumbel-table-native-q" => {
+                args.gumbel_table_native_q = true;
             }
             "--gumbel-leaf-softmix" => {
                 args.gumbel_leaf_softmix =
@@ -644,6 +649,9 @@ Options:
                                score. Gate-aligned cooperative objective.
   --gumbel-leaf-softmix <tau>  Leaf bootstrap = softmax(q/tau)-weighted mean
                                instead of max-Q (bias/variance reduction).
+  --gumbel-table-native-q      The model's q head predicts table-scale
+                               score-to-go (table-total-trained cycle):
+                               table terminals/rollouts, no value shift.
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
   --gumbel-blend-weight <w>
@@ -2396,6 +2404,7 @@ fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfi
         exploration: args.gumbel_exploration,
         peek_true_hidden: args.gumbel_peek,
         table_total: args.gumbel_table_total,
+        table_native_q: args.gumbel_table_native_q,
         leaf_softmix_temp: args.gumbel_leaf_softmix,
         search_seed,
         ..gumbel::GumbelConfig::default()
@@ -2860,6 +2869,7 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
         "max_root_actions": args.gumbel_max_root_actions,
         "root_menu": args.gumbel_root_menu,
         "table_total": args.gumbel_table_total,
+        "table_native_q": args.gumbel_table_native_q,
         "leaf_softmix": args.gumbel_leaf_softmix,
         "simulations_run": result.simulations_run,
     })
@@ -5085,6 +5095,7 @@ mod tests {
             mode: Mode::ExportRoots,
             gumbel_peek: false,
             gumbel_table_total: false,
+            gumbel_table_native_q: false,
             gumbel_leaf_softmix: None,
             out: PathBuf::from("/tmp/unused.jsonl"),
             manifest: PathBuf::from("/tmp/unused_manifest.json"),

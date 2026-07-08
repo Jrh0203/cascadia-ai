@@ -76,6 +76,7 @@ def run_gumbel_games(
     exploration: bool,
     peek: bool = False,
     table_total: bool = False,
+    table_native_q: bool = False,
     leaf_softmix: float | None = None,
 ) -> list[dict[str, Any]]:
     command = [
@@ -107,6 +108,7 @@ def run_gumbel_games(
         "on" if exploration else "off",
         *(["--gumbel-peek"] if peek else []),
         *(["--gumbel-table-total"] if table_total else []),
+        *(["--gumbel-table-native-q"] if table_native_q else []),
         *(["--gumbel-leaf-softmix", str(leaf_softmix)] if leaf_softmix is not None else []),
         "--k-interior",
         str(k_interior),
@@ -177,6 +179,7 @@ def run_gumbel_games_batch(
     exploration: bool,
     peek: bool = False,
     table_total: bool = False,
+    table_native_q: bool = False,
     leaf_softmix: float | None = None,
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
@@ -214,6 +217,7 @@ def run_gumbel_games_batch(
             "on" if exploration else "off",
             *(["--gumbel-peek"] if peek else []),
             *(["--gumbel-table-total"] if table_total else []),
+            *(["--gumbel-table-native-q"] if table_native_q else []),
             *(["--gumbel-leaf-softmix", str(leaf_softmix)] if leaf_softmix is not None else []),
             "--k-interior",
             str(k_interior),
@@ -295,6 +299,7 @@ def run_gumbel_benchmark(
     batch_runner: bool = False,
     peek: bool = False,
     table_total: bool = False,
+    table_native_q: bool = False,
     leaf_softmix: float | None = None,
 ) -> dict[str, Any]:
     service = model_service or default_model_service_command(manifest, device_name)
@@ -327,6 +332,7 @@ def run_gumbel_benchmark(
                 exploration=False,
                 peek=peek,
                 table_total=table_total,
+                table_native_q=table_native_q,
                 leaf_softmix=leaf_softmix,
             )
         else:
@@ -359,6 +365,7 @@ def run_gumbel_benchmark(
                     exploration=False,
                     peek=peek,
                     table_total=table_total,
+                    table_native_q=table_native_q,
                     leaf_softmix=leaf_softmix,
                 )
 
@@ -561,6 +568,11 @@ def main() -> int:
         help="Value search by the table total (gate-aligned cooperative objective)",
     )
     parser.add_argument(
+        "--gumbel-table-native-q",
+        action="store_true",
+        help="Model q head is table-scale (table-total-trained cycle)",
+    )
+    parser.add_argument(
         "--gumbel-leaf-softmix",
         type=float,
         default=None,
@@ -611,6 +623,7 @@ def main() -> int:
         batch_runner=args.batch_runner,
         peek=args.gumbel_peek,
         table_total=args.gumbel_table_total,
+        table_native_q=args.gumbel_table_native_q,
         leaf_softmix=args.gumbel_leaf_softmix,
     )
     out_path = Path(args.out)
