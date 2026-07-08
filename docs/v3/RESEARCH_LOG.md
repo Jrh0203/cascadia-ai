@@ -5,8 +5,11 @@ campaign: what it was, why we tried it, what we measured, and the verdict.
 Updated continuously; the freshest entries are in the "Active program" section.
 
 Goal (the gate): **mean seat score ≥ 100 over 1,000 games of 4-player
-self-play.** Honest measured optimum as of 2026-07-08 morning: **98.28**
-(100 games, champion serving config), gap **−1.72**.
+self-play.** Best measured as of 2026-07-08 evening: **98.40** (distq_k8
+at n1024/d16, 100 games; +0.12 ns vs the 98.28 scalar champion — the two
+are statistically tied at high search budget, distq strictly better at
+low budget). Gap ≈ **−1.6**. The live lever: distributional-Q expert
+iteration (EI-1 running overnight).
 
 ---
 
@@ -103,7 +106,7 @@ near-tie flips cost little individually but compound over ~80 plies.
 
 ---
 
-## 4. Active program (2026-07-08, ranked by expected value)
+## 4. Active program (2026-07-08, updated through the evening)
 
 ### 4.1 Table-total search objective — CLOSED at serving (v1 −1.65 CI−, v2 −1.05 CI−)
 
@@ -173,7 +176,7 @@ Requires a `table_native_q` serving flag (table terminals/rollouts, no
 shift). Fleet (john1-4, idle) can generate this corpus without touching
 john0.
 
-### 4.4 Distributional (quantile) score-to-go head — **CI+ at n256/d4**
+### 4.4 Distributional (quantile) score-to-go head — **CI+ at n256/d4; champion-equal at n1024/d16; EI-1 RUNNING**
 
 **Hypothesis.** Reduce per-eval variance at the source. The head search
 actually consumes is the **q / score-to-go head** (not the value head), so
@@ -187,13 +190,25 @@ champion, fresh q-head). Recipe otherwise identical to cycle-6 (same data,
 same steps/LR/selection) — so the run is a clean "same everything,
 distributional head" ablation against a known-flat control.
 
-**Result: CI+ — 97.38 vs 96.95, delta +0.43, CI95 [+0.09, +0.77].**
-The first training-side win of the campaign, against a control (cycle-6
-recipe, scalar head) that was measured flat three ways. EI at M was
-saturated for the scalar q head; the distributional head un-sticks it.
-Champion-config confirm (n1024/d16 vs 98.28) is chained; if it holds,
-distq becomes the champion line and a distq EI cycle is the overnight
-long-runner.
+**Result (n256/d4): CI+ — 97.38 vs 96.95, delta +0.43, CI95
+[+0.09, +0.77].** The first training-side win of the campaign, against a
+control (cycle-6 recipe, scalar head) that was measured flat three ways.
+
+**Result (champion config n1024/d16): 98.40 vs 98.28, +0.12 ns.** The
+gain compresses at high search budget: the quantile head and the
+16-world ensemble are overlapping variance reducers, so where search
+already denoises, the better head is partly redundant. Net position:
+distq_k8 is champion-equal at high budget, strictly better at low
+budget (97.38 at 2.8 s/dec — better play for a quarter of the serving
+cost).
+
+**EI-1 (running overnight):** generation with the distq model (n512/d8
+w1.0, 1,375 fresh seeds), quantile-head training on new+cycle-6+cycle-5
+at 1.0/0.5/0.25. Tests whether better-search-from-a-better-head yields
+better *labels* — compounding — now that scalar-head saturation is
+broken. Fleet (john1-4) concurrently generating a distq supplementary
+corpus (held out for a safety-tested low-weight fold-in; never
+auto-folded, per the cycle-5 poisoning lesson).
 
 ### 4.5 Market-refill chance-node expectimax — DEPRIORITIZED (evidence)
 

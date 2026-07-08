@@ -5,7 +5,28 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-08 afternoon — DISTQ IS CI+, chain running, user away until ~21:30)
+## RESUME HERE (07-08 evening — distq EI-1 + fleet5 running overnight)
+
+**Day's verdicts (all 100g paired):** distq_k8 n256 **+0.43 CI+** (first
+training-side win); distq n1024/d16 98.40 vs 98.28 **+0.12 ns**
+(champion-equal; gains overlap with worlds ensemble); table-total v1
+−1.65 CI− / v2 −1.05 CI− (closed: table-scoring leaves multiply noise);
+softmix flat (closed: common-mode bias cancels); TTA×3 flat at 3× cost
+(closed: rotation-invariant representations don't decorrelate). Decision
+SNR: 46% of decisions noise-flippable (median SNR 1.06).
+
+**Running overnight:** (1) john0 `gumbel_selfplay_distq_ei1_job` —
+distq-model generation n512/d8 w1.0 seeds 2026810000x1250/2026910000x125,
+then --q-quantiles 8 train (init distq_k8, mix new/c6/c5 1.0/0.5/0.25).
+On completion: battery vs distq_k8 AND vs c4 champion (n256 + n1024/d16
+legs, seeds 2026995000). Promote on CI+ with no CI−. (2) Fleet5 john1-4
+— distq-labeled shards seeds 2026815000+ (150/host); fetch + process but
+DO NOT auto-fold (safety trial first). Monitors armed on both.
+
+**Deliverable doc for the user: docs/v3/RESEARCH_LOG.md** (complete:
+architecture, all directions, verdicts, lessons).
+
+## PREVIOUS RESUME (07-08 afternoon — DISTQ CI+, chain running)
 
 **Scoreboard (all 100g paired vs 96.95 n256/d4 unless noted):**
 - **distq_k8 (quantile q head): +0.43 CI+** — first training-side win
