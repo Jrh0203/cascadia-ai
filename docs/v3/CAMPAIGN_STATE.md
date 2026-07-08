@@ -5,7 +5,26 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-07 afternoon)
+## RESUME HERE (07-08 morning — tuning program COMPLETE, awaiting direction)
+
+**Honest measured optimum: 98.28 mean seat (100g), c4-M champion at
+n1024/top_m16/w0.5/d16, 10.6 s/dec, 11/100 games >=100.** Every tuning
+lever is now measured and closed (see EXPERIMENT_LOG 07-06..07-08):
+capacity (L flat, fresh-M flat), data (3x flat), labels/EI (saturated),
+search shape (n1024_d16 is the peak; worlds axis reverses past 16),
+serving blend (w0.5 optimal), ensembles (closed: shared bias).
+Key science: determinization = ensemble variance-reduction, NOT
+hidden-info approximation (oracle peek LOSES to honest search).
+
+**Decision menu for the user (john0 + fleet idle):**
+1. Table-total (gate-aligned cooperative) objective — potentially
+   several points; changes what the benchmark means. PENDING RULING.
+2. 1,000-game certification of 98.28 (~24h) — certifies the number,
+   cannot pass the 100-gate.
+3. New research: distributional value head; market-refill chance-node
+   expectimax; multi-bridge structural throughput.
+
+## PREVIOUS RESUME (07-07 afternoon)
 
 **Champion: cycle-4 M** (`checkpoints/full_v3_gumbel_selfplay_cycle4/
 best_locked_val.manifest.json`) at **SERVING CONFIG n1024/top_m16/
