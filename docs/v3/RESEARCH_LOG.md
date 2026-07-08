@@ -190,16 +190,25 @@ model eval error (decorrelated by input perturbation) is. Explicit
 chance nodes would attack a non-binding constraint. Killed before
 implementation; reasoning recorded so it isn't re-proposed.
 
-### 4.5b Symmetry test-time augmentation (TTA) — INVESTIGATING
+### 4.5b Symmetry test-time augmentation (TTA) — IMPLEMENTED, PROBE QUEUED
 
 The one lever family that measurably paid (+0.9/doubling of worlds) is
 input-space perturbation that decorrelates model eval error, and it caps
-at d=16. Hex-board symmetries (rotations/reflections) are an orthogonal
-perturbation axis: evaluate the model on a symmetry-transformed state and
-average — same decorrelation mechanism, no change to hidden sampling.
-Scoring is symmetry-invariant, so exact afterstate scores give a strong
-correctness oracle for the transform. Feasibility depends on a
-state-level transform in the game crate.
+at d=16. Hex-board symmetries are an orthogonal perturbation axis:
+evaluate the model on rotated board frames and average.
+
+**Implemented (commits 5ff2303, e0a6e95):** `HexCoord::rotated`,
+`Board::rotated` (tile rotation composes r→r−k), 
+`GameState::with_rotated_boards`, `TurnAction::rotated`, with the
+load-bearing invariant tested over full legal menus: apply∘rotate ==
+rotate∘apply, and exact scoring rotation-invariant. Exporter:
+`--gumbel-tta k` evaluates each unique row on k rotated frames and
+elementwise-averages priors/score-to-go (cache stores the average);
+end-to-end mock-bridge policy game passes. Cost: k× model evals.
+
+**Probe (chained on john0):** 100g n256/d4 w0.5 --gumbel-tta 3 vs 96.95.
+Per the SNR measurement, √3 lower model-error variance on evals should
+convert a measurable slice of the 46% coin-flip decisions.
 
 ### 4.6 Multi-bridge generation throughput — BACKLOG (enabler)
 
