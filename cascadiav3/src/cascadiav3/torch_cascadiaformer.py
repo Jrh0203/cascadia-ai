@@ -34,6 +34,10 @@ class CascadiaFormerConfig:
     market_aux_dim: int = 16
     gradient_checkpointing: bool = False
     model_name: str = "CascadiaFormer-S-v1"
+    # >1 turns the scalar score-to-go head into a quantile head (pinball
+    # loss); the serving "q" output is the quantile mean, so bridges and
+    # search need no changes. 1 keeps the legacy scalar head bit-for-bit.
+    q_quantiles: int = 1
 
     def to_dict(self) -> dict[str, Any]:
         out = asdict(self)
@@ -188,7 +192,7 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             self.action_norm = nn.LayerNorm(cfg.d_model)
             self.root_norm = nn.LayerNorm(cfg.d_model)
             self.legal_logits = nn.Linear(cfg.d_model, 1)
-            self.q_head = nn.Linear(cfg.d_model, 1)
+            self.q_head = nn.Linear(cfg.d_model, max(1, cfg.q_quantiles))
             self.uncertainty_head = nn.Linear(cfg.d_model, 1)
             self.value_head = nn.Linear(cfg.d_model, cfg.seats)
             self.rank_head = nn.Linear(cfg.d_model, cfg.seats * cfg.seats)
@@ -254,9 +258,14 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             decoded, cgab_bias = self.cgab(decoded, relation_ids, relation_tail)
             decoded = decoded.masked_fill(~action_mask.unsqueeze(-1), 0.0)
             root_h = self.root_norm(_masked_mean(encoded, token_mask))
-            return {
+            q_raw = self.q_head(decoded)
+            if cfg.q_quantiles > 1:
+                q_out = q_raw.mean(dim=-1)
+            else:
+                q_out = q_raw.squeeze(-1)
+            outputs = {
                 "logits": self.legal_logits(decoded).squeeze(-1),
-                "q": self.q_head(decoded).squeeze(-1),
+                "q": q_out,
                 "uncertainty": torch.nn.functional.softplus(
                     self.uncertainty_head(decoded).squeeze(-1)
                 ),
@@ -272,6 +281,9 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
                 "market_aux": self.market_aux_head(root_h),
                 "cgab_bias": cgab_bias,
             }
+            if cfg.q_quantiles > 1:
+                outputs["q_quantile_values"] = q_raw
+            return outputs
 
     return CascadiaFormer()
 

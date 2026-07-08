@@ -357,11 +357,24 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
             q_variance = torch.zeros_like(target_final_q)
         teacher_se_sq = q_variance.clamp_min(0.0) / q_count.clamp_min(1.0)
         confidence = (1.0 / (0.25 + teacher_se_sq)).clamp(0.25, 4.0)
-        q_loss_unreduced = F.smooth_l1_loss(
-            predicted_score_to_go[q_mask],
-            target_score_to_go[q_mask],
-            reduction="none",
-        )
+        quantile_values = outputs.get("q_quantile_values")
+        if quantile_values is not None:
+            # Distributional score-to-go: pinball loss over K quantiles at
+            # levels (k+0.5)/K. The serving "q" output is the quantile mean.
+            levels_count = quantile_values.shape[-1]
+            levels = (
+                torch.arange(levels_count, dtype=quantile_values.dtype, device=quantile_values.device)
+                + 0.5
+            ) / levels_count
+            residual = target_score_to_go[q_mask].unsqueeze(-1) - quantile_values[q_mask]
+            pinball = torch.maximum(levels * residual, (levels - 1.0) * residual).mean(dim=-1)
+            q_loss_unreduced = pinball
+        else:
+            q_loss_unreduced = F.smooth_l1_loss(
+                predicted_score_to_go[q_mask],
+                target_score_to_go[q_mask],
+                reduction="none",
+            )
         confidence_selected = confidence[q_mask]
         q = (q_loss_unreduced * confidence_selected).sum() / confidence_selected.sum().clamp_min(1.0e-8)
     else:
@@ -1348,6 +1361,7 @@ def run_training(
     train_format: str,
     val_format: str,
     model_size: str,
+    q_quantiles: int = 1,
     steps: int,
     batch_size: int,
     lr: float,
@@ -1487,6 +1501,10 @@ def run_training(
                 steps = max_steps
     weights = loss_weights or loss_weights_for_objective(objective)
     config = config_for_size(model_size)
+    if q_quantiles > 1:
+        from dataclasses import replace as _dc_replace
+
+        config = _dc_replace(config, q_quantiles=q_quantiles)
     model = build_cascadiaformer(config).to(device)
     if cgab_fused:
         # Fused CGAB relation tail (count-matmul); mathematically equivalent
@@ -1981,6 +1999,12 @@ def _parse_optional_float_list(raw: str | None) -> list[float] | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-size", choices=["tiny", "S", "M", "L"], default="S")
+    parser.add_argument(
+        "--q-quantiles",
+        type=int,
+        default=1,
+        help="K>1 trains a distributional (quantile) score-to-go head with pinball loss",
+    )
     parser.add_argument("--train", required=True)
     parser.add_argument("--val", required=True)
     parser.add_argument(
@@ -2140,6 +2164,7 @@ def main() -> int:
         train_format=args.train_format,
         val_format=args.val_format,
         model_size=args.model_size,
+        q_quantiles=args.q_quantiles,
         steps=args.steps,
         batch_size=args.batch_size,
         lr=args.lr,
