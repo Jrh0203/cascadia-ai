@@ -106,7 +106,22 @@ If CI+ → confirm at champion n1024/d16.
 
 **Status.** Implementing. Results TBD.
 
-### 4.2 Reanalyze value targets — QUEUED
+### 4.2 Softened leaf bootstrap (max-bias correction) — IN PROGRESS
+
+**Hypothesis.** The leaf value bootstrap takes the **max** over the leaf
+menu's Q estimates. The max of N noisy estimates is upward-biased and
+high-variance — and eval noise is the proven binding constraint. A
+softmax(q/τ)-weighted mean lowers both bias and variance at the cost of a
+slightly pessimistic policy value.
+
+**Design.** `--gumbel-leaf-softmix <tau>`; interior advance stays argmax;
+τ→0 recovers max. Implemented + unit-tested (monotone in τ, bounded by
+max and mean, changes search values end-to-end).
+
+**Experiment.** 100g at n256/d4 w=0.5 τ∈{2,4} vs the 96.95 baseline,
+after the table-total probe (john0 sequential). Results TBD.
+
+### 4.3 Reanalyze value targets — QUEUED
 
 **Hypothesis.** EI saturation was measured on the *policy* prior. The
 value head still trains on single noisy game outcomes. Training it toward
@@ -115,18 +130,18 @@ estimator) is a different label family; the saturation evidence does not
 cover it. Lower value noise → better leaf bootstraps → the same +0.9/
 doubling mechanism that made worlds pay.
 
-### 4.3 Distributional value head — QUEUED
+### 4.4 Distributional value head — QUEUED
 
 **Hypothesis.** Reduce per-eval variance at the source with a
 quantile/categorical value head; serving uses the mean (later:
 variance-aware world weighting). Attacks the proven constraint directly.
 
-### 4.4 Market-refill chance-node expectimax — BACKLOG
+### 4.5 Market-refill chance-node expectimax — BACKLOG
 
 Model the refill chance node explicitly instead of averaging it through
 determinized worlds; surgical variance reduction where randomness enters.
 
-### 4.5 Multi-bridge generation throughput — BACKLOG (enabler)
+### 4.6 Multi-bridge generation throughput — BACKLOG (enabler)
 
 ~2× generation wall-clock via worker partitioning across bridge processes.
 No points directly; halves the cost of every probe and EI cycle.

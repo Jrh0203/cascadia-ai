@@ -1548,7 +1548,14 @@ def run_training(
         )
         init_config = init_payload.get("config")
         if init_config and init_config != config.to_dict():
-            raise ValueError("--init-manifest config does not match requested model config")
+            if init_skip_mismatched:
+                print(
+                    "[trainer] init manifest config differs from requested config "
+                    "(allowed by --init-skip-mismatched)",
+                    flush=True,
+                )
+            else:
+                raise ValueError("--init-manifest config does not match requested model config")
     fused_optimizer_applied = False
     optimizer_extra_kwargs: dict[str, Any] = {}
     if fused_optimizer:
