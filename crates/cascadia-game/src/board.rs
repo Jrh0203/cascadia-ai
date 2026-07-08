@@ -279,6 +279,36 @@ impl Board {
         }
     }
 
+    /// Returns this board rotated by `steps` 60° turns about the origin.
+    /// One coordinate step maps spatial edge `e` to `e - 1 (mod 6)`, so each
+    /// tile's rotation decreases by `steps` to keep every edge showing the
+    /// same terrain toward the same neighbor. Scoring, habitat corridors,
+    /// and adjacency are invariant; only the frame changes.
+    pub fn rotated(&self, steps: u8) -> Self {
+        let steps = steps % 6;
+        let mut cells = vec![None; GRID_SIZE];
+        let mut placed_indices = Vec::with_capacity(self.placed_indices.len());
+        for (coord, placed) in self.placed_tiles() {
+            let new_coord = coord.rotated(steps);
+            let index = new_coord
+                .to_index()
+                .expect("rotation about the origin preserves the board radius");
+            let rotation = Rotation::new((placed.rotation.get() + 6 - steps) % 6)
+                .expect("rotation arithmetic stays in 0..6");
+            cells[index] = Some(PlacedTile {
+                tile: placed.tile,
+                rotation,
+                wildlife: placed.wildlife,
+            });
+            placed_indices.push(index as u16);
+        }
+        Self {
+            cells,
+            placed_indices,
+            nature_tokens: self.nature_tokens,
+        }
+    }
+
     pub fn from_starter(starter: &[StarterPlacement; 3]) -> Self {
         let mut board = Self::empty();
         for placement in starter {

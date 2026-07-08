@@ -154,6 +154,24 @@ impl TurnAction {
             wildlife_wipes: self.wildlife_wipes.clone(),
         }
     }
+
+    /// The same action expressed in a board frame rotated by `steps` 60°
+    /// turns (see [`crate::Board::rotated`]). Market/draft choices are
+    /// frame-free; only placement coordinates and the tile rotation move.
+    pub fn rotated(&self, steps: u8) -> Self {
+        let steps = steps % 6;
+        Self {
+            replace_three_of_a_kind: self.replace_three_of_a_kind,
+            wildlife_wipes: self.wildlife_wipes.clone(),
+            draft: self.draft.clone(),
+            tile: TilePlacement {
+                coord: self.tile.coord.rotated(steps),
+                rotation: Rotation::new((self.tile.rotation.get() + 6 - steps) % 6)
+                    .expect("rotation arithmetic stays in 0..6"),
+            },
+            wildlife: self.wildlife.map(|coord| coord.rotated(steps)),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -324,6 +342,18 @@ impl GameState {
 
     pub fn unplaced_wildlife_counts(&self) -> [u8; 5] {
         unplaced_wildlife_counts(&self.boards)
+    }
+
+    /// A clone of this state with every seat's board rotated by `steps` 60°
+    /// turns about the origin (see [`Board::rotated`]). Market, bag, stack,
+    /// and turn bookkeeping are frame-free and copied verbatim. Exact
+    /// scoring is invariant; model evaluations are not — which is the
+    /// point: symmetry variants decorrelate model error for test-time
+    /// augmentation.
+    pub fn with_rotated_boards(&self, steps: u8) -> Self {
+        let mut out = self.clone();
+        out.boards = self.boards.iter().map(|board| board.rotated(steps)).collect();
+        out
     }
 
     pub fn public_state(&self) -> PublicGameState {
@@ -1194,6 +1224,70 @@ mod tests {
                 .position(|candidate| *candidate == desired)
                 .unwrap();
             game.market.wildlife[slot.index()] = Some(game.wildlife_bag.swap_remove(index));
+        }
+    }
+
+    fn played_forward(mut game: GameState, plies: usize) -> GameState {
+        for _ in 0..plies {
+            if game.is_game_over() {
+                break;
+            }
+            let action = game
+                .legal_turn_actions(&MarketPrelude::default())
+                .unwrap()
+                .into_iter()
+                .next()
+                .unwrap();
+            game.apply(&action).unwrap();
+        }
+        game
+    }
+
+    #[test]
+    fn rotated_boards_preserve_scoring_and_structure() {
+        let game = played_forward(game(4, 20_260_708), 16);
+        let base_scores = crate::score_game(&game);
+        for steps in 1..6 {
+            let rotated = game.with_rotated_boards(steps);
+            assert_eq!(
+                crate::score_game(&rotated),
+                base_scores,
+                "exact scoring must be rotation-invariant (steps={steps})"
+            );
+            for (original, transformed) in game.boards.iter().zip(rotated.boards.iter()) {
+                assert_eq!(original.tile_count(), transformed.tile_count());
+                assert_eq!(original.frontier().len(), transformed.frontier().len());
+                assert_eq!(original.nature_tokens(), transformed.nature_tokens());
+            }
+        }
+        assert_eq!(game.with_rotated_boards(0), game);
+        assert_eq!(game.with_rotated_boards(6), game, "full turn is the identity");
+    }
+
+    #[test]
+    fn rotation_commutes_with_apply() {
+        // The load-bearing TTA invariant: applying a rotated action to the
+        // rotated state must land on the rotation of the original
+        // afterstate — for every legal action, including wildlife
+        // placements. Hidden refills agree because rotation copies the
+        // hidden stack verbatim.
+        let game = played_forward(game(4, 20_260_709), 12);
+        assert!(!game.is_game_over());
+        let actions = game.legal_turn_actions(&MarketPrelude::default()).unwrap();
+        assert!(actions.len() >= 5, "test needs a non-trivial menu");
+        let rotated_game = game.with_rotated_boards(1);
+        for action in actions.into_iter().take(24) {
+            let mut original = game.clone();
+            original.apply(&action).unwrap();
+            let mut transformed = rotated_game.clone();
+            transformed
+                .apply(&action.rotated(1))
+                .expect("rotated action must stay legal in the rotated frame");
+            assert_eq!(
+                original.with_rotated_boards(1),
+                transformed,
+                "apply then rotate must equal rotate then apply"
+            );
         }
     }
 

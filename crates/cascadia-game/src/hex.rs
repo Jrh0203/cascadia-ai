@@ -46,6 +46,22 @@ impl HexCoord {
         ))
     }
 
+    /// Rotates the coordinate 60° about the origin (the step that maps
+    /// `DIRECTIONS[e]` to `DIRECTIONS[(e + 5) % 6]`). Distance from the
+    /// origin is preserved, so any in-bounds coordinate stays in bounds.
+    pub fn rotated_once(self) -> Self {
+        Self::new(-self.r, self.q + self.r)
+    }
+
+    /// Rotates the coordinate by `steps` 60° turns about the origin.
+    pub fn rotated(self, steps: u8) -> Self {
+        let mut out = self;
+        for _ in 0..(steps % 6) {
+            out = out.rotated_once();
+        }
+        out
+    }
+
     pub fn distance(self, other: Self) -> u8 {
         let dq = i16::from(self.q) - i16::from(other.q);
         let dr = i16::from(self.r) - i16::from(other.r);
