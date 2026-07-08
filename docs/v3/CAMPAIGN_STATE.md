@@ -5,7 +5,29 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-08 midday — RESEARCH PROGRAM RUNNING, user granted 12h autonomy)
+## RESUME HERE (07-08 afternoon — DISTQ IS CI+, chain running, user away until ~21:30)
+
+**Scoreboard (all 100g paired vs 96.95 n256/d4 unless noted):**
+- **distq_k8 (quantile q head): +0.43 CI+** — first training-side win
+  since saturation; clean ablation vs cycle-6 recipe. Champion-config
+  confirm (n1024/d16 vs 98.28) chained.
+- table-total v1: −1.65 CI− (per-leaf value-head noise); v2 (constant
+  root shift) in flight.
+- leaf softmix τ2/τ4: flat ns (common-mode bias cancels) — closed.
+- Decision SNR: median 1.06; 46% of decisions noise-flippable.
+
+**Chain on john0:** tablev2 probe (running since 13:59) → tta3 probe
+(--gumbel-tta 3, symmetry TTA) → distq n1024/d16 confirm. Monitor armed.
+**Staged, launch-gated:** `logs/gumbel_selfplay_distq_ei1_job.sh` (distq
+EI cycle, the overnight long-runner if the confirm holds); cycle7_table
+job + fleet4 scripts (if tablev2 CI+).
+**Ops lesson (cost: ~1.75h GPU):** exporter is NOT covered by `cargo
+check --workspace`; a cfg(test)-gated fn broke the non-test build while
+tests passed, and job scripts silenced build output. Preflight with
+`cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml`
+and never >/dev/null the build in job scripts.
+
+## PREVIOUS RESUME (07-08 midday — research program launch)
 
 **User ruling (07-08 ~09:30): research agenda approved** — table-total,
 value-noise reduction, lean into what pays, kick off a long experiment at
