@@ -3259,3 +3259,24 @@ pooled c6-era corpus with different trainer seeds (16-pass, ~2h each
 at the new 0.23 s/step); (3) 4-way diverse ensemble probe (champion +
 c3m + freshA + freshB) at n512d8, then n1024d16. Morning readout
 decides whether diversity-ensembling is the next confirmed lever.
+
+## 2026-07-08 03:08 — Ensemble lever CLOSED
+
+Full sweep (25g paired vs solo controls): swa +0.38 ns; c6 -0.12 ns;
+c6@n1024d16 -0.10 ns; c3m -0.19 ns; L-v2 +0.30 ns; 4-way(c3m+freshA+
+freshB) n512d8 +0.18 ns; **4-way n1024d16 -0.78 CI-**. Verdict:
+checkpoint output-averaging does not pay. Diverse members trend
+mildly positive but never significant; weak/lineage members actively
+hurt at the peak config. The world-ensemble mechanism works because
+per-world evaluation noise is large and world-independent; model noise
+is dominated by SHARED bias that averaging cannot cancel.
+
+Fresh from-scratch M's (3x pooled corpus, 16-pass, seeds 777001/2)
+trained as ensemble members; solo n256 battery of seed_a queued — an
+M-scale replication of the capacity/data-scale saturation result.
+
+Campaign position: 98.28 (n1024_d16) stands as the measured honest
+optimum of this architecture+search. Remaining moves: (1) user ruling
+on table-total objective; (2) 1,000-game certification of 98.28
+(~24h at 10.6 s/dec); (3) new-research directions (distributional
+value head, market-refill chance nodes) with uncertain payoff.
