@@ -3333,3 +3333,15 @@ rollout half (honest table sums) is unaffected. v2 = compute the shift
 once at the root (constant across leaves, zero added variance; within a
 depth-1 search the other seats' expected finals barely move). Fleet4
 table generation and cycle-7 stay HELD pending the v2 verdict.
+
+## 2026-07-08 11:20 — Leaf softmix: flat at both temperatures (closed)
+
+softmix_t2_n256: 96.9225 vs 96.95, delta=-0.0275 CI95=[-0.379,+0.324] ns
+softmix_t4_n256: 96.9375 vs 96.95, delta=-0.0125 CI95=[-0.360,+0.335] ns
+
+Softening the leaf max-Q bootstrap changes nothing at either τ. Reading:
+the upward max-bias is common-mode across root actions (each action's
+leaf takes a max over a similar interior menu), and common-mode bias
+cancels in the argmax comparison; the per-leaf variance reduction is
+small next to determinization/rollout noise. Lever closed. Probes now
+run ~33 min/100g on warm GPU (pace note for planning).

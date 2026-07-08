@@ -133,7 +133,7 @@ leaves, zero added variance; the cooperation signal flows through the
 honest table-scoring rollout and terminal halves. Fleet table
 generation and cycle-7 HELD pending this verdict.
 
-### 4.2 Softened leaf bootstrap (max-bias correction) — IN PROGRESS
+### 4.2 Softened leaf bootstrap (max-bias correction) — CLOSED (flat)
 
 **Hypothesis.** The leaf value bootstrap takes the **max** over the leaf
 menu's Q estimates. The max of N noisy estimates is upward-biased and
@@ -145,8 +145,12 @@ slightly pessimistic policy value.
 τ→0 recovers max. Implemented + unit-tested (monotone in τ, bounded by
 max and mean, changes search values end-to-end).
 
-**Experiment.** 100g at n256/d4 w=0.5 τ∈{2,4} vs the 96.95 baseline,
-after the table-total probe (john0 sequential). Results TBD.
+**Result: flat at both temperatures (closed).** τ2 −0.03 ns, τ4 −0.01
+ns (CIs ±0.35). Reading: leaf max-bias is common-mode across root
+actions — every action's leaf takes a max over a similar interior menu —
+and common-mode bias cancels in argmax comparisons, so correcting it
+buys nothing. A useful negative: it sharpens where the real noise lives
+(across determinized worlds and rollouts, not within-leaf aggregation).
 
 ### 4.3 Table-native q head (cycle-7 design, contingent on 4.1) — DESIGNED
 
