@@ -117,6 +117,7 @@ enum Mode {
     ExpertTensorCorpus,
     InteractivePolicyGame,
     GumbelPolicyGame,
+    GumbelSuggestServer,
     GumbelBenchmarkBatch,
     GumbelSelfplayTensorCorpus,
 }
@@ -297,6 +298,9 @@ fn main() -> Result<()> {
         Mode::GumbelPolicyGame => {
             run_gumbel_policy_game(&args)?;
         }
+        Mode::GumbelSuggestServer => {
+            run_gumbel_suggest_server(&args)?;
+        }
         Mode::GumbelBenchmarkBatch => {
             run_gumbel_benchmark_batch(&args)?;
         }
@@ -379,6 +383,7 @@ fn parse_args() -> Result<Args> {
             }
             "--expert-tensor-corpus" => args.mode = Mode::ExpertTensorCorpus,
             "--gumbel-policy-game" => args.mode = Mode::GumbelPolicyGame,
+            "--gumbel-suggest-server" => args.mode = Mode::GumbelSuggestServer,
             "--gumbel-benchmark-batch" => args.mode = Mode::GumbelBenchmarkBatch,
             "--output-dir" => args.output_dir = Some(PathBuf::from(value()?)),
             "--gumbel-selfplay-tensor-corpus" => {
@@ -528,6 +533,7 @@ fn parse_args() -> Result<Args> {
             | Mode::ExpertTensorCorpus
             | Mode::ModelStateSearchBootstrapTensorCorpus
             | Mode::GumbelPolicyGame
+            | Mode::GumbelSuggestServer
             | Mode::GumbelBenchmarkBatch
             | Mode::GumbelSelfplayTensorCorpus
     ) && args.model_service.is_none()
@@ -539,7 +545,10 @@ fn parse_args() -> Result<Args> {
     }
     if matches!(
         args.mode,
-        Mode::GumbelPolicyGame | Mode::GumbelBenchmarkBatch | Mode::GumbelSelfplayTensorCorpus
+        Mode::GumbelPolicyGame
+            | Mode::GumbelSuggestServer
+            | Mode::GumbelBenchmarkBatch
+            | Mode::GumbelSelfplayTensorCorpus
     ) {
         if args.gumbel_n_simulations == 0 {
             bail!("--gumbel-n-simulations must be positive");
@@ -3360,6 +3369,110 @@ fn play_gumbel_policy_game_seed(
         game_started.elapsed().as_secs_f64()
     );
     Ok(records)
+}
+
+/// Persistent interactive suggestion server: reads JSONL requests carrying a
+/// serialized `GameState` on stdin, runs the configured Gumbel search, and
+/// answers with the ranked legal menu on stdout. Powers the web UI's
+/// "champion" strength. Emits a `suggest_ready` line once the model bridge
+/// is up so the parent can gate readiness.
+fn run_gumbel_suggest_server(args: &Args) -> Result<()> {
+    use std::io::{BufRead, Write};
+
+    let mut chunk_bridge = ChunkBridge::Owned(model_state_worker_session(args)?);
+    let mut eval_cache = EvalRowCache::new();
+    let stdout = std::io::stdout();
+    {
+        let mut out = stdout.lock();
+        serde_json::to_writer(&mut out, &json!({"type": "suggest_ready"}))?;
+        out.write_all(b"\n")?;
+        out.flush()?;
+    }
+    let stdin = std::io::stdin();
+    for line in stdin.lock().lines() {
+        let line = line?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let request: Value = match serde_json::from_str(&line) {
+            Ok(value) => value,
+            Err(error) => {
+                let mut out = stdout.lock();
+                serde_json::to_writer(
+                    &mut out,
+                    &json!({"type": "suggest_error", "id": null, "error": format!("bad request json: {error}")}),
+                )?;
+                out.write_all(b"\n")?;
+                out.flush()?;
+                continue;
+            }
+        };
+        let id = request.get("id").cloned().unwrap_or(Value::Null);
+        let mut response =
+            match suggest_for_request(args, &request, &mut chunk_bridge, &mut eval_cache) {
+                Ok(value) => value,
+                Err(error) => json!({"type": "suggest_error", "error": error.to_string()}),
+            };
+        response["id"] = id;
+        let mut out = stdout.lock();
+        serde_json::to_writer(&mut out, &response)?;
+        out.write_all(b"\n")?;
+        out.flush()?;
+    }
+    Ok(())
+}
+
+/// One suggestion: deserialize the game, search, return the full ranked menu
+/// (actions in game-crate serde form, action-aligned Q/policy arrays).
+fn suggest_for_request(
+    args: &Args,
+    request: &Value,
+    bridge: &mut ChunkBridge,
+    cache: &mut EvalRowCache,
+) -> Result<Value> {
+    let game: GameState = serde_json::from_value(
+        request
+            .get("game")
+            .context("suggest request missing game")?
+            .clone(),
+    )
+    .context("deserializing game state")?;
+    let Some(row) = gumbel::eval_row_for_state(&game, gumbel_root_menu_limit(args))? else {
+        return Ok(json!({"type": "suggest_response", "game_over": true}));
+    };
+    // Deterministic per-position search seed: identical positions get
+    // identical suggestions across requests and restarts.
+    let public_hash = row.staged.public_state().canonical_hash();
+    let seed = u64::from_le_bytes(public_hash.as_bytes()[..8].try_into().expect("hash prefix"));
+    let cfg = gumbel_config_from_args(args, seed);
+    let mut evaluator = BridgeLeafEvaluator {
+        bridge,
+        allow_model_fallback: args.allow_model_fallback,
+        cache,
+        tta_rotations: args.gumbel_tta,
+    };
+    let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
+        .context("gumbel search for suggestion")?;
+    let actions = row
+        .afterstates
+        .iter()
+        .map(|afterstate| serde_json::to_value(&afterstate.candidate.action))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(json!({
+        "type": "suggest_response",
+        "game_over": false,
+        "chosen_index": result.chosen_index,
+        "actions": actions,
+        "completed_q": result.completed_q,
+        "improved_policy": result.improved_policy,
+        "visit_counts": result.visit_counts,
+        "root_value": result.root_value,
+        "exact_afterstate_scores": row
+            .afterstates
+            .iter()
+            .map(|afterstate| afterstate.exact_score_active)
+            .collect::<Vec<_>>(),
+    }))
 }
 
 fn run_gumbel_policy_game(args: &Args) -> Result<()> {
