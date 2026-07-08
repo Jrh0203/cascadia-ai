@@ -2871,3 +2871,242 @@ select {
     gap: 8px;
   }
 }
+
+/* ===== Legacy v1 UX layout ===================================== */
+
+.v1-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--ink-900);
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+  min-height: 44px;
+}
+.v1-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--paper);
+  margin: 0;
+  white-space: nowrap;
+}
+.header-controls {
+  display: flex;
+  gap: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.ctrl-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 0 10px;
+  border-right: 1px solid var(--line);
+  height: 28px;
+}
+.ctrl-group:last-child { border-right: none; padding-right: 0; }
+.ctrl-label {
+  font-size: 10px;
+  color: var(--paper-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+.v1-header button,
+.rail-button,
+.candidate-row {
+  background: var(--ink-800);
+  color: var(--paper);
+  border: 1px solid var(--line-strong);
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.v1-header button:hover:not(:disabled),
+.rail-button:hover:not(:disabled),
+.candidate-row:hover:not(:disabled) { background: var(--line-strong); }
+.v1-header button:disabled,
+.rail-button:disabled,
+.candidate-row:disabled { opacity: 0.4; cursor: not-allowed; }
+.v1-header button.active,
+.rail-button.active { background: var(--line-strong); border-color: var(--accent); }
+.v1-header button.icon-btn { padding: 5px 8px; font-size: 14px; line-height: 1; }
+.strength-select {
+  background: var(--ink-800);
+  color: var(--paper);
+  border: 1px solid var(--line-strong);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+}
+.turn-info { font-size: 11px; color: var(--paper-muted); white-space: nowrap; }
+
+.v1-layout {
+  display: grid !important;
+  grid-template-columns: 250px minmax(0, 1fr) 300px;
+  gap: 0;
+  height: calc(100vh - 44px - 30px);
+  overflow: hidden;
+}
+.left-panel,
+.side-panel {
+  overflow-y: auto;
+  background: var(--ink-900);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.left-panel { border-right: 1px solid var(--line); }
+.side-panel { border-left: 1px solid var(--line); }
+.panel-section h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--paper-muted);
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.panel-note { font-size: 11px; color: var(--paper-faint); }
+.v1-layout .board-column {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink-950);
+  padding: 0;
+}
+.board-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+}
+.board-tabs button {
+  background: var(--ink-900);
+  color: var(--paper-muted);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.board-tabs button.active {
+  background: var(--ink-800);
+  color: var(--paper);
+  border-color: var(--line-strong);
+}
+.board-tabs .tab-score { margin-left: 6px; color: var(--accent-strong); }
+
+.market-rail { display: flex; flex-direction: column; gap: 6px; }
+.market-pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  transition: border-color 0.12s, opacity 0.12s;
+}
+.market-pair.selected { border-color: var(--accent); }
+.market-pair.dimmed { opacity: 0.4; }
+.market-pair.empty {
+  justify-content: center;
+  color: var(--paper-faint);
+  font-size: 11px;
+  padding: 12px;
+}
+.market-half {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.market-half:hover:not(:disabled) { border-color: var(--line-strong); }
+.market-half.picked { border-color: var(--accent); }
+.market-half:disabled { cursor: default; }
+.market-info {
+  font-size: 11px;
+  color: var(--paper-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.market-allowed { display: flex; gap: 3px; opacity: 0.8; }
+.market-actions { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.rail-button { width: 100%; white-space: normal; text-align: center; }
+.rail-button.danger { background: var(--accent); border-color: var(--accent); }
+.rail-button.danger:hover:not(:disabled) { background: var(--accent-strong); }
+
+.candidates-list { display: flex; flex-direction: column; gap: 4px; }
+.candidate-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+}
+.candidate-rank { color: var(--paper-faint); font-size: 10px; }
+.candidate-desc { flex: 1; }
+.candidate-value { color: var(--accent-strong); }
+
+.event-log { display: flex; flex-direction: column; gap: 2px; max-height: 40vh; overflow-y: auto; }
+.event-log.empty { color: var(--paper-faint); font-size: 11px; }
+.event-log-row { display: flex; gap: 6px; font-size: 11px; line-height: 1.5; }
+.event-player { color: var(--accent-strong); min-width: 22px; }
+.event-text { color: var(--paper-muted); }
+
+.instructions { font-size: 11px; color: var(--paper-muted); line-height: 1.7; margin-bottom: 8px; }
+
+.status-bar {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--ink-900);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--paper-muted);
+}
+
+.spinner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 46, 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 60;
+}
+.spinner-overlay .spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--line-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: v1spin 0.9s linear infinite;
+}
+.spinner-text { color: var(--paper); font-size: 13px; }
+@keyframes v1spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .v1-layout { grid-template-columns: 1fr; height: auto; }
+  .left-panel, .side-panel { border: none; }
+}

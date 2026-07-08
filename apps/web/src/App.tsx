@@ -1,13 +1,5 @@
 import {
-  Download,
-  History,
   LoaderCircle,
-  Menu,
-  Redo2,
-  Server,
-  Settings2,
-  Undo2,
-  Upload,
   X,
 } from "lucide-react";
 import {
@@ -20,9 +12,9 @@ import {
 } from "react";
 
 import { api } from "./api";
-import { AnalysisPanel } from "./components/AnalysisPanel";
 import { HexBoard } from "./components/HexBoard";
-import { MarketWorkbench } from "./components/MarketWorkbench";
+import { EventLog } from "./components/EventLog";
+import { MarketRail } from "./components/MarketRail";
 import { ScorePanel } from "./components/ScorePanel";
 import { SetupDialog, type SetupResult } from "./components/SetupDialog";
 import {
@@ -36,6 +28,7 @@ import {
   titleCase,
 } from "./game";
 import type {
+  StrengthCapability,
   Capabilities,
   DraftChoice,
   GameConfig,
@@ -85,14 +78,16 @@ export default function App() {
   const [redoStack, setRedoStack] = useState<SavedGame[]>([]);
   const [setupOpen, setSetupOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [analysisOpen, setAnalysisOpen] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [candidates, setCandidates] = useState<SuggestionCandidate[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("board");
+  const [hintStrength, setHintStrength] = useState<StrengthCapability["id"]>("research");
+  const [autoPlay, setAutoPlay] = useState(false);
   const loadInput = useRef<HTMLInputElement>(null);
   const aiState = useRef<string | null>(null);
+  const autoState = useRef<string | null>(null);
 
   const view = document?.view ?? null;
   const savedGame = document?.game ?? null;
@@ -101,6 +96,15 @@ export default function App() {
   const currentPlayer = view?.current_player ?? 0;
   const currentSeat = seats[currentPlayer];
   const isHumanTurn = currentSeat?.kind !== "ai";
+  // Legacy v1 three-phase turn flow: pick a market pair, place the tile
+  // (R rotates), then place or skip the wildlife token. Wildlife/skip
+  // clicks apply the move immediately — no separate confirm step.
+  const phase: "select_market" | "place_tile" | "place_wildlife" =
+    draft === null
+      ? "select_market"
+      : selectedCoord === null
+        ? "place_tile"
+        : "place_wildlife";
   const selectedBoard = view?.boards[selectedPlayer] ?? null;
   const stagedMarket = turnOptions?.market ?? view?.market ?? [];
   const selectedPlacement = useMemo(
@@ -274,6 +278,37 @@ export default function App() {
     stateHash,
   ]);
 
+  // Legacy v1 keyboard: R cycles the placed tile's legal rotations.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "r" && event.key !== "R") return;
+      const target = event.target as HTMLElement | null;
+      if (target && ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)) return;
+      if (!selectedPlacement || selectedPlacement.rotations.length < 2) return;
+      const index = selectedPlacement.rotations.findIndex(
+        (option) => option.rotation === selectedRotation,
+      );
+      const next =
+        selectedPlacement.rotations[(index + 1) % selectedPlacement.rotations.length];
+      setSelectedRotation(next.rotation);
+      setSelectedWildlife(null);
+      setWildlifeDecision("pending");
+      event.preventDefault();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedPlacement, selectedRotation]);
+
+  // Legacy v1 auto-play: when enabled, the hint engine plays human seats too.
+  useEffect(() => {
+    if (!autoPlay || !savedGame || !stateHash || gameOver || busy) return;
+    if (currentSeat?.kind === "ai") return;
+    const key = `${stateHash}:${currentPlayer}`;
+    if (autoState.current === key) return;
+    autoState.current = key;
+    void bestMove();
+  }, [autoPlay, busy, currentPlayer, currentSeat?.kind, gameOver, savedGame, stateHash]);
+
   function clearPlacement() {
     setSelectedCoord(null);
     setSelectedRotation(0);
@@ -313,12 +348,6 @@ export default function App() {
     setWildlifeDecision("pending");
   }
 
-  function selectRotation(rotation: number) {
-    setSelectedRotation(rotation);
-    setSelectedWildlife(null);
-    setWildlifeDecision("pending");
-  }
-
   async function commitAction(action = buildAction()) {
     if (!document || !action) return;
     setBusy(true);
@@ -346,6 +375,39 @@ export default function App() {
       },
       wildlife: wildlifeDecision === "placed" ? selectedWildlife : null,
     };
+  }
+
+  /** Applies the drafted tile at the selected coord with the given
+   * wildlife decision, immediately (legacy v1 flow — no confirm step). */
+  async function commitWildlife(wildlife: HexCoord | null) {
+    if (!draft || !selectedCoord) return;
+    await commitAction({
+      replace_three_of_a_kind: prelude.replace_three_of_a_kind,
+      wildlife_wipes: prelude.wildlife_wipes,
+      draft,
+      tile: { coord: selectedCoord, rotation: selectedRotation },
+      wildlife,
+    });
+  }
+
+  /** Legacy "Best Move": ask the configured hint engine for its top action
+   * and play it for the current seat. */
+  async function bestMove() {
+    if (!document || view?.game_over || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await api.suggest(document.game, 1, hintStrength);
+      const action = response.candidates[0]?.action;
+      if (!action) throw new Error("The engine returned no legal move.");
+      const next = await api.apply(document.game, action);
+      setDocument(next);
+      setRedoStack([]);
+    } catch (reason) {
+      setError(messageFrom(reason));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function undo() {
@@ -384,7 +446,7 @@ export default function App() {
     setAnalysisLoading(true);
     setError(null);
     try {
-      const response = await api.suggest(document.game, 8, "research");
+      const response = await api.suggest(document.game, 8, hintStrength);
       setCandidates(response.candidates);
     } catch (reason) {
       setError(messageFrom(reason));
@@ -462,110 +524,97 @@ export default function App() {
 
   return (
     <div className="app-shell" data-mobile-panel={mobilePanel}>
-      <header className="topbar">
-        <div className="brand-block">
-          <span className="brand-mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
-          <div>
-            <h1>Cascadia Lab</h1>
-            <span>AAAAA · Local</span>
+      <header className="topbar v1-header">
+        <h1 className="v1-title">CASCADIA</h1>
+        <div className="header-controls">
+          <div className="ctrl-group">
+            <button type="button" onClick={() => void analyze()} disabled={busy || gameOver || !view}>
+              Suggest
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              title="Clear suggestions"
+              onClick={() => setCandidates([])}
+              disabled={candidates.length === 0}
+            >
+              ✕
+            </button>
+            <button type="button" onClick={() => void bestMove()} disabled={busy || gameOver || !view}>
+              Best Move
+            </button>
+            <button
+              type="button"
+              className={autoPlay ? "active" : ""}
+              onClick={() => {
+                autoState.current = null;
+                setAutoPlay((current) => !current);
+              }}
+              disabled={gameOver || !view}
+            >
+              Auto: {autoPlay ? "ON" : "OFF"}
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              title="Undo"
+              onClick={() => void undo()}
+              disabled={!document || document.game.replay.turns.length === 0 || busy}
+            >
+              ↶
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              title="Redo"
+              onClick={() => void redo()}
+              disabled={redoStack.length === 0 || busy}
+            >
+              ↷
+            </button>
+          </div>
+          <div className="ctrl-group">
+            <span className="ctrl-label">Engine</span>
+            <select
+              className="strength-select"
+              value={hintStrength}
+              onChange={(event) =>
+                setHintStrength(event.target.value as StrengthCapability["id"])
+              }
+            >
+              {(capabilities?.strengths ?? [])
+                .filter((strength) => strength.available)
+                .map((strength) => (
+                  <option key={strength.id} value={strength.id}>
+                    {strength.label}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="ctrl-group">
+            <span className="turn-info">
+              {view
+                ? gameOver
+                  ? "game over"
+                  : `P${currentPlayer + 1} · turn ${Math.floor(view.completed_turns / view.config.player_count) + 1} · seed ${view.seed}`
+                : "no game"}
+            </span>
+          </div>
+          <div className="ctrl-group">
+            <button type="button" onClick={() => setHistoryOpen(true)} disabled={!view}>
+              History
+            </button>
+            <button type="button" onClick={saveGame} disabled={!view}>
+              Save
+            </button>
+            <button type="button" onClick={() => loadInput.current?.click()}>
+              Load
+            </button>
+            <button type="button" className="active" onClick={() => setSetupOpen(true)}>
+              New Game
+            </button>
           </div>
         </div>
-        <div className="turn-status">
-          <span className="turn-player">P{currentPlayer + 1}</span>
-          <div>
-            <strong>
-              {view.game_over
-                ? "Final scores"
-                : busy && currentSeat?.kind === "ai"
-                  ? "AI is choosing"
-                  : `Turn ${Math.floor(view.completed_turns / view.config.player_count) + 1}`}
-            </strong>
-            <small>
-              {view.completed_turns} / {view.total_turns} actions · seed {view.seed}
-            </small>
-          </div>
-          {busy && <LoaderCircle className="spinner" aria-label="Working" />}
-        </div>
-        <nav className="top-actions" aria-label="Game actions">
-          <a
-            className="icon-button"
-            href="/cluster"
-            title="Cluster dashboard"
-            aria-label="Cluster dashboard"
-          >
-            <Server aria-hidden="true" />
-          </a>
-          <button
-            className="icon-button"
-            type="button"
-            title="Undo"
-            onClick={undo}
-            disabled={document.game.replay.turns.length === 0 || busy}
-          >
-            <Undo2 aria-hidden="true" />
-          </button>
-          <button
-            className="icon-button"
-            type="button"
-            title="Redo"
-            onClick={redo}
-            disabled={redoStack.length === 0 || busy}
-          >
-            <Redo2 aria-hidden="true" />
-          </button>
-          <span className="action-divider" />
-          <button
-            className="icon-button"
-            type="button"
-            title="Game history"
-            onClick={() => setHistoryOpen(true)}
-          >
-            <History aria-hidden="true" />
-          </button>
-          <button
-            className="icon-button"
-            type="button"
-            title="Save game"
-            onClick={saveGame}
-          >
-            <Download aria-hidden="true" />
-          </button>
-          <button
-            className="icon-button"
-            type="button"
-            title="Load game"
-            onClick={() => loadInput.current?.click()}
-          >
-            <Upload aria-hidden="true" />
-          </button>
-          <button
-            className="command-button setup-button"
-            type="button"
-            onClick={() => setSetupOpen(true)}
-          >
-            <Settings2 aria-hidden="true" />
-            New game
-          </button>
-          <button
-            className="icon-button mobile-menu-button"
-            type="button"
-            title="New game"
-            onClick={() => setSetupOpen(true)}
-          >
-            <Menu aria-hidden="true" />
-          </button>
-          <input
-            ref={loadInput}
-            className="visually-hidden"
-            type="file"
-            accept="application/json,.json"
-            onChange={loadGame}
-          />
-        </nav>
       </header>
 
       {error && (
@@ -582,33 +631,63 @@ export default function App() {
         </div>
       )}
 
-      <main className="game-layout">
-        <div className="desktop-score-column">
-          <ScorePanel
-            boards={view.boards}
-            selectedPlayer={selectedPlayer}
-            currentPlayer={currentPlayer}
-            cards={view.config.scoring_cards}
-            onSelectPlayer={setSelectedPlayer}
-          />
+      <main className="game-layout v1-layout">
+        <div className="left-panel">
+          <div className="panel-section">
+            <h2>Suggestions</h2>
+            {analysisLoading ? (
+              <div className="panel-note">Computing…</div>
+            ) : candidates.length === 0 ? (
+              <div className="panel-note">
+                Press Suggest for {hintStrength} hints.
+              </div>
+            ) : (
+              <div className="candidates-list">
+                {candidates.map((candidate, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className="candidate-row"
+                    disabled={busy || !isHumanTurn}
+                    onClick={() => void commitAction(candidate.action)}
+                    title="Play this move"
+                  >
+                    <span className="candidate-rank">#{index + 1}</span>
+                    <span className="candidate-desc">
+                      ({candidate.action.tile.coord.q},{candidate.action.tile.coord.r})
+                      {candidate.action.wildlife ? " +token" : ""}
+                    </span>
+                    <span className="candidate-value">
+                      {candidate.search_value.toFixed(1)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="panel-section">
+            <h2>Event log</h2>
+            <EventLog
+              turns={document?.game.replay.turns ?? []}
+              playerCount={view.config.player_count}
+            />
+          </div>
         </div>
 
         <section className="board-column" aria-label="Cascadia board">
-          <div className="board-caption">
-            <div>
-              <span className="eyebrow">Player {selectedPlayer + 1}</span>
-              <h2>
-                {selectedPlayer === currentPlayer
-                  ? isHumanTurn
-                    ? "Your environment"
-                    : "AI environment"
-                  : "Environment review"}
-              </h2>
-            </div>
-            <div className="board-score">
-              <span>Base</span>
-              <strong>{selectedBoard.score.base_total}</strong>
-            </div>
+          <div className="board-tabs">
+            {view.boards.map((board, index) => (
+              <button
+                key={index}
+                type="button"
+                className={index === selectedPlayer ? "active" : ""}
+                onClick={() => setSelectedPlayer(index)}
+              >
+                P{index + 1}
+                {index === currentPlayer ? " ●" : ""}
+                <span className="tab-score">{board.score.total}</span>
+              </button>
+            ))}
           </div>
           <HexBoard
             board={selectedBoard}
@@ -625,27 +704,57 @@ export default function App() {
             onSelectWildlife={(coord) => {
               setSelectedWildlife(coord);
               setWildlifeDecision("placed");
+              void commitWildlife(coord);
             }}
           />
         </section>
 
-        <div className="desktop-workbench-column">
-          {isHumanTurn && !view.game_over ? (
-            <MarketWorkbench
-              market={view.market}
+        <div className="side-panel">
+          <div className="panel-section">
+            <h2>Market</h2>
+            <MarketRail
+              market={stagedMarket}
               turnOptions={turnOptions}
               draft={draft}
               independent={independent}
               selectedTileSlot={selectedTileSlot}
               selectedWildlifeSlot={selectedWildlifeSlot}
-              selectedCoord={selectedCoord}
-              selectedRotation={selectedRotation}
-              wildlifeDecision={wildlifeDecision}
-              placement={selectedPlacement}
-              busy={busy}
+              phase={phase}
+              busy={busy || !isHumanTurn}
               freeReplacement={view.free_overpopulation_replacement}
               freeReplacementSelected={freeReplacementSelected}
               preludeActive={preludeActive}
+              natureTokens={turnOptions?.nature_tokens_remaining ?? 0}
+              onSelectDraftComponent={selectDraftComponent}
+              onSetIndependent={(next) => {
+                setIndependent(next);
+                setDraft(null);
+                setSelectedTileSlot(null);
+                setSelectedWildlifeSlot(null);
+                clearPlacement();
+              }}
+              onWipeAll={() => {
+                const counts = new Map<string, number[]>();
+                stagedMarket.forEach((pair) => {
+                  if (!pair.wildlife) return;
+                  counts.set(pair.wildlife, [
+                    ...(counts.get(pair.wildlife) ?? []),
+                    pair.slot,
+                  ]);
+                });
+                const repeated = [...counts.values()]
+                  .filter((slots) => slots.length > 1)
+                  .sort((left, right) => right.length - left.length)[0];
+                if (!repeated) return;
+                setPrelude((current) => ({
+                  ...current,
+                  wildlife_wipes: [...current.wildlife_wipes, { slots: repeated }],
+                }));
+                setDraft(null);
+                setSelectedTileSlot(null);
+                setSelectedWildlifeSlot(null);
+                clearPlacement();
+              }}
               onToggleFreeReplacement={() => {
                 setPrelude((current) => ({
                   ...current,
@@ -656,51 +765,76 @@ export default function App() {
                 setSelectedWildlifeSlot(null);
                 clearPlacement();
               }}
-              onAddWipe={(slots) => {
-                setPrelude((current) => ({
-                  ...current,
-                  wildlife_wipes: [...current.wildlife_wipes, { slots }],
-                }));
-                setDraft(null);
-                setSelectedTileSlot(null);
-                setSelectedWildlifeSlot(null);
-                clearPlacement();
-              }}
               onResetPrelude={resetTurnSelection}
-              onSetIndependent={(next) => {
-                setIndependent(next);
-                setDraft(null);
-                setSelectedTileSlot(null);
-                setSelectedWildlifeSlot(null);
-                clearPlacement();
-              }}
-              onSelectDraftComponent={selectDraftComponent}
-              onSetRotation={selectRotation}
-              onSkipWildlife={() => {
-                setSelectedWildlife(null);
-                setWildlifeDecision("skipped");
-              }}
-              onCommit={() => void commitAction()}
             />
-          ) : (
-            <aside className="workbench passive-workbench">
-              <LoaderCircle className={busy ? "spinner" : ""} aria-hidden="true" />
-              <span>
-                {view.game_over ? "Game complete" : `Player ${currentPlayer + 1} is choosing`}
-              </span>
-            </aside>
-          )}
+          </div>
+          <div className="panel-section">
+            <h2>Scores</h2>
+            <ScorePanel
+              boards={view.boards}
+              selectedPlayer={selectedPlayer}
+              currentPlayer={currentPlayer}
+              cards={view.config.scoring_cards}
+              onSelectPlayer={setSelectedPlayer}
+            />
+          </div>
+          <div className="panel-section">
+            <h2>How to play</h2>
+            <div className="instructions">
+              1. Click a market pair on the right
+              <br />
+              2. Click a highlighted hex — press <b>R</b> to rotate
+              <br />
+              3. Click a tile for the wildlife token, or skip
+            </div>
+            {phase === "place_wildlife" && (
+              <button
+                type="button"
+                className="rail-button"
+                onClick={() => {
+                  setSelectedWildlife(null);
+                  setWildlifeDecision("skipped");
+                  void commitWildlife(null);
+                }}
+                disabled={busy || !isHumanTurn}
+              >
+                Skip Wildlife
+              </button>
+            )}
+          </div>
         </div>
       </main>
 
-      <AnalysisPanel
-        open={analysisOpen}
-        loading={analysisLoading}
-        candidates={candidates}
-        onToggle={() => setAnalysisOpen((open) => !open)}
-        onAnalyze={() => void analyze()}
-        onPlay={(candidate) => void commitAction(candidate.action)}
+      <div className="status-bar">
+        {error
+          ? `⚠ ${error}`
+          : gameOver
+            ? "Game over — press New Game to play again."
+            : !isHumanTurn
+              ? busy
+                ? `P${currentPlayer + 1} (${currentSeat?.strength}) is thinking…`
+                : `Waiting for P${currentPlayer + 1}…`
+              : phase === "select_market"
+                ? "Your turn: click a market pair on the right."
+                : phase === "place_tile"
+                  ? "Click a highlighted frontier hex. Press R to rotate after placing."
+                  : "Click a highlighted tile to place the wildlife token, press R to rotate the tile, or Skip Wildlife."}
+      </div>
+
+      <input
+        ref={loadInput}
+        type="file"
+        accept="application/json"
+        className="visually-hidden"
+        onChange={(event) => void loadGame(event)}
       />
+
+      {busy && !isHumanTurn && (
+        <div className="spinner-overlay">
+          <div className="spinner" />
+          <div className="spinner-text">Computing best move…</div>
+        </div>
+      )}
 
       <nav className="mobile-tabs" aria-label="Mobile views">
         {(["board", "market", "scores", "analysis"] as MobilePanel[]).map((panel) => (
@@ -708,10 +842,7 @@ export default function App() {
             key={panel}
             type="button"
             className={mobilePanel === panel ? "is-active" : ""}
-            onClick={() => {
-              setMobilePanel(panel);
-              if (panel === "analysis") setAnalysisOpen(true);
-            }}
+            onClick={() => setMobilePanel(panel)}
           >
             {titleCase(panel)}
           </button>
