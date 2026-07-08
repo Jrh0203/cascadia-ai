@@ -3110,3 +3110,49 @@ select {
   .v1-layout { grid-template-columns: 1fr; height: auto; }
   .left-panel, .side-panel { border: none; }
 }
+
+/* ===== Legacy v1 suggestion niceties ============================ */
+.suggest-glow {
+  animation: suggestPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 0 3px #ffcc00, 0 0 20px #ffcc00;
+  position: relative;
+  z-index: 10;
+  border-radius: 6px;
+}
+@keyframes suggestPulse {
+  0%, 100% { box-shadow: 0 0 0 3px #ffcc00, 0 0 15px rgba(255, 204, 0, 0.6); }
+  50% { box-shadow: 0 0 0 4px #ffcc00, 0 0 25px rgba(255, 204, 0, 0.9); }
+}
+.hex-suggested {
+  fill: none;
+  stroke: #ffcc00;
+  stroke-width: 2.5;
+  pointer-events: none;
+  animation: hexSuggestPulse 1.5s ease-in-out infinite;
+}
+@keyframes hexSuggestPulse {
+  0%, 100% { stroke-opacity: 0.55; stroke-width: 2; }
+  50% { stroke-opacity: 1; stroke-width: 3.5; }
+}
+.candidate-row { cursor: pointer; align-items: center; }
+.candidate-row.selected { border-color: #ffcc00; }
+.candidate-row.preaction { background: rgba(255, 255, 255, 0.04); border-left: 3px solid var(--paper-faint); }
+.candidate-row.preaction.recommended {
+  background: rgba(233, 69, 96, 0.15);
+  border-left: 3px solid var(--accent);
+}
+.preaction-label { color: var(--paper-faint); font-size: 10px; letter-spacing: 0.5px; }
+.preaction-label.do-first { color: var(--accent); font-weight: 700; }
+.candidate-delta { color: var(--paper-faint); font-size: 10px; }
+.candidate-play {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--accent-strong);
+  border-radius: 3px;
+  font-size: 9px;
+  padding: 2px 5px;
+  cursor: pointer;
+  line-height: 1;
+}
+.candidate-play:hover:not(:disabled) { background: var(--line-strong); }
+.candidate-play:disabled { opacity: 0.4; cursor: not-allowed; }

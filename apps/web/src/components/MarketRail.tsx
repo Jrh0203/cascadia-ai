@@ -21,6 +21,9 @@ interface MarketRailProps {
   selectedTileSlot: number | null;
   selectedWildlifeSlot: number | null;
   phase: "select_market" | "place_tile" | "place_wildlife";
+  glowTileSlot: number | null;
+  glowWildlifeSlot: number | null;
+  glowSplit: boolean;
   busy: boolean;
   freeReplacement: boolean;
   freeReplacementSelected: boolean;
@@ -41,6 +44,9 @@ export function MarketRail({
   selectedTileSlot,
   selectedWildlifeSlot,
   phase,
+  glowTileSlot,
+  glowWildlifeSlot,
+  glowSplit,
   busy,
   freeReplacement,
   freeReplacementSelected,
@@ -61,6 +67,9 @@ export function MarketRail({
         const tileSelected = selectedTileSlot === slot;
         const wildlifeSelected = selectedWildlifeSlot === slot;
         const dimmed = draft !== null && !tileSelected && !wildlifeSelected;
+        const pairGlow = !glowSplit && glowTileSlot === slot;
+        const tileGlow = glowSplit && glowTileSlot === slot;
+        const wildlifeGlow = glowSplit && glowWildlifeSlot === slot;
         if (!pair.tile || !pair.wildlife) {
           return (
             <div key={slot} className="market-pair empty">
@@ -75,11 +84,11 @@ export function MarketRail({
         return (
           <div
             key={slot}
-            className={`market-pair${tileSelected || wildlifeSelected ? " selected" : ""}${dimmed ? " dimmed" : ""}`}
+            className={`market-pair${tileSelected || wildlifeSelected ? " selected" : ""}${dimmed ? " dimmed" : ""}${pairGlow ? " suggest-glow" : ""}`}
           >
             <button
               type="button"
-              className={`market-half${tileSelected ? " picked" : ""}`}
+              className={`market-half${tileSelected ? " picked" : ""}${tileGlow ? " suggest-glow" : ""}`}
               disabled={!selectable}
               onClick={() => onSelectDraftComponent(slot, "tile")}
               title={independent ? "Draft this tile" : "Draft this pair"}
@@ -88,7 +97,7 @@ export function MarketRail({
             </button>
             <button
               type="button"
-              className={`market-half${wildlifeSelected ? " picked" : ""}`}
+              className={`market-half${wildlifeSelected ? " picked" : ""}${wildlifeGlow ? " suggest-glow" : ""}`}
               disabled={!selectable}
               onClick={() => onSelectDraftComponent(slot, "wildlife")}
               title={independent ? "Draft this wildlife" : "Draft this pair"}

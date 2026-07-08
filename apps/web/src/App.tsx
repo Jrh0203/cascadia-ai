@@ -84,6 +84,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("board");
   const [hintStrength, setHintStrength] = useState<StrengthCapability["id"]>("research");
+  const [selectedCandidateIdx, setSelectedCandidateIdx] = useState(0);
   const [autoPlay, setAutoPlay] = useState(false);
   const loadInput = useRef<HTMLInputElement>(null);
   const aiState = useRef<string | null>(null);
@@ -105,6 +106,22 @@ export default function App() {
       : selectedCoord === null
         ? "place_tile"
         : "place_wildlife";
+  // Active suggestion preview (legacy v1 "suggest glow"): the selected
+  // candidate highlights its market pair (or split halves) and target hex.
+  const suggestion = candidates[selectedCandidateIdx] ?? null;
+  const suggestionDraft = suggestion?.action.draft ?? null;
+  const suggestionTileSlot = suggestionDraft
+    ? "Paired" in suggestionDraft
+      ? suggestionDraft.Paired.slot
+      : suggestionDraft.Independent.tile_slot
+    : null;
+  const suggestionWildlifeSlot = suggestionDraft
+    ? "Paired" in suggestionDraft
+      ? suggestionDraft.Paired.slot
+      : suggestionDraft.Independent.wildlife_slot
+    : null;
+  const suggestionSplit =
+    suggestionTileSlot !== null && suggestionTileSlot !== suggestionWildlifeSlot;
   const selectedBoard = view?.boards[selectedPlayer] ?? null;
   const stagedMarket = turnOptions?.market ?? view?.market ?? [];
   const selectedPlacement = useMemo(
@@ -343,7 +360,15 @@ export default function App() {
     );
     if (!placement) return;
     setSelectedCoord(coord);
-    setSelectedRotation(placement.rotations[0]?.rotation ?? 0);
+    const suggestedRotation =
+      suggestion &&
+      sameCoord(suggestion.action.tile.coord, coord) &&
+      placement.rotations.some(
+        (option) => option.rotation === suggestion.action.tile.rotation,
+      )
+        ? suggestion.action.tile.rotation
+        : (placement.rotations[0]?.rotation ?? 0);
+    setSelectedRotation(suggestedRotation);
     setSelectedWildlife(null);
     setWildlifeDecision("pending");
   }
@@ -448,6 +473,7 @@ export default function App() {
     try {
       const response = await api.suggest(document.game, 8, hintStrength);
       setCandidates(response.candidates);
+      setSelectedCandidateIdx(0);
     } catch (reason) {
       setError(messageFrom(reason));
     } finally {
@@ -535,7 +561,10 @@ export default function App() {
               type="button"
               className="icon-btn"
               title="Clear suggestions"
-              onClick={() => setCandidates([])}
+              onClick={() => {
+                setCandidates([]);
+                setSelectedCandidateIdx(0);
+              }}
               disabled={candidates.length === 0}
             >
               ✕
@@ -643,25 +672,87 @@ export default function App() {
               </div>
             ) : (
               <div className="candidates-list">
-                {candidates.map((candidate, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    className="candidate-row"
-                    disabled={busy || !isHumanTurn}
-                    onClick={() => void commitAction(candidate.action)}
-                    title="Play this move"
+                {view.free_overpopulation_replacement && (
+                  <div
+                    className={`candidate-row preaction${candidates[0]?.action.replace_three_of_a_kind ? " recommended" : ""}`}
+                    onClick={() => {
+                      if (busy || !isHumanTurn) return;
+                      setPrelude((current) => ({
+                        ...current,
+                        replace_three_of_a_kind:
+                          !current.replace_three_of_a_kind,
+                      }));
+                      setDraft(null);
+                      setSelectedTileSlot(null);
+                      setSelectedWildlifeSlot(null);
+                      clearPlacement();
+                    }}
+                    role="button"
+                    title="Free three-of-a-kind market refresh"
                   >
-                    <span className="candidate-rank">#{index + 1}</span>
+                    <span className="candidate-rank">♻️</span>
                     <span className="candidate-desc">
-                      ({candidate.action.tile.coord.q},{candidate.action.tile.coord.r})
-                      {candidate.action.wildlife ? " +token" : ""}
+                      Free replace{freeReplacementSelected ? " ✓" : ""}
                     </span>
-                    <span className="candidate-value">
-                      {candidate.search_value.toFixed(1)}
+                    <span
+                      className={`preaction-label${candidates[0]?.action.replace_three_of_a_kind ? " do-first" : ""}`}
+                    >
+                      {candidates[0]?.action.replace_three_of_a_kind
+                        ? "DO FIRST"
+                        : "SKIP"}
                     </span>
-                  </button>
-                ))}
+                  </div>
+                )}
+                {candidates.map((candidate, index) => {
+                  const draftChoice = candidate.action.draft;
+                  const split = !("Paired" in draftChoice);
+                  const tileSlot =
+                    "Paired" in draftChoice
+                      ? draftChoice.Paired.slot
+                      : draftChoice.Independent.tile_slot;
+                  const delta =
+                    index === 0
+                      ? null
+                      : candidate.search_value - candidates[0].search_value;
+                  return (
+                    <div
+                      key={index}
+                      className={`candidate-row${index === selectedCandidateIdx ? " selected" : ""}`}
+                      onClick={() => setSelectedCandidateIdx(index)}
+                      role="button"
+                      title="Preview this move (glows on board and market)"
+                    >
+                      <span className="candidate-rank">#{index + 1}</span>
+                      <span className="candidate-desc">
+                        {split ? "🌲 " : ""}pair {tileSlot + 1} → (
+                        {candidate.action.tile.coord.q},
+                        {candidate.action.tile.coord.r})
+                        {candidate.action.wildlife ? " +tok" : ""}
+                        {delta !== null && (
+                          <span className="candidate-delta">
+                            {" "}
+                            ({delta.toFixed(1)})
+                          </span>
+                        )}
+                      </span>
+                      <span className="candidate-value">
+                        {candidate.search_value.toFixed(1)}
+                      </span>
+                      <button
+                        type="button"
+                        className="candidate-play"
+                        disabled={busy || !isHumanTurn}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void commitAction(candidate.action);
+                        }}
+                        title="Play this move now"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -700,6 +791,11 @@ export default function App() {
             selectedWildlife={selectedWildlife}
             draftedWildlife={draftedWildlife as Wildlife | null}
             preview={activePlacement ? preview : null}
+            suggestedCoord={
+              suggestion && selectedPlayer === currentPlayer && isHumanTurn
+                ? suggestion.action.tile.coord
+                : null
+            }
             onSelectCoord={selectPlacement}
             onSelectWildlife={(coord) => {
               setSelectedWildlife(coord);
@@ -720,6 +816,9 @@ export default function App() {
               selectedTileSlot={selectedTileSlot}
               selectedWildlifeSlot={selectedWildlifeSlot}
               phase={phase}
+              glowTileSlot={isHumanTurn ? suggestionTileSlot : null}
+              glowWildlifeSlot={isHumanTurn ? suggestionWildlifeSlot : null}
+              glowSplit={suggestionSplit}
               busy={busy || !isHumanTurn}
               freeReplacement={view.free_overpopulation_replacement}
               freeReplacementSelected={freeReplacementSelected}
