@@ -76,6 +76,7 @@ def run_gumbel_games(
     exploration: bool,
     peek: bool = False,
     table_total: bool = False,
+    leaf_softmix: float | None = None,
 ) -> list[dict[str, Any]]:
     command = [
         str(binary),
@@ -106,6 +107,7 @@ def run_gumbel_games(
         "on" if exploration else "off",
         *(["--gumbel-peek"] if peek else []),
         *(["--gumbel-table-total"] if table_total else []),
+        *(["--gumbel-leaf-softmix", str(leaf_softmix)] if leaf_softmix is not None else []),
         "--k-interior",
         str(k_interior),
         "--max-actions",
@@ -175,6 +177,7 @@ def run_gumbel_games_batch(
     exploration: bool,
     peek: bool = False,
     table_total: bool = False,
+    leaf_softmix: float | None = None,
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
     process per contiguous seed run (one process total for the usual
@@ -211,6 +214,7 @@ def run_gumbel_games_batch(
             "on" if exploration else "off",
             *(["--gumbel-peek"] if peek else []),
             *(["--gumbel-table-total"] if table_total else []),
+            *(["--gumbel-leaf-softmix", str(leaf_softmix)] if leaf_softmix is not None else []),
             "--k-interior",
             str(k_interior),
             "--max-actions",
@@ -291,6 +295,7 @@ def run_gumbel_benchmark(
     batch_runner: bool = False,
     peek: bool = False,
     table_total: bool = False,
+    leaf_softmix: float | None = None,
 ) -> dict[str, Any]:
     service = model_service or default_model_service_command(manifest, device_name)
 
@@ -322,6 +327,7 @@ def run_gumbel_benchmark(
                 exploration=False,
                 peek=peek,
                 table_total=table_total,
+                leaf_softmix=leaf_softmix,
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -353,6 +359,7 @@ def run_gumbel_benchmark(
                     exploration=False,
                     peek=peek,
                     table_total=table_total,
+                    leaf_softmix=leaf_softmix,
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -553,6 +560,12 @@ def main() -> int:
         action="store_true",
         help="Value search by the table total (gate-aligned cooperative objective)",
     )
+    parser.add_argument(
+        "--gumbel-leaf-softmix",
+        type=float,
+        default=None,
+        help="Leaf bootstrap softmix temperature (default: classic max-Q)",
+    )
     parser.add_argument("--gumbel-blend-weight", type=float, default=0.5)
     parser.add_argument("--k-interior", type=int, default=16)
     parser.add_argument("--gumbel-max-root-actions", type=int, default=0, help="0 keeps the full legal set")
@@ -598,6 +611,7 @@ def main() -> int:
         batch_runner=args.batch_runner,
         peek=args.gumbel_peek,
         table_total=args.gumbel_table_total,
+        leaf_softmix=args.gumbel_leaf_softmix,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

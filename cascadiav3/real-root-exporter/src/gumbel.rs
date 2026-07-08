@@ -75,6 +75,14 @@ pub struct GumbelConfig {
     /// other seats' points lower the gate metric. Interior plies remain
     /// selfish argmax (an approximation of the other searchers).
     pub table_total: bool,
+    /// Leaf bootstrap aggregation temperature. `None` keeps the classic
+    /// max-Q bootstrap. `Some(tau)` replaces it with a softmax(q/tau)-
+    /// weighted mean over the leaf menu: the max of N noisy estimates is
+    /// upward-biased and high-variance, and eval noise is the measured
+    /// binding constraint; a softened mean trades a little policy
+    /// optimality for lower bias and variance. Interior advance stays
+    /// argmax either way.
+    pub leaf_softmix_temp: Option<f64>,
 }
 
 impl Default for GumbelConfig {
@@ -96,6 +104,7 @@ impl Default for GumbelConfig {
             determinization_seed: None,
             peek_true_hidden: false,
             table_total: false,
+            leaf_softmix_temp: None,
         }
     }
 }
@@ -209,6 +218,27 @@ fn minmax_normalize(values: &[f64]) -> Vec<f64> {
         return vec![0.0; values.len()];
     }
     values.iter().map(|value| (value - min) / (max - min)).collect()
+}
+
+/// Leaf bootstrap over the menu's derived final Q: classic max, or a
+/// softmax(q/tau)-weighted mean when a softmix temperature is set.
+fn leaf_bootstrap_value(derived_final_q: &[f64], softmix_temp: Option<f64>) -> f64 {
+    let max = derived_final_q
+        .iter()
+        .cloned()
+        .fold(f64::NEG_INFINITY, f64::max);
+    let Some(temp) = softmix_temp else {
+        return max;
+    };
+    let temp = temp.max(1e-6);
+    let mut weight_sum = 0.0_f64;
+    let mut value_sum = 0.0_f64;
+    for &q in derived_final_q {
+        let weight = ((q - max) / temp).exp();
+        weight_sum += weight;
+        value_sum += weight * q;
+    }
+    value_sum / weight_sum
 }
 
 /// Terminal simulation value: root seat's score, or the table sum in
@@ -336,15 +366,18 @@ fn advance_simulations(
             if active_seat == root_seat {
                 simulation.rounds_left = simulation.rounds_left.saturating_sub(1);
                 if simulation.rounds_left == 0 {
-                    // Leaf: blend max-Q bootstrap with an optional terminal rollout.
-                    // Table-total mode keeps the exact-grounded own-seat Q and adds
-                    // the other seats' predicted final scores; the rollout branch
+                    // Leaf: blend a Q bootstrap (max or softmix aggregation)
+                    // with an optional terminal rollout. Table-total mode
+                    // keeps the exact-grounded own-seat Q and adds the other
+                    // seats' predicted final scores; the rollout branch
                     // scores the whole terminal table.
+                    let own_bootstrap =
+                        leaf_bootstrap_value(&eval.derived_final_q, cfg.leaf_softmix_temp);
                     let bootstrap = if cfg.table_total {
-                        eval.derived_final_q[best_index]
+                        own_bootstrap
                             + other_seats_final_estimate(&eval, &row.staged, active_seat)
                     } else {
-                        eval.derived_final_q[best_index]
+                        own_bootstrap
                     };
                     let w = cfg.rollout_blend_weight.clamp(0.0, 1.0);
                     let value = if w >= 1.0 {
@@ -822,6 +855,54 @@ mod tests {
             original.completed_q, permuted.completed_q,
             "peek search must depend on the true hidden order"
         );
+    }
+
+    #[test]
+    fn leaf_softmix_bounds_and_limits() {
+        let q = [10.0, 8.0, 4.0, -2.0];
+        let max = leaf_bootstrap_value(&q, None);
+        assert_eq!(max, 10.0);
+        // Tiny temperature converges to the max.
+        let sharp = leaf_bootstrap_value(&q, Some(1e-4));
+        assert!((sharp - 10.0).abs() < 1e-6);
+        // Softer temperatures move monotonically from max toward the mean,
+        // never past either bound.
+        let mean = q.iter().sum::<f64>() / q.len() as f64;
+        let mut previous = max;
+        for temp in [0.5, 2.0, 8.0, 64.0] {
+            let value = leaf_bootstrap_value(&q, Some(temp));
+            assert!(value <= previous + 1e-12, "monotone in temperature");
+            assert!(value > mean - 1e-12, "never below the uniform mean");
+            previous = value;
+        }
+    }
+
+    #[test]
+    fn leaf_softmix_changes_search_values() {
+        let game = test_state(2_026_070_700, 5);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |softmix: Option<f64>| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(17);
+            cfg.leaf_softmix_temp = softmix;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search")
+        };
+        let max_run = run(None);
+        let mix_run = run(Some(4.0));
+        // Same seeds, same interior play; softened leaves must lower (or at
+        // the degenerate single-action leaf, preserve) visited values.
+        let mut lowered = 0;
+        for index in 0..max_run.completed_q.len() {
+            if max_run.visit_counts[index] > 0 && mix_run.visit_counts[index] > 0 {
+                assert!(mix_run.completed_q[index] <= max_run.completed_q[index] + 1e-9);
+                if mix_run.completed_q[index] < max_run.completed_q[index] - 1e-9 {
+                    lowered += 1;
+                }
+            }
+        }
+        assert!(lowered > 0, "softmix must actually soften some leaf");
     }
 
     #[test]
