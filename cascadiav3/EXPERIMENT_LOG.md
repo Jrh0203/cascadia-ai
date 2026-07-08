@@ -3382,3 +3382,21 @@ serving. Training-side table-native labels (cycle-7, staged) remain
 theoretically distinct (training averages away label noise) but are
 outcompeted for GPU by the CI+ distq line; parked with reasoning.
 Overnight slot goes to distq EI-1.
+
+## 2026-07-08 16:10 — Symmetry TTA: flat at 3× cost (closed), with the sharpest negative lesson of the day
+
+tta3_n256: cand=96.9075 vs 96.9500, delta=-0.0425 CI95=[-0.400,+0.315] ns
+(8.22 s/dec vs 2.79 baseline — 3× eval cost for nothing).
+Cost-matched: tta3 vs n256_d8 (97.25, cheaper): delta=-0.34 ns, trending
+worse. CLOSED.
+
+Lesson: rotation barely decorrelates this model's eval error — CGAB
+relation-bias attention is built on relative geometry (distances,
+pairwise relations), which is largely rotation-invariant, so rotated
+frames return nearly the same eval (and the same error). Determinized
+worlds pay because they change the EVALUATION PROBLEM (different hidden
+futures → genuinely independent value estimates), not the input frame.
+Future variance-reduction levers must perturb the problem, not the
+representation. The rotation machinery (game-crate transforms +
+--gumbel-tta) stays in-tree: correctness-tested and reusable for
+training-time augmentation if data diversity is ever the constraint.

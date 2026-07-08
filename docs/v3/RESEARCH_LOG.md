@@ -204,7 +204,7 @@ model eval error (decorrelated by input perturbation) is. Explicit
 chance nodes would attack a non-binding constraint. Killed before
 implementation; reasoning recorded so it isn't re-proposed.
 
-### 4.5b Symmetry test-time augmentation (TTA) — IMPLEMENTED, PROBE QUEUED
+### 4.5b Symmetry test-time augmentation (TTA) — CLOSED (flat at 3× cost)
 
 The one lever family that measurably paid (+0.9/doubling of worlds) is
 input-space perturbation that decorrelates model eval error, and it caps
@@ -220,9 +220,17 @@ rotate∘apply, and exact scoring rotation-invariant. Exporter:
 elementwise-averages priors/score-to-go (cache stores the average);
 end-to-end mock-bridge policy game passes. Cost: k× model evals.
 
-**Probe (chained on john0):** 100g n256/d4 w0.5 --gumbel-tta 3 vs 96.95.
-Per the SNR measurement, √3 lower model-error variance on evals should
-convert a measurable slice of the 46% coin-flip decisions.
+**Result: flat — 96.91 vs 96.95, ns, at 3× eval cost (8.2 vs 2.8
+s/dec); cost-matched it loses to simply doubling worlds (d8 = 97.25 for
+less compute). CLOSED.**
+
+**Lesson (load-bearing for future proposals):** rotation barely
+decorrelates this model's eval error. CGAB relation-bias attention is
+built on relative geometry, which is rotation-invariant, so rotated
+frames return nearly the same eval and the same error. Determinized
+worlds pay because they perturb the *evaluation problem* (different
+hidden futures → independent estimates), not the input representation.
+Variance-reduction levers must change the problem, not the frame.
 
 ### 4.6 Multi-bridge generation throughput — BACKLOG (enabler)
 
