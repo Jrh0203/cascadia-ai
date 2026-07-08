@@ -2426,7 +2426,6 @@ fn gumbel_search_seed(seed_u64: u64, ply_index: usize) -> u64 {
     gumbel::splitmix64(seed_u64 ^ gumbel::splitmix64(ply_index as u64 ^ 0x6706_2026))
 }
 
-#[cfg(test)]
 fn eval_request_for_row(row: &gumbel::EvalRow, packed: bool) -> Result<Value> {
     let public_hash = row.staged.public_state().canonical_hash();
     eval_request_for_row_with_public_hash(row, packed, &public_hash)
