@@ -3366,3 +3366,19 @@ was #[cfg(test)]-gated; production TTA path used it; cargo check
 build output to /dev/null). Fixed, relaunched 13:59. Lesson: always
 `cargo build --release --manifest-path cascadiav3/real-root-exporter/...`
 as preflight, never silence its output in job scripts.
+
+## 2026-07-08 14:35 — Table-total v2: CI− (−1.05). Serving-side table objective CLOSED
+
+table_v2_n256: cand=95.9000 vs 96.9500, delta=-1.0500 CI95=[-1.408,-0.692] n=100 CI−.
+
+v2 (constant root shift) removed the value-head noise and recovered 0.6
+of v1's −1.65, but the objective still loses ~1 point.残 mechanism:
+with a constant bootstrap shift the ranking is bootstrap-identical to
+own-seat search; the only live difference is rollout/terminal leaves
+scoring the WHOLE table — ~4× outcome variance per leaf at unchanged
+per-action signal. Table scoring at serving leaves is a noise multiplier
+that outweighs any denial-avoidance signal at this scale. CLOSED at
+serving. Training-side table-native labels (cycle-7, staged) remain
+theoretically distinct (training averages away label noise) but are
+outcompeted for GPU by the CI+ distq line; parked with reasoning.
+Overnight slot goes to distq EI-1.

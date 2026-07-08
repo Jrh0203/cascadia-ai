@@ -105,7 +105,7 @@ near-tie flips cost little individually but compound over ~80 plies.
 
 ## 4. Active program (2026-07-08, ranked by expected value)
 
-### 4.1 Table-total search objective — IN PROGRESS
+### 4.1 Table-total search objective — CLOSED at serving (v1 −1.65 CI−, v2 −1.05 CI−)
 
 **Hypothesis.** The gate metric is the *table mean* (all four seats are
 ours). Max^n competitive search spends points on denial moves that lower
@@ -128,10 +128,16 @@ search reads only q/score-to-go), so its per-leaf variation injected
 unvalidated eval noise straight into the across-action Q comparison —
 exactly the quantity the campaign proved is the binding constraint.
 
-**v2 (running):** shift computed once at the root — constant across
-leaves, zero added variance; the cooperation signal flows through the
-honest table-scoring rollout and terminal halves. Fleet table
-generation and cycle-7 HELD pending this verdict.
+**Result (v2): CI− — 95.90 vs 96.95, delta −1.05, CI95 [−1.41, −0.69].**
+Constant root shift removed the value-head noise (recovering 0.6 of
+v1's loss) yet the objective still loses ~1 point. Mechanism: the
+remaining difference from own-seat search is rollout/terminal leaves
+scoring the whole table — ~4× outcome variance per leaf at unchanged
+per-action signal. Table scoring at serving leaves is a noise
+multiplier; the cooperation signal is smaller than the noise it costs.
+**CLOSED at serving** (two variants, both CI−). Training-side
+table-native labels (§4.3) are theoretically distinct — training
+averages away label noise — but parked: the CI+ distq line owns the GPU.
 
 ### 4.2 Softened leaf bootstrap (max-bias correction) — CLOSED (flat)
 
