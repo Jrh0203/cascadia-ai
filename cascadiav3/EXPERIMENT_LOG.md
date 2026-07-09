@@ -3953,3 +3953,14 @@ throughput gain. Dynamic source archive SHA:
 `574a691df3f2ebbaa04d650dee5dce8f94f1f6ef064158f439cecbad32a34e4f`;
 validation artifact SHA:
 `e738e6a9948630ddc7a76a54fefc7d08bf0d9e417bda2ceb40aaa5a1c9958f0d`.
+
+The broad workspace gate exposed and fixed a separate provenance defect.
+`cascadia-provenance` recursively hashed all of `cascadiav3`, including 10 GiB
+of checkpoints, 879 MiB of Rust build output, reports, and logs. A generated
+file changed between its two passes, so the stability test failed after
+`300.38s`. Source identity now hashes `git ls-files --cached --others
+--exclude-standard` within the registered source roots; non-Git archives use
+explicit generated-directory exclusions. Ignored-output invariance and
+archive-fallback tests were added. All three provenance tests pass in `0.15s`.
+This changes only source bookkeeping; checkpoint/report identities remain
+separate SHA-addressed fields.

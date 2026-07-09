@@ -31,6 +31,20 @@ const SOURCE_ROOTS: &[&str] = &[
     "crates/cascadia-provenance",
 ];
 
+/// Recursive fallback exclusions for source archives that are no longer in a
+/// Git worktree. The normal Git path uses repository ignore rules directly.
+const GENERATED_DIRECTORY_NAMES: &[&str] = &[
+    ".git",
+    ".venv",
+    "__pycache__",
+    "checkpoints",
+    "logs",
+    "node_modules",
+    "reports",
+    "target",
+    "venv",
+];
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceProvenance {
     pub git_revision: String,
@@ -76,10 +90,19 @@ pub fn checksum_file(path: &Path) -> io::Result<String> {
 }
 
 fn source_digest(repository: &Path) -> io::Result<String> {
-    let mut files = Vec::new();
-    for relative in SOURCE_ROOTS {
-        collect_files(&repository.join(relative), &mut files)?;
-    }
+    // Hash tracked files plus untracked, non-ignored source files. Generated
+    // checkpoints/reports/build outputs can be enormous and mutable during a
+    // run; including them made the purported source digest slow and unstable.
+    let mut files = match git_visible_source_files(repository) {
+        Some(files) => files,
+        None => {
+            let mut files = Vec::new();
+            for relative in SOURCE_ROOTS {
+                collect_files(&repository.join(relative), &mut files)?;
+            }
+            files
+        }
+    };
     files.sort_unstable();
     let mut digest = Hasher::new();
     for path in files {
@@ -96,6 +119,35 @@ fn source_digest(repository: &Path) -> io::Result<String> {
     Ok(digest.finalize().to_hex().to_string())
 }
 
+fn git_visible_source_files(repository: &Path) -> Option<Vec<PathBuf>> {
+    let output = Command::new("git")
+        .current_dir(repository)
+        .args([
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "--",
+        ])
+        .args(SOURCE_ROOTS)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let paths = String::from_utf8(output.stdout).ok()?;
+    Some(
+        paths
+            .split_terminator('\0')
+            .map(|relative| repository.join(relative))
+            // A tracked deletion belongs in the Git-status digest but has no
+            // file bytes to include in the source-content digest.
+            .filter(|path| path.is_file())
+            .collect(),
+    )
+}
+
 fn collect_files(path: &Path, files: &mut Vec<PathBuf>) -> io::Result<()> {
     if path.is_file() {
         files.push(path.to_owned());
@@ -104,15 +156,16 @@ fn collect_files(path: &Path, files: &mut Vec<PathBuf>) -> io::Result<()> {
     if !path.is_dir() {
         return Ok(());
     }
+    if path
+        .file_name()
+        .and_then(OsStr::to_str)
+        .is_some_and(|name| GENERATED_DIRECTORY_NAMES.contains(&name))
+    {
+        return Ok(());
+    }
     for entry in fs::read_dir(path)? {
         let entry = entry?;
         let child = entry.path();
-        if child
-            .components()
-            .any(|component| component.as_os_str() == OsStr::new("__pycache__"))
-        {
-            continue;
-        }
         collect_files(&child, files)?;
     }
     Ok(())
@@ -153,5 +206,37 @@ mod tests {
         let right = source_provenance().unwrap();
         assert_eq!(left.v2_source_blake3, right.v2_source_blake3);
         assert_eq!(left.git_status_blake3, right.git_status_blake3);
+    }
+
+    #[test]
+    fn ignored_generated_outputs_do_not_change_source_digest() {
+        let repository = repository_root().unwrap();
+        let ignored = repository
+            .join("cascadiav3/real-root-exporter/target")
+            .join(format!("provenance-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&ignored);
+        let before = source_digest(&repository).unwrap();
+        fs::create_dir_all(&ignored).unwrap();
+        fs::write(ignored.join("mutable-checkpoint.bin"), b"generated output").unwrap();
+        let after = source_digest(&repository).unwrap();
+        fs::remove_dir_all(&ignored).unwrap();
+        assert_eq!(before, after);
+    }
+
+    #[test]
+    fn archive_fallback_skips_generated_directories() {
+        let root = env::temp_dir().join(format!("cascadia-provenance-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::create_dir_all(root.join("target/release")).unwrap();
+        fs::create_dir_all(root.join("reports")).unwrap();
+        fs::write(root.join("src/lib.rs"), b"source").unwrap();
+        fs::write(root.join("target/release/binary"), b"generated").unwrap();
+        fs::write(root.join("reports/result.json"), b"generated").unwrap();
+
+        let mut files = Vec::new();
+        collect_files(&root, &mut files).unwrap();
+        assert_eq!(files, vec![root.join("src/lib.rs")]);
+        fs::remove_dir_all(&root).unwrap();
     }
 }

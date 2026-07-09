@@ -31,14 +31,24 @@ HERE section first, always).
 # Plain `cargo`/`python3` are wrong on this machine:
 RUSTC=~/.cargo/bin/rustc ~/.cargo/bin/cargo build --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 RUSTC=~/.cargo/bin/rustc ~/.cargo/bin/cargo check --workspace   # does NOT cover the exporter!
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=cascadiav3/src python3.13 -m unittest discover -s cascadiav3/tests
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=cascadiav3/src ./venv/bin/python -m unittest discover -s cascadiav3/tests
 ```
 - Homebrew rustc 1.85 shadows rustup 1.96 → pin RUSTC (and RUSTDOC for doc tests).
-- `python3` is miniconda 3.9 (too old) → use `python3.13`.
+- System `python3` is 3.9 (too old); the repo-root `venv` is Python 3.12 with
+  the required Torch stack.
 - **The exporter has its own workspace** — `cargo check --workspace`
   does not compile it. Always build the exporter manifest explicitly
   before shipping exporter changes (a cfg(test)-gated fn once broke only
   the non-test build and silently killed a job chain).
+
+**Source provenance:** `cascadia-provenance` hashes Git-visible source under
+its registered roots: tracked files plus untracked files not excluded by
+`.gitignore`. It must never recursively hash ignored checkpoints, reports,
+logs, venvs, or Rust `target/` output. Those generated trees exceed 11 GiB in
+an active checkout, mutate during experiments, and are separately identified
+by artifact manifests/checksums. Archive operation without Git uses the same
+generated-directory exclusions. The stability and ignored-output invariance
+tests pin this contract.
 
 **john0:**
 ```bash
