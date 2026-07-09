@@ -45,8 +45,8 @@ Verdict watcher PID `1268022` waits for the chain and then writes
 `rules_20260709_rebaseline_verdict.{json,md}` with paired distq-minus-cycle4
 intervals at both budgets plus within-model scaling deltas.
 
-**Structured-Q implementation (complete locally; experiment not yet
-launched):** the representation gate's authorized path is now real rather
+**Structured-Q implementation and v4 data (complete; john0 training not yet
+started):** the representation gate's authorized path is now real rather
 than a design note. New Gumbel generation emits exact-grounded schema v4:
 `active_seat`, per-action wildlife/habitat/Nature afterstate components,
 real terminal components, and fail-closed sum invariants. Filtering and
@@ -63,6 +63,19 @@ claim yet. The Mac fleet may generate the three corrected-rules v4 blocks, but
 the frozen-head training and held-out gate remain john0-only. john0's live
 n1024 rebaseline remains untouched; the pilot will be checksum-queued behind
 the already-approved exact-K1 gate once all three shard hashes are fixed.
+
+The hashes are now fixed. Three Mac hosts generated disjoint 800-root blocks
+from exporter source `6e89d955`, cycle4 teacher manifest `b8886c24...` /
+weights `33559aab...`, corrected rules, and seeds `2027073500..29`. The final
+shape was n8/top4/d1, one determinization, eight optional-refresh samples,
+blend 0.5, K8 interior, exact K1, full root menus, two games per shared MPS
+bridge. Generation took `984.3 / 908.1 / 1059.8s`; all raw shards are
+training-eligible v4 with 800 records and Q-identity max error `3.8147e-6`.
+Immutable NPZ hashes are fit `06d550b4...`, selection `5095d572...`, and
+untouched verdict `cdbd54b0...`. They are copied and hash-matched on john0.
+The first n16/d2 launch was terminated before any NPZ/manifest was published
+because it had not produced a first seed on any host after about seven
+minutes; no partial artifact was admitted.
 
 The verdict is preregistered in `torch_structured_q_probe`: exclude exact K1
 rows; require at least 10% selected-final RMSE improvement over the better of

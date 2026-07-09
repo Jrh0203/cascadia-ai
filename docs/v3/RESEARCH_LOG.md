@@ -479,6 +479,15 @@ over the better incumbent baseline, a paired absolute-error CI wholly below
 zero, all-q completed-Q RMSE within 1.05x incumbent, and mean q-regret increase
 at most 0.05. Exact-endgame rows are excluded from the primary read.
 
+The three-way data split is ready. Corrected-rules v4 generation used disjoint
+10-seed blocks `2027073500..09` (fit), `..10..19` (learning-rate selection),
+and `..20..29` (one-shot verdict), producing 800 roots each. Search was
+n8/top4/d1 with one determinization, eight refresh samples, blend 0.5, K8
+interior, exact K1, and full root menus. Raw NPZ hashes are `06d550b4...`,
+`5095d572...`, and `cdbd54b0...`; all three pass v4 and Q-identity validation
+and are staged on john0. The Macs supplied data only. Training and the verdict
+remain behind the approved exact-K1 john0 gate.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)

@@ -4397,3 +4397,45 @@ Scientific next step: generate a small fresh corrected-rules v4 train/locked-
 validation pair, warm-start the incumbent with `--init-skip-mismatched`, and
 run only the frozen component-head kill test. Full fine-tuning and gameplay
 remain gated on that result.
+
+## 2026-07-09 — Three-way structured-Q v4 corpus generated and staged
+
+Purpose: supply a disjoint fit / hyperparameter-selection / untouched-verdict
+split for the preregistered head-only gate. The Mac fleet generated data only;
+all training and verdict execution remains john0-owned.
+
+An initial n16/top8/d2 attempt was stopped after roughly seven minutes because
+none of the three hosts had published an NPZ/manifest and the shape was too
+slow for a 2,400-root plumbing gate. No partial artifact was retained. The
+final immutable shape kept the scientifically important contracts—corrected
+rules, full root menus, eight-sample optional-refresh choice, real terminal
+outcomes, exact K1 rows, and no model fallback—while reducing counterfactual
+search-label cost to n8/top4/d1, one determinization, blend 0.5, and K8
+interior. Each host used two concurrent games through one shared MPS bridge.
+
+All blocks used exporter source
+`6e89d9555f6126bdc29f65657d8431cab3d2c024` and cycle4 teacher manifest SHA
+`b8886c24cd93e19299e8c4cca4dd7671fe16b685d54949de014d6f9d5aee616d` /
+weights SHA
+`33559aab05324e74998164d4e59e7adec9fa3c77da531dd4797c718cf4cfd354`:
+
+| Block | Host | Seeds | Seconds | Roots | Actions | NPZ SHA-256 |
+|---|---|---|---:|---:|---:|---|
+| fit | john2 | 2027073500..09 | 984.3 | 800 | 358,975 | `06d550b4b70b32bab1e7bea4d994a26341d7b5a8d3dc58b8fc636d89c31e8519` |
+| selection | john4 | 2027073510..19 | 908.1 | 800 | 389,735 | `5095d572b2167f81931d2a5ba7d8a339ffba285d04dd3ff55eeac99c647688cc` |
+| verdict | john3 | 2027073520..29 | 1059.8 | 800 | 365,045 | `cdbd54b0c2aaa79fbc4c1a12c73eaae863d3a62ab8924a8173df12c9717eb6b4` |
+
+Every shard is training-eligible `cascadiav3.expert_tensor_shard.v4`; Python
+shape/component validation and Q-identity validation passed, with maximum
+`|Q - exact_afterstate - score_to_go| = 3.8146973e-6` against a `1e-4`
+limit. Raw max legal menus reached 6,900 / 8,424 / 8,064 actions, demonstrating
+why the fit path must use a provenance-preserving top-64 transform while the
+selected real-action category label remains exact.
+
+`run_structured_q_head_pilot.sh` requires all three hashes, selects among
+fixed learning rates `3e-4 / 1e-3 / 3e-3` using only the middle block, and
+invokes `torch_structured_q_probe` once on the third block. Legacy warm starts
+initialize the three projections as equal thirds of incumbent Q, preserving
+their sum within floating-point tolerance at step zero. The runner records a
+scientific failure without launching gameplay and stops on malformed output.
+All three raw NPZs and manifests are copied to john0 with matching hashes.
