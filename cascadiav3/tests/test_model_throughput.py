@@ -21,6 +21,8 @@ from cascadiav3.torch_model_throughput_benchmark import (
     _p95,
     load_roots,
     parse_positive_ints,
+    prepare_roots,
+    production_packed_root,
     run_benchmark,
 )
 
@@ -76,6 +78,49 @@ class ModelThroughputBenchmarkTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "empty"):
             _p95([])
 
+    def test_raw_audit_root_is_packed_before_timing(self) -> None:
+        from unittest import mock
+
+        raw = {
+            "schema_id": "audit-root",
+            "ruleset_id": "corrected-rules",
+            "state_hash": "state",
+            "active_seat": 2,
+            "action_ids": ["a", "b"],
+            "exact_afterstate_score_active": [10.0, 11.0],
+            "legal_actions": [{"action_id": "a"}, {"action_id": "b"}],
+            "public_tokens": {"tokens": [{}], "token_count": 1},
+        }
+        with (
+            mock.patch(
+                "cascadiav3.torch_public_token_merit.public_token_features",
+                return_value=[[0.0] * PUBLIC_TOKEN_FEATURE_DIM],
+            ),
+            mock.patch(
+                "cascadiav3.torch_semantic_relation_bias_merit.semantic_public_token_action_features",
+                return_value=[
+                    [0.0] * SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM,
+                    [0.0] * SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM,
+                ],
+            ),
+            mock.patch(
+                "cascadiav3.torch_relation_bias_merit.combined_relation_ids_array",
+                return_value=np.zeros((3, 3), dtype=np.uint8),
+            ),
+        ):
+            packed = production_packed_root(raw)
+
+        self.assertNotIn("legal_actions", packed)
+        self.assertNotIn("public_tokens", packed)
+        self.assertEqual(packed["action_ids"], ["a", "b"])
+        self.assertEqual(packed["ruleset_id"], "corrected-rules")
+        self.assertEqual(packed["packed_features"]["token_count"], 1)
+        self.assertEqual(packed["packed_features"]["action_count"], 2)
+        self.assertEqual(prepare_roots([packed], "production-packed"), [packed])
+        self.assertIs(prepare_roots([raw], "as-is")[0], raw)
+        with self.assertRaisesRegex(ValueError, "unsupported root format"):
+            prepare_roots([raw], "raw-ish")
+
     def test_cpu_shape_probe_is_deterministic_and_reports_end_to_end_rate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             roots_path = Path(tmp) / "roots.jsonl"
@@ -100,6 +145,8 @@ class ModelThroughputBenchmarkTest(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["scientific_eligibility"], "engineering_throughput_only")
         self.assertEqual(report["source_revision"], "tested-revision")
+        self.assertEqual(report["roots"]["benchmark_format"], "production-packed")
+        self.assertEqual(len(report["roots"]["benchmark_payload_sha256"]), 64)
         self.assertEqual(report["baseline_label"], "synthetic_tiny")
         self.assertEqual([row["batch_size"] for row in report["models"][0]["batches"]], [1, 2])
         self.assertTrue(

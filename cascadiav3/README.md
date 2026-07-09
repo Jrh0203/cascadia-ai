@@ -87,7 +87,8 @@ Important runners:
   sample ablation; reuses the exact-K1 sample-8 control only after validating
   its full rules/source/seeds/search contract)
 - `run_model_throughput_probe.sh` (engineering-only M/S/XS/tiny fixed-root
-  bridge throughput; measures the compute headroom for model/search inversion)
+  bridge throughput; converts audit roots to the production Rust-packed wire
+  shape before timing model/search inversion headroom)
 
 Gumbel exporter modes (see `--help`):
 
@@ -114,9 +115,11 @@ Gumbel exporter modes (see `--help`):
   traces before the first optional-refresh opportunity. Runs below 100 matched
   games are explicitly engineering smokes, never promotion evidence.
 - `python -m cascadiav3.torch_model_throughput_benchmark`: benchmark complete
-  collate-to-packed-response throughput for checkpoint and synthetic model
-  shapes on identical roots, with hashed model/root provenance and repeated-
-  output determinism checks. This is not gameplay evidence.
+  production-packed collate-to-packed-response throughput for checkpoint and
+  synthetic model shapes on identical roots, with hashed source/prepared-root
+  provenance and repeated-output determinism checks. `--root-format as-is`
+  exists only to diagnose the legacy raw Python-feature path; live Rust search
+  advertises and sends `packed_features`. This is not gameplay evidence.
 - `--rollout-determinize`: public-information-legal rollouts for the legacy
   search path (honest baselines).
 

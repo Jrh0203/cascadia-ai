@@ -62,6 +62,7 @@ test "$(wc -l < "$TMP/roots.jsonl" | tr -d '[:space:]')" = 4
   --manifest "cycle4_M=$M_MANIFEST" \
   --manifest "ei0_S=$S_MANIFEST" \
   --synthetic-model-sizes XS,tiny \
+  --root-format production-packed \
   --batch-sizes 1,2,4,8,16,32 \
   --warmup-iterations 3 \
   --measured-iterations 10 \

@@ -678,6 +678,14 @@ if os.environ.get("CASCADIA_BRIDGE_TIMING") == "1":
     atexit.register(_BRIDGE_TIMING.emit, "final")
 
 
+def _synchronize_device_for_timing(torch_module: Any, device: Any) -> None:
+    """Place an explicit accelerator boundary for opt-in phase accounting."""
+    if device.type == "cuda":
+        torch_module.cuda.synchronize()
+    elif device.type == "mps":
+        torch_module.mps.synchronize()
+
+
 def _model_eval_batch(
     model,
     roots: list[dict[str, Any]],
@@ -706,7 +714,6 @@ def _model_eval_batch(
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     autocast_bf16 = _autocast_bf16_requested() and device.type == "cuda"
     timing = _BRIDGE_TIMING
-    cuda_sync = torch.cuda.synchronize if (timing is not None and device.type == "cuda") else None
     responses: list[dict[str, Any]] = []
     for chunk in _eval_batch_chunks(roots, chunk_size=max(1, chunk_size)):
         if timing is not None:
@@ -716,8 +723,11 @@ def _model_eval_batch(
             t_collated = time.perf_counter()
         inputs = _model_inputs_to_device(batch, device)
         if timing is not None:
-            if cuda_sync is not None:
-                cuda_sync()
+            # MPS execution is asynchronous just like CUDA. Without an
+            # explicit boundary the forward is incorrectly charged to the
+            # first subsequent host copy, which makes phase profiles point at
+            # the wrong optimization target.
+            _synchronize_device_for_timing(torch, device)
             t_transferred = time.perf_counter()
         with torch.inference_mode():
             forward_context = (
@@ -735,8 +745,7 @@ def _model_eval_batch(
                     relation_tail=inputs.get("relation_tail"),
                 )
             if timing is not None:
-                if cuda_sync is not None:
-                    cuda_sync()
+                _synchronize_device_for_timing(torch, device)
                 t_forwarded = time.perf_counter()
             masked_logits = outputs["logits"].float().masked_fill(~inputs["action_mask"], -1.0e9)
             priors = torch.softmax(masked_logits, dim=1).cpu()

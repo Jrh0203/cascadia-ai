@@ -731,6 +731,27 @@ class BridgeForwardOptimizationTest(unittest.TestCase):
         for phase in ("collate=", "h2d=", "forward=", "d2h=", "encode="):
             self.assertIn(phase, summary)
 
+    def test_timing_sync_dispatches_to_both_accelerators(self) -> None:
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from cascadiav3.torch_inference_bridge import (
+            _synchronize_device_for_timing,
+        )
+
+        torch_module = SimpleNamespace(
+            cuda=SimpleNamespace(synchronize=mock.Mock()),
+            mps=SimpleNamespace(synchronize=mock.Mock()),
+        )
+        _synchronize_device_for_timing(torch_module, SimpleNamespace(type="cuda"))
+        torch_module.cuda.synchronize.assert_called_once_with()
+        torch_module.mps.synchronize.assert_not_called()
+        _synchronize_device_for_timing(torch_module, SimpleNamespace(type="mps"))
+        torch_module.mps.synchronize.assert_called_once_with()
+        _synchronize_device_for_timing(torch_module, SimpleNamespace(type="cpu"))
+        torch_module.cuda.synchronize.assert_called_once_with()
+        torch_module.mps.synchronize.assert_called_once_with()
+
 
 class TrainerCursorContractTest(unittest.TestCase):
     def test_loader_cursor_points_to_next_unconsumed_microbatch(self) -> None:

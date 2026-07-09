@@ -9,6 +9,7 @@ more search if the whole serving path becomes faster.
 from __future__ import annotations
 
 import argparse
+import base64
 import gc
 import hashlib
 import json
@@ -22,6 +23,9 @@ import time
 from itertools import cycle, islice
 from pathlib import Path
 from typing import Any
+
+
+ROOT_FORMATS = ("production-packed", "as-is")
 
 
 def _sha256(path: Path) -> str:
@@ -112,6 +116,91 @@ def _clear_device(device_name: str) -> None:
 def _response_digest(responses: list[dict[str, Any]]) -> str:
     payload = json.dumps(responses, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _records_digest(records: list[dict[str, Any]]) -> str:
+    payload = "".join(
+        json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
+        for record in records
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def production_packed_root(root: dict[str, Any]) -> dict[str, Any]:
+    """Mirror the packed-features request shape advertised to Rust clients.
+
+    Root-export artifacts intentionally retain their human-auditable token and
+    action dictionaries. Live search does not send those dictionaries to the
+    Python bridge: Rust precomputes the 41-d token rows, 61-d action rows, and
+    action relation tail, then sends base64 arrays. A serving benchmark must
+    perform this conversion before the timed loop or it measures a legacy raw
+    request path that production does not use.
+    """
+    if "packed_features" in root:
+        return root
+
+    import numpy as np
+
+    from .torch_public_token_merit import public_token_features
+    from .torch_relation_bias_merit import combined_relation_ids_array
+    from .torch_semantic_relation_bias_merit import (
+        semantic_public_token_action_features,
+    )
+
+    tokens = np.asarray(public_token_features(root), dtype="<f4")
+    actions = np.asarray(semantic_public_token_action_features(root), dtype="<f4")
+    if tokens.ndim != 2 or actions.ndim != 2:
+        raise ValueError("production packing requires rank-2 feature arrays")
+    token_count = int(tokens.shape[0])
+    action_count = int(actions.shape[0])
+    action_ids = root.get("action_ids")
+    if not isinstance(action_ids, list):
+        legal_actions = root.get("legal_actions")
+        if not isinstance(legal_actions, list):
+            raise ValueError("production packing requires action ids")
+        action_ids = [action["action_id"] for action in legal_actions]
+    exact_afterstate = root.get("exact_afterstate_score_active")
+    if not isinstance(exact_afterstate, list) or len(exact_afterstate) != action_count:
+        raise ValueError("production packing requires aligned exact afterstate scores")
+    if len(action_ids) != action_count:
+        raise ValueError("production packing produced misaligned action ids")
+    relation_tail = combined_relation_ids_array(root)[token_count:, :].astype(
+        np.uint8, copy=False
+    )
+    if relation_tail.shape != (action_count, token_count + action_count):
+        raise ValueError(
+            f"production relation tail has shape {relation_tail.shape}; expected "
+            f"{(action_count, token_count + action_count)}"
+        )
+    return {
+        "schema_id": root.get("schema_id"),
+        "ruleset_id": root.get("ruleset_id"),
+        "state_hash": root.get("state_hash"),
+        "active_seat": root.get("active_seat"),
+        "action_ids": action_ids,
+        "exact_afterstate_score_active": exact_afterstate,
+        "packed_features": {
+            "token_count": token_count,
+            "action_count": action_count,
+            "token_feature_dim": int(tokens.shape[1]),
+            "action_feature_dim": int(actions.shape[1]),
+            "tokens_f32_b64": base64.b64encode(tokens.tobytes()).decode("ascii"),
+            "actions_f32_b64": base64.b64encode(actions.tobytes()).decode("ascii"),
+            "relation_tail_u8_b64": base64.b64encode(relation_tail.tobytes()).decode(
+                "ascii"
+            ),
+        },
+    }
+
+
+def prepare_roots(
+    roots: list[dict[str, Any]], root_format: str
+) -> list[dict[str, Any]]:
+    if root_format not in ROOT_FORMATS:
+        raise ValueError(f"unsupported root format: {root_format}")
+    if root_format == "as-is":
+        return roots
+    return [production_packed_root(root) for root in roots]
 
 
 def benchmark_model(
@@ -231,6 +320,7 @@ def run_benchmark(
     baseline_label: str | None,
     source_revision: str | None,
     seed: int = 0,
+    root_format: str = "production-packed",
 ) -> dict[str, Any]:
     import torch
 
@@ -245,7 +335,8 @@ def run_benchmark(
     if device_name == "mps" and not torch.backends.mps.is_available():
         raise RuntimeError("MPS throughput probe requested but MPS is unavailable")
 
-    roots = load_roots(roots_path)
+    source_roots = load_roots(roots_path)
+    roots = prepare_roots(source_roots, root_format)
     model_reports: list[dict[str, Any]] = []
     labels: set[str] = set()
 
@@ -348,6 +439,8 @@ def run_benchmark(
         "roots": {
             "path": str(roots_path),
             "sha256": _sha256(roots_path),
+            "benchmark_format": root_format,
+            "benchmark_payload_sha256": _records_digest(roots),
             "unique_roots": len(roots),
             "action_counts": [_root_action_count(root) for root in roots],
             "schema_ids": sorted(
@@ -415,6 +508,15 @@ def main() -> int:
     parser.add_argument("--baseline-label", default="")
     parser.add_argument("--source-revision", default="")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--root-format",
+        choices=ROOT_FORMATS,
+        default="production-packed",
+        help=(
+            "production-packed converts audit roots to the Rust live-serving "
+            "wire shape before timing; as-is is a legacy diagnostic"
+        ),
+    )
     parser.add_argument("--out", required=True)
     parser.add_argument("--summary-out", required=True)
     args = parser.parse_args()
@@ -434,6 +536,7 @@ def main() -> int:
         baseline_label=args.baseline_label or None,
         source_revision=args.source_revision or None,
         seed=args.seed,
+        root_format=args.root_format,
     )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
