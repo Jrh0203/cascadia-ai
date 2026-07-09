@@ -176,7 +176,11 @@ worker/session cap is unchanged. The Rust exporter suite passes 44/44,
 including deterministic backfill and exact batch-versus-single record parity.
 Replaying the completed arm's observed seed durations predicts 9,014.5s
 static versus 8,380.2s dynamic (`1.076x`), explicitly an estimate pending a
-post-chain john0 measurement.
+post-chain john0 measurement. An exact-revision jobs2 MPS nonregression run
+passed with 0/320 action changes, identical scores, `1.56e-5` maximum
+root-value drift, flat wall (`+0.57%`), and `-2.86%` mean decision time. The
+four-seed static arm was already balanced; validation SHA
+`e738e6a9948630ddc7a76a54fefc7d08bf0d9e417bda2ceb40aaa5a1c9958f0d`.
 
 **Corrected-rules n256 interim result (07-09):** cycle4 scored `97.0675` and
 distq-k8 mean serving scored `97.3075` on the same 100 seeds, a paired

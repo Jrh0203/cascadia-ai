@@ -3942,3 +3942,14 @@ all affected model-backed pipelines. Workers retain their bridge/session and
 eval cache; `--model-sessions` remains the hard concurrency cap. A
 deterministic test proves backfill while a long seed remains blocked, and the
 full 44-test exporter suite including exact batch/single policy parity passes.
+
+The exact-revision MPS check compared static `fbe3f2d2` to dynamic
+`d7f6e487` on the same four seeds, jobs2, model, and search. All 320 actions
+and scores matched; maximum root-value drift was `1.56e-5`. Wall was
+`500.257s -> 503.113s` (`+0.57%`) while mean decision time was
+`3.046829s -> 2.959602s` (`-2.86%`). This tiny static assignment was already
+balanced, so the result establishes policy parity/nonregression rather than a
+throughput gain. Dynamic source archive SHA:
+`574a691df3f2ebbaa04d650dee5dce8f94f1f6ef064158f439cecbad32a34e4f`;
+validation artifact SHA:
+`e738e6a9948630ddc7a76a54fefc7d08bf0d9e417bda2ceb40aaa5a1c9958f0d`.

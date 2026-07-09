@@ -212,6 +212,18 @@ change individual game durations when full concurrency persists longer.
 Interim comparison artifact SHA:
 `287555fb6c233a4e7e14d7e362c7f796ebd35dd4f2b2558b1fd9e12c0b3dbdb8`.
 
+An exact-revision MPS nonregression run then repeated the earlier jobs2 arm
+on the same four seeds and model. Dynamic source `d7f6e487` produced the same
+scores and all 320 actions as static source `fbe3f2d2`; maximum root-value
+drift was `1.56e-5`. Wall was flat (`503.113s` versus `500.257s`, `+0.57%`)
+and mean decision time improved from `3.046829s` to `2.959602s` (`-2.86%`).
+Those four old chunks were already unusually balanced, so this is a measured
+policy/parity nonregression check rather than evidence for the 100-seed
+throughput estimate. Dynamic source archive SHA is
+`574a691df3f2ebbaa04d650dee5dce8f94f1f6ef064158f439cecbad32a34e4f`;
+fail-closed validation artifact SHA is
+`e738e6a9948630ddc7a76a54fefc7d08bf0d9e417bda2ceb40aaa5a1c9958f0d`.
+
 ## Tensor Export
 
 Rust-native greedy tensor export on `john0`:
