@@ -252,6 +252,52 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             skew = (left_l * right_r - right_l * left_r).sum(dim=-1)
             return merit + skew / (cfg.pairwise_rank**0.5)
 
+        def policy_logits_chunked(
+            self,
+            tokens,
+            token_mask,
+            actions,
+            action_mask,
+            *,
+            relation_tail=None,
+            action_chunk_size=256,
+        ):
+            """Score an exact full action menu without padding it into one CGAB batch.
+
+            State encoding is shared across chunks. Cross-attention and CGAB
+            are action-row independent, so slicing action rows and their
+            relation tails preserves the model function while bounding peak
+            memory for menus with thousands of draft/placement combinations.
+            """
+            if action_chunk_size <= 0:
+                raise ValueError("action_chunk_size must be positive")
+            if actions.shape[:2] != action_mask.shape:
+                raise ValueError("actions/action_mask shape mismatch")
+            if relation_tail is not None and relation_tail.shape[:2] != action_mask.shape:
+                raise ValueError("relation_tail action shape mismatch")
+            token_h = self.token_proj(tokens)
+            token_padding = ~token_mask
+            encoded = self._encode_state(token_h, token_padding)
+            chunks = []
+            for start in range(0, int(actions.shape[1]), int(action_chunk_size)):
+                end = min(start + int(action_chunk_size), int(actions.shape[1]))
+                action_h = self.action_proj(actions[:, start:end])
+                decoded, _ = self.action_cross_attn(
+                    query=action_h,
+                    key=encoded,
+                    value=encoded,
+                    key_padding_mask=token_padding,
+                    need_weights=False,
+                )
+                decoded = self.action_norm(decoded + action_h)
+                chunk_tail = relation_tail[:, start:end, :] if relation_tail is not None else None
+                decoded, _ = self.cgab(decoded, relation_tail=chunk_tail)
+                decoded = decoded.masked_fill(~action_mask[:, start:end].unsqueeze(-1), 0.0)
+                chunks.append(self.legal_logits(decoded).squeeze(-1))
+            if not chunks:
+                return actions.new_empty((actions.shape[0], 0))
+            return torch.cat(chunks, dim=1)
+
         def pairwise_borda_logits(self, action_h, action_mask):  # type: ignore[no-untyped-def]
             """Mean pair log-odds against every other legal action.
 

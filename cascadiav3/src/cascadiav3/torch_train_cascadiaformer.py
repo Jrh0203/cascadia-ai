@@ -633,6 +633,15 @@ def _configure_pairwise_head_only(model) -> int:  # type: ignore[no-untyped-def]
     return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
 
 
+def _configure_policy_head_only(model) -> int:  # type: ignore[no-untyped-def]
+    """Freeze the incumbent and expose only its established policy projection."""
+    for parameter in model.parameters():
+        parameter.requires_grad_(False)
+    for parameter in model.legal_logits.parameters():
+        parameter.requires_grad_(True)
+    return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
+
+
 def _atomic_jsonl_append(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
@@ -1581,6 +1590,7 @@ def run_training(
     pairwise_min_margin: float = 0.25,
     pairwise_min_snr: float = 1.0,
     pairwise_head_only: bool = False,
+    policy_head_only: bool = False,
     steps: int,
     batch_size: int,
     lr: float,
@@ -1660,6 +1670,10 @@ def run_training(
         raise ValueError("pairwise_min_snr must be nonnegative")
     if pairwise_head_only and not (pairwise_comparator or objective == "gumbel-selfplay-pairwise"):
         raise ValueError("pairwise_head_only requires the pairwise comparator")
+    if pairwise_head_only and policy_head_only:
+        raise ValueError("pairwise_head_only and policy_head_only are mutually exclusive")
+    if policy_head_only and objective != "gumbel-selfplay":
+        raise ValueError("policy_head_only requires the gumbel-selfplay objective")
 
     # ---- opt-in performance knobs (defaults preserve bit-identical runs) ----
     data_workers = max(0, int(data_workers or _env_int("CASCADIA_TRAIN_DATA_WORKERS", 0)))
@@ -1792,6 +1806,8 @@ def run_training(
     trainable_parameter_count = parameter_count(model)
     if pairwise_head_only:
         trainable_parameter_count = _configure_pairwise_head_only(model)
+    elif policy_head_only:
+        trainable_parameter_count = _configure_policy_head_only(model)
     fused_optimizer_applied = False
     optimizer_extra_kwargs: dict[str, Any] = {}
     if fused_optimizer:
@@ -2179,6 +2195,7 @@ def run_training(
         "parameter_count": parameter_count(model),
         "trainable_parameter_count": trainable_parameter_count,
         "pairwise_head_only": pairwise_head_only,
+        "policy_head_only": policy_head_only,
         "steps": completed_steps,
         "requested_steps": steps,
         "stopped_early": stopped_early_reason is not None,
@@ -2289,6 +2306,11 @@ def main() -> int:
         "--pairwise-head-only",
         action="store_true",
         help="Freeze the incumbent trunk/legacy heads and optimize only the pairwise head",
+    )
+    parser.add_argument(
+        "--policy-head-only",
+        action="store_true",
+        help="Freeze the incumbent and optimize only the established policy projection",
     )
     parser.add_argument("--train", required=True)
     parser.add_argument("--val", required=True)
@@ -2459,6 +2481,7 @@ def main() -> int:
         pairwise_min_margin=args.pairwise_min_margin,
         pairwise_min_snr=args.pairwise_min_snr,
         pairwise_head_only=args.pairwise_head_only,
+        policy_head_only=args.policy_head_only,
         steps=args.steps,
         batch_size=args.batch_size,
         lr=args.lr,

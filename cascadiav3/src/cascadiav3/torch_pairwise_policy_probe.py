@@ -131,6 +131,8 @@ def run_probe(
         ruleset_ids = sorted({str(item["ruleset_id"]) for item in metadata})
         if len(source_revisions) != 1 or len(ruleset_ids) != 1:
             raise ValueError("probe shards must share one source revision and ruleset")
+        filter_contracts = [item.get("filter") for item in metadata if item.get("filter")]
+        exact_full_menu = not filter_contracts
 
         mode_totals = {mode: _empty_mode_totals() for mode in POLICY_MODES}
         mode_observations: dict[str, list[tuple[float, float]]] = {
@@ -263,8 +265,21 @@ def run_probe(
         raise ValueError("probe found no confidence-qualified policy roots/pairs")
     return {
         "status": "pass",
-        "schema_id": "cascadiav3.pairwise_policy_probe.v3",
-        "scientific_eligibility": "offline_policy_routing_only_not_gameplay",
+        "schema_id": "cascadiav3.pairwise_policy_probe.v4",
+        "scientific_eligibility": (
+            "exact_full_menu_offline_policy_routing_only_not_gameplay"
+            if exact_full_menu
+            else "filtered_action_surface_offline_routing_only_not_gameplay"
+        ),
+        "action_surface": {
+            "exact_full_legal_menu": exact_full_menu,
+            "filter_contracts": filter_contracts,
+            "warning": (
+                None
+                if exact_full_menu
+                else "policy top-K is computed inside the filtered tensor, not the full legal menu"
+            ),
+        },
         "ruleset_id": ruleset_ids[0],
         "source_revision": source_revisions[0],
         "record_count": record_count,
@@ -317,6 +332,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         "# Pairwise Policy Probe",
         "",
         f"Records: `{report['record_count']}`",
+        f"Exact full legal action surface: `{report['action_surface']['exact_full_legal_menu']}`",
         f"Eligible policy roots: `{report['eligible_policy_root_count']}`",
         f"Incumbent policy candidate cap: `{report['confidence_gate']['incumbent_policy_top_k']}`",
         "Global completed-Q best covered by candidate set: "

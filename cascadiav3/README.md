@@ -140,11 +140,18 @@ Gumbel exporter modes (see `--help`):
   without a comparator head.
 - `python -m cascadiav3.torch_pairwise_policy_probe`: provenance-hash a v3
   held-out routing gate comparing established logits, pairwise Borda, and
-  their sum within the same incumbent-policy candidate mask used at serving
-  (`--policy-top-k`, default 16), and only where that mask's top-two teacher
-  comparison clears the sample, margin, and SNR contract. The report includes
-  global completed-Q-best candidate coverage. It is offline evidence, never a
-  promotion gate.
+  their sum within one incumbent-policy candidate mask (`--policy-top-k`,
+  default 16), and only where that mask's top-two teacher comparison clears
+  the sample, margin, and SNR contract. The report says explicitly whether the
+  tensor is the full legal menu or a filtered training surface; filtered-mask
+  results are not serving evidence. It is offline evidence, never a promotion
+  gate.
+- `--policy-head-only`: freeze the incumbent trunk and every value/auxiliary
+  head, training only the established policy projection on corrected-rules
+  Gumbel improved-policy targets. Use
+  `python -m cascadiav3.torch_policy_candidate_probe` before gameplay: it
+  rejects filtered tensors and chunk-scores every legal action while reusing
+  the state encoding, then reports paired top-K recall and oracle regret.
 - `python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark --q-risk-mode
   {mean,q25,q50,q75}`: serve a distributional-Q checkpoint with the selected
   statistic. `mean` is the default and preserves prior behavior. Non-mean

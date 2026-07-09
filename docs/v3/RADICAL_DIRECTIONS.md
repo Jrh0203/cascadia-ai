@@ -123,8 +123,9 @@ fixed 1,600/800 train/validation split. The head learned its pair labels
 `1.1496 -> 1.2121`. Logits plus Borda was top-1 flat and also worse on regret.
 No john0 gameplay was launched. Keep the implementation, but do not re-open
 this serving direction without a materially different data/decision model.
-The stronger clue is that incumbent top-16 candidate recall of the global
-completed-Q best was only `88.3%`.
+The initially reported `88.3%` candidate recall was inside a top-Q-filtered
+64-action tensor, not the full legal menu, and is not serving evidence. The
+new full-menu policy probe fails closed on such filtered inputs.
 
 ## 4. Whole-rollout generation on GPU (kill the lockstep wall)
 

@@ -395,10 +395,11 @@ logits and Borda was top-1 flat and also worse on regret. No gameplay was run.
 Keep the implementation as infrastructure; do not spend promotion compute on
 this checkpoint.
 
-The useful new signal is upstream: incumbent top-16 contained the global
-completed-Q best on only 88.3% of roots with a valid candidate. Candidate
-recall, not within-set pairwise expressivity, is the policy-side bottleneck
-suggested by this pilot.
+The initial `88.3%` candidate-coverage read was computed inside the
+top-Q-with-selected 64-action training tensor. It is not exact full-menu
+serving recall. The permanent policy-candidate probe now rejects filtered
+tensors and chunk-scores all legal actions; use that result, not 88.3%, to
+judge whether upstream candidate recall is a real bottleneck.
 
 ---
 

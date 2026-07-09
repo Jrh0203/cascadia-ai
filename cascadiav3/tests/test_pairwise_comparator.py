@@ -141,6 +141,48 @@ class PairwiseComparatorTest(unittest.TestCase):
                 name,
             )
 
+    def test_policy_head_only_mode_freezes_every_other_parameter(self) -> None:
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_train_cascadiaformer import _configure_policy_head_only
+
+        model = build_cascadiaformer(config_for_size("tiny"))
+        trainable = _configure_policy_head_only(model)
+        expected = model.config.d_model + 1
+        self.assertEqual(trainable, expected)
+        for name, parameter in model.named_parameters():
+            self.assertEqual(parameter.requires_grad, name.startswith("legal_logits."), name)
+
+    def test_chunked_policy_logits_match_full_forward(self) -> None:
+        import torch
+
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer
+
+        config, batch = self._batch()
+        model = build_cascadiaformer(config).eval()
+        relation_tail = torch.randint(
+            0,
+            config.relation_vocab_size,
+            (1, 3, 6),
+            dtype=torch.uint8,
+        )
+        with torch.inference_mode():
+            full = model(
+                batch["tokens"],
+                batch["token_mask"],
+                batch["actions"],
+                batch["action_mask"],
+                relation_tail=relation_tail,
+            )["logits"]
+            chunked = model.policy_logits_chunked(
+                batch["tokens"],
+                batch["token_mask"],
+                batch["actions"],
+                batch["action_mask"],
+                relation_tail=relation_tail,
+                action_chunk_size=2,
+            )
+        self.assertTrue(torch.allclose(full, chunked, atol=1.0e-6, rtol=1.0e-6))
+
     def test_bridge_policy_mode_is_explicit_and_changes_only_priors(self) -> None:
         import base64
 
@@ -260,7 +302,8 @@ class PairwiseComparatorTest(unittest.TestCase):
                 max_records=0,
                 policy_top_k=2,
             )
-            self.assertEqual(report["schema_id"], "cascadiav3.pairwise_policy_probe.v3")
+            self.assertEqual(report["schema_id"], "cascadiav3.pairwise_policy_probe.v4")
+            self.assertTrue(report["action_surface"]["exact_full_legal_menu"])
             self.assertEqual(report["record_count"], 1)
             self.assertEqual(report["eligible_policy_root_count"], 1)
             self.assertEqual(report["pairwise"]["directed_pair_count"], 2)

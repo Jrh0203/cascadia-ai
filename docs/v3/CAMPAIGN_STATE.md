@@ -201,10 +201,11 @@ out roots, Borda changed logits' top-1 accuracy `30.58% -> 31.55%` (only two
 net hits; paired 95% bootstrap delta CI `[-3.40,+5.34]` points) while worsening
 completed-Q regret `1.1496 -> 1.2121`. Adding logits and Borda was exactly flat
 on top-1 and also worsened regret. No gameplay was launched; incumbent logits
-remain live. The incumbent top-16 covered the global completed-Q best on only
-`88.3%` of eligible-candidate roots, making policy candidate coverage a more
-promising target than comparator reranking. Probe SHA `92834d4e...`; full
-record is in `cascadiav3/EXPERIMENT_LOG.md`.
+remain live. The reported `88.3%` top-16 coverage was inside a top-Q-filtered
+64-action tensor, not the full legal menu; it must not be quoted as serving
+recall. The follow-up probe now rejects filtered tensors and chunk-scores the
+exact full menu. Probe SHA `92834d4e...`; full record and correction are in
+`cascadiav3/EXPERIMENT_LOG.md`.
 
 **Live john0 high-budget chain (07-09 08:37 EDT):** cycle4 n1024/d16 remains
 healthy under PID `1739796` / exporter `1739797`; 14/100 complete seed files

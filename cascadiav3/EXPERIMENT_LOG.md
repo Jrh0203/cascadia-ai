@@ -4061,10 +4061,12 @@ the pair labels, not that it improved decisions.
 
 The decisive probe used exact source `2c3997e4` (archive SHA
 `2f66c633dae943710d57f136e6832f50b85fb0e52516fc495e14dd5a298df484`)
-and all 800 untouched 3120 roots. It exactly matched serving: the incumbent
-logits first retained top 16, then all three policy modes selected only inside
-that same mask. The mask covered the global completed-Q best on 702/795 roots
-with any valid candidate (`88.302%`). 206 roots passed the within-mask top-two
+and all 800 untouched 3120 roots. All modes used the same incumbent-policy
+top-16 mask, but that mask was computed inside the top-Q-with-selected 64-action
+training tensor, not the unfiltered legal menu. This is therefore an
+optimistic restricted-surface reranking gate, not exact serving evidence. On
+that surface the mask covered the completed-Q best on 702/795 roots with any
+valid candidate (`88.302%`). 206 roots passed the within-mask top-two
 count/margin/SNR gate. Comparator pair accuracy was `66.960%` unweighted and
 `69.466%` confidence-weighted over 3,862 directed pairs.
 
@@ -4086,8 +4088,9 @@ labels, but its two extra top-1 hits are noise-sized and paid for by worse
 average completed-Q regret; the additive route did nothing directionally.
 Keep the schema, comparator, safe top-K serving, and probe as reusable
 research infrastructure, but keep incumbent logits in production and do not
-spend john0 time on this checkpoint. Candidate coverage (88.3%) is now the
-more actionable policy-side deficit.
+spend john0 time on this checkpoint. Commit after this run makes the pairwise
+probe label filtered action surfaces explicitly; exact full-menu candidate
+recall requires `torch_policy_candidate_probe`.
 
 All fetched artifacts are checksum-verified under ignored path
 `cascadiav3/reports/pairwise_v3_n16_20260709/fit/`: three relation-tail

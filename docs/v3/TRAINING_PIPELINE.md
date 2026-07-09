@@ -249,15 +249,35 @@ actions assign support to unseen long-tail actions.
 
 Run `python -m cascadiav3.torch_pairwise_policy_probe` first. It hashes the
 checkpoint and every v3 validation shard, requires one source/rules contract,
-and reports top-1 plus completed-Q regret for all three policy modes within the
-same incumbent candidate mask used by serving (`--policy-top-k 16`). The
-confidence gate is applied to the best two completed-Q actions in that mask,
-and global completed-Q-best coverage is reported separately.
+and reports top-1 plus completed-Q regret for all three policy modes within one
+incumbent candidate mask (`--policy-top-k 16`). It records whether that mask
+comes from the full menu or a filtered tensor. The confidence gate is applied
+to the best two completed-Q actions in the mask; never promote from a filtered
+action-surface result.
 
 Current data gate: v3 corrected-rules shards only. The July 9 240-root audit
 found 27,360 raw pairs but only 23.33% variance-evaluable; 14.58% of those
 clear SNR 1.96. Pre-v3 audit shards cannot become training inputs because
 their exact-endgame/provenance fields were not preserved.
+
+### Policy candidate-recall pilot
+
+When a reranker cannot improve decisions inside the retained set, test the
+upstream policy projection without perturbing the established Q/value model:
+
+```text
+--objective gumbel-selfplay
+--policy-head-only
+--init-manifest <incumbent>
+--selection-metric locked_val_policy
+```
+
+The training tensors may be filtered for bounded memory, but the routing gate
+may not. `python -m cascadiav3.torch_policy_candidate_probe` requires
+unfiltered training-eligible v3 shards and chunk-scores the exact full legal
+menu. Use `--require-prior-top-k-parity` to prove the baseline reproduces the
+generator's stored policy top-K before comparing candidate recall. A filtered
+top-K metric is not serving evidence.
 
 ## Checkpoint Contract
 
