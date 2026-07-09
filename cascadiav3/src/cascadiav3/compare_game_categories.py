@@ -158,6 +158,7 @@ def build_category_comparison(
     right_games_path: Path,
     source_revision: str,
     label: str,
+    total_verdict_path: Path | None = None,
 ) -> dict[str, Any]:
     left_report = _load_report(left_report_path, source_revision)
     right_report = _load_report(right_report_path, source_revision)
@@ -197,7 +198,7 @@ def build_category_comparison(
         - category_stats["total"]["mean"]
     ) > 1e-9:
         raise ValueError("mean paired category deltas do not sum to total")
-    return {
+    result = {
         "status": "pass",
         "comparison": "paired_game_score_categories_v1",
         "label": label,
@@ -224,6 +225,49 @@ def build_category_comparison(
         "paired_left_minus_right": category_stats,
         "per_seed": per_seed,
     }
+    if total_verdict_path is not None:
+        verdict = json.loads(total_verdict_path.read_text(encoding="utf-8"))
+        if verdict.get("status") != "pass":
+            raise ValueError("canonical total-score verdict is not passing")
+        if verdict.get("ruleset_id") != RULESET_ID or verdict.get(
+            "source_revision"
+        ) != source_revision:
+            raise ValueError("canonical total-score verdict provenance mismatch")
+        matches = [
+            comparison
+            for comparison in verdict.get("comparisons", {}).values()
+            if comparison.get("left_experiment_id") == left_report["experiment_id"]
+            and comparison.get("right_experiment_id") == right_report["experiment_id"]
+        ]
+        if len(matches) != 1:
+            raise ValueError("canonical total-score verdict lacks one matching comparison")
+        canonical = matches[0]
+        if abs(
+            float(canonical["left_mean_seat_score"])
+            - result["left"]["summary"]["overall_mean"]["total"]
+        ) > 1e-12 or abs(
+            float(canonical["right_mean_seat_score"])
+            - result["right"]["summary"]["overall_mean"]["total"]
+        ) > 1e-12:
+            raise ValueError("canonical total-score verdict arm means disagree with ledgers")
+        canonical_stats = canonical.get("paired_delta_stats", {})
+        ledger_stats = category_stats["total"]
+        if canonical_stats.keys() != ledger_stats.keys():
+            raise ValueError("canonical total-score verdict statistic fields mismatch")
+        for key, value in ledger_stats.items():
+            canonical_value = canonical_stats[key]
+            if isinstance(value, bool) or value is None:
+                matches_value = canonical_value == value
+            else:
+                matches_value = abs(float(canonical_value) - float(value)) <= 1e-12
+            if not matches_value:
+                raise ValueError(f"canonical total-score verdict statistic mismatch: {key}")
+        result["canonical_total_verdict"] = {
+            "path": str(total_verdict_path),
+            "sha256": _sha256(total_verdict_path),
+            "comparison_label": canonical.get("label"),
+        }
+    return result
 
 
 def write_markdown(report: dict[str, Any], path: Path) -> None:
@@ -257,6 +301,7 @@ def main() -> int:
     parser.add_argument("--right-games", type=Path, required=True)
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--label", required=True)
+    parser.add_argument("--total-verdict", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--summary-out", type=Path, required=True)
     args = parser.parse_args()
@@ -267,6 +312,7 @@ def main() -> int:
         right_games_path=args.right_games,
         source_revision=args.source_revision,
         label=args.label,
+        total_verdict_path=args.total_verdict,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

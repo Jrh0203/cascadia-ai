@@ -50,6 +50,11 @@ n1024 watcher publishes both complete 100-row game ledgers,
 distq-minus-cycle4 wildlife, habitat, Nature-token, and total deltas with CIs.
 It fails on missing seeds, search/rules/source mismatch, category-sum error, or
 any ledger/report total disagreement.
+Canonical orchestrator harvest is
+`cascadiav3/scripts/fetch_rules_n1024_verdict.sh`. It refuses while the
+rebaseline or raw-ledger watcher is live, hash-verifies every fetched report,
+decision ledger, game ledger, and category summary, and requires the category
+total statistics to reproduce the canonical total verdict field-for-field.
 
 **Structured-Q implementation and v4 data (complete; john0 training not yet
 started):** the representation gate's authorized path is now real rather

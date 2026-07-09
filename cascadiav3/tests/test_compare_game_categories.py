@@ -163,6 +163,78 @@ class CompareGameCategoriesTest(unittest.TestCase):
                     label="missing",
                 )
 
+    def test_canonical_total_verdict_must_match_category_total(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            left_report, left_games = self._write_arm(root, "left", wildlife_offset=1)
+            right_report, right_games = self._write_arm(root, "right")
+            base = build_category_comparison(
+                left_report_path=left_report,
+                left_games_path=left_games,
+                right_report_path=right_report,
+                right_games_path=right_games,
+                source_revision="revision",
+                label="left - right",
+            )
+            verdict_path = root / "verdict.json"
+            verdict = {
+                "status": "pass",
+                "ruleset_id": RULESET_ID,
+                "source_revision": "revision",
+                "comparisons": {
+                    "left_minus_right": {
+                        "label": "left - right",
+                        "left_experiment_id": "left",
+                        "right_experiment_id": "right",
+                        "left_mean_seat_score": base["left"]["summary"]["overall_mean"][
+                            "total"
+                        ],
+                        "right_mean_seat_score": base["right"]["summary"]["overall_mean"][
+                            "total"
+                        ],
+                        "paired_delta_stats": base["paired_left_minus_right"]["total"],
+                    }
+                },
+            }
+            verdict_path.write_text(json.dumps(verdict), encoding="utf-8")
+            reconciled = build_category_comparison(
+                left_report_path=left_report,
+                left_games_path=left_games,
+                right_report_path=right_report,
+                right_games_path=right_games,
+                source_revision="revision",
+                label="left - right",
+                total_verdict_path=verdict_path,
+            )
+            self.assertIn("canonical_total_verdict", reconciled)
+            verdict["comparisons"]["left_minus_right"]["paired_delta_stats"]["mean"] += 1
+            verdict_path.write_text(json.dumps(verdict), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "statistic mismatch: mean"):
+                build_category_comparison(
+                    left_report_path=left_report,
+                    left_games_path=left_games,
+                    right_report_path=right_report,
+                    right_games_path=right_games,
+                    source_revision="revision",
+                    label="left - right",
+                    total_verdict_path=verdict_path,
+                )
+
+    def test_n1024_harvest_pins_complete_artifacts_and_total_reconciliation(self) -> None:
+        script = (
+            Path(__file__).resolve().parents[1]
+            / "scripts"
+            / "fetch_rules_n1024_verdict.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("rules_20260709_cycle4_n1024_d16", script)
+        self.assertIn("rules_20260709_distq_k8_n1024_d16", script)
+        self.assertIn("d20daf44dc6aa4aad3d03c6ccb7d3a21c3013135", script)
+        self.assertIn("rules_20260709_remaining_raw_watcher.pid", script)
+        self.assertIn("--total-verdict", script)
+        self.assertIn("_category_summary.json", script)
+        self.assertIn("_games.jsonl", script)
+        self.assertNotIn("scp ", script)
+
 
 if __name__ == "__main__":
     unittest.main()

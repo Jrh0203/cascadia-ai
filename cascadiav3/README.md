@@ -107,6 +107,10 @@ Important runners:
   wildlife/habitat/Nature attribution for two candidate-only game ledgers;
   binds both ledgers to passing reports and checks that per-category deltas sum
   exactly to the paired total-score delta)
+- `fetch_rules_n1024_verdict.sh` (orchestrator-only corrected-rules harvest;
+  refuses live rebaseline/watcher state, hash-verifies all n1024 reports and
+  ledgers from john0, and requires the category total to reproduce the
+  canonical paired rebaseline verdict exactly)
 
 Gumbel exporter modes (see `--help`):
 

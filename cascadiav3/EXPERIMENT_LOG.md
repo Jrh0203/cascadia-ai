@@ -4596,3 +4596,24 @@ tampering. A real production-schema jobs2-versus-jobs1 parity replay passed on
 four seeds with exact zero deltas in every category. Full Python gate:
 164/164 passing with 45 expected fixture skips. The category verdict will run
 only after both n1024 ledgers are complete; no partial score was inspected.
+
+## 2026-07-09 12:40 — n1024 harvest reconciles mechanism and headline
+
+`fetch_rules_n1024_verdict.sh` now makes the completed corrected-rules read a
+single fail-closed operation. It refuses while either the main rebaseline PID
+or the raw-ledger watcher is live, then requires both n1024 reports, summaries,
+8,000-row decision ledgers, 100-row game ledgers, category summaries, and the
+canonical total verdict. Every remote file is SHA-256 checked again after a
+resumable local transfer.
+
+The category comparator now optionally consumes the canonical total verdict.
+It locates exactly one comparison by left/right experiment IDs, checks rules
+and source provenance, checks both arm means against the ledgers, and requires
+all paired-total statistic fields—including mean, dispersion, t interval,
+bootstrap interval, confidence, and CI decision—to agree within `1e-12`.
+Thus the category report cannot silently tell a different headline story.
+
+The live invocation correctly refused before transfer with status 2 while
+rebaseline PID `1265148` remained active. Five targeted tests and the full
+Python gate pass: 166/166 with 45 expected fixture skips. No john0 artifact was
+modified and no partial score was read.
