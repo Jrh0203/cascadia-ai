@@ -73,6 +73,7 @@ RETENTION_METRIC_KEYS = (
     "pairwise_mean_snr",
     "policy_best_top16",
     "policy_confident_best_top16",
+    "policy_confident_best_top16_correct",
     "policy_recall_examples",
 )
 AGGREGATE_KEYS = LOSS_COMPONENT_KEYS + RETENTION_METRIC_KEYS
@@ -584,6 +585,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         policy_recall,
         policy_best_top16,
         policy_confident_best_top16,
+        policy_confident_best_top16_correct,
         policy_recall_examples,
     ) = _policy_recall_terms(
         logits,
@@ -641,6 +643,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         "pairwise_mean_snr": pairwise_mean_snr.detach(),
         "policy_best_top16": policy_best_top16.detach(),
         "policy_confident_best_top16": policy_confident_best_top16.detach(),
+        "policy_confident_best_top16_correct": policy_confident_best_top16_correct.detach(),
         "policy_recall_examples": policy_recall_examples.detach(),
     }
 
@@ -707,8 +710,11 @@ def _policy_recall_terms(
     eligible &= has_valid & (action_mask.sum(dim=1) > top_k)
     if not eligible.any():
         zero = logits.sum() * 0.0
-        return zero, policy_best_top16, zero.detach(), zero.detach()
-    policy_confident_best_top16 = contains_best[eligible].to(torch.float32).mean()
+        return zero, policy_best_top16, zero.detach(), zero.detach(), zero.detach()
+    policy_confident_best_top16_correct = contains_best[eligible].to(torch.float32).sum()
+    policy_confident_best_top16 = (
+        policy_confident_best_top16_correct / eligible.sum().to(torch.float32)
+    )
     rows = torch.arange(batch_size, device=logits.device)
     best_logit = logits[rows, best]
     kth_logit = logits.topk(top_k, dim=1).values[:, -1]
@@ -717,6 +723,7 @@ def _policy_recall_terms(
         losses[eligible].mean(),
         policy_best_top16,
         policy_confident_best_top16,
+        policy_confident_best_top16_correct,
         logits.new_tensor(float(eligible.sum())),
     )
 
@@ -1254,6 +1261,8 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
     was_training = model.training
     model.eval()
     totals = {key: 0.0 for key in AGGREGATE_KEYS}
+    confident_top16_correct_total = 0.0
+    confident_top16_example_total = 0.0
     record_total = 0
     with torch.no_grad():
         for batch_index in range(batch_limit):
@@ -1267,11 +1276,24 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
             batch_weight = len(batch_records)
             record_total += batch_weight
             loss_values = _loss_scalars(losses, AGGREGATE_KEYS)
+            confident_top16_correct_total += loss_values[
+                "policy_confident_best_top16_correct"
+            ]
+            confident_top16_example_total += loss_values["policy_recall_examples"]
             for key in totals:
                 totals[key] += loss_values[key] * batch_weight
     if was_training:
         model.train()
     metrics = {f"locked_val_{key}": value / record_total for key, value in totals.items()}
+    metrics["locked_val_policy_confident_best_top16_correct"] = (
+        confident_top16_correct_total
+    )
+    metrics["locked_val_policy_recall_examples"] = confident_top16_example_total
+    metrics["locked_val_policy_confident_best_top16"] = (
+        confident_top16_correct_total / confident_top16_example_total
+        if confident_top16_example_total > 0.0
+        else 0.0
+    )
     metrics.update(
         {
             "locked_val_batches": batch_limit,
