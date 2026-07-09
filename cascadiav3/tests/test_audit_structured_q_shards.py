@@ -153,6 +153,9 @@ class AuditStructuredQShardsTest(unittest.TestCase):
             self.assertEqual(report["totals"]["seeds"], 2)
             self.assertEqual(report["totals"]["records"], 8)
             self.assertEqual(report["totals"]["exact_rows"], 8)
+            distribution = report["primary"][0]["target_distribution"]
+            self.assertIsNone(distribution["final_score_non_exact"])
+            self.assertEqual(distribution["q_valid_per_root"]["mean"], 1.0)
 
     def test_audit_rejects_overlap_contract_and_sidecar_tampering(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -97,8 +97,9 @@ Important runners:
   verdict; raw shard SHA-256 values are mandatory and no gameplay auto-launches)
 - `python -m cascadiav3.audit_structured_q_shards` (raw-v4 admission audit;
   verifies NPZ/sidecar checksums, exact/Q/component identities, one shared
-  source/search/execution/teacher contract, and seed disjointness across both
-  candidate and explicitly excluded locked shards)
+  source/search/execution/teacher contract, seed disjointness across both
+  candidate and explicitly excluded locked shards, and per-shard target/error
+  distributions for drift diagnosis)
 - `fetch_structured_q_expansion.sh` (orchestrator-only harvest for the
   quarantined john2–john4 expansion; refuses live/partial jobs, rechecks remote
   and local hashes, fetches validation artifacts, and runs the six-shard audit

@@ -132,7 +132,10 @@ Admission no longer relies on those per-host checks alone: the new
 `audit_structured_q_shards` tool requires all expansion NPZs and sidecars on
 one host, proves one exact contract plus seed disjointness from the locked
 three-way pilot, and fails closed on overlap or sidecar tampering. It has
-already passed against the real locked 2,400-root corpus.
+already passed against the real locked 2,400-root corpus. Audit schema v2 also
+records per-shard final-score, component score-to-go, selected-teacher error,
+Nature-spending frequency, and q-valid-menu distributions so expansion drift
+is visible before any admission decision.
 Canonical harvest is `cascadiav3/scripts/fetch_structured_q_expansion.sh`.
 It refuses while any producer or validator is live, verifies passing remote
 reports and remote/local NPZ plus manifest hashes, fetches all six artifact

@@ -4555,7 +4555,7 @@ overlap rejection, contract mismatch, and sidecar checksum tampering. Full
 Python gate: 160/160 passing with 45 expected fixture skips. The expansion
 remains quarantined until the same audit can run over all six raw shards.
 Locked-corpus audit JSON SHA-256:
-`ea919618bea4adbfae1ae25befc542ea791f7dac57a0c5f7ca55c94c496d0beb`.
+`720a2f84b9f02d28ceb4fb293274e78f6739394ff5b181e1272e269c61ba339b`.
 
 ## 2026-07-09 12:28 — Expansion harvest made fail-closed and repeatable
 
@@ -4617,3 +4617,20 @@ The live invocation correctly refused before transfer with status 2 while
 rebaseline PID `1265148` remained active. Five targeted tests and the full
 Python gate pass: 166/166 with 45 expected fixture skips. No john0 artifact was
 modified and no partial score was read.
+
+## 2026-07-09 12:41 — Structured-Q admission audit now diagnoses target drift
+
+Matching source/search/teacher provenance does not prove that a new seed block
+has a comparable learning target. Audit schema
+`raw_structured_q_cross_shard_v2` now records, per shard and outside exact K1
+rows, final-score and wildlife/habitat/Nature/total score-to-go distributions,
+selected-teacher-minus-real error distributions, and valid-Q actions per root.
+It retains every v1 identity and disjointness check.
+
+The regenerated locked-corpus report reproduces the independent target audit:
+fit / selection / verdict final means `91.250 / 92.000 / 92.425`, total
+score-to-go means `45.303 / 46.071 / 46.141`, Nature-negative fractions
+`6.32% / 8.68% / 7.24%`, selected-teacher RMSE
+`2.9992 / 3.4929 / 3.5520`, and exactly `3.85` q-valid actions per root.
+The v2 JSON SHA is
+`720a2f84b9f02d28ceb4fb293274e78f6739394ff5b181e1272e269c61ba339b`.

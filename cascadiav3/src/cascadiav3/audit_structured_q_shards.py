@@ -122,6 +122,25 @@ def _contract(metadata: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _describe(values: np.ndarray) -> dict[str, float] | None:
+    values = np.asarray(values, dtype=np.float64)
+    if values.size == 0:
+        return None
+    if not np.isfinite(values).all():
+        raise ValueError("structured-Q target distribution contains non-finite values")
+    return {
+        "count": int(values.size),
+        "mean": float(values.mean()),
+        "sd": float(values.std()),
+        "min": float(values.min()),
+        "p05": float(np.quantile(values, 0.05)),
+        "p50": float(np.quantile(values, 0.50)),
+        "p95": float(np.quantile(values, 0.95)),
+        "max": float(values.max()),
+        "negative_fraction": float((values < 0.0).mean()),
+    }
+
+
 def _audit_one(label: str, path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(f"structured-Q shard is missing: {path}")
@@ -204,6 +223,13 @@ def _audit_one(label: str, path: Path) -> dict[str, Any]:
         terminal_error = float(
             np.abs(terminal_components.sum(axis=1) - terminal_scores).max(initial=0.0)
         )
+        non_exact = ~exact
+        selected_after_components = after_components[selected_global]
+        score_to_go_components = terminal_components - selected_after_components
+        selected_teacher_error = (
+            np.asarray(shard.target_q, dtype=np.float64)[selected_global] - terminal_scores
+        )
+        q_valid_per_root = np.add.reduceat(q_valid.astype(np.int64), offsets[:-1])
         return {
             "label": label,
             "path": str(path),
@@ -219,6 +245,19 @@ def _audit_one(label: str, path: Path) -> dict[str, Any]:
             "max_abs_q_identity_error": q_error,
             "max_abs_afterstate_component_error": after_error,
             "max_abs_terminal_component_error": terminal_error,
+            "target_distribution": {
+                "final_score_non_exact": _describe(terminal_scores[non_exact]),
+                "score_to_go_non_exact": {
+                    "wildlife": _describe(score_to_go_components[non_exact, 0]),
+                    "habitat": _describe(score_to_go_components[non_exact, 1]),
+                    "nature_tokens": _describe(score_to_go_components[non_exact, 2]),
+                    "total": _describe(score_to_go_components[non_exact].sum(axis=1)),
+                },
+                "selected_teacher_error_non_exact": _describe(
+                    selected_teacher_error[non_exact]
+                ),
+                "q_valid_per_root": _describe(q_valid_per_root),
+            },
             "contract": _contract(metadata),
         }
     finally:
@@ -288,7 +327,7 @@ def audit_shards(
 
     return {
         "status": "pass",
-        "audit": "raw_structured_q_cross_shard_v1",
+        "audit": "raw_structured_q_cross_shard_v2",
         "contract": reference,
         "primary": primary,
         "excluded_shards": excluded,

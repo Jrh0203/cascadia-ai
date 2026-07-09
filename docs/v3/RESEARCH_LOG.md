@@ -516,6 +516,10 @@ component identities, requires one source/rules/search/execution/teacher
 contract, and proves that candidate plus explicitly excluded locked seed
 intervals do not overlap. The real fixed pilot passes as 30 seeds, 2,400
 roots, 1,113,755 actions, 9,240 q-valid actions, and 120 exact rows.
+Schema v2 of that audit carries the target distributions too; expansion
+admission must compare final-score, component-residual, Nature-spending, and
+teacher-error distributions against the locked blocks rather than relying on
+matching provenance alone.
 
 ---
 
