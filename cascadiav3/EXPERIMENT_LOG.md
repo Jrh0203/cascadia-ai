@@ -4439,3 +4439,13 @@ initialize the three projections as equal thirds of incumbent Q, preserving
 their sum within floating-point tolerance at step zero. The runner records a
 scientific failure without launching gameplay and stops on malformed output.
 All three raw NPZs and manifests are copied to john0 with matching hashes.
+
+The idle post-chain waiter was replaced without touching the live rebaseline
+or verdict watcher. New waiter PID `2241595` verified all three NPZ hashes and
+the source archive before sleeping. It pins source
+`f35b0d0b209444f8c09e7e603c380f1d8edbc100` via archive SHA-256
+`460857f26f7431727db623313f92df2e5be13a27033bd72d642eb6d650fc7a81`.
+Order remains corrected rebaseline/verdict, exact K1, structured-Q head pilot,
+model throughput, market sample-4, then CUDA concurrency. The older
+`11f254d9` waiter/archive was removed only after the new waiter passed its
+preflight and was observed alive.

@@ -486,7 +486,8 @@ n8/top4/d1 with one determinization, eight refresh samples, blend 0.5, K8
 interior, exact K1, and full root menus. Raw NPZ hashes are `06d550b4...`,
 `5095d572...`, and `cdbd54b0...`; all three pass v4 and Q-identity validation
 and are staged on john0. The Macs supplied data only. Training and the verdict
-remain behind the approved exact-K1 john0 gate.
+are checksum-queued behind the approved exact-K1 john0 gate at source
+`f35b0d0b`; no gameplay can launch automatically from this pilot.
 
 ---
 

@@ -61,8 +61,8 @@ distributional sums, malformed shards, transforms/collation, head freezing,
 checkpoint reload, and an end-to-end two-step v4 train. This work has no score
 claim yet. The Mac fleet may generate the three corrected-rules v4 blocks, but
 the frozen-head training and held-out gate remain john0-only. john0's live
-n1024 rebaseline remains untouched; the pilot will be checksum-queued behind
-the already-approved exact-K1 gate once all three shard hashes are fixed.
+n1024 rebaseline remains untouched. The pilot is checksum-queued behind the
+already-approved exact-K1 gate.
 
 The hashes are now fixed. Three Mac hosts generated disjoint 800-root blocks
 from exporter source `6e89d955`, cycle4 teacher manifest `b8886c24...` /
@@ -76,6 +76,16 @@ untouched verdict `cdbd54b0...`. They are copied and hash-matched on john0.
 The first n16/d2 launch was terminated before any NPZ/manifest was published
 because it had not produced a first seed on any host after about seven
 minutes; no partial artifact was admitted.
+
+The replacement post-chain waiter is PID `2241595`, source revision
+`f35b0d0b209444f8c09e7e603c380f1d8edbc100`, archive SHA-256
+`460857f26f7431727db623313f92df2e5be13a27033bd72d642eb6d650fc7a81`.
+It verified the archive and all three raw NPZ hashes before waiting. The live
+rebaseline PIDs were not touched. Its strict sequence is corrected rebaseline
+and verdict -> exact K1 -> structured-Q head pilot -> CUDA model throughput ->
+market sample-4 -> jobs12/16/24 concurrency. A valid scientific structured-Q
+failure returns control to the remaining queue; a crash or malformed verdict
+stops it.
 
 The verdict is preregistered in `torch_structured_q_probe`: exclude exact K1
 rows; require at least 10% selected-final RMSE improvement over the better of
