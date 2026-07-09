@@ -260,7 +260,7 @@ class PairwiseComparatorTest(unittest.TestCase):
                 max_records=0,
                 policy_top_k=2,
             )
-            self.assertEqual(report["schema_id"], "cascadiav3.pairwise_policy_probe.v2")
+            self.assertEqual(report["schema_id"], "cascadiav3.pairwise_policy_probe.v3")
             self.assertEqual(report["record_count"], 1)
             self.assertEqual(report["eligible_policy_root_count"], 1)
             self.assertEqual(report["pairwise"]["directed_pair_count"], 2)
@@ -275,6 +275,16 @@ class PairwiseComparatorTest(unittest.TestCase):
                 "pairwise-borda",
                 "logits-plus-pairwise",
             })
+            self.assertEqual(
+                set(report["comparisons_vs_logits"]),
+                {"pairwise-borda", "logits-plus-pairwise"},
+            )
+            for comparison in report["comparisons_vs_logits"].values():
+                self.assertEqual(comparison["root_count"], 1)
+                self.assertEqual(
+                    sum(comparison["top1_discordance"].values()),
+                    1,
+                )
 
 
 if __name__ == "__main__":

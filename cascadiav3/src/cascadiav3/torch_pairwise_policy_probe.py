@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .expert_tensor_shards import ExpertTensorCorpus, SHARD_VERSION_V3, collate_expert_tensor_examples
+from .torch_benchmark_stats import paired_delta_stats
 from .torch_inference_bridge import _load_model, resolve_checkpoint_path
 from .torch_train_cascadiaformer import _add_pairwise_supervision, _move_to_device
 
@@ -44,6 +45,39 @@ def _finalize_mode(totals: dict[str, float]) -> dict[str, float | int | None]:
         "root_count": count,
         "top1_accuracy": totals["correct"] / count if count else None,
         "mean_completed_q_regret": totals["regret"] / count if count else None,
+    }
+
+
+def _compare_mode_to_logits(
+    baseline: list[tuple[float, float]],
+    candidate: list[tuple[float, float]],
+    *,
+    bootstrap_seed: int,
+) -> dict[str, Any]:
+    if len(baseline) != len(candidate):
+        raise ValueError("paired policy-mode observations must have equal lengths")
+    top1_deltas = [right[0] - left[0] for left, right in zip(baseline, candidate)]
+    regret_deltas = [right[1] - left[1] for left, right in zip(baseline, candidate)]
+    baseline_only = sum(left[0] > right[0] for left, right in zip(baseline, candidate))
+    candidate_only = sum(right[0] > left[0] for left, right in zip(baseline, candidate))
+    both_correct = sum(left[0] > 0.0 and right[0] > 0.0 for left, right in zip(baseline, candidate))
+    both_wrong = len(baseline) - baseline_only - candidate_only - both_correct
+    return {
+        "root_count": len(baseline),
+        "top1_delta_candidate_minus_logits": paired_delta_stats(
+            top1_deltas,
+            seed=bootstrap_seed,
+        ),
+        "regret_delta_candidate_minus_logits": paired_delta_stats(
+            regret_deltas,
+            seed=bootstrap_seed + 1,
+        ),
+        "top1_discordance": {
+            "candidate_only_correct": candidate_only,
+            "logits_only_correct": baseline_only,
+            "both_correct": both_correct,
+            "both_wrong": both_wrong,
+        },
     }
 
 
@@ -99,6 +133,9 @@ def run_probe(
             raise ValueError("probe shards must share one source revision and ruleset")
 
         mode_totals = {mode: _empty_mode_totals() for mode in POLICY_MODES}
+        mode_observations: dict[str, list[tuple[float, float]]] = {
+            mode: [] for mode in POLICY_MODES
+        }
         pair_count = 0
         pair_correct = 0.0
         pair_weight = 0.0
@@ -204,13 +241,21 @@ def run_probe(
                 for mode, logits in policy_logits.items():
                     predicted = logits.masked_fill(~candidate_mask, -torch.inf).argmax(dim=1)
                     selected_q = target_q[rows, predicted]
+                    correct = ((predicted == best) & eligible).to(torch.float32)
+                    regret = (best_q - selected_q).clamp_min(0.0)
                     mode_totals[mode]["correct"] += float(
-                        ((predicted == best) & eligible).sum().cpu()
+                        correct.sum().cpu()
                     )
                     mode_totals[mode]["regret"] += float(
-                        (best_q - selected_q).clamp_min(0.0).masked_select(eligible).sum().cpu()
+                        regret.masked_select(eligible).sum().cpu()
                     )
                     mode_totals[mode]["count"] += float(eligible.sum().cpu())
+                    mode_observations[mode].extend(
+                        zip(
+                            correct.masked_select(eligible).cpu().tolist(),
+                            regret.masked_select(eligible).cpu().tolist(),
+                        )
+                    )
     finally:
         corpus.close()
 
@@ -218,7 +263,7 @@ def run_probe(
         raise ValueError("probe found no confidence-qualified policy roots/pairs")
     return {
         "status": "pass",
-        "schema_id": "cascadiav3.pairwise_policy_probe.v2",
+        "schema_id": "cascadiav3.pairwise_policy_probe.v3",
         "scientific_eligibility": "offline_policy_routing_only_not_gameplay",
         "ruleset_id": ruleset_ids[0],
         "source_revision": source_revisions[0],
@@ -248,6 +293,14 @@ def run_probe(
             "weighted_binary_cross_entropy": pair_weighted_loss / pair_weight,
         },
         "policy_modes": {mode: _finalize_mode(totals) for mode, totals in mode_totals.items()},
+        "comparisons_vs_logits": {
+            mode: _compare_mode_to_logits(
+                mode_observations["logits"],
+                mode_observations[mode],
+                bootstrap_seed=20260709 + index * 10,
+            )
+            for index, mode in enumerate(POLICY_MODES[1:], start=1)
+        },
         "checkpoint": {
             "manifest": _artifact(manifest),
             "weights": _artifact(weights),
@@ -284,6 +337,25 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
             if accuracy is not None and regret is not None
             else f"| {mode} | n/a | n/a |"
         )
+    lines.extend(
+        [
+            "",
+            "| Candidate vs logits | Top-1 delta | 95% bootstrap CI | Regret delta | 95% bootstrap CI | Candidate-only / logits-only correct |",
+            "|---|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for mode in POLICY_MODES[1:]:
+        comparison = report["comparisons_vs_logits"][mode]
+        top1 = comparison["top1_delta_candidate_minus_logits"]
+        regret = comparison["regret_delta_candidate_minus_logits"]
+        discordance = comparison["top1_discordance"]
+        lines.append(
+            f"| {mode} | {top1['mean']:+.2%} | "
+            f"[{top1['bootstrap_ci_low']:+.2%}, {top1['bootstrap_ci_high']:+.2%}] | "
+            f"{regret['mean']:+.4f} | "
+            f"[{regret['bootstrap_ci_low']:+.4f}, {regret['bootstrap_ci_high']:+.4f}] | "
+            f"{discordance['candidate_only_correct']} / {discordance['logits_only_correct']} |"
+        )
     lines.extend(["", "Offline routing evidence only; this is not gameplay or promotion evidence."])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -312,7 +384,16 @@ def main() -> None:
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if args.summary_out is not None:
         write_markdown(report, args.summary_out)
-    print(json.dumps({"pairwise": report["pairwise"], "policy_modes": report["policy_modes"]}, indent=2))
+    print(
+        json.dumps(
+            {
+                "pairwise": report["pairwise"],
+                "policy_modes": report["policy_modes"],
+                "comparisons_vs_logits": report["comparisons_vs_logits"],
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":
