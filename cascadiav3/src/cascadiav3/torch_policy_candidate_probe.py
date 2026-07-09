@@ -236,6 +236,10 @@ def run_probe(
         observations: dict[str, list[dict[str, Any]]] = {"baseline": [], "candidate": []}
         prior_parity_eligible = 0
         prior_parity_matches = 0
+        prior_top_k_overlap_total = 0
+        prior_top_k_overlap_min = top_k
+        prior_best_coverage_agreements = 0
+        prior_mismatches: list[dict[str, Any]] = []
         skipped_without_valid_q = 0
         exact_endgame_roots = 0
         with torch.inference_mode():
@@ -305,7 +309,33 @@ def run_probe(
                     prior_parity_eligible += 1
                     priors = torch.as_tensor(np.array(example["priors"], copy=True))
                     prior_top = priors.topk(candidate_count).indices
-                    prior_parity_matches += int(set(baseline_top.tolist()) == set(prior_top.tolist()))
+                    baseline_set = set(baseline_top.tolist())
+                    prior_set = set(prior_top.tolist())
+                    overlap = len(baseline_set & prior_set)
+                    exact_set_match = baseline_set == prior_set
+                    prior_parity_matches += int(exact_set_match)
+                    prior_top_k_overlap_total += overlap
+                    prior_top_k_overlap_min = min(prior_top_k_overlap_min, overlap)
+                    coverage_agrees = (int(global_best) in baseline_set) == (
+                        int(global_best) in prior_set
+                    )
+                    prior_best_coverage_agreements += int(coverage_agrees)
+                    if not exact_set_match:
+                        sorted_priors = priors.topk(min(candidate_count + 1, action_count)).values
+                        boundary_gap = (
+                            float(sorted_priors[candidate_count - 1] - sorted_priors[candidate_count])
+                            if action_count > candidate_count
+                            else None
+                        )
+                        prior_mismatches.append(
+                            {
+                                "record_index": index,
+                                "action_count": action_count,
+                                "top_k_overlap_count": overlap,
+                                "completed_q_best_coverage_agrees": coverage_agrees,
+                                "stored_prior_boundary_gap": boundary_gap,
+                            }
+                        )
 
                 for name, logits in logits_by_name.items():
                     candidate_indices = logits.topk(candidate_count).indices
@@ -377,6 +407,20 @@ def run_probe(
             "non_exact_root_count": prior_parity_eligible,
             "exact_top_k_set_match_count": prior_parity_matches,
             "exact_top_k_set_match_rate": prior_parity_rate,
+            "mean_top_k_action_overlap_rate": (
+                prior_top_k_overlap_total / (prior_parity_eligible * top_k)
+                if prior_parity_eligible
+                else None
+            ),
+            "minimum_top_k_action_overlap_rate": (
+                prior_top_k_overlap_min / top_k if prior_parity_eligible else None
+            ),
+            "completed_q_best_coverage_agreement_rate": (
+                prior_best_coverage_agreements / prior_parity_eligible
+                if prior_parity_eligible
+                else None
+            ),
+            "mismatches": prior_mismatches,
             "required": require_prior_top_k_parity,
         },
         "baseline": _finalize_checkpoint(baseline, top_k=top_k),
