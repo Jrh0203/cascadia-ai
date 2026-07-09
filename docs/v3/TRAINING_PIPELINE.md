@@ -288,8 +288,10 @@ then fill from incumbent prior rank. The recall loss uses only exact-endgame
 roots or roots whose top-two Q labels have count at least 2/action, margin at
 least 0.25, and SNR at least 1. It pushes completed-Q best above the 16th
 policy logit by 0.25 while a 0.25-weight improved-policy loss limits drift.
-Select on `locked_val_policy_best_top16` (max), then rerun the exact full-menu
-probe. Do not add more objective variants if this direct test fails.
+Select on `locked_val_policy_confident_best_top16` (max) over the complete
+held-out seed block, then rerun the exact full-menu probe. Report the all-root
+recall alongside it. Do not add more objective variants if this direct test
+fails.
 
 ## Checkpoint Contract
 

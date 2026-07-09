@@ -72,6 +72,7 @@ RETENTION_METRIC_KEYS = (
     "pairwise_examples",
     "pairwise_mean_snr",
     "policy_best_top16",
+    "policy_confident_best_top16",
     "policy_recall_examples",
 )
 AGGREGATE_KEYS = LOSS_COMPONENT_KEYS + RETENTION_METRIC_KEYS
@@ -579,7 +580,12 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         pairwise_accuracy = pairwise.detach()
         pairwise_examples = pairwise.detach()
         pairwise_mean_snr = pairwise.detach()
-    policy_recall, policy_best_top16, policy_recall_examples = _policy_recall_terms(
+    (
+        policy_recall,
+        policy_best_top16,
+        policy_confident_best_top16,
+        policy_recall_examples,
+    ) = _policy_recall_terms(
         logits,
         mask,
         target_final_q,
@@ -634,6 +640,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         "pairwise_examples": pairwise_examples.detach(),
         "pairwise_mean_snr": pairwise_mean_snr.detach(),
         "policy_best_top16": policy_best_top16.detach(),
+        "policy_confident_best_top16": policy_confident_best_top16.detach(),
         "policy_recall_examples": policy_recall_examples.detach(),
     }
 
@@ -700,7 +707,8 @@ def _policy_recall_terms(
     eligible &= has_valid & (action_mask.sum(dim=1) > top_k)
     if not eligible.any():
         zero = logits.sum() * 0.0
-        return zero, policy_best_top16, zero.detach()
+        return zero, policy_best_top16, zero.detach(), zero.detach()
+    policy_confident_best_top16 = contains_best[eligible].to(torch.float32).mean()
     rows = torch.arange(batch_size, device=logits.device)
     best_logit = logits[rows, best]
     kth_logit = logits.topk(top_k, dim=1).values[:, -1]
@@ -708,6 +716,7 @@ def _policy_recall_terms(
     return (
         losses[eligible].mean(),
         policy_best_top16,
+        policy_confident_best_top16,
         logits.new_tensor(float(eligible.sum())),
     )
 

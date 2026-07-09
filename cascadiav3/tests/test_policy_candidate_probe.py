@@ -37,7 +37,7 @@ class PolicyCandidateProbeTest(unittest.TestCase):
         q_valid[0, :2] = True
         q_count = torch.full_like(logits, 4.0)
         q_variance = torch.full_like(logits, 0.01)
-        bad_loss, bad_recall, examples = _policy_recall_terms(
+        bad_loss, bad_recall, bad_confident_recall, examples = _policy_recall_terms(
             logits,
             action_mask,
             target_q,
@@ -47,7 +47,7 @@ class PolicyCandidateProbeTest(unittest.TestCase):
         )
         improved = logits.clone()
         improved[0, 0] = 30.0
-        good_loss, good_recall, _ = _policy_recall_terms(
+        good_loss, good_recall, good_confident_recall, _ = _policy_recall_terms(
             improved,
             action_mask,
             target_q,
@@ -59,6 +59,8 @@ class PolicyCandidateProbeTest(unittest.TestCase):
         self.assertGreater(float(bad_loss), float(good_loss))
         self.assertEqual(float(bad_recall), 0.0)
         self.assertEqual(float(good_recall), 1.0)
+        self.assertEqual(float(bad_confident_recall), 0.0)
+        self.assertEqual(float(good_confident_recall), 1.0)
 
     def test_identical_checkpoints_have_zero_paired_deltas(self) -> None:
         import torch
