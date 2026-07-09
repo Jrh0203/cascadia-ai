@@ -3964,3 +3964,46 @@ explicit generated-directory exclusions. Ignored-output invariance and
 archive-fallback tests were added. All three provenance tests pass in `0.15s`.
 This changes only source bookkeeping; checkpoint/report identities remain
 separate SHA-addressed fields.
+
+## 2026-07-09 07:48 — Pairwise labels are plentiful but confidence-limited; tensor provenance promoted to v3
+
+Purpose: decide whether the proposed pairwise action comparator has a viable
+supervision surface before changing the model, and close the artifact gaps
+found while inspecting real Gumbel tensors.
+
+Three idle Mac minis each generated one corrected-rules, all-seat Gumbel game
+from exact source `752ba894`, cycle4 M, n64/top16/d4, depth 1, blend 0.5,
+K16 interior, four market samples, exploration on, and exact final-personal-
+turn solving enabled. Seeds were `2027073000..2027073002`; each shard contains
+80 roots. Generation took `590.9 / 425.7 / 447.3s`; persistent-bridge eval
+dedup saved `45.1% / 44.8% / 46.1%` of requested rows. Remote and fetched NPZ
+SHA-256 values matched exactly:
+
+- seed 2027073000: `092e76121a3530f5eb9ab1bd9ec5d4e90bd4bf85663284626b37395fe3eb2a36`;
+- seed 2027073001: `87be982632071f73ac41fa2f79a792ca822b3ba359fcc5b0f7c4898902a130d7`;
+- seed 2027073002: `024d8f1235ecec4272e05ce06121cae48205efe8620982d3bf6019945d3bcad5`.
+
+Across 240 roots, 228 (95.0%) had at least two valid search actions. There
+were 3,660 valid actions and 27,360 pair labels, or 114 pairs/root and a
+projection of 11.4M pairs per 100k-root cycle. Absolute margins are abundant:
+62.51% are at least 0.5 points and 36.95% at least 1.0. Confidence is the
+constraint: only 6,384 pairs (23.33%) have at least two samples on both
+actions; among those, 38.20% reach SNR 1.0 and 14.58% reach SNR 1.96. The
+top-two margin median is 0.198, while top-two SNR median is 0.459. Verdict:
+proceed with an antisymmetric comparator only with q-valid, count, margin,
+and SNR filtering/weighting. Never train blindly on every pair or interpret a
+one-sample zero variance as certainty. This audit is engineering feasibility,
+not strength evidence. Combined audit JSON SHA-256:
+`a22b8b6156b45e376cc4a7f877c9bcc788ef18170c950364e6ae5f342e80aba1`.
+
+Inspection also found the old v2 NPZ contract omitted exact-endgame flags,
+ruleset/source identity, several search switches, execution topology, teacher
+artifact hashes, and used a fixed fake creation date; its seed-domain mode
+was also wrong. The three shards therefore remain audit-only even though the
+immutable launch evidence is known. New Gumbel generation uses
+`cascadiav3.expert_tensor_shard.v3`: required explicit `exact_endgame`, exact
+source revision, ruleset, complete search/execution contract, exporter
+SHA/size, teacher manifest/weights SHA/size, and real creation time. Filtering
+and relation-tail materialization preserve v3; malformed v3 fails closed, and
+fallback/unverified teachers cannot enter a training corpus. The audit CLI is
+covered on Python 3.9+ despite the repository's 3.12 runtime contract.

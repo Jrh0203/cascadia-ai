@@ -153,6 +153,20 @@ def _schema_ids_for_formats(*formats: str) -> list[str]:
     return schema_ids
 
 
+def _schema_ids_for_loaded_corpora(*corpora_and_formats: tuple[Any, str]) -> list[str]:
+    schema_ids: list[str] = []
+    for corpus, corpus_format in corpora_and_formats:
+        candidates = (
+            corpus.schema_ids()
+            if corpus_format == "npz" and hasattr(corpus, "schema_ids")
+            else _schema_ids_for_formats(corpus_format)
+        )
+        for candidate in candidates:
+            if candidate not in schema_ids:
+                schema_ids.append(candidate)
+    return schema_ids
+
+
 def _selected_action_indices(records: list[dict[str, Any]]) -> list[int]:
     out = []
     for record in records:
@@ -1482,6 +1496,10 @@ def run_training(
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     train_records = _load_corpus(train_paths, corpus_format=train_format)
     val_records = _load_corpus(val_paths, corpus_format=val_format)
+    loaded_schema_ids = _schema_ids_for_loaded_corpora(
+        (train_records, train_format),
+        (val_records, val_format),
+    )
     train_source_lengths = _corpus_source_lengths(train_records)
     normalized_train_source_weights = _normalize_source_weights(train_source_weights, len(train_paths))
     if normalized_train_source_weights is not None:
@@ -1602,7 +1620,7 @@ def run_training(
     swa_start_step = max(1, math.floor(steps * (1.0 - swa_fraction)) + 1)
     shuffle_train = not overfit_one_batch
     source_hashes = {"trainer": _sha256(Path(__file__)), "model": _sha256(Path(__file__).with_name("torch_cascadiaformer.py"))}
-    schema_ids = _schema_ids_for_formats(train_format, val_format)
+    schema_ids = loaded_schema_ids
     dataset_manifests = {"train": _dataset_manifest(train_paths), "val": _dataset_manifest(val_paths)}
     resume_identity = _resume_identity(
         schema_ids=schema_ids,

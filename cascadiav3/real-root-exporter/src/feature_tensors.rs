@@ -6,7 +6,7 @@ use serde_json::Value;
 
 pub const SHARD_VERSION: &str = "greedy_policy_tensor_shard_v1";
 pub const EXPERT_SHARD_VERSION: &str = "cascadiav3.expert_tensor_shard.v1";
-pub const EXPERT_SHARD_VERSION_V2: &str = "cascadiav3.expert_tensor_shard.v2";
+pub const EXPERT_SHARD_VERSION_V3: &str = "cascadiav3.expert_tensor_shard.v3";
 pub const PUBLIC_TOKEN_FEATURE_DIM: usize = 41;
 pub const MERIT_ACTION_FEATURE_DIM: usize = 25;
 pub const PUBLIC_TOKEN_ACTION_FEATURE_DIM: usize = 33;
@@ -69,6 +69,11 @@ pub struct ExpertTensorShardData {
     pub improved_policy: Vec<f32>,
     pub search_root_value: Vec<f32>,
     pub improved_policy_records: usize,
+    /// v3 field: one explicit boolean per root. This must not be inferred
+    /// from visits or policy shape because exact K1 and sampled roots can
+    /// otherwise be indistinguishable after packing.
+    pub exact_endgame: Vec<u8>,
+    pub exact_endgame_field_records: usize,
     pub record_count: usize,
     pub total_token_count: usize,
     pub total_action_count: usize,
@@ -151,6 +156,8 @@ impl ExpertTensorShardData {
         self.improved_policy.extend(other.improved_policy);
         self.search_root_value.extend(other.search_root_value);
         self.improved_policy_records += other.improved_policy_records;
+        self.exact_endgame.extend(other.exact_endgame);
+        self.exact_endgame_field_records += other.exact_endgame_field_records;
         self.record_count += other.record_count;
         self.total_token_count += other.total_token_count;
         self.total_action_count += other.total_action_count;
@@ -226,6 +233,10 @@ impl ExpertTensorShardData {
             self.improved_policy.extend(improved);
             self.search_root_value.push(root_value as f32);
             self.improved_policy_records += 1;
+        }
+        if let Some(exact_endgame) = record.get("exact_endgame").and_then(Value::as_bool) {
+            self.exact_endgame.push(u8::from(exact_endgame));
+            self.exact_endgame_field_records += 1;
         }
 
         self.record_count += 1;
@@ -1507,8 +1518,7 @@ pub fn action_relation_tail(
             // target itself sits in the action range (never true for
             // well-formed token indexes, mirrored here for exactness).
             if target as usize >= token_count {
-                tail[(target as usize - token_count) * seq_len + action_pos as usize] =
-                    relation_id;
+                tail[(target as usize - token_count) * seq_len + action_pos as usize] = relation_id;
             }
         }
     }

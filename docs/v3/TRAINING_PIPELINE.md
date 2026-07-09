@@ -26,9 +26,17 @@ Use packed tensor shards for real training:
 - `cascadiav3.expert_tensor_shard.v2`: v1 plus Gumbel self-play targets —
   action-aligned `improved_policy` soft targets and per-record
   `search_root_value`, with `final_score_vector`/`rank_vector`/decomposition
-  labeled from real terminal outcomes instead of rollout means.
+  labeled from real terminal outcomes instead of rollout means. Existing v2
+  shards remain readable, but their exact-endgame rows and generation
+  provenance cannot be reconstructed reliably after packing.
+- `cascadiav3.expert_tensor_shard.v3`: the required format for new Gumbel
+  generation. It adds an explicit per-record `exact_endgame` tensor and
+  fail-closed metadata for ruleset, source revision, complete search and
+  execution settings, exporter SHA/size, and teacher manifest/weights
+  SHA/size. A v3 shard with fallback/unverified teacher identity is marked
+  audit-only and the training corpus loader rejects it.
 - `relation_tail` shards: filtered fixed-capacity action relation caches used
-  by the GPU trainer (v2 fields pass through filtering and materialization;
+  by the GPU trainer (v2/v3 fields pass through filtering and materialization;
   retained improved-policy slices are renormalized).
 
 Use JSONL only for tiny audit fixtures that need human-readable reconstruction
@@ -44,6 +52,7 @@ Packed expert shards contain:
 - exact afterstate score for the active seat;
 - score decomposition labels;
 - final score/rank vectors;
+- explicit exact-endgame provenance for every v3 root;
 - sparse relation edges plus materialized relation-tail tensors.
 
 ## Target Semantics
@@ -186,7 +195,8 @@ champion, and rejected models remain opponent-diversity material.
 Canonical plan: [GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md).
 Summary:
 
-- Exporter mode: `--gumbel-selfplay-tensor-corpus` (schema v2). All four
+- Exporter mode: `--gumbel-selfplay-tensor-corpus` (schema v3; requires
+  `--source-revision`). All four
   seats play via Gumbel top-m search with batched model leaf values over
   hidden-redeterminized states; every visited root exports completed-Q
   targets, `improved_policy`, `search_root_value`, and real-outcome value
@@ -205,6 +215,10 @@ Summary:
   Exported rows identify `exact_endgame=true`, carry zero simulations and a
   one-hot improved policy, and therefore provide an exact zero-score-to-go
   terminal target rather than a model/search estimate.
+- Before a shard becomes training input, independently verify its NPZ SHA and
+  embedded v3 provenance. Shards generated before the v3 contract are
+  audit-only when the missing fields cannot be recovered from immutable
+  launch evidence.
 - Runner: `cascadiav3/scripts/run_gumbel_selfplay_cycle.sh` (delegates to
   the full pipeline with `EXPERT_TENSOR_MODE=gumbel_selfplay`).
 
@@ -219,6 +233,8 @@ Save every 1k optimizer steps and at every epoch/block boundary:
 - schema ids;
 - dataset manifests and checksums;
 - source hashes;
+- ruleset ID, exact source revision, exporter artifact identity, and teacher
+  manifest/weights identities;
 - search config;
 - objective and loss weights;
 - metrics history;

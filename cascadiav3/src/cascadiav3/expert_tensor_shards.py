@@ -12,7 +12,8 @@ from typing import Any
 
 SHARD_VERSION = "cascadiav3.expert_tensor_shard.v1"
 SHARD_VERSION_V2 = "cascadiav3.expert_tensor_shard.v2"
-SUPPORTED_SHARD_VERSIONS = {SHARD_VERSION, SHARD_VERSION_V2}
+SHARD_VERSION_V3 = "cascadiav3.expert_tensor_shard.v3"
+SUPPORTED_SHARD_VERSIONS = {SHARD_VERSION, SHARD_VERSION_V2, SHARD_VERSION_V3}
 TOKEN_FEATURE_DIM = 41
 ACTION_FEATURE_DIM = 61
 
@@ -201,11 +202,112 @@ class ExpertTensorShard:
         self.search_root_value = (
             self._npz["search_root_value"] if "search_root_value" in self._npz.files else None
         )
-        if self.version == SHARD_VERSION_V2 and (
+        self.exact_endgame = (
+            self._npz["exact_endgame"] if "exact_endgame" in self._npz.files else None
+        )
+        if self.version in {SHARD_VERSION_V2, SHARD_VERSION_V3} and (
             self.improved_policy is None or self.search_root_value is None
         ):
-            raise ValueError("v2 expert tensor shard requires improved_policy and search_root_value")
+            raise ValueError("v2+ expert tensor shard requires improved_policy and search_root_value")
+        if self.version == SHARD_VERSION_V3 and self.exact_endgame is None:
+            raise ValueError("v3 expert tensor shard requires exact_endgame")
+        if self.version == SHARD_VERSION_V3:
+            self._validate_v3_metadata()
         self._validate_shapes()
+
+    def _validate_v3_metadata(self) -> None:
+        def is_sha256(value: Any) -> bool:
+            return (
+                isinstance(value, str)
+                and len(value) == 64
+                and all(character in "0123456789abcdef" for character in value.lower())
+            )
+
+        def require_text(container: dict[str, Any], key: str) -> str:
+            value = container.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"v3 metadata requires non-empty {key}")
+            return value
+
+        if self.metadata.get("schema_id") != SHARD_VERSION_V3:
+            raise ValueError("v3 metadata schema_id mismatch")
+        require_text(self.metadata, "ruleset_id")
+        require_text(self.metadata, "source_revision")
+        if self.metadata.get("mode") != "gumbel_selfplay_tensor_corpus":
+            raise ValueError("v3 metadata mode must be gumbel_selfplay_tensor_corpus")
+        search = self.metadata.get("search")
+        if not isinstance(search, dict):
+            raise ValueError("v3 metadata requires search contract")
+        for key in (
+            "n_simulations",
+            "top_m",
+            "depth_rounds",
+            "determinization_samples",
+            "market_decision_samples",
+            "exact_endgame_turns",
+            "rollout_blend_weight",
+            "exploration",
+            "peek",
+            "table_total",
+            "table_native_q",
+            "leaf_softmix",
+            "tta",
+            "k_interior",
+            "max_root_actions",
+            "root_menu",
+        ):
+            if key not in search:
+                raise ValueError(f"v3 metadata search contract missing {key}")
+        execution = self.metadata.get("execution")
+        if not isinstance(execution, dict):
+            raise ValueError("v3 metadata requires execution contract")
+        for key in (
+            "rayon_threads_requested",
+            "rayon_current_num_threads",
+            "model_sessions_requested",
+            "shared_model_session",
+            "seed_scheduler",
+            "model_session_topology",
+        ):
+            if key not in execution:
+                raise ValueError(f"v3 metadata execution contract missing {key}")
+        if not isinstance(self.metadata.get("teacher_model"), dict):
+            raise ValueError("v3 metadata requires teacher_model identity")
+        generator = self.metadata.get("generator")
+        if not isinstance(generator, dict):
+            raise ValueError("v3 metadata requires generator identity")
+        generator_hash = generator.get("sha256")
+        if (
+            not is_sha256(generator_hash)
+            or not isinstance(generator.get("bytes"), int)
+            or generator["bytes"] <= 0
+        ):
+            raise ValueError("v3 metadata requires generator sha256")
+        created = self.metadata.get("created_unix_seconds")
+        if not isinstance(created, int) or created <= 0:
+            raise ValueError("v3 metadata requires positive created_unix_seconds")
+        targets = self.metadata.get("canonical_targets")
+        if not isinstance(targets, list) or "exact_endgame" not in targets:
+            raise ValueError("v3 metadata canonical_targets must include exact_endgame")
+        eligibility = require_text(self.metadata, "scientific_eligibility")
+        if eligibility not in {
+            "gumbel_selfplay_expert_iteration",
+            "audit_only_unverified_or_uniform_model_fallback",
+        }:
+            raise ValueError(f"unsupported v3 scientific_eligibility {eligibility!r}")
+        if eligibility == "gumbel_selfplay_expert_iteration":
+            teacher = self.metadata["teacher_model"]
+            for artifact_name in ("manifest", "weights"):
+                artifact = teacher.get(artifact_name)
+                digest = artifact.get("sha256") if isinstance(artifact, dict) else None
+                if (
+                    not is_sha256(digest)
+                    or not isinstance(artifact.get("bytes"), int)
+                    or artifact["bytes"] <= 0
+                ):
+                    raise ValueError(
+                        f"training-eligible v3 metadata requires teacher {artifact_name} sha256"
+                    )
 
     def _validate_shapes(self) -> None:
         if self.tokens.ndim != 2 or self.tokens.shape[1] != TOKEN_FEATURE_DIM:
@@ -245,6 +347,10 @@ class ExpertTensorShard:
             raise ValueError("improved_policy length mismatch")
         if self.search_root_value is not None and self.search_root_value.shape[0] != record_count:
             raise ValueError("search_root_value length mismatch")
+        if self.exact_endgame is not None and self.exact_endgame.shape != (record_count,):
+            raise ValueError("exact_endgame length mismatch")
+        if self.exact_endgame is not None and ((self.exact_endgame != 0) & (self.exact_endgame != 1)).any():
+            raise ValueError("exact_endgame values must be boolean 0/1")
         if self.relation_tail is not None:
             if self.relation_tail.ndim != 3:
                 raise ValueError(f"relation_tail shape mismatch: {self.relation_tail.shape}")
@@ -266,6 +372,7 @@ class ExpertTensorShard:
         relation_start = int(self.relation_offsets[index])
         relation_end = int(self.relation_offsets[index + 1])
         example = {
+            "schema_id": self.version,
             "tokens": self.tokens[token_start:token_end],
             "actions": self.actions[action_start:action_end],
             "relation_edges": self.relation_edges[relation_start:relation_end],
@@ -289,6 +396,8 @@ class ExpertTensorShard:
             example["improved_policy"] = self.improved_policy[action_start:action_end]
         if self.search_root_value is not None:
             example["search_root_value"] = float(self.search_root_value[index])
+        if self.exact_endgame is not None:
+            example["exact_endgame"] = bool(self.exact_endgame[index])
         return example
 
     def close(self) -> None:
@@ -442,12 +551,19 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
     relation_tail=None,
     improved_policy=None,
     search_root_value=None,
+    exact_endgame=None,
 ) -> None:
     import numpy as np
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = out_path.with_name(f"{out_path.name}.tmp")
-    version = SHARD_VERSION_V2 if improved_policy is not None else SHARD_VERSION
+    version = (
+        SHARD_VERSION_V3
+        if exact_endgame is not None
+        else SHARD_VERSION_V2
+        if improved_policy is not None
+        else SHARD_VERSION
+    )
     arrays = {
         "version": _string_array(version),
         "metadata_json": _string_array(json.dumps(metadata, sort_keys=True, separators=(",", ":"))),
@@ -478,6 +594,10 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
         if search_root_value is None:
             raise ValueError("improved_policy requires search_root_value")
         arrays["search_root_value"] = search_root_value
+    if exact_endgame is not None:
+        if improved_policy is None or search_root_value is None:
+            raise ValueError("exact_endgame requires v2 improved_policy and search_root_value")
+        arrays["exact_endgame"] = exact_endgame
     with tmp_path.open("wb") as handle:
         np.savez(handle, **arrays)
     tmp_path.replace(out_path)
@@ -679,6 +799,7 @@ def filter_expert_tensor_shard(
                 else None
             ),
             search_root_value=shard.search_root_value,
+            exact_endgame=shard.exact_endgame,
         )
     finally:
         shard.close()
@@ -758,6 +879,7 @@ def materialize_relation_tail_shard(
             relation_tail=relation_tail,
             improved_policy=shard.improved_policy,
             search_root_value=shard.search_root_value,
+            exact_endgame=shard.exact_endgame,
         )
     finally:
         shard.close()
@@ -779,6 +901,18 @@ class ExpertTensorCorpus:
             raise ValueError("ExpertTensorCorpus requires at least one shard")
         self.paths = paths
         self.shards = [ExpertTensorShard(path) for path in paths]
+        try:
+            for shard in self.shards:
+                if shard.version == SHARD_VERSION_V3 and shard.metadata.get(
+                    "scientific_eligibility"
+                ) != "gumbel_selfplay_expert_iteration":
+                    raise ValueError(
+                        f"v3 shard is not training eligible: {shard.path}"
+                    )
+        except Exception:
+            for shard in self.shards:
+                shard.close()
+            raise
         self.cumulative: list[int] = []
         total = 0
         for shard in self.shards:
@@ -792,6 +926,9 @@ class ExpertTensorCorpus:
 
     def source_lengths(self) -> list[int]:
         return [len(shard) for shard in self.shards]
+
+    def schema_ids(self) -> list[str]:
+        return list(dict.fromkeys(shard.version for shard in self.shards))
 
     def example(self, index: int) -> dict[str, Any]:
         if index < 0 or index >= len(self):
@@ -858,6 +995,8 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
     search_root_value = (
         torch.zeros((batch_size,), dtype=torch.float32) if has_improved_policy else None
     )
+    has_exact_endgame = all(example.get("exact_endgame") is not None for example in examples)
+    exact_endgame = torch.zeros((batch_size,), dtype=torch.bool) if has_exact_endgame else None
     target_value = torch.zeros((batch_size, 4), dtype=torch.float32)
     target_rank = torch.zeros((batch_size, 4), dtype=torch.long)
     target_score = torch.zeros((batch_size, 3, 4), dtype=torch.float32)
@@ -891,6 +1030,8 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
             )
             assert search_root_value is not None
             search_root_value[batch_index] = float(example.get("search_root_value", 0.0))
+        if exact_endgame is not None:
+            exact_endgame[batch_index] = bool(example["exact_endgame"])
         target_value[batch_index] = torch.as_tensor(example["final_score_vector"], dtype=torch.float32)
         target_rank[batch_index] = torch.as_tensor(example["rank_vector"], dtype=torch.long) - 1
         target_score[batch_index] = torch.as_tensor(example["score_decomposition"], dtype=torch.float32)
@@ -938,7 +1079,10 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
         "target_value": target_value,
         "target_rank": target_rank,
         "target_score": target_score,
-        "schema_ids": [SHARD_VERSION_V2 if has_improved_policy else SHARD_VERSION] * batch_size,
+        "schema_ids": [
+            str(example.get("schema_id", SHARD_VERSION_V2 if has_improved_policy else SHARD_VERSION))
+            for example in examples
+        ],
         "state_hashes": ["packed-expert-tensor"] * batch_size,
         "token_counts": token_counts,
         "action_counts": action_counts,
@@ -947,6 +1091,8 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
     if has_improved_policy:
         batch["improved_policy"] = improved_policy
         batch["search_root_value"] = search_root_value
+    if exact_endgame is not None:
+        batch["exact_endgame"] = exact_endgame
     if relation_tail is not None:
         batch["relation_tail"] = relation_tail
     else:

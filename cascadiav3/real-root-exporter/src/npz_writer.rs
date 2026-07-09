@@ -195,9 +195,11 @@ pub struct ExpertTensorNpz<'a> {
     pub final_score_vector: &'a [f32],
     pub rank_vector: &'a [i16],
     pub score_decomposition: &'a [f32],
-    /// v2-only arrays; omitted from the archive when `None`.
+    /// v2+ arrays; omitted from the archive when `None`.
     pub improved_policy: Option<&'a [f32]>,
     pub search_root_value: Option<&'a [f32]>,
+    /// v3-only per-record exact-solver provenance.
+    pub exact_endgame: Option<&'a [u8]>,
     pub record_count: usize,
     pub compression: NpzCompression,
 }
@@ -289,6 +291,10 @@ pub fn write_expert_tensor_npz(path: &Path, shard: ExpertTensorNpz<'_>) -> Resul
     if let Some(search_root_value) = shard.search_root_value {
         start_file(&mut zip, "search_root_value.npy", shard.compression)?;
         write_f32_npy(&mut zip, search_root_value, &[search_root_value.len()])?;
+    }
+    if let Some(exact_endgame) = shard.exact_endgame {
+        start_file(&mut zip, "exact_endgame.npy", shard.compression)?;
+        write_u8_npy(&mut zip, exact_endgame, &[exact_endgame.len()])?;
     }
 
     zip.finish()?;

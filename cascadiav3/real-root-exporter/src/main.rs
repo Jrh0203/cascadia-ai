@@ -8,10 +8,10 @@ mod npz_writer;
 
 use std::fs::File;
 use std::io::{BufRead, BufWriter, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 use cascadia_game::{
@@ -29,7 +29,7 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
 use feature_tensors::{
-    EXPERT_SHARD_VERSION, EXPERT_SHARD_VERSION_V2, ExpertTensorShardData, PUBLIC_TOKEN_FEATURE_DIM,
+    EXPERT_SHARD_VERSION, EXPERT_SHARD_VERSION_V3, ExpertTensorShardData, PUBLIC_TOKEN_FEATURE_DIM,
     SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM, SHARD_VERSION, TensorShardData,
 };
 use model_bridge::{
@@ -41,7 +41,7 @@ use npz_writer::NpzCompression;
 const SCHEMA_ID: &str = "cascadiav3.pre_gpu.v0";
 const EXPERT_ROOT_SCHEMA_ID: &str = "cascadiav3.expert_root.v1";
 const EXPERT_TENSOR_SCHEMA_ID: &str = "cascadiav3.expert_tensor_shard.v1";
-const EXPERT_TENSOR_SCHEMA_ID_V2: &str = "cascadiav3.expert_tensor_shard.v2";
+const EXPERT_TENSOR_SCHEMA_ID_V3: &str = "cascadiav3.expert_tensor_shard.v3";
 const GREEDY_TENSOR_SCHEMA_ID: &str = "greedy_policy_tensor_shard_v1";
 const ROOT_REPLAY_SCHEMA_ID: &str = "cascadiav3.root_replay.v1";
 const RULESET_ID: &str = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09";
@@ -73,6 +73,7 @@ struct Args {
     allow_model_fallback: bool,
     model_service: Option<String>,
     model_manifest: Option<PathBuf>,
+    source_revision: Option<String>,
     model_timeout_ms: u64,
     rollout_determinize: bool,
     gumbel_n_simulations: usize,
@@ -340,6 +341,7 @@ fn parse_args() -> Result<Args> {
         allow_model_fallback: false,
         model_service: None,
         model_manifest: None,
+        source_revision: None,
         model_timeout_ms: 10_000,
         rollout_determinize: false,
         gumbel_n_simulations: 64,
@@ -478,6 +480,7 @@ fn parse_args() -> Result<Args> {
             "--rollout-determinize" => args.rollout_determinize = true,
             "--model-service" => args.model_service = Some(value()?),
             "--model-manifest" => args.model_manifest = Some(PathBuf::from(value()?)),
+            "--source-revision" => args.source_revision = Some(value()?),
             "--model-timeout-ms" => {
                 args.model_timeout_ms = value()?.parse().context("invalid --model-timeout-ms")?
             }
@@ -591,6 +594,14 @@ fn parse_args() -> Result<Args> {
             "real model service use requires --model-manifest unless --allow-model-fallback is set"
         );
     }
+    if args.mode == Mode::GumbelSelfplayTensorCorpus
+        && args
+            .source_revision
+            .as_deref()
+            .map_or(true, |revision| revision.trim().is_empty())
+    {
+        bail!("--gumbel-selfplay-tensor-corpus requires non-empty --source-revision");
+    }
     if let Some(threads) = args.rayon_threads {
         if threads == 0 {
             bail!("--rayon-threads must be positive");
@@ -635,6 +646,8 @@ Options:
   --model-service <cmd>    Python JSONL stdio model service command for real
                            model priors. Real use requires --model-manifest.
   --model-manifest <path>  Manifest checked before model service use.
+  --source-revision <git>  Exact source revision embedded in generated
+                           Gumbel self-play tensor metadata and manifest.
   --model-timeout-ms <n>   Model service request timeout [10000].
   --validate-expert-reconstruction
                            Rebuild expert roots from seed plus replay prefix
@@ -671,9 +684,9 @@ Options:
                            --gumbel-benchmark-batch.
   --gumbel-selfplay-tensor-corpus
                            All-seat Gumbel self-play; every visited root is
-                           exported as a v2 expert tensor record with
-                           completed-Q targets, improved policy, and real
-                           final-outcome value labels.
+                           exported as a v3 expert tensor record with
+                           completed-Q targets, improved policy, explicit
+                           exact-endgame flags, and real final outcomes.
   --gumbel-n-simulations <n>
                            Total simulation budget per decision [64].
   --gumbel-top-m <n>       Gumbel top-m root candidates [16].
@@ -1787,12 +1800,13 @@ fn export_expert_tensor_corpus(args: &Args) -> Result<usize> {
             score_decomposition: &shard.score_decomposition,
             improved_policy: None,
             search_root_value: None,
+            exact_endgame: None,
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
     )?;
     let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -1875,12 +1889,13 @@ fn export_greedy_expert_tensor_corpus(args: &Args) -> Result<usize> {
             score_decomposition: &shard.score_decomposition,
             improved_policy: None,
             search_root_value: None,
+            exact_endgame: None,
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
     )?;
     let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -1986,12 +2001,13 @@ fn export_greedy_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usi
             score_decomposition: &shard.score_decomposition,
             improved_policy: None,
             search_root_value: None,
+            exact_endgame: None,
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
     )?;
     let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -2108,12 +2124,13 @@ fn export_model_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usiz
             score_decomposition: &shard.score_decomposition,
             improved_policy: None,
             search_root_value: None,
+            exact_endgame: None,
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
     )?;
     let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -3170,6 +3187,7 @@ fn gumbel_selfplay_root_record(
         "selected_action": selected_action_id,
         "improved_policy": result.improved_policy,
         "search_root_value": result.root_value,
+        "exact_endgame": exact_endgame,
         "chance_samples": [],
         // Outcome labels are placeholders until the game finishes; see
         // backfill_final_outcome.
@@ -3283,6 +3301,13 @@ fn play_gumbel_selfplay_seed(
 }
 
 fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
+    if args
+        .source_revision
+        .as_deref()
+        .map_or(true, |revision| revision.trim().is_empty())
+    {
+        bail!("gumbel selfplay tensor export requires non-empty source_revision");
+    }
     if args.out.as_os_str() == "-" {
         bail!("--gumbel-selfplay-tensor-corpus requires a file --out path");
     }
@@ -3388,10 +3413,19 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
             shard.record_count
         );
     }
+    if shard.exact_endgame_field_records != shard.record_count {
+        bail!(
+            "gumbel selfplay shard has {} explicit exact-endgame flags for {} records",
+            shard.exact_endgame_field_records,
+            shard.record_count
+        );
+    }
     let mut metadata = expert_tensor_shard_metadata(args, &shard);
+    let teacher_model = model_artifact_identity(args)?;
+    let generator = generator_artifact_identity()?;
     if let Some(object) = metadata.as_object_mut() {
-        object.insert("version".to_owned(), json!(EXPERT_SHARD_VERSION_V2));
-        object.insert("schema_id".to_owned(), json!(EXPERT_TENSOR_SCHEMA_ID_V2));
+        object.insert("version".to_owned(), json!(EXPERT_SHARD_VERSION_V3));
+        object.insert("schema_id".to_owned(), json!(EXPERT_TENSOR_SCHEMA_ID_V3));
         object.insert("source".to_owned(), json!("gumbel_selfplay_tensor_corpus"));
         object.insert(
             "source_paths".to_owned(),
@@ -3412,11 +3446,47 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                 "top_m": args.gumbel_top_m,
                 "depth_rounds": args.gumbel_depth_rounds,
                 "determinization_samples": args.gumbel_determinizations,
+                "market_decision_samples": args.gumbel_market_decision_samples,
+                "exact_endgame_turns": args.gumbel_exact_endgame_turns,
                 "rollout_blend_weight": args.gumbel_blend_weight,
                 "exploration": args.gumbel_exploration,
+                "peek": args.gumbel_peek,
+                "table_total": args.gumbel_table_total,
+                "table_native_q": args.gumbel_table_native_q,
+                "leaf_softmix": args.gumbel_leaf_softmix,
+                "tta": args.gumbel_tta,
                 "k_interior": args.k_interior,
                 "max_root_actions": args.gumbel_max_root_actions,
                 "root_menu": args.gumbel_root_menu,
+            }),
+        );
+        object.insert("teacher_model".to_owned(), teacher_model);
+        object.insert("generator".to_owned(), generator);
+        object.insert(
+            "execution".to_owned(),
+            json!({
+                "rayon_threads_requested": args.rayon_threads,
+                "rayon_current_num_threads": rayon::current_num_threads(),
+                "model_sessions_requested": args.model_sessions,
+                "shared_model_session": args.shared_model_session,
+                "seed_scheduler": "dynamic_atomic_queue",
+                "model_session_topology": if args.shared_model_session {
+                    "one_shared_bridge_with_worker_clients"
+                } else {
+                    "one_persistent_bridge_per_seed_worker"
+                },
+            }),
+        );
+        object.insert(
+            "created_unix_seconds".to_owned(),
+            json!(created_unix_seconds()?),
+        );
+        object.insert(
+            "scientific_eligibility".to_owned(),
+            json!(if args.model_manifest.is_some() && !args.allow_model_fallback {
+                "gumbel_selfplay_expert_iteration"
+            } else {
+                "audit_only_unverified_or_uniform_model_fallback"
             }),
         );
     }
@@ -3424,7 +3494,7 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     npz_writer::write_expert_tensor_npz(
         &args.out,
         npz_writer::ExpertTensorNpz {
-            version: feature_tensors::EXPERT_SHARD_VERSION_V2,
+            version: feature_tensors::EXPERT_SHARD_VERSION_V3,
             metadata_json: &metadata_json,
             tokens_f16_bits: &shard.tokens_f16_bits,
             token_shape: [shard.total_token_count, PUBLIC_TOKEN_FEATURE_DIM],
@@ -3453,12 +3523,13 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
             score_decomposition: &shard.score_decomposition,
             improved_policy: Some(&shard.improved_policy),
             search_root_value: Some(&shard.search_root_value),
+            exact_endgame: Some(&shard.exact_endgame),
             record_count: shard.record_count,
             compression: args.tensor_compression,
         },
     )?;
     let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -5247,10 +5318,165 @@ fn tensor_shard_metadata(args: &Args, shard: &TensorShardData) -> Value {
     })
 }
 
+fn expert_tensor_mode_contract(args: &Args) -> (&'static str, &'static str, &'static str) {
+    match args.mode {
+        Mode::GreedyExpertTensorCorpus => (
+            "greedy_expert_tensor_corpus",
+            "behavior_clone_pretraining",
+            "Rust-native packed expert tensor shard from greedy self-play; relation edges are present and labels are one-step greedy behavior-cloning targets.",
+        ),
+        Mode::GreedyStateSearchBootstrapTensorCorpus => (
+            "greedy_state_search_bootstrap_tensor_corpus",
+            "expert_iteration_bootstrap",
+            "Rust-native packed expert tensor shard from greedy-state roots; retained greedy-ranked actions are labeled by sampled greedy rollout means while real trajectories advance by the greedy action.",
+        ),
+        Mode::ModelStateSearchBootstrapTensorCorpus => (
+            "model_state_search_bootstrap_tensor_corpus",
+            "expert_iteration_model_state_bootstrap",
+            "Rust-native packed expert tensor shard from model-state roots; retained greedy-ranked actions are labeled by sampled greedy rollout means while real trajectories advance by model derived-Q or model prior.",
+        ),
+        Mode::GumbelSelfplayTensorCorpus => (
+            "gumbel_selfplay_tensor_corpus",
+            "gumbel_selfplay_expert_iteration",
+            "Rust-native packed v3 expert tensor shard from all-seat Gumbel self-play over determinized hidden states; per-action targets are search completed-Q values, improved_policy is the Gumbel policy-improvement target, exact_endgame is explicit per root, and value labels are real terminal outcomes.",
+        ),
+        _ => (
+            "expert_tensor_corpus",
+            "expert_iteration_bootstrap_tensor_pretraining",
+            "Rust-native packed expert tensor shard; JSONL audit can be generated separately, but trainer scale path reads this NPZ directly.",
+        ),
+    }
+}
+
+fn created_unix_seconds() -> Result<u64> {
+    Ok(SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .context("system time predates Unix epoch")?
+        .as_secs())
+}
+
+fn file_identity(path: &Path) -> Result<Value> {
+    let metadata = std::fs::metadata(path)
+        .with_context(|| format!("reading artifact metadata {}", path.display()))?;
+    Ok(json!({
+        "path": path.display().to_string(),
+        "bytes": metadata.len(),
+        "sha256": sha256_file_hex(path)?,
+    }))
+}
+
+fn resolve_manifest_weights_path(manifest_path: &Path, raw_weights: &str) -> Result<PathBuf> {
+    let raw_path = PathBuf::from(raw_weights);
+    if raw_path.is_absolute() {
+        return Ok(raw_path);
+    }
+    let cwd = std::env::current_dir().context("reading current directory")?;
+    let mut candidates = vec![cwd.join(&raw_path)];
+    for ancestor in manifest_path.ancestors() {
+        if ancestor.file_name().and_then(|name| name.to_str()) == Some("cascadiav3") {
+            if let Some(project_root) = ancestor.parent() {
+                let candidate = project_root.join(&raw_path);
+                if !candidates.contains(&candidate) {
+                    candidates.push(candidate);
+                }
+            }
+        }
+    }
+    if let Some(parent) = manifest_path.parent() {
+        let candidate = parent.join(&raw_path);
+        if !candidates.contains(&candidate) {
+            candidates.push(candidate);
+        }
+    }
+    candidates
+        .iter()
+        .find(|candidate| candidate.exists())
+        .cloned()
+        .with_context(|| {
+            format!(
+                "checkpoint weights {raw_weights:?} not found; tried {}",
+                candidates
+                    .iter()
+                    .map(|candidate| candidate.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        })
+}
+
+fn model_artifact_identity(args: &Args) -> Result<Value> {
+    let Some(raw_manifest_path) = args.model_manifest.as_ref() else {
+        return Ok(json!({
+            "kind": "unverified_or_uniform_fallback",
+            "allow_model_fallback": args.allow_model_fallback,
+            "service": args.model_service,
+            "manifest": null,
+            "weights": null,
+        }));
+    };
+    let manifest_path = if raw_manifest_path.is_absolute() {
+        raw_manifest_path.clone()
+    } else {
+        std::env::current_dir()
+            .context("reading current directory")?
+            .join(raw_manifest_path)
+    };
+    let manifest_bytes = std::fs::read(&manifest_path)
+        .with_context(|| format!("reading model manifest {}", manifest_path.display()))?;
+    let manifest: Value = serde_json::from_slice(&manifest_bytes)
+        .with_context(|| format!("parsing model manifest {}", manifest_path.display()))?;
+    let raw_weights = manifest
+        .get("weights")
+        .and_then(Value::as_str)
+        .context("model manifest is missing string weights")?;
+    let weights_path = resolve_manifest_weights_path(&manifest_path, raw_weights)?;
+    Ok(json!({
+        "kind": "checkpoint_manifest_and_weights",
+        "allow_model_fallback": args.allow_model_fallback,
+        "service": args.model_service,
+        "manifest": file_identity(&manifest_path)?,
+        "weights": file_identity(&weights_path)?,
+        "checkpoint_tag": manifest.get("checkpoint_tag"),
+        "step": manifest.get("step"),
+        "model_name": manifest.pointer("/config/model_name"),
+        "model_size": manifest.pointer("/config/model_size"),
+        "q_quantiles": manifest.pointer("/config/q_quantiles"),
+    }))
+}
+
+fn generator_artifact_identity() -> Result<Value> {
+    let executable = std::env::current_exe().context("resolving exporter executable")?;
+    let mut identity = file_identity(&executable)?;
+    identity["kind"] = json!("cascadiav3-real-root-exporter");
+    Ok(identity)
+}
+
 fn expert_tensor_shard_metadata(args: &Args, shard: &ExpertTensorShardData) -> Value {
+    let (mode_name, _, _) = expert_tensor_mode_contract(args);
+    let mut targets = vec![
+        "selected_action_index",
+        "per_action_Q",
+        "per_action_score_to_go",
+        "per_action_Q_valid",
+        "priors",
+        "visits",
+        "per_action_Q_variance",
+        "per_action_Q_count",
+        "per_action_truncated_count",
+        "exact_afterstate_score_active",
+        "final_score_vector",
+        "rank_vector",
+        "score_decomposition",
+    ];
+    if args.mode == Mode::GumbelSelfplayTensorCorpus {
+        targets.extend(["improved_policy", "search_root_value", "exact_endgame"]);
+    }
     json!({
         "version": EXPERT_SHARD_VERSION,
         "schema_id": EXPERT_TENSOR_SCHEMA_ID,
+        "ruleset_id": RULESET_ID,
+        "mode": mode_name,
+        "source_revision": args.source_revision,
         "source": "expert_root_chance_mcts_dry_run_tensor_corpus",
         "source_paths": ["rust-native:expert_tensor_corpus"],
         "format": "npz",
@@ -5274,34 +5500,21 @@ fn expert_tensor_shard_metadata(args: &Args, shard: &ExpertTensorShardData) -> V
         "feature_extractor": "rust:cascadiav3-real-root-exporter",
         "feature_extractor_contract": "public_token_features_v1+semantic_public_token_action_features_v1+sparse_combined_relation_ids_v1",
         "seed_domain": format!(
-            "first_seed={},seed_count={},plies_per_seed={},max_actions={},rollouts_per_action={},rollout_top_k={},mode=expert_tensor_corpus",
+            "first_seed={},seed_count={},plies_per_seed={},max_actions={},rollouts_per_action={},rollout_top_k={},mode={}",
             args.first_seed,
             args.seed_count,
             args.plies_per_seed,
             args.max_actions,
             args.rollouts_per_action,
             args.rollout_top_k,
+            mode_name,
         ),
         "canonical_model_inputs": [
             "public_token_features",
             "semantic_public_token_action_features",
             "sparse_relation_edges"
         ],
-        "canonical_targets": [
-            "selected_action_index",
-            "per_action_Q",
-            "per_action_score_to_go",
-            "per_action_Q_valid",
-            "priors",
-            "visits",
-            "per_action_Q_variance",
-            "per_action_Q_count",
-            "per_action_truncated_count",
-            "exact_afterstate_score_active",
-            "final_score_vector",
-            "rank_vector",
-            "score_decomposition"
-        ],
+        "canonical_targets": targets,
         "omitted_by_design": [
             "raw_legal_action_json",
             "raw_replay_prefix",
@@ -5357,42 +5570,29 @@ fn write_expert_tensor_manifest(
     args: &Args,
     shard: &ExpertTensorShardData,
     checksum: &str,
+    metadata: &Value,
 ) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let (mode_name, scientific_eligibility, notes) = match args.mode {
-        Mode::GreedyExpertTensorCorpus => (
-            "greedy_expert_tensor_corpus",
-            "behavior_clone_pretraining",
-            "Rust-native packed expert tensor shard from greedy self-play; relation edges are present and labels are one-step greedy behavior-cloning targets.",
-        ),
-        Mode::GreedyStateSearchBootstrapTensorCorpus => (
-            "greedy_state_search_bootstrap_tensor_corpus",
-            "expert_iteration_bootstrap",
-            "Rust-native packed expert tensor shard from greedy-state roots; retained greedy-ranked actions are labeled by sampled greedy rollout means while real trajectories advance by the greedy action.",
-        ),
-        Mode::ModelStateSearchBootstrapTensorCorpus => (
-            "model_state_search_bootstrap_tensor_corpus",
-            "expert_iteration_model_state_bootstrap",
-            "Rust-native packed expert tensor shard from model-state roots; retained greedy-ranked actions are labeled by sampled greedy rollout means while real trajectories advance by model derived-Q or model prior.",
-        ),
-        Mode::GumbelSelfplayTensorCorpus => (
-            "gumbel_selfplay_tensor_corpus",
-            "gumbel_selfplay_expert_iteration",
-            "Rust-native packed v2 expert tensor shard from all-seat Gumbel self-play over determinized hidden states; per-action targets are search completed-Q values, improved_policy is the Gumbel policy-improvement target, and value labels are real terminal outcomes.",
-        ),
-        _ => (
-            "expert_tensor_corpus",
-            "expert_iteration_bootstrap_tensor_pretraining",
-            "Rust-native packed expert tensor shard; JSONL audit can be generated separately, but trainer scale path reads this NPZ directly.",
-        ),
-    };
+    let (mode_name, default_scientific_eligibility, notes) = expert_tensor_mode_contract(args);
+    let scientific_eligibility =
+        if args.mode == Mode::GumbelSelfplayTensorCorpus
+            && (args.model_manifest.is_none() || args.allow_model_fallback)
+        {
+            "audit_only_unverified_or_uniform_model_fallback"
+        } else {
+            default_scientific_eligibility
+        };
     let (schema_id, version) = if args.mode == Mode::GumbelSelfplayTensorCorpus {
-        (EXPERT_TENSOR_SCHEMA_ID_V2, EXPERT_SHARD_VERSION_V2)
+        (EXPERT_TENSOR_SCHEMA_ID_V3, EXPERT_SHARD_VERSION_V3)
     } else {
         (EXPERT_TENSOR_SCHEMA_ID, EXPERT_SHARD_VERSION)
     };
+    let manifest_created_unix_seconds = metadata
+        .get("created_unix_seconds")
+        .and_then(Value::as_u64)
+        .map_or_else(created_unix_seconds, Ok)?;
     let manifest = json!({
         "schema_id": schema_id,
         "version": version,
@@ -5410,7 +5610,7 @@ fn write_expert_tensor_manifest(
         "record_count": shard.record_count,
         "checksum": checksum,
         "scientific_eligibility": scientific_eligibility,
-        "created_at_utc": "2026-06-30T00:00:00+00:00",
+        "created_unix_seconds": manifest_created_unix_seconds,
         "format": "npz",
         "feature_dtype": "float16",
         "target_dtype": "float32",
@@ -5425,6 +5625,7 @@ fn write_expert_tensor_manifest(
         "max_action_count": shard.max_action_count,
         "max_relation_edge_count": shard.max_relation_edge_count,
         "rayon_current_num_threads": rayon::current_num_threads(),
+        "metadata": metadata,
         "notes": notes,
     });
     std::fs::write(path, format!("{}\n", canonical_json(&manifest)))?;
@@ -5493,7 +5694,7 @@ fn binary_hash() -> String {
         .unwrap_or_else(|| "sha256:unavailable".to_owned())
 }
 
-fn sha256_file_hex(path: &PathBuf) -> Result<String> {
+fn sha256_file_hex(path: &Path) -> Result<String> {
     let mut file = File::open(path)?;
     let mut digest = Sha256::new();
     let mut buffer = [0_u8; 1024 * 1024];
@@ -5569,6 +5770,7 @@ mod tests {
             allow_model_fallback: true,
             model_service: None,
             model_manifest: None,
+            source_revision: None,
             model_timeout_ms: 1_000,
             rollout_determinize: false,
             gumbel_n_simulations: 8,
@@ -5689,10 +5891,30 @@ mod tests {
 
     fn gumbel_test_args(tempdir: &std::path::Path) -> Args {
         let mut args = test_args();
+        let weights_path = tempdir.join("mock.weights");
+        std::fs::write(&weights_path, b"deterministic mock weights").expect("mock weights");
+        let model_manifest_path = tempdir.join("mock.manifest.json");
+        std::fs::write(
+            &model_manifest_path,
+            canonical_json(&json!({
+                "checkpoint_tag": "mock-checkpoint",
+                "step": 17,
+                "config": {
+                    "model_name": "Mock-CascadiaFormer",
+                    "model_size": "test",
+                    "q_quantiles": 1,
+                },
+                "weights": "mock.weights",
+            })),
+        )
+        .expect("mock manifest");
         args.mode = Mode::GumbelSelfplayTensorCorpus;
         args.out = tempdir.join("gumbel_tiny.npz");
         args.manifest = tempdir.join("gumbel_tiny_manifest.json");
         args.model_service = Some(mock_bridge_command());
+        args.model_manifest = Some(model_manifest_path);
+        args.allow_model_fallback = false;
+        args.source_revision = Some("test-source-revision".to_owned());
         args.plies_per_seed = 3;
         args.gumbel_n_simulations = 4;
         args.gumbel_top_m = 2;
@@ -5707,7 +5929,7 @@ mod tests {
     }
 
     #[test]
-    fn gumbel_selfplay_records_roundtrip_into_v2_shard() {
+    fn gumbel_selfplay_records_roundtrip_into_v3_shard() {
         let tempdir =
             std::env::temp_dir().join(format!("cascadia-gumbel-test-{}", std::process::id()));
         std::fs::create_dir_all(&tempdir).expect("tempdir");
@@ -5750,12 +5972,14 @@ mod tests {
             }
         }
 
-        let shard = ExpertTensorShardData::from_records(&records).expect("v2 shard");
+        let shard = ExpertTensorShardData::from_records(&records).expect("v3 shard");
         assert_eq!(shard.improved_policy_records, shard.record_count);
         assert_eq!(shard.improved_policy.len(), shard.total_action_count);
         assert_eq!(shard.search_root_value.len(), shard.record_count);
+        assert_eq!(shard.exact_endgame_field_records, shard.record_count);
+        assert_eq!(shard.exact_endgame.len(), shard.record_count);
 
-        // Full export path writes a v2 npz + manifest.
+        // Full export path writes a v3 npz + manifest.
         let written = export_gumbel_selfplay_tensor_corpus(&args).expect("export");
         assert!(written > 0);
         assert!(args.out.exists());
@@ -5776,12 +6000,73 @@ mod tests {
         .expect("manifest json");
         assert_eq!(
             manifest["schema_id"].as_str(),
-            Some(EXPERT_TENSOR_SCHEMA_ID_V2)
+            Some(EXPERT_TENSOR_SCHEMA_ID_V3)
         );
         assert_eq!(
             manifest["version"].as_str(),
-            Some(feature_tensors::EXPERT_SHARD_VERSION_V2)
+            Some(feature_tensors::EXPERT_SHARD_VERSION_V3)
         );
+        assert!(manifest["created_unix_seconds"].as_u64().unwrap() > 0);
+        assert_eq!(
+            manifest["created_unix_seconds"],
+            manifest["metadata"]["created_unix_seconds"]
+        );
+        assert!(manifest.get("created_at_utc").is_none());
+        assert_eq!(manifest["metadata"]["ruleset_id"], RULESET_ID);
+        assert_eq!(
+            manifest["metadata"]["source_revision"],
+            "test-source-revision"
+        );
+        assert_eq!(
+            manifest["metadata"]["search"]["market_decision_samples"],
+            args.gumbel_market_decision_samples
+        );
+        assert_eq!(
+            manifest["metadata"]["search"]["exact_endgame_turns"],
+            args.gumbel_exact_endgame_turns
+        );
+        assert_eq!(
+            manifest["metadata"]["execution"]["seed_scheduler"],
+            "dynamic_atomic_queue"
+        );
+        assert_eq!(
+            manifest["metadata"]["teacher_model"]["checkpoint_tag"],
+            "mock-checkpoint"
+        );
+        assert_eq!(manifest["metadata"]["teacher_model"]["step"], 17);
+        assert_eq!(
+            manifest["metadata"]["teacher_model"]["weights"]["sha256"],
+            sha256_file_hex(&tempdir.join("mock.weights")).unwrap()
+        );
+        assert!(
+            manifest["metadata"]["generator"]["sha256"]
+                .as_str()
+                .map_or(false, |hash| hash.len() == 64)
+        );
+        assert!(
+            manifest["metadata"]["canonical_targets"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|target| target == "exact_endgame")
+        );
+        let archive = File::open(&args.out).expect("npz readable");
+        let mut zip = zip::ZipArchive::new(archive).expect("npz zip");
+        assert!(zip.by_name("exact_endgame.npy").is_ok());
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
+    fn gumbel_selfplay_tensor_export_requires_source_revision() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-gumbel-source-revision-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let mut args = gumbel_test_args(&tempdir);
+        args.source_revision = Some("   ".to_owned());
+        let error = export_gumbel_selfplay_tensor_corpus(&args).unwrap_err();
+        assert!(error.to_string().contains("source_revision"));
         let _ = std::fs::remove_dir_all(&tempdir);
     }
 

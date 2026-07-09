@@ -20,6 +20,7 @@ EXPERT_ROOT_SCHEMA_ID = "cascadiav3.expert_root.v1"
 GREEDY_TENSOR_SHARD_SCHEMA_ID = "greedy_policy_tensor_shard_v1"
 EXPERT_TENSOR_SHARD_SCHEMA_ID = "cascadiav3.expert_tensor_shard.v1"
 EXPERT_TENSOR_SHARD_SCHEMA_ID_V2 = "cascadiav3.expert_tensor_shard.v2"
+EXPERT_TENSOR_SHARD_SCHEMA_ID_V3 = "cascadiav3.expert_tensor_shard.v3"
 
 # Backward-compatible name used by the original scaffold and tests.
 SCHEMA_ID = PRE_GPU_SCHEMA_ID
@@ -95,6 +96,17 @@ SCHEMA_REGISTRY: dict[str, SchemaDefinition] = {
             "cascadiav3.torch_train_cascadiaformer",
         ),
     ),
+    EXPERT_TENSOR_SHARD_SCHEMA_ID_V3: SchemaDefinition(
+        schema_id=EXPERT_TENSOR_SHARD_SCHEMA_ID_V3,
+        artifact_kind="expert_tensor_shard",
+        version=3,
+        status="active",
+        description="v2 Gumbel self-play shard plus an explicit per-record exact_endgame flag and complete generation provenance in metadata.",
+        compatible_readers=(
+            "cascadiav3.expert_tensor_shards",
+            "cascadiav3.torch_train_cascadiaformer",
+        ),
+    ),
 }
 
 REPLAY_JSONL_SCHEMA_IDS = {PRE_GPU_SCHEMA_ID, EXPERT_ROOT_SCHEMA_ID}
@@ -102,6 +114,7 @@ TENSOR_SCHEMA_IDS = {
     GREEDY_TENSOR_SHARD_SCHEMA_ID,
     EXPERT_TENSOR_SHARD_SCHEMA_ID,
     EXPERT_TENSOR_SHARD_SCHEMA_ID_V2,
+    EXPERT_TENSOR_SHARD_SCHEMA_ID_V3,
 }
 
 
@@ -134,7 +147,12 @@ def registry_report(*, include_legacy: bool = True, include_expert: bool = True)
             continue
         if (
             schema_id
-            in {EXPERT_ROOT_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID_V2}
+            in {
+                EXPERT_ROOT_SCHEMA_ID,
+                EXPERT_TENSOR_SHARD_SCHEMA_ID,
+                EXPERT_TENSOR_SHARD_SCHEMA_ID_V2,
+                EXPERT_TENSOR_SHARD_SCHEMA_ID_V3,
+            }
             and not include_expert
         ):
             continue
@@ -149,7 +167,12 @@ def registry_report(*, include_legacy: bool = True, include_expert: bool = True)
     if include_expert:
         missing.extend(
             schema_id
-            for schema_id in (EXPERT_ROOT_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID)
+            for schema_id in (
+                EXPERT_ROOT_SCHEMA_ID,
+                EXPERT_TENSOR_SHARD_SCHEMA_ID,
+                EXPERT_TENSOR_SHARD_SCHEMA_ID_V2,
+                EXPERT_TENSOR_SHARD_SCHEMA_ID_V3,
+            )
             if schema_id not in schema_ids
         )
     return {

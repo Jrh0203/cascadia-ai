@@ -100,9 +100,11 @@ Gumbel exporter modes (see `--help`):
   seed coverage. Reports hash the exporter, manifest, and weights, and record
   whether execution used subprocess slices or the shared batch runner plus
   its requested jobs, parallel-game cap, bridge topology, and device.
-- `--gumbel-selfplay-tensor-corpus`: schema-v2 self-play training shards with
-  completed-Q targets, improved-policy soft targets, and real-outcome value
-  labels.
+- `--gumbel-selfplay-tensor-corpus`: schema-v3 self-play training shards with
+  completed-Q targets, improved-policy soft targets, explicit per-root
+  exact-endgame flags, and real-outcome value labels. New generation requires
+  `--source-revision`; metadata binds the ruleset, full search/execution
+  contract, exporter binary, and teacher manifest/weights by SHA-256.
 - `--gumbel-exact-endgame-turns 1`: enumerate the complete legal menu and
   choose by exact own final score on each seat's last personal turn. The
   model and simulations are bypassed for those four decisions; optional
@@ -127,6 +129,10 @@ Gumbel exporter modes (see `--help`):
   direct derived-Q action flips for `q25`, `q50`, and `q75` after monotone
   rearrangement. The probe is engineering evidence only; gameplay batteries
   still decide policy strength.
+- `python -m cascadiav3.torch_pairwise_label_audit`: audit v2/v3 Gumbel shards
+  for valid pair volume, absolute margins, and variance-aware pair SNR. It
+  refuses v1 behavior-clone tensors and never treats a one-sample zero
+  variance as confidence. This is label-feasibility evidence, not gameplay.
 - `python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark --q-risk-mode
   {mean,q25,q50,q75}`: serve a distributional-Q checkpoint with the selected
   statistic. `mean` is the default and preserves prior behavior. Non-mean

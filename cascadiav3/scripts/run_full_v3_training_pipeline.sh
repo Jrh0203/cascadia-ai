@@ -7,6 +7,7 @@ SSH_PORT="${SSH_PORT:-2222}"
 REMOTE_ROOT="${REMOTE_ROOT:-/home/john0/cascadia}"
 REMOTE_VENV="${REMOTE_VENV:-/home/john0/venvs/torch}"
 LOCAL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SOURCE_REVISION="${SOURCE_REVISION:-$(git -C "$LOCAL_ROOT" rev-parse HEAD)}"
 RSYNC_SSH="ssh -p ${SSH_PORT}"
 
 JOB_SLUG="${JOB_SLUG:-full_v3_training_pipeline}"
@@ -37,6 +38,7 @@ GUMBEL_TOP_M="${GUMBEL_TOP_M:-16}"
 GUMBEL_DEPTH_ROUNDS="${GUMBEL_DEPTH_ROUNDS:-1}"
 GUMBEL_DETERMINIZATIONS="${GUMBEL_DETERMINIZATIONS:-4}"
 GUMBEL_MARKET_DECISION_SAMPLES="${GUMBEL_MARKET_DECISION_SAMPLES:-8}"
+GUMBEL_EXACT_ENDGAME_TURNS="${GUMBEL_EXACT_ENDGAME_TURNS:-0}"
 GUMBEL_BLEND_WEIGHT="${GUMBEL_BLEND_WEIGHT:-0.5}"
 GUMBEL_K_INTERIOR="${GUMBEL_K_INTERIOR:-16}"
 GUMBEL_MAX_ROOT_ACTIONS="${GUMBEL_MAX_ROOT_ACTIONS:-}"
@@ -95,6 +97,14 @@ RUNBOOK_REPORT="${RUNBOOK_REPORT:-cascadiav3/reports/full_v3_${PROFILE}_runbook.
 
 sync_sources() {
   cd "$LOCAL_ROOT"
+  local source_status
+  source_status="$(git status --porcelain --untracked-files=all -- \
+    Cargo.toml Cargo.lock crates/cascadia-game crates/cascadia-sim cascadiav3 docs/v3)"
+  if [ -n "$source_status" ]; then
+    echo "refusing to sync a dirty training source tree for revision $SOURCE_REVISION" >&2
+    echo "$source_status" >&2
+    return 1
+  fi
   ssh -p "$SSH_PORT" "$REMOTE" "mkdir -p '$REMOTE_ROOT/crates' '$REMOTE_ROOT/docs' '$REMOTE_LOG_DIR'"
   rsync -az -e "$RSYNC_SSH" Cargo.toml Cargo.lock "$REMOTE:$REMOTE_ROOT/"
   rsync -az -e "$RSYNC_SSH" --delete --exclude 'target/' \
@@ -132,6 +142,7 @@ fi
 
 echo "[full-v3] started \$(date -Is)"
 echo "[full-v3] profile=$PROFILE train_seeds=$TRAIN_SEED_COUNT val_seeds=$VAL_SEED_COUNT plies=$PLIES_PER_SEED rollouts_per_action=$ROLLOUTS_PER_ACTION rollout_top_k=$ROLLOUT_TOP_K expert_tensor_mode=$EXPERT_TENSOR_MODE"
+echo "[full-v3] source_revision=$SOURCE_REVISION"
 echo "[full-v3] model_size=$MODEL_SIZE steps=$TRAIN_STEPS batch_size=$BATCH_SIZE grad_accum=$GRAD_ACCUM lr=$LR val_max_batches=$VAL_MAX_BATCHES eval_every_steps=$EVAL_EVERY_STEPS min_selection_greedy_top1=$MIN_SELECTION_GREEDY_TOP1 early_stop_guard_failures=$EARLY_STOP_SELECTION_GUARD_FAILURES early_stop_after_step=$EARLY_STOP_AFTER_STEP filter_top_k=$FILTER_TOP_K filter_mode=$FILTER_MODE objective=$OBJECTIVE selection=$SELECTION_MODE:$SELECTION_METRIC"
 echo "[full-v3] note: phase0 writes packed expert_tensor_shard.v1 NPZ directly, filters to top-K, then materializes fixed relation-tail tensors for GPU training"
 echo "[full-v3] init_manifest=$INIT_MANIFEST"
@@ -214,6 +225,8 @@ generate_tensor_roots() {
         mode_args+=(--gumbel-depth-rounds '$GUMBEL_DEPTH_ROUNDS')
         mode_args+=(--gumbel-determinizations '$GUMBEL_DETERMINIZATIONS')
         mode_args+=(--gumbel-market-decision-samples '$GUMBEL_MARKET_DECISION_SAMPLES')
+        mode_args+=(--gumbel-exact-endgame-turns '$GUMBEL_EXACT_ENDGAME_TURNS')
+        mode_args+=(--source-revision '$SOURCE_REVISION')
         mode_args+=(--gumbel-blend-weight '$GUMBEL_BLEND_WEIGHT')
         mode_args+=(--k-interior '$GUMBEL_K_INTERIOR')
         if [ -n '$GUMBEL_MAX_ROOT_ACTIONS' ]; then
@@ -397,6 +410,7 @@ report = {
     "status": "pass",
     "profile": "$PROFILE",
     "runbook": "docs/v3/TRAINING_PIPELINE.md",
+    "source_revision": "$SOURCE_REVISION",
     "scale_note": "phase0 bootstrap uses packed expert_tensor_shard.v1 NPZ; JSONL is used only for tiny audit gates",
     "train_roots": train_manifest,
     "val_roots": val_manifest,

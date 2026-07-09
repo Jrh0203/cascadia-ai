@@ -65,7 +65,7 @@ Gumbel AlphaZero-style root search with neural leaf values:
   in **one batched model evaluation** (`eval_batch` protocol), moving search
   cost from CPU rollouts to the GPU.
 
-### Data: `--gumbel-selfplay-tensor-corpus` (schema v2)
+### Data: `--gumbel-selfplay-tensor-corpus` (schema v3)
 
 All four seats play via Gumbel search with root exploration noise; **every
 visited root is a training record** (the search that plays the game produces
@@ -75,12 +75,17 @@ the labels — no separate labeling pass):
   exact afterstate, `q_valid` = visits > 0, `per_action_Q_variance` =
   per-action simulation variance;
 - new `improved_policy` (soft policy target) and `search_root_value`;
+- explicit per-record `exact_endgame`; never infer exact rows from visits or a
+  one-hot policy;
 - `final_score_vector` / `rank_vector` / `score_decomposition` are backfilled
   from the **actual game outcome** after terminal — real-outcome value
   targets replace rollout means.
-- Schema `cascadiav3.expert_tensor_shard.v2`; v1 modes unchanged and byte
-  identical (golden test); filter/relation-tail tools pass the new fields
-  through (retained improved-policy slices are renormalized).
+- Schema `cascadiav3.expert_tensor_shard.v3`; v1/v2 readers remain available
+  for historical shards. New generation requires `--source-revision` and
+  records ruleset, all search/execution switches, exporter SHA, and teacher
+  manifest/weights SHA. Filter/relation-tail tools preserve the fields
+  (retained improved-policy slices are renormalized). Unverified/fallback v3
+  teachers are audit-only and rejected by the training corpus loader.
 
 ### Training: `--objective gumbel-selfplay`
 
