@@ -3493,3 +3493,34 @@ hash is `24ca921ec767b442acbc5495c9fbacd8790beb0346c94b795625aaf8194e2b7a`.
 The final pre-deploy gate also passed the complete 217-test Rust workspace,
 104 Python tests (45 fixture-dependent skips), 109 cluster tests, web lint,
 all 7 web tests, and the production web build.
+
+## 2026-07-09 01:23 — Corrected-rules rebaseline launched on john0
+
+Committed and pushed the rules correction, report provenance gates, and
+idempotent rebaseline launcher. Deployed source revision
+`863c696dd41e5b4c7e26385851201072a38c22f4` to john0 and verified the rules
+constants in place.
+
+john0 had Rust but no system C compiler or libc development package, and no
+passwordless sudo. The first launch therefore failed loudly during the release
+rebuild before creating game data. The permanent target-build fix pins Zig
+`0.13.0` in the user account, verifies the official tarball SHA-256
+`d45312e61ebcc48032b77bc4cf7fd6915c11fa16e4aad116b66c9468211230ea`, and
+uses the checked-in `zig-cc-linker.sh` adapter. A clean release rebuild then
+produced a fresh x86-64 Linux binary from the deployed revision.
+
+The corrected job is live as PID `1262885` / PGID `1262878`. Its n16/d2
+one-game smoke passed with ruleset
+`cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09`, exact
+source revision, and `market_decision_samples=8` recorded in the report. The
+ordered 100-game program on fresh seeds `2027070900..2027070999` is:
+
+1. cycle4 no-search policy/q plus greedy baseline;
+2. cycle4 n256/d4;
+3. distq_k8 n256/d4;
+4. cycle4 n1024/d16;
+5. distq_k8 n1024/d16.
+
+The Gumbel legs share identical seeds and policy settings so the scalar versus
+distributional-Q differences remain pairable. No strength or promotion claim
+is valid until the corrected reports finish.

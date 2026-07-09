@@ -21,7 +21,22 @@ corpus, and checkpoint was generated under the forced-refresh policy. Preserve
 them as historical architecture evidence, but do not use them as promotion
 controls. Before resuming EI or a 100-point claim, regenerate greedy,
 no-search, n256/d4, and n1024/d16 baselines with the new rules identity and
-fresh promotion seeds. Any remote job still running old code is legacy-only.
+fresh promotion seeds.
+
+**Live corrected rebaseline on john0 (launched 07-09 01:21 EDT):** PID
+`1262885`, PGID `1262878`, source revision
+`863c696dd41e5b4c7e26385851201072a38c22f4`, seeds `2027070900..2027070999`,
+and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
+the corrected rules ID plus exact source revision. The job is now running the
+100-game greedy/no-search floor, then sequentially runs cycle4 and distq_k8 at
+n256/d4 and n1024/d16 on the same fresh seeds. Log/pid:
+`cascadiav3/logs/rules_20260709_rebaseline.{log,pid}`. Canonical launcher:
+`cascadiav3/scripts/run_rules_20260709_rebaseline.sh`; every completed report
+is reused only when both rules ID and source revision match.
+
+The old forced-refresh EI-1 generation and queued battery were stopped before
+deployment (PGIDs `1225249` and `1228689`). Its 825 partial games/66k roots
+are quarantined as legacy and are not inputs to this campaign.
 
 ## RESUME HERE (07-08 evening — distq EI-1 + fleet5 running overnight)
 
