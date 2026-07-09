@@ -121,6 +121,56 @@ class DistributionalQTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported q risk mode"):
             default_model_service_command(Path("checkpoint.json"), "cpu", "tail")
 
+    def test_gumbel_execution_and_artifact_provenance(self) -> None:
+        import hashlib
+        import json
+        import tempfile
+        from pathlib import Path
+
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
+            execution_provenance,
+            model_artifact_provenance,
+        )
+
+        execution = execution_provenance(
+            batch_runner=True, jobs=4, seed_count=3, device_name="mps"
+        )
+        self.assertEqual(execution["runner"], "gumbel-benchmark-batch")
+        self.assertEqual(execution["parallel_game_cap"], 3)
+        self.assertEqual(execution["maximum_concurrent_bridge_processes"], 1)
+        self.assertTrue(execution["shared_model_session"])
+        with self.assertRaisesRegex(ValueError, "jobs must be positive"):
+            execution_provenance(
+                batch_runner=False, jobs=0, seed_count=3, device_name="cpu"
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = root / "exporter"
+            weights = root / "model.weights.pt"
+            manifest = root / "model.manifest.json"
+            binary.write_bytes(b"exact exporter")
+            weights.write_bytes(b"exact weights")
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "weights": weights.name,
+                        "checkpoint_tag": "best",
+                        "step": 7,
+                        "config": {"q_quantiles": 8},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            provenance = model_artifact_provenance(binary, manifest)
+        self.assertEqual(
+            provenance["binary_sha256"], hashlib.sha256(b"exact exporter").hexdigest()
+        )
+        self.assertEqual(
+            provenance["weights_sha256"], hashlib.sha256(b"exact weights").hexdigest()
+        )
+        self.assertEqual(provenance["q_quantiles"], 8)
+
     def test_q_risk_probe_reports_crossing_and_policy_flips(self) -> None:
         from cascadiav3.torch_q_risk_probe import summarize_q_risk_rows
 

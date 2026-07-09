@@ -17,6 +17,7 @@ comparison is against the honest (no hidden-order peek) baseline.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shlex
 import subprocess
@@ -29,7 +30,11 @@ from statistics import mean
 from typing import Any
 
 from .torch_benchmark_stats import paired_delta_stats
-from .torch_inference_bridge import Q_RISK_MODES, validate_q_risk_manifest
+from .torch_inference_bridge import (
+    Q_RISK_MODES,
+    resolve_checkpoint_path,
+    validate_q_risk_manifest,
+)
 from .torch_cascadiaformer_search_benchmark import (
     _percentile,
     parse_seeds,
@@ -38,6 +43,58 @@ from .torch_cascadiaformer_search_benchmark import (
 )
 
 EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def model_artifact_provenance(binary: Path, manifest: Path) -> dict[str, Any]:
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    weights = resolve_checkpoint_path(
+        payload["weights"], manifest_path=manifest, checkpoint_path=manifest
+    )
+    return {
+        "binary": str(binary),
+        "binary_bytes": binary.stat().st_size,
+        "binary_sha256": _sha256(binary),
+        "manifest": str(manifest),
+        "manifest_bytes": manifest.stat().st_size,
+        "manifest_sha256": _sha256(manifest),
+        "weights": str(weights),
+        "weights_bytes": weights.stat().st_size,
+        "weights_sha256": _sha256(weights),
+        "checkpoint_tag": payload.get("checkpoint_tag"),
+        "checkpoint_step": payload.get("step"),
+        "q_quantiles": int(payload.get("config", {}).get("q_quantiles", 1)),
+    }
+
+
+def execution_provenance(
+    *, batch_runner: bool, jobs: int, seed_count: int, device_name: str
+) -> dict[str, Any]:
+    if jobs <= 0:
+        raise ValueError("jobs must be positive")
+    if seed_count <= 0:
+        raise ValueError("seed_count must be positive")
+    parallel_games = min(jobs, seed_count)
+    return {
+        "runner": "gumbel-benchmark-batch" if batch_runner else "gumbel-policy-game",
+        "batch_runner": batch_runner,
+        "requested_jobs": jobs,
+        "seed_count": seed_count,
+        "parallel_game_cap": parallel_games,
+        "shared_model_session": batch_runner,
+        "bridge_process_topology": (
+            "one_shared_bridge" if batch_runner else "one_bridge_per_active_subprocess"
+        ),
+        "maximum_concurrent_bridge_processes": 1 if batch_runner else parallel_games,
+        "device": device_name,
+    }
 
 
 def default_model_service_command(
@@ -437,6 +494,12 @@ def run_gumbel_benchmark(
     game_rows_path: Path | None = None,
     q_risk_mode: str = "mean",
 ) -> dict[str, Any]:
+    execution = execution_provenance(
+        batch_runner=batch_runner,
+        jobs=jobs,
+        seed_count=len(seeds),
+        device_name=device_name,
+    )
     if exact_endgame_turns not in (0, 1):
         raise ValueError("exact_endgame_turns currently supports only 0 or 1")
     if exact_endgame_turns and (table_total or table_native_q):
@@ -454,6 +517,7 @@ def run_gumbel_benchmark(
     service = model_service or default_model_service_command(
         manifest, device_name, q_risk_mode
     )
+    artifacts = model_artifact_provenance(binary, manifest)
 
     candidate_lines: list[dict[str, Any]] = []
     started = time.perf_counter()
@@ -639,8 +703,14 @@ def run_gumbel_benchmark(
         "ruleset_id": EXPECTED_RULESET_ID,
         "source_revision": source_revision,
         "candidate_per_seed": candidate_per_seed,
-        "scientific_eligibility": "gumbel_search_vs_rollout_search_paired_benchmark",
+        "scientific_eligibility": (
+            "gumbel_search_vs_rollout_search_paired_benchmark"
+            if control == "full-search"
+            else "candidate_only_search_arm"
+        ),
         "experiment_id": experiment_id,
+        "execution": execution,
+        "artifacts": artifacts,
         "binary": str(binary),
         "manifest": str(manifest),
         "model_service": service,
@@ -688,6 +758,9 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
         "# Gumbel Search Benchmark",
         "",
         f"Experiment: `{report['experiment_id']}`",
+        f"Execution: `{report.get('execution', {}).get('runner', 'legacy-unrecorded')}`; "
+        f"jobs `{report.get('execution', {}).get('requested_jobs', 'legacy-unrecorded')}`; "
+        f"bridge topology `{report.get('execution', {}).get('bridge_process_topology', 'legacy-unrecorded')}`",
         f"Ruleset: `{report['ruleset_id']}`",
         f"Source revision: `{report['source_revision']}`",
         f"Manifest: `{report['manifest']}`",

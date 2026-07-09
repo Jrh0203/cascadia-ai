@@ -97,7 +97,9 @@ Gumbel exporter modes (see `--help`):
   candidate-only Gumbel batteries. In addition to the aggregate report and
   per-ply decision ledger, `--games-out` persists every completed game's raw
   wildlife/habitat/Nature/total breakdown in seed order and refuses partial
-  seed coverage.
+  seed coverage. Reports hash the exporter, manifest, and weights, and record
+  whether execution used subprocess slices or the shared batch runner plus
+  its requested jobs, parallel-game cap, bridge topology, and device.
 - `--gumbel-selfplay-tensor-corpus`: schema-v2 self-play training shards with
   completed-Q targets, improved-policy soft targets, and real-outcome value
   labels.
