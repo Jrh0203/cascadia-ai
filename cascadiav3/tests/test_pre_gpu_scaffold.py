@@ -2240,6 +2240,49 @@ class BenchmarkStatsTest(unittest.TestCase):
         self.assertEqual(summary["games"], 1)
         self.assertAlmostEqual(summary["mean_seat_score"], (90 + 95 + 88 + 92) / 4)
 
+    def test_corrected_rules_comparator_validates_and_pairs_reports(self) -> None:
+        from cascadiav3.compare_rules_rebaseline import RULESET_ID, build_comparison
+
+        revision = "tested-revision"
+        specs = {
+            "rules_20260709_cycle4_n256_d4.json": (256, 4, [90.0, 92.0]),
+            "rules_20260709_distq_k8_n256_d4.json": (256, 4, [91.0, 94.0]),
+            "rules_20260709_cycle4_n1024_d16.json": (1024, 16, [93.0, 95.0]),
+            "rules_20260709_distq_k8_n1024_d16.json": (1024, 16, [94.0, 97.0]),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name, (simulations, determinizations, scores) in specs.items():
+                report = {
+                    "status": "pass",
+                    "ruleset_id": RULESET_ID,
+                    "source_revision": revision,
+                    "experiment_id": name.removesuffix(".json"),
+                    "seeds": [1, 2],
+                    "search": {
+                        "n_simulations": simulations,
+                        "determinizations": determinizations,
+                        "market_decision_samples": 8,
+                    },
+                    "strategies": {"gumbel-search": {"mean_seat_score": sum(scores) / 2}},
+                    "candidate_per_seed": [
+                        {"seed": seed, "mean_score_per_seat": score}
+                        for seed, score in zip((1, 2), scores)
+                    ],
+                    "market_decisions": {
+                        "accepted": 3,
+                        "declined": 1,
+                        "acceptance_rate_when_available": 0.75,
+                    },
+                }
+                (root / name).write_text(json.dumps(report), encoding="utf-8")
+
+            result = build_comparison(root, revision)
+
+        low = result["comparisons"]["distq_minus_cycle4_n256_d4"]
+        self.assertEqual(low["paired_delta_stats"]["mean"], 1.5)
+        self.assertEqual(result["reports"]["cycle4_n256_d4"]["market_decisions"]["declined"], 1)
+
 
 class GumbelBatchRunnerTest(unittest.TestCase):
     """Contract tests for the --gumbel-benchmark-batch per-seed JSONL path."""

@@ -159,6 +159,12 @@ run_gumbel distq_k8 "$DISTQ_MANIFEST" 256 4
 run_gumbel cycle4 "$CYCLE4_MANIFEST" 1024 16
 run_gumbel distq_k8 "$DISTQ_MANIFEST" 1024 16
 
+"$PYTHON" -m cascadiav3.compare_rules_rebaseline \
+  --report-dir "$REPORT_DIR" \
+  --source-revision "$SOURCE_REVISION" \
+  --out "$REPORT_DIR/rules_20260709_rebaseline_verdict.json" \
+  --summary-out "$REPORT_DIR/rules_20260709_rebaseline_verdict.md"
+
 "$PYTHON" - "$LOG_DIR/rules_20260709_rebaseline_complete.json" <<PY
 import json
 import sys
