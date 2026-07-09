@@ -273,9 +273,18 @@ No points directly; halves the cost of every probe and EI cycle.
 4. **Search-shape re-sweep under distq** — the n1024/d16 peak was
    established with the scalar head; a better value function can shift
    the optimal sims/worlds trade (maybe fewer worlds needed → cheaper).
-5. **1,000-game certification** — run when a champion plausibly clears
+5. **Free-refresh as a search decision** — the engine unconditionally
+   takes the free three-of-a-kind market refresh when available (legacy
+   design). That is a real policy restriction: when the tripled wildlife
+   is exactly what the seat wants to draft, refreshing destroys value —
+   the search cannot even consider declining. Probe: evaluate both
+   prelude branches at the root (union the two menus, ~2× root eval
+   cost only on refresh-eligible plies) and 100g vs baseline. All
+   training data and all existing numbers share the restriction, so any
+   gain is fresh points.
+6. **1,000-game certification** — run when a champion plausibly clears
    ~99+ at 100g; currently premature.
-6. **Closed (do not re-propose without new evidence):** oracle/belief
+7. **Closed (do not re-propose without new evidence):** oracle/belief
    modeling, checkpoint ensembles, leaf softmix, symmetry TTA,
    chance-node expectimax, serving-side table-total, capacity/data
    scaling for the scalar head. See §2/§4 for the measurements.

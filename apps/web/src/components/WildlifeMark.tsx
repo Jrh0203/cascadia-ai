@@ -1,11 +1,11 @@
 import type { Wildlife } from "../types";
 
 const LABELS: Record<Wildlife, string> = {
-  bear: "BR",
-  elk: "EL",
-  salmon: "SA",
-  hawk: "HK",
-  fox: "FX",
+  bear: "🐻",
+  elk: "🫎",
+  salmon: "🐟",
+  hawk: "🦅",
+  fox: "🦊",
 };
 
 export function WildlifeMark({

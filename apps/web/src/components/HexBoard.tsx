@@ -77,11 +77,11 @@ function splitPoints(coord: HexCoord, rotation: number): string {
 
 function wildlifeLabel(wildlife: Wildlife): string {
   return {
-    bear: "BR",
-    elk: "EL",
-    salmon: "SA",
-    hawk: "HK",
-    fox: "FX",
+    bear: "🐻",
+    elk: "🫎",
+    salmon: "🐟",
+    hawk: "🦅",
+    fox: "🦊",
   }[wildlife];
 }
 

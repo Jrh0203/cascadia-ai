@@ -15,6 +15,7 @@ import { api } from "./api";
 import { HexBoard } from "./components/HexBoard";
 import { EventLog } from "./components/EventLog";
 import { MarketRail } from "./components/MarketRail";
+import { WildlifeMark } from "./components/WildlifeMark";
 import { ScorePanel } from "./components/ScorePanel";
 import { SetupDialog, type SetupResult } from "./components/SetupDialog";
 import {
@@ -774,6 +775,57 @@ export default function App() {
                 })}
               </div>
             )}
+          </div>
+          <div className="panel-section">
+            <h2>Scoring — P{selectedPlayer + 1}</h2>
+            <div className="score-breakdown">
+              {(["bear", "elk", "salmon", "hawk", "fox"] as const).map(
+                (animal, index) => (
+                  <div key={animal} className="score-line">
+                    <span className="score-name">
+                      <WildlifeMark wildlife={animal} size="small" /> {titleCase(animal)}{" "}
+                      <span className="score-card">
+                        card {view.config.scoring_cards[animal]}
+                      </span>
+                    </span>
+                    <span className="score-points">
+                      {selectedBoard.score.wildlife[index]}
+                    </span>
+                  </div>
+                ),
+              )}
+              <div className="score-divider" />
+              {(
+                ["mountain", "forest", "prairie", "wetland", "river"] as const
+              ).map((terrain, index) => (
+                <div key={terrain} className="score-line">
+                  <span className="score-name">
+                    <i className={`terrain-dot terrain-${terrain}`} />{" "}
+                    {titleCase(terrain)}
+                    {selectedBoard.score.habitat_bonus[index] > 0 && (
+                      <span className="score-card">
+                        {" "}
+                        +{selectedBoard.score.habitat_bonus[index]} bonus
+                      </span>
+                    )}
+                  </span>
+                  <span className="score-points">
+                    {selectedBoard.score.habitat[index]}
+                  </span>
+                </div>
+              ))}
+              <div className="score-divider" />
+              <div className="score-line">
+                <span className="score-name">🌲 Nature tokens</span>
+                <span className="score-points">
+                  {selectedBoard.score.nature_tokens}
+                </span>
+              </div>
+              <div className="score-line total">
+                <span className="score-name">Total</span>
+                <span className="score-points">{selectedBoard.score.total}</span>
+              </div>
+            </div>
           </div>
           <div className="panel-section">
             <h2>Event log</h2>
