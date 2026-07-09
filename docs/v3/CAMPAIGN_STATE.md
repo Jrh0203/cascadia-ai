@@ -31,9 +31,10 @@ the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
 completed the 100-game greedy/no-search floor and cycle4 n256/d4 arm and is
 now running distq_k8 n256/d4, followed sequentially by both models at
-n1024/d16 on the same fresh seeds. A sidecar copies each completed distq game
-out of the benchmark's temporary directory so category scores survive even
-though the deployed pre-fix reducer retains totals only. Log/pid:
+n1024/d16 on the same fresh seeds. Sidecar PID `1281124` copies each completed
+distq-n256 game out of the benchmark's temporary directory; watcher PID
+`1284321` is armed to do the same for both n1024 arms. This preserves category
+scores even though the deployed pre-fix reducer retains totals only. Log/pid:
 `cascadiav3/logs/rules_20260709_rebaseline.{log,pid}`. Canonical launcher:
 `cascadiav3/scripts/run_rules_20260709_rebaseline.sh`; every completed report
 is reused only when both rules ID and source revision match.
@@ -84,11 +85,12 @@ final actions changed. Score was exactly flat (`92.25` both arms, per-seed
 deltas `0/0`). K1's own eight decisions were `8.86x` faster (`4.212s` to
 `0.476s` total), but whole-arm wall/mean-decision time improved only `1.3%` /
 `1.2%`. This is engineering evidence only. A checksum-verified waiter is
-armed on john0 (pid file
+armed on john0 from a checksum-pinned final-main snapshot (pid file
 `cascadiav3/logs/exact_k1_waiter_main.pid`): only after the current rebaseline
 and verdict watcher exit will it install the exact revision-marked `main`
 snapshot, rebuild, and run a fresh same-revision 100-seed corrected n256/d4
-baseline/K1 gate.
+baseline/K1 gate. It then runs the same-revision CUDA model-size throughput
+probe and finally the sample-8 versus sample-4 gate, strictly sequentially.
 
 **Optional-refresh performance ablation (07-09):** a 65-game streamed profile
 of the live corrected cycle4 n256/d4 arm found that 611 refresh-available
@@ -102,8 +104,9 @@ frontier made sample-4 the only non-dominated reduced count: score
 sample-6 and sample-2 were both slower and lower-scoring end to end because
 their changed trajectories encountered more refresh opportunities. This is
 engineering evidence only. A revision-audited `run_market_samples_gate.sh`
-will follow exact K1 on john0, reuse its identical validated sample-8 arm, and
-run a fresh 100-seed sample-4 candidate. Passing requires t-CI lower bound
+will follow exact K1 and the CUDA throughput probe on john0, reuse the exact
+gate's identical validated sample-8 arm, and run a fresh 100-seed sample-4
+candidate. Passing requires t-CI lower bound
 `>= -0.25` and whole-decision speedup `>= 1.15x`; failure leaves sample-8 in
 place.
 
