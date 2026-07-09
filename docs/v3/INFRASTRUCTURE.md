@@ -66,6 +66,11 @@ ssh john0 'cd /home/john0/cascadia && (nohup bash cascadiav3/logs/X_job.sh > cas
 - Give every phase an idempotent skip guard (`[ -s report.json ] && skip`).
 - **Never `>/dev/null` a cargo build inside a job** — a compile error
   dies silently under `set -e`.
+- `john0` may expose Rust without a system `cc` or libc development package.
+  `run_rules_20260709_rebaseline.sh` falls back to Zig `0.13.0` installed in
+  the user account from the official tarball only after checking the pinned
+  SHA-256; `zig-cc-linker.sh` is the checked-in Cargo/cc-rs adapter. Do not use
+  the stale release binary when a target rebuild cannot be proven.
 - Launch ssh sessions often exit 255 with a benign broken pipe; verify
   via pid file + log, not the ssh exit code.
 - `pgrep -f` self-matches over ssh; use `ps aux | grep -v grep`.

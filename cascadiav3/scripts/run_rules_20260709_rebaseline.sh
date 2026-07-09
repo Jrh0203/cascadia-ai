@@ -18,6 +18,11 @@ CYCLE4_MANIFEST="${CYCLE4_MANIFEST:-cascadiav3/checkpoints/full_v3_gumbel_selfpl
 DISTQ_MANIFEST="${DISTQ_MANIFEST:-cascadiav3/checkpoints/full_v3_distq_k8/best_locked_val.manifest.json}"
 REPORT_DIR="${REPORT_DIR:-cascadiav3/reports}"
 LOG_DIR="${LOG_DIR:-cascadiav3/logs}"
+ZIG_VERSION="0.13.0"
+ZIG_ARCHIVE="zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
+ZIG_SHA256="d45312e61ebcc48032b77bc4cf7fd6915c11fa16e4aad116b66c9468211230ea"
+ZIG_URL="https://ziglang.org/download/${ZIG_VERSION}/${ZIG_ARCHIVE}"
+ZIG_ROOT="${ZIG_ROOT:-$HOME/.local/opt/zig-linux-x86_64-${ZIG_VERSION}}"
 
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH="cascadiav3/src"
@@ -33,7 +38,33 @@ test -s "$CYCLE4_MANIFEST"
 test -s "$DISTQ_MANIFEST"
 
 echo "[rebaseline] source_revision=$SOURCE_REVISION ruleset=$RULESET_ID seeds=${FIRST_SEED}x${GAMES}"
-cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
+
+install_pinned_zig() {
+  if [ -x "$ZIG_ROOT/zig" ]; then
+    return
+  fi
+  local tmp
+  tmp="$(mktemp -d)"
+  echo "[rebaseline] installing checksum-pinned Zig $ZIG_VERSION under $ZIG_ROOT"
+  curl --fail --location --retry 3 --output "$tmp/$ZIG_ARCHIVE" "$ZIG_URL"
+  printf '%s  %s\n' "$ZIG_SHA256" "$tmp/$ZIG_ARCHIVE" | sha256sum --check --status
+  tar -xJf "$tmp/$ZIG_ARCHIVE" -C "$tmp"
+  mkdir -p "$(dirname "$ZIG_ROOT")"
+  rm -rf "$ZIG_ROOT"
+  mv "$tmp/zig-linux-x86_64-${ZIG_VERSION}" "$ZIG_ROOT"
+  rm -rf "$tmp"
+}
+
+if command -v cc >/dev/null 2>&1; then
+  cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
+else
+  install_pinned_zig
+  export ZIG="$ZIG_ROOT/zig"
+  export CC="$ROOT/cascadiav3/scripts/zig-cc-linker.sh"
+  export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER="$CC"
+  echo "[rebaseline] native cc unavailable; building with $ZIG cc"
+  cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
+fi
 
 if [ -f /home/john0/venvs/torch/bin/activate ]; then
   # shellcheck disable=SC1091
