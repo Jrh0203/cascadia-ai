@@ -31,8 +31,10 @@ from typing import Any
 
 from .torch_benchmark_stats import paired_delta_stats
 from .torch_inference_bridge import (
+    POLICY_MODES,
     Q_RISK_MODES,
     resolve_checkpoint_path,
+    validate_policy_mode_manifest,
     validate_q_risk_manifest,
 )
 from .torch_cascadiaformer_search_benchmark import (
@@ -71,6 +73,8 @@ def model_artifact_provenance(binary: Path, manifest: Path) -> dict[str, Any]:
         "checkpoint_tag": payload.get("checkpoint_tag"),
         "checkpoint_step": payload.get("step"),
         "q_quantiles": int(payload.get("config", {}).get("q_quantiles", 1)),
+        "pairwise_comparator": bool(payload.get("config", {}).get("pairwise_comparator", False)),
+        "pairwise_rank": int(payload.get("config", {}).get("pairwise_rank", 0)),
     }
 
 
@@ -101,14 +105,20 @@ def execution_provenance(
 
 
 def default_model_service_command(
-    manifest: Path, device: str, q_risk_mode: str = "mean"
+    manifest: Path,
+    device: str,
+    q_risk_mode: str = "mean",
+    policy_mode: str = "logits",
 ) -> str:
     if q_risk_mode not in Q_RISK_MODES:
         raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
+    if policy_mode not in POLICY_MODES:
+        raise ValueError(f"unsupported policy mode: {policy_mode}")
     return (
         f"{shlex.quote(sys.executable)} -m cascadiav3.torch_inference_bridge "
         f"--manifest {shlex.quote(str(manifest))} --device {shlex.quote(device)} "
-        f"--q-risk-mode {shlex.quote(q_risk_mode)}"
+        f"--q-risk-mode {shlex.quote(q_risk_mode)} "
+        f"--policy-mode {shlex.quote(policy_mode)}"
     )
 
 
@@ -496,6 +506,7 @@ def run_gumbel_benchmark(
     decision_rows_path: Path | None = None,
     game_rows_path: Path | None = None,
     q_risk_mode: str = "mean",
+    policy_mode: str = "logits",
 ) -> dict[str, Any]:
     execution = execution_provenance(
         batch_runner=batch_runner,
@@ -511,14 +522,17 @@ def run_gumbel_benchmark(
         )
     if q_risk_mode not in Q_RISK_MODES:
         raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
-    if model_service is not None and q_risk_mode != "mean":
-        raise ValueError("non-mean q risk modes require the generated model service")
+    if policy_mode not in POLICY_MODES:
+        raise ValueError(f"unsupported policy mode: {policy_mode}")
+    if model_service is not None and (q_risk_mode != "mean" or policy_mode != "logits"):
+        raise ValueError("non-default Q/policy modes require the generated model service")
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
     if q_risk_mode != "mean":
-        validate_q_risk_manifest(
-            json.loads(manifest.read_text(encoding="utf-8")), q_risk_mode
-        )
+        validate_q_risk_manifest(manifest_payload, q_risk_mode)
+    if policy_mode != "logits":
+        validate_policy_mode_manifest(manifest_payload, policy_mode)
     service = model_service or default_model_service_command(
-        manifest, device_name, q_risk_mode
+        manifest, device_name, q_risk_mode, policy_mode
     )
     artifacts = model_artifact_provenance(binary, manifest)
 
@@ -729,6 +743,7 @@ def run_gumbel_benchmark(
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
             "q_risk_mode": q_risk_mode,
+            "policy_mode": policy_mode,
         },
         "market_decisions": summarize_market_decisions(candidate_lines),
         "candidate_score_breakdown": summarize_score_categories(candidate_results),
@@ -812,6 +827,7 @@ def main() -> int:
     parser.add_argument("--model-service", default="")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--q-risk-mode", choices=Q_RISK_MODES, default="mean")
+    parser.add_argument("--policy-mode", choices=POLICY_MODES, default="logits")
     parser.add_argument("--seeds", default="")
     parser.add_argument("--first-seed", type=int, default=2026995000)
     parser.add_argument("--games", type=int, default=100)
@@ -938,6 +954,7 @@ def main() -> int:
         decision_rows_path=Path(args.decisions_out),
         game_rows_path=Path(args.games_out),
         q_risk_mode=args.q_risk_mode,
+        policy_mode=args.policy_mode,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

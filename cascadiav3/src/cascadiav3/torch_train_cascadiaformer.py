@@ -20,7 +20,12 @@ from typing import Any
 from .expert_tensor_shards import ExpertTensorCorpus, collate_expert_tensor_examples
 from .replay import read_replay_jsonl
 from .schema import EXPERT_ROOT_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID
-from .torch_cascadiaformer import build_cascadiaformer, config_for_size, parameter_count
+from .torch_cascadiaformer import (
+    CascadiaFormerConfig,
+    build_cascadiaformer,
+    config_for_size,
+    parameter_count,
+)
 
 
 @dataclass(frozen=True)
@@ -34,6 +39,7 @@ class LossWeights:
     greedy_policy: float = 0.0
     greedy_margin: float = 0.0
     greedy_margin_value: float = 0.25
+    pairwise: float = 0.0
 
     def to_dict(self) -> dict[str, float]:
         return asdict(self)
@@ -52,6 +58,7 @@ LOSS_COMPONENT_KEYS = (
     "uncertainty",
     "greedy_policy",
     "greedy_margin",
+    "pairwise",
 )
 RETENTION_METRIC_KEYS = (
     "teacher_top1",
@@ -59,6 +66,9 @@ RETENTION_METRIC_KEYS = (
     "mean_teacher_rank",
     "mean_greedy_rank",
     "teacher_advantage_over_greedy",
+    "pairwise_accuracy",
+    "pairwise_examples",
+    "pairwise_mean_snr",
 )
 AGGREGATE_KEYS = LOSS_COMPONENT_KEYS + RETENTION_METRIC_KEYS
 
@@ -92,6 +102,19 @@ def loss_weights_for_objective(objective: str) -> LossWeights:
             greedy_policy=0.0,
             greedy_margin=0.0,
             greedy_margin_value=0.0,
+        )
+    if objective == "gumbel-selfplay-pairwise":
+        return LossWeights(
+            policy=1.0,
+            q=0.5,
+            value=0.5,
+            score=0.05,
+            rank=0.02,
+            uncertainty=0.01,
+            greedy_policy=0.0,
+            greedy_margin=0.0,
+            greedy_margin_value=0.0,
+            pairwise=1.0,
         )
     if objective == "k32-greedy-retention":
         return LossWeights(
@@ -311,6 +334,107 @@ def _collate_examples(examples: list[Any], *, corpus_format: str) -> dict[str, A
     raise ValueError(f"unsupported expert corpus format {corpus_format!r}")
 
 
+def _add_pairwise_supervision(batch: dict[str, Any], config: Any) -> None:
+    """Attach deterministic, confidence-qualified directed action pairs.
+
+    Pair construction runs on the host before H2D. Both orientations are
+    emitted so a comparator cannot learn a left-slot shortcut. We keep the
+    hardest reliable pairs first (lowest SNR above the threshold), which
+    concentrates the bounded auxiliary budget near consequential decisions
+    without admitting one-sample variance claims.
+    """
+    import torch
+
+    if not bool(getattr(config, "pairwise_comparator", False)):
+        return
+    max_pairs = int(config.pairwise_max_pairs_per_root)
+    min_margin = float(config.pairwise_min_margin)
+    min_snr = float(config.pairwise_min_snr)
+    if max_pairs <= 0:
+        raise ValueError("pairwise_max_pairs_per_root must be positive")
+    if min_margin <= 0.0:
+        raise ValueError("pairwise_min_margin must be positive")
+    if min_snr < 0.0:
+        raise ValueError("pairwise_min_snr must be nonnegative")
+
+    target_q = batch["target_q"]
+    q_valid = batch["q_valid"] & batch["action_mask"]
+    q_variance = batch.get("target_q_variance")
+    q_count = batch.get("target_q_count")
+    if q_variance is None or q_count is None:
+        raise ValueError("pairwise comparator requires Q variance and count tensors")
+    if target_q.device.type != "cpu":
+        raise ValueError("pairwise supervision must be built before H2D")
+    if (q_variance < 0.0).any() or (q_count < 0.0).any():
+        raise ValueError("pairwise Q variance/count values must be nonnegative")
+
+    roots: list[Any] = []
+    left_indices: list[Any] = []
+    right_indices: list[Any] = []
+    targets: list[Any] = []
+    weights: list[Any] = []
+    snrs: list[Any] = []
+
+    for root_index in range(int(target_q.shape[0])):
+        valid_actions = torch.nonzero(
+            q_valid[root_index]
+            & (q_count[root_index] >= 2.0)
+            & torch.isfinite(target_q[root_index])
+            & torch.isfinite(q_variance[root_index]),
+            as_tuple=False,
+        ).flatten()
+        if valid_actions.numel() < 2:
+            continue
+        candidate_pairs = torch.combinations(valid_actions, r=2)
+        left = candidate_pairs[:, 0]
+        right = candidate_pairs[:, 1]
+        left_count = q_count[root_index, left]
+        right_count = q_count[root_index, right]
+        margin = (target_q[root_index, left] - target_q[root_index, right]).abs()
+        standard_error_sq = (
+            q_variance[root_index, left].clamp_min(0.0) / left_count.clamp_min(1.0)
+            + q_variance[root_index, right].clamp_min(0.0) / right_count.clamp_min(1.0)
+        )
+        finite = torch.isfinite(margin) & torch.isfinite(standard_error_sq)
+        snr = torch.where(
+            standard_error_sq > 0.0,
+            margin / torch.sqrt(standard_error_sq.clamp_min(torch.finfo(torch.float32).tiny)),
+            torch.where(margin > 0.0, torch.full_like(margin, torch.inf), torch.zeros_like(margin)),
+        )
+        eligible = finite & (margin >= min_margin) & (snr >= min_snr)
+        candidate_positions = torch.nonzero(eligible, as_tuple=False).flatten()
+        if candidate_positions.numel() == 0:
+            continue
+        if candidate_positions.numel() > max_pairs:
+            order = torch.argsort(snr[candidate_positions], stable=True)
+            candidate_positions = candidate_positions[order[:max_pairs]]
+        chosen_left = left[candidate_positions]
+        chosen_right = right[candidate_positions]
+        chosen_snr = snr[candidate_positions]
+        forward_targets = (
+            target_q[root_index, chosen_left] > target_q[root_index, chosen_right]
+        ).to(torch.float32)
+        confidence = (chosen_snr / 1.96).clamp(0.25, 4.0)
+        root_vector = torch.full_like(chosen_left, root_index)
+
+        roots.extend([root_vector, root_vector])
+        left_indices.extend([chosen_left, chosen_right])
+        right_indices.extend([chosen_right, chosen_left])
+        targets.extend([forward_targets, 1.0 - forward_targets])
+        weights.extend([confidence, confidence])
+        snrs.extend([chosen_snr, chosen_snr])
+
+    def concatenate_or_empty(parts: list[Any], *, dtype: Any) -> Any:
+        return torch.cat(parts).to(dtype=dtype) if parts else torch.empty((0,), dtype=dtype)
+
+    batch["pairwise_root_indices"] = concatenate_or_empty(roots, dtype=torch.long)
+    batch["pairwise_left_indices"] = concatenate_or_empty(left_indices, dtype=torch.long)
+    batch["pairwise_right_indices"] = concatenate_or_empty(right_indices, dtype=torch.long)
+    batch["pairwise_targets"] = concatenate_or_empty(targets, dtype=torch.float32)
+    batch["pairwise_weights"] = concatenate_or_empty(weights, dtype=torch.float32)
+    batch["pairwise_snr"] = concatenate_or_empty(snrs, dtype=torch.float32)
+
+
 def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: LossWeights):  # type: ignore[no-untyped-def]
     import torch
     import torch.nn.functional as F
@@ -404,6 +528,36 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         if uncertainty_target.numel()
         else outputs["uncertainty"].sum() * 0.0
     )
+    pairwise_logits = outputs.get("pairwise_logits")
+    if pairwise_logits is not None:
+        pairwise_targets = batch["pairwise_targets"]
+        pairwise_weights = batch["pairwise_weights"]
+        if pairwise_logits.shape != pairwise_targets.shape:
+            raise ValueError("pairwise logits/targets shape mismatch")
+        if pairwise_logits.numel():
+            pairwise_unreduced = F.binary_cross_entropy_with_logits(
+                pairwise_logits,
+                pairwise_targets,
+                reduction="none",
+            )
+            pairwise = (pairwise_unreduced * pairwise_weights).sum() / pairwise_weights.sum().clamp_min(
+                1.0e-8
+            )
+            pairwise_accuracy = (
+                (pairwise_logits >= 0.0) == (pairwise_targets >= 0.5)
+            ).to(torch.float32).mean()
+            pairwise_examples = pairwise_logits.new_tensor(float(pairwise_logits.numel()))
+            pairwise_mean_snr = batch["pairwise_snr"].mean()
+        else:
+            pairwise = outputs["q"].sum() * 0.0
+            pairwise_accuracy = pairwise.detach()
+            pairwise_examples = pairwise.detach()
+            pairwise_mean_snr = pairwise.detach()
+    else:
+        pairwise = outputs["q"].sum() * 0.0
+        pairwise_accuracy = pairwise.detach()
+        pairwise_examples = pairwise.detach()
+        pairwise_mean_snr = pairwise.detach()
     total = (
         weights.policy * policy
         + weights.q * q
@@ -413,6 +567,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         + weights.uncertainty * uncertainty
         + weights.greedy_policy * greedy_policy
         + weights.greedy_margin * greedy_margin
+        + weights.pairwise * pairwise
     )
     predicted = logits.argmax(dim=1)
     predicted_by_final_q = predicted_final_q.masked_fill(~mask, -1.0e9).argmax(dim=1)
@@ -437,11 +592,15 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         "uncertainty": uncertainty.detach(),
         "greedy_policy": greedy_policy.detach(),
         "greedy_margin": greedy_margin.detach(),
+        "pairwise": pairwise.detach(),
         "teacher_top1": (predicted == teacher_target).to(torch.float32).mean().detach(),
         "greedy_top1": (predicted == greedy_target).to(torch.float32).mean().detach(),
         "mean_teacher_rank": teacher_rank.mean().detach(),
         "mean_greedy_rank": greedy_rank.mean().detach(),
         "teacher_advantage_over_greedy": teacher_advantage.detach(),
+        "pairwise_accuracy": pairwise_accuracy.detach(),
+        "pairwise_examples": pairwise_examples.detach(),
+        "pairwise_mean_snr": pairwise_mean_snr.detach(),
     }
 
 
@@ -453,7 +612,22 @@ def _model_forward(model, batch: dict[str, Any]):  # type: ignore[no-untyped-def
         batch["action_mask"],
         relation_ids=batch.get("relation_ids"),
         relation_tail=batch.get("relation_tail"),
+        pairwise_root_indices=batch.get("pairwise_root_indices"),
+        pairwise_left_indices=batch.get("pairwise_left_indices"),
+        pairwise_right_indices=batch.get("pairwise_right_indices"),
     )
+
+
+def _configure_pairwise_head_only(model) -> int:  # type: ignore[no-untyped-def]
+    modules = (model.pairwise_merit, model.pairwise_left, model.pairwise_right)
+    if any(module is None for module in modules):
+        raise ValueError("pairwise-head-only training requires an enabled comparator")
+    for parameter in model.parameters():
+        parameter.requires_grad_(False)
+    for module in modules:
+        for parameter in module.parameters():
+            parameter.requires_grad_(True)
+    return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
 
 
 def _atomic_jsonl_append(path: Path, row: dict[str, Any]) -> None:
@@ -959,7 +1133,9 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
         for batch_index in range(batch_limit):
             indices = list(range(batch_index * batch_size, min((batch_index + 1) * batch_size, record_count)))
             batch_records = _corpus_examples(records, indices, corpus_format=corpus_format)
-            batch = _move_to_device(_collate_examples(batch_records, corpus_format=corpus_format), device)
+            host_batch = _collate_examples(batch_records, corpus_format=corpus_format)
+            _add_pairwise_supervision(host_batch, model.config)
+            batch = _move_to_device(host_batch, device)
             outputs = _model_forward(model, batch)
             losses = _loss_components(outputs, batch, weights)
             batch_weight = len(batch_records)
@@ -1214,6 +1390,10 @@ def _resume_identity(
 def _diff_resume_identity(expected: dict[str, Any], observed: dict[str, Any] | None) -> list[str]:
     if observed is None:
         return ["resume_identity"]
+    observed = dict(observed)
+    observed_config = observed.get("config")
+    if isinstance(observed_config, dict):
+        observed["config"] = CascadiaFormerConfig(**observed_config).to_dict()
     keys = sorted(set(expected) | set(observed))
     return [key for key in keys if expected.get(key) != observed.get(key)]
 
@@ -1392,6 +1572,12 @@ def run_training(
     val_format: str,
     model_size: str,
     q_quantiles: int = 1,
+    pairwise_comparator: bool = False,
+    pairwise_rank: int = 64,
+    pairwise_max_pairs_per_root: int = 32,
+    pairwise_min_margin: float = 0.25,
+    pairwise_min_snr: float = 1.0,
+    pairwise_head_only: bool = False,
     steps: int,
     batch_size: int,
     lr: float,
@@ -1459,6 +1645,18 @@ def run_training(
 
     if init_manifest is not None and resume is not None:
         raise ValueError("--init-manifest and --resume are mutually exclusive")
+    if q_quantiles <= 0:
+        raise ValueError("q_quantiles must be positive")
+    if pairwise_rank <= 0:
+        raise ValueError("pairwise_rank must be positive")
+    if pairwise_max_pairs_per_root <= 0:
+        raise ValueError("pairwise_max_pairs_per_root must be positive")
+    if pairwise_min_margin <= 0.0:
+        raise ValueError("pairwise_min_margin must be positive")
+    if pairwise_min_snr < 0.0:
+        raise ValueError("pairwise_min_snr must be nonnegative")
+    if pairwise_head_only and not (pairwise_comparator or objective == "gumbel-selfplay-pairwise"):
+        raise ValueError("pairwise_head_only requires the pairwise comparator")
 
     # ---- opt-in performance knobs (defaults preserve bit-identical runs) ----
     data_workers = max(0, int(data_workers or _env_int("CASCADIA_TRAIN_DATA_WORKERS", 0)))
@@ -1537,10 +1735,22 @@ def run_training(
                 steps = max_steps
     weights = loss_weights or loss_weights_for_objective(objective)
     config = config_for_size(model_size)
-    if q_quantiles > 1:
-        from dataclasses import replace as _dc_replace
-
-        config = _dc_replace(config, q_quantiles=q_quantiles)
+    pairwise_comparator = pairwise_comparator or objective == "gumbel-selfplay-pairwise"
+    model_name = config.model_name
+    if pairwise_comparator:
+        model_name = (
+            f"{model_name[:-3]}-pairwise-v1" if model_name.endswith("-v1") else f"{model_name}-pairwise-v1"
+        )
+    config = replace(
+        config,
+        model_name=model_name,
+        q_quantiles=q_quantiles,
+        pairwise_comparator=pairwise_comparator,
+        pairwise_rank=pairwise_rank,
+        pairwise_max_pairs_per_root=pairwise_max_pairs_per_root,
+        pairwise_min_margin=pairwise_min_margin,
+        pairwise_min_snr=pairwise_min_snr,
+    )
     model = build_cascadiaformer(config).to(device)
     if cgab_fused:
         # Fused CGAB relation tail (count-matmul); mathematically equivalent
@@ -1565,6 +1775,8 @@ def run_training(
             model, init_manifest, skip_mismatched=init_skip_mismatched
         )
         init_config = init_payload.get("config")
+        if isinstance(init_config, dict):
+            init_config = CascadiaFormerConfig(**init_config).to_dict()
         if init_config and init_config != config.to_dict():
             if init_skip_mismatched:
                 print(
@@ -1574,6 +1786,9 @@ def run_training(
                 )
             else:
                 raise ValueError("--init-manifest config does not match requested model config")
+    trainable_parameter_count = parameter_count(model)
+    if pairwise_head_only:
+        trainable_parameter_count = _configure_pairwise_head_only(model)
     fused_optimizer_applied = False
     optimizer_extra_kwargs: dict[str, Any] = {}
     if fused_optimizer:
@@ -1583,7 +1798,7 @@ def run_training(
         else:
             print("[trainer] --fused-optimizer requires CUDA; ignoring on this device", flush=True)
     optimizer = torch.optim.AdamW(
-        model.parameters(),
+        (parameter for parameter in model.parameters() if parameter.requires_grad),
         lr=lr,
         betas=(0.9, 0.95),
         weight_decay=weight_decay,
@@ -1772,6 +1987,7 @@ def run_training(
             else:
                 batch_examples = _corpus_examples(train_records, indices, corpus_format=train_format)
                 host_batch = _collate_examples(batch_examples, corpus_format=train_format)
+            _add_pairwise_supervision(host_batch, config)
             timer.stop("data", phase_started)
             phase_started = timer.start()
             batch = _move_to_device(host_batch, device, non_blocking=pin_memory)
@@ -1958,6 +2174,8 @@ def run_training(
         "model_size": model_size,
         "config": config.to_dict(),
         "parameter_count": parameter_count(model),
+        "trainable_parameter_count": trainable_parameter_count,
+        "pairwise_head_only": pairwise_head_only,
         "steps": completed_steps,
         "requested_steps": steps,
         "stopped_early": stopped_early_reason is not None,
@@ -2055,6 +2273,20 @@ def main() -> int:
         default=1,
         help="K>1 trains a distributional (quantile) score-to-go head with pinball loss",
     )
+    parser.add_argument(
+        "--pairwise-comparator",
+        action="store_true",
+        help="Enable the antisymmetric low-rank action comparator head",
+    )
+    parser.add_argument("--pairwise-rank", type=int, default=64)
+    parser.add_argument("--pairwise-max-pairs-per-root", type=int, default=32)
+    parser.add_argument("--pairwise-min-margin", type=float, default=0.25)
+    parser.add_argument("--pairwise-min-snr", type=float, default=1.0)
+    parser.add_argument(
+        "--pairwise-head-only",
+        action="store_true",
+        help="Freeze the incumbent trunk/legacy heads and optimize only the pairwise head",
+    )
     parser.add_argument("--train", required=True)
     parser.add_argument("--val", required=True)
     parser.add_argument(
@@ -2079,6 +2311,7 @@ def main() -> int:
             "pure-greedy-retention",
             "search-improved-greedy-retention",
             "gumbel-selfplay",
+            "gumbel-selfplay-pairwise",
         ],
         default="expert",
     )
@@ -2099,6 +2332,7 @@ def main() -> int:
     parser.add_argument("--greedy-policy-weight", type=float)
     parser.add_argument("--greedy-margin-weight", type=float)
     parser.add_argument("--greedy-margin-value", type=float)
+    parser.add_argument("--pairwise-loss-weight", type=float)
     parser.add_argument("--overfit-one-batch", action="store_true")
     parser.add_argument("--out", default="cascadiav3/reports/cascadiaformer_train.json")
     parser.add_argument("--metrics-jsonl", default="cascadiav3/reports/cascadiaformer_metrics.jsonl")
@@ -2204,6 +2438,7 @@ def main() -> int:
         "greedy_policy": args.greedy_policy_weight,
         "greedy_margin": args.greedy_margin_weight,
         "greedy_margin_value": args.greedy_margin_value,
+        "pairwise": args.pairwise_loss_weight,
     }.items():
         if value is not None:
             loss_weights = replace(loss_weights, **{field_name: value})
@@ -2215,6 +2450,12 @@ def main() -> int:
         val_format=args.val_format,
         model_size=args.model_size,
         q_quantiles=args.q_quantiles,
+        pairwise_comparator=args.pairwise_comparator,
+        pairwise_rank=args.pairwise_rank,
+        pairwise_max_pairs_per_root=args.pairwise_max_pairs_per_root,
+        pairwise_min_margin=args.pairwise_min_margin,
+        pairwise_min_snr=args.pairwise_min_snr,
+        pairwise_head_only=args.pairwise_head_only,
         steps=args.steps,
         batch_size=args.batch_size,
         lr=args.lr,

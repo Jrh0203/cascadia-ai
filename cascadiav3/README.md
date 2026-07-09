@@ -133,6 +133,11 @@ Gumbel exporter modes (see `--help`):
   for valid pair volume, absolute margins, and variance-aware pair SNR. It
   refuses v1 behavior-clone tensors and never treats a one-sample zero
   variance as confidence. This is label-feasibility evidence, not gameplay.
+- `--objective gumbel-selfplay-pairwise`: add the confidence-filtered,
+  antisymmetric low-rank comparator loss. `--pairwise-head-only` freezes the
+  incumbent for a fast first fit. At serving, `--policy-mode pairwise-borda`
+  or `logits-plus-pairwise` changes priors only and is rejected for manifests
+  without a comparator head.
 - `python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark --q-risk-mode
   {mean,q25,q50,q75}`: serve a distributional-Q checkpoint with the selected
   statistic. `mean` is the default and preserves prior behavior. Non-mean

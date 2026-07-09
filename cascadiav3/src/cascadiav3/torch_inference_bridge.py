@@ -59,6 +59,7 @@ def _response(payload: dict[str, Any]) -> None:
 
 PROTOCOL_FEATURES = ["eval_batch", "value_vector", "packed_features", "packed_response"]
 Q_RISK_MODES = ("mean", "q25", "q50", "q75")
+POLICY_MODES = ("logits", "pairwise-borda", "logits-plus-pairwise")
 EVAL_BATCH_CHUNK_SIZE = 32
 # The relation-bias layer materializes a [rows, actions, seq, d_model] tensor,
 # so chunking must bound rows * actions * seq, not just rows. 2^21 cells keeps
@@ -731,6 +732,16 @@ def validate_q_risk_manifest(manifest_payload: dict[str, Any], mode: str) -> Non
         raise ValueError(f"q risk mode {mode} requires a distributional-Q checkpoint")
 
 
+def validate_policy_mode_manifest(manifest_payload: dict[str, Any], mode: str) -> None:
+    if mode not in POLICY_MODES:
+        raise ValueError(f"unsupported policy mode: {mode}")
+    if mode == "logits":
+        return
+    config = manifest_payload.get("config", manifest_payload)
+    if not bool(config.get("pairwise_comparator", False)):
+        raise ValueError(f"policy mode {mode} requires a pairwise-comparator checkpoint")
+
+
 def _model_eval_batch(
     model,
     roots: list[dict[str, Any]],
@@ -739,6 +750,7 @@ def _model_eval_batch(
     chunk_size: int = EVAL_BATCH_CHUNK_SIZE,
     packed_response: bool = False,
     q_risk_mode: str = "mean",
+    policy_mode: str = "logits",
 ) -> list[dict[str, Any]]:  # type: ignore[no-untyped-def]
     """One collated forward per chunk of roots. Chunking bounds the dense
     relation_ids tensor (batch x seq x seq int64) at full action menus.
@@ -757,6 +769,8 @@ def _model_eval_batch(
 
     if not roots:
         return []
+    if policy_mode not in POLICY_MODES:
+        raise ValueError(f"unsupported policy mode: {policy_mode}")
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     autocast_bf16 = _autocast_bf16_requested() and device.type == "cuda"
     timing = _BRIDGE_TIMING
@@ -789,11 +803,20 @@ def _model_eval_batch(
                     inputs["action_mask"],
                     relation_ids=inputs.get("relation_ids"),
                     relation_tail=inputs.get("relation_tail"),
+                    return_pairwise_borda=policy_mode != "logits",
                 )
             if timing is not None:
                 _synchronize_device_for_timing(torch, device)
                 t_forwarded = time.perf_counter()
-            masked_logits = outputs["logits"].float().masked_fill(~inputs["action_mask"], -1.0e9)
+            if policy_mode == "logits":
+                policy_logits = outputs["logits"]
+            elif policy_mode == "pairwise-borda":
+                policy_logits = outputs["pairwise_borda_logits"]
+            elif policy_mode == "logits-plus-pairwise":
+                policy_logits = outputs["logits"] + outputs["pairwise_borda_logits"]
+            else:
+                raise ValueError(f"unsupported policy mode: {policy_mode}")
+            masked_logits = policy_logits.float().masked_fill(~inputs["action_mask"], -1.0e9)
             priors = torch.softmax(masked_logits, dim=1).cpu()
             # One device->host copy per output tensor per chunk; the rows are
             # sliced host-side below. (.float() is a no-op without autocast.)
@@ -854,6 +877,7 @@ def _model_eval(
     device_name: str = "cpu",
     packed_response: bool = False,
     q_risk_mode: str = "mean",
+    policy_mode: str = "logits",
 ) -> dict[str, Any]:  # type: ignore[no-untyped-def]
     return _model_eval_batch(
         model,
@@ -861,6 +885,7 @@ def _model_eval(
         device_name=device_name,
         packed_response=packed_response,
         q_risk_mode=q_risk_mode,
+        policy_mode=policy_mode,
     )[0]
 
 
@@ -918,15 +943,19 @@ def serve(
     allow_dry_run_fallback: bool,
     device_name: str = "cpu",
     q_risk_mode: str = "mean",
+    policy_mode: str = "logits",
 ) -> int:
     if q_risk_mode not in Q_RISK_MODES:
         raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
+    if policy_mode not in POLICY_MODES:
+        raise ValueError(f"unsupported policy mode: {policy_mode}")
     loaded_model = None
     manifest_payload = None
     if manifest is not None:
         manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
         try:
             validate_q_risk_manifest(manifest_payload, q_risk_mode)
+            validate_policy_mode_manifest(manifest_payload, policy_mode)
         except ValueError as exc:
             _response(
                 {
@@ -934,6 +963,7 @@ def serve(
                     "error": str(exc),
                     "manifest": str(manifest),
                     "q_risk_mode": q_risk_mode,
+                    "policy_mode": policy_mode,
                 }
             )
             return 2
@@ -958,15 +988,19 @@ def serve(
     ensemble_paths = _ensemble_manifest_paths()
     if loaded_model is not None and ensemble_paths:
         try:
-            extra_models = [
-                _load_model(
-                    path,
-                    manifest_path=path,
-                    manifest_payload=json.loads(path.read_text(encoding="utf-8")),
-                    device_name=device_name,
+            extra_models = []
+            for path in ensemble_paths:
+                extra_payload = json.loads(path.read_text(encoding="utf-8"))
+                validate_q_risk_manifest(extra_payload, q_risk_mode)
+                validate_policy_mode_manifest(extra_payload, policy_mode)
+                extra_models.append(
+                    _load_model(
+                        path,
+                        manifest_path=path,
+                        manifest_payload=extra_payload,
+                        device_name=device_name,
+                    )
                 )
-                for path in ensemble_paths
-            ]
         except Exception as exc:
             _response({"type": "error", "error": f"ensemble_load_failed: {exc}"})
             return 2
@@ -982,6 +1016,7 @@ def serve(
             "allow_dry_run_fallback": allow_dry_run_fallback,
             "device": device_name,
             "q_risk_mode": q_risk_mode,
+            "policy_mode": policy_mode,
             "protocol_features": PROTOCOL_FEATURES,
         }
     )
@@ -1011,6 +1046,7 @@ def serve(
                             device_name=device_name,
                             packed_response=packed_response,
                             q_risk_mode=q_risk_mode,
+                            policy_mode=policy_mode,
                         )
                     )
             elif message_type == "eval_batch_request":
@@ -1029,6 +1065,7 @@ def serve(
                         device_name=device_name,
                         packed_response=packed_response,
                         q_risk_mode=q_risk_mode,
+                        policy_mode=policy_mode,
                     )
                 _response({"type": "eval_batch_response", "results": results})
             else:
@@ -1105,6 +1142,7 @@ def main() -> int:
     parser.add_argument("--manifest")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--q-risk-mode", choices=Q_RISK_MODES, default="mean")
+    parser.add_argument("--policy-mode", choices=POLICY_MODES, default="logits")
     parser.add_argument("--allow-dry-run-fallback", action="store_true")
     parser.add_argument("--self-test-root")
     parser.add_argument("--self-test-manifest-resolution", action="store_true")
@@ -1127,6 +1165,7 @@ def main() -> int:
         allow_dry_run_fallback=args.allow_dry_run_fallback,
         device_name=args.device,
         q_risk_mode=args.q_risk_mode,
+        policy_mode=args.policy_mode,
     )
 
 

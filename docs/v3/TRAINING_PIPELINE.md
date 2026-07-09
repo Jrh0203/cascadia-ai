@@ -222,6 +222,33 @@ Summary:
 - Runner: `cascadiav3/scripts/run_gumbel_selfplay_cycle.sh` (delegates to
   the full pipeline with `EXPERT_TENSOR_MODE=gumbel_selfplay`).
 
+### Pairwise comparator pilot
+
+The confidence audit supports a bounded comparator experiment, not indiscriminate
+all-pairs training. Use:
+
+```text
+--objective gumbel-selfplay-pairwise
+--pairwise-comparator
+--pairwise-rank 64
+--pairwise-max-pairs-per-root 32
+--pairwise-min-margin 0.25
+--pairwise-min-snr 1.0
+```
+
+For the first kill test, warm-start the corrected incumbent with
+`--init-skip-mismatched --pairwise-head-only`; this initializes only the new
+head and freezes every established parameter. Select on locked-validation
+pairwise loss/accuracy, then compare `--policy-mode logits` against
+`pairwise-borda` and `logits-plus-pairwise` on identical seeds. Offline
+pairwise accuracy is a prerequisite, never strength evidence. Only a paired
+gameplay battery can promote the policy mode.
+
+Current data gate: v3 corrected-rules shards only. The July 9 240-root audit
+found 27,360 raw pairs but only 23.33% variance-evaluable; 14.58% of those
+clear SNR 1.96. Pre-v3 audit shards cannot become training inputs because
+their exact-endgame/provenance fields were not preserved.
+
 ## Checkpoint Contract
 
 Save every 1k optimizer steps and at every epoch/block boundary:

@@ -40,6 +40,15 @@ class CascadiaFormerConfig:
     # quantile-risk mode for research ablations. 1 keeps the legacy scalar
     # head bit-for-bit.
     q_quantiles: int = 1
+    # Optional pairwise action comparator. The low-rank skew interaction is
+    # antisymmetric by construction: compare(a, b) == -compare(b, a).
+    # Existing checkpoints keep this disabled and therefore retain their
+    # exact parameter/state contract.
+    pairwise_comparator: bool = False
+    pairwise_rank: int = 64
+    pairwise_max_pairs_per_root: int = 32
+    pairwise_min_margin: float = 0.25
+    pairwise_min_snr: float = 1.0
 
     def to_dict(self) -> dict[str, Any]:
         out = asdict(self)
@@ -211,12 +220,69 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             self.score_head = nn.Linear(cfg.d_model, len(cfg.score_categories) * cfg.seats)
             self.opponent_aux_head = nn.Linear(cfg.d_model, cfg.opponent_aux_dim)
             self.market_aux_head = nn.Linear(cfg.d_model, cfg.market_aux_dim)
+            if cfg.pairwise_comparator:
+                if cfg.pairwise_rank <= 0:
+                    raise ValueError("pairwise_rank must be positive")
+                self.pairwise_merit = nn.Linear(cfg.d_model, 1, bias=False)
+                self.pairwise_left = nn.Linear(cfg.d_model, cfg.pairwise_rank, bias=False)
+                self.pairwise_right = nn.Linear(cfg.d_model, cfg.pairwise_rank, bias=False)
+            else:
+                self.pairwise_merit = None
+                self.pairwise_left = None
+                self.pairwise_right = None
 
         def set_gradient_checkpointing(self, enabled: bool) -> None:
             self.gradient_checkpointing_enabled = bool(enabled)
 
         def set_cgab_fused(self, enabled: bool) -> None:
             self.cgab.fused = bool(enabled)
+
+        def compare_action_embeddings(self, left, right):  # type: ignore[no-untyped-def]
+            if (
+                self.pairwise_merit is None
+                or self.pairwise_left is None
+                or self.pairwise_right is None
+            ):
+                raise RuntimeError("pairwise comparator is disabled in this checkpoint")
+            merit = self.pairwise_merit(left).squeeze(-1) - self.pairwise_merit(right).squeeze(-1)
+            left_l = self.pairwise_left(left)
+            left_r = self.pairwise_right(left)
+            right_l = self.pairwise_left(right)
+            right_r = self.pairwise_right(right)
+            skew = (left_l * right_r - right_l * left_r).sum(dim=-1)
+            return merit + skew / (cfg.pairwise_rank**0.5)
+
+        def pairwise_borda_logits(self, action_h, action_mask):  # type: ignore[no-untyped-def]
+            """Mean pair log-odds against every other legal action.
+
+            This turns the non-transitive comparator matrix into one
+            permutation-equivariant root policy score without changing the Q
+            head used for leaf values. Invalid/padded opponents contribute
+            nothing and are excluded from the denominator.
+            """
+            if (
+                self.pairwise_merit is None
+                or self.pairwise_left is None
+                or self.pairwise_right is None
+            ):
+                raise RuntimeError("pairwise comparator is disabled in this checkpoint")
+            merit = self.pairwise_merit(action_h).squeeze(-1)
+            left_projection = self.pairwise_left(action_h)
+            right_projection = self.pairwise_right(action_h)
+            pair_logits = merit.unsqueeze(2) - merit.unsqueeze(1)
+            pair_logits = pair_logits + (
+                left_projection @ right_projection.transpose(1, 2)
+                - right_projection @ left_projection.transpose(1, 2)
+            ) / (cfg.pairwise_rank**0.5)
+            pair_mask = action_mask.unsqueeze(2) & action_mask.unsqueeze(1)
+            diagonal = torch.eye(
+                action_h.shape[1],
+                dtype=torch.bool,
+                device=action_h.device,
+            ).unsqueeze(0)
+            pair_mask &= ~diagonal
+            denominator = pair_mask.sum(dim=2).clamp_min(1).to(action_h.dtype)
+            return pair_logits.masked_fill(~pair_mask, 0.0).sum(dim=2) / denominator
 
         def _encode_state(self, token_h, token_padding):  # type: ignore[no-untyped-def]
             if (
@@ -253,6 +319,10 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             action_mask,
             relation_ids=None,
             relation_tail=None,
+            pairwise_root_indices=None,
+            pairwise_left_indices=None,
+            pairwise_right_indices=None,
+            return_pairwise_borda=False,
         ):
             token_h = self.token_proj(tokens)
             token_padding = ~token_mask
@@ -294,6 +364,24 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             }
             if cfg.q_quantiles > 1:
                 outputs["q_quantile_values"] = q_raw
+            pairwise_indices = (
+                pairwise_root_indices,
+                pairwise_left_indices,
+                pairwise_right_indices,
+            )
+            if any(indices is not None for indices in pairwise_indices):
+                if not all(indices is not None for indices in pairwise_indices):
+                    raise ValueError("all pairwise index tensors must be provided together")
+                if self.pairwise_merit is None:
+                    raise RuntimeError("pairwise indices require an enabled comparator")
+                left = decoded[pairwise_root_indices, pairwise_left_indices]
+                right = decoded[pairwise_root_indices, pairwise_right_indices]
+                outputs["pairwise_logits"] = self.compare_action_embeddings(left, right)
+            if return_pairwise_borda:
+                outputs["pairwise_borda_logits"] = self.pairwise_borda_logits(
+                    decoded,
+                    action_mask,
+                )
             return outputs
 
     return CascadiaFormer()

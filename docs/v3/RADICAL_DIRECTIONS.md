@@ -96,12 +96,22 @@ exactly the regime where ranking losses beat regression losses (the whole
 learning-to-rank literature exists because of this). The scalar/quantile q
 head spends capacity on absolute calibration the argmax never uses.
 
-**Sketch.** CGAB already produces per-action embeddings; a bilinear
-comparator over action-pair embeddings is a small head. Train on the
-existing corpus (pairs are free — no new generation). Serving: comparator
-reranks the top-m after sequential halving, or replaces sigma(q) in the
-final halving round. Kill-test: does comparator-reranked n256/d4 beat
-97.38? One training run + one battery.
+**Implemented pilot (2026-07-09).** CGAB's action embeddings now feed a
+strictly antisymmetric low-rank head: merit difference plus a skew bilinear
+interaction. The trainer emits both orientations, requires q-valid actions,
+at least two samples/action, margin ≥0.25 and SNR ≥1.0, caps each root at 32
+hard reliable pairs, and supports head-only warm-start training. The bridge
+serves a permutation-equivariant all-opponent Borda logit behind an explicit
+provenance-recorded policy mode; Q/value serving is unchanged.
+
+The data premise needed correction. In a 240-root corrected-rules audit,
+27,360 pairs existed (11.4M projected/100k roots), but only 23.33% had enough
+samples to estimate variance and only 14.58% of those reached SNR 1.96. Pair
+volume is free; trustworthy labels are not. The inspected v2 shards also lost
+exact-endgame and generation provenance, so they are audit-only. Fresh v3
+corrected-rules generation is required before the kill test. After an offline
+held-out accuracy gate, compare established logits, pure pairwise Borda, and
+their sum on identical n256/d4 seeds; only gameplay can establish value.
 
 ## 4. Whole-rollout generation on GPU (kill the lockstep wall)
 

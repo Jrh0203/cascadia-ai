@@ -60,10 +60,17 @@ EARLY_STOP_AFTER_STEP="${EARLY_STOP_AFTER_STEP:-0}"
 SWA_FRACTION="${SWA_FRACTION:-0.20}"
 SEED="${SEED:-20260630}"
 OBJECTIVE="${OBJECTIVE:-expert}"
+PAIRWISE_COMPARATOR="${PAIRWISE_COMPARATOR:-0}"
+PAIRWISE_RANK="${PAIRWISE_RANK:-64}"
+PAIRWISE_MAX_PAIRS_PER_ROOT="${PAIRWISE_MAX_PAIRS_PER_ROOT:-32}"
+PAIRWISE_MIN_MARGIN="${PAIRWISE_MIN_MARGIN:-0.25}"
+PAIRWISE_MIN_SNR="${PAIRWISE_MIN_SNR:-1.0}"
+PAIRWISE_HEAD_ONLY="${PAIRWISE_HEAD_ONLY:-0}"
 MAX_EXAMPLE_PASSES="${MAX_EXAMPLE_PASSES:-0}"
 SELECTION_METRIC="${SELECTION_METRIC:-locked_val_total}"
 SELECTION_MODE="${SELECTION_MODE:-min}"
 INIT_MANIFEST="${INIT_MANIFEST:-}"
+INIT_SKIP_MISMATCHED="${INIT_SKIP_MISMATCHED:-0}"
 # "none" = explicit from-scratch init even when a wrapper defaults
 # INIT_MANIFEST to the incumbent (S weights cannot warm-start M).
 if [ "$INIT_MANIFEST" = "none" ]; then INIT_MANIFEST=""; fi
@@ -341,6 +348,21 @@ if [ -n '$RESUME_MANIFEST' ]; then
   TRAINER_INIT_ARGS=(--resume '$RESUME_MANIFEST')
 elif [ -n '$INIT_MANIFEST' ]; then
   TRAINER_INIT_ARGS=(--init-manifest '$INIT_MANIFEST')
+  if [ '$INIT_SKIP_MISMATCHED' = '1' ]; then
+    TRAINER_INIT_ARGS+=(--init-skip-mismatched)
+  fi
+fi
+TRAINER_PAIRWISE_ARGS=(
+  --pairwise-rank '$PAIRWISE_RANK'
+  --pairwise-max-pairs-per-root '$PAIRWISE_MAX_PAIRS_PER_ROOT'
+  --pairwise-min-margin '$PAIRWISE_MIN_MARGIN'
+  --pairwise-min-snr '$PAIRWISE_MIN_SNR'
+)
+if [ '$PAIRWISE_COMPARATOR' = '1' ]; then
+  TRAINER_PAIRWISE_ARGS+=(--pairwise-comparator)
+fi
+if [ '$PAIRWISE_HEAD_ONLY' = '1' ]; then
+  TRAINER_PAIRWISE_ARGS+=(--pairwise-head-only)
 fi
 TRAINER_MIX_ARGS=()
 if [ -n '$TRAIN_SOURCE_WEIGHTS' ]; then
@@ -375,6 +397,7 @@ python -m cascadiav3.torch_train_cascadiaformer \
   --out '$REPORT' \
   "\${TRAINER_INIT_ARGS[@]}" \
   "\${TRAINER_MIX_ARGS[@]}" \
+  "\${TRAINER_PAIRWISE_ARGS[@]}" \
   $TRAINER_EXTRA_ARGS
 TRAINING_SECONDS="\$(( \$(date +%s) - TRAINING_STARTED ))"
 
@@ -418,6 +441,12 @@ report = {
     "filter_mode": "$FILTER_MODE",
     "expert_tensor_mode": "$EXPERT_TENSOR_MODE",
     "objective": "$OBJECTIVE",
+    "pairwise_comparator": "$PAIRWISE_COMPARATOR" == "1" or "$OBJECTIVE" == "gumbel-selfplay-pairwise",
+    "pairwise_rank": $PAIRWISE_RANK,
+    "pairwise_max_pairs_per_root": $PAIRWISE_MAX_PAIRS_PER_ROOT,
+    "pairwise_min_margin": $PAIRWISE_MIN_MARGIN,
+    "pairwise_min_snr": $PAIRWISE_MIN_SNR,
+    "pairwise_head_only": "$PAIRWISE_HEAD_ONLY" == "1",
     "init_manifest": "$INIT_MANIFEST",
     "resume_manifest": "$RESUME_MANIFEST",
     "train_source_weights": "$TRAIN_SOURCE_WEIGHTS",

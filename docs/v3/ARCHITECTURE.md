@@ -132,6 +132,34 @@ exactly, so default `mean` behavior is unchanged. Non-mean modes are
 distributional-checkpoint-only, provenance-recorded ablations, not promotions
 by themselves.
 
+### Pairwise comparator (experimental)
+
+The optional comparator consumes the same post-cross-attention, post-CGAB
+action embeddings as the policy/Q heads. Its logit is a scalar merit
+difference plus a low-rank skew interaction:
+
+```text
+C(i,j) = m(h_i) - m(h_j)
+       + (L(h_i)·R(h_j) - L(h_j)·R(h_i)) / sqrt(rank)
+```
+
+Therefore `C(i,j) = -C(j,i)` and `C(i,i) = 0` by construction, while the skew
+term can represent preferences that a single scalar action value cannot. The
+legacy model contract is unchanged when `pairwise_comparator=false`.
+
+Training emits both pair orientations and uses only actions with `q_valid`, at
+least two samples/action, absolute completed-Q margin at least 0.25, and pair
+SNR at least 1.0. A root contributes at most 32 undirected pairs, chosen from
+the hardest pairs above the confidence gate; loss weights scale with SNR and
+are clamped. `--pairwise-head-only` freezes the incumbent trunk and all legacy
+heads for a cheap first kill test.
+
+Serving mode `pairwise-borda` averages the antisymmetric log-odds against every
+other legal action to produce a permutation-equivariant prior score. It changes
+policy priors only; derived final Q/value semantics stay untouched. The bridge
+and benchmark record `policy_mode`, and non-default modes fail before launch
+unless the checkpoint manifest declares the comparator.
+
 ## Search Semantics
 
 The serving-strength search is Gumbel top-m + sequential halving
