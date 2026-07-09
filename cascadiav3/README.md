@@ -150,6 +150,12 @@ Gumbel exporter modes (see `--help`):
   direct derived-Q action flips for `q25`, `q50`, and `q75` after monotone
   rearrangement. The probe is engineering evidence only; gameplay batteries
   still decide policy strength.
+- `python -m cascadiav3.torch_structured_value_probe`: test whether a frozen
+  selected-action representation carries category-specific terminal-value
+  signal on disjoint fit/selection/held-out v3 seed blocks. It rejects
+  filtered menus, mismatched teachers, overlapping seeds, and exact-endgame
+  rows. Passing authorizes a new exact-grounded schema; the ridge head itself
+  is deliberately not serveable or gameplay evidence.
 - `python -m cascadiav3.torch_pairwise_label_audit`: audit v2/v3 Gumbel shards
   for valid pair volume, absolute margins, and variance-aware pair SNR. It
   refuses v1 behavior-clone tensors and never treats a one-sample zero

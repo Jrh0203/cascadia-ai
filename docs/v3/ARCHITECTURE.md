@@ -132,6 +132,25 @@ exactly, so default `mean` behavior is unchanged. Non-mean modes are
 distributional-checkpoint-only, provenance-recorded ablations, not promotions
 by themselves.
 
+### Structured value frontier
+
+The legacy `score_decomposition` output is a root-level auxiliary and must not
+be mistaken for an action-value head. A corrected-rules held-out preflight now
+shows that the post-CGAB selected-action latent contains materially better
+terminal wildlife/habitat/Nature signal than the incumbent scalar/value
+comparisons (`3.4889` versus best-baseline `4.1528` RMSE, 760 untouched
+non-exact roots). This authorizes an action-conditioned decomposition design,
+but not the direct-final ridge used by the probe.
+
+The production design remains exact-grounded: export the active seat's exact
+afterstate wildlife/habitat/Nature vector for every action, predict the
+category score-to-go residuals, and sum exact components plus predicted
+residuals for final Q. Selected real outcomes provide category supervision;
+all q-valid actions retain scalar/distributional completed-Q supervision on
+the component sum. No structured checkpoint may serve until the schema,
+filter/materialization paths, bridge provenance, and derived-Q rank-flip tests
+cover this contract.
+
 ### Pairwise comparator (experimental)
 
 The optional comparator consumes the same post-cross-attention, post-CGAB

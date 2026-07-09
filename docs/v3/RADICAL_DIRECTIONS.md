@@ -196,6 +196,25 @@ cannot honestly replace per-action Q at serving. This direction therefore
 requires a new action-conditioned decomposition head plus retraining; it is
 not a free serving ablation of the current checkpoint.
 
+**Action-representation preflight: PASSED (2026-07-09).** A fail-closed probe
+used three disjoint corrected-rules v3 seed blocks: 760 non-exact roots to fit
+a ridge head on the frozen selected-action latent, 760 to choose regularization,
+and 760 untouched roots for the verdict. Every tensor retained its exact full
+menu and matched the probed cycle4 teacher manifest/weights. On held-out real
+terminal outcomes, the action-conditioned wildlife/habitat/Nature sum reached
+`3.4889` RMSE and `2.6964` MAE. The best incumbent comparison was selected-
+action completed-Q at `4.1528` RMSE; root decomposition/value and model Q were
+`4.2525 / 4.2438 / 4.4570`. The `15.99%` RMSE reduction clears the
+preregistered `10%` representation gate.
+
+This is a go for the real schema, not for serving the ridge head. The probe
+predicts direct final categories only for the chosen action; it has neither
+per-action exact category grounding nor counterfactual category labels. The
+next implementation must export each action's exact afterstate category vector,
+train action-conditioned category score-to-go heads whose sum stays grounded,
+and retain scalar/distq supervision for all searched actions. Probe JSON SHA:
+`5c06de5da762352765a26c233b8718af7e69bc9040d698ad0758c2b72e908c2a`.
+
 ## 6. League self-play (break the self-play attractor)
 
 **Idea.** Fresh-M from scratch converged to the *same point* as champion

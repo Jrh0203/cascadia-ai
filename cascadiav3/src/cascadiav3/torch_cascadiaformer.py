@@ -357,7 +357,7 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
                 return encoded
             return self.state_encoder(token_h, src_key_padding_mask=token_padding)
 
-        def forward(  # type: ignore[no-untyped-def]
+        def encode_action_queries(  # type: ignore[no-untyped-def]
             self,
             tokens,
             token_mask,
@@ -365,12 +365,14 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             action_mask,
             relation_ids=None,
             relation_tail=None,
-            pairwise_root_indices=None,
-            pairwise_left_indices=None,
-            pairwise_right_indices=None,
-            return_pairwise_borda=False,
-            pairwise_borda_top_k=None,
         ):
+            """Return the shared root latent and post-CGAB action latents.
+
+            The public method keeps diagnostic heads on the exact serving
+            representation instead of reimplementing the trunk. Callers may
+            pass a subset of action queries only when ``relation_tail``
+            contains those queries' complete outgoing relation rows.
+            """
             token_h = self.token_proj(tokens)
             token_padding = ~token_mask
             encoded = self._encode_state(token_h, token_padding)
@@ -386,6 +388,30 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             decoded, cgab_bias = self.cgab(decoded, relation_ids, relation_tail)
             decoded = decoded.masked_fill(~action_mask.unsqueeze(-1), 0.0)
             root_h = self.root_norm(_masked_mean(encoded, token_mask))
+            return root_h, decoded, cgab_bias
+
+        def forward(  # type: ignore[no-untyped-def]
+            self,
+            tokens,
+            token_mask,
+            actions,
+            action_mask,
+            relation_ids=None,
+            relation_tail=None,
+            pairwise_root_indices=None,
+            pairwise_left_indices=None,
+            pairwise_right_indices=None,
+            return_pairwise_borda=False,
+            pairwise_borda_top_k=None,
+        ):
+            root_h, decoded, cgab_bias = self.encode_action_queries(
+                tokens,
+                token_mask,
+                actions,
+                action_mask,
+                relation_ids,
+                relation_tail,
+            )
             q_raw = self.q_head(decoded)
             if cfg.q_quantiles > 1:
                 q_out = q_raw.mean(dim=-1)

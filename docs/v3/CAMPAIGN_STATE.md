@@ -30,7 +30,7 @@ and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
 the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
 completed the 100-game greedy/no-search floor plus both n256/d4 arms and is
-now running cycle4 n1024/d16, with 35/100 raw games complete at 10:26 EDT;
+now running cycle4 n1024/d16, with 38/100 raw games complete at 10:51 EDT;
 distq_k8 n1024/d16 follows on the same fresh seeds. A live sidecar copied the
 growing distq-n256 seed files with overwrite-on-poll semantics; a second
 watcher does the same for both n1024 arms. Each publishes only after strict
@@ -244,9 +244,20 @@ more objective variants without materially new supervision or architecture
 and a new untouched root block. Exact recall probe SHA `5b5668bb...`; full
 record is in `cascadiav3/EXPERIMENT_LOG.md`.
 
-**Live john0 high-budget chain (07-09 10:15 EDT):** cycle4 n1024/d16 remains
+**Structured-value representation gate (07-09): PASSED.** On three disjoint
+corrected-rules v3 seed blocks, a frozen selected-action latent plus a linear
+wildlife/habitat/Nature head used 760 non-exact roots for fitting, 760 for
+regularization selection, and 760 untouched roots for the verdict. Held-out
+sum RMSE was `3.4889`, versus the best incumbent comparison at `4.1528`, a
+`15.99%` reduction that clears the preregistered `10%` gate. This is offline
+representation evidence only. The direct-final ridge head cannot serve; the
+authorized next branch is an exact per-action category-afterstate schema plus
+an action-conditioned residual head whose sum retains scalar/distq Q
+supervision. Probe SHA `5c06de5d...`.
+
+**Live john0 high-budget chain (07-09 10:51 EDT):** cycle4 n1024/d16 remains
 healthy under PID `1739796` / exporter `1739797`; the watcher has copied and
-validated 32/100 complete 81-row seed files after roughly 3h27m. Dynamic
+validated 38/100 complete 81-row seed files after roughly 4h03m. Dynamic
 scheduling is backfilling new seeds, and the exporter remains CPU-saturated.
 Distq-k8 n1024/d16 follows on the same fresh seeds, then the verdict watcher
 publishes the paired result. Do not use partial scores as a verdict and do not

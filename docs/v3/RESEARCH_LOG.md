@@ -435,6 +435,27 @@ iterate more losses on these 2,400 roots. Reopening candidate recall requires
 materially different supervision or architecture plus a new untouched root
 block. Probe SHAs: soft `ac2daed8...`; direct `5b5668bb...`.
 
+### 4.9 Action-conditioned structured value — REPRESENTATION GATE PASSED
+
+The existing category auxiliary is root-level and therefore cannot replace
+per-action Q. Before changing the data/model contract, a provenance-safe
+preflight tested the actual post-CGAB selected-action latent on three disjoint
+corrected-rules v3 seed blocks. Exact K1 rows were excluded, leaving 760 roots
+for ridge fitting, 760 for lambda selection, and 760 untouched roots for the
+held-out verdict. Raw unfiltered menus, source revision, rules identity, and
+the cycle4 teacher manifest/weights all had to match.
+
+The linear action-conditioned wildlife/habitat/Nature head reduced held-out
+real-final-score RMSE to `3.4889`, versus `4.1528` for the best incumbent
+comparison (selected-action completed-Q), `4.2525` for the root category sum,
+`4.2438` for root value, and `4.4570` for selected model Q. Its `15.99%`
+relative reduction passes the preregistered `10%` representation threshold.
+The result is not a serving or strength claim: it predicts direct categories
+only for the selected action. It authorizes the proper next step—export exact
+per-action afterstate categories and train an action-conditioned, exactly
+grounded decomposed score-to-go head while retaining total-Q supervision over
+all searched actions. Probe SHA `5c06de5d...`.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)
@@ -465,24 +486,29 @@ block. Probe SHAs: soft `ac2daed8...`; direct `5b5668bb...`.
    survives, resume EI with corrected-policy data; next training knobs are
    K=16 and a distq + L capacity retry. Quantile-aware serving is implemented
    but its fixed-root/n=3 screen did not justify a standalone CUDA gate.
-5. **Table-native q head (cycle-7)** — staged but parked: serving-side
+5. **Action-conditioned structured value** — representation gate passed.
+   A frozen selected-action category head cut held-out real-outcome RMSE by
+   `15.99%` versus the best incumbent comparison on 760 untouched non-exact
+   roots. Build the exact per-action category grounding/schema and run a
+   head-first kill test; do not serve the direct-final ridge preflight.
+6. **Table-native q head (cycle-7)** — staged but parked: serving-side
    table objectives measured CI− twice (noise multiplier); the
    training-side variant is theoretically distinct (labels average away
    noise). Revisit only if the distq line stalls AND the gate's
    cooperative reading is confirmed acceptable.
-6. **Search-shape re-sweep under distq** — the n1024/d16 peak was
+7. **Search-shape re-sweep under distq** — the n1024/d16 peak was
    established with the scalar head; a better value function can shift
    the optimal sims/worlds trade (maybe fewer worlds needed → cheaper).
-7. **Free-refresh as a search decision — IMPLEMENTED 2026-07-09.** The
+8. **Free-refresh as a search decision — IMPLEMENTED 2026-07-09.** The
    engine and every automated policy now expose
    and value decline and accept. Gumbel searches separate roots and makes the
    same choice at interior plies; the 100-game cycle4 baseline accepted 565
    and declined 387 opportunities. This is a rules correction, not an
    experiment to score against the forced-refresh baseline; all old numbers
    are compatibility-broken. See `RULES_CONTRACT.md`.
-8. **1,000-game certification** — run when a corrected-rules champion plausibly clears
+9. **1,000-game certification** — run when a corrected-rules champion plausibly clears
    ~99+ at 100g; currently premature.
-9. **Closed (do not re-propose without new evidence):** oracle/belief
+10. **Closed (do not re-propose without new evidence):** oracle/belief
    modeling, checkpoint ensembles, leaf softmix, symmetry TTA,
    chance-node expectimax, serving-side table-total, pairwise comparator
    serving, small-data/head-only policy candidate recall, capacity/data scaling

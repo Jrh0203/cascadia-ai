@@ -4296,3 +4296,49 @@ n1024 arm had 35/100 raw games and remained healthy; no CUDA concurrency arm
 has run yet, and no default has changed. The implementation gate is 137/137
 Python tests passing with 45 expected fixture skips; `bash -n` and the diff
 whitespace check also pass.
+
+## 2026-07-09 10:52 — Action-conditioned structured-value representation gate passes
+
+Purpose: decide whether the ranked per-category value direction has enough
+representation signal to justify a new exact-grounded data/model contract.
+The existing `score_head(root_h)` is root-level and cannot honestly replace
+per-action Q. This probe is deliberately offline; no gameplay or strength
+claim is attached.
+
+`torch_structured_value_probe` rejects filtered menus, non-v3 or nontraining
+shards, rules/source mismatches, a teacher manifest/weights mismatch, and
+overlapping seed intervals. It excludes exact K1 roots and evaluates one
+selected action using its complete outgoing full-menu relation row. The model
+now exposes `encode_action_queries`, and a unit test pins that method to the
+ordinary forward representation while preserving all default outputs.
+
+The fixed corpus was the three corrected pairwise-generation shards. Seeds
+`2027073100..09` supplied 760 non-exact fit roots; `2027073110..19` supplied
+760 roots to select ridge lambda from a fixed grid; `2027073120..29` supplied
+760 untouched validation roots. All three raw tensors were unfiltered and
+matched cycle4 manifest SHA `b8886c24...`, weights SHA `33559aab...`, rules,
+and source `0f107219`. Lambda `100` minimized category MSE on the middle block;
+the head was then refit on the first two blocks before the single held-out
+read.
+
+| Predictor | Held-out RMSE | MAE | Bias | Error SD |
+|---|---:|---:|---:|---:|
+| action-conditioned category sum | **3.4889** | **2.6964** | -0.3010 | 3.4781 |
+| root category sum | 4.2525 | 3.2905 | +0.9547 | 4.1467 |
+| root value | 4.2438 | 3.2877 | +0.9254 | 4.1444 |
+| selected model Q | 4.4570 | 3.4010 | -2.2045 | 3.8762 |
+| selected completed-Q teacher | 4.1528 | 3.1085 | -2.1818 | 3.5357 |
+
+The action-conditioned head improves RMSE `15.99%` relative to the best
+incumbent comparison, clearing the preregistered `10%` representation gate.
+Verdict: build the proper exact-grounded branch. Do **not** serve this ridge
+head: it predicts direct final categories only for the chosen action and has
+neither exact category afterstates nor counterfactual category labels. The
+real implementation must export per-action exact wildlife/habitat/Nature
+components, predict category score-to-go residuals, sum them on the exact
+scale, and retain scalar/distq completed-Q supervision across all q-valid
+actions. Report JSON SHA:
+`5c06de5da762352765a26c233b8718af7e69bc9040d698ad0758c2b72e908c2a`.
+An independent repeat on the same MPS host was byte-identical for both JSON
+and Markdown. The complete Python gate is 140/140 passing with 45 expected
+fixture skips; Python compilation and the diff whitespace check pass.
