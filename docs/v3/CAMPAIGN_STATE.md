@@ -207,12 +207,30 @@ recall. The follow-up probe now rejects filtered tensors and chunk-scores the
 exact full menu. Probe SHA `92834d4e...`; full record and correction are in
 `cascadiav3/EXPERIMENT_LOG.md`.
 
-**Live john0 high-budget chain (07-09 08:37 EDT):** cycle4 n1024/d16 remains
-healthy under PID `1739796` / exporter `1739797`; 14/100 complete seed files
-are present after roughly 1h52m. Dynamic scheduling is backfilling new seeds,
-and the exporter remains CPU-saturated. Distq-k8 n1024/d16 follows on the same
-fresh seeds, then the verdict watcher publishes the paired result. Do not use
-partial scores as a verdict and do not disturb this chain.
+**Exact full-menu candidate-recall kill test (07-09):** the corrected probe
+establishes cycle4's actual top-16 coverage of the completed-Q best at
+`689/800 = 86.125%` (`654/760 = 86.053%` outside exact K1 roots), with
+`186/206 = 90.291%` coverage on confidence-qualified roots. Recomputed
+full-menu priors averaged `99.737%` top-16 overlap with generator priors and
+agreed on best-action coverage for all 760 non-exact roots, so this is a
+validated serving measurement rather than the pairwise tensor's filtered
+`88.3%`. A 769-parameter soft-policy fit reduced coverage by four roots. A
+purpose-built confidence-gated recall hinge rescued only two menus
+(`86.125% -> 86.375%`) and one qualified root, while top-1 stayed exactly flat
+and candidate-oracle regret did not improve. The recall candidate was selected
+on the same seed-3120 validation block, making even that tiny gain optimistic.
+No gameplay was launched. Close this small-data/head-only route; do not add
+more objective variants without materially new supervision or architecture
+and a new untouched root block. Exact recall probe SHA `5b5668bb...`; full
+record is in `cascadiav3/EXPERIMENT_LOG.md`.
+
+**Live john0 high-budget chain (07-09 09:38 EDT):** cycle4 n1024/d16 remains
+healthy under PID `1739796` / exporter `1739797`; the watcher has copied and
+validated 24/100 complete 81-row seed files after roughly 2h50m. Dynamic
+scheduling is backfilling new seeds, and the exporter remains CPU-saturated.
+Distq-k8 n1024/d16 follows on the same fresh seeds, then the verdict watcher
+publishes the paired result. Do not use partial scores as a verdict and do not
+disturb this chain.
 
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process

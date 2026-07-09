@@ -127,6 +127,17 @@ The initially reported `88.3%` candidate recall was inside a top-Q-filtered
 64-action tensor, not the full legal menu, and is not serving evidence. The
 new full-menu policy probe fails closed on such filtered inputs.
 
+**Upstream recall follow-up: CLOSED for head-only tuning.** The exact probe
+puts incumbent top-16 completed-Q-best coverage at `86.125%` over 800 roots
+and `90.291%` over 206 confidence-qualified roots. A 769-parameter soft-policy
+fit lost four covered menus. A direct confidence-gated recall hinge rescued
+only two menus and one qualified root, left top-1 flat, and did not improve
+candidate-oracle regret; moreover, checkpoint selection and audit used the
+same validation block. No gameplay was justified. Keep exact full-menu
+measurement infrastructure, but do not substitute more loss tuning on this
+small corpus for the materially different data/decision model required to
+reopen this direction.
+
 ## 4. Whole-rollout generation on GPU (kill the lockstep wall)
 
 **Idea.** The serving/generation bottleneck is per-ply lockstep: every

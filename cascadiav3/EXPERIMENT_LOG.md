@@ -4097,3 +4097,98 @@ All fetched artifacts are checksum-verified under ignored path
 tensors, filter/invariant reports, full metrics/log/report, selected
 checkpoint, v3 probe, and exact training/probe source archives. The Python
 gate is 130/130 passing with 45 expected fixture skips.
+
+## 2026-07-09 09:34 — Exact full-menu probe closes the head-only candidate-recall branch before gameplay
+
+Purpose: correct the pairwise pilot's filtered-surface recall measurement and
+test the stronger upstream hypothesis directly: perhaps incumbent search is
+limited because policy logits fail to place the completed-Q-best action in the
+top-16 candidate set. This entry evaluates two bounded, policy-head-only fits.
+It is offline routing evidence only; no gameplay was run and no champion
+changed.
+
+The permanent `torch_policy_candidate_probe` rejects filtered tensors and
+scores every legal action in the raw 800-root seed-3120 v3 shard. It saw 800
+valid-Q roots, including 40 exact K1 roots. `--action-chunk-size 16384` exceeds
+the largest legal menu in this shard, so each root/model pair used one complete
+forward pass rather than a chunk-boundary approximation. As a generator-versus-
+probe reproducibility check on the 760 non-exact roots, recomputed cycle4
+priors matched the stored top-16 set on 729/760 roots (`95.921%`), averaged
+`99.7368%` action overlap, and agreed on completed-Q-best coverage on 760/760.
+All mismatches were policy-boundary swaps; the mean-overlap >=99% and exact
+best-coverage-parity gates passed.
+
+The exact incumbent baseline covered the completed-Q best in 689/800 menus
+(`86.125%`), or 654/760 (`86.053%`) after excluding exact K1 roots. On the 206
+count/margin/SNR-qualified roots, coverage was 186/206 (`90.291%`). Mean
+candidate-oracle regret was `0.075117`; full-menu top-1 accuracy was 194/800
+(`24.250%`). These replace the pairwise probe's optimistic `88.3%`, which was
+measured only inside a top-Q-filtered 64-action tensor.
+
+### Soft improved-policy imitation
+
+The first fit warm-started cycle4 M, froze all but the 769-parameter policy
+projection, and trained for 500 steps on the 3100+3110 top-Q-with-selected
+relation-tail shards, with 3120 fixed for validation. Locked validation chose
+step 400: policy loss improved `2.675326 -> 2.590267` and teacher top-1
+`25.75% -> 26.50%`. Selected manifest/weights hashes are `5ecc053a...` and
+`844f6e46...`; training report/metrics hashes are `d9ed7161...` and
+`f91fadff...`.
+
+The exact full-menu result moved in the wrong direction for the intended
+mechanism: best-action coverage fell to 685/800 (`85.625%`, paired delta
+`-0.500` percentage points, bootstrap CI `[-1.750,+0.750]`) and qualified
+coverage fell to 185/206 (`89.806%`, delta `-0.485` points, CI
+`[-2.427,+1.456]`). Candidate-oracle regret was statistically flat
+(`0.072796`, paired delta `-0.000779`, CI `[-0.014891,+0.012161]`). Top-1
+accuracy gained four roots to `24.750%`, but its paired CI
+`[-0.750,+1.750]` points includes zero and does not rescue candidate recall.
+Probe JSON SHA-256: `ac2daed82bac9434ce1080402ddaa076549d9b912f776b1633ec48aa0154e6b7`.
+
+### Direct confidence-gated recall objective
+
+The second fit changed the retained training surface and the objective rather
+than adding another model. `top-prior-with-q-valid` keeps a fixed 64-action
+menu selected by incumbent policy while mandating every Q-valid and selected
+action. The three v3 relation-tail hashes are `84bc8ea5...`, `78b20088...`,
+and `a79484ec...`; all source/rules/Q invariants passed. The new
+`gumbel-policy-recall` objective uses policy CE weight `0.25` plus a unit
+hinge requiring the completed-Q best to beat the 16th policy logit by `0.25`.
+Hinge examples must be exact K1 roots or have at least two Q-valid actions,
+top-two margin >=0.25, and SNR >=1. Selection used the exactly aggregated
+full validation set, not batch-ratio averages.
+
+This 769-parameter fit selected step 225 at 222/246 trusted retained-menu hits
+(`90.244%`), one above initialization's 221/246; later steps reduced hinge
+loss but never exceeded that count. The selected manifest/weights hashes are
+`b8e0dc69...` and `f0457c2a...`; training report/metrics hashes are
+`7c38e2d2...` and `f11c9640...`. Exact source was `4738f1b3`; deterministic
+source-archive SHA-256 is `9e935a918808ae7f08b0589849eae9142caf4119e5c4b438beb313a524852228`.
+
+On the same fixed validation roots, the exact full-menu audit rescued only two
+candidate sets with no losses: 691/800 (`86.375%`), delta `+0.250` points,
+bootstrap CI `[+0.000,+0.625]`. Qualified coverage rescued one root to 187/206
+(`90.777%`), delta `+0.485` points, CI `[+0.000,+1.456]`. Top-1 accuracy was
+exactly flat at 194/800. Mean candidate-oracle regret was slightly worse at
+`0.075954` (paired delta `+0.000837`, CI `[-0.009988,+0.010742]`). The
+non-exact stratum lost one top-1 decision despite the two coverage rescues.
+Because checkpoint selection and this audit share seed block 3120, even the
+two-root gain is selection-optimistic rather than independent confirmation.
+Probe JSON SHA-256: `5b5668bb8fa678f74e98969378a6212a70d5e516612154d8eeb568cbfea8ed75`.
+
+**Verdict: kill this small-data, head-only candidate-recall branch before
+gameplay.** Soft imitation reduced recall; the purpose-built objective found
+only two validation-menu rescues, no top-1 gain, and no regret improvement.
+Do not spend john0 time or add more loss variants to this checkpoint. The
+exact full-menu probe, retained-prior filter, objective, and weighted metrics
+remain reusable infrastructure. Reopen upstream candidate recall only with a
+materially different supervision source or architecture and a new untouched
+root block, not another tuning pass on these 2,400 roots.
+
+All artifacts are checksum-verified under ignored paths
+`cascadiav3/reports/pairwise_v3_n16_20260709/policy_candidate/` and
+`cascadiav3/reports/pairwise_v3_n16_20260709/policy_recall/`, including raw
+reports, metrics/logs, selected checkpoints, filter/invariant reports, three
+v3 tensors, exact probes, and source archive. The final Python 3.12 gate is
+135/135 passing with 45 expected fixture skips. After checksum verification,
+all policy-branch scratch trees were removed from john2 and john3.

@@ -401,6 +401,40 @@ serving recall. The permanent policy-candidate probe now rejects filtered
 tensors and chunk-scores all legal actions; use that result, not 88.3%, to
 judge whether upstream candidate recall is a real bottleneck.
 
+### 4.8 Exact full-menu policy candidate recall — MEASURED; HEAD-ONLY ROUTE CLOSED
+
+The exact probe used the untouched raw 800-root validation shard rather than a
+retained-action training tensor. It scored every legal action for both models,
+failed closed on incomplete surfaces, and verified the recomputed incumbent
+prior against generator priors. Across 760 non-exact roots, exact top-16 sets
+matched 95.92%, mean action overlap was 99.737%, and completed-Q-best coverage
+agreed on every root. The few set mismatches were near-zero policy-boundary
+swaps and did not alter the measured baseline mechanism.
+
+Cycle4's real top-16 completed-Q-best coverage is 689/800 (`86.125%`), or
+654/760 (`86.053%`) outside exact K1 roots. It rises to 186/206 (`90.291%`)
+on roots whose completed-Q comparison clears the count, margin, and SNR gate.
+Mean candidate-oracle regret is only `0.0751`; this quantifies a real but
+fairly small upstream ceiling.
+
+Two 769-parameter policy-head-only attempts did not exploit it:
+
+- Soft improved-policy imitation lowered exact coverage to 685/800
+  (`-0.500` percentage points, paired bootstrap CI `[-1.750,+0.750]`) and
+  confidence-qualified coverage to 185/206. Its four-root top-1 gain was
+  uncertainty-sized and did not repair the target mechanism.
+- A direct confidence-gated top-16 hinge selected 222/246 trusted retained-
+  menu hits versus 221/246 at initialization. The exact audit rescued just two
+  full-menu sets with no losses (691/800, `+0.250` points) and one qualified
+  set, while top-1 was flat and oracle regret was slightly worse. Selection
+  and audit shared seed block 3120, so this is optimistic validation evidence,
+  not independent replication.
+
+No gameplay was run. Keep the exact probe and objective machinery, but do not
+iterate more losses on these 2,400 roots. Reopening candidate recall requires
+materially different supervision or architecture plus a new untouched root
+block. Probe SHAs: soft `ac2daed8...`; direct `5b5668bb...`.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)
@@ -451,8 +485,8 @@ judge whether upstream candidate recall is a real bottleneck.
 9. **Closed (do not re-propose without new evidence):** oracle/belief
    modeling, checkpoint ensembles, leaf softmix, symmetry TTA,
    chance-node expectimax, serving-side table-total, pairwise comparator
-   serving, capacity/data scaling for the scalar head. See §2/§4 for the
-   measurements.
+   serving, small-data/head-only policy candidate recall, capacity/data scaling
+   for the scalar head. See §2/§4 for the measurements.
 
 ## 6. Historical record (campaign to date, condensed)
 
