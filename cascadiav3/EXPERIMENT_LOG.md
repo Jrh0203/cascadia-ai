@@ -4554,3 +4554,5 @@ sum error. Synthetic tests cover valid admission, strict seed-domain parsing,
 overlap rejection, contract mismatch, and sidecar checksum tampering. Full
 Python gate: 160/160 passing with 45 expected fixture skips. The expansion
 remains quarantined until the same audit can run over all six raw shards.
+Locked-corpus audit JSON SHA-256:
+`ea919618bea4adbfae1ae25befc542ea791f7dac57a0c5f7ca55c94c496d0beb`.
