@@ -92,6 +92,9 @@ Important runners:
 - `run_cuda_concurrency_probe.sh` (engineering-only matched jobs12/16/24 CUDA
   shared-bridge calibration with one-second GPU telemetry and a fail-closed
   smallest-near-fastest knee recommendation; never changes defaults)
+- `run_structured_q_head_pilot.sh` (john0-only frozen-head LR selection on
+  disjoint v4 fit/selection blocks, followed by exactly one untouched held-out
+  verdict; raw shard SHA-256 values are mandatory and no gameplay auto-launches)
 
 Gumbel exporter modes (see `--help`):
 

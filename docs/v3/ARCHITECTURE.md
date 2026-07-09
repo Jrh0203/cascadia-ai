@@ -168,6 +168,14 @@ reload, and derived-Q serving are tested. This makes the implementation safe
 to run; promotion still requires the preregistered head-first validation gate
 and paired gameplay.
 
+When a structured run warm-starts from a legacy checkpoint, each category
+projection is initialized to one third of the loaded Q projection (per
+quantile). Their sum therefore reproduces the incumbent Q projection at step
+zero within floating-point reassociation tolerance; the head-first test
+measures learned decomposition rather than recovery
+from random total-Q initialization. The initialization mode is recorded in the
+training report.
+
 ### Pairwise comparator (experimental)
 
 The optional comparator consumes the same post-cross-attention, post-CGAB

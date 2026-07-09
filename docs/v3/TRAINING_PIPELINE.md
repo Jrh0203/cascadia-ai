@@ -263,6 +263,12 @@ head clears its preregistered validation threshold should a full fine-tune or
 paired gameplay battery consume GPU time. A lower component loss is not
 promotion evidence.
 
+For a legacy warm start, the trainer initializes all three category
+projections to equal thirds of the loaded incumbent Q projection, separately
+for every quantile. The sum matches the incumbent within floating-point
+reassociation tolerance before the first update and
+the report records `q_component_initialization=equal_split_of_loaded_legacy_q`.
+
 The validation verdict is produced by
 `python -m cascadiav3.torch_structured_q_probe`. Exact-endgame rows are
 excluded from its primary read. All four gates must pass:
@@ -278,6 +284,14 @@ excluded from its primary read. All four gates must pass:
 Hyperparameters are selected on a disjoint v4 block. Run the probe once on a
 third untouched seed block for the preregistered verdict; do not pick learning
 rate or checkpoint from that final block.
+
+`cascadiav3/scripts/run_structured_q_head_pilot.sh` owns the john0 execution:
+it requires immutable SHA-256 values for all three raw shards, preserves and
+validates every v4 transform, runs the fixed learning-rate grid
+`3e-4 / 1e-3 / 3e-3` on fit -> selection, selects only by
+`locked_val_q_decomposition`, and invokes the held-out probe once. A scientific
+fail is recorded as a valid closed route so later queued experiments continue;
+a crash or malformed verdict stops the chain.
 
 ### Pairwise comparator pilot
 

@@ -59,9 +59,10 @@ and supervises categories only on the selected real trajectory while keeping
 completed-Q loss over every q-valid action. Unit coverage includes scalar and
 distributional sums, malformed shards, transforms/collation, head freezing,
 checkpoint reload, and an end-to-end two-step v4 train. This work has no score
-claim yet. The next authorized action is a small corrected-rules v4 generation
-plus frozen-head validation kill test on an idle host; john0's live n1024
-rebaseline remains untouched.
+claim yet. The Mac fleet may generate the three corrected-rules v4 blocks, but
+the frozen-head training and held-out gate remain john0-only. john0's live
+n1024 rebaseline remains untouched; the pilot will be checksum-queued behind
+the already-approved exact-K1 gate once all three shard hashes are fixed.
 
 The verdict is preregistered in `torch_structured_q_probe`: exclude exact K1
 rows; require at least 10% selected-final RMSE improvement over the better of

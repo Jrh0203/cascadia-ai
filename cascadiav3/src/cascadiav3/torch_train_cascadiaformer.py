@@ -865,6 +865,26 @@ def _configure_q_decomposition_head_only(model) -> int:  # type: ignore[no-untyp
     return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
 
 
+def _initialize_q_decomposition_from_legacy_q(model) -> None:  # type: ignore[no-untyped-def]
+    """Make the component sum reproduce a loaded legacy Q projection."""
+    import torch
+
+    component_head = model.q_component_head
+    if component_head is None:
+        raise ValueError("legacy-Q component initialization requires q_decomposition")
+    categories = len(model.config.score_categories)
+    quantiles = max(1, model.config.q_quantiles)
+    if model.q_head.out_features != quantiles:
+        raise ValueError("legacy q_head quantile count does not match structured target")
+    if component_head.out_features != categories * quantiles:
+        raise ValueError("structured component-head shape does not match model config")
+    with torch.no_grad():
+        component_weight = component_head.weight.view(categories, quantiles, -1)
+        component_weight.copy_(model.q_head.weight.unsqueeze(0) / categories)
+        component_bias = component_head.bias.view(categories, quantiles)
+        component_bias.copy_(model.q_head.bias.unsqueeze(0) / categories)
+
+
 def _atomic_jsonl_append(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
@@ -2047,6 +2067,7 @@ def run_training(
         )
     init_payload: dict[str, Any] | None = None
     resume_payload: dict[str, Any] | None = None
+    q_component_initialization = "random"
     if init_manifest is not None:
         init_payload = _load_weights_from_manifest(
             model, init_manifest, skip_mismatched=init_skip_mismatched
@@ -2054,6 +2075,9 @@ def run_training(
         init_config = init_payload.get("config")
         if isinstance(init_config, dict):
             init_config = CascadiaFormerConfig(**init_config).to_dict()
+        if q_decomposition and init_config and not init_config.get("q_decomposition", False):
+            _initialize_q_decomposition_from_legacy_q(model)
+            q_component_initialization = "equal_split_of_loaded_legacy_q"
         if init_config and init_config != config.to_dict():
             if init_skip_mismatched:
                 print(
@@ -2070,6 +2094,8 @@ def run_training(
         trainable_parameter_count = _configure_policy_head_only(model)
     elif q_decomposition_head_only:
         trainable_parameter_count = _configure_q_decomposition_head_only(model)
+    if resume is not None:
+        q_component_initialization = "resume_checkpoint"
     fused_optimizer_applied = False
     optimizer_extra_kwargs: dict[str, Any] = {}
     if fused_optimizer:
@@ -2166,6 +2192,7 @@ def run_training(
                 if q_decomposition
                 else None
             ),
+            "q_component_initialization": q_component_initialization,
             "val_max_batches": val_max_batches,
             "eval_every_steps": eval_every_steps,
             "min_selection_greedy_top1": min_selection_greedy_top1,
@@ -2474,6 +2501,7 @@ def run_training(
         "pairwise_head_only": pairwise_head_only,
         "policy_head_only": policy_head_only,
         "q_decomposition_head_only": q_decomposition_head_only,
+        "q_component_initialization": q_component_initialization,
         "steps": completed_steps,
         "requested_steps": steps,
         "stopped_early": stopped_early_reason is not None,

@@ -146,6 +146,27 @@ class StructuredQTest(unittest.TestCase):
                 name,
             )
 
+    def test_legacy_q_equal_split_preserves_initial_total_projection(self) -> None:
+        self._require_torch()
+        import torch
+
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_train_cascadiaformer import (
+            _initialize_q_decomposition_from_legacy_q,
+        )
+
+        config = replace(config_for_size("tiny"), q_decomposition=True, q_quantiles=8)
+        model = build_cascadiaformer(config)
+        torch.manual_seed(41)
+        with torch.no_grad():
+            model.q_head.weight.copy_(torch.randn_like(model.q_head.weight))
+            model.q_head.bias.copy_(torch.randn_like(model.q_head.bias))
+        _initialize_q_decomposition_from_legacy_q(model)
+        hidden = torch.randn(2, 5, config.d_model)
+        legacy = model.q_head(hidden)
+        components = model.q_component_head(hidden).view(2, 5, 3, 8)
+        torch.testing.assert_close(components.sum(dim=-2), legacy, rtol=1e-5, atol=1e-5)
+
     def test_inference_bridge_loads_structured_checkpoint_contract(self) -> None:
         self._require_torch()
         import torch

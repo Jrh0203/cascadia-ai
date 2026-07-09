@@ -19,7 +19,7 @@ import numpy as np
 
 from .expert_tensor_shards import SHARD_VERSION_V4, ExpertTensorCorpus, collate_expert_tensor_examples
 from .torch_benchmark_stats import paired_delta_stats
-from .torch_inference_bridge import _load_model, resolve_checkpoint_path
+from .torch_inference_bridge import _config_from_payload, _load_model, resolve_checkpoint_path
 
 CATEGORIES = ("wildlife", "habitat", "nature_tokens")
 MIN_SELECTED_RMSE_IMPROVEMENT = 0.10
@@ -218,8 +218,22 @@ def _validate_contract(
         raise ValueError("candidate checkpoint does not enable q_decomposition")
     if bool(incumbent_artifact["config"].get("q_decomposition", False)):
         raise ValueError("incumbent checkpoint must use the legacy monolithic Q head")
+    normalized_candidate = _config_from_payload(candidate_payload).to_dict()
+    normalized_incumbent = _config_from_payload(
+        {"config": incumbent_artifact["config"]}
+    ).to_dict()
+    ignored_config_fields = {"model_name", "q_decomposition", "q_quantiles"}
+    trunk_mismatches = sorted(
+        key
+        for key in normalized_candidate
+        if key not in ignored_config_fields
+        and normalized_candidate[key] != normalized_incumbent[key]
+    )
+    if trunk_mismatches:
+        raise ValueError(f"candidate/incumbent trunk config mismatch: {trunk_mismatches}")
     source_revisions: set[str] = set()
     rulesets: set[str] = set()
+    search_contracts: set[str] = set()
     action_surfaces: list[dict[str, Any] | None] = []
     for shard in shards.shards:
         if shard.version != SHARD_VERSION_V4:
@@ -234,11 +248,14 @@ def _validate_contract(
             raise ValueError(f"shard teacher weights do not match incumbent: {shard.path}")
         source_revisions.add(str(metadata.get("source_revision", "")))
         rulesets.add(str(metadata.get("ruleset_id", "")))
+        search_contracts.add(json.dumps(metadata.get("search"), sort_keys=True))
         action_surfaces.append(metadata.get("filter"))
     if len(source_revisions) != 1 or "" in source_revisions:
         raise ValueError("probe shards must share one non-empty source revision")
     if len(rulesets) != 1 or "" in rulesets:
         raise ValueError("probe shards must share one non-empty ruleset")
+    if len(search_contracts) != 1 or "null" in search_contracts:
+        raise ValueError("probe shards must share one complete search contract")
     return {
         "source_revision": next(iter(source_revisions)),
         "ruleset_id": next(iter(rulesets)),
