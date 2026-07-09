@@ -4515,3 +4515,17 @@ complete with v4 provenance and invariant validation, remain disjoint from
 the fixed selection/verdict blocks, and may not enter training unless the
 preregistered head-only pilot passes. john1 was intentionally left to the
 active UI/champion service; john0 remained untouched.
+
+## 2026-07-09 12:13 — Live n1024 utilization sample confirms feed gaps
+
+A read-only 30-s, one-Hz sample of the in-flight corrected cycle4 n1024/d16
+jobs12 arm found GPU utilization mean / P50 / P90 `63.8% / 66% / 85%`, with a
+wide `2%..88%` range. Mean power was `350.1W` (range `271.9..413.4W`), memory
+was fixed at `2403 MiB`, and temperature averaged `62.1C`. Linux cumulative
+process CPU readings were stable at `779%` for exporter PID `1739797` and
+`407.5%` for bridge PID `1739800`.
+
+Interpretation: the GPU still sees intermittent feed gaps while both Rust
+search and Python bridge consume substantial CPU. This is diagnostic evidence
+for the checksum-queued jobs12/16/24 concurrency calibration, not permission
+to alter the 52/100 live scientific arm. No score field was read.

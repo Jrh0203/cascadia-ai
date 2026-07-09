@@ -326,13 +326,20 @@ authorized next branch is an exact per-action category-afterstate schema plus
 an action-conditioned residual head whose sum retains scalar/distq Q
 supervision. Probe SHA `5c06de5d...`.
 
-**Live john0 high-budget chain (07-09 10:51 EDT):** cycle4 n1024/d16 remains
+**Live john0 high-budget chain (07-09 12:13 EDT):** cycle4 n1024/d16 remains
 healthy under PID `1739796` / exporter `1739797`; the watcher has copied and
-validated 38/100 complete 81-row seed files after roughly 4h03m. Dynamic
+validated 52/100 complete 81-row seed files. Dynamic
 scheduling is backfilling new seeds, and the exporter remains CPU-saturated.
 Distq-k8 n1024/d16 follows on the same fresh seeds, then the verdict watcher
 publishes the paired result. Do not use partial scores as a verdict and do not
 disturb this chain.
+
+A read-only 30-second sample at this exact n1024/d16 workload measured GPU
+utilization mean / P50 / P90 `63.8% / 66% / 85%` (range `2%..88%`), power
+`350.1W` mean, and fixed `2403 MiB` device memory. Exporter and bridge process
+CPU readings were `779%` and `407.5%`. This confirms intermittent model-feed
+gaps despite heavy CPU use; it supports the already-queued matched
+jobs12/16/24 calibration but is not authority to mutate the live arm.
 
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process
