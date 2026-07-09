@@ -20,14 +20,15 @@ use axum::{
 };
 use cascadia_game::{
     Board, DraftChoice, GameConfig, GameSeed, GameState, HexCoord, Market, MarketPrelude,
-    MarketSlot, PlacedTile, Replay, RuleError, ScoreBreakdown, Terrain, Tile, TurnAction, Wildlife,
-    score_board, score_game,
+    MarketSlot, PlacedTile, RULES_SEMANTICS_ID, Replay, RuleError, ScoreBreakdown, Terrain, Tile,
+    TurnAction, Wildlife, score_board, score_game,
 };
 use cascadia_search::{
     LateConservativeBasePolicyImprovementConfig, LateConservativeBasePolicyImprovementStrategy,
 };
 use cascadia_sim::{
-    PATTERN_AWARE_STRATEGY_ID, PatternAwareConfig, rank_greedy_actions, rank_pattern_actions,
+    PATTERN_AWARE_STRATEGY_ID, PatternAwareConfig, rank_greedy_actions_with_market_choice,
+    rank_pattern_actions_with_market_choice,
 };
 use serde::{Deserialize, Serialize};
 use tower_http::{
@@ -206,6 +207,7 @@ pub struct GameDocument {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct GameView {
+    pub ruleset_id: &'static str,
     pub config: GameConfig,
     pub seed: u64,
     pub current_player: usize,
@@ -601,11 +603,7 @@ pub fn suggest(request: SuggestRequest) -> Result<SuggestionResponse, ApiError> 
     let limit = request.candidates.clamp(1, 32);
     match request.strength {
         SuggestionStrength::Instant => {
-            let prelude = MarketPrelude {
-                replace_three_of_a_kind: state.market().three_of_a_kind().is_some(),
-                wildlife_wipes: Vec::new(),
-            };
-            let ranked = rank_greedy_actions(&state, &prelude, Some(limit))
+            let ranked = rank_greedy_actions_with_market_choice(&state, Some(limit))
                 .map_err(|error| ApiError::bad_request("suggestion-failed", error.to_string()))?;
             Ok(SuggestionResponse {
                 strategy: "greedy-v1".to_owned(),
@@ -626,12 +624,11 @@ pub fn suggest(request: SuggestRequest) -> Result<SuggestionResponse, ApiError> 
             })
         }
         SuggestionStrength::Interactive => {
-            let prelude = MarketPrelude {
-                replace_three_of_a_kind: state.market().three_of_a_kind().is_some(),
-                wildlife_wipes: Vec::new(),
-            };
-            let ranked = rank_pattern_actions(&state, &prelude, PatternAwareConfig::default())
-                .map_err(|error| ApiError::bad_request("suggestion-failed", error.to_string()))?;
+            let ranked =
+                rank_pattern_actions_with_market_choice(&state, PatternAwareConfig::default())
+                    .map_err(|error| {
+                        ApiError::bad_request("suggestion-failed", error.to_string())
+                    })?;
             Ok(SuggestionResponse {
                 strategy: PATTERN_AWARE_STRATEGY_ID.to_owned(),
                 candidates: ranked
@@ -666,8 +663,14 @@ pub fn suggest(request: SuggestRequest) -> Result<SuggestionResponse, ApiError> 
             // menu ranked by completed Q.
             let mut order: Vec<usize> = (0..reply.actions.len()).collect();
             order.sort_by(|&left, &right| {
-                let left_key = (left != reply.chosen_index, std::cmp::Reverse(ordered(reply.completed_q.get(left))));
-                let right_key = (right != reply.chosen_index, std::cmp::Reverse(ordered(reply.completed_q.get(right))));
+                let left_key = (
+                    left != reply.chosen_index,
+                    std::cmp::Reverse(ordered(reply.completed_q.get(left))),
+                );
+                let right_key = (
+                    right != reply.chosen_index,
+                    std::cmp::Reverse(ordered(reply.completed_q.get(right))),
+                );
                 left_key.cmp(&right_key)
             });
             Ok(SuggestionResponse {
@@ -705,12 +708,9 @@ fn research_suggestions(
         LateConservativeBasePolicyImprovementConfig::default(),
     )
     .map_err(|error| ApiError::bad_request("suggestion-failed", error.to_string()))?;
-    let prelude = MarketPrelude {
-        replace_three_of_a_kind: state.market().three_of_a_kind().is_some(),
-        wildlife_wipes: Vec::new(),
-    };
-    let pattern_ranked = rank_pattern_actions(state, &prelude, PatternAwareConfig::default())
-        .map_err(|error| ApiError::bad_request("suggestion-failed", error.to_string()))?;
+    let pattern_ranked =
+        rank_pattern_actions_with_market_choice(state, PatternAwareConfig::default())
+            .map_err(|error| ApiError::bad_request("suggestion-failed", error.to_string()))?;
     let anchor = pattern_ranked
         .first()
         .ok_or_else(|| ApiError::bad_request("suggestion-failed", "no legal actions"))?
@@ -822,6 +822,7 @@ fn load_saved_game(saved: &SavedGame) -> Result<GameState, ApiError> {
 fn game_view(state: &GameState, seed: u64) -> GameView {
     let scores = score_game(state);
     GameView {
+        ruleset_id: RULES_SEMANTICS_ID,
         config: state.config(),
         seed,
         current_player: state.current_player(),
@@ -955,6 +956,7 @@ mod tests {
     #[test]
     fn create_apply_and_undo_round_trip_the_canonical_state() {
         let initial = new_two_player_game(42);
+        assert_eq!(initial.view.ruleset_id, RULES_SEMANTICS_ID);
         let options = turn_options(TurnOptionsRequest {
             game: initial.game.clone(),
             prelude: MarketPrelude::default(),

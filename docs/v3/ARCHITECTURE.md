@@ -136,6 +136,14 @@ action is applied; the legacy rollout path honors the same contract behind
 `--rollout-determinize`. Benchmarks that violate this contract are marked
 legacy-leaky and are not promotion evidence.
 
+**Optional market-policy contract:** a free three-of-a-kind wildlife wipe is
+an accept/decline decision followed by a chance draw and then the ordinary
+draft decision. Policy and search value accept from public-hash-derived hidden
+samples; they never condition acceptance on the real replacement order.
+CascadiaFormer uses separate model rows for sampled accepted markets and, only
+after acceptance, for the real revealed market. See
+[RULES_CONTRACT.md](RULES_CONTRACT.md).
+
 ## Promotion Philosophy
 
 Validation loss, imitation accuracy, and greedy top-1 retention are diagnostics.

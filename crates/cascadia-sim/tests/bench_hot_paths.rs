@@ -13,7 +13,10 @@ use std::time::Instant;
 
 use blake3::Hasher;
 use cascadia_game::{GameConfig, GameSeed, GameState, MarketPrelude, score_game};
-use cascadia_sim::{GreedyRankScratch, rank_greedy_actions, rank_greedy_actions_with_scratch};
+use cascadia_sim::{
+    GreedyRankScratch, rank_greedy_actions, rank_greedy_actions_with_market_choice,
+    rank_greedy_actions_with_scratch,
+};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -30,16 +33,16 @@ fn advance_sampled_greedy(game: &mut GameState, plies: usize, rng: &mut ChaCha8R
         if game.is_game_over() {
             return;
         }
-        if game.market().three_of_a_kind().is_some() {
-            let (_prelude, staged) = game.preview_free_three_of_a_kind_if_feasible().unwrap();
-            *game = staged;
+        let candidates = if game.market().three_of_a_kind().is_some() {
+            rank_greedy_actions_with_market_choice(game, Some(RANK_LIMIT))
+        } else {
+            rank_greedy_actions_with_scratch(
+                game,
+                &MarketPrelude::default(),
+                Some(RANK_LIMIT),
+                &mut scratch,
+            )
         }
-        let candidates = rank_greedy_actions_with_scratch(
-            game,
-            &MarketPrelude::default(),
-            Some(RANK_LIMIT),
-            &mut scratch,
-        )
         .unwrap();
         assert!(!candidates.is_empty());
         let sample_limit = ROLLOUT_TOP_K.min(candidates.len());
@@ -56,20 +59,17 @@ fn advance_sampled_greedy(game: &mut GameState, plies: usize, rng: &mut ChaCha8R
 fn rollout_to_terminal(mut game: GameState, rng: &mut ChaCha8Rng) -> Vec<u16> {
     let mut scratch = GreedyRankScratch::default();
     while !game.is_game_over() {
-        let staged = if game.market().three_of_a_kind().is_some() {
-            match game.preview_free_three_of_a_kind_if_feasible() {
-                Ok((_prelude, staged)) => Some(staged),
-                Err(_) => break,
-            }
+        let candidates = if game.market().three_of_a_kind().is_some() {
+            rank_greedy_actions_with_market_choice(&game, Some(RANK_LIMIT))
         } else {
-            None
+            rank_greedy_actions_with_scratch(
+                &game,
+                &MarketPrelude::default(),
+                Some(RANK_LIMIT),
+                &mut scratch,
+            )
         };
-        let candidates = match rank_greedy_actions_with_scratch(
-            staged.as_ref().unwrap_or(&game),
-            &MarketPrelude::default(),
-            Some(RANK_LIMIT),
-            &mut scratch,
-        ) {
+        let candidates = match candidates {
             Ok(candidates) => candidates,
             Err(_) => break,
         };
@@ -83,9 +83,6 @@ fn rollout_to_terminal(mut game: GameState, rng: &mut ChaCha8Rng) -> Vec<u16> {
             rng.gen_range(0..sample_limit)
         };
         let action = candidates[sampled].action.clone();
-        if let Some(staged) = staged {
-            game = staged;
-        }
         if game.apply(&action).is_err() {
             break;
         }

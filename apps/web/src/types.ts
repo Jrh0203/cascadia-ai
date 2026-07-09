@@ -61,6 +61,7 @@ export interface MarketPairView {
 }
 
 export interface GameView {
+  ruleset_id: string;
   config: GameConfig;
   seed: number;
   current_player: number;

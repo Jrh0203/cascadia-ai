@@ -4,8 +4,8 @@ use cascadia_data::PositionRecord;
 use cascadia_game::{GameConfig, GameSeed, GameState, MarketPrelude, TurnAction};
 use cascadia_model::{MAX_BATCH, ModelProcess};
 use cascadia_sim::{
-    GreedyCandidate, MatchResult, PatternAwareConfig, SimulationError, play_match_with_selector,
-    rank_pattern_frontier_actions,
+    GreedyCandidate, MatchResult, PatternAwareConfig, SimulationError,
+    choose_greedy_market_prelude, play_match_with_selector, rank_pattern_frontier_actions,
 };
 use rand::Rng;
 
@@ -221,10 +221,7 @@ impl<P: RankingPredictor> MlxPatternRankingStrategy<P> {
     }
 
     pub fn rank_actions(&mut self, game: &GameState) -> Result<Vec<RolloutCandidate>, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
+        let prelude = choose_greedy_market_prelude(game)?;
         let staged = game.preview_market_prelude(&prelude)?;
         let candidates = rank_pattern_frontier_actions(
             &staged,

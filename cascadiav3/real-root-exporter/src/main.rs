@@ -20,7 +20,7 @@ use cascadia_game::{
 };
 use cascadia_sim::{
     GreedyCandidate, GreedyRankScratch, SimulationError, rank_greedy_actions,
-    rank_greedy_actions_with_scratch,
+    rank_greedy_actions_with_market_choice, rank_greedy_actions_with_scratch,
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -29,9 +29,8 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
 use feature_tensors::{
-    EXPERT_SHARD_VERSION, EXPERT_SHARD_VERSION_V2, ExpertTensorShardData,
-    PUBLIC_TOKEN_FEATURE_DIM, SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM, SHARD_VERSION,
-    TensorShardData,
+    EXPERT_SHARD_VERSION, EXPERT_SHARD_VERSION_V2, ExpertTensorShardData, PUBLIC_TOKEN_FEATURE_DIM,
+    SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM, SHARD_VERSION, TensorShardData,
 };
 use model_bridge::{
     BridgeConfig, ModelEval, ModelServiceSession, SharedBridge, SharedBridgeClient,
@@ -45,7 +44,7 @@ const EXPERT_TENSOR_SCHEMA_ID: &str = "cascadiav3.expert_tensor_shard.v1";
 const EXPERT_TENSOR_SCHEMA_ID_V2: &str = "cascadiav3.expert_tensor_shard.v2";
 const GREEDY_TENSOR_SCHEMA_ID: &str = "greedy_policy_tensor_shard_v1";
 const ROOT_REPLAY_SCHEMA_ID: &str = "cascadiav3.root_replay.v1";
-const RULESET_ID: &str = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus";
+const RULESET_ID: &str = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09";
 const DEFAULT_FIRST_SEED: u64 = 2_026_062_900;
 const DEFAULT_SEED_COUNT: u64 = 2;
 const DEFAULT_PLIES_PER_SEED: usize = 2;
@@ -80,6 +79,7 @@ struct Args {
     gumbel_top_m: usize,
     gumbel_depth_rounds: usize,
     gumbel_determinizations: usize,
+    gumbel_market_decision_samples: usize,
     gumbel_blend_weight: f64,
     gumbel_exploration: bool,
     gumbel_peek: bool,
@@ -345,6 +345,7 @@ fn parse_args() -> Result<Args> {
         gumbel_top_m: 16,
         gumbel_depth_rounds: 1,
         gumbel_determinizations: 4,
+        gumbel_market_decision_samples: 8,
         gumbel_blend_weight: 0.5,
         gumbel_exploration: false,
         gumbel_peek: false,
@@ -425,6 +426,14 @@ fn parse_args() -> Result<Args> {
                     .parse()
                     .context("invalid --gumbel-determinizations")?
             }
+            "--gumbel-market-decision-samples" => {
+                args.gumbel_market_decision_samples = value()?
+                    .parse()
+                    .context("invalid --gumbel-market-decision-samples")?;
+                if args.gumbel_market_decision_samples == 0 {
+                    bail!("--gumbel-market-decision-samples must be positive");
+                }
+            }
             "--gumbel-blend-weight" => {
                 args.gumbel_blend_weight =
                     value()?.parse().context("invalid --gumbel-blend-weight")?
@@ -437,8 +446,7 @@ fn parse_args() -> Result<Args> {
                 }
             }
             "--gumbel-root-menu" => {
-                args.gumbel_root_menu =
-                    value()?.parse().context("invalid --gumbel-root-menu")?
+                args.gumbel_root_menu = value()?.parse().context("invalid --gumbel-root-menu")?
             }
             "--gumbel-max-root-actions" => {
                 args.gumbel_max_root_actions = Some(
@@ -447,12 +455,9 @@ fn parse_args() -> Result<Args> {
                         .context("invalid --gumbel-max-root-actions")?,
                 )
             }
-            "--k-interior" => {
-                args.k_interior = value()?.parse().context("invalid --k-interior")?
-            }
+            "--k-interior" => args.k_interior = value()?.parse().context("invalid --k-interior")?,
             "--model-sessions" => {
-                args.model_sessions =
-                    Some(value()?.parse().context("invalid --model-sessions")?)
+                args.model_sessions = Some(value()?.parse().context("invalid --model-sessions")?)
             }
             "--shared-model-session" => args.shared_model_session = true,
             "--out" => args.out = PathBuf::from(value()?),
@@ -813,7 +818,7 @@ fn build_expert_root_record(
     let active_seat = game.current_player();
     let parent_public_hash = public_hash(game);
     let parent_full_hash = game_hash(game);
-    let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+    let (prelude, staged) = greedy_market_choice(game, None)?;
     let staged_public_hash = public_hash(&staged);
     let staged_full_hash = game_hash(&staged);
     let root_public_hash = staged_public_hash.clone();
@@ -1246,16 +1251,19 @@ fn validate_one_expert_reconstruction(record: &Value) -> Result<()> {
         }
     }
 
-    let (computed_prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
     let expected_prelude: MarketPrelude = serde_json::from_value(
         root_replay
             .get("market_prelude")
             .cloned()
             .context("root_replay.market_prelude missing")?,
     )?;
-    if computed_prelude != expected_prelude {
-        bail!("market prelude mismatch during reconstruction");
+    if !game
+        .free_three_of_a_kind_choices()?
+        .contains(&expected_prelude)
+    {
+        bail!("recorded market prelude is not legal during reconstruction");
     }
+    let staged = game.preview_market_prelude(&expected_prelude)?;
     let expected_public = record
         .get("public_hash")
         .and_then(Value::as_str)
@@ -1354,7 +1362,7 @@ fn bench_tokenize(args: &Args) -> Result<Value> {
             if game.is_game_over() {
                 break;
             }
-            let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+            let (prelude, staged) = greedy_market_choice(&game, None)?;
             let active_seat = staged.current_player();
             let legal = staged.legal_turn_actions(&MarketPrelude::default())?;
             let public = public_tokens(&staged, active_seat);
@@ -2203,14 +2211,18 @@ fn export_greedy_state_search_bootstrap_seed_records(
 
 fn model_state_worker_session(args: &Args) -> Result<Option<ModelServiceSession>> {
     match args.model_service.as_ref() {
-        Some(command) => match ModelServiceSession::spawn(command, &BridgeConfig::from_args(args)) {
-            Ok(session) => Ok(Some(session)),
-            Err(error) if args.allow_model_fallback => {
-                eprintln!("model service unavailable for worker; using fallback priors: {error}");
-                Ok(None)
+        Some(command) => {
+            match ModelServiceSession::spawn(command, &BridgeConfig::from_args(args)) {
+                Ok(session) => Ok(Some(session)),
+                Err(error) if args.allow_model_fallback => {
+                    eprintln!(
+                        "model service unavailable for worker; using fallback priors: {error}"
+                    );
+                    Ok(None)
+                }
+                Err(error) => Err(error),
             }
-            Err(error) => Err(error),
-        },
+        }
         None => Ok(None),
     }
 }
@@ -2417,6 +2429,7 @@ fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfi
         max_root_actions: args.gumbel_max_root_actions,
         depth_rounds: args.gumbel_depth_rounds,
         determinization_samples: args.gumbel_determinizations,
+        market_decision_samples: args.gumbel_market_decision_samples,
         rollout_blend_weight: args.gumbel_blend_weight,
         rollout_max_actions: args.max_actions,
         rollout_top_k: args.rollout_top_k,
@@ -2508,8 +2521,7 @@ fn packed_features_for_request(request: &Value) -> Result<Value> {
     let action_rows = feature_tensors::semantic_public_token_action_features(request)?;
     let token_count = token_rows.len();
     let action_count = action_rows.len();
-    let relation_tail =
-        feature_tensors::action_relation_tail(request, token_count, action_count)?;
+    let relation_tail = feature_tensors::action_relation_tail(request, token_count, action_count)?;
 
     let mut token_bytes = Vec::with_capacity(token_count * PUBLIC_TOKEN_FEATURE_DIM * 4);
     for value in token_rows.iter().flatten() {
@@ -2957,6 +2969,7 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
         "top_m": args.gumbel_top_m,
         "depth_rounds": args.gumbel_depth_rounds,
         "determinization_samples": args.gumbel_determinizations,
+        "market_decision_samples": args.gumbel_market_decision_samples,
         "rollout_blend_weight": args.gumbel_blend_weight,
         "exploration": args.gumbel_exploration,
         "k_interior": args.k_interior,
@@ -2973,6 +2986,9 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
 fn gumbel_selfplay_root_record(
     row: &gumbel::EvalRow,
     result: &gumbel::GumbelSearchResult,
+    market_branches_searched: usize,
+    market_chance_samples: usize,
+    total_simulations_run: usize,
     seed_u64: u64,
     ply_index: usize,
     args: &Args,
@@ -3009,6 +3025,7 @@ fn gumbel_selfplay_root_record(
     ];
     Ok(json!({
         "schema_id": SCHEMA_ID,
+        "ruleset_id": RULESET_ID,
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
         "active_seat": active_seat,
         "legal_actions": legal_actions,
@@ -3055,6 +3072,16 @@ fn gumbel_selfplay_root_record(
             "turns_remaining": staged.turns_remaining(),
             "retained_action_count": action_count,
             "max_actions": args.max_actions,
+            "free_three_of_a_kind_choice": if row.prelude.replace_three_of_a_kind {
+                "accept"
+            } else if row.staged.market().three_of_a_kind().is_some() {
+                "decline"
+            } else {
+                "not_available"
+            },
+            "market_branches_searched": market_branches_searched,
+            "market_chance_samples": market_chance_samples,
+            "total_simulations_run": total_simulations_run,
             "search": gumbel_search_metadata(args, result),
         },
     }))
@@ -3064,7 +3091,10 @@ fn backfill_final_outcome(records: &mut [Value], final_scores: &[ScoreBreakdown]
     let means = score_means_from_breakdowns(final_scores);
     let final_score_vector: Vec<Value> = means.iter().map(|mean| json!(mean.total)).collect();
     let decomposition = score_decomposition(&means);
-    let ranks: Vec<Value> = rank_vector(&means).into_iter().map(|rank| json!(rank)).collect();
+    let ranks: Vec<Value> = rank_vector(&means)
+        .into_iter()
+        .map(|rank| json!(rank))
+        .collect();
     for record in records.iter_mut() {
         let object = record
             .as_object_mut()
@@ -3089,9 +3119,6 @@ fn play_gumbel_selfplay_seed(
     let mut records = Vec::new();
     let mut ply_index = 0usize;
     while !game.is_game_over() && ply_index < args.plies_per_seed {
-        let Some(row) = gumbel::eval_row_for_state(&game, gumbel_root_menu_limit(args))? else {
-            break;
-        };
         let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
         let mut evaluator = BridgeLeafEvaluator {
             bridge,
@@ -3099,9 +3126,30 @@ fn play_gumbel_selfplay_seed(
             cache: eval_cache,
             tta_rotations: args.gumbel_tta,
         };
-        let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
-            .with_context(|| format!("gumbel selfplay seed {seed_u64} ply {ply_index}"))?;
-        let record = gumbel_selfplay_root_record(&row, &result, seed_u64, ply_index, args)?;
+        let Some(decision) = gumbel::gumbel_search_for_state(
+            &game,
+            gumbel_root_menu_limit(args),
+            &mut evaluator,
+            &cfg,
+        )?
+        else {
+            break;
+        };
+        let market_branches_searched = decision.market_branches_searched;
+        let market_chance_samples = decision.market_chance_samples;
+        let total_simulations_run = decision.total_simulations_run;
+        let row = decision.row;
+        let result = decision.result;
+        let record = gumbel_selfplay_root_record(
+            &row,
+            &result,
+            market_branches_searched,
+            market_chance_samples,
+            total_simulations_run,
+            seed_u64,
+            ply_index,
+            args,
+        )?;
         records.push(record);
         let chosen = &row.afterstates[result.chosen_index];
         game = chosen.state.clone();
@@ -3174,9 +3222,9 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                     format!("extracting gumbel selfplay tensor features for seed {seed_u64}")
                 })?;
                 let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
-                let records_done =
-                    completed_records.fetch_add(shard.record_count as u64, Ordering::Relaxed)
-                        + shard.record_count as u64;
+                let records_done = completed_records
+                    .fetch_add(shard.record_count as u64, Ordering::Relaxed)
+                    + shard.record_count as u64;
                 log_seed_export_progress(
                     "gumbel selfplay tensor",
                     done,
@@ -3312,9 +3360,6 @@ fn play_gumbel_policy_game_seed(
     let game_started = Instant::now();
     let mut ply_index = 0usize;
     while !game.is_game_over() {
-        let Some(row) = gumbel::eval_row_for_state(&game, gumbel_root_menu_limit(args))? else {
-            break;
-        };
         let decision_started = Instant::now();
         let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
         let mut evaluator = BridgeLeafEvaluator {
@@ -3323,11 +3368,24 @@ fn play_gumbel_policy_game_seed(
             cache: eval_cache,
             tta_rotations: args.gumbel_tta,
         };
-        let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
-            .with_context(|| format!("gumbel policy game seed {seed_u64} ply {ply_index}"))?;
+        let Some(decision) = gumbel::gumbel_search_for_state(
+            &game,
+            gumbel_root_menu_limit(args),
+            &mut evaluator,
+            &cfg,
+        )?
+        else {
+            break;
+        };
+        let market_branches_searched = decision.market_branches_searched;
+        let market_chance_samples = decision.market_chance_samples;
+        let total_simulations_run = decision.total_simulations_run;
+        let row = decision.row;
+        let result = decision.result;
         let chosen = &row.afterstates[result.chosen_index];
         records.push(json!({
             "type": "gumbel_decision",
+            "ruleset_id": RULESET_ID,
             "seed": seed_u64,
             "ply": ply_index,
             "active_seat": row.staged.current_player(),
@@ -3335,6 +3393,16 @@ fn play_gumbel_policy_game_seed(
             "chosen_action_id": action_id(&chosen.candidate.action)?,
             "root_value": result.root_value,
             "simulations_run": result.simulations_run,
+            "market_branches_searched": market_branches_searched,
+            "market_chance_samples": market_chance_samples,
+            "total_simulations_run": total_simulations_run,
+            "free_three_of_a_kind_choice": if row.prelude.replace_three_of_a_kind {
+                "accept"
+            } else if row.staged.market().three_of_a_kind().is_some() {
+                "decline"
+            } else {
+                "not_available"
+            },
             "decision_seconds": decision_started.elapsed().as_secs_f64(),
         }));
         game = chosen.state.clone();
@@ -3349,6 +3417,7 @@ fn play_gumbel_policy_game_seed(
     let scores = score_game(&game);
     records.push(json!({
         "type": "gumbel_game_done",
+        "ruleset_id": RULESET_ID,
         "seed": seed_u64,
         "scores": scores.iter().map(score_breakdown_json).collect::<Vec<_>>(),
         "decision_count": ply_index,
@@ -3358,6 +3427,7 @@ fn play_gumbel_policy_game_seed(
             "top_m": args.gumbel_top_m,
             "depth_rounds": args.gumbel_depth_rounds,
             "determinization_samples": args.gumbel_determinizations,
+            "market_decision_samples": args.gumbel_market_decision_samples,
             "rollout_blend_weight": args.gumbel_blend_weight,
             "exploration": args.gumbel_exploration,
             "k_interior": args.k_interior,
@@ -3437,12 +3507,9 @@ fn suggest_for_request(
             .clone(),
     )
     .context("deserializing game state")?;
-    let Some(row) = gumbel::eval_row_for_state(&game, gumbel_root_menu_limit(args))? else {
-        return Ok(json!({"type": "suggest_response", "game_over": true}));
-    };
     // Deterministic per-position search seed: identical positions get
     // identical suggestions across requests and restarts.
-    let public_hash = row.staged.public_state().canonical_hash();
+    let public_hash = game.public_state().canonical_hash();
     let seed = u64::from_le_bytes(public_hash.as_bytes()[..8].try_into().expect("hash prefix"));
     let mut cfg = gumbel_config_from_args(args, seed);
     // Per-request search-shape overrides so one server (one loaded model)
@@ -3462,12 +3529,19 @@ fn suggest_for_request(
         cache,
         tta_rotations: args.gumbel_tta,
     };
-    let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
-        .context("gumbel search for suggestion")?;
-    // The eval row auto-stages the free three-of-a-kind refresh (and any
-    // wipes) before ranking, so the candidate actions are relative to the
-    // STAGED market. Merge the prelude back in so the returned actions
-    // reproduce that market when applied to the real game state.
+    let Some(decision) =
+        gumbel::gumbel_search_for_state(&game, gumbel_root_menu_limit(args), &mut evaluator, &cfg)?
+    else {
+        return Ok(json!({"type": "suggest_response", "game_over": true}));
+    };
+    let market_branches_searched = decision.market_branches_searched;
+    let market_chance_samples = decision.market_chance_samples;
+    let total_simulations_run = decision.total_simulations_run;
+    let row = decision.row;
+    let result = decision.result;
+    // Candidate actions are relative to their selected staged market. Merge
+    // that explicit policy choice back into each returned compound turn so
+    // applying it to the original game reproduces the searched branch.
     let actions = row
         .afterstates
         .iter()
@@ -3480,6 +3554,7 @@ fn suggest_for_request(
         .collect::<Result<Vec<_>, _>>()?;
     Ok(json!({
         "type": "suggest_response",
+        "ruleset_id": RULESET_ID,
         "game_over": false,
         "chosen_index": result.chosen_index,
         "actions": actions,
@@ -3487,6 +3562,16 @@ fn suggest_for_request(
         "improved_policy": result.improved_policy,
         "visit_counts": result.visit_counts,
         "root_value": result.root_value,
+        "market_branches_searched": market_branches_searched,
+        "market_chance_samples": market_chance_samples,
+        "total_simulations_run": total_simulations_run,
+        "free_three_of_a_kind_choice": if row.prelude.replace_three_of_a_kind {
+            "accept"
+        } else if row.staged.market().three_of_a_kind().is_some() {
+            "decline"
+        } else {
+            "not_available"
+        },
         "exact_afterstate_scores": row
             .afterstates
             .iter()
@@ -3628,7 +3713,7 @@ fn build_greedy_policy_root_record(
     args: &Args,
 ) -> Result<(Value, String)> {
     let active_seat = game.current_player();
-    let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+    let (prelude, staged) = greedy_market_choice(game, Some(args.max_actions))?;
     let candidates =
         rank_greedy_actions(&staged, &MarketPrelude::default(), Some(args.max_actions))?;
     if candidates.is_empty() {
@@ -3740,7 +3825,7 @@ fn build_root_record(
     args: &Args,
 ) -> Result<Value> {
     let active_seat = game.current_player();
-    let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+    let (prelude, staged) = greedy_market_choice(game, Some(args.max_actions))?;
     let candidates =
         rank_greedy_actions(&staged, &MarketPrelude::default(), Some(args.max_actions))?;
     if candidates.is_empty() {
@@ -3984,13 +4069,8 @@ fn evaluate_candidate_rollouts(
             let terminal = if truncated {
                 next
             } else {
-                let (terminal, continuation_truncated) = complete_with_sampled_greedy(
-                    next,
-                    max_actions,
-                    rollout_top_k,
-                    &mut rng,
-                    None,
-                )?;
+                let (terminal, continuation_truncated) =
+                    complete_with_sampled_greedy(next, max_actions, rollout_top_k, &mut rng, None)?;
                 truncated = continuation_truncated;
                 terminal
             };
@@ -4053,6 +4133,7 @@ fn run_interactive_policy_game(args: &Args) -> Result<()> {
         let root_bundle = build_interactive_root(&game, seed_u64, ply_index, args)?;
         let root_message = json!({
             "type": "root",
+            "ruleset_id": RULESET_ID,
             "seed_u64": seed_u64,
             "ply_index": ply_index,
             "active_seat": root_bundle.active_seat,
@@ -4087,6 +4168,7 @@ fn run_interactive_policy_game(args: &Args) -> Result<()> {
         let decision_seconds = decision_started.elapsed().as_secs_f64();
         let decision_record = json!({
             "type": "decision",
+            "ruleset_id": RULESET_ID,
             "seed_u64": seed_u64,
             "ply_index": ply_index,
             "active_seat": root_bundle.active_seat,
@@ -4110,6 +4192,7 @@ fn run_interactive_policy_game(args: &Args) -> Result<()> {
     let scores = score_game(&game);
     let done_message = json!({
         "type": "done",
+        "ruleset_id": RULESET_ID,
         "seed_u64": seed_u64,
         "turns": game.completed_turns(),
         "scores": scores.iter().map(score_breakdown_json).collect::<Vec<_>>(),
@@ -4137,7 +4220,7 @@ fn build_interactive_root(
     args: &Args,
 ) -> Result<InteractiveRoot> {
     let active_seat = game.current_player();
-    let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+    let (prelude, staged) = greedy_market_choice(game, Some(args.max_actions))?;
     let candidates =
         rank_greedy_actions(&staged, &MarketPrelude::default(), Some(args.max_actions))?;
     if candidates.is_empty() {
@@ -4174,6 +4257,7 @@ fn build_interactive_root(
     let public_hash = staged.public_state().canonical_hash();
     let mut record = json!({
         "schema_id": SCHEMA_ID,
+        "ruleset_id": RULESET_ID,
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
         "active_seat": active_seat,
         "legal_actions": legal_actions,
@@ -4362,12 +4446,27 @@ fn score_breakdown_json(score: &ScoreBreakdown) -> Value {
     })
 }
 
+/// Chooses the optional free three-of-a-kind branch with the same immediate
+/// greedy policy used by legacy corpus/rollout modes, then returns the staged
+/// state those modes require for feature construction. Gumbel modes use the
+/// stronger search-valued branch decision in `gumbel_search_for_state`.
+fn greedy_market_choice(
+    game: &GameState,
+    limit: Option<usize>,
+) -> Result<(MarketPrelude, GameState)> {
+    let ranked = rank_greedy_actions_with_market_choice(game, limit)?;
+    let action = ranked.first().context("no legal market-choice action")?;
+    let prelude = action.action.prelude();
+    let staged = game.preview_market_prelude(&prelude)?;
+    Ok((prelude, staged))
+}
+
 fn advance_selected_action(
     game: &GameState,
     max_actions: usize,
     selected_action_id: &str,
 ) -> Result<GameState> {
-    let (_prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+    let (_prelude, staged) = greedy_market_choice(game, Some(max_actions))?;
     let candidates = rank_greedy_actions(&staged, &MarketPrelude::default(), Some(max_actions))?;
     for candidate in candidates {
         if action_id(&candidate.action)? == selected_action_id {
@@ -4397,24 +4496,20 @@ fn complete_with_sampled_greedy(
     // Ranking buffers reused across every ply of this rollout.
     let mut scratch = GreedyRankScratch::default();
     while !game.is_game_over() {
-        // `preview_free_three_of_a_kind_if_feasible` returns `(default
-        // prelude, self.clone())` when the market holds no three of a kind,
-        // so the staging (and its state clone) is only performed when a
-        // replacement is actually available; otherwise `game` is ranked
-        // directly. Trajectories and truncation states are identical either
-        // way: `staged` replaces `game` exactly where the historical loop
-        // assigned `game = staged` (after a successful ranking).
-        let staged = if game.market().three_of_a_kind().is_some() {
-            Some(game.preview_free_three_of_a_kind_if_feasible()?.1)
+        // A three-of-a-kind produces two complete-turn branches. Rank them
+        // together so the rollout policy may accept or decline; retain the
+        // scratch-buffer hot path when no market choice exists.
+        let candidates = if game.market().three_of_a_kind().is_some() {
+            rank_greedy_actions_with_market_choice(&game, Some(max_actions))
         } else {
-            None
+            rank_greedy_actions_with_scratch(
+                &game,
+                &MarketPrelude::default(),
+                Some(max_actions),
+                &mut scratch,
+            )
         };
-        let candidates = match rank_greedy_actions_with_scratch(
-            staged.as_ref().unwrap_or(&game),
-            &MarketPrelude::default(),
-            Some(max_actions),
-            &mut scratch,
-        ) {
+        let candidates = match candidates {
             Ok(candidates) => candidates,
             Err(SimulationError::Rules(error)) if is_rollout_truncation_rule_error(&error) => {
                 truncated = true;
@@ -4435,9 +4530,6 @@ fn complete_with_sampled_greedy(
             rng.gen_range(0..sample_limit)
         };
         let best = &candidates[sampled_index];
-        if let Some(staged) = staged {
-            game = staged;
-        }
         if let Err(error) = game.apply(&best.action) {
             if is_rollout_truncation_rule_error(&error) {
                 truncated = true;
@@ -5341,6 +5433,7 @@ mod tests {
             gumbel_top_m: 4,
             gumbel_depth_rounds: 1,
             gumbel_determinizations: 2,
+            gumbel_market_decision_samples: 2,
             gumbel_blend_weight: 1.0,
             gumbel_exploration: false,
             gumbel_max_root_actions: None,
@@ -5370,9 +5463,7 @@ mod tests {
     #[test]
     fn determinized_rollouts_never_observe_true_hidden_order() {
         let game = advanced_test_state(2_026_063_100, 6);
-        let (_prelude, staged) = game
-            .preview_free_three_of_a_kind_if_feasible()
-            .expect("staged");
+        let (_prelude, staged) = greedy_market_choice(&game, Some(4)).expect("staged");
         let candidates =
             rank_greedy_actions(&staged, &MarketPrelude::default(), Some(4)).expect("candidates");
         assert!(!candidates.is_empty());
@@ -5389,11 +5480,21 @@ mod tests {
         let evaluate = |root: &GameState| -> Vec<f64> {
             let afterstates =
                 candidate_afterstates(root, &candidates, root.current_player()).expect("after");
-            evaluate_candidate_rollouts(root, &afterstates, root.current_player(), 7, 3, 4, 3, 2, true)
-                .expect("rollouts")
-                .iter()
-                .map(|rollout| rollout.active_score)
-                .collect()
+            evaluate_candidate_rollouts(
+                root,
+                &afterstates,
+                root.current_player(),
+                7,
+                3,
+                4,
+                3,
+                2,
+                true,
+            )
+            .expect("rollouts")
+            .iter()
+            .map(|rollout| rollout.active_score)
+            .collect()
         };
         assert_eq!(
             evaluate(&staged),
@@ -5414,9 +5515,8 @@ mod tests {
         assert!(!capped.is_game_over());
 
         let mut rng_zero = ChaCha8Rng::seed_from_u64(11);
-        let (unmoved, _) =
-            complete_with_sampled_greedy(game.clone(), 4, 2, &mut rng_zero, Some(0))
-                .expect("zero cap");
+        let (unmoved, _) = complete_with_sampled_greedy(game.clone(), 4, 2, &mut rng_zero, Some(0))
+            .expect("zero cap");
         assert_eq!(unmoved.canonical_hash(), game.canonical_hash());
     }
 
@@ -5431,7 +5531,9 @@ mod tests {
         }
         assert_eq!(
             format!("{:x}", hasher.finalize()),
-            "39bffaa912cab1a59fd309fbd3a8efc88210abcc9c50129c6b88ca6eb0dc3e39"
+            // Rules 2026-07-09: optional three-of-a-kind refreshes are
+            // public-information policy decisions before the chance draw.
+            "24ca921ec767b442acbc5495c9fbacd8790beb0346c94b795625aaf8194e2b7a"
         );
     }
 
@@ -5463,10 +5565,8 @@ mod tests {
 
     #[test]
     fn gumbel_selfplay_records_roundtrip_into_v2_shard() {
-        let tempdir = std::env::temp_dir().join(format!(
-            "cascadia-gumbel-test-{}",
-            std::process::id()
-        ));
+        let tempdir =
+            std::env::temp_dir().join(format!("cascadia-gumbel-test-{}", std::process::id()));
         std::fs::create_dir_all(&tempdir).expect("tempdir");
         let args = gumbel_test_args(&tempdir);
 
@@ -5474,9 +5574,8 @@ mod tests {
         assert!(session.is_some(), "mock bridge session must spawn");
         let mut bridge = ChunkBridge::Owned(session);
         let mut eval_cache = EvalRowCache::new();
-        let records =
-            play_gumbel_selfplay_seed(&args, 2_026_070_600, &mut bridge, &mut eval_cache)
-                .expect("selfplay seed plays");
+        let records = play_gumbel_selfplay_seed(&args, 2_026_070_600, &mut bridge, &mut eval_cache)
+            .expect("selfplay seed plays");
         assert!(!records.is_empty());
         assert!(eval_cache.stats.rows_requested > 0);
         assert!(eval_cache.stats.rows_sent <= eval_cache.stats.rows_requested);
@@ -5566,7 +5665,10 @@ mod tests {
         let token_bytes = engine
             .decode(features["tokens_f32_b64"].as_str().unwrap())
             .expect("token b64");
-        assert_eq!(token_bytes.len(), token_count * PUBLIC_TOKEN_FEATURE_DIM * 4);
+        assert_eq!(
+            token_bytes.len(),
+            token_count * PUBLIC_TOKEN_FEATURE_DIM * 4
+        );
         let decoded_tokens: Vec<f32> = token_bytes
             .chunks_exact(4)
             .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
@@ -5588,7 +5690,10 @@ mod tests {
         let tail_bytes = engine
             .decode(features["relation_tail_u8_b64"].as_str().unwrap())
             .expect("tail b64");
-        assert_eq!(tail_bytes.len(), action_count * (token_count + action_count));
+        assert_eq!(
+            tail_bytes.len(),
+            action_count * (token_count + action_count)
+        );
         // The tail must contain at least one action-pointer relation on a
         // real mid-game state.
         assert!(tail_bytes.iter().any(|value| *value != 0));
@@ -5616,7 +5721,10 @@ mod tests {
             let reference =
                 feature_tensors::action_relation_tail_reference(&raw, token_count, action_count)
                     .expect("reference tail");
-            assert_eq!(fast, reference, "tail mismatch for seed {seed} plies {plies}");
+            assert_eq!(
+                fast, reference,
+                "tail mismatch for seed {seed} plies {plies}"
+            );
             assert!(fast.iter().any(|value| *value != 0));
         }
     }
@@ -5731,7 +5839,11 @@ mod tests {
     /// single-field perturbations of every request-visible input.
     fn key_completeness_corpus() -> Vec<gumbel::EvalRow> {
         let mut rows = Vec::new();
-        for (seed, plies) in [(2_026_070_900_u64, 2usize), (2_026_070_901, 4), (2_026_070_902, 7)] {
+        for (seed, plies) in [
+            (2_026_070_900_u64, 2usize),
+            (2_026_070_901, 4),
+            (2_026_070_902, 7),
+        ] {
             let state = advanced_test_state(seed, plies);
             for menu in [4usize, 6] {
                 rows.push(
@@ -5749,7 +5861,9 @@ mod tests {
 
         // Same public state, permuted hidden order: requests stay identical.
         let mut redet = clone_eval_row(&base);
-        redet.staged.redeterminize_hidden(GameSeed::from_u64(0xfeed_f00d));
+        redet
+            .staged
+            .redeterminize_hidden(GameSeed::from_u64(0xfeed_f00d));
         rows.push(redet);
 
         // Exact afterstate score perturbation.
@@ -5764,13 +5878,19 @@ mod tests {
 
         // Prelude projection perturbation (feeds every cleanup_choice field).
         let mut prelude_flip = clone_eval_row(&base);
-        prelude_flip.prelude.replace_three_of_a_kind = !prelude_flip.prelude.replace_three_of_a_kind;
+        prelude_flip.prelude.replace_three_of_a_kind =
+            !prelude_flip.prelude.replace_three_of_a_kind;
         rows.push(prelude_flip);
 
         // Action identity perturbation (only the serialized action changes).
         let mut action_flip = clone_eval_row(&base);
-        action_flip.afterstates[0].candidate.action.replace_three_of_a_kind =
-            !action_flip.afterstates[0].candidate.action.replace_three_of_a_kind;
+        action_flip.afterstates[0]
+            .candidate
+            .action
+            .replace_three_of_a_kind = !action_flip.afterstates[0]
+            .candidate
+            .action
+            .replace_three_of_a_kind;
         rows.push(action_flip);
 
         // Menu order perturbation.
@@ -5865,7 +5985,10 @@ mod tests {
                 rotated_request["action_ids"].as_array().unwrap().len()
             );
             // Different frame -> different public state hash (the whole point).
-            assert_ne!(original_request["state_hash"], rotated_request["state_hash"]);
+            assert_ne!(
+                original_request["state_hash"],
+                rotated_request["state_hash"]
+            );
         }
     }
 
@@ -5898,10 +6021,8 @@ mod tests {
 
     #[test]
     fn gumbel_policy_game_runs_with_tta_rotations() {
-        let tempdir = std::env::temp_dir().join(format!(
-            "cascadia-gumbel-tta-test-{}",
-            std::process::id()
-        ));
+        let tempdir =
+            std::env::temp_dir().join(format!("cascadia-gumbel-tta-test-{}", std::process::id()));
         std::fs::create_dir_all(&tempdir).expect("tempdir");
         let mut args = gumbel_test_args(&tempdir);
         args.mode = Mode::GumbelPolicyGame;
@@ -5923,10 +6044,8 @@ mod tests {
 
     #[test]
     fn gumbel_policy_game_emits_decisions_and_done() {
-        let tempdir = std::env::temp_dir().join(format!(
-            "cascadia-gumbel-game-test-{}",
-            std::process::id()
-        ));
+        let tempdir =
+            std::env::temp_dir().join(format!("cascadia-gumbel-game-test-{}", std::process::id()));
         std::fs::create_dir_all(&tempdir).expect("tempdir");
         let mut args = gumbel_test_args(&tempdir);
         args.mode = Mode::GumbelPolicyGame;
@@ -5982,10 +6101,8 @@ mod tests {
 
     #[test]
     fn gumbel_benchmark_batch_matches_single_seed_policy_games() {
-        let tempdir = std::env::temp_dir().join(format!(
-            "cascadia-gumbel-batch-test-{}",
-            std::process::id()
-        ));
+        let tempdir =
+            std::env::temp_dir().join(format!("cascadia-gumbel-batch-test-{}", std::process::id()));
         std::fs::create_dir_all(&tempdir).expect("tempdir");
         let first_seed = 2_026_070_600u64;
 

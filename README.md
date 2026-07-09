@@ -9,6 +9,7 @@ Bacalhau-backed worker orchestration for CPU-bound jobs.
 - [Cascadia v3 overview](docs/v3/README.md)
 - [Transformer architecture](docs/v3/ARCHITECTURE.md)
 - [Training pipeline](docs/v3/TRAINING_PIPELINE.md)
+- [Rules contract](docs/v3/RULES_CONTRACT.md)
 - [Implementation package](cascadiav3/README.md)
 - [Bacalhau operations guide](docs/BACALHAU_USAGE.md)
 - [Cluster orchestrator notes](docs/cluster_orchestrator.md)

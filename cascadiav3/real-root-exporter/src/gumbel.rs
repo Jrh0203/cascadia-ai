@@ -6,9 +6,11 @@
 //!   never a greedy-ranked truncation, so non-greedy plans stay reachable.
 //! - Root action selection is Gumbel top-m + sequential halving over model
 //!   policy logits, with completed-Q values from determinized simulations.
-//! - Every simulation runs on a hidden-redeterminized clone, sampled BEFORE the
-//!   root action's market refill, so search is public-information-legal by
-//!   construction (no peeking at the true tile/bag order).
+//! - Optional market refresh is a public-state decision valued over sampled
+//!   hidden orders. Only after acceptance is fixed does search reveal the real
+//!   replacement market and choose a draft.
+//! - Every simulation then runs on a hidden-redeterminized clone before its
+//!   root draft, so future refills never expose the true tile/bag order.
 //! - Interior plies advance every seat by argmax of its own derived final Q
 //!   (`exact_afterstate_score_active + predicted score-to-go`), which is max^n
 //!   play under the model's value estimates.
@@ -28,6 +30,7 @@ use crate::{CandidateAfterstate, candidate_afterstates, complete_with_sampled_gr
 const GUMBEL_NOISE_SALT: u64 = 0x6a3b_1e55_9d2c_4f01;
 const DETERMINIZATION_STREAM_SALT: u64 = 0x0d5e_ed12_37ab_44c9;
 const ROLLOUT_STREAM_SALT: u64 = 0x77c0_ffee_4bad_5eed;
+const MARKET_DECISION_STREAM_SALT: u64 = 0x3f62_9a17_c4d8_05be;
 
 #[derive(Debug, Clone)]
 pub struct GumbelConfig {
@@ -45,6 +48,10 @@ pub struct GumbelConfig {
     /// Distinct hidden-order determinizations cycled across each action's
     /// simulations (common random numbers across actions).
     pub determinization_samples: usize,
+    /// Hidden-order samples used only for the optional three-of-a-kind market
+    /// decision. Kept separate from search worlds so high-d serving does not
+    /// multiply every eligible root by the full search determinization count.
+    pub market_decision_samples: usize,
     /// Leaf value = w * value bootstrap + (1-w) * sampled greedy terminal
     /// rollout. w=1.0 disables CPU rollouts entirely.
     pub rollout_blend_weight: f64,
@@ -100,6 +107,7 @@ impl Default for GumbelConfig {
             max_root_actions: None,
             depth_rounds: 1,
             determinization_samples: 4,
+            market_decision_samples: 8,
             rollout_blend_weight: 0.5,
             rollout_max_actions: 8,
             rollout_top_k: 4,
@@ -158,12 +166,68 @@ pub struct GumbelSearchResult {
     pub simulations_run: usize,
 }
 
-/// Builds an `EvalRow` for a state, or `None` when the game is over.
-pub fn eval_row_for_state(game: &GameState, menu_limit: Option<usize>) -> Result<Option<EvalRow>> {
+/// Complete policy decision for one turn. The optional refresh is valued over
+/// hidden-order samples before the real replacement draw is exposed. If the
+/// policy accepts, the returned row is then built from the newly revealed real
+/// market and the draft is searched there.
+pub struct GumbelTurnDecision {
+    pub row: EvalRow,
+    pub result: GumbelSearchResult,
+    pub market_branches_searched: usize,
+    pub market_chance_samples: usize,
+    pub total_simulations_run: usize,
+}
+
+/// Builds one model/search row for every legal free three-of-a-kind choice.
+/// The default/decline row is first; an accept row follows when the market has
+/// exactly three matching tokens and the replacement is feasible.
+#[cfg(test)]
+pub fn eval_rows_for_state(game: &GameState, menu_limit: Option<usize>) -> Result<Vec<EvalRow>> {
+    if game.is_game_over() {
+        return Ok(Vec::new());
+    }
+    let mut rows = Vec::new();
+    for prelude in game.free_three_of_a_kind_choices()? {
+        if let Some(row) = eval_row_for_prelude(game, prelude, menu_limit)? {
+            rows.push(row);
+        }
+    }
+    Ok(rows)
+}
+
+fn sampled_market_state(game: &GameState, cfg: &GumbelConfig, sample_index: usize) -> GameState {
+    let public_hash = game.public_state().canonical_hash();
+    let public_prefix = u64::from_le_bytes(
+        public_hash.as_bytes()[..8]
+            .try_into()
+            .expect("public hash prefix has eight bytes"),
+    );
+    let stream = cfg.determinization_seed.unwrap_or(cfg.search_seed);
+    let seed = splitmix64(
+        stream ^ MARKET_DECISION_STREAM_SALT ^ public_prefix ^ splitmix64(sample_index as u64),
+    );
+    let mut sampled = game.clone();
+    sampled.redeterminize_hidden(GameSeed::from_u64(seed));
+    sampled
+}
+
+fn selected_completed_q(result: &GumbelSearchResult) -> Result<f64> {
+    result
+        .completed_q
+        .get(result.chosen_index)
+        .copied()
+        .context("chosen gumbel action is absent from completed Q")
+}
+
+fn eval_row_for_prelude(
+    game: &GameState,
+    prelude: MarketPrelude,
+    menu_limit: Option<usize>,
+) -> Result<Option<EvalRow>> {
     if game.is_game_over() {
         return Ok(None);
     }
-    let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+    let staged = game.preview_market_prelude(&prelude)?;
     let candidates = match rank_greedy_actions(&staged, &MarketPrelude::default(), menu_limit) {
         Ok(candidates) => candidates,
         Err(cascadia_sim::SimulationError::Rules(error))
@@ -187,6 +251,14 @@ pub fn eval_row_for_state(game: &GameState, menu_limit: Option<usize>) -> Result
         prelude,
         afterstates,
     }))
+}
+
+/// Single-row helper retained for focused low-level tests. Policy-facing code
+/// must use [`eval_rows_for_state`] or [`gumbel_search_for_state`] so it does
+/// not discard the optional market branch.
+#[cfg(test)]
+pub fn eval_row_for_state(game: &GameState, menu_limit: Option<usize>) -> Result<Option<EvalRow>> {
+    Ok(eval_rows_for_state(game, menu_limit)?.into_iter().next())
 }
 
 struct Simulation {
@@ -225,7 +297,10 @@ fn minmax_normalize(values: &[f64]) -> Vec<f64> {
     if !min.is_finite() || !max.is_finite() || (max - min).abs() < 1e-12 {
         return vec![0.0; values.len()];
     }
-    values.iter().map(|value| (value - min) / (max - min)).collect()
+    values
+        .iter()
+        .map(|value| (value - min) / (max - min))
+        .collect()
 }
 
 /// Leaf bootstrap over the menu's derived final Q: classic max, or a
@@ -289,6 +364,14 @@ fn softmax(logits: &[f64]) -> Vec<f64> {
     exps.iter().map(|exp| exp / sum).collect()
 }
 
+struct InteriorRowGroup {
+    sim_index: usize,
+    decline_index: usize,
+    accept_sample_start: usize,
+    accept_sample_end: usize,
+    actual_accept_index: Option<usize>,
+}
+
 /// Advances every live simulation by one ply (batched model eval), resolving
 /// simulations that hit terminal states or leaf conditions.
 fn advance_simulations(
@@ -299,49 +382,65 @@ fn advance_simulations(
     cfg: &GumbelConfig,
 ) -> Result<()> {
     loop {
-        let mut live_indexes = Vec::new();
-        let mut rows = Vec::new();
-        for (sim_index, simulation) in simulations.iter().enumerate() {
-            if simulation.value.is_some() {
+        let mut model_rows = Vec::new();
+        let mut row_groups = Vec::new();
+        for sim_index in 0..simulations.len() {
+            if simulations[sim_index].value.is_some() {
                 continue;
             }
-            match eval_row_for_state(&simulation.state, Some(cfg.k_interior))? {
-                Some(row) => {
-                    live_indexes.push(sim_index);
-                    rows.push(row);
-                }
-                None => {
-                    // Terminal: exact final score for the root seat.
-                    live_indexes.push(sim_index);
-                    rows.push(EvalRow {
-                        staged: simulation.state.clone(),
-                        prelude: MarketPrelude::default(),
-                        afterstates: Vec::new(),
-                    });
-                }
-            }
-        }
-        if live_indexes.is_empty() {
-            return Ok(());
-        }
-
-        // Terminal rows resolve without a model call.
-        let mut model_rows = Vec::new();
-        let mut model_row_sims = Vec::new();
-        for (&sim_index, row) in live_indexes.iter().zip(rows.into_iter()) {
-            if row.afterstates.is_empty() {
+            let state = &simulations[sim_index].state;
+            let Some(decline_row) =
+                eval_row_for_prelude(state, MarketPrelude::default(), Some(cfg.k_interior))?
+            else {
                 simulations[sim_index].value = Some(terminal_simulation_value(
-                    &simulations[sim_index].state,
+                    state,
                     root_seat,
                     cfg.table_total || cfg.table_native_q,
                 ));
-            } else {
-                model_rows.push(row);
-                model_row_sims.push(sim_index);
+                continue;
+            };
+            let decline_index = model_rows.len();
+            model_rows.push(decline_row);
+
+            let accept = state
+                .free_three_of_a_kind_choices()?
+                .into_iter()
+                .find(|choice| choice.replace_three_of_a_kind);
+            let accept_sample_start = model_rows.len();
+            let mut actual_accept_index = None;
+            if let Some(accept) = accept {
+                for sample_index in 0..cfg.market_decision_samples.max(1) {
+                    let sampled = sampled_market_state(state, cfg, sample_index);
+                    let row = eval_row_for_prelude(&sampled, accept.clone(), Some(cfg.k_interior))?
+                        .context("sampled interior accepted market produced no row")?;
+                    model_rows.push(row);
+                }
+                actual_accept_index = Some(model_rows.len());
+                model_rows.push(
+                    eval_row_for_prelude(state, accept, Some(cfg.k_interior))?
+                        .context("actual interior accepted market produced no row")?,
+                );
             }
+            let accept_sample_end = actual_accept_index.unwrap_or(accept_sample_start);
+            row_groups.push(InteriorRowGroup {
+                sim_index,
+                decline_index,
+                accept_sample_start,
+                accept_sample_end,
+                actual_accept_index,
+            });
         }
-        if model_rows.is_empty() {
+        if model_rows.is_empty() && row_groups.is_empty() {
+            if simulations
+                .iter()
+                .all(|simulation| simulation.value.is_some())
+            {
+                return Ok(());
+            }
             continue;
+        }
+        if row_groups.is_empty() {
+            return Ok(());
         }
 
         let evals = evaluator.evaluate_batch(&model_rows)?;
@@ -352,17 +451,51 @@ fn advance_simulations(
                 model_rows.len()
             );
         }
-        for ((sim_index, row), eval) in model_row_sims
-            .iter()
-            .cloned()
-            .zip(model_rows.into_iter())
-            .zip(evals.into_iter())
-        {
+        let mut evaluated = model_rows
+            .into_iter()
+            .zip(evals)
+            .map(Some)
+            .collect::<Vec<_>>();
+        for group in row_groups {
+            let branch_value = |row_index: usize| -> Result<f64> {
+                let Some((row, eval)) = evaluated[row_index].as_ref() else {
+                    unreachable!("each interior model row is consumed at most once");
+                };
+                if eval.derived_final_q.len() != row.afterstates.len() {
+                    bail!("evaluator derived_final_q length mismatch");
+                }
+                Ok(leaf_bootstrap_value(
+                    &eval.derived_final_q,
+                    cfg.leaf_softmix_temp,
+                ))
+            };
+            let decline_value = branch_value(group.decline_index)?;
+            let choose_accept = if let Some(_) = group.actual_accept_index {
+                let accept_total = (group.accept_sample_start..group.accept_sample_end)
+                    .map(&branch_value)
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter()
+                    .sum::<f64>();
+                let accept_count = group.accept_sample_end - group.accept_sample_start;
+                accept_total / accept_count as f64 > decline_value
+            } else {
+                false
+            };
+            let chosen_row_index = if choose_accept {
+                group
+                    .actual_accept_index
+                    .expect("accepted interior branch has an actual row")
+            } else {
+                group.decline_index
+            };
+            let (row, eval) = evaluated[chosen_row_index]
+                .take()
+                .expect("chosen market branch exists");
             if eval.derived_final_q.len() != row.afterstates.len() {
                 bail!("evaluator derived_final_q length mismatch");
             }
             let active_seat = row.staged.current_player();
-            let simulation = &mut simulations[sim_index];
+            let simulation = &mut simulations[group.sim_index];
             let best_index = eval
                 .derived_final_q
                 .iter()
@@ -508,12 +641,14 @@ pub fn gumbel_search(
                     break;
                 }
                 let visit_index = visit_counts[action_index] as usize
-                    + simulations.iter().filter(|s: &&Simulation| s.action_index == action_index).count();
+                    + simulations
+                        .iter()
+                        .filter(|s: &&Simulation| s.action_index == action_index)
+                        .count();
                 let det_index = (visit_index % cfg.determinization_samples.max(1)) as u64;
                 let det_stream = cfg.determinization_seed.unwrap_or(cfg.search_seed);
-                let det_seed = splitmix64(
-                    det_stream ^ DETERMINIZATION_STREAM_SALT ^ splitmix64(det_index),
-                );
+                let det_seed =
+                    splitmix64(det_stream ^ DETERMINIZATION_STREAM_SALT ^ splitmix64(det_index));
                 let mut state = root.staged.clone();
                 if !cfg.peek_true_hidden {
                     state.redeterminize_hidden(GameSeed::from_u64(det_seed));
@@ -594,7 +729,11 @@ pub fn gumbel_search(
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         let keep = (survivors.len() + 1) / 2;
-        survivors = scored.into_iter().take(keep).map(|(index, _)| index).collect();
+        survivors = scored
+            .into_iter()
+            .take(keep)
+            .map(|(index, _)| index)
+            .collect();
     }
 
     let chosen_index = *survivors.first().context("no surviving root action")?;
@@ -658,10 +797,85 @@ pub fn gumbel_search(
     })
 }
 
+/// Makes the optional refresh decision before observing its chance outcome.
+///
+/// Decline is searched once. Accept is valued by averaging searches over
+/// public-hash-derived hidden-order samples. Only after accept wins is the real
+/// replacement market revealed and searched for the draft. Exact ties decline.
+pub fn gumbel_search_for_state(
+    game: &GameState,
+    menu_limit: Option<usize>,
+    evaluator: &mut dyn LeafEvaluator,
+    cfg: &GumbelConfig,
+) -> Result<Option<GumbelTurnDecision>> {
+    if game.is_game_over() {
+        return Ok(None);
+    }
+    let choices = game.free_three_of_a_kind_choices()?;
+    let accept = choices
+        .iter()
+        .find(|choice| choice.replace_three_of_a_kind)
+        .cloned();
+    let decline = MarketPrelude::default();
+    let Some(decline_row) = eval_row_for_prelude(game, decline, menu_limit)? else {
+        return Ok(None);
+    };
+    let decline_result = gumbel_search(&decline_row, evaluator, cfg)?;
+    let decline_value = selected_completed_q(&decline_result)?;
+    let mut total_simulations_run = 0usize;
+    total_simulations_run += decline_result.simulations_run;
+
+    let Some(accept) = accept else {
+        return Ok(Some(GumbelTurnDecision {
+            row: decline_row,
+            result: decline_result,
+            market_branches_searched: 1,
+            market_chance_samples: 0,
+            total_simulations_run,
+        }));
+    };
+
+    let market_chance_samples = cfg.market_decision_samples.max(1);
+    let mut accept_total = 0.0;
+    for sample_index in 0..market_chance_samples {
+        let sampled = sampled_market_state(game, cfg, sample_index);
+        let sampled_row = eval_row_for_prelude(&sampled, accept.clone(), menu_limit)?
+            .context("sampled accepted market produced no gumbel row")?;
+        let sampled_result = gumbel_search(&sampled_row, evaluator, cfg)?;
+        total_simulations_run += sampled_result.simulations_run;
+        accept_total += selected_completed_q(&sampled_result)?;
+    }
+    let accept_value = accept_total / market_chance_samples as f64;
+
+    if accept_value <= decline_value {
+        return Ok(Some(GumbelTurnDecision {
+            row: decline_row,
+            result: decline_result,
+            market_branches_searched: 2,
+            market_chance_samples,
+            total_simulations_run,
+        }));
+    }
+
+    // The decision is now committed. Reveal the real replacement market and
+    // search the downstream draft without reusing any sampled chance outcome.
+    let actual_accept_row = eval_row_for_prelude(game, accept, menu_limit)?
+        .context("accepted real market produced no gumbel row")?;
+    let actual_accept_result = gumbel_search(&actual_accept_row, evaluator, cfg)?;
+    total_simulations_run += actual_accept_result.simulations_run;
+    Ok(Some(GumbelTurnDecision {
+        row: actual_accept_row,
+        result: actual_accept_result,
+        market_branches_searched: 2,
+        market_chance_samples,
+        total_simulations_run,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cascadia_game::GameConfig;
+    use cascadia_game::{GameConfig, Market};
 
     /// Deterministic evaluator: priors proportional to softmax of exact
     /// afterstate scores; per-action Q = exact afterstate score + 1.
@@ -697,7 +911,8 @@ mod tests {
                         .iter()
                         .map(|afterstate| afterstate.exact_score_active)
                         .collect();
-                    let priors = softmax(&exact.iter().map(|value| value / 4.0).collect::<Vec<_>>());
+                    let priors =
+                        softmax(&exact.iter().map(|value| value / 4.0).collect::<Vec<_>>());
                     let derived_final_q = exact
                         .iter()
                         .map(|value| value + remaining.max(0.0))
@@ -706,6 +921,60 @@ mod tests {
                         priors,
                         derived_final_q,
                         value_vector: self.value_vector.clone(),
+                    }
+                })
+                .collect())
+        }
+    }
+
+    struct MarketBranchEvaluator {
+        root_turn: u16,
+        prefer_accept: bool,
+        current_accept_branch: bool,
+    }
+
+    struct ActualReplacementTrapEvaluator {
+        target_market: Market,
+    }
+
+    impl LeafEvaluator for ActualReplacementTrapEvaluator {
+        fn evaluate_batch(&mut self, rows: &[EvalRow]) -> Result<Vec<EvalOut>> {
+            Ok(rows
+                .iter()
+                .map(|row| {
+                    let value = if !row.prelude.replace_three_of_a_kind {
+                        0.0
+                    } else if row.staged.market() == &self.target_market {
+                        100.0
+                    } else {
+                        -100.0
+                    };
+                    let action_count = row.afterstates.len();
+                    EvalOut {
+                        priors: vec![1.0 / action_count as f64; action_count],
+                        derived_final_q: vec![value; action_count],
+                        value_vector: None,
+                    }
+                })
+                .collect())
+        }
+    }
+
+    impl LeafEvaluator for MarketBranchEvaluator {
+        fn evaluate_batch(&mut self, rows: &[EvalRow]) -> Result<Vec<EvalOut>> {
+            Ok(rows
+                .iter()
+                .map(|row| {
+                    if row.staged.completed_turns() == self.root_turn {
+                        self.current_accept_branch = row.prelude.replace_three_of_a_kind;
+                    }
+                    let preferred = self.current_accept_branch == self.prefer_accept;
+                    let value = if preferred { 100.0 } else { 0.0 };
+                    let action_count = row.afterstates.len();
+                    EvalOut {
+                        priors: vec![1.0 / action_count as f64; action_count],
+                        derived_final_q: vec![value; action_count],
+                        value_vector: None,
                     }
                 })
                 .collect())
@@ -725,6 +994,14 @@ mod tests {
             game = next;
         }
         game
+    }
+
+    fn state_with_three_of_a_kind() -> GameState {
+        let config = GameConfig::research_aaaaa(4).expect("4p config");
+        (0..10_000)
+            .map(|seed| GameState::new(config, GameSeed::from_u64(seed)).expect("game setup"))
+            .find(|game| game.market().three_of_a_kind().is_some())
+            .expect("seed search must find a three-of-a-kind market")
     }
 
     fn test_config(seed: u64) -> GumbelConfig {
@@ -803,10 +1080,95 @@ mod tests {
     }
 
     #[test]
+    fn gumbel_policy_can_accept_or_decline_free_three_of_a_kind() {
+        let game = state_with_three_of_a_kind();
+        let choices = eval_rows_for_state(&game, Some(8)).expect("market branches");
+        assert_eq!(choices.len(), 2);
+        assert!(!choices[0].prelude.replace_three_of_a_kind);
+        assert!(choices[1].prelude.replace_three_of_a_kind);
+
+        for prefer_accept in [false, true] {
+            let mut evaluator = MarketBranchEvaluator {
+                root_turn: game.completed_turns(),
+                prefer_accept,
+                current_accept_branch: false,
+            };
+            let cfg = GumbelConfig {
+                n_simulations: 4,
+                top_m: 1,
+                max_root_actions: Some(1),
+                depth_rounds: 1,
+                rollout_blend_weight: 1.0,
+                k_interior: 2,
+                ..test_config(17)
+            };
+            let decision = gumbel_search_for_state(&game, Some(8), &mut evaluator, &cfg)
+                .expect("search")
+                .expect("non-terminal decision");
+            assert_eq!(decision.row.prelude.replace_three_of_a_kind, prefer_accept);
+        }
+    }
+
+    #[test]
+    fn triple_root_market_decision_cannot_observe_actual_replacement_order() {
+        let game = state_with_three_of_a_kind();
+        let accept = game
+            .free_three_of_a_kind_choices()
+            .unwrap()
+            .into_iter()
+            .find(|choice| choice.replace_three_of_a_kind)
+            .expect("accept branch");
+        let target_market = game
+            .preview_market_prelude(&accept)
+            .expect("actual accepted market")
+            .market()
+            .clone();
+        let redetermined = (1..10_000)
+            .find_map(|seed| {
+                let mut candidate = game.clone();
+                candidate.redeterminize_hidden(GameSeed::from_u64(seed));
+                let market = candidate
+                    .preview_market_prelude(&accept)
+                    .ok()?
+                    .market()
+                    .clone();
+                (market != target_market).then_some(candidate)
+            })
+            .expect("a different hidden order must reveal a different accepted market");
+
+        let cfg = GumbelConfig {
+            n_simulations: 4,
+            top_m: 1,
+            max_root_actions: Some(1),
+            depth_rounds: 1,
+            determinization_samples: 2,
+            market_decision_samples: 2,
+            rollout_blend_weight: 1.0,
+            k_interior: 2,
+            ..test_config(0x5151)
+        };
+        let mut left_evaluator = ActualReplacementTrapEvaluator {
+            target_market: target_market.clone(),
+        };
+        let mut right_evaluator = ActualReplacementTrapEvaluator { target_market };
+        let left = gumbel_search_for_state(&game, Some(8), &mut left_evaluator, &cfg)
+            .expect("left search")
+            .expect("left decision");
+        let right = gumbel_search_for_state(&redetermined, Some(8), &mut right_evaluator, &cfg)
+            .expect("right search")
+            .expect("right decision");
+
+        assert_eq!(left.row.prelude, right.row.prelude);
+        assert!(!left.row.prelude.replace_three_of_a_kind);
+        assert_eq!(left.market_chance_samples, 2);
+        assert_eq!(right.market_chance_samples, 2);
+    }
+
+    #[test]
     fn search_never_observes_true_hidden_order() {
         let game = test_state(2_026_070_300, 6);
-        let (_prelude, staged) = game
-            .preview_free_three_of_a_kind_if_feasible()
+        let staged = game
+            .preview_market_prelude(&MarketPrelude::default())
             .expect("staged");
         let mut permuted_game = staged.clone();
         permuted_game.redeterminize_hidden(GameSeed::from_u64(0xfeed_f00d));
@@ -851,8 +1213,8 @@ mod tests {
         // change the search result. Guards against the flag silently becoming
         // a no-op (which would invalidate ceiling measurements).
         let game = test_state(2_026_070_300, 6);
-        let (_prelude, staged) = game
-            .preview_free_three_of_a_kind_if_feasible()
+        let staged = game
+            .preview_market_prelude(&MarketPrelude::default())
             .expect("staged");
         let mut permuted_game = staged.clone();
         permuted_game.redeterminize_hidden(GameSeed::from_u64(0xfeed_f00d));
@@ -1051,7 +1413,10 @@ mod tests {
                 visited_checked += 1;
             }
         }
-        assert!(visited_checked > 0, "test requires commonly visited actions");
+        assert!(
+            visited_checked > 0,
+            "test requires commonly visited actions"
+        );
     }
 
     #[test]

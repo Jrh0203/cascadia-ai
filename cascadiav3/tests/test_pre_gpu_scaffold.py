@@ -711,7 +711,10 @@ class BridgeForwardOptimizationTest(unittest.TestCase):
         from cascadiav3 import torch_inference_bridge as bridge
 
         self.assertIsNone(bridge._BRIDGE_TIMING)
-        roots = [self._truncated_root(root, 9) for root in self._public_fixture_roots(limit=2)]
+        fixture_roots = self._public_fixture_roots(limit=2)
+        if not fixture_roots:
+            self.skipTest("expert tiny roots have not been generated")
+        roots = [self._truncated_root(root, 9) for root in fixture_roots]
         timing = bridge._BridgeTiming()
         with mock.patch.object(bridge, "_BRIDGE_TIMING", timing):
             bridge._model_eval_batch(model, roots)
@@ -2295,6 +2298,7 @@ class GumbelBatchRunnerTest(unittest.TestCase):
                 top_m=2,
                 depth_rounds=1,
                 determinizations=2,
+                market_decision_samples=2,
                 blend_weight=1.0,
                 k_interior=3,
                 max_root_actions=None,

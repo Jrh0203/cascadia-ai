@@ -4,6 +4,15 @@ This is the canonical plan for pushing CascadiaFormer past a 100 mean seat
 score in 4-player Cascadia. It replaces the rollout-teacher expert-iteration
 line (EI-0/EI-1) as the active strategy. Implementation landed 2026-07-02.
 
+**Rules update, 2026-07-09:** the free three-of-a-kind wildlife wipe is an
+optional policy action followed by a chance draw. Gumbel values accept over
+public-hash-derived hidden samples, commits accept/decline before revealing the
+real replacement market, and makes the same ordered decision at interior
+plies. `--gumbel-market-decision-samples` controls the independent chance
+estimate (default `8`); it is intentionally separate from the ordinary search
+determinization count. All earlier measurements used forced acceptance and require
+rebaselining; see [`RULES_CONTRACT.md`](RULES_CONTRACT.md).
+
 ## 1. Diagnosis: why the previous method plateaued
 
 Measured trajectory before this campaign: greedy `87.56` → EI-0 q-head

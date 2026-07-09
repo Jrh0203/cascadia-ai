@@ -21,6 +21,8 @@ from typing import Any
 
 from .torch_inference_bridge import _load_model, collate_inference_roots
 
+EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+
 
 def parse_seeds(*, seeds: str, first_seed: int, games: int) -> list[int]:
     if seeds.strip():
@@ -299,6 +301,7 @@ def run_benchmark(
     experiment_id: str,
     decision_rows_path: Path | None,
     game_results_path: Path | None = None,
+    source_revision: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if baseline_workers <= 0:
         raise ValueError("--baseline-workers must be positive")
@@ -384,8 +387,17 @@ def run_benchmark(
             else None
         )
 
+    all_results = all_model_results + greedy_results
+    ruleset_ids = sorted({str(result["done"].get("ruleset_id")) for result in all_results})
+    if ruleset_ids != [EXPECTED_RULESET_ID]:
+        raise RuntimeError(
+            f"game output ruleset mismatch: expected {EXPECTED_RULESET_ID}, got {ruleset_ids}"
+        )
+
     return {
         "status": "pass",
+        "ruleset_id": EXPECTED_RULESET_ID,
+        "source_revision": source_revision,
         "scientific_eligibility": "cascadiaformer_no_search_complete_game_benchmark",
         "experiment_id": experiment_id,
         "binary": str(binary),
@@ -413,9 +425,9 @@ def run_benchmark(
         "mean_paired_delta_cascadiaformer_minus_greedy": mean_delta_by_head,
         "games": [
             completed_game_result_row(result)
-            for result in all_model_results + greedy_results
+            for result in all_results
         ],
-    }, all_model_results + greedy_results
+    }, all_results
 
 
 def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
@@ -424,6 +436,8 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
         "# CascadiaFormer Complete-Game Benchmark",
         "",
         f"Experiment: `{report['experiment_id']}`",
+        f"Ruleset: `{report['ruleset_id']}`",
+        f"Source revision: `{report['source_revision']}`",
         f"Manifest: `{report['manifest']}`",
         f"Games: `{len(report['seeds'])}` matched seeds",
         f"Max actions/root: `{report['max_actions']}`",
@@ -473,6 +487,11 @@ def main() -> int:
     parser.add_argument("--treatment-workers", type=int, default=1)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--experiment-id", default="cascadiaformer-complete-game-benchmark-v1")
+    parser.add_argument(
+        "--source-revision",
+        default="",
+        help="Exact deployed Git revision used to build the Rust exporter",
+    )
     parser.add_argument("--out", default="cascadiav3/reports/cascadiaformer_game_benchmark.json")
     parser.add_argument("--decisions-out", default="cascadiav3/reports/cascadiaformer_game_benchmark_decisions.jsonl")
     parser.add_argument("--game-results-out", default="cascadiav3/reports/cascadiaformer_game_benchmark_games.jsonl")
@@ -496,6 +515,7 @@ def main() -> int:
         experiment_id=args.experiment_id,
         decision_rows_path=Path(args.decisions_out),
         game_results_path=Path(args.game_results_out),
+        source_revision=args.source_revision or None,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

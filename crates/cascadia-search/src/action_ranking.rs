@@ -5,8 +5,9 @@ use cascadia_game::{GameConfig, GameSeed, GameState, MarketPrelude, TurnAction};
 use cascadia_model::{MAX_BATCH, ModelProcess};
 use cascadia_sim::{
     MatchResult, PATTERN_AWARE_STRATEGY_ID, PatternAwareConfig, SimulationError,
-    play_match_with_selector, rank_greedy_actions, rank_pattern_frontier_actions,
-    rank_wildlife_diverse_pattern_frontier_actions, select_pattern_action, strategy_rng,
+    choose_greedy_market_prelude, play_match_with_selector, rank_greedy_actions_with_market_choice,
+    rank_pattern_frontier_actions, rank_wildlife_diverse_pattern_frontier_actions,
+    select_pattern_action_with_market_choice, strategy_rng,
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -181,9 +182,10 @@ impl<P: ActionRankingPredictor> MlxPublicBeamValueStrategy<P> {
         &mut self,
         game: &GameState,
     ) -> Result<Vec<RolloutCandidate>, SearchError> {
+        let prelude = choose_greedy_market_prelude(game)?;
         let candidates = rank_wildlife_diverse_pattern_frontier_actions(
             game,
-            &MarketPrelude::default(),
+            &prelude,
             self.config.blueprint,
             self.config.wildlife_candidate_limit,
         )?;
@@ -254,13 +256,8 @@ impl<P: ActionRankingPredictor> MlxPublicBeamValueStrategy<P> {
         blueprint_rng: &mut ChaCha8Rng,
     ) -> Result<TurnAction, SearchError> {
         if !self.uses_model(game) {
-            let prelude = MarketPrelude {
-                replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-                wildlife_wipes: Vec::new(),
-            };
-            return Ok(select_pattern_action(
+            return Ok(select_pattern_action_with_market_choice(
                 game,
-                &prelude,
                 self.config.blueprint,
                 blueprint_rng,
             )?);
@@ -338,21 +335,21 @@ impl<P: ActionRankingPredictor> MlxActionDeltaRankingStrategy<P> {
     }
 
     pub fn rank_actions(&mut self, game: &GameState) -> Result<Vec<RolloutCandidate>, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
+        let prelude = choose_greedy_market_prelude(game)?;
         let staged = game.preview_market_prelude(&prelude)?;
-        let candidates = rank_pattern_frontier_actions(
+        let mut branches = Vec::new();
+        for candidate in rank_pattern_frontier_actions(
             &staged,
             &MarketPrelude::default(),
             self.config.blueprint,
-        )?;
-        if candidates.is_empty() {
+        )? {
+            branches.push((prelude.clone(), candidate));
+        }
+        if branches.is_empty() {
             return Err(SearchError::NoLegalActions);
         }
-        let mut records = Vec::with_capacity(candidates.len());
-        for candidate in &candidates {
+        let mut records = Vec::with_capacity(branches.len());
+        for (prelude, candidate) in &branches {
             let action = with_prelude(candidate.action.clone(), &prelude);
             records.push(ActionPositionRecord::observe(
                 game,
@@ -370,9 +367,9 @@ impl<P: ActionRankingPredictor> MlxActionDeltaRankingStrategy<P> {
         for chunk in records.chunks(MAX_BATCH) {
             scores.extend(self.predictor.predict_action_scores(chunk)?);
         }
-        if scores.len() != candidates.len() {
+        if scores.len() != branches.len() {
             return Err(SearchError::PredictionCount {
-                expected: candidates.len(),
+                expected: branches.len(),
                 actual: scores.len(),
             });
         }
@@ -384,10 +381,10 @@ impl<P: ActionRankingPredictor> MlxActionDeltaRankingStrategy<P> {
             return Err(SearchError::NonFinitePrediction { index });
         }
 
-        let mut ranked = candidates
+        let mut ranked = branches
             .into_iter()
             .zip(scores)
-            .map(|(candidate, score)| RolloutCandidate {
+            .map(|((prelude, candidate), score)| RolloutCandidate {
                 action: with_prelude(candidate.action, &prelude),
                 immediate_rank: candidate.immediate_rank,
                 immediate_score: candidate.resulting_base_score,
@@ -460,11 +457,7 @@ impl<P: ImitationPredictor> MlxFullActionImitationStrategy<P> {
     }
 
     pub fn rank_actions(&mut self, game: &GameState) -> Result<Vec<RolloutCandidate>, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let candidates = rank_greedy_actions(game, &prelude, None)?;
+        let candidates = rank_greedy_actions_with_market_choice(game, None)?;
         if candidates.is_empty() {
             return Err(SearchError::NoLegalActions);
         }

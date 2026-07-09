@@ -2,8 +2,9 @@ use cascadia_game::{
     GameConfig, GameSeed, GameState, MarketPrelude, TurnAction, WildlifeWipe, score_board,
 };
 use cascadia_sim::{
-    GreedyCandidate, MatchResult, SimulationError, play_greedy_plies, play_match_with_selector,
-    rank_bear_setup_actions, rank_greedy_actions, rank_habitat_setup_actions,
+    GreedyCandidate, MatchResult, SimulationError, choose_greedy_market_prelude, play_greedy_plies,
+    play_match_with_selector, rank_bear_setup_actions, rank_greedy_actions,
+    rank_habitat_setup_actions,
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -86,7 +87,7 @@ impl DeterminizedLookaheadStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<Vec<RolloutCandidate>, SearchError> {
-        let (prelude, _) = game.preview_free_three_of_a_kind_if_feasible()?;
+        let prelude = choose_greedy_market_prelude(game)?;
         self.rank_actions_with_prelude(game, &prelude, rng)
     }
 
@@ -126,8 +127,9 @@ impl DeterminizedLookaheadStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<(Vec<RolloutCandidate>, TurnAction), SearchError> {
-        let (prelude, _) = game.preview_free_three_of_a_kind_if_feasible()?;
-        self.rank_and_select_with_prelude(game, &prelude, rng)
+        let ranked = self.rank_actions(game, rng)?;
+        let action = select_ranked_action(&ranked, rng)?;
+        Ok((ranked, action))
     }
 
     pub fn rank_and_select_with_prelude(
@@ -308,7 +310,8 @@ pub(crate) fn bear_candidate_union(
     immediate_candidate_limit: usize,
     bear_candidate_limit: usize,
 ) -> Result<(MarketPrelude, GameState, Vec<GreedyCandidate>), SearchError> {
-    let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+    let prelude = choose_greedy_market_prelude(game)?;
+    let staged = game.preview_market_prelude(&prelude)?;
     let mut candidates = rank_greedy_actions(
         &staged,
         &MarketPrelude::default(),
@@ -322,6 +325,9 @@ pub(crate) fn bear_candidate_union(
             Some(bear_candidate_limit),
         )?,
     );
+    if candidates.is_empty() {
+        return Err(SearchError::NoLegalActions);
+    }
     Ok((prelude, staged, candidates))
 }
 
@@ -452,7 +458,8 @@ pub(crate) fn habitat_candidate_union(
     immediate_candidate_limit: usize,
     habitat_candidate_limit: usize,
 ) -> Result<(MarketPrelude, GameState, Vec<GreedyCandidate>), SearchError> {
-    let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible()?;
+    let prelude = choose_greedy_market_prelude(game)?;
+    let staged = game.preview_market_prelude(&prelude)?;
     let mut candidates = rank_greedy_actions(
         &staged,
         &MarketPrelude::default(),
@@ -466,6 +473,9 @@ pub(crate) fn habitat_candidate_union(
             Some(habitat_candidate_limit),
         )?,
     );
+    if candidates.is_empty() {
+        return Err(SearchError::NoLegalActions);
+    }
     Ok((prelude, staged, candidates))
 }
 
@@ -696,22 +706,18 @@ impl NatureWipeLookaheadStrategy {
     }
 
     pub fn select_action_deterministic(&self, game: &GameState) -> Result<TurnAction, SearchError> {
-        let (free_prelude, after_free) = game.preview_free_three_of_a_kind_if_feasible()?;
-        let replace_three_of_a_kind = free_prelude.replace_three_of_a_kind;
+        let mut rng = lookahead_decision_rng(game);
+        let free_prelude = choose_greedy_market_prelude(game)?;
+        let after_free = game.preview_market_prelude(&free_prelude)?;
         let paid_wipe = self.select_paid_wipe(&after_free)?;
-        let paid_prelude = MarketPrelude {
-            replace_three_of_a_kind: false,
-            wildlife_wipes: paid_wipe.iter().cloned().collect(),
+        let combined = MarketPrelude {
+            replace_three_of_a_kind: free_prelude.replace_three_of_a_kind,
+            wildlife_wipes: paid_wipe.into_iter().collect(),
         };
-        let staged = after_free.preview_market_prelude(&paid_prelude)?;
-        let (_, mut action) = self.action_search.rank_and_select_with_prelude(
-            &staged,
-            &MarketPrelude::default(),
-            &mut lookahead_decision_rng(game),
-        )?;
-        action.replace_three_of_a_kind = replace_three_of_a_kind;
-        action.wildlife_wipes = paid_wipe.into_iter().collect();
-        Ok(action)
+        let ranked = self
+            .action_search
+            .rank_actions_with_prelude(game, &combined, &mut rng)?;
+        select_ranked_action(&ranked, &mut rng)
     }
 
     pub fn play_match(
@@ -889,13 +895,17 @@ pub(crate) fn rank_rollout_candidates(
             }
         })
         .collect::<Vec<_>>();
+    sort_rollout_candidates(&mut ranked);
+    Ok(ranked)
+}
+
+fn sort_rollout_candidates(ranked: &mut [RolloutCandidate]) {
     ranked.sort_by(|left, right| {
         right
             .mean_leaf_score
             .total_cmp(&left.mean_leaf_score)
             .then_with(|| right.immediate_score.cmp(&left.immediate_score))
     });
-    Ok(ranked)
 }
 
 pub(crate) fn select_ranked_action(

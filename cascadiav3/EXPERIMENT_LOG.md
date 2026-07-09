@@ -3421,3 +3421,75 @@ answers: does better-search-from-a-better-head yield better LABELS
 Fleet5 (distq model, n256/d4, seeds 2026815000+, 150/host) generating
 supplementary shards on john1-4 — stored for a safety-tested low-weight
 fold-in, NOT auto-folded (cycle-5 lesson).
+
+## 2026-07-08 22:15 — Official rules correction: wildlife return order pinned; free three-of-a-kind is now a policy action
+
+Audited the engine against the official AEG Cascadia rulebook and corrected
+the policy-space contract across the full stack.
+
+1. A drafted wildlife token that is not placed now returns to the cloth bag
+   before the end-of-turn market refill. The regression test empties the bag
+   and proves that the returned token can supply that same refill.
+2. A market with exactly three matching wildlife now exposes two legal
+   branches, decline then accept. The engine never chooses for the caller.
+   Random, greedy, pattern, MLX, rollout, terminal-improvement, oracle/beam,
+   public-tree, API, exporter, and Gumbel policies all value both branches.
+3. Gumbel uses separate declined/accepted model rows at the root and interior
+   plies, searches both roots, and records the chosen branch, branch count,
+   total simulations, and corrected ruleset identity in output artifacts.
+4. Rules semantics are now identified as
+   `cascadia-base-official-2026-07-08`; exporter config identity is
+   `cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_08`.
+
+Scientific ruling: every pre-correction score, paired control, corpus, and
+checkpoint used forced acceptance. Preserve those artifacts as historical
+architecture evidence, but they are not valid promotion controls under the
+corrected action space. EI/fleet jobs already running old code are legacy-only;
+greedy, no-search, and Gumbel baselines must be regenerated before research
+strength claims resume. Canonical contract: `docs/v3/RULES_CONTRACT.md`.
+
+Verification: Rust workspace 217 passed (one timing harness ignored);
+real-root-exporter 39 passed; Python unittest 104 run (69 environment skips);
+cluster pytest 109 passed; web lint clean, 7 tests passed, and production build
+succeeded. The corrected deterministic rollout golden hash is
+`bd39c8b6e42af15ec20837dbc76ba7025889de2cedda5f58c0ab45d3f5d43760`.
+
+## 2026-07-09 01:03 — Chance boundary corrected; legacy john0 EI-1 stopped
+
+The 07-08 rules patch made free three-of-a-kind accept/decline explicit, but
+its first search implementation still evaluated the accepted branch after
+drawing from the real hidden bag. That let the policy decide whether to
+accept after observing the replacement, which is not information available
+to a player. This is a second compatibility break, not a cosmetic refactor.
+
+The permanent correction is decision → chance → draft throughout the stack:
+
+1. Greedy, pattern, rollout, lookahead, oracle, and public-tree policies value
+   accept/decline over public-hash-derived hidden-order samples, commit the
+   branch, and only then rank drafts in the real revealed market.
+2. Gumbel searches decline once, estimates accept over an independent
+   `market_decision_samples` stream (default `8`), tie-breaks to decline, and
+   runs a separate downstream search after a real accepted draw. Interior
+   plies enforce the same boundary.
+3. The hidden-order regression constructs two identical public
+   three-of-a-kind roots whose actual accepted replacements differ and proves
+   the accept/decline result is identical. The downstream action may differ;
+   the pre-draw decision may not.
+4. Rules identity advanced to `cascadia-base-official-2026-07-09` and
+   `cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09`.
+   Benchmark reports now reject mismatched runtime identities and record the
+   exact deployed Git revision.
+
+At user authorization, stopped the old forced-refresh john0 process groups:
+EI-1 generation PGID `1225249` (825/1,250 games, 66k roots, no completed
+artifact) and its queued battery PGID `1228689`. Verification at 01:03 EDT
+found no self-play, Gumbel benchmark, or exporter process remaining on john0.
+Those partial roots are legacy-only and will not enter training or promotion.
+
+Validation completed before this entry: 61 search tests, 33 simulation tests,
+and all 40 exporter tests passed, including both the hidden replacement trap
+and forced accept/decline policy tests. The new deterministic rollout golden
+hash is `24ca921ec767b442acbc5495c9fbacd8790beb0346c94b795625aaf8194e2b7a`.
+The final pre-deploy gate also passed the complete 217-test Rust workspace,
+104 Python tests (45 fixture-dependent skips), 109 cluster tests, web lint,
+all 7 web tests, and the production web build.

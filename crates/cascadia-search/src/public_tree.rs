@@ -1,9 +1,10 @@
 use blake3::Hasher;
-use cascadia_game::{GameConfig, GameSeed, GameState, MarketPrelude, TurnAction, score_board};
+use cascadia_game::{GameConfig, GameSeed, GameState, TurnAction, score_board};
 use cascadia_sim::{
     MatchResult, PATTERN_AWARE_STRATEGY_ID, PatternAwareConfig, SimulationError,
-    play_match_with_selector, play_pattern_plies, rank_wildlife_diverse_pattern_frontier_actions,
-    select_pattern_action, strategy_rng,
+    choose_pattern_market_prelude, play_match_with_selector, play_pattern_plies,
+    rank_wildlife_diverse_pattern_frontier_actions, select_pattern_action_with_market_choice,
+    strategy_rng,
 };
 use rand_chacha::ChaCha8Rng;
 
@@ -162,26 +163,14 @@ impl PublicFocalOpenLoopTreeStrategy {
         if game.is_game_over() {
             return Err(SearchError::NoLegalActions);
         }
-        if game.market().three_of_a_kind().is_some() {
-            return Err(SearchError::InvalidConfig(
-                "public focal tree analysis requires an already observable root market",
-            ));
-        }
-
-        let root_candidates = rank_wildlife_diverse_pattern_frontier_actions(
+        let root_actions = wildlife_diverse_actions_across_market_choices(
             game,
-            &MarketPrelude::default(),
             self.config.blueprint,
             self.config.wildlife_candidate_limit,
-        )?;
-        if root_candidates.is_empty() {
-            return Err(SearchError::NoLegalActions);
-        }
-        let root_actions = root_candidates
-            .into_iter()
-            .take(self.config.root_candidate_limit)
-            .map(|candidate| candidate.action)
-            .collect::<Vec<_>>();
+        )?
+        .into_iter()
+        .take(self.config.root_candidate_limit)
+        .collect::<Vec<_>>();
         let focal_seat = game.current_player();
         let cards = game.config().scoring_cards;
         let public_hash = game.public_state().canonical_hash();
@@ -201,18 +190,13 @@ impl PublicFocalOpenLoopTreeStrategy {
                 let actions = if node_index == 0 {
                     &root_actions
                 } else {
-                    let ranked = rank_wildlife_diverse_pattern_frontier_actions(
+                    let owned = wildlife_diverse_actions_across_market_choices(
                         &sample,
-                        &current_prelude(&sample),
                         self.config.blueprint,
                         self.config.wildlife_candidate_limit,
                     )?;
-                    let action_count = ranked.len();
+                    let action_count = owned.len();
                     nodes[node_index].ensure_edges(action_count);
-                    let owned = ranked
-                        .into_iter()
-                        .map(|candidate| candidate.action)
-                        .collect::<Vec<_>>();
                     let edge_index = select_edge(
                         &nodes[node_index],
                         owned.len(),
@@ -310,9 +294,9 @@ impl PublicFocalOpenLoopTreeStrategy {
         game: &GameState,
         blueprint_rng: &mut ChaCha8Rng,
     ) -> Result<TurnAction, SearchError> {
-        let prelude = current_prelude(game);
-        let anchor = select_pattern_action(game, &prelude, self.config.blueprint, blueprint_rng)?;
-        if !self.uses_tree(game) || prelude.replace_three_of_a_kind {
+        let anchor =
+            select_pattern_action_with_market_choice(game, self.config.blueprint, blueprint_rng)?;
+        if !self.uses_tree(game) {
             return Ok(anchor);
         }
         Ok(self.analyze_deterministic(game)?.selected_action)
@@ -338,11 +322,26 @@ impl PublicFocalOpenLoopTreeStrategy {
     }
 }
 
-fn current_prelude(game: &GameState) -> MarketPrelude {
-    MarketPrelude {
-        replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-        wildlife_wipes: Vec::new(),
+fn wildlife_diverse_actions_across_market_choices(
+    game: &GameState,
+    blueprint: PatternAwareConfig,
+    wildlife_candidate_limit: usize,
+) -> Result<Vec<TurnAction>, SearchError> {
+    let prelude = choose_pattern_market_prelude(game, blueprint)?;
+    let mut candidates = rank_wildlife_diverse_pattern_frontier_actions(
+        game,
+        &prelude,
+        blueprint,
+        wildlife_candidate_limit,
+    )?;
+    candidates.sort_by(|left, right| right.resulting_base_score.cmp(&left.resulting_base_score));
+    if candidates.is_empty() {
+        return Err(SearchError::NoLegalActions);
     }
+    Ok(candidates
+        .into_iter()
+        .map(|candidate| candidate.action)
+        .collect())
 }
 
 fn simulation_seed(public_hash: &[u8; 32], simulation: usize) -> GameSeed {
@@ -423,7 +422,7 @@ fn advance_opponents(
     rng: &mut ChaCha8Rng,
 ) -> Result<(), SearchError> {
     while !game.is_game_over() && game.current_player() != focal_seat {
-        let action = select_pattern_action(game, &current_prelude(game), blueprint, rng)?;
+        let action = select_pattern_action_with_market_choice(game, blueprint, rng)?;
         game.apply(&action)?;
     }
     Ok(())

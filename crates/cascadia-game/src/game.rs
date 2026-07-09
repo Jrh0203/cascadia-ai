@@ -352,7 +352,11 @@ impl GameState {
     /// augmentation.
     pub fn with_rotated_boards(&self, steps: u8) -> Self {
         let mut out = self.clone();
-        out.boards = self.boards.iter().map(|board| board.rotated(steps)).collect();
+        out.boards = self
+            .boards
+            .iter()
+            .map(|board| board.rotated(steps))
+            .collect();
         out
     }
 
@@ -647,21 +651,30 @@ impl GameState {
         Ok(staged)
     }
 
-    pub fn preview_free_three_of_a_kind_if_feasible(
-        &self,
-    ) -> Result<(MarketPrelude, Self), RuleError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: self.market.three_of_a_kind().is_some(),
+    /// Legal choices for the free, optional three-of-a-kind wildlife wipe.
+    ///
+    /// The official rule is a decision, not an automatic market cleanup: the
+    /// active player may decline, or may accept once before drafting. Keep the
+    /// decline branch first so deterministic policies prefer preserving the
+    /// current market when both branches receive exactly the same value.
+    pub fn free_three_of_a_kind_choices(&self) -> Result<Vec<MarketPrelude>, RuleError> {
+        let mut choices = vec![MarketPrelude::default()];
+        if self.market.three_of_a_kind().is_none() {
+            return Ok(choices);
+        }
+
+        let accept = MarketPrelude {
+            replace_three_of_a_kind: true,
             wildlife_wipes: Vec::new(),
         };
-        if !prelude.replace_three_of_a_kind {
-            return Ok((prelude, self.clone()));
+        match self.preview_market_prelude(&accept) {
+            Ok(_) => choices.push(accept),
+            // Near exhaustion, a replacement that cannot draw three tokens
+            // is infeasible; declining remains a legal turn.
+            Err(RuleError::WildlifeBagEmpty) => {}
+            Err(error) => return Err(error),
         }
-        match self.preview_market_prelude(&prelude) {
-            Ok(staged) => Ok((prelude, staged)),
-            Err(RuleError::WildlifeBagEmpty) => Ok((MarketPrelude::default(), self.clone())),
-            Err(error) => Err(error),
-        }
+        Ok(choices)
     }
 
     fn visit_staged_drafts_with_tile_context<C, S>(
@@ -906,13 +919,14 @@ impl GameState {
         };
 
         self.boards[player].place_tile(action.tile.coord, tile, action.tile.rotation)?;
-        if let Some(coord) = action.wildlife {
+        let unplaced_wildlife = if let Some(coord) = action.wildlife {
             self.boards[player].place_wildlife(coord, wildlife)?;
+            None
         } else {
-            self.return_wildlife(wildlife);
-        }
+            Some(wildlife)
+        };
 
-        self.finish_turn()?;
+        self.finish_turn(unplaced_wildlife)?;
         Ok(())
     }
 
@@ -1041,11 +1055,20 @@ impl GameState {
         self.wildlife_return_counter += 1;
     }
 
-    fn finish_turn(&mut self) -> Result<(), RuleError> {
+    fn finish_turn(&mut self, unplaced_wildlife: Option<Wildlife>) -> Result<(), RuleError> {
+        // Official turn order: a drafted token that is not placed goes back
+        // into the cloth bag, then the empty market pair is replenished. This
+        // deliberately allows the returned token to be drawn again during
+        // the same end-of-turn refill (the physical bag has the same rule).
+        if let Some(wildlife) = unplaced_wildlife {
+            self.return_wildlife(wildlife);
+        }
+
         self.completed_turns += 1;
-        self.current_player = ((usize::from(self.current_player) + 1) % self.boards.len()) as u8;
 
         if self.is_game_over() {
+            self.current_player =
+                ((usize::from(self.current_player) + 1) % self.boards.len()) as u8;
             return Ok(());
         }
 
@@ -1053,7 +1076,9 @@ impl GameState {
             GameMode::Standard => self.refill_standard_market()?,
             GameMode::Solo => self.refill_solo_market()?,
         }
-        self.resolve_automatic_overpopulation()
+        self.resolve_automatic_overpopulation()?;
+        self.current_player = ((usize::from(self.current_player) + 1) % self.boards.len()) as u8;
+        Ok(())
     }
 
     fn refill_standard_market(&mut self) -> Result<(), RuleError> {
@@ -1261,7 +1286,11 @@ mod tests {
             }
         }
         assert_eq!(game.with_rotated_boards(0), game);
-        assert_eq!(game.with_rotated_boards(6), game, "full turn is the identity");
+        assert_eq!(
+            game.with_rotated_boards(6),
+            game,
+            "full turn is the identity"
+        );
     }
 
     #[test]
@@ -1507,6 +1536,46 @@ mod tests {
     }
 
     #[test]
+    fn unplaced_drafted_wildlife_returns_before_end_of_turn_refill() {
+        let mut game = game(2, 2_001);
+        force_market_wildlife(
+            &mut game,
+            [
+                Wildlife::Bear,
+                Wildlife::Elk,
+                Wildlife::Salmon,
+                Wildlife::Hawk,
+            ],
+        );
+        // Leave the cloth bag empty while preserving conservation. The turn
+        // can refill only if the declined Bear is returned before the draw.
+        game.discarded_wildlife.append(&mut game.wildlife_bag);
+        game.validate().unwrap();
+        let action = game
+            .legal_turn_actions_for_draft(
+                &MarketPrelude::default(),
+                DraftChoice::Paired {
+                    slot: MarketSlot::ZERO,
+                },
+            )
+            .unwrap()
+            .into_iter()
+            .find(|action| action.wildlife.is_none())
+            .expect("declining the drafted wildlife is always legal");
+
+        game.apply(&action).unwrap();
+
+        assert_eq!(
+            game.market.wildlife[MarketSlot::ZERO.index()],
+            Some(Wildlife::Bear)
+        );
+        assert!(game.wildlife_bag.is_empty());
+        assert_eq!(game.completed_turns(), 1);
+        assert_eq!(game.current_player(), 1);
+        game.validate().unwrap();
+    }
+
+    #[test]
     fn paid_wipe_accepts_any_nonempty_subset_and_charges_one_token() {
         let mut game = game(2, 3);
         game.boards[0].grant_nature_tokens(2);
@@ -1644,6 +1713,34 @@ mod tests {
 
         assert_eq!(game.completed_turns(), 1);
         game.validate().unwrap();
+    }
+
+    #[test]
+    fn optional_three_token_replacement_exposes_accept_and_decline_choices() {
+        let mut game = game(2, 102_001);
+        force_market_wildlife(
+            &mut game,
+            [
+                Wildlife::Bear,
+                Wildlife::Bear,
+                Wildlife::Bear,
+                Wildlife::Elk,
+            ],
+        );
+
+        let choices = game.free_three_of_a_kind_choices().unwrap();
+
+        assert_eq!(choices.len(), 2);
+        assert_eq!(choices[0], MarketPrelude::default());
+        assert!(choices[1].replace_three_of_a_kind);
+        for prelude in choices {
+            let actions = game.legal_turn_actions(&prelude).unwrap();
+            assert!(!actions.is_empty());
+            assert!(actions
+                .iter()
+                .all(|action| action.replace_three_of_a_kind == prelude.replace_three_of_a_kind));
+            game.transition(&actions[0]).unwrap();
+        }
     }
 
     #[test]
@@ -1794,11 +1891,10 @@ mod tests {
             Err(RuleError::WildlifeBagEmpty)
         ));
 
-        let before = game.canonical_hash();
-        let (prelude, staged) = game.preview_free_three_of_a_kind_if_feasible().unwrap();
-        assert_eq!(prelude, MarketPrelude::default());
-        assert_eq!(staged.canonical_hash(), before);
-        staged.validate().unwrap();
+        assert_eq!(
+            game.free_three_of_a_kind_choices().unwrap(),
+            vec![MarketPrelude::default()]
+        );
     }
 
     #[test]

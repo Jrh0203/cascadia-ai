@@ -364,6 +364,32 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedPlacement, selectedRotation]);
 
+  /** Legacy "Best Move": ask the configured hint engine for its top action
+   * and play it for the current seat. */
+  const bestMove = useCallback(async () => {
+    if (!document || view?.game_over || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await api.suggest(document.game, 1, hintStrength);
+      const action = response.candidates[0]?.action;
+      if (!action) throw new Error("The engine returned no legal move.");
+      const next = await api.apply(document.game, action);
+      setDocument(next);
+      setRedoStack([]);
+    } catch (reason) {
+      setError(messageFrom(reason));
+      if (stateHash) {
+        const key = `auto:${stateHash}:${currentPlayer}`;
+        const failures = (turnFailures.current.get(key) ?? 0) + 1;
+        turnFailures.current.set(key, failures);
+        if (failures < 3) autoState.current = null;
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, currentPlayer, document, hintStrength, stateHash, view?.game_over]);
+
   // Legacy v1 auto-play: when enabled, the hint engine plays human seats too.
   useEffect(() => {
     if (!autoPlay || !savedGame || !stateHash || gameOver || busy) return;
@@ -372,7 +398,7 @@ export default function App() {
     if (autoState.current === key) return;
     autoState.current = key;
     void bestMove();
-  }, [autoPlay, busy, currentPlayer, currentSeat?.kind, gameOver, savedGame, stateHash]);
+  }, [autoPlay, bestMove, busy, currentPlayer, currentSeat?.kind, gameOver, savedGame, stateHash]);
 
   function clearPlacement() {
     setSelectedCoord(null);
@@ -461,32 +487,6 @@ export default function App() {
       tile: { coord: selectedCoord, rotation: selectedRotation },
       wildlife,
     });
-  }
-
-  /** Legacy "Best Move": ask the configured hint engine for its top action
-   * and play it for the current seat. */
-  async function bestMove() {
-    if (!document || view?.game_over || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await api.suggest(document.game, 1, hintStrength);
-      const action = response.candidates[0]?.action;
-      if (!action) throw new Error("The engine returned no legal move.");
-      const next = await api.apply(document.game, action);
-      setDocument(next);
-      setRedoStack([]);
-    } catch (reason) {
-      setError(messageFrom(reason));
-      if (stateHash) {
-        const key = `auto:${stateHash}:${currentPlayer}`;
-        const failures = (turnFailures.current.get(key) ?? 0) + 1;
-        turnFailures.current.set(key, failures);
-        if (failures < 3) autoState.current = null;
-      }
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function undo() {

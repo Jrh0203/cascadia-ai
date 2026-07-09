@@ -75,12 +75,19 @@ ssh john0 'cd /home/john0/cascadia && (nohup bash cascadiav3/logs/X_job.sh > cas
 
 ## 4. Standard experiment workflow
 
+Before using any baseline report, verify that its ruleset/config identity is
+the corrected 2026-07-09 contract from `docs/v3/RULES_CONTRACT.md`. Reports
+from the forced three-of-a-kind refresh era are historical only and must not
+enter a paired verdict against corrected games.
+
 1. **Benchmark/battery** (100 games, paired seeds):
 ```bash
 python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
   --manifest <ckpt.manifest.json> --device cuda \
   --first-seed 2026995000 --games 100 --jobs 12 --batch-runner \
-  --gumbel-n-simulations 256 --gumbel-top-m 16 --gumbel-blend-weight 0.5 \
+  --gumbel-n-simulations 256 --gumbel-top-m 16 \
+  --gumbel-determinizations 4 --gumbel-market-decision-samples 8 \
+  --gumbel-blend-weight 0.5 --source-revision "$(git rev-parse HEAD)" \
   --control none --experiment-id <tag> \
   --out cascadiav3/reports/gumbel_<tag>.json
 ```

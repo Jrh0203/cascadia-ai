@@ -36,6 +36,8 @@ from .torch_cascadiaformer_search_benchmark import (
     summarize_game_results,
 )
 
+EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+
 
 def default_model_service_command(manifest: Path, device: str) -> str:
     return (
@@ -67,6 +69,7 @@ def run_gumbel_games(
     top_m: int,
     depth_rounds: int,
     determinizations: int,
+    market_decision_samples: int,
     blend_weight: float,
     k_interior: int,
     max_root_actions: int | None,
@@ -103,6 +106,8 @@ def run_gumbel_games(
         str(depth_rounds),
         "--gumbel-determinizations",
         str(determinizations),
+        "--gumbel-market-decision-samples",
+        str(market_decision_samples),
         "--gumbel-blend-weight",
         str(blend_weight),
         "--gumbel-exploration",
@@ -172,6 +177,7 @@ def run_gumbel_games_batch(
     top_m: int,
     depth_rounds: int,
     determinizations: int,
+    market_decision_samples: int,
     blend_weight: float,
     k_interior: int,
     max_root_actions: int | None,
@@ -214,6 +220,8 @@ def run_gumbel_games_batch(
             str(depth_rounds),
             "--gumbel-determinizations",
             str(determinizations),
+            "--gumbel-market-decision-samples",
+            str(market_decision_samples),
             "--gumbel-blend-weight",
             str(blend_weight),
             "--gumbel-exploration",
@@ -289,6 +297,7 @@ def run_gumbel_benchmark(
     top_m: int,
     depth_rounds: int,
     determinizations: int,
+    market_decision_samples: int,
     blend_weight: float,
     k_interior: int,
     max_root_actions: int | None,
@@ -306,6 +315,7 @@ def run_gumbel_benchmark(
     table_native_q: bool = False,
     leaf_softmix: float | None = None,
     tta_rotations: int = 1,
+    source_revision: str | None = None,
 ) -> dict[str, Any]:
     service = model_service or default_model_service_command(manifest, device_name)
 
@@ -328,6 +338,7 @@ def run_gumbel_benchmark(
                 top_m=top_m,
                 depth_rounds=depth_rounds,
                 determinizations=determinizations,
+                market_decision_samples=market_decision_samples,
                 blend_weight=blend_weight,
                 k_interior=k_interior,
                 max_root_actions=max_root_actions,
@@ -362,6 +373,7 @@ def run_gumbel_benchmark(
                     top_m=top_m,
                     depth_rounds=depth_rounds,
                     determinizations=determinizations,
+                    market_decision_samples=market_decision_samples,
                     blend_weight=blend_weight,
                     k_interior=k_interior,
                     max_root_actions=max_root_actions,
@@ -388,6 +400,18 @@ def run_gumbel_benchmark(
                     for future in as_completed(futures):
                         candidate_lines.extend(future.result())
     candidate_elapsed = time.perf_counter() - started
+    ruleset_ids = sorted(
+        {
+            str(line["ruleset_id"])
+            for line in candidate_lines
+            if line.get("type") in {"gumbel_decision", "gumbel_game_done"}
+            and line.get("ruleset_id") is not None
+        }
+    )
+    if ruleset_ids != [EXPECTED_RULESET_ID]:
+        raise RuntimeError(
+            f"candidate output ruleset mismatch: expected {EXPECTED_RULESET_ID}, got {ruleset_ids}"
+        )
     candidate_results = sorted(collect_gumbel_results(candidate_lines), key=lambda r: r["seed"])
 
     control_results: list[dict[str, Any]] = []
@@ -461,6 +485,8 @@ def run_gumbel_benchmark(
     ]
     return {
         "status": "pass",
+        "ruleset_id": EXPECTED_RULESET_ID,
+        "source_revision": source_revision,
         "candidate_per_seed": candidate_per_seed,
         "scientific_eligibility": "gumbel_search_vs_rollout_search_paired_benchmark",
         "experiment_id": experiment_id,
@@ -473,6 +499,7 @@ def run_gumbel_benchmark(
             "top_m": top_m,
             "depth_rounds": depth_rounds,
             "determinizations": determinizations,
+            "market_decision_samples": market_decision_samples,
             "blend_weight": blend_weight,
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
@@ -505,6 +532,8 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
         "# Gumbel Search Benchmark",
         "",
         f"Experiment: `{report['experiment_id']}`",
+        f"Ruleset: `{report['ruleset_id']}`",
+        f"Source revision: `{report['source_revision']}`",
         f"Manifest: `{report['manifest']}`",
         f"Games: `{len(report['seeds'])}` matched seeds",
         f"Search: `{json.dumps(report['search'], sort_keys=True)}`",
@@ -565,6 +594,12 @@ def main() -> int:
     parser.add_argument("--gumbel-depth-rounds", type=int, default=1)
     parser.add_argument("--gumbel-determinizations", type=int, default=4)
     parser.add_argument(
+        "--gumbel-market-decision-samples",
+        type=int,
+        default=8,
+        help="Hidden replacement samples used to decide optional three-of-a-kind refresh",
+    )
+    parser.add_argument(
         "--gumbel-peek",
         action="store_true",
         help="ORACLE ONLY: search on the true hidden state (ceiling measurement)",
@@ -606,6 +641,11 @@ def main() -> int:
     )
     parser.add_argument("--model-timeout-ms", type=int, default=120_000)
     parser.add_argument("--experiment-id", default="gumbel-search-vs-rollout-search-v1")
+    parser.add_argument(
+        "--source-revision",
+        default="",
+        help="Exact deployed Git revision used to build the Rust exporter",
+    )
     parser.add_argument("--out", default="cascadiav3/reports/gumbel_benchmark.json")
     parser.add_argument("--summary-out", default="cascadiav3/reports/gumbel_benchmark_summary.md")
     args = parser.parse_args()
@@ -622,6 +662,7 @@ def main() -> int:
         top_m=args.gumbel_top_m,
         depth_rounds=args.gumbel_depth_rounds,
         determinizations=args.gumbel_determinizations,
+        market_decision_samples=args.gumbel_market_decision_samples,
         blend_weight=args.gumbel_blend_weight,
         k_interior=args.k_interior,
         max_root_actions=args.gumbel_max_root_actions or None,
@@ -639,6 +680,7 @@ def main() -> int:
         table_native_q=args.gumbel_table_native_q,
         leaf_softmix=args.gumbel_leaf_softmix,
         tta_rotations=args.gumbel_tta,
+        source_revision=args.source_revision or None,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -29,6 +29,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=cascadiav3/src python3 -m cascadiav3.torch_
   --gumbel-top-m "${GUMBEL_TOP_M:-32}" \
   --gumbel-depth-rounds "${GUMBEL_DEPTH_ROUNDS:-1}" \
   --gumbel-determinizations "${GUMBEL_DETERMINIZATIONS:-8}" \
+  --gumbel-market-decision-samples "${GUMBEL_MARKET_DECISION_SAMPLES:-8}" \
   --gumbel-blend-weight "${GUMBEL_BLEND_WEIGHT:-1.0}" \
   --k-interior "${GUMBEL_K_INTERIOR:-16}" \
   --control "${CONTROL:-full-search}" \

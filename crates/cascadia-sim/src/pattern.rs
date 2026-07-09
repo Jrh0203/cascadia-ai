@@ -181,11 +181,7 @@ impl PatternPotentialStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<TurnAction, SimulationError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        select_pattern_potential_action(game, &prelude, self.config, rng)
+        select_pattern_potential_action_with_market_choice(game, self.config, rng)
     }
 
     pub fn play_match(
@@ -229,12 +225,65 @@ pub fn rank_pattern_actions(
     rank_pattern_actions_with_turns(game, prelude, config, 1)
 }
 
+fn rank_after_market_decision(
+    game: &GameState,
+    policy_domain: &[u8],
+    mut rank: impl FnMut(&GameState, &MarketPrelude) -> Result<Vec<PatternCandidate>, SimulationError>,
+) -> Result<Vec<PatternCandidate>, SimulationError> {
+    let prelude = crate::choose_free_three_of_a_kind_prelude(
+        game,
+        policy_domain,
+        crate::MARKET_DECISION_SAMPLES,
+        |staged| {
+            rank(staged, &MarketPrelude::default())?
+                .first()
+                .map(|candidate| candidate.heuristic_value)
+                .ok_or(SimulationError::NoLegalActions)
+        },
+    )?;
+    rank(game, &prelude)
+}
+
+pub fn rank_pattern_actions_with_market_choice(
+    game: &GameState,
+    config: PatternAwareConfig,
+) -> Result<Vec<PatternCandidate>, SimulationError> {
+    let prelude = choose_pattern_market_prelude(game, config)?;
+    rank_pattern_actions(game, &prelude, config)
+}
+
+pub fn choose_pattern_market_prelude(
+    game: &GameState,
+    config: PatternAwareConfig,
+) -> Result<MarketPrelude, SimulationError> {
+    crate::choose_free_three_of_a_kind_prelude(
+        game,
+        b"pattern-aware-v1",
+        crate::MARKET_DECISION_SAMPLES,
+        |staged| {
+            rank_pattern_actions(staged, &MarketPrelude::default(), config)?
+                .first()
+                .map(|candidate| candidate.heuristic_value)
+                .ok_or(SimulationError::NoLegalActions)
+        },
+    )
+}
+
 pub fn rank_pattern_commitment_actions(
     game: &GameState,
     prelude: &MarketPrelude,
     config: PatternAwareConfig,
 ) -> Result<Vec<PatternCandidate>, SimulationError> {
     rank_pattern_actions_with_turns(game, prelude, config, 2)
+}
+
+pub fn rank_pattern_commitment_actions_with_market_choice(
+    game: &GameState,
+    config: PatternAwareConfig,
+) -> Result<Vec<PatternCandidate>, SimulationError> {
+    rank_after_market_decision(game, b"pattern-commitment-v1", |state, prelude| {
+        rank_pattern_commitment_actions(state, prelude, config)
+    })
 }
 
 pub fn rank_pattern_competition_actions(
@@ -251,6 +300,15 @@ pub fn rank_pattern_competition_actions(
     )
 }
 
+pub fn rank_pattern_competition_actions_with_market_choice(
+    game: &GameState,
+    config: PatternAwareConfig,
+) -> Result<Vec<PatternCandidate>, SimulationError> {
+    rank_after_market_decision(game, b"pattern-competition-v1", |state, prelude| {
+        rank_pattern_competition_actions(state, prelude, config)
+    })
+}
+
 pub fn rank_pattern_portfolio_actions(
     game: &GameState,
     prelude: &MarketPrelude,
@@ -263,6 +321,15 @@ pub fn rank_pattern_portfolio_actions(
         2,
         OpportunityModel::ConditionedPremium,
     )
+}
+
+pub fn rank_pattern_portfolio_actions_with_market_choice(
+    game: &GameState,
+    config: PatternAwareConfig,
+) -> Result<Vec<PatternCandidate>, SimulationError> {
+    rank_after_market_decision(game, b"pattern-portfolio-v1", |state, prelude| {
+        rank_pattern_portfolio_actions(state, prelude, config)
+    })
 }
 
 fn rank_pattern_actions_with_turns(
@@ -730,6 +797,29 @@ pub fn select_pattern_action(
     Ok(tied[rng.gen_range(0..tied.len())].action.clone())
 }
 
+fn select_ranked_pattern_action(
+    ranked: &[PatternCandidate],
+    rng: &mut ChaCha8Rng,
+) -> Result<TurnAction, SimulationError> {
+    let Some(best) = ranked.first() else {
+        return Err(SimulationError::NoLegalActions);
+    };
+    let tied = ranked
+        .iter()
+        .take_while(|candidate| candidate.heuristic_value == best.heuristic_value)
+        .count();
+    Ok(ranked[rng.gen_range(0..tied)].action.clone())
+}
+
+pub fn select_pattern_action_with_market_choice(
+    game: &GameState,
+    config: PatternAwareConfig,
+    rng: &mut ChaCha8Rng,
+) -> Result<TurnAction, SimulationError> {
+    let ranked = rank_pattern_actions_with_market_choice(game, config)?;
+    select_ranked_pattern_action(&ranked, rng)
+}
+
 pub fn rank_pattern_potential_actions(
     game: &GameState,
     prelude: &MarketPrelude,
@@ -750,6 +840,15 @@ pub fn rank_pattern_potential_actions(
     Ok(evaluated)
 }
 
+pub fn rank_pattern_potential_actions_with_market_choice(
+    game: &GameState,
+    config: PatternPotentialConfig,
+) -> Result<Vec<PatternCandidate>, SimulationError> {
+    rank_after_market_decision(game, b"pattern-aware-v1", |state, prelude| {
+        rank_pattern_potential_actions(state, prelude, config)
+    })
+}
+
 pub fn select_pattern_potential_action(
     game: &GameState,
     prelude: &MarketPrelude,
@@ -765,6 +864,15 @@ pub fn select_pattern_potential_action(
         .take_while(|candidate| candidate.heuristic_value == best.heuristic_value)
         .count();
     Ok(ranked[rng.gen_range(0..tied)].action.clone())
+}
+
+pub fn select_pattern_potential_action_with_market_choice(
+    game: &GameState,
+    config: PatternPotentialConfig,
+    rng: &mut ChaCha8Rng,
+) -> Result<TurnAction, SimulationError> {
+    let ranked = rank_pattern_potential_actions_with_market_choice(game, config)?;
+    select_ranked_pattern_action(&ranked, rng)
 }
 
 fn pattern_potential_value(candidate: &PatternCandidate, config: PatternPotentialConfig) -> f64 {
@@ -793,6 +901,15 @@ pub fn select_pattern_commitment_action(
     Ok(ranked[rng.gen_range(0..tied)].action.clone())
 }
 
+pub fn select_pattern_commitment_action_with_market_choice(
+    game: &GameState,
+    config: PatternAwareConfig,
+    rng: &mut ChaCha8Rng,
+) -> Result<TurnAction, SimulationError> {
+    let ranked = rank_pattern_commitment_actions_with_market_choice(game, config)?;
+    select_ranked_pattern_action(&ranked, rng)
+}
+
 pub fn select_pattern_competition_action(
     game: &GameState,
     prelude: &MarketPrelude,
@@ -808,6 +925,15 @@ pub fn select_pattern_competition_action(
         .take_while(|candidate| candidate.heuristic_value == best.heuristic_value)
         .count();
     Ok(ranked[rng.gen_range(0..tied)].action.clone())
+}
+
+pub fn select_pattern_competition_action_with_market_choice(
+    game: &GameState,
+    config: PatternAwareConfig,
+    rng: &mut ChaCha8Rng,
+) -> Result<TurnAction, SimulationError> {
+    let ranked = rank_pattern_competition_actions_with_market_choice(game, config)?;
+    select_ranked_pattern_action(&ranked, rng)
 }
 
 pub fn select_pattern_portfolio_action(
@@ -827,6 +953,15 @@ pub fn select_pattern_portfolio_action(
     Ok(ranked[rng.gen_range(0..tied)].action.clone())
 }
 
+pub fn select_pattern_portfolio_action_with_market_choice(
+    game: &GameState,
+    config: PatternAwareConfig,
+    rng: &mut ChaCha8Rng,
+) -> Result<TurnAction, SimulationError> {
+    let ranked = rank_pattern_portfolio_actions_with_market_choice(game, config)?;
+    select_ranked_pattern_action(&ranked, rng)
+}
+
 pub fn play_pattern_plies(
     game: &mut GameState,
     plies: usize,
@@ -837,11 +972,7 @@ pub fn play_pattern_plies(
         if game.is_game_over() {
             break;
         }
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let action = select_pattern_action(game, &prelude, config, rng)?;
+        let action = select_pattern_action_with_market_choice(game, config, rng)?;
         game.apply(&action)?;
     }
     Ok(())

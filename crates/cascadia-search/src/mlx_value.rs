@@ -4,8 +4,8 @@ use cascadia_data::PositionRecord;
 use cascadia_game::{GameConfig, GameSeed, GameState, MarketPrelude, TurnAction, score_board};
 use cascadia_model::{MAX_BATCH, ModelProcess, Prediction};
 use cascadia_sim::{
-    GreedyCandidate, MatchResult, SimulationError, play_greedy_plies, play_match_with_selector,
-    rank_greedy_actions,
+    GreedyCandidate, MatchResult, SimulationError, choose_greedy_market_prelude, play_greedy_plies,
+    play_match_with_selector, rank_greedy_actions_with_market_choice,
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -115,16 +115,15 @@ impl<P: Predictor> MlxValueStrategy<P> {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<TurnAction, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
         let actions: Vec<_> = match self.config.greedy_prefilter {
-            Some(limit) => rank_greedy_actions(game, &prelude, Some(limit))?
+            Some(limit) => rank_greedy_actions_with_market_choice(game, Some(limit))?
                 .into_iter()
                 .map(|candidate| candidate.action)
                 .collect(),
-            None => game.legal_turn_actions(&prelude)?,
+            None => {
+                let prelude = choose_greedy_market_prelude(game)?;
+                game.legal_turn_actions(&prelude)?
+            }
         };
         if actions.is_empty() {
             return Err(SearchError::NoLegalActions);

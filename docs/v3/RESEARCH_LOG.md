@@ -5,11 +5,28 @@ campaign: what it was, why we tried it, what we measured, and the verdict.
 Updated continuously; the freshest entries are in the "Active program" section.
 
 Goal (the gate): **mean seat score ≥ 100 over 1,000 games of 4-player
-self-play.** Best measured as of 2026-07-08 evening: **98.40** (distq_k8
+self-play.** Best legacy measurement as of 2026-07-08 evening: **98.40** (distq_k8
 at n1024/d16, 100 games; +0.12 ns vs the 98.28 scalar champion — the two
 are statistically tied at high search budget, distq strictly better at
-low budget). Gap ≈ **−1.6**. The live lever: distributional-Q expert
-iteration (EI-1 running overnight).
+low budget). This number predates the corrected optional three-of-a-kind
+policy action and is not a current promotion baseline. See the rules
+compatibility break below.
+
+---
+
+## Rules compatibility break (2026-07-08)
+
+The engine previously forced every free three-of-a-kind wildlife refresh.
+Officially, the active player may accept or decline. The corrected policy
+stack evaluates both branches, and unused drafted wildlife is regression-
+tested to return to the bag before the end-of-turn market refill. Contract:
+[`RULES_CONTRACT.md`](RULES_CONTRACT.md).
+
+All results in this log through the 98.40 distq measurement are legacy under
+the forced-refresh policy space. They remain useful architecture evidence but
+cannot promote a post-fix model or serve as paired controls. Greedy, no-search,
+and Gumbel baselines must be regenerated under rules semantics
+`cascadia-base-official-2026-07-09`.
 
 ---
 
@@ -40,6 +57,10 @@ Rust exporter (`real-root-exporter/src/gumbel.rs`):
   tile/bag order (strict no-peek); `d` distinct determinized worlds are
   cycled across each action's simulations (common random numbers across
   actions).
+- Optional three-of-a-kind refresh: decide from public information, value
+  accept over `8` independent hidden replacement samples by default, commit
+  accept/decline, then search the real revealed market. The refresh chance
+  sample count is recorded separately from `d`.
 - Interior plies: every seat advances by argmax of its own derived final Q
   (max^n multiplayer), menus capped at k_interior.
 - Leaf value: `w·(model bootstrap) + (1−w)·(sampled-greedy rollout)`;
@@ -273,16 +294,13 @@ No points directly; halves the cost of every probe and EI cycle.
 4. **Search-shape re-sweep under distq** — the n1024/d16 peak was
    established with the scalar head; a better value function can shift
    the optimal sims/worlds trade (maybe fewer worlds needed → cheaper).
-5. **Free-refresh as a search decision** — the engine unconditionally
-   takes the free three-of-a-kind market refresh when available (legacy
-   design). That is a real policy restriction: when the tripled wildlife
-   is exactly what the seat wants to draft, refreshing destroys value —
-   the search cannot even consider declining. Probe: evaluate both
-   prelude branches at the root (union the two menus, ~2× root eval
-   cost only on refresh-eligible plies) and 100g vs baseline. All
-   training data and all existing numbers share the restriction, so any
-   gain is fresh points.
-6. **1,000-game certification** — run when a champion plausibly clears
+5. **Free-refresh as a search decision — IMPLEMENTED 2026-07-09, awaiting
+   corrected rebaseline.** The engine and every automated policy now expose
+   and value decline and accept. Gumbel searches separate roots and makes the
+   same choice at interior plies. This is a rules correction, not an
+   experiment to score against the forced-refresh baseline; all old numbers
+   are compatibility-broken. See `RULES_CONTRACT.md`.
+6. **1,000-game certification** — run when a corrected-rules champion plausibly clears
    ~99+ at 100g; currently premature.
 7. **Closed (do not re-propose without new evidence):** oracle/belief
    modeling, checkpoint ensembles, leaf softmix, symmetry TTA,

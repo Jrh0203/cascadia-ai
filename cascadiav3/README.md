@@ -10,6 +10,7 @@ This directory contains the active transformer implementation:
 
 The governing docs are:
 
+- [Rules Contract](../docs/v3/RULES_CONTRACT.md)
 - [Architecture](../docs/v3/ARCHITECTURE.md)
 - [Training Pipeline](../docs/v3/TRAINING_PIPELINE.md)
 - [Operations](../docs/v3/OPERATIONS.md)

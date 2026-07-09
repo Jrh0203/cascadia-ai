@@ -36,6 +36,7 @@ GUMBEL_N_SIMULATIONS="${GUMBEL_N_SIMULATIONS:-64}"
 GUMBEL_TOP_M="${GUMBEL_TOP_M:-16}"
 GUMBEL_DEPTH_ROUNDS="${GUMBEL_DEPTH_ROUNDS:-1}"
 GUMBEL_DETERMINIZATIONS="${GUMBEL_DETERMINIZATIONS:-4}"
+GUMBEL_MARKET_DECISION_SAMPLES="${GUMBEL_MARKET_DECISION_SAMPLES:-8}"
 GUMBEL_BLEND_WEIGHT="${GUMBEL_BLEND_WEIGHT:-0.5}"
 GUMBEL_K_INTERIOR="${GUMBEL_K_INTERIOR:-16}"
 GUMBEL_MAX_ROOT_ACTIONS="${GUMBEL_MAX_ROOT_ACTIONS:-}"
@@ -212,6 +213,7 @@ generate_tensor_roots() {
         mode_args+=(--gumbel-top-m '$GUMBEL_TOP_M')
         mode_args+=(--gumbel-depth-rounds '$GUMBEL_DEPTH_ROUNDS')
         mode_args+=(--gumbel-determinizations '$GUMBEL_DETERMINIZATIONS')
+        mode_args+=(--gumbel-market-decision-samples '$GUMBEL_MARKET_DECISION_SAMPLES')
         mode_args+=(--gumbel-blend-weight '$GUMBEL_BLEND_WEIGHT')
         mode_args+=(--k-interior '$GUMBEL_K_INTERIOR')
         if [ -n '$GUMBEL_MAX_ROOT_ACTIONS' ]; then

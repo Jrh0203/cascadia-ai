@@ -1,9 +1,27 @@
-# Campaign Working State (updated 2026-07-08 midday)
+# Campaign Working State (updated 2026-07-09)
 
 Live working notes for the Gumbel self-play campaign. Companion to
 [GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md) (strategy) and
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
+
+## RESUME HERE (07-09 rules correction — rebaseline before research resumes)
+
+The official rules audit found a load-bearing policy-space error: the free
+three-of-a-kind wildlife refresh is optional, but every automated policy had
+forced it. The corrected engine exposes decline and accept; greedy, pattern,
+lookahead, API suggestions, Gumbel root search, and Gumbel interior plies now
+choose from public information, sample the replacement chance outcome, and
+only then draft from the revealed market. Unplaced drafted wildlife is pinned
+to return to the bag before the end-of-turn refill. See
+`docs/v3/RULES_CONTRACT.md`.
+
+**Compatibility ruling:** every existing score baseline, paired battery,
+corpus, and checkpoint was generated under the forced-refresh policy. Preserve
+them as historical architecture evidence, but do not use them as promotion
+controls. Before resuming EI or a 100-point claim, regenerate greedy,
+no-search, n256/d4, and n1024/d16 baselines with the new rules identity and
+fresh promotion seeds. Any remote job still running old code is legacy-only.
 
 ## RESUME HERE (07-08 evening — distq EI-1 + fleet5 running overnight)
 

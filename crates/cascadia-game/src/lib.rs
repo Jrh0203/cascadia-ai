@@ -3,6 +3,11 @@
 //! This crate intentionally has no dependency on the v1 implementation. Rules,
 //! simulation, AI, and presentation build on this single canonical state model.
 
+/// Rules-semantics identity for reports, APIs, and promotion provenance.
+/// Changing an official rule or the legal policy action space requires a new
+/// value and a fresh baseline campaign.
+pub const RULES_SEMANTICS_ID: &str = "cascadia-base-official-2026-07-09";
+
 mod board;
 mod game;
 mod hex;

@@ -2,9 +2,9 @@ use blake3::Hasher;
 use cascadia_data::PositionRecord;
 use cascadia_game::{Board, GameSeed, GameState, Market, MarketPrelude, TurnAction, score_board};
 use cascadia_sim::{
-    PatternAwareConfig, best_pattern_heuristic_value, play_pattern_plies,
-    rank_pattern_frontier_actions, rank_wildlife_diverse_pattern_frontier_actions,
-    select_pattern_action,
+    PatternAwareConfig, best_pattern_heuristic_value, choose_pattern_market_prelude,
+    play_pattern_plies, rank_pattern_frontier_actions,
+    rank_wildlife_diverse_pattern_frontier_actions, select_pattern_action_with_market_choice,
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -295,10 +295,12 @@ impl PerfectInformationPatternOracleStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<Vec<RolloutCandidate>, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
+        let acting_seat = game.current_player();
+        let cards = game.config().scoring_cards;
+        let mut continuation_seed = [0; 32];
+        rng.fill(&mut continuation_seed);
+        let continuation_seed = GameSeed(continuation_seed);
+        let prelude = choose_pattern_market_prelude(game, self.config.blueprint)?;
         let staged = game.preview_market_prelude(&prelude)?;
         let candidates = if let Some(limit) = self.config.wildlife_candidate_limit {
             rank_wildlife_diverse_pattern_frontier_actions(
@@ -314,15 +316,6 @@ impl PerfectInformationPatternOracleStrategy {
                 self.config.blueprint,
             )?
         };
-        if candidates.is_empty() {
-            return Err(SearchError::NoLegalActions);
-        }
-
-        let acting_seat = staged.current_player();
-        let cards = staged.config().scoring_cards;
-        let mut continuation_seed = [0; 32];
-        rng.fill(&mut continuation_seed);
-        let continuation_seed = GameSeed(continuation_seed);
         let scores = candidates
             .par_iter()
             .map(|candidate| {
@@ -342,7 +335,6 @@ impl PerfectInformationPatternOracleStrategy {
                 ))
             })
             .collect::<Result<Vec<_>, _>>()?;
-
         let mut ranked = candidates
             .into_iter()
             .zip(scores)
@@ -354,6 +346,9 @@ impl PerfectInformationPatternOracleStrategy {
                 leaf_score_stddev: 0.0,
             })
             .collect::<Vec<_>>();
+        if ranked.is_empty() {
+            return Err(SearchError::NoLegalActions);
+        }
         ranked.sort_by(|left, right| {
             right
                 .mean_leaf_score
@@ -437,10 +432,11 @@ impl PerfectInformationFocalBeamStrategy {
         root_wildlife_candidate_limit: usize,
         retention: BeamRetention,
     ) -> Result<Vec<RolloutCandidate>, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
+        let acting_seat = game.current_player();
+        let mut continuation_seed = [0; 32];
+        rng.fill(&mut continuation_seed);
+        let continuation_seed = GameSeed(continuation_seed);
+        let prelude = choose_pattern_market_prelude(game, self.config.blueprint)?;
         let staged = game.preview_market_prelude(&prelude)?;
         let candidates = rank_wildlife_diverse_pattern_frontier_actions(
             &staged,
@@ -448,14 +444,6 @@ impl PerfectInformationFocalBeamStrategy {
             self.config.blueprint,
             root_wildlife_candidate_limit,
         )?;
-        if candidates.is_empty() {
-            return Err(SearchError::NoLegalActions);
-        }
-
-        let acting_seat = staged.current_player();
-        let mut continuation_seed = [0; 32];
-        rng.fill(&mut continuation_seed);
-        let continuation_seed = GameSeed(continuation_seed);
         let scores = candidates
             .par_iter()
             .map(|candidate| {
@@ -468,7 +456,6 @@ impl PerfectInformationFocalBeamStrategy {
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
-
         let mut ranked = candidates
             .into_iter()
             .zip(scores)
@@ -480,6 +467,9 @@ impl PerfectInformationFocalBeamStrategy {
                 leaf_score_stddev: 0.0,
             })
             .collect::<Vec<_>>();
+        if ranked.is_empty() {
+            return Err(SearchError::NoLegalActions);
+        }
         ranked.sort_by(|left, right| {
             right
                 .mean_leaf_score
@@ -545,10 +535,8 @@ impl PerfectInformationFocalBeamStrategy {
             let mut expanded = Vec::new();
             for node in beam {
                 debug_assert_eq!(node.game.current_player(), focal_seat);
-                let prelude = MarketPrelude {
-                    replace_three_of_a_kind: node.game.market().three_of_a_kind().is_some(),
-                    wildlife_wipes: Vec::new(),
-                };
+                let mut opponent_replays = Vec::new();
+                let prelude = choose_pattern_market_prelude(&node.game, self.config.blueprint)?;
                 let staged = node.game.preview_market_prelude(&prelude)?;
                 let candidates = rank_wildlife_diverse_pattern_frontier_actions(
                     &staged,
@@ -556,7 +544,6 @@ impl PerfectInformationFocalBeamStrategy {
                     self.config.blueprint,
                     self.config.wildlife_candidate_limit,
                 )?;
-                let mut opponent_replays = Vec::new();
                 for candidate in candidates {
                     let mut child = BeamNode {
                         game: staged.clone(),
@@ -606,13 +593,8 @@ impl PerfectInformationFocalBeamStrategy {
 
     fn advance_opponents(&self, node: &mut BeamNode, focal_seat: usize) -> Result<(), SearchError> {
         while !node.game.is_game_over() && node.game.current_player() != focal_seat {
-            let prelude = MarketPrelude {
-                replace_three_of_a_kind: node.game.market().three_of_a_kind().is_some(),
-                wildlife_wipes: Vec::new(),
-            };
-            let action = select_pattern_action(
+            let action = select_pattern_action_with_market_choice(
                 &node.game,
-                &prelude,
                 self.config.blueprint,
                 &mut node.policy_rng,
             )?;
@@ -631,13 +613,8 @@ impl PerfectInformationFocalBeamStrategy {
         while !node.game.is_game_over() && node.game.current_player() != focal_seat {
             let observation = Self::pattern_policy_observation(&node.game, focal_seat)
                 .expect("an unfinished opponent turn has a policy observation");
-            let prelude = MarketPrelude {
-                replace_three_of_a_kind: node.game.market().three_of_a_kind().is_some(),
-                wildlife_wipes: Vec::new(),
-            };
-            let action = select_pattern_action(
+            let action = select_pattern_action_with_market_choice(
                 &node.game,
-                &prelude,
                 self.config.blueprint,
                 &mut node.policy_rng,
             )?;
@@ -696,15 +673,11 @@ impl PerfectInformationFocalBeamStrategy {
             ));
         }
         debug_assert_eq!(game.current_player(), focal_seat);
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        Ok(
-            best_pattern_heuristic_value(game, &prelude, self.config.blueprint)?.unwrap_or_else(
-                || f64::from(score_board(&game.boards()[focal_seat], cards).base_total),
-            ),
-        )
+        let prelude = choose_pattern_market_prelude(game, self.config.blueprint)?;
+        let best = best_pattern_heuristic_value(game, &prelude, self.config.blueprint)?;
+        Ok(best.unwrap_or_else(|| {
+            f64::from(score_board(&game.boards()[focal_seat], cards).base_total)
+        }))
     }
 
     fn beam_dimensions(

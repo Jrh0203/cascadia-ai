@@ -3,6 +3,20 @@
 This is the canonical v3 runbook. It replaces the older scattered planning
 files and keeps the training method in one place.
 
+## Ruleset Gate
+
+Every corpus, checkpoint, report, and promotion comparison must identify the
+rules semantics used to generate it. The active contract is
+[`RULES_CONTRACT.md`](RULES_CONTRACT.md), semantics ID
+`cascadia-base-official-2026-07-09`.
+
+The optional free three-of-a-kind refresh became a real policy decision on
+2026-07-08; the 2026-07-09 correction additionally enforces decision → hidden
+chance draw → draft, so a policy cannot condition accept/decline on the actual
+replacement. Earlier forced-refresh artifacts are legacy evidence and cannot
+be mixed with corrected games in promotion statistics. Rebaseline every
+opponent and incumbent after a rules-semantics change.
+
 ## Data Formats
 
 Use packed tensor shards for real training:

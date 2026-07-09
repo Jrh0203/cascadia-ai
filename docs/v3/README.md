@@ -10,6 +10,9 @@ packed expert tensors with search-supervised action values.
 - [Research Log](RESEARCH_LOG.md): **the experiment record** — architecture,
   every direction tried with verdicts, scaling laws, decision-SNR
   measurement, and ranked future directions.
+- [Rules Contract](RULES_CONTRACT.md): official wildlife-return ordering,
+  optional three-of-a-kind policy choice, rules identity, and the resulting
+  baseline compatibility boundary.
 - [Radical Directions](RADICAL_DIRECTIONS.md): speculative architecture-level
   bets (exact endgame solving, tiny-model/huge-search inversion, pairwise
   comparator head, on-GPU rollouts, decomposed value heads, league play),
@@ -35,6 +38,12 @@ The implementation package lives in
 [cascadiav3/README.md](../../cascadiav3/README.md).
 
 ## Current Scientific State
+
+Rules compatibility break: all score measurements below predate the
+2026-07-09 correction that made the free three-of-a-kind refresh an explicit
+accept/decline policy action. They remain historical architecture evidence,
+but corrected baselines must be regenerated before promotion. See
+[Rules Contract](RULES_CONTRACT.md).
 
 - Real training data should use packed `.npz` tensor shards.
 - JSONL is retained only for tiny audit fixtures.

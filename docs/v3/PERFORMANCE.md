@@ -2,6 +2,17 @@
 
 These are engineering measurements and diagnostics, not promotion evidence.
 
+Measurements recorded before rules semantics `cascadia-base-official-2026-07-09`
+used a forced free three-of-a-kind refresh. They remain valid engineering
+profiles but are not score baselines for the corrected policy space. See
+[`RULES_CONTRACT.md`](RULES_CONTRACT.md).
+
+Corrected Gumbel runs pay extra work only when an optional three-of-a-kind
+decision exists: decline is searched once, accept is estimated over `8`
+hidden replacement samples by default, and an accepted real market receives
+its own downstream draft search. Keep this cost separate from the ordinary
+`d`-world search budget in performance reports.
+
 ## Tensor Export
 
 Rust-native greedy tensor export on `john0`:
@@ -488,11 +499,12 @@ Landed changes, all exact-parity-gated:
    `GreedyRankScratch`): evaluation vec, wildlife-sum cache, cell-query map,
    and top-k key buffer are reusable across plies; `complete_with_sampled_greedy`
    and the bench thread one scratch through the rollout loop.
-5. **Staged-clone skip** (exporter rollout loop): the free three-of-a-kind
-   preview only clones the `GameState` when the market actually holds a
-   three of a kind; otherwise ranking runs directly on the rollout state.
-   Also: `score_board_with_habitat_analysis` reuses the analysis' largest
-   components for the per-ply baseline instead of 5 extra BFS passes.
+5. **Market-choice fast path** (exporter rollout loop): when no optional
+   three-of-a-kind choice exists, ranking stays on the scratch-buffer path
+   without staging clones. On eligible plies, both accept and decline are
+   ranked as required by the corrected rules. Also:
+   `score_board_with_habitat_analysis` reuses the analysis' largest components
+   for the per-ply baseline instead of 5 extra BFS passes.
 
 Rejected: top-k-aware pruning of enumeration (no admissible bound available
 that provably preserves the top-k set and its enumeration-order tie-breaks;

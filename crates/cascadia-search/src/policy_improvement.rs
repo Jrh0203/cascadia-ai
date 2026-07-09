@@ -1,11 +1,14 @@
 use cascadia_game::{
     GameConfig, GameSeed, GameState, MarketPrelude, TurnAction, Wildlife, score_board,
 };
+#[cfg(test)]
+use cascadia_sim::select_pattern_action;
 use cascadia_sim::{
     MatchResult, PATTERN_AWARE_STRATEGY_ID, PatternAwareConfig, SimulationError,
-    play_match_with_selector, play_pattern_plies, rank_pattern_frontier_actions,
-    rank_wildlife_diverse_pattern_frontier_actions, rank_wildlife_focused_pattern_frontier_actions,
-    select_pattern_action, strategy_rng,
+    choose_pattern_market_prelude, play_match_with_selector, play_pattern_plies,
+    rank_pattern_frontier_actions, rank_wildlife_diverse_pattern_frontier_actions,
+    rank_wildlife_focused_pattern_frontier_actions, select_pattern_action_with_market_choice,
+    strategy_rng,
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -13,8 +16,7 @@ use rayon::prelude::*;
 
 use crate::{
     PerfectInformationFocalBeamConfig, PerfectInformationFocalBeamStrategy, RolloutCandidate,
-    SearchError, finish_rollout_ranking, lookahead_decision_rng, rollout_rng, select_ranked_action,
-    with_prelude,
+    SearchError, lookahead_decision_rng, rollout_rng, select_ranked_action, with_prelude,
 };
 
 pub const TERMINAL_POLICY_IMPROVEMENT_STRATEGY_ID: &str = "terminal-policy-improvement-v1";
@@ -420,7 +422,6 @@ pub struct LateConservativeFocalBeamStrategy {
 }
 
 struct TerminalCandidateValues {
-    prelude: MarketPrelude,
     candidates: Vec<cascadia_sim::GreedyCandidate>,
     values: Vec<Vec<f64>>,
 }
@@ -464,13 +465,8 @@ impl LateTerminalPolicyImprovementStrategy {
         if self.uses_terminal_search(game) {
             self.terminal.select_action_deterministic(game)
         } else {
-            let prelude = MarketPrelude {
-                replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-                wildlife_wipes: Vec::new(),
-            };
-            Ok(select_pattern_action(
+            Ok(select_pattern_action_with_market_choice(
                 game,
-                &prelude,
                 self.config.terminal.blueprint,
                 blueprint_rng,
             )?)
@@ -523,13 +519,8 @@ impl LateWildlifeDiversePolicyImprovementStrategy {
         if self.uses_terminal_search(game) {
             self.terminal.select_action_deterministic(game)
         } else {
-            let prelude = MarketPrelude {
-                replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-                wildlife_wipes: Vec::new(),
-            };
-            Ok(select_pattern_action(
+            Ok(select_pattern_action_with_market_choice(
                 game,
-                &prelude,
                 self.config.terminal.terminal.blueprint,
                 blueprint_rng,
             )?)
@@ -579,22 +570,16 @@ impl LateConservativePolicyImprovementStrategy {
         game: &GameState,
         blueprint_rng: &mut ChaCha8Rng,
     ) -> Result<TurnAction, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
         if !self.uses_terminal_search(game) {
-            return Ok(select_pattern_action(
+            return Ok(select_pattern_action_with_market_choice(
                 game,
-                &prelude,
                 self.config.terminal.terminal.blueprint,
                 blueprint_rng,
             )?);
         }
 
-        let anchor = select_pattern_action(
+        let anchor = select_pattern_action_with_market_choice(
             game,
-            &prelude,
             self.config.terminal.terminal.blueprint,
             blueprint_rng,
         )?;
@@ -647,13 +632,8 @@ impl LateConservativeWildlifeFocusedPolicyImprovementStrategy {
         game: &GameState,
         blueprint_rng: &mut ChaCha8Rng,
     ) -> Result<TurnAction, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let anchor = select_pattern_action(
+        let anchor = select_pattern_action_with_market_choice(
             game,
-            &prelude,
             self.config.terminal.terminal.blueprint,
             blueprint_rng,
         )?;
@@ -712,10 +692,10 @@ impl LateConservativeFocalBeamStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<TerminalCandidateValues, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
+        let acting_seat = game.current_player();
+        let sample_seeds = terminal_sample_seeds(rng, self.config.determinizations);
+        let sample_count = sample_seeds.len();
+        let prelude = choose_pattern_market_prelude(game, self.config.blueprint)?;
         let staged = game.preview_market_prelude(&prelude)?;
         let candidates = rank_wildlife_diverse_pattern_frontier_actions(
             &staged,
@@ -723,12 +703,6 @@ impl LateConservativeFocalBeamStrategy {
             self.config.blueprint,
             self.config.wildlife_candidate_limit,
         )?;
-        if candidates.is_empty() {
-            return Err(SearchError::NoLegalActions);
-        }
-        let acting_seat = staged.current_player();
-        let sample_seeds = terminal_sample_seeds(rng, self.config.determinizations);
-        let sample_count = sample_seeds.len();
         let scores: Vec<Result<(usize, f64), SearchError>> = (0..candidates.len() * sample_count)
             .into_par_iter()
             .map(|job| {
@@ -750,9 +724,17 @@ impl LateConservativeFocalBeamStrategy {
             let (candidate_index, score) = score?;
             values[candidate_index].push(score);
         }
+        if candidates.is_empty() {
+            return Err(SearchError::NoLegalActions);
+        }
         Ok(TerminalCandidateValues {
-            prelude,
-            candidates,
+            candidates: candidates
+                .into_iter()
+                .map(|mut candidate| {
+                    candidate.action = with_prelude(candidate.action, &prelude);
+                    candidate
+                })
+                .collect(),
             values,
         })
     }
@@ -762,11 +744,8 @@ impl LateConservativeFocalBeamStrategy {
         game: &GameState,
         blueprint_rng: &mut ChaCha8Rng,
     ) -> Result<TurnAction, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let anchor = select_pattern_action(game, &prelude, self.config.blueprint, blueprint_rng)?;
+        let anchor =
+            select_pattern_action_with_market_choice(game, self.config.blueprint, blueprint_rng)?;
         if !self.uses_beam(game) {
             return Ok(anchor);
         }
@@ -836,22 +815,16 @@ impl LateConservativeBasePolicyImprovementStrategy {
         game: &GameState,
         blueprint_rng: &mut ChaCha8Rng,
     ) -> Result<TurnAction, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
         if !self.uses_terminal_search(game) {
-            return Ok(select_pattern_action(
+            return Ok(select_pattern_action_with_market_choice(
                 game,
-                &prelude,
                 self.config.terminal.blueprint,
                 blueprint_rng,
             )?);
         }
 
-        let anchor = select_pattern_action(
+        let anchor = select_pattern_action_with_market_choice(
             game,
-            &prelude,
             self.config.terminal.blueprint,
             blueprint_rng,
         )?;
@@ -897,17 +870,15 @@ impl TerminalPolicyImprovementStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<Vec<RolloutCandidate>, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let staged = game.preview_market_prelude(&prelude)?;
-        let candidates = rank_pattern_frontier_actions(
-            &staged,
-            &MarketPrelude::default(),
-            self.config.blueprint,
-        )?;
-        rank_terminal_candidates(game, staged, prelude, candidates, self.config, rng)
+        let sampled =
+            terminal_candidate_values_across_market_choices(game, self.config, rng, |staged| {
+                Ok(rank_pattern_frontier_actions(
+                    staged,
+                    &MarketPrelude::default(),
+                    self.config.blueprint,
+                )?)
+            })?;
+        finish_terminal_ranking(sampled.candidates, sampled.values)
     }
 
     fn candidate_values(
@@ -915,21 +886,12 @@ impl TerminalPolicyImprovementStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<TerminalCandidateValues, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let staged = game.preview_market_prelude(&prelude)?;
-        let candidates = rank_pattern_frontier_actions(
-            &staged,
-            &MarketPrelude::default(),
-            self.config.blueprint,
-        )?;
-        let values = evaluate_terminal_candidates(game, &staged, &candidates, self.config, rng)?;
-        Ok(TerminalCandidateValues {
-            prelude,
-            candidates,
-            values,
+        terminal_candidate_values_across_market_choices(game, self.config, rng, |staged| {
+            Ok(rank_pattern_frontier_actions(
+                staged,
+                &MarketPrelude::default(),
+                self.config.blueprint,
+            )?)
         })
     }
 
@@ -951,12 +913,8 @@ impl TerminalPolicyImprovementStrategy {
         let mut rng = lookahead_decision_rng(game);
         let sampled = self.candidate_values(game, &mut rng)?;
         let action = select_conservative_candidate(&sampled, anchor, &mut rng)?;
-        let TerminalCandidateValues {
-            prelude,
-            candidates,
-            values,
-        } = sampled;
-        let ranked = finish_rollout_ranking(candidates, values, &prelude)?;
+        let TerminalCandidateValues { candidates, values } = sampled;
+        let ranked = finish_terminal_ranking(candidates, values)?;
         Ok((ranked, action))
     }
 
@@ -1033,18 +991,20 @@ impl WildlifeDiverseTerminalPolicyImprovementStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<Vec<RolloutCandidate>, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let staged = game.preview_market_prelude(&prelude)?;
-        let candidates = rank_wildlife_diverse_pattern_frontier_actions(
-            &staged,
-            &MarketPrelude::default(),
-            self.config.terminal.blueprint,
-            self.config.wildlife_candidate_limit,
+        let sampled = terminal_candidate_values_across_market_choices(
+            game,
+            self.config.terminal,
+            rng,
+            |staged| {
+                Ok(rank_wildlife_diverse_pattern_frontier_actions(
+                    staged,
+                    &MarketPrelude::default(),
+                    self.config.terminal.blueprint,
+                    self.config.wildlife_candidate_limit,
+                )?)
+            },
         )?;
-        rank_terminal_candidates(game, staged, prelude, candidates, self.config.terminal, rng)
+        finish_terminal_ranking(sampled.candidates, sampled.values)
     }
 
     fn candidate_values(
@@ -1052,23 +1012,13 @@ impl WildlifeDiverseTerminalPolicyImprovementStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<TerminalCandidateValues, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let staged = game.preview_market_prelude(&prelude)?;
-        let candidates = rank_wildlife_diverse_pattern_frontier_actions(
-            &staged,
-            &MarketPrelude::default(),
-            self.config.terminal.blueprint,
-            self.config.wildlife_candidate_limit,
-        )?;
-        let values =
-            evaluate_terminal_candidates(game, &staged, &candidates, self.config.terminal, rng)?;
-        Ok(TerminalCandidateValues {
-            prelude,
-            candidates,
-            values,
+        terminal_candidate_values_across_market_choices(game, self.config.terminal, rng, |staged| {
+            Ok(rank_wildlife_diverse_pattern_frontier_actions(
+                staged,
+                &MarketPrelude::default(),
+                self.config.terminal.blueprint,
+                self.config.wildlife_candidate_limit,
+            )?)
         })
     }
 
@@ -1109,24 +1059,14 @@ impl WildlifeFocusedTerminalPolicyImprovementStrategy {
         game: &GameState,
         rng: &mut ChaCha8Rng,
     ) -> Result<TerminalCandidateValues, SearchError> {
-        let prelude = MarketPrelude {
-            replace_three_of_a_kind: game.market().three_of_a_kind().is_some(),
-            wildlife_wipes: Vec::new(),
-        };
-        let staged = game.preview_market_prelude(&prelude)?;
-        let candidates = rank_wildlife_focused_pattern_frontier_actions(
-            &staged,
-            &MarketPrelude::default(),
-            self.config.terminal.blueprint,
-            self.config.wildlife,
-            self.config.wildlife_candidate_limit,
-        )?;
-        let values =
-            evaluate_terminal_candidates(game, &staged, &candidates, self.config.terminal, rng)?;
-        Ok(TerminalCandidateValues {
-            prelude,
-            candidates,
-            values,
+        terminal_candidate_values_across_market_choices(game, self.config.terminal, rng, |staged| {
+            Ok(rank_wildlife_focused_pattern_frontier_actions(
+                staged,
+                &MarketPrelude::default(),
+                self.config.terminal.blueprint,
+                self.config.wildlife,
+                self.config.wildlife_candidate_limit,
+            )?)
         })
     }
 
@@ -1141,16 +1081,33 @@ impl WildlifeFocusedTerminalPolicyImprovementStrategy {
     }
 }
 
-fn rank_terminal_candidates(
+fn terminal_candidate_values_across_market_choices(
     game: &GameState,
-    staged: GameState,
-    prelude: MarketPrelude,
-    candidates: Vec<cascadia_sim::GreedyCandidate>,
     config: TerminalPolicyImprovementConfig,
     rng: &mut ChaCha8Rng,
-) -> Result<Vec<RolloutCandidate>, SearchError> {
-    let values = evaluate_terminal_candidates(game, &staged, &candidates, config, rng)?;
-    finish_rollout_ranking(candidates, values, &prelude)
+    mut candidates_for_staged: impl FnMut(
+        &GameState,
+    )
+        -> Result<Vec<cascadia_sim::GreedyCandidate>, SearchError>,
+) -> Result<TerminalCandidateValues, SearchError> {
+    let sample_seeds = terminal_sample_seeds(rng, config.determinizations);
+    let prelude = choose_pattern_market_prelude(game, config.blueprint)?;
+    let staged = game.preview_market_prelude(&prelude)?;
+    let candidates = candidates_for_staged(&staged)?;
+    let values = evaluate_terminal_candidates(game, &staged, &candidates, config, &sample_seeds)?;
+    if candidates.is_empty() {
+        return Err(SearchError::NoLegalActions);
+    }
+    Ok(TerminalCandidateValues {
+        candidates: candidates
+            .into_iter()
+            .map(|mut candidate| {
+                candidate.action = with_prelude(candidate.action, &prelude);
+                candidate
+            })
+            .collect(),
+        values,
+    })
 }
 
 fn evaluate_terminal_candidates(
@@ -1158,7 +1115,7 @@ fn evaluate_terminal_candidates(
     staged: &GameState,
     candidates: &[cascadia_sim::GreedyCandidate],
     config: TerminalPolicyImprovementConfig,
-    rng: &mut ChaCha8Rng,
+    sample_seeds: &[GameSeed],
 ) -> Result<Vec<Vec<f64>>, SearchError> {
     if candidates.is_empty() {
         return Err(SearchError::NoLegalActions);
@@ -1166,7 +1123,6 @@ fn evaluate_terminal_candidates(
 
     let acting_seat = staged.current_player();
     let cards = game.config().scoring_cards;
-    let sample_seeds = terminal_sample_seeds(rng, config.determinizations);
     let sample_count = sample_seeds.len();
     let scores: Vec<Result<(usize, f64), SearchError>> = (0..candidates.len() * sample_count)
         .into_par_iter()
@@ -1200,6 +1156,47 @@ fn evaluate_terminal_candidates(
     Ok(values)
 }
 
+fn finish_terminal_ranking(
+    candidates: Vec<cascadia_sim::GreedyCandidate>,
+    values: Vec<Vec<f64>>,
+) -> Result<Vec<RolloutCandidate>, SearchError> {
+    if candidates.len() != values.len() || values.iter().any(Vec::is_empty) {
+        return Err(SearchError::InvalidConfig(
+            "terminal evaluation produced incomplete candidate values",
+        ));
+    }
+    let mut ranked = candidates
+        .into_iter()
+        .zip(values)
+        .map(|(candidate, values)| {
+            let mean = values.iter().sum::<f64>() / values.len() as f64;
+            let variance = if values.len() > 1 {
+                values
+                    .iter()
+                    .map(|value| (value - mean).powi(2))
+                    .sum::<f64>()
+                    / (values.len() - 1) as f64
+            } else {
+                0.0
+            };
+            RolloutCandidate {
+                action: candidate.action,
+                immediate_rank: candidate.immediate_rank,
+                immediate_score: candidate.resulting_base_score,
+                mean_leaf_score: mean,
+                leaf_score_stddev: variance.sqrt(),
+            }
+        })
+        .collect::<Vec<_>>();
+    ranked.sort_by(|left, right| {
+        right
+            .mean_leaf_score
+            .total_cmp(&left.mean_leaf_score)
+            .then_with(|| right.immediate_score.cmp(&left.immediate_score))
+    });
+    Ok(ranked)
+}
+
 fn select_conservative_candidate(
     sampled: &TerminalCandidateValues,
     anchor: &TurnAction,
@@ -1208,7 +1205,7 @@ fn select_conservative_candidate(
     let anchor_index = sampled
         .candidates
         .iter()
-        .position(|candidate| with_prelude(candidate.action.clone(), &sampled.prelude) == *anchor)
+        .position(|candidate| candidate.action == *anchor)
         .ok_or(SearchError::InvalidConfig(
             "pattern-aware anchor is absent from terminal frontier",
         ))?;
@@ -1243,10 +1240,7 @@ fn select_conservative_candidate(
         .take_while(|candidate| candidate.3 == eligible[0].3)
         .count();
     let selected = eligible[rng.gen_range(0..tied)].0;
-    Ok(with_prelude(
-        sampled.candidates[selected].action.clone(),
-        &sampled.prelude,
-    ))
+    Ok(sampled.candidates[selected].action.clone())
 }
 
 fn conservative_candidate_evaluations(
@@ -1256,7 +1250,7 @@ fn conservative_candidate_evaluations(
     let anchor_index = sampled
         .candidates
         .iter()
-        .position(|candidate| with_prelude(candidate.action.clone(), &sampled.prelude) == *anchor)
+        .position(|candidate| candidate.action == *anchor)
         .ok_or(SearchError::InvalidConfig(
             "pattern-aware anchor is absent from terminal frontier",
         ))?;
@@ -1276,7 +1270,7 @@ fn conservative_candidate_evaluations(
             let (mean_advantage, advantage_standard_error, lower_bound) =
                 paired_advantage_lcb90(values, anchor_values)?;
             Ok(ConservativeCandidateEvaluation {
-                action: with_prelude(candidate.action.clone(), &sampled.prelude),
+                action: candidate.action.clone(),
                 immediate_rank: candidate.immediate_rank,
                 immediate_score: candidate.resulting_base_score,
                 terminal_mean: mean,

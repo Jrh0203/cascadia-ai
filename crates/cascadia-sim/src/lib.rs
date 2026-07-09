@@ -23,13 +23,20 @@ pub use pattern::{
     PATTERN_AWARE_STRATEGY_ID, PATTERN_COMMITMENT_STRATEGY_ID, PATTERN_COMPETITION_STRATEGY_ID,
     PATTERN_PORTFOLIO_STRATEGY_ID, PATTERN_POTENTIAL_STRATEGY_ID, PatternAwareConfig,
     PatternCandidate, PatternPotentialConfig, PatternPotentialStrategy,
-    best_pattern_heuristic_value, future_market_opportunity, future_wildlife_opportunity,
-    play_pattern_plies, rank_pattern_actions, rank_pattern_commitment_actions,
-    rank_pattern_competition_actions, rank_pattern_frontier_actions,
-    rank_pattern_portfolio_actions, rank_pattern_potential_actions,
+    best_pattern_heuristic_value, choose_pattern_market_prelude, future_market_opportunity,
+    future_wildlife_opportunity, play_pattern_plies, rank_pattern_actions,
+    rank_pattern_actions_with_market_choice, rank_pattern_commitment_actions,
+    rank_pattern_commitment_actions_with_market_choice, rank_pattern_competition_actions,
+    rank_pattern_competition_actions_with_market_choice, rank_pattern_frontier_actions,
+    rank_pattern_portfolio_actions, rank_pattern_portfolio_actions_with_market_choice,
+    rank_pattern_potential_actions, rank_pattern_potential_actions_with_market_choice,
     rank_wildlife_diverse_pattern_frontier_actions, rank_wildlife_focused_pattern_frontier_actions,
-    select_pattern_action, select_pattern_commitment_action, select_pattern_competition_action,
-    select_pattern_portfolio_action, select_pattern_potential_action, wildlife_marginal_gains,
+    select_pattern_action, select_pattern_action_with_market_choice,
+    select_pattern_commitment_action, select_pattern_commitment_action_with_market_choice,
+    select_pattern_competition_action, select_pattern_competition_action_with_market_choice,
+    select_pattern_portfolio_action, select_pattern_portfolio_action_with_market_choice,
+    select_pattern_potential_action, select_pattern_potential_action_with_market_choice,
+    wildlife_marginal_gains,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -169,6 +176,84 @@ pub fn rank_greedy_actions(
     rank_greedy_actions_with_scratch(game, prelude, limit, &mut GreedyRankScratch::default())
 }
 
+/// Hidden-order determinizations used to value the optional free
+/// three-of-a-kind decision. The decision is made from the public state;
+/// only after it is fixed may the real replacement market be revealed and a
+/// draft selected.
+pub const MARKET_DECISION_SAMPLES: usize = 8;
+
+/// Chooses decline or accept without observing the real hidden bag order.
+///
+/// Both choices are evaluated on common, public-hash-derived hidden
+/// determinizations. This is the chance-node boundary required by the
+/// physical rules: decide whether to wipe, reveal replacements, then draft.
+/// Exact ties decline.
+pub fn choose_free_three_of_a_kind_prelude(
+    game: &GameState,
+    policy_domain: &[u8],
+    sample_count: usize,
+    mut value_staged_market: impl FnMut(&GameState) -> Result<f64, SimulationError>,
+) -> Result<MarketPrelude, SimulationError> {
+    let choices = game.free_three_of_a_kind_choices()?;
+    let Some(accept) = choices
+        .iter()
+        .find(|choice| choice.replace_three_of_a_kind)
+        .cloned()
+    else {
+        return Ok(MarketPrelude::default());
+    };
+    if sample_count == 0 {
+        return Err(SimulationError::Strategy(
+            "market decision requires at least one hidden-order sample".to_owned(),
+        ));
+    }
+
+    let public_hash = game.public_state().canonical_hash();
+    let mut decline_total = 0.0;
+    let mut accept_total = 0.0;
+    for sample_index in 0..sample_count {
+        let mut hasher = Hasher::new();
+        hasher.update(b"cascadia-v3/free-three-market-decision-v1");
+        hasher.update(policy_domain);
+        hasher.update(public_hash.as_bytes());
+        hasher.update(&(sample_index as u64).to_le_bytes());
+        let mut sampled = game.clone();
+        sampled.redeterminize_hidden(GameSeed(*hasher.finalize().as_bytes()));
+
+        let declined = sampled.preview_market_prelude(&MarketPrelude::default())?;
+        decline_total += value_staged_market(&declined)?;
+        let accepted = sampled.preview_market_prelude(&accept)?;
+        accept_total += value_staged_market(&accepted)?;
+    }
+
+    if accept_total > decline_total {
+        Ok(accept)
+    } else {
+        Ok(MarketPrelude::default())
+    }
+}
+
+pub fn choose_greedy_market_prelude(game: &GameState) -> Result<MarketPrelude, SimulationError> {
+    choose_free_three_of_a_kind_prelude(game, b"greedy-v1", MARKET_DECISION_SAMPLES, |staged| {
+        rank_greedy_actions(staged, &MarketPrelude::default(), Some(1))?
+            .first()
+            .map(|candidate| f64::from(candidate.resulting_base_score))
+            .ok_or(SimulationError::NoLegalActions)
+    })
+}
+
+/// Makes the optional free three-of-a-kind decision over sampled hidden
+/// orders, then ranks complete turns in the real market revealed by that
+/// decision. Callers with an explicit UI/user-selected prelude should use
+/// [`rank_greedy_actions`] directly.
+pub fn rank_greedy_actions_with_market_choice(
+    game: &GameState,
+    limit: Option<usize>,
+) -> Result<Vec<GreedyCandidate>, SimulationError> {
+    let prelude = choose_greedy_market_prelude(game)?;
+    rank_greedy_actions(game, &prelude, limit)
+}
+
 /// [`rank_greedy_actions`] with caller-owned scratch buffers. Candidates,
 /// order, and ranks are bit-identical to the historical implementation
 /// (full per-action `ScoreBreakdown` rebuild + stable sort by score
@@ -279,7 +364,9 @@ pub fn rank_greedy_actions_with_scratch(
             ));
         },
     )?;
-    Ok(select_top_greedy_candidates(evaluated, keyed, prelude, limit))
+    Ok(select_top_greedy_candidates(
+        evaluated, keyed, prelude, limit,
+    ))
 }
 
 /// Compact, `Copy` representation of one evaluated greedy action: resulting
@@ -695,47 +782,41 @@ impl Strategy {
     }
 
     fn select_action(&mut self, game: &GameState) -> Result<TurnAction, SimulationError> {
-        let (prelude, _) = game.preview_free_three_of_a_kind_if_feasible()?;
         match self.kind {
             StrategyKind::Random => {
-                let actions = game.legal_turn_actions(&prelude)?;
+                let market_choices = game.free_three_of_a_kind_choices()?;
+                let prelude = &market_choices[self.rng.gen_range(0..market_choices.len())];
+                let actions = game.legal_turn_actions(prelude)?;
                 if actions.is_empty() {
                     return Err(SimulationError::NoLegalActions);
                 }
                 let index = self.rng.gen_range(0..actions.len());
                 Ok(actions[index].clone())
             }
-            StrategyKind::Greedy => self.select_greedy(game, &prelude),
-            StrategyKind::PatternAware => {
-                select_pattern_action(game, &prelude, PatternAwareConfig::default(), &mut self.rng)
+            StrategyKind::Greedy => select_greedy_action_with_market_choice(game, &mut self.rng),
+            StrategyKind::PatternAware => select_pattern_action_with_market_choice(
+                game,
+                PatternAwareConfig::default(),
+                &mut self.rng,
+            ),
+            StrategyKind::PatternCommitment => select_pattern_commitment_action_with_market_choice(
+                game,
+                PatternAwareConfig::default(),
+                &mut self.rng,
+            ),
+            StrategyKind::PatternCompetition => {
+                select_pattern_competition_action_with_market_choice(
+                    game,
+                    PatternAwareConfig::default(),
+                    &mut self.rng,
+                )
             }
-            StrategyKind::PatternCommitment => select_pattern_commitment_action(
+            StrategyKind::PatternPortfolio => select_pattern_portfolio_action_with_market_choice(
                 game,
-                &prelude,
-                PatternAwareConfig::default(),
-                &mut self.rng,
-            ),
-            StrategyKind::PatternCompetition => select_pattern_competition_action(
-                game,
-                &prelude,
-                PatternAwareConfig::default(),
-                &mut self.rng,
-            ),
-            StrategyKind::PatternPortfolio => select_pattern_portfolio_action(
-                game,
-                &prelude,
                 PatternAwareConfig::default(),
                 &mut self.rng,
             ),
         }
-    }
-
-    fn select_greedy(
-        &mut self,
-        game: &GameState,
-        prelude: &MarketPrelude,
-    ) -> Result<TurnAction, SimulationError> {
-        select_greedy_action(game, prelude, &mut self.rng)
     }
 }
 
@@ -768,6 +849,24 @@ pub fn select_greedy_action(
     Ok(candidates[index].action.clone())
 }
 
+pub fn select_greedy_action_with_market_choice(
+    game: &GameState,
+    rng: &mut ChaCha8Rng,
+) -> Result<TurnAction, SimulationError> {
+    let candidates = rank_greedy_actions_with_market_choice(game, None)?;
+    let Some(best_score) = candidates
+        .first()
+        .map(|candidate| candidate.resulting_base_score)
+    else {
+        return Err(SimulationError::NoLegalActions);
+    };
+    let tied = candidates
+        .iter()
+        .take_while(|candidate| candidate.resulting_base_score == best_score)
+        .count();
+    Ok(candidates[rng.gen_range(0..tied)].action.clone())
+}
+
 pub fn play_greedy_plies(
     game: &mut GameState,
     plies: usize,
@@ -777,8 +876,7 @@ pub fn play_greedy_plies(
         if game.is_game_over() {
             break;
         }
-        let (prelude, _) = game.preview_free_three_of_a_kind_if_feasible()?;
-        let action = select_greedy_action(game, &prelude, rng)?;
+        let action = select_greedy_action_with_market_choice(game, rng)?;
         game.apply(&action)?;
     }
     Ok(())
@@ -917,12 +1015,12 @@ mod tests {
                 GameState::new(config, GameSeed::from_u64(3_000 + offset as u64)).unwrap();
             let mut rng = ChaCha8Rng::seed_from_u64(4_000 + offset as u64);
             for ply in 0..60 {
-                let (free_prelude, staged) =
-                    game.preview_free_three_of_a_kind_if_feasible().unwrap();
+                let mut preludes = game.free_three_of_a_kind_choices().unwrap();
+                let free_prelude = preludes.last().cloned().unwrap_or_default();
+                let staged = game.preview_market_prelude(&free_prelude).unwrap();
                 // Preludes are ranked against the pre-staged state so the
                 // three-of-a-kind replacement and paid-wipe staging paths are
                 // both exercised.
-                let mut preludes = vec![MarketPrelude::default(), free_prelude];
                 if game.boards()[game.current_player()].nature_tokens() > 0 {
                     preludes.push(MarketPrelude {
                         replace_three_of_a_kind: false,
@@ -944,7 +1042,9 @@ mod tests {
                 }
                 let candidates =
                     rank_greedy_actions(&staged, &MarketPrelude::default(), Some(8)).unwrap();
-                let action = candidates[rng.gen_range(0..candidates.len())].action.clone();
+                let action = candidates[rng.gen_range(0..candidates.len())]
+                    .action
+                    .clone();
                 game = staged;
                 game.apply(&action).unwrap();
             }
@@ -970,6 +1070,42 @@ mod tests {
         for candidate in candidates {
             game.transition(&candidate.action).unwrap();
         }
+    }
+
+    #[test]
+    fn market_decision_precedes_hidden_replacement_draw() {
+        let config = GameConfig::research_aaaaa(4).unwrap();
+        let game = (0..10_000)
+            .map(|seed| GameState::new(config, GameSeed::from_u64(seed)).unwrap())
+            .find(|game| game.market().three_of_a_kind().is_some())
+            .expect("seed search must find a three-of-a-kind market");
+        let mut redetermined = game.clone();
+        redetermined.redeterminize_hidden(GameSeed::from_u64(0xfeed_f00d));
+
+        let left = choose_greedy_market_prelude(&game).unwrap();
+        let right = choose_greedy_market_prelude(&redetermined).unwrap();
+        assert_eq!(left, right, "market choice must not observe hidden order");
+
+        let selected = rank_greedy_actions_with_market_choice(&game, Some(1)).unwrap();
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].action.prelude(), left);
+        game.transition(&selected[0].action).unwrap();
+
+        let mut calls = 0;
+        let accept = choose_free_three_of_a_kind_prelude(&game, b"force-accept", 2, |_| {
+            calls += 1;
+            Ok(if calls % 2 == 0 { 1.0 } else { 0.0 })
+        })
+        .unwrap();
+        assert!(accept.replace_three_of_a_kind);
+
+        calls = 0;
+        let decline = choose_free_three_of_a_kind_prelude(&game, b"force-decline", 2, |_| {
+            calls += 1;
+            Ok(if calls % 2 == 0 { 0.0 } else { 1.0 })
+        })
+        .unwrap();
+        assert!(!decline.replace_three_of_a_kind);
     }
 
     #[test]
