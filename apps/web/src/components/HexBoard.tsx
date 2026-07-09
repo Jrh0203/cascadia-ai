@@ -64,9 +64,14 @@ function pointsAttribute(points: [number, number][]): string {
 }
 
 function splitPoints(coord: HexCoord, rotation: number): string {
+  // Engine convention (Tile::terrain_edge_masks): terrain_a shows on edges
+  // {r, r+1, r+2}, terrain_b on {r+3..r+5}. On this pointy-top layout,
+  // edge e spans corners {(1-e) mod 6, (-e) mod 6}, so terrain_b's half
+  // covers the four corners ascending from (1 - r) mod 6.
   const corners = cornerPoints(coord);
+  const start = (((1 - rotation) % 6) + 6) % 6;
   return pointsAttribute(
-    Array.from({ length: 4 }, (_, index) => corners[(rotation + index) % 6]),
+    Array.from({ length: 4 }, (_, index) => corners[(start + index) % 6]),
   );
 }
 
