@@ -30,7 +30,7 @@ and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
 the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
 completed the 100-game greedy/no-search floor plus both n256/d4 arms and is
-now running cycle4 n1024/d16, with 38/100 raw games complete at 10:51 EDT;
+now running cycle4 n1024/d16, with 51/100 raw games complete at 12:00 EDT;
 distq_k8 n1024/d16 follows on the same fresh seeds. A live sidecar copied the
 growing distq-n256 seed files with overwrite-on-poll semantics; a second
 watcher does the same for both n1024 arms. Each publishes only after strict
@@ -93,6 +93,16 @@ incumbent model Q and selected completed-Q teacher; require the paired
 absolute-error t-CI below zero; cap all-q RMSE at 1.05x incumbent and mean
 q-regret increase at 0.05. Learning-rate selection and the final verdict use
 disjoint seed blocks.
+
+The candidate-blind held-out baseline read is now fixed. On the 760 non-exact
+verdict roots, selected incumbent final-Q RMSE is `3.7476` and selected teacher
+RMSE is `3.5520`, so the teacher owns the primary baseline and a candidate must
+reach at most `3.1968` RMSE before the paired-CI requirement is considered.
+Incumbent all-q RMSE against the four searched actions per non-exact root is
+`1.7499`, mean completed-Q regret is `0.7515`, and top-1 agreement is `36.45%`;
+the corresponding hard ceilings are `1.8374` all-q RMSE and `0.8015` mean
+regret. No candidate output was inspected and no hyperparameter was selected
+on the verdict block.
 
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI

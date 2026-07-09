@@ -4449,3 +4449,40 @@ Order remains corrected rebaseline/verdict, exact K1, structured-Q head pilot,
 model throughput, market sample-4, then CUDA concurrency. The older
 `11f254d9` waiter/archive was removed only after the new waiter passed its
 preflight and was observed alive.
+
+## 2026-07-09 — Structured-Q target and held-out baseline audit
+
+Purpose: quantify the v4 target before john0 training, turn the preregistered
+gate into absolute thresholds, and detect split drift or impossible component
+semantics without inspecting any candidate prediction.
+
+Each block contains 800 roots: 40 exact K1 rows and 760 non-exact rows. Every
+non-exact row has four q-valid searched actions; the exact rows have one, hence
+3.85 q-valid actions per root overall. Exact terminal component sums matched
+the active-seat final score with zero observed error. The non-exact selected-
+action score-to-go means were stable across fit / selection / verdict:
+
+| Component | Fit | Selection | Verdict |
+|---|---:|---:|---:|
+| Wildlife | 31.8250 | 32.8474 | 32.5618 |
+| Habitat | 11.7197 | 11.5434 | 11.8079 |
+| Nature tokens | 1.7579 | 1.6803 | 1.7711 |
+| Total | 45.3026 | 46.0711 | 46.1408 |
+
+Nature-token residuals were negative on `6.32% / 8.68% / 7.24%` of non-exact
+rows, as they must be when the real trajectory spends tokens after the chosen
+action. Wildlife, habitat, and total residuals were never negative. The
+teacher's selected-final RMSE against the real trajectory was `2.9992 / 3.4929
+/ 3.5520`; the harder later blocks reinforce the need for disjoint selection
+and verdict data rather than weakening the gate.
+
+The candidate-blind verdict baseline used the exact top-64 + fixed relation-
+tail surface that the queued probe will use. On 760 non-exact roots, incumbent
+selected-final RMSE / MAE / bias were `3.7476 / 2.8394 / -1.5379`; teacher
+values were `3.5520 / 2.6386 / -1.6946`. Therefore the better baseline is the
+teacher and the 10% gate requires candidate RMSE `<= 3.1968`, plus a paired
+absolute-error t-CI wholly below zero. Across 3,040 q-valid actions, incumbent
+RMSE against teacher completed-Q was `1.7499`, mean teacher-Q regret was
+`0.7515`, and top-1 agreement was `36.45%`. The retention ceilings are thus
+candidate all-q RMSE `<= 1.8374` and mean regret `<= 0.8015`. No candidate was
+evaluated and this read did not influence the fixed LR grid or selection rule.

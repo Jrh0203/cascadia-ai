@@ -489,6 +489,18 @@ and are staged on john0. The Macs supplied data only. Training and the verdict
 are checksum-queued behind the approved exact-K1 john0 gate at source
 `f35b0d0b`; no gameplay can launch automatically from this pilot.
 
+A candidate-blind target audit found no split-level component pathology. Mean
+non-exact wildlife / habitat / Nature score-to-go was respectively
+`31.825/11.720/1.758`, `32.847/11.543/1.680`, and
+`32.562/11.808/1.771` across fit, selection, and verdict. Nature residuals can
+correctly be negative when later token spending exceeds earning (`6.3%` to
+`8.7%` of rows); total residuals never were. The held-out baseline is now
+numerically pinned: teacher selected-final RMSE `3.5520` beats incumbent
+`3.7476`, so the primary 10% threshold is `3.1968`. The incumbent retention
+baselines are `1.7499` all-q RMSE and `0.7515` mean completed-Q regret, making
+the corresponding ceilings `1.8374` and `0.8015`. No candidate prediction or
+hyperparameter touched the verdict block during this audit.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)
