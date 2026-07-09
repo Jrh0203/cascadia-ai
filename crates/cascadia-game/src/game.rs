@@ -189,6 +189,14 @@ pub struct GameState {
     current_player: u8,
     completed_turns: u16,
     wildlife_return_counter: u64,
+    /// Wildlife removed by the active player's market refreshes this turn
+    /// (free three-of-a-kind + paid wipes). Per the rules clarification,
+    /// these return to the bag at END OF TURN, not per refresh — so
+    /// successive wipes within a turn draw from a shrinking bag ("digging").
+    /// Always empty between turns (flushed in finish_turn within the same
+    /// apply call), hence not serialized.
+    #[serde(skip, default)]
+    wildlife_pending_return: Vec<Wildlife>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -298,6 +306,7 @@ impl GameState {
             current_player: 0,
             completed_turns: 0,
             wildlife_return_counter: 0,
+            wildlife_pending_return: Vec::new(),
         };
         state.resolve_automatic_overpopulation()?;
         state.validate().map_err(RuleError::Invariant)?;
@@ -869,6 +878,7 @@ impl GameState {
         let wildlife_total = self.wildlife_bag.len()
             + self.discarded_wildlife.len()
             + self.market.wildlife.iter().flatten().count()
+            + self.wildlife_pending_return.len()
             + placed_wildlife;
         if wildlife_total != 100 {
             return Err("wildlife token conservation failed");
@@ -924,7 +934,7 @@ impl GameState {
                 .three_of_a_kind()
                 .ok_or(RuleError::NoThreeOfAKind)?;
             let slots = self.market.wildlife_slots(wildlife);
-            self.replace_wildlife(&slots)?;
+            self.replace_wildlife_with_return(&slots, true)?;
         }
 
         for wipe in &prelude.wildlife_wipes {
@@ -932,7 +942,7 @@ impl GameState {
             if !self.boards[player].spend_nature_token() {
                 return Err(RuleError::NoNatureTokens);
             }
-            self.replace_wildlife(&wipe.slots)?;
+            self.replace_wildlife_with_return(&wipe.slots, true)?;
         }
         Ok(())
     }
@@ -979,6 +989,17 @@ impl GameState {
     }
 
     fn replace_wildlife(&mut self, slots: &[MarketSlot]) -> Result<(), RuleError> {
+        self.replace_wildlife_with_return(slots, false)
+    }
+
+    /// `defer_returns` holds the removed tokens out of the bag until
+    /// finish_turn (player abilities); automatic overpopulation between
+    /// turns returns immediately.
+    fn replace_wildlife_with_return(
+        &mut self,
+        slots: &[MarketSlot],
+        defer_returns: bool,
+    ) -> Result<(), RuleError> {
         let mut set_aside = Vec::with_capacity(slots.len() + 4);
         for slot in slots {
             let wildlife = self.market.wildlife[slot.index()]
@@ -1004,8 +1025,12 @@ impl GameState {
             self.fill_empty_wildlife()?;
         }
 
-        for wildlife in set_aside {
-            self.return_wildlife(wildlife);
+        if defer_returns {
+            self.wildlife_pending_return.extend(set_aside);
+        } else {
+            for wildlife in set_aside {
+                self.return_wildlife(wildlife);
+            }
         }
         Ok(())
     }
@@ -1042,6 +1067,12 @@ impl GameState {
     }
 
     fn finish_turn(&mut self) -> Result<(), RuleError> {
+        // End of the active player's turn: wiped wildlife re-enter the bag
+        // before the market refills for the next player.
+        let pending = std::mem::take(&mut self.wildlife_pending_return);
+        for wildlife in pending {
+            self.return_wildlife(wildlife);
+        }
         self.completed_turns += 1;
         self.current_player = ((usize::from(self.current_player) + 1) % self.boards.len()) as u8;
 
@@ -1241,6 +1272,66 @@ mod tests {
             game.apply(&action).unwrap();
         }
         game
+    }
+
+    #[test]
+    fn wiped_wildlife_stay_out_of_the_bag_until_end_of_turn() {
+        // Rules clarification: player market refreshes hold the removed
+        // tokens OUT of the bag until end of turn, so successive wipes dig
+        // into a shrinking pool and can never redraw earlier wipes' tokens.
+        let mut game = game(4, 20_260_708);
+        game.boards[0].refund_nature_token();
+        game.boards[0].refund_nature_token();
+        force_market_wildlife(
+            &mut game,
+            [Wildlife::Elk, Wildlife::Elk, Wildlife::Hawk, Wildlife::Salmon],
+        );
+        // Shrink the bag to exactly two tokens so the second wipe can only
+        // succeed by redrawing the first wipe's tokens — which the new rule
+        // forbids.
+        game.discarded_wildlife.extend(game.wildlife_bag.drain(2..));
+        let bag_before = game.wildlife_bag.clone();
+
+        let prelude = MarketPrelude {
+            replace_three_of_a_kind: false,
+            wildlife_wipes: vec![
+                WildlifeWipe { slots: vec![MarketSlot::ALL[0], MarketSlot::ALL[1]] },
+                WildlifeWipe { slots: vec![MarketSlot::ALL[2], MarketSlot::ALL[3]] },
+            ],
+        };
+        let mut staged = game.clone();
+        let error = staged.apply_market_prelude(&prelude).unwrap_err();
+        assert!(
+            matches!(error, RuleError::WildlifeBagEmpty),
+            "second wipe must find an empty bag (first wipe's tokens are \
+             pending, not returned): got {error:?}"
+        );
+
+        // A single wipe succeeds, holds the tokens in pending, and returns
+        // them at end of turn (conservation across the full apply).
+        let mut staged = game.clone();
+        staged
+            .apply_market_prelude(&MarketPrelude {
+                replace_three_of_a_kind: false,
+                wildlife_wipes: vec![WildlifeWipe {
+                    slots: vec![MarketSlot::ALL[0], MarketSlot::ALL[1]],
+                }],
+            })
+            .expect("single wipe fits the two-token bag");
+        assert!(staged.wildlife_bag.is_empty(), "bag drained by the refill");
+        assert_eq!(staged.wildlife_pending_return, vec![Wildlife::Elk, Wildlife::Elk]);
+        assert_eq!(
+            staged.market.wildlife.iter().flatten().filter(|w| **w == Wildlife::Elk).count(),
+            bag_before.iter().filter(|w| **w == Wildlife::Elk).count(),
+            "refill drew from the real bag, never from pending"
+        );
+        staged.finish_turn().expect("turn finishes");
+        assert_eq!(
+            staged.wildlife_bag.iter().filter(|w| **w == Wildlife::Elk).count(),
+            2,
+            "pending elk re-enter the bag at end of turn"
+        );
+        assert!(staged.wildlife_pending_return.is_empty());
     }
 
     #[test]
