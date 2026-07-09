@@ -100,9 +100,11 @@ Initial model sizes:
 
 | Model | Layers | Width | Heads | Use |
 |---|---:|---:|---:|---|
-| CascadiaFormer-S | 10-12 | 384 | 8 | bootstrap, EI-0, ablations |
-| CascadiaFormer-M | 14-18 | 512 | 8 | main RTX 5090 target after S passes |
-| CascadiaFormer-L | 20-24 | 768 | 12 | only after data and gates justify it |
+| CascadiaFormer-tiny | 1 | 64 | 4 | plumbing and fixed-overhead floor only |
+| CascadiaFormer-XS | 6 | 256 | 8 | 5M-parameter distillation/search-ratio probe |
+| CascadiaFormer-S | 8 | 384 | 8 | bootstrap, EI-0, ablations |
+| CascadiaFormer-M | 12 | 768 | 12 | current RTX 5090 champion family |
+| CascadiaFormer-L | 16 | 1024 | 16 | only after data and gates justify it |
 
 Use bf16 mixed precision on CUDA, gradient checkpointing when needed, and packed
 relation-tail batches rather than Python-built dense relation matrices.

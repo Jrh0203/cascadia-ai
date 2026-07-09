@@ -86,6 +86,8 @@ Important runners:
 - `run_market_samples_gate.sh` (fresh same-revision n256/d4 market chance-
   sample ablation; reuses the exact-K1 sample-8 control only after validating
   its full rules/source/seeds/search contract)
+- `run_model_throughput_probe.sh` (engineering-only M/S/XS/tiny fixed-root
+  bridge throughput; measures the compute headroom for model/search inversion)
 
 Gumbel exporter modes (see `--help`):
 
@@ -106,6 +108,10 @@ Gumbel exporter modes (see `--help`):
   all other search settings, sample-count telemetry, and identical action
   traces before the first optional-refresh opportunity. Runs below 100 matched
   games are explicitly engineering smokes, never promotion evidence.
+- `python -m cascadiav3.torch_model_throughput_benchmark`: benchmark complete
+  collate-to-packed-response throughput for checkpoint and synthetic model
+  shapes on identical roots, with hashed model/root provenance and repeated-
+  output determinism checks. This is not gameplay evidence.
 - `--rollout-determinize`: public-information-legal rollouts for the legacy
   search path (honest baselines).
 

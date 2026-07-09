@@ -2025,7 +2025,7 @@ def _parse_optional_float_list(raw: str | None) -> list[float] | None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model-size", choices=["tiny", "S", "M", "L"], default="S")
+    parser.add_argument("--model-size", choices=["tiny", "XS", "S", "M", "L"], default="S")
     parser.add_argument(
         "--init-skip-mismatched",
         action="store_true",

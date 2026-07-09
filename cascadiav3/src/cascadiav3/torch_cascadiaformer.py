@@ -56,6 +56,15 @@ def config_for_size(model_size: str) -> CascadiaFormerConfig:
             ffn_dim=128,
             model_name="CascadiaFormer-tiny-v1",
         )
+    if normalized == "XS":
+        return CascadiaFormerConfig(
+            model_size="XS",
+            d_model=256,
+            layers=6,
+            heads=8,
+            ffn_dim=1024,
+            model_name="CascadiaFormer-XS-v1",
+        )
     if normalized == "S":
         return CascadiaFormerConfig(model_size="S", model_name="CascadiaFormer-S-v1")
     if normalized == "M":
@@ -78,7 +87,7 @@ def config_for_size(model_size: str) -> CascadiaFormerConfig:
             gradient_checkpointing=True,
             model_name="CascadiaFormer-L-v1",
         )
-    raise ValueError("model_size must be one of tiny, S, M, L")
+    raise ValueError("model_size must be one of tiny, XS, S, M, L")
 
 
 def cgab_fused_default() -> bool:
