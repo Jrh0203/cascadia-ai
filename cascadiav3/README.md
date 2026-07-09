@@ -138,6 +138,10 @@ Gumbel exporter modes (see `--help`):
   incumbent for a fast first fit. At serving, `--policy-mode pairwise-borda`
   or `logits-plus-pairwise` changes priors only and is rejected for manifests
   without a comparator head.
+- `python -m cascadiav3.torch_pairwise_policy_probe`: provenance-hash a v3
+  held-out routing gate comparing established logits, pairwise Borda, and
+  their sum only where the top-two teacher comparison clears the sample,
+  margin, and SNR contract. It is offline evidence, never a promotion gate.
 - `python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark --q-risk-mode
   {mean,q25,q50,q75}`: serve a distributional-Q checkpoint with the selected
   statistic. `mean` is the default and preserves prior behavior. Non-mean

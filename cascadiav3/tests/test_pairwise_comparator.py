@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import unittest
 from dataclasses import replace
+import json
 from pathlib import Path
+import tempfile
 
 
 class PairwiseComparatorTest(unittest.TestCase):
@@ -205,6 +207,58 @@ class PairwiseComparatorTest(unittest.TestCase):
             policy_mode="pairwise-borda",
         )
         self.assertIn("--policy-mode pairwise-borda", command)
+
+    def test_offline_probe_runs_end_to_end_on_v3_shard(self) -> None:
+        import torch
+
+        from test_expert_tensor_v3 import ExpertTensorV3Test
+
+        from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
+        from cascadiav3.torch_pairwise_policy_probe import run_probe
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            tensor = root / "val.npz"
+            ExpertTensorV3Test()._write_v3(tensor)
+            config = replace(
+                config_for_size("tiny"),
+                pairwise_comparator=True,
+                pairwise_rank=8,
+                pairwise_max_pairs_per_root=4,
+                pairwise_min_margin=0.25,
+                pairwise_min_snr=1.0,
+            )
+            model = build_cascadiaformer(config)
+            weights = root / "weights.pt"
+            torch.save(model.state_dict(), weights)
+            manifest = root / "manifest.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "checkpoint_tag": "test",
+                        "step": 0,
+                        "config": config.to_dict(),
+                        "weights": weights.name,
+                        "weights_format": "torch_state_dict",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = run_probe(
+                manifest=manifest,
+                tensors=[tensor],
+                device_name="cpu",
+                batch_size=1,
+                max_records=0,
+            )
+            self.assertEqual(report["record_count"], 1)
+            self.assertEqual(report["eligible_policy_root_count"], 1)
+            self.assertEqual(report["pairwise"]["directed_pair_count"], 2)
+            self.assertEqual(set(report["policy_modes"]), {
+                "logits",
+                "pairwise-borda",
+                "logits-plus-pairwise",
+            })
 
 
 if __name__ == "__main__":

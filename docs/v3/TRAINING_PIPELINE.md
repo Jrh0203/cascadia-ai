@@ -244,6 +244,11 @@ pairwise loss/accuracy, then compare `--policy-mode logits` against
 pairwise accuracy is a prerequisite, never strength evidence. Only a paired
 gameplay battery can promote the policy mode.
 
+Run `python -m cascadiav3.torch_pairwise_policy_probe` first. It hashes the
+checkpoint and every v3 validation shard, requires one source/rules contract,
+and reports top-1 plus completed-Q regret for all three policy modes only on
+confidence-qualified top-two roots.
+
 Current data gate: v3 corrected-rules shards only. The July 9 240-root audit
 found 27,360 raw pairs but only 23.33% variance-evaluable; 14.58% of those
 clear SNR 1.96. Pre-v3 audit shards cannot become training inputs because
