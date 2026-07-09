@@ -89,6 +89,8 @@ export default function App() {
   const loadInput = useRef<HTMLInputElement>(null);
   const aiState = useRef<string | null>(null);
   const autoState = useRef<string | null>(null);
+  const turnFailures = useRef(new Map<string, number>());
+  const [aiRetryTick, setAiRetryTick] = useState(0);
 
   const view = document?.view ?? null;
   const savedGame = document?.game ?? null;
@@ -278,7 +280,17 @@ export default function App() {
         }
       })
       .catch((reason) => {
-        if (!cancelled) setError(messageFrom(reason));
+        if (!cancelled) {
+          setError(messageFrom(reason));
+          // Allow the turn to retry (bounded) instead of wedging the game:
+          // clear the attempt mark and schedule a re-render tick.
+          const failures = (turnFailures.current.get(key) ?? 0) + 1;
+          turnFailures.current.set(key, failures);
+          if (failures < 3) {
+            aiState.current = null;
+            window.setTimeout(() => setAiRetryTick((tick) => tick + 1), 1500);
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setBusy(false);
@@ -287,6 +299,7 @@ export default function App() {
       cancelled = true;
     };
   }, [
+    aiRetryTick,
     currentPlayer,
     currentSeat?.kind,
     currentSeat?.strength,
@@ -430,6 +443,12 @@ export default function App() {
       setRedoStack([]);
     } catch (reason) {
       setError(messageFrom(reason));
+      if (stateHash) {
+        const key = `auto:${stateHash}:${currentPlayer}`;
+        const failures = (turnFailures.current.get(key) ?? 0) + 1;
+        turnFailures.current.set(key, failures);
+        if (failures < 3) autoState.current = null;
+      }
     } finally {
       setBusy(false);
     }
