@@ -44,6 +44,12 @@ is reused only when both rules ID and source revision match.
 Verdict watcher PID `1268022` waits for the chain and then writes
 `rules_20260709_rebaseline_verdict.{json,md}` with paired distq-minus-cycle4
 intervals at both budgets plus within-model scaling deltas.
+The total-score verdict is no longer the end of the analysis. Once the raw
+n1024 watcher publishes both complete 100-row game ledgers,
+`compare_game_categories` will bind them back to their reports and emit paired
+distq-minus-cycle4 wildlife, habitat, Nature-token, and total deltas with CIs.
+It fails on missing seeds, search/rules/source mismatch, category-sum error, or
+any ledger/report total disagreement.
 
 **Structured-Q implementation and v4 data (complete; john0 training not yet
 started):** the representation gate's authorized path is now real rather

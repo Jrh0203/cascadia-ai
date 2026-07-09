@@ -4572,3 +4572,27 @@ john2, and a live-producer invocation failed before transfer with the expected
 status 2. Four targeted unit tests pass, including pins for all hosts, source,
 teacher hashes, exclusions, and the quarantine promise. At this checkpoint all
 three producers had streamed 10/50 complete seeds; no fetch was attempted.
+
+## 2026-07-09 12:32 — Corrected n1024 verdict gains category attribution
+
+The d20 total-score comparator cannot explain a distq gain or regression, and
+the old n256 reducer irretrievably discarded score components. The live
+n1024 watcher is different: it preserves one complete engine game-done row
+per seed with all four seats' wildlife-card, habitat-type, Nature-token, and
+total scores. `compare_game_categories` now turns those two 100-row ledgers
+into a same-seed distq-minus-cycle4 mechanism verdict.
+
+The comparator requires passing candidate-only reports with identical rules,
+source revision, seeds, and normalized search contracts; exactly 80 decisions
+and four category-complete seats per ledger row; exact category-to-total sums;
+and exact agreement between every ledger game mean and its aggregate report.
+It reports overall and by-seat means, games/seat-scores at least 100, paired
+t/bootstrapped intervals for all three categories and total, per-seed deltas,
+and input SHA-256 identities. Per-seed and mean category deltas must sum to the
+total delta.
+
+Three adversarial unit tests cover missing seeds, search mismatch, and category
+tampering. A real production-schema jobs2-versus-jobs1 parity replay passed on
+four seeds with exact zero deltas in every category. Full Python gate:
+164/164 passing with 45 expected fixture skips. The category verdict will run
+only after both n1024 ledgers are complete; no partial score was inspected.

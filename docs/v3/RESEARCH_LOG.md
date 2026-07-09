@@ -524,7 +524,9 @@ roots, 1,113,755 actions, 9,240 q-valid actions, and 120 exact rows.
 1. **Finish the corrected distq rebaseline** — ACTIVE. Distq n256/d4 and
    both models at n1024/d16 must establish whether the legacy distributional
    gain survives the rules compatibility break. No EI corpus or promotion
-   result may cross that boundary.
+   result may cross that boundary. The n1024 verdict now includes paired
+   wildlife/habitat/Nature attribution from complete raw game ledgers, not
+   merely a total-score delta.
 2. **Exact final-personal-turn K1** — IMPLEMENTED; 2-seed causal MPS smoke
    was score-flat and made the exact frontier 8.86x faster. A fresh 100-seed
    corrected n256/d4 CUDA baseline/K1 gate is queued. K2 is gated on that

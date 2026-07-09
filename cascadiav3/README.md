@@ -103,6 +103,10 @@ Important runners:
   quarantined john2–john4 expansion; refuses live/partial jobs, rechecks remote
   and local hashes, fetches validation artifacts, and runs the six-shard audit
   without copying anything to john0 or a training input)
+- `python -m cascadiav3.compare_game_categories` (fail-closed same-seed
+  wildlife/habitat/Nature attribution for two candidate-only game ledgers;
+  binds both ledgers to passing reports and checks that per-category deltas sum
+  exactly to the paired total-score delta)
 
 Gumbel exporter modes (see `--help`):
 
