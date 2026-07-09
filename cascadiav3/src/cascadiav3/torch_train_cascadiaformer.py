@@ -19,7 +19,11 @@ from typing import Any
 
 from .expert_tensor_shards import ExpertTensorCorpus, collate_expert_tensor_examples
 from .replay import read_replay_jsonl
-from .schema import EXPERT_ROOT_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID
+from .schema import (
+    EXPERT_ROOT_SCHEMA_ID,
+    EXPERT_TENSOR_SHARD_SCHEMA_ID,
+    EXPERT_TENSOR_SHARD_SCHEMA_ID_V4,
+)
 from .torch_cascadiaformer import (
     CascadiaFormerConfig,
     build_cascadiaformer,
@@ -41,6 +45,7 @@ class LossWeights:
     greedy_margin_value: float = 0.25
     pairwise: float = 0.0
     policy_recall: float = 0.0
+    q_decomposition: float = 0.0
 
     def to_dict(self) -> dict[str, float]:
         return asdict(self)
@@ -61,6 +66,7 @@ LOSS_COMPONENT_KEYS = (
     "greedy_margin",
     "pairwise",
     "policy_recall",
+    "q_decomposition",
 )
 RETENTION_METRIC_KEYS = (
     "teacher_top1",
@@ -108,6 +114,22 @@ def loss_weights_for_objective(objective: str) -> LossWeights:
             greedy_policy=0.0,
             greedy_margin=0.0,
             greedy_margin_value=0.0,
+        )
+    if objective == "gumbel-selfplay-structured-q":
+        # The summed component head retains the ordinary search-Q objective;
+        # the selected action additionally receives exact category grounding
+        # from its realized terminal score decomposition.
+        return LossWeights(
+            policy=1.0,
+            q=0.5,
+            value=0.5,
+            score=0.05,
+            rank=0.02,
+            uncertainty=0.01,
+            greedy_policy=0.0,
+            greedy_margin=0.0,
+            greedy_margin_value=0.0,
+            q_decomposition=0.5,
         )
     if objective == "gumbel-selfplay-pairwise":
         return LossWeights(
@@ -337,8 +359,38 @@ def _load_corpus(paths: list[Path], *, corpus_format: str) -> Any:
     raise ValueError(f"unsupported expert corpus format {corpus_format!r}")
 
 
+def _validate_q_decomposition_corpora(
+    *,
+    enabled: bool,
+    train_format: str,
+    val_format: str,
+    schema_ids: list[str],
+) -> None:
+    if not enabled:
+        return
+    if train_format != "npz" or val_format != "npz":
+        raise ValueError("q_decomposition requires packed NPZ train and validation corpora")
+    incompatible = sorted(
+        schema_id
+        for schema_id in schema_ids
+        if schema_id != EXPERT_TENSOR_SHARD_SCHEMA_ID_V4
+    )
+    if incompatible:
+        raise ValueError(
+            "q_decomposition requires only v4 exact-grounded shards; "
+            f"found {incompatible}"
+        )
+
+
 def _corpus_len(corpus: Any) -> int:
     return len(corpus)
+
+
+class _InMemoryTensorExamples(list[Any]):
+    """Packed examples retained in memory for the one-batch overfit gate."""
+
+    def examples(self, indices: list[int]) -> list[Any]:
+        return [self[index] for index in indices]
 
 
 def _corpus_examples(corpus: Any, indices: list[int], *, corpus_format: str) -> list[Any]:
@@ -551,6 +603,43 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         if uncertainty_target.numel()
         else outputs["uncertainty"].sum() * 0.0
     )
+    q_component_predictions = outputs.get("q_score_to_go_components")
+    if q_component_predictions is not None:
+        exact_components = batch.get("exact_afterstate_score_decomposition_active")
+        active_seat = batch.get("active_seat")
+        if exact_components is None or active_seat is None:
+            raise ValueError("structured Q output requires exact component grounding and active_seat")
+        if q_component_predictions.shape != exact_components.shape:
+            raise ValueError("structured Q prediction/afterstate component shape mismatch")
+        rows = torch.arange(mask.shape[0], device=mask.device)
+        selected = batch["selected_action_index"]
+        final_components = batch["target_score"][rows, :, active_seat]
+        selected_afterstate_components = exact_components[rows, selected]
+        target_score_to_go_components = final_components - selected_afterstate_components
+        component_quantiles = outputs.get("q_component_quantile_values")
+        if component_quantiles is not None:
+            levels_count = component_quantiles.shape[-1]
+            levels = (
+                torch.arange(
+                    levels_count,
+                    dtype=component_quantiles.dtype,
+                    device=component_quantiles.device,
+                )
+                + 0.5
+            ) / levels_count
+            selected_component_quantiles = component_quantiles[rows, selected]
+            residual = target_score_to_go_components.unsqueeze(-1) - selected_component_quantiles
+            q_decomposition = torch.maximum(
+                levels * residual,
+                (levels - 1.0) * residual,
+            ).mean()
+        else:
+            q_decomposition = F.smooth_l1_loss(
+                q_component_predictions[rows, selected],
+                target_score_to_go_components,
+            )
+    else:
+        q_decomposition = outputs["q"].sum() * 0.0
     pairwise_logits = outputs.get("pairwise_logits")
     if pairwise_logits is not None:
         pairwise_targets = batch["pairwise_targets"]
@@ -607,6 +696,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         + weights.greedy_margin * greedy_margin
         + weights.pairwise * pairwise
         + weights.policy_recall * policy_recall
+        + weights.q_decomposition * q_decomposition
     )
     predicted = logits.argmax(dim=1)
     predicted_by_final_q = predicted_final_q.masked_fill(~mask, -1.0e9).argmax(dim=1)
@@ -633,6 +723,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         "greedy_margin": greedy_margin.detach(),
         "pairwise": pairwise.detach(),
         "policy_recall": policy_recall.detach(),
+        "q_decomposition": q_decomposition.detach(),
         "teacher_top1": (predicted == teacher_target).to(torch.float32).mean().detach(),
         "greedy_top1": (predicted == greedy_target).to(torch.float32).mean().detach(),
         "mean_teacher_rank": teacher_rank.mean().detach(),
@@ -759,6 +850,17 @@ def _configure_policy_head_only(model) -> int:  # type: ignore[no-untyped-def]
     for parameter in model.parameters():
         parameter.requires_grad_(False)
     for parameter in model.legal_logits.parameters():
+        parameter.requires_grad_(True)
+    return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
+
+
+def _configure_q_decomposition_head_only(model) -> int:  # type: ignore[no-untyped-def]
+    """Freeze the incumbent and expose only the exact-grounded component head."""
+    if model.q_component_head is None:
+        raise ValueError("q-decomposition-head-only training requires q_decomposition")
+    for parameter in model.parameters():
+        parameter.requires_grad_(False)
+    for parameter in model.q_component_head.parameters():
         parameter.requires_grad_(True)
     return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
 
@@ -1720,6 +1822,7 @@ def run_training(
     val_format: str,
     model_size: str,
     q_quantiles: int = 1,
+    q_decomposition: bool = False,
     pairwise_comparator: bool = False,
     pairwise_rank: int = 64,
     pairwise_max_pairs_per_root: int = 32,
@@ -1727,6 +1830,7 @@ def run_training(
     pairwise_min_snr: float = 1.0,
     pairwise_head_only: bool = False,
     policy_head_only: bool = False,
+    q_decomposition_head_only: bool = False,
     steps: int,
     batch_size: int,
     lr: float,
@@ -1796,6 +1900,7 @@ def run_training(
         raise ValueError("--init-manifest and --resume are mutually exclusive")
     if q_quantiles <= 0:
         raise ValueError("q_quantiles must be positive")
+    q_decomposition = q_decomposition or objective == "gumbel-selfplay-structured-q"
     if pairwise_rank <= 0:
         raise ValueError("pairwise_rank must be positive")
     if pairwise_max_pairs_per_root <= 0:
@@ -1806,10 +1911,12 @@ def run_training(
         raise ValueError("pairwise_min_snr must be nonnegative")
     if pairwise_head_only and not (pairwise_comparator or objective == "gumbel-selfplay-pairwise"):
         raise ValueError("pairwise_head_only requires the pairwise comparator")
-    if pairwise_head_only and policy_head_only:
-        raise ValueError("pairwise_head_only and policy_head_only are mutually exclusive")
+    if sum((pairwise_head_only, policy_head_only, q_decomposition_head_only)) > 1:
+        raise ValueError("head-only modes are mutually exclusive")
     if policy_head_only and objective not in {"gumbel-selfplay", "gumbel-policy-recall"}:
         raise ValueError("policy_head_only requires a Gumbel policy objective")
+    if q_decomposition_head_only and not q_decomposition:
+        raise ValueError("q_decomposition_head_only requires q_decomposition")
 
     # ---- opt-in performance knobs (defaults preserve bit-identical runs) ----
     data_workers = max(0, int(data_workers or _env_int("CASCADIA_TRAIN_DATA_WORKERS", 0)))
@@ -1851,6 +1958,12 @@ def run_training(
         (train_records, train_format),
         (val_records, val_format),
     )
+    _validate_q_decomposition_corpora(
+        enabled=q_decomposition,
+        train_format=train_format,
+        val_format=val_format,
+        schema_ids=loaded_schema_ids,
+    )
     train_source_lengths = _corpus_source_lengths(train_records)
     normalized_train_source_weights = _normalize_source_weights(train_source_weights, len(train_paths))
     if normalized_train_source_weights is not None:
@@ -1861,14 +1974,18 @@ def run_training(
         if len(train_source_lengths) != len(train_paths):
             raise ValueError("train source weights require one source length per train path")
     if overfit_one_batch:
-        train_records = _corpus_examples(
+        overfit_examples = _corpus_examples(
             train_records,
             list(range(min(batch_size, _corpus_len(train_records)))),
             corpus_format=train_format,
         )
-        train_format = "jsonl"
+        train_records = (
+            _InMemoryTensorExamples(overfit_examples)
+            if train_format == "npz"
+            else overfit_examples
+        )
         val_records = train_records
-        val_format = "jsonl"
+        val_format = train_format
         train_source_lengths = None
         normalized_train_source_weights = None
     if max_example_passes > 0.0 and not overfit_one_batch:
@@ -1894,10 +2011,17 @@ def run_training(
         model_name = (
             f"{model_name[:-3]}-pairwise-v1" if model_name.endswith("-v1") else f"{model_name}-pairwise-v1"
         )
+    if q_decomposition:
+        model_name = (
+            f"{model_name[:-3]}-structured-q-v1"
+            if model_name.endswith("-v1")
+            else f"{model_name}-structured-q-v1"
+        )
     config = replace(
         config,
         model_name=model_name,
         q_quantiles=q_quantiles,
+        q_decomposition=q_decomposition,
         pairwise_comparator=pairwise_comparator,
         pairwise_rank=pairwise_rank,
         pairwise_max_pairs_per_root=pairwise_max_pairs_per_root,
@@ -1944,6 +2068,8 @@ def run_training(
         trainable_parameter_count = _configure_pairwise_head_only(model)
     elif policy_head_only:
         trainable_parameter_count = _configure_policy_head_only(model)
+    elif q_decomposition_head_only:
+        trainable_parameter_count = _configure_q_decomposition_head_only(model)
     fused_optimizer_applied = False
     optimizer_extra_kwargs: dict[str, Any] = {}
     if fused_optimizer:
@@ -2021,10 +2147,25 @@ def run_training(
         "source_hashes": source_hashes,
         "dataset_manifests": dataset_manifests,
         "search_config": {
-            "accepted_schema": EXPERT_TENSOR_SHARD_SCHEMA_ID if train_format == "npz" else EXPERT_ROOT_SCHEMA_ID,
-            "accepted_schemas": [EXPERT_ROOT_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID],
+            "accepted_schema": (
+                EXPERT_TENSOR_SHARD_SCHEMA_ID_V4
+                if q_decomposition
+                else EXPERT_TENSOR_SHARD_SCHEMA_ID
+                if train_format == "npz"
+                else EXPERT_ROOT_SCHEMA_ID
+            ),
+            "accepted_schemas": (
+                [EXPERT_TENSOR_SHARD_SCHEMA_ID_V4]
+                if q_decomposition
+                else [EXPERT_ROOT_SCHEMA_ID, EXPERT_TENSOR_SHARD_SCHEMA_ID]
+            ),
             "target": "active_seat_score_to_go",
             "derived_final_q": "exact_afterstate_score_active + predicted_score_to_go",
+            "q_decomposition_target": (
+                "selected terminal score components minus selected exact afterstate components"
+                if q_decomposition
+                else None
+            ),
             "val_max_batches": val_max_batches,
             "eval_every_steps": eval_every_steps,
             "min_selection_greedy_top1": min_selection_greedy_top1,
@@ -2332,6 +2473,7 @@ def run_training(
         "trainable_parameter_count": trainable_parameter_count,
         "pairwise_head_only": pairwise_head_only,
         "policy_head_only": policy_head_only,
+        "q_decomposition_head_only": q_decomposition_head_only,
         "steps": completed_steps,
         "requested_steps": steps,
         "stopped_early": stopped_early_reason is not None,
@@ -2430,6 +2572,11 @@ def main() -> int:
         help="K>1 trains a distributional (quantile) score-to-go head with pinball loss",
     )
     parser.add_argument(
+        "--q-decomposition",
+        action="store_true",
+        help="Predict score-to-go as exact-grounded wildlife/habitat/Nature components (v4 NPZ only)",
+    )
+    parser.add_argument(
         "--pairwise-comparator",
         action="store_true",
         help="Enable the antisymmetric low-rank action comparator head",
@@ -2447,6 +2594,11 @@ def main() -> int:
         "--policy-head-only",
         action="store_true",
         help="Freeze the incumbent and optimize only the established policy projection",
+    )
+    parser.add_argument(
+        "--q-decomposition-head-only",
+        action="store_true",
+        help="Freeze the incumbent and optimize only the structured score-to-go head",
     )
     parser.add_argument("--train", required=True)
     parser.add_argument("--val", required=True)
@@ -2472,6 +2624,7 @@ def main() -> int:
             "pure-greedy-retention",
             "search-improved-greedy-retention",
             "gumbel-selfplay",
+            "gumbel-selfplay-structured-q",
             "gumbel-selfplay-pairwise",
             "gumbel-policy-recall",
         ],
@@ -2496,6 +2649,7 @@ def main() -> int:
     parser.add_argument("--greedy-margin-value", type=float)
     parser.add_argument("--pairwise-loss-weight", type=float)
     parser.add_argument("--policy-recall-loss-weight", type=float)
+    parser.add_argument("--q-decomposition-loss-weight", type=float)
     parser.add_argument("--overfit-one-batch", action="store_true")
     parser.add_argument("--out", default="cascadiav3/reports/cascadiaformer_train.json")
     parser.add_argument("--metrics-jsonl", default="cascadiav3/reports/cascadiaformer_metrics.jsonl")
@@ -2603,6 +2757,7 @@ def main() -> int:
         "greedy_margin_value": args.greedy_margin_value,
         "pairwise": args.pairwise_loss_weight,
         "policy_recall": args.policy_recall_loss_weight,
+        "q_decomposition": args.q_decomposition_loss_weight,
     }.items():
         if value is not None:
             loss_weights = replace(loss_weights, **{field_name: value})
@@ -2614,6 +2769,7 @@ def main() -> int:
         val_format=args.val_format,
         model_size=args.model_size,
         q_quantiles=args.q_quantiles,
+        q_decomposition=args.q_decomposition,
         pairwise_comparator=args.pairwise_comparator,
         pairwise_rank=args.pairwise_rank,
         pairwise_max_pairs_per_root=args.pairwise_max_pairs_per_root,
@@ -2621,6 +2777,7 @@ def main() -> int:
         pairwise_min_snr=args.pairwise_min_snr,
         pairwise_head_only=args.pairwise_head_only,
         policy_head_only=args.policy_head_only,
+        q_decomposition_head_only=args.q_decomposition_head_only,
         steps=args.steps,
         batch_size=args.batch_size,
         lr=args.lr,

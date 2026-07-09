@@ -74,7 +74,8 @@ but corrected baselines must be regenerated before promotion. See
   ([GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md)): Gumbel top-m
   search with batched model leaf values over determinized states, all-seat
   self-play data with improved-policy targets and real-outcome value labels
-  (schema v2), and CI-gated promotion at 100+ paired games. EI-1 was
+  (new generation uses exact-grounded schema v4), and CI-gated promotion at
+  100+ paired games. EI-1 was
   terminated in favor of this line.
 
 ## Historical Recovery

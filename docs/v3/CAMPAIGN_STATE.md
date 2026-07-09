@@ -45,6 +45,24 @@ Verdict watcher PID `1268022` waits for the chain and then writes
 `rules_20260709_rebaseline_verdict.{json,md}` with paired distq-minus-cycle4
 intervals at both budgets plus within-model scaling deltas.
 
+**Structured-Q implementation (complete locally; experiment not yet
+launched):** the representation gate's authorized path is now real rather
+than a design note. New Gumbel generation emits exact-grounded schema v4:
+`active_seat`, per-action wildlife/habitat/Nature afterstate components,
+real terminal components, and fail-closed sum invariants. Filtering and
+relation-tail materialization preserve the new tensors. CascadiaFormer has an
+opt-in action-conditioned component head whose sum is the existing
+score-to-go output; legacy checkpoints remain state-contract compatible when
+disabled. The trainer exposes `gumbel-selfplay-structured-q` and
+`q-decomposition-head-only`, requires v4 NPZ for both train and validation,
+and supervises categories only on the selected real trajectory while keeping
+completed-Q loss over every q-valid action. Unit coverage includes scalar and
+distributional sums, malformed shards, transforms/collation, head freezing,
+checkpoint reload, and an end-to-end two-step v4 train. This work has no score
+claim yet. The next authorized action is a small corrected-rules v4 generation
+plus frozen-head validation kill test on an idle host; john0's live n1024
+rebaseline remains untouched.
+
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI
 `[+3.8705,+4.7245]`; cycle4 Q head `90.8925`, delta `+3.3475`, CI

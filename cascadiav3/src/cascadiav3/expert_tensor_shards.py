@@ -13,7 +13,13 @@ from typing import Any
 SHARD_VERSION = "cascadiav3.expert_tensor_shard.v1"
 SHARD_VERSION_V2 = "cascadiav3.expert_tensor_shard.v2"
 SHARD_VERSION_V3 = "cascadiav3.expert_tensor_shard.v3"
-SUPPORTED_SHARD_VERSIONS = {SHARD_VERSION, SHARD_VERSION_V2, SHARD_VERSION_V3}
+SHARD_VERSION_V4 = "cascadiav3.expert_tensor_shard.v4"
+SUPPORTED_SHARD_VERSIONS = {
+    SHARD_VERSION,
+    SHARD_VERSION_V2,
+    SHARD_VERSION_V3,
+    SHARD_VERSION_V4,
+}
 TOKEN_FEATURE_DIM = 41
 ACTION_FEATURE_DIM = 61
 
@@ -192,6 +198,12 @@ class ExpertTensorShard:
         self.q_count = self._npz["q_count"]
         self.truncated_count = self._npz["truncated_count"]
         self.exact_afterstate_score_active = self._npz["exact_afterstate_score_active"]
+        self.exact_afterstate_score_decomposition_active = (
+            self._npz["exact_afterstate_score_decomposition_active"]
+            if "exact_afterstate_score_decomposition_active" in self._npz.files
+            else None
+        )
+        self.active_seat = self._npz["active_seat"] if "active_seat" in self._npz.files else None
         self.final_score_vector = self._npz["final_score_vector"]
         self.rank_vector = self._npz["rank_vector"]
         self.score_decomposition = self._npz["score_decomposition"]
@@ -205,13 +217,17 @@ class ExpertTensorShard:
         self.exact_endgame = (
             self._npz["exact_endgame"] if "exact_endgame" in self._npz.files else None
         )
-        if self.version in {SHARD_VERSION_V2, SHARD_VERSION_V3} and (
+        if self.version in {SHARD_VERSION_V2, SHARD_VERSION_V3, SHARD_VERSION_V4} and (
             self.improved_policy is None or self.search_root_value is None
         ):
             raise ValueError("v2+ expert tensor shard requires improved_policy and search_root_value")
-        if self.version == SHARD_VERSION_V3 and self.exact_endgame is None:
-            raise ValueError("v3 expert tensor shard requires exact_endgame")
-        if self.version == SHARD_VERSION_V3:
+        if self.version in {SHARD_VERSION_V3, SHARD_VERSION_V4} and self.exact_endgame is None:
+            raise ValueError("v3+ expert tensor shard requires exact_endgame")
+        if self.version == SHARD_VERSION_V4 and (
+            self.exact_afterstate_score_decomposition_active is None or self.active_seat is None
+        ):
+            raise ValueError("v4 expert tensor shard requires active seat and exact components")
+        if self.version in {SHARD_VERSION_V3, SHARD_VERSION_V4}:
             self._validate_v3_metadata()
         self._validate_shapes()
 
@@ -229,8 +245,8 @@ class ExpertTensorShard:
                 raise ValueError(f"v3 metadata requires non-empty {key}")
             return value
 
-        if self.metadata.get("schema_id") != SHARD_VERSION_V3:
-            raise ValueError("v3 metadata schema_id mismatch")
+        if self.metadata.get("schema_id") != self.version:
+            raise ValueError("v3+ metadata schema_id mismatch")
         require_text(self.metadata, "ruleset_id")
         require_text(self.metadata, "source_revision")
         if self.metadata.get("mode") != "gumbel_selfplay_tensor_corpus":
@@ -288,7 +304,12 @@ class ExpertTensorShard:
             raise ValueError("v3 metadata requires positive created_unix_seconds")
         targets = self.metadata.get("canonical_targets")
         if not isinstance(targets, list) or "exact_endgame" not in targets:
-            raise ValueError("v3 metadata canonical_targets must include exact_endgame")
+            raise ValueError("v3+ metadata canonical_targets must include exact_endgame")
+        if self.version == SHARD_VERSION_V4 and not {
+            "active_seat",
+            "exact_afterstate_score_decomposition_active",
+        }.issubset(targets):
+            raise ValueError("v4 metadata canonical_targets is missing structured grounding")
         eligibility = require_text(self.metadata, "scientific_eligibility")
         if eligibility not in {
             "gumbel_selfplay_expert_iteration",
@@ -310,6 +331,8 @@ class ExpertTensorShard:
                     )
 
     def _validate_shapes(self) -> None:
+        import numpy as np
+
         if self.tokens.ndim != 2 or self.tokens.shape[1] != TOKEN_FEATURE_DIM:
             raise ValueError(f"token feature shape mismatch: {self.tokens.shape}")
         if self.actions.ndim != 2 or self.actions.shape[1] != ACTION_FEATURE_DIM:
@@ -343,6 +366,29 @@ class ExpertTensorShard:
             raise ValueError("rank_vector shape mismatch")
         if self.score_decomposition.shape != (record_count, 3, 4):
             raise ValueError("score_decomposition shape mismatch")
+        if self.version == SHARD_VERSION_V4 and not np.allclose(
+            self.score_decomposition.sum(axis=1),
+            self.final_score_vector,
+            rtol=0.0,
+            atol=1.0e-4,
+        ):
+            raise ValueError("v4 terminal score decomposition does not sum to final score")
+        if self.exact_afterstate_score_decomposition_active is not None:
+            if self.exact_afterstate_score_decomposition_active.shape != (total_actions, 3):
+                raise ValueError("exact afterstate score decomposition shape mismatch")
+            component_total = self.exact_afterstate_score_decomposition_active.sum(axis=1)
+            if not np.allclose(
+                component_total,
+                self.exact_afterstate_score_active,
+                rtol=0.0,
+                atol=1.0e-4,
+            ):
+                raise ValueError("exact afterstate score decomposition total mismatch")
+        if self.active_seat is not None:
+            if self.active_seat.shape != (record_count,):
+                raise ValueError("active_seat shape mismatch")
+            if ((self.active_seat < 0) | (self.active_seat >= 4)).any():
+                raise ValueError("active_seat values must be in [0, 4)")
         if self.improved_policy is not None and self.improved_policy.shape[0] != total_actions:
             raise ValueError("improved_policy length mismatch")
         if self.search_root_value is not None and self.search_root_value.shape[0] != record_count:
@@ -398,6 +444,12 @@ class ExpertTensorShard:
             example["search_root_value"] = float(self.search_root_value[index])
         if self.exact_endgame is not None:
             example["exact_endgame"] = bool(self.exact_endgame[index])
+        if self.exact_afterstate_score_decomposition_active is not None:
+            example["exact_afterstate_score_decomposition_active"] = (
+                self.exact_afterstate_score_decomposition_active[action_start:action_end]
+            )
+        if self.active_seat is not None:
+            example["active_seat"] = int(self.active_seat[index])
         return example
 
     def close(self) -> None:
@@ -572,6 +624,8 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
     q_count,
     truncated_count,
     exact_afterstate_score_active,
+    exact_afterstate_score_decomposition_active=None,
+    active_seat=None,
     final_score_vector,
     rank_vector,
     score_decomposition,
@@ -584,8 +638,16 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = out_path.with_name(f"{out_path.name}.tmp")
+    structured_fields = (
+        exact_afterstate_score_decomposition_active is not None,
+        active_seat is not None,
+    )
+    if structured_fields[0] != structured_fields[1]:
+        raise ValueError("v4 exact components and active seat must appear together")
     version = (
-        SHARD_VERSION_V3
+        SHARD_VERSION_V4
+        if structured_fields[0]
+        else SHARD_VERSION_V3
         if exact_endgame is not None
         else SHARD_VERSION_V2
         if improved_policy is not None
@@ -625,6 +687,13 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
         if improved_policy is None or search_root_value is None:
             raise ValueError("exact_endgame requires v2 improved_policy and search_root_value")
         arrays["exact_endgame"] = exact_endgame
+    if structured_fields[0]:
+        if exact_endgame is None:
+            raise ValueError("v4 structured grounding requires exact_endgame provenance")
+        arrays["exact_afterstate_score_decomposition_active"] = (
+            exact_afterstate_score_decomposition_active
+        )
+        arrays["active_seat"] = active_seat
     with tmp_path.open("wb") as handle:
         np.savez(handle, **arrays)
     tmp_path.replace(out_path)
@@ -704,6 +773,7 @@ def filter_expert_tensor_shard(
         q_count_chunks = []
         truncated_count_chunks = []
         exact_afterstate_score_active_chunks = []
+        exact_afterstate_score_decomposition_active_chunks = []
         improved_policy_chunks = []
         relation_chunks = []
         action_offsets = [0]
@@ -755,6 +825,10 @@ def filter_expert_tensor_shard(
             q_count_chunks.append(shard.q_count[keep_global])
             truncated_count_chunks.append(shard.truncated_count[keep_global])
             exact_afterstate_score_active_chunks.append(shard.exact_afterstate_score_active[keep_global])
+            if shard.exact_afterstate_score_decomposition_active is not None:
+                exact_afterstate_score_decomposition_active_chunks.append(
+                    shard.exact_afterstate_score_decomposition_active[keep_global]
+                )
             if shard.improved_policy is not None:
                 # Renormalize the retained slice of the improved-policy
                 # distribution so it remains a valid soft target.
@@ -817,6 +891,12 @@ def filter_expert_tensor_shard(
             q_count=np.concatenate(q_count_chunks, axis=0),
             truncated_count=np.concatenate(truncated_count_chunks, axis=0),
             exact_afterstate_score_active=np.concatenate(exact_afterstate_score_active_chunks, axis=0),
+            exact_afterstate_score_decomposition_active=(
+                np.concatenate(exact_afterstate_score_decomposition_active_chunks, axis=0)
+                if exact_afterstate_score_decomposition_active_chunks
+                else None
+            ),
+            active_seat=shard.active_seat,
             final_score_vector=shard.final_score_vector,
             rank_vector=shard.rank_vector,
             score_decomposition=shard.score_decomposition,
@@ -900,6 +980,10 @@ def materialize_relation_tail_shard(
             q_count=shard.q_count,
             truncated_count=shard.truncated_count,
             exact_afterstate_score_active=shard.exact_afterstate_score_active,
+            exact_afterstate_score_decomposition_active=(
+                shard.exact_afterstate_score_decomposition_active
+            ),
+            active_seat=shard.active_seat,
             final_score_vector=shard.final_score_vector,
             rank_vector=shard.rank_vector,
             score_decomposition=shard.score_decomposition,
@@ -930,11 +1014,11 @@ class ExpertTensorCorpus:
         self.shards = [ExpertTensorShard(path) for path in paths]
         try:
             for shard in self.shards:
-                if shard.version == SHARD_VERSION_V3 and shard.metadata.get(
+                if shard.version in {SHARD_VERSION_V3, SHARD_VERSION_V4} and shard.metadata.get(
                     "scientific_eligibility"
                 ) != "gumbel_selfplay_expert_iteration":
                     raise ValueError(
-                        f"v3 shard is not training eligible: {shard.path}"
+                        f"v3+ shard is not training eligible: {shard.path}"
                     )
         except Exception:
             for shard in self.shards:
@@ -1024,6 +1108,17 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
     )
     has_exact_endgame = all(example.get("exact_endgame") is not None for example in examples)
     exact_endgame = torch.zeros((batch_size,), dtype=torch.bool) if has_exact_endgame else None
+    has_structured_grounding = all(
+        example.get("exact_afterstate_score_decomposition_active") is not None
+        and example.get("active_seat") is not None
+        for example in examples
+    )
+    exact_afterstate_score_decomposition_active = (
+        torch.zeros((batch_size, max_actions, 3), dtype=torch.float32)
+        if has_structured_grounding
+        else None
+    )
+    active_seat = torch.zeros((batch_size,), dtype=torch.long) if has_structured_grounding else None
     target_value = torch.zeros((batch_size, 4), dtype=torch.float32)
     target_rank = torch.zeros((batch_size, 4), dtype=torch.long)
     target_score = torch.zeros((batch_size, 3, 4), dtype=torch.float32)
@@ -1059,6 +1154,13 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
             search_root_value[batch_index] = float(example.get("search_root_value", 0.0))
         if exact_endgame is not None:
             exact_endgame[batch_index] = bool(example["exact_endgame"])
+        if exact_afterstate_score_decomposition_active is not None:
+            exact_afterstate_score_decomposition_active[batch_index, :action_count] = torch.as_tensor(
+                example["exact_afterstate_score_decomposition_active"],
+                dtype=torch.float32,
+            )
+            assert active_seat is not None
+            active_seat[batch_index] = int(example["active_seat"])
         target_value[batch_index] = torch.as_tensor(example["final_score_vector"], dtype=torch.float32)
         target_rank[batch_index] = torch.as_tensor(example["rank_vector"], dtype=torch.long) - 1
         target_score[batch_index] = torch.as_tensor(example["score_decomposition"], dtype=torch.float32)
@@ -1114,12 +1216,18 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
         "token_counts": token_counts,
         "action_counts": action_counts,
         "has_improved_policy": has_improved_policy,
+        "has_structured_grounding": has_structured_grounding,
     }
     if has_improved_policy:
         batch["improved_policy"] = improved_policy
         batch["search_root_value"] = search_root_value
     if exact_endgame is not None:
         batch["exact_endgame"] = exact_endgame
+    if exact_afterstate_score_decomposition_active is not None:
+        batch["exact_afterstate_score_decomposition_active"] = (
+            exact_afterstate_score_decomposition_active
+        )
+        batch["active_seat"] = active_seat
     if relation_tail is not None:
         batch["relation_tail"] = relation_tail
     else:

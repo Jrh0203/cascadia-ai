@@ -456,6 +456,25 @@ per-action afterstate categories and train an action-conditioned, exactly
 grounded decomposed score-to-go head while retaining total-Q supervision over
 all searched actions. Probe SHA `5c06de5d...`.
 
+The authorized production branch is now implemented, but has not yet earned a
+model verdict. New Gumbel generation writes
+`cascadiav3.expert_tensor_shard.v4` with `active_seat` and an exact
+action-aligned three-component afterstate vector. Rust and Python readers
+reject component/scalar mismatches; filtering, relation-tail materialization,
+and collation preserve the fields. The optional model head predicts three
+action-conditioned score-to-go residuals and defines ordinary Q as their sum,
+so the existing bridge continues to rank
+`exact_afterstate_score_active + predicted_score_to_go`. Only the selected
+real action receives category supervision; all q-valid actions retain the
+completed-Q loss on the sum.
+
+The preregistered first experiment is deliberately cheap:
+`gumbel-selfplay-structured-q`, incumbent warm start,
+`q-decomposition-head-only`, and untouched v4 validation. The legacy model
+and state-dict contract are unchanged while the feature is disabled. Do not
+open full-model training or gameplay unless this head-only branch improves the
+locked component and total-Q read without a policy/value retention failure.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)
@@ -486,11 +505,13 @@ all searched actions. Probe SHA `5c06de5d...`.
    survives, resume EI with corrected-policy data; next training knobs are
    K=16 and a distq + L capacity retry. Quantile-aware serving is implemented
    but its fixed-root/n=3 screen did not justify a standalone CUDA gate.
-5. **Action-conditioned structured value** — representation gate passed.
-   A frozen selected-action category head cut held-out real-outcome RMSE by
+5. **Action-conditioned structured value** — representation gate passed and
+   exact-grounded v4 implementation complete. The frozen selected-action
+   category head cut held-out real-outcome RMSE by
    `15.99%` versus the best incumbent comparison on 760 untouched non-exact
-   roots. Build the exact per-action category grounding/schema and run a
-   head-first kill test; do not serve the direct-final ridge preflight.
+   roots. Generate a corrected v4 pilot corpus and run the head-first kill
+   test; do not serve the direct-final ridge preflight or skip directly to a
+   full-model/gameplay run.
 6. **Table-native q head (cycle-7)** — staged but parked: serving-side
    table objectives measured CI− twice (noise multiplier); the
    training-side variant is theoretically distinct (labels average away

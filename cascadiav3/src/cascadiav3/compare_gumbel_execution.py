@@ -53,6 +53,7 @@ def _artifact_identity(report: dict[str, Any]) -> dict[str, Any]:
         "q_quantiles",
     )
     identity = {key: artifacts.get(key) for key in keys}
+    identity["q_decomposition"] = bool(artifacts.get("q_decomposition", False))
     if any(value is None for value in identity.values()):
         raise ValueError("report artifact identity is incomplete")
     return identity

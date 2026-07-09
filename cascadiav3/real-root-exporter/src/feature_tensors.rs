@@ -6,7 +6,7 @@ use serde_json::Value;
 
 pub const SHARD_VERSION: &str = "greedy_policy_tensor_shard_v1";
 pub const EXPERT_SHARD_VERSION: &str = "cascadiav3.expert_tensor_shard.v1";
-pub const EXPERT_SHARD_VERSION_V3: &str = "cascadiav3.expert_tensor_shard.v3";
+pub const EXPERT_SHARD_VERSION_V4: &str = "cascadiav3.expert_tensor_shard.v4";
 pub const PUBLIC_TOKEN_FEATURE_DIM: usize = 41;
 pub const MERIT_ACTION_FEATURE_DIM: usize = 25;
 pub const PUBLIC_TOKEN_ACTION_FEATURE_DIM: usize = 33;
@@ -61,6 +61,11 @@ pub struct ExpertTensorShardData {
     pub q_count: Vec<f32>,
     pub truncated_count: Vec<f32>,
     pub exact_afterstate_score_active: Vec<f32>,
+    /// v4 action-aligned [wildlife, habitat, nature_tokens] exact score.
+    pub exact_afterstate_score_decomposition_active: Vec<f32>,
+    /// v4 explicit active seat per root.
+    pub active_seat: Vec<u8>,
+    pub structured_value_field_records: usize,
     pub final_score_vector: Vec<f32>,
     pub rank_vector: Vec<i16>,
     pub score_decomposition: Vec<f32>,
@@ -150,6 +155,10 @@ impl ExpertTensorShardData {
         self.truncated_count.extend(other.truncated_count);
         self.exact_afterstate_score_active
             .extend(other.exact_afterstate_score_active);
+        self.exact_afterstate_score_decomposition_active
+            .extend(other.exact_afterstate_score_decomposition_active);
+        self.active_seat.extend(other.active_seat);
+        self.structured_value_field_records += other.structured_value_field_records;
         self.final_score_vector.extend(other.final_score_vector);
         self.rank_vector.extend(other.rank_vector);
         self.score_decomposition.extend(other.score_decomposition);
@@ -194,6 +203,47 @@ impl ExpertTensorShardData {
         let final_score = f32_array(record, "final_score_vector", 4)?;
         let rank = i16_array(record, "rank_vector", 4)?;
         let score_decomposition = score_decomposition_array(record)?;
+        let structured_value_fields = match record
+            .get("exact_afterstate_score_decomposition_active")
+        {
+            Some(_) => {
+                let decomposition = action_score_decomposition_array(
+                    record,
+                    "exact_afterstate_score_decomposition_active",
+                    action_count,
+                )?;
+                let active_seat = record
+                    .get("active_seat")
+                    .context("structured expert tensor record is missing active_seat")?
+                    .as_u64()
+                    .context("expert tensor active_seat must be an integer")?;
+                if active_seat >= 4 {
+                    bail!("expert tensor active_seat must be in [0, 4)");
+                }
+                for (index, components) in decomposition.chunks_exact(3).enumerate() {
+                    let component_total: f32 = components.iter().sum();
+                    if (component_total - exact_afterstate[index]).abs() > 1.0e-4 {
+                        bail!(
+                            "exact afterstate component sum mismatch at action {index}: {component_total} != {}",
+                            exact_afterstate[index]
+                        );
+                    }
+                }
+                for seat in 0..4 {
+                    let component_total = (0..3)
+                        .map(|category| score_decomposition[category * 4 + seat])
+                        .sum::<f32>();
+                    if (component_total - final_score[seat]).abs() > 1.0e-4 {
+                        bail!(
+                            "terminal component sum mismatch at seat {seat}: {component_total} != {}",
+                            final_score[seat]
+                        );
+                    }
+                }
+                Some((decomposition, active_seat as u8))
+            }
+            None => None,
+        };
 
         if self.first_state_hash.is_none() {
             self.first_state_hash = string_field(record, "state_hash");
@@ -221,6 +271,12 @@ impl ExpertTensorShardData {
         self.q_count.extend(q_count);
         self.truncated_count.extend(truncated);
         self.exact_afterstate_score_active.extend(exact_afterstate);
+        if let Some((decomposition, active_seat)) = structured_value_fields {
+            self.exact_afterstate_score_decomposition_active
+                .extend(decomposition);
+            self.active_seat.push(active_seat);
+            self.structured_value_field_records += 1;
+        }
         self.final_score_vector.extend(final_score);
         self.rank_vector.extend(rank);
         self.score_decomposition.extend(score_decomposition);
@@ -431,6 +487,41 @@ fn f32_array(record: &Value, key: &str, expected_len: usize) -> Result<Vec<f32>>
                 .with_context(|| format!("expert tensor array {key} contains non-number"))
         })
         .collect()
+}
+
+fn action_score_decomposition_array(
+    record: &Value,
+    key: &str,
+    action_count: usize,
+) -> Result<Vec<f32>> {
+    let rows = field(record, key)
+        .and_then(Value::as_array)
+        .with_context(|| format!("expert tensor record missing array {key}"))?;
+    if rows.len() != action_count {
+        bail!(
+            "expert tensor array {key} length {} does not match expected {action_count}",
+            rows.len()
+        );
+    }
+    let mut flattened = Vec::with_capacity(action_count * 3);
+    for (index, row) in rows.iter().enumerate() {
+        let values = row
+            .as_array()
+            .with_context(|| format!("expert tensor array {key}[{index}] is not an array"))?;
+        if values.len() != 3 {
+            bail!("expert tensor array {key}[{index}] must have three components");
+        }
+        for value in values {
+            let number = value.as_f64().with_context(|| {
+                format!("expert tensor array {key}[{index}] contains non-number")
+            })? as f32;
+            if !number.is_finite() {
+                bail!("expert tensor array {key}[{index}] contains non-finite value");
+            }
+            flattened.push(number);
+        }
+    }
+    Ok(flattened)
 }
 
 fn i16_array(record: &Value, key: &str, expected_len: usize) -> Result<Vec<i16>> {

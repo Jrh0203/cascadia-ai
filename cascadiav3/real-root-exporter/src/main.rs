@@ -29,7 +29,7 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
 use feature_tensors::{
-    EXPERT_SHARD_VERSION, EXPERT_SHARD_VERSION_V3, ExpertTensorShardData, PUBLIC_TOKEN_FEATURE_DIM,
+    EXPERT_SHARD_VERSION, EXPERT_SHARD_VERSION_V4, ExpertTensorShardData, PUBLIC_TOKEN_FEATURE_DIM,
     SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM, SHARD_VERSION, TensorShardData,
 };
 use model_bridge::{
@@ -41,7 +41,7 @@ use npz_writer::NpzCompression;
 const SCHEMA_ID: &str = "cascadiav3.pre_gpu.v0";
 const EXPERT_ROOT_SCHEMA_ID: &str = "cascadiav3.expert_root.v1";
 const EXPERT_TENSOR_SCHEMA_ID: &str = "cascadiav3.expert_tensor_shard.v1";
-const EXPERT_TENSOR_SCHEMA_ID_V3: &str = "cascadiav3.expert_tensor_shard.v3";
+const EXPERT_TENSOR_SCHEMA_ID_V4: &str = "cascadiav3.expert_tensor_shard.v4";
 const GREEDY_TENSOR_SCHEMA_ID: &str = "greedy_policy_tensor_shard_v1";
 const ROOT_REPLAY_SCHEMA_ID: &str = "cascadiav3.root_replay.v1";
 const RULESET_ID: &str = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09";
@@ -166,6 +166,26 @@ struct ScoreMean {
     habitat: f64,
     nature_tokens: f64,
     total: f64,
+}
+
+fn score_components(score: &ScoreBreakdown) -> [f64; 3] {
+    let wildlife = f64::from(score.wildlife.iter().sum::<u16>());
+    let nature_tokens = f64::from(score.nature_tokens);
+    // Habitat owns any configured habitat bonus so the three components
+    // always sum exactly to the engine's final total. The active research
+    // rules disable bonuses, but the tensor contract remains general.
+    let habitat = f64::from(score.total) - wildlife - nature_tokens;
+    [wildlife, habitat, nature_tokens]
+}
+
+fn score_mean(score: &ScoreBreakdown) -> ScoreMean {
+    let [wildlife, habitat, nature_tokens] = score_components(score);
+    ScoreMean {
+        wildlife,
+        habitat,
+        nature_tokens,
+        total: f64::from(score.total),
+    }
 }
 
 fn main() -> Result<()> {
@@ -1641,15 +1661,7 @@ fn export_greedy_policy_seed_records(args: &Args, seed_u64: u64) -> Result<Vec<V
         ply_index += 1;
     }
     let terminal_scores = score_game(&game);
-    let score_means = terminal_scores
-        .iter()
-        .map(|score| ScoreMean {
-            wildlife: f64::from(score.wildlife.iter().sum::<u16>()),
-            habitat: f64::from(score.habitat.iter().sum::<u16>()),
-            nature_tokens: f64::from(score.nature_tokens),
-            total: f64::from(score.total),
-        })
-        .collect::<Vec<_>>();
+    let score_means = terminal_scores.iter().map(score_mean).collect::<Vec<_>>();
     let final_score_vector = score_means
         .iter()
         .map(|score| json!(score.total))
@@ -1801,6 +1813,8 @@ fn export_expert_tensor_corpus(args: &Args) -> Result<usize> {
             q_count: &shard.q_count,
             truncated_count: &shard.truncated_count,
             exact_afterstate_score_active: &shard.exact_afterstate_score_active,
+            exact_afterstate_score_decomposition_active: None,
+            active_seat: None,
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
@@ -1890,6 +1904,8 @@ fn export_greedy_expert_tensor_corpus(args: &Args) -> Result<usize> {
             q_count: &shard.q_count,
             truncated_count: &shard.truncated_count,
             exact_afterstate_score_active: &shard.exact_afterstate_score_active,
+            exact_afterstate_score_decomposition_active: None,
+            active_seat: None,
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
@@ -2002,6 +2018,8 @@ fn export_greedy_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usi
             q_count: &shard.q_count,
             truncated_count: &shard.truncated_count,
             exact_afterstate_score_active: &shard.exact_afterstate_score_active,
+            exact_afterstate_score_decomposition_active: None,
+            active_seat: None,
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
@@ -2125,6 +2143,8 @@ fn export_model_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usiz
             q_count: &shard.q_count,
             truncated_count: &shard.truncated_count,
             exact_afterstate_score_active: &shard.exact_afterstate_score_active,
+            exact_afterstate_score_decomposition_active: None,
+            active_seat: None,
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
@@ -2985,6 +3005,7 @@ fn rotated_eval_row(row: &gumbel::EvalRow, steps: u8) -> gumbel::EvalRow {
                 },
                 state: afterstate.state.with_rotated_boards(steps),
                 exact_score_active: afterstate.exact_score_active,
+                exact_score_decomposition_active: afterstate.exact_score_decomposition_active,
                 apply_truncated: afterstate.apply_truncated,
             })
             .collect(),
@@ -3090,15 +3111,7 @@ impl gumbel::LeafEvaluator for BridgeLeafEvaluator<'_> {
 }
 
 fn score_means_from_breakdowns(scores: &[ScoreBreakdown]) -> Vec<ScoreMean> {
-    scores
-        .iter()
-        .map(|score| ScoreMean {
-            wildlife: f64::from(score.wildlife.iter().sum::<u16>()),
-            habitat: f64::from(score.habitat.iter().sum::<u16>()),
-            nature_tokens: f64::from(score.nature_tokens),
-            total: f64::from(score.total),
-        })
-        .collect()
+    scores.iter().map(score_mean).collect()
 }
 
 fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> Value {
@@ -3154,6 +3167,11 @@ fn gumbel_selfplay_root_record(
         .iter()
         .map(|afterstate| afterstate.exact_score_active)
         .collect();
+    let exact_score_decomposition: Vec<Value> = row
+        .afterstates
+        .iter()
+        .map(|afterstate| json!(afterstate.exact_score_decomposition_active))
+        .collect();
     let public_hash = staged.public_state().canonical_hash();
     let placeholder_means = vec![
         ScoreMean {
@@ -3187,6 +3205,7 @@ fn gumbel_selfplay_root_record(
             .collect::<Vec<_>>(),
         "per_action_truncated_count": vec![json!(0); action_count],
         "exact_afterstate_score_active": exact_scores,
+        "exact_afterstate_score_decomposition_active": exact_score_decomposition,
         "per_action_Q_valid": result
             .visit_counts
             .iter()
@@ -3428,12 +3447,19 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
             shard.record_count
         );
     }
+    if shard.structured_value_field_records != shard.record_count {
+        bail!(
+            "gumbel selfplay shard has {} structured-value records for {} records",
+            shard.structured_value_field_records,
+            shard.record_count
+        );
+    }
     let mut metadata = expert_tensor_shard_metadata(args, &shard);
     let teacher_model = model_artifact_identity(args)?;
     let generator = generator_artifact_identity()?;
     if let Some(object) = metadata.as_object_mut() {
-        object.insert("version".to_owned(), json!(EXPERT_SHARD_VERSION_V3));
-        object.insert("schema_id".to_owned(), json!(EXPERT_TENSOR_SCHEMA_ID_V3));
+        object.insert("version".to_owned(), json!(EXPERT_SHARD_VERSION_V4));
+        object.insert("schema_id".to_owned(), json!(EXPERT_TENSOR_SCHEMA_ID_V4));
         object.insert("source".to_owned(), json!("gumbel_selfplay_tensor_corpus"));
         object.insert(
             "source_paths".to_owned(),
@@ -3492,18 +3518,20 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
         );
         object.insert(
             "scientific_eligibility".to_owned(),
-            json!(if args.model_manifest.is_some() && !args.allow_model_fallback {
-                "gumbel_selfplay_expert_iteration"
-            } else {
-                "audit_only_unverified_or_uniform_model_fallback"
-            }),
+            json!(
+                if args.model_manifest.is_some() && !args.allow_model_fallback {
+                    "gumbel_selfplay_expert_iteration"
+                } else {
+                    "audit_only_unverified_or_uniform_model_fallback"
+                }
+            ),
         );
     }
     let metadata_json = canonical_json(&metadata);
     npz_writer::write_expert_tensor_npz(
         &args.out,
         npz_writer::ExpertTensorNpz {
-            version: feature_tensors::EXPERT_SHARD_VERSION_V3,
+            version: feature_tensors::EXPERT_SHARD_VERSION_V4,
             metadata_json: &metadata_json,
             tokens_f16_bits: &shard.tokens_f16_bits,
             token_shape: [shard.total_token_count, PUBLIC_TOKEN_FEATURE_DIM],
@@ -3527,6 +3555,10 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
             q_count: &shard.q_count,
             truncated_count: &shard.truncated_count,
             exact_afterstate_score_active: &shard.exact_afterstate_score_active,
+            exact_afterstate_score_decomposition_active: Some(
+                &shard.exact_afterstate_score_decomposition_active,
+            ),
+            active_seat: Some(&shard.active_seat),
             final_score_vector: &shard.final_score_vector,
             rank_vector: &shard.rank_vector,
             score_decomposition: &shard.score_decomposition,
@@ -4197,6 +4229,7 @@ struct CandidateAfterstate {
     candidate: GreedyCandidate,
     state: GameState,
     exact_score_active: f64,
+    exact_score_decomposition_active: [f64; 3],
     apply_truncated: bool,
 }
 
@@ -4225,6 +4258,7 @@ fn candidate_afterstates(
                 candidate: candidate.clone(),
                 state: after,
                 exact_score_active: f64::from(scores[active_seat].total),
+                exact_score_decomposition_active: score_components(&scores[active_seat]),
                 apply_truncated,
             })
         })
@@ -4466,15 +4500,7 @@ fn build_interactive_root(
         .collect::<Result<Vec<_>>>()?;
     let action_count = legal_actions.len();
     let current_scores = score_game(game);
-    let score_means = current_scores
-        .iter()
-        .map(|score| ScoreMean {
-            wildlife: f64::from(score.wildlife.iter().sum::<u16>()),
-            habitat: f64::from(score.habitat.iter().sum::<u16>()),
-            nature_tokens: f64::from(score.nature_tokens),
-            total: f64::from(score.total),
-        })
-        .collect::<Vec<_>>();
+    let score_means = current_scores.iter().map(score_mean).collect::<Vec<_>>();
     let uniform_prior = 1.0 / action_count as f64;
     let public_hash = staged.public_state().canonical_hash();
     let mut record = json!({
@@ -4822,9 +4848,10 @@ fn mean_scores(samples: &[Vec<ScoreBreakdown>]) -> Vec<ScoreMean> {
     ];
     for scores in samples {
         for (seat, score) in scores.iter().enumerate() {
-            means[seat].wildlife += f64::from(score.wildlife.iter().sum::<u16>());
-            means[seat].habitat += f64::from(score.habitat.iter().sum::<u16>());
-            means[seat].nature_tokens += f64::from(score.nature_tokens);
+            let [wildlife, habitat, nature_tokens] = score_components(score);
+            means[seat].wildlife += wildlife;
+            means[seat].habitat += habitat;
+            means[seat].nature_tokens += nature_tokens;
             means[seat].total += f64::from(score.total);
         }
     }
@@ -5348,7 +5375,7 @@ fn expert_tensor_mode_contract(args: &Args) -> (&'static str, &'static str, &'st
         Mode::GumbelSelfplayTensorCorpus => (
             "gumbel_selfplay_tensor_corpus",
             "gumbel_selfplay_expert_iteration",
-            "Rust-native packed v3 expert tensor shard from all-seat Gumbel self-play over determinized hidden states; per-action targets are search completed-Q values, improved_policy is the Gumbel policy-improvement target, exact_endgame is explicit per root, and value labels are real terminal outcomes.",
+            "Rust-native packed v4 expert tensor shard from all-seat Gumbel self-play over determinized hidden states; per-action targets are search completed-Q values, exact category afterstates ground structured score-to-go, improved_policy is the Gumbel policy-improvement target, exact_endgame is explicit per root, and value labels are real terminal outcomes.",
         ),
         _ => (
             "expert_tensor_corpus",
@@ -5451,6 +5478,7 @@ fn model_artifact_identity(args: &Args) -> Result<Value> {
         "model_name": manifest.pointer("/config/model_name"),
         "model_size": manifest.pointer("/config/model_size"),
         "q_quantiles": manifest.pointer("/config/q_quantiles"),
+        "q_decomposition": manifest.pointer("/config/q_decomposition"),
     }))
 }
 
@@ -5479,7 +5507,13 @@ fn expert_tensor_shard_metadata(args: &Args, shard: &ExpertTensorShardData) -> V
         "score_decomposition",
     ];
     if args.mode == Mode::GumbelSelfplayTensorCorpus {
-        targets.extend(["improved_policy", "search_root_value", "exact_endgame"]);
+        targets.extend([
+            "improved_policy",
+            "search_root_value",
+            "exact_endgame",
+            "active_seat",
+            "exact_afterstate_score_decomposition_active",
+        ]);
     }
     json!({
         "version": EXPERT_SHARD_VERSION,
@@ -5586,16 +5620,15 @@ fn write_expert_tensor_manifest(
         std::fs::create_dir_all(parent)?;
     }
     let (mode_name, default_scientific_eligibility, notes) = expert_tensor_mode_contract(args);
-    let scientific_eligibility =
-        if args.mode == Mode::GumbelSelfplayTensorCorpus
-            && (args.model_manifest.is_none() || args.allow_model_fallback)
-        {
-            "audit_only_unverified_or_uniform_model_fallback"
-        } else {
-            default_scientific_eligibility
-        };
+    let scientific_eligibility = if args.mode == Mode::GumbelSelfplayTensorCorpus
+        && (args.model_manifest.is_none() || args.allow_model_fallback)
+    {
+        "audit_only_unverified_or_uniform_model_fallback"
+    } else {
+        default_scientific_eligibility
+    };
     let (schema_id, version) = if args.mode == Mode::GumbelSelfplayTensorCorpus {
-        (EXPERT_TENSOR_SCHEMA_ID_V3, EXPERT_SHARD_VERSION_V3)
+        (EXPERT_TENSOR_SCHEMA_ID_V4, EXPERT_SHARD_VERSION_V4)
     } else {
         (EXPERT_TENSOR_SCHEMA_ID, EXPERT_SHARD_VERSION)
     };
@@ -5891,6 +5924,15 @@ mod tests {
             // public-information policy decisions before the chance draw.
             "24ca921ec767b442acbc5495c9fbacd8790beb0346c94b795625aaf8194e2b7a"
         );
+        let legacy_shard = ExpertTensorShardData::from_records(&records)
+            .expect("legacy expert records with active_seat remain v1-packable");
+        assert_eq!(legacy_shard.structured_value_field_records, 0);
+        assert!(legacy_shard.active_seat.is_empty());
+        assert!(
+            legacy_shard
+                .exact_afterstate_score_decomposition_active
+                .is_empty()
+        );
     }
 
     fn mock_bridge_command() -> String {
@@ -5940,7 +5982,7 @@ mod tests {
     }
 
     #[test]
-    fn gumbel_selfplay_records_roundtrip_into_v3_shard() {
+    fn gumbel_selfplay_records_roundtrip_into_v4_shard() {
         let tempdir =
             std::env::temp_dir().join(format!("cascadia-gumbel-test-{}", std::process::id()));
         std::fs::create_dir_all(&tempdir).expect("tempdir");
@@ -5973,7 +6015,33 @@ mod tests {
                 );
             }
             assert!(record["search_root_value"].as_f64().is_some());
+            let active_seat = record["active_seat"].as_u64().unwrap() as usize;
+            let exact_scores = record["exact_afterstate_score_active"].as_array().unwrap();
+            let exact_components = record["exact_afterstate_score_decomposition_active"]
+                .as_array()
+                .unwrap();
+            assert_eq!(exact_components.len(), action_count);
+            for (score, components) in exact_scores.iter().zip(exact_components) {
+                let component_sum: f64 = components
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|value| value.as_f64().unwrap())
+                    .sum();
+                assert!((component_sum - score.as_f64().unwrap()).abs() < 1e-6);
+            }
             let final_score = record["final_score_vector"].clone();
+            let final_component_sum: f64 = ["wildlife", "habitat", "nature_tokens"]
+                .iter()
+                .map(|category| {
+                    record["score_decomposition"][active_seat.to_string()][category]
+                        .as_f64()
+                        .unwrap()
+                })
+                .sum();
+            assert!(
+                (final_component_sum - final_score[active_seat].as_f64().unwrap()).abs() < 1e-6
+            );
             match &shared_final_score {
                 None => shared_final_score = Some(final_score),
                 Some(existing) => assert_eq!(
@@ -5983,14 +6051,20 @@ mod tests {
             }
         }
 
-        let shard = ExpertTensorShardData::from_records(&records).expect("v3 shard");
+        let shard = ExpertTensorShardData::from_records(&records).expect("v4 shard");
         assert_eq!(shard.improved_policy_records, shard.record_count);
         assert_eq!(shard.improved_policy.len(), shard.total_action_count);
         assert_eq!(shard.search_root_value.len(), shard.record_count);
         assert_eq!(shard.exact_endgame_field_records, shard.record_count);
         assert_eq!(shard.exact_endgame.len(), shard.record_count);
+        assert_eq!(shard.structured_value_field_records, shard.record_count);
+        assert_eq!(
+            shard.exact_afterstate_score_decomposition_active.len(),
+            3 * shard.total_action_count
+        );
+        assert_eq!(shard.active_seat.len(), shard.record_count);
 
-        // Full export path writes a v3 npz + manifest.
+        // Full export path writes a v4 npz + manifest.
         let written = export_gumbel_selfplay_tensor_corpus(&args).expect("export");
         assert!(written > 0);
         assert!(args.out.exists());
@@ -6011,11 +6085,11 @@ mod tests {
         .expect("manifest json");
         assert_eq!(
             manifest["schema_id"].as_str(),
-            Some(EXPERT_TENSOR_SCHEMA_ID_V3)
+            Some(EXPERT_TENSOR_SCHEMA_ID_V4)
         );
         assert_eq!(
             manifest["version"].as_str(),
-            Some(feature_tensors::EXPERT_SHARD_VERSION_V3)
+            Some(feature_tensors::EXPERT_SHARD_VERSION_V4)
         );
         assert!(manifest["created_unix_seconds"].as_u64().unwrap() > 0);
         assert_eq!(
@@ -6064,6 +6138,11 @@ mod tests {
         let archive = File::open(&args.out).expect("npz readable");
         let mut zip = zip::ZipArchive::new(archive).expect("npz zip");
         assert!(zip.by_name("exact_endgame.npy").is_ok());
+        assert!(
+            zip.by_name("exact_afterstate_score_decomposition_active.npy")
+                .is_ok()
+        );
+        assert!(zip.by_name("active_seat.npy").is_ok());
         let _ = std::fs::remove_dir_all(&tempdir);
     }
 

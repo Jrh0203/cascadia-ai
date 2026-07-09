@@ -185,10 +185,12 @@ where a single head's error doesn't (this is ensemble variance reduction
 for us). The score_decomposition head already exists as an aux — promote
 it to load-bearing.
 
-**Sketch.** Trainer: score-to-go target already decomposes (the exporter
-emits score_decomposition per seat). Serving: sum the heads instead of
-reading q. Kill-test: one cycle-6-style ablation (identical data/recipe,
-decomposed head vs distq) — the distq playbook, re-run.
+**Sketch.** Trainer: use the selected real trajectory for category residual
+targets, retain completed-Q supervision on the head sum for all searched
+actions, and never copy a selected category outcome onto counterfactual
+actions. Serving sums the heads instead of reading monolithic q. Kill-test:
+head-only locked validation first; only then a cycle-style decomposed-head
+versus incumbent comparison.
 
 **Implementation audit (2026-07-09).** The existing `score_decomposition`
 auxiliary is root-level (`score_head(root_h)`), not action-conditioned. It
@@ -214,6 +216,16 @@ next implementation must export each action's exact afterstate category vector,
 train action-conditioned category score-to-go heads whose sum stays grounded,
 and retain scalar/distq supervision for all searched actions. Probe JSON SHA:
 `5c06de5da762352765a26c233b8718af7e69bc9040d698ad0758c2b72e908c2a`.
+
+**Exact-grounded implementation: COMPLETE; TRAINING VERDICT PENDING.** New
+Gumbel exports are schema v4 with active seat and exact per-action
+wildlife/habitat/Nature afterstate components. The optional component head
+defines ordinary score-to-go as its exact sum, supports scalar or quantile
+training, and is reloadable by the unchanged bridge. The v4-only structured
+objective supervises categories on the selected action and completed Q on all
+q-valid sums. `q-decomposition-head-only` freezes every incumbent parameter
+for the preregistered cheap gate. This closes the architecture/plumbing task;
+it does not yet establish that the trained head improves validation or play.
 
 ## 6. League self-play (break the self-play attractor)
 

@@ -40,6 +40,11 @@ class CascadiaFormerConfig:
     # quantile-risk mode for research ablations. 1 keeps the legacy scalar
     # head bit-for-bit.
     q_quantiles: int = 1
+    # Opt-in structured score-to-go head. Each action predicts wildlife,
+    # habitat (including habitat bonuses), and Nature-token residuals; their
+    # sum is the ordinary q output. Disabled preserves the legacy q_head and
+    # state-dict contract exactly.
+    q_decomposition: bool = False
     # Optional pairwise action comparator. The low-rank skew interaction is
     # antisymmetric by construction: compare(a, b) == -compare(b, a).
     # Existing checkpoints keep this disabled and therefore retain their
@@ -213,6 +218,14 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             self.root_norm = nn.LayerNorm(cfg.d_model)
             self.legal_logits = nn.Linear(cfg.d_model, 1)
             self.q_head = nn.Linear(cfg.d_model, max(1, cfg.q_quantiles))
+            self.q_component_head = (
+                nn.Linear(
+                    cfg.d_model,
+                    len(cfg.score_categories) * max(1, cfg.q_quantiles),
+                )
+                if cfg.q_decomposition
+                else None
+            )
             self.uncertainty_head = nn.Linear(cfg.d_model, 1)
             self.value_head = nn.Linear(cfg.d_model, cfg.seats)
             self.rank_head = nn.Linear(cfg.d_model, cfg.seats * cfg.seats)
@@ -412,11 +425,23 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
                 relation_ids,
                 relation_tail,
             )
-            q_raw = self.q_head(decoded)
-            if cfg.q_quantiles > 1:
-                q_out = q_raw.mean(dim=-1)
+            if self.q_component_head is not None:
+                component_raw = self.q_component_head(decoded).view(
+                    *decoded.shape[:-1],
+                    len(cfg.score_categories),
+                    max(1, cfg.q_quantiles),
+                )
+                component_means = component_raw.mean(dim=-1)
+                q_out = component_means.sum(dim=-1)
+                q_raw = component_raw.sum(dim=-2)
             else:
-                q_out = q_raw.squeeze(-1)
+                component_raw = None
+                component_means = None
+                q_raw = self.q_head(decoded)
+                if cfg.q_quantiles > 1:
+                    q_out = q_raw.mean(dim=-1)
+                else:
+                    q_out = q_raw.squeeze(-1)
             outputs = {
                 "logits": self.legal_logits(decoded).squeeze(-1),
                 "q": q_out,
@@ -437,6 +462,10 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             }
             if cfg.q_quantiles > 1:
                 outputs["q_quantile_values"] = q_raw
+            if component_means is not None:
+                outputs["q_score_to_go_components"] = component_means
+                if cfg.q_quantiles > 1:
+                    outputs["q_component_quantile_values"] = component_raw
             pairwise_indices = (
                 pairwise_root_indices,
                 pairwise_left_indices,

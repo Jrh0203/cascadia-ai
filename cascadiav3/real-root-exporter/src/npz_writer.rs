@@ -192,6 +192,10 @@ pub struct ExpertTensorNpz<'a> {
     pub q_count: &'a [f32],
     pub truncated_count: &'a [f32],
     pub exact_afterstate_score_active: &'a [f32],
+    /// v4 action-aligned [wildlife, habitat, nature_tokens] exact scores.
+    pub exact_afterstate_score_decomposition_active: Option<&'a [f32]>,
+    /// v4 explicit active seat per root.
+    pub active_seat: Option<&'a [u8]>,
     pub final_score_vector: &'a [f32],
     pub rank_vector: &'a [i16],
     pub score_decomposition: &'a [f32],
@@ -295,6 +299,24 @@ pub fn write_expert_tensor_npz(path: &Path, shard: ExpertTensorNpz<'_>) -> Resul
     if let Some(exact_endgame) = shard.exact_endgame {
         start_file(&mut zip, "exact_endgame.npy", shard.compression)?;
         write_u8_npy(&mut zip, exact_endgame, &[exact_endgame.len()])?;
+    }
+    if let Some(decomposition) = shard.exact_afterstate_score_decomposition_active {
+        if decomposition.len() != shard.target_q.len() * 3 {
+            bail!("v4 exact afterstate decomposition length mismatch");
+        }
+        start_file(
+            &mut zip,
+            "exact_afterstate_score_decomposition_active.npy",
+            shard.compression,
+        )?;
+        write_f32_npy(&mut zip, decomposition, &[shard.target_q.len(), 3])?;
+    }
+    if let Some(active_seat) = shard.active_seat {
+        if active_seat.len() != shard.record_count {
+            bail!("v4 active seat length mismatch");
+        }
+        start_file(&mut zip, "active_seat.npy", shard.compression)?;
+        write_u8_npy(&mut zip, active_seat, &[active_seat.len()])?;
     }
 
     zip.finish()?;

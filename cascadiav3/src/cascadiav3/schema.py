@@ -21,6 +21,7 @@ GREEDY_TENSOR_SHARD_SCHEMA_ID = "greedy_policy_tensor_shard_v1"
 EXPERT_TENSOR_SHARD_SCHEMA_ID = "cascadiav3.expert_tensor_shard.v1"
 EXPERT_TENSOR_SHARD_SCHEMA_ID_V2 = "cascadiav3.expert_tensor_shard.v2"
 EXPERT_TENSOR_SHARD_SCHEMA_ID_V3 = "cascadiav3.expert_tensor_shard.v3"
+EXPERT_TENSOR_SHARD_SCHEMA_ID_V4 = "cascadiav3.expert_tensor_shard.v4"
 
 # Backward-compatible name used by the original scaffold and tests.
 SCHEMA_ID = PRE_GPU_SCHEMA_ID
@@ -107,6 +108,20 @@ SCHEMA_REGISTRY: dict[str, SchemaDefinition] = {
             "cascadiav3.torch_train_cascadiaformer",
         ),
     ),
+    EXPERT_TENSOR_SHARD_SCHEMA_ID_V4: SchemaDefinition(
+        schema_id=EXPERT_TENSOR_SHARD_SCHEMA_ID_V4,
+        artifact_kind="expert_tensor_shard",
+        version=4,
+        status="active",
+        description=(
+            "v3 Gumbel self-play shard plus explicit active_seat and action-aligned exact "
+            "wildlife/habitat/Nature afterstate components for grounded structured Q."
+        ),
+        compatible_readers=(
+            "cascadiav3.expert_tensor_shards",
+            "cascadiav3.torch_train_cascadiaformer",
+        ),
+    ),
 }
 
 REPLAY_JSONL_SCHEMA_IDS = {PRE_GPU_SCHEMA_ID, EXPERT_ROOT_SCHEMA_ID}
@@ -115,6 +130,7 @@ TENSOR_SCHEMA_IDS = {
     EXPERT_TENSOR_SHARD_SCHEMA_ID,
     EXPERT_TENSOR_SHARD_SCHEMA_ID_V2,
     EXPERT_TENSOR_SHARD_SCHEMA_ID_V3,
+    EXPERT_TENSOR_SHARD_SCHEMA_ID_V4,
 }
 
 

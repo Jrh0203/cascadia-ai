@@ -29,14 +29,18 @@ Use packed tensor shards for real training:
   labeled from real terminal outcomes instead of rollout means. Existing v2
   shards remain readable, but their exact-endgame rows and generation
   provenance cannot be reconstructed reliably after packing.
-- `cascadiav3.expert_tensor_shard.v3`: the required format for new Gumbel
-  generation. It adds an explicit per-record `exact_endgame` tensor and
+- `cascadiav3.expert_tensor_shard.v3`: adds an explicit per-record
+  `exact_endgame` tensor and
   fail-closed metadata for ruleset, source revision, complete search and
   execution settings, exporter SHA/size, and teacher manifest/weights
   SHA/size. A v3 shard with fallback/unverified teacher identity is marked
   audit-only and the training corpus loader rejects it.
+- `cascadiav3.expert_tensor_shard.v4`: the required format for new Gumbel
+  generation. It adds `active_seat` and exact action-aligned
+  wildlife/habitat/Nature afterstate components, with scalar-sum invariants,
+  and is the only format accepted by structured-Q training.
 - `relation_tail` shards: filtered fixed-capacity action relation caches used
-  by the GPU trainer (v2/v3 fields pass through filtering and materialization;
+  by the GPU trainer (v2-v4 fields pass through filtering and materialization;
   retained improved-policy slices are renormalized).
 
 Use JSONL only for tiny audit fixtures that need human-readable reconstruction
@@ -52,7 +56,9 @@ Packed expert shards contain:
 - exact afterstate score for the active seat;
 - score decomposition labels;
 - final score/rank vectors;
-- explicit exact-endgame provenance for every v3 root;
+- explicit exact-endgame provenance for every v3+ root;
+- for v4, the active seat plus exact per-action wildlife/habitat/Nature
+  afterstate components;
 - sparse relation edges plus materialized relation-tail tensors.
 
 ## Target Semantics
@@ -64,9 +70,23 @@ per_action_Q = estimated active-seat final raw score
 target_score_to_go = per_action_Q - exact_afterstate_score_active
 ```
 
-The model's `q_head` predicts score-to-go. Serving derives final Q by adding the
-exact afterstate score back in. Losses must ignore invalid Q targets. Reports
-must separate raw score-to-go error from derived-final-Q regret.
+The legacy `q_head` predicts score-to-go. With `--q-decomposition`, the model
+instead predicts three action-conditioned category residuals and defines
+score-to-go as their sum. Serving derives final Q by adding the exact
+afterstate score back in. Losses must ignore invalid Q targets. Reports must
+separate raw score-to-go error from derived-final-Q regret.
+
+Structured category supervision exists only for the selected real action:
+
+```text
+target_category_score_to_go =
+    terminal_category_score(active_seat)
+    - exact_selected_afterstate_category_score(active_seat)
+```
+
+Unselected actions retain ordinary completed-Q supervision on the summed
+component output; assigning them the selected trajectory's terminal category
+vector would be a false counterfactual label.
 
 With `--q-quantiles K` (`K > 1`), the head is trained by pinball loss at
 centered quantile levels `(k + 0.5) / K`; its ordinary `q` output remains the
@@ -195,7 +215,8 @@ champion, and rejected models remain opponent-diversity material.
 Canonical plan: [GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md).
 Summary:
 
-- Exporter mode: `--gumbel-selfplay-tensor-corpus` (schema v3; requires
+- Exporter mode: `--gumbel-selfplay-tensor-corpus` (new generation is schema
+  v4; requires
   `--source-revision`). All four
   seats play via Gumbel top-m search with batched model leaf values over
   hidden-redeterminized states; every visited root exports completed-Q
@@ -216,11 +237,31 @@ Summary:
   one-hot improved policy, and therefore provide an exact zero-score-to-go
   terminal target rather than a model/search estimate.
 - Before a shard becomes training input, independently verify its NPZ SHA and
-  embedded v3 provenance. Shards generated before the v3 contract are
+  embedded v3+ provenance. Shards generated before the v3 contract are
   audit-only when the missing fields cannot be recovered from immutable
   launch evidence.
 - Runner: `cascadiav3/scripts/run_gumbel_selfplay_cycle.sh` (delegates to
   the full pipeline with `EXPERT_TENSOR_MODE=gumbel_selfplay`).
+
+### Structured-Q pilot
+
+Schema v4 is the sole accepted input for the action-conditioned decomposition:
+
+```text
+--objective gumbel-selfplay-structured-q
+--q-decomposition
+--init-manifest <incumbent>
+--init-skip-mismatched
+--q-decomposition-head-only
+```
+
+The objective retains the normal Gumbel policy/value losses and completed-Q
+loss, adding a 0.5-weight selected-action component loss. The first kill test
+must be head-only: it freezes the trunk and every established head, trains only
+`q_component_head`, and selects on untouched locked validation. Only after the
+head clears its preregistered validation threshold should a full fine-tune or
+paired gameplay battery consume GPU time. A lower component loss is not
+promotion evidence.
 
 ### Pairwise comparator pilot
 

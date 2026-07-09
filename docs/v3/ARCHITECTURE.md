@@ -142,14 +142,31 @@ comparisons (`3.4889` versus best-baseline `4.1528` RMSE, 760 untouched
 non-exact roots). This authorizes an action-conditioned decomposition design,
 but not the direct-final ridge used by the probe.
 
-The production design remains exact-grounded: export the active seat's exact
-afterstate wildlife/habitat/Nature vector for every action, predict the
-category score-to-go residuals, and sum exact components plus predicted
-residuals for final Q. Selected real outcomes provide category supervision;
-all q-valid actions retain scalar/distributional completed-Q supervision on
-the component sum. No structured checkpoint may serve until the schema,
-filter/materialization paths, bridge provenance, and derived-Q rank-flip tests
-cover this contract.
+The exact-grounded design is now implemented behind
+`q_decomposition=false` by default. Schema v4 exports the active seat's exact
+afterstate wildlife/habitat/Nature vector for every action. The optional head
+predicts three category score-to-go residuals and defines ordinary Q as their
+exact sum:
+
+```text
+predicted_score_to_go = sum(predicted_category_score_to_go)
+derived_final_q = exact_afterstate_score_active + predicted_score_to_go
+```
+
+The bridge's scalar exact-afterstate addition is algebraically identical to
+summing the three exact components and three residuals. Selected real outcomes
+provide category supervision as `terminal_components - selected_afterstate_components`;
+counterfactual actions do not receive invented category labels. All q-valid
+actions retain scalar/distributional completed-Q supervision on the component
+sum. Distributional mode emits category quantiles and sums corresponding
+quantile levels before existing risk selection.
+
+When disabled, `q_component_head` is absent and the legacy state-dict/output
+contract is unchanged. Schema loading, filtering, relation-tail materialization,
+collation, terminal/afterstate sum invariants, head-only freezing, checkpoint
+reload, and derived-Q serving are tested. This makes the implementation safe
+to run; promotion still requires the preregistered head-first validation gate
+and paired gameplay.
 
 ### Pairwise comparator (experimental)
 

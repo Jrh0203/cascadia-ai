@@ -73,6 +73,7 @@ def model_artifact_provenance(binary: Path, manifest: Path) -> dict[str, Any]:
         "checkpoint_tag": payload.get("checkpoint_tag"),
         "checkpoint_step": payload.get("step"),
         "q_quantiles": int(payload.get("config", {}).get("q_quantiles", 1)),
+        "q_decomposition": bool(payload.get("config", {}).get("q_decomposition", False)),
         "pairwise_comparator": bool(payload.get("config", {}).get("pairwise_comparator", False)),
         "pairwise_rank": int(payload.get("config", {}).get("pairwise_rank", 0)),
     }

@@ -4342,3 +4342,58 @@ actions. Report JSON SHA:
 An independent repeat on the same MPS host was byte-identical for both JSON
 and Markdown. The complete Python gate is 140/140 passing with 45 expected
 fixture skips; Python compilation and the diff whitespace check pass.
+
+## 2026-07-09 — Exact-grounded structured-Q path implemented (no model verdict yet)
+
+Purpose: turn the passed representation preflight into an honest trainable
+architecture without assigning the selected trajectory's category outcome to
+counterfactual actions. This is implementation and contract evidence only;
+no gameplay, strength, or promotion claim is attached.
+
+New Gumbel self-play generation writes
+`cascadiav3.expert_tensor_shard.v4`. Each record carries `active_seat`; each
+legal action carries exact afterstate wildlife, habitat (including any habitat
+bonus), and Nature-token components. Those components must sum to
+`exact_afterstate_score_active`, and each terminal three-component vector must
+sum to `final_score_vector`. The Rust exporter, NPZ writer, Python mmap/NPZ
+reader, action filter, fixed-capacity relation-tail materializer, corpus
+collator, and schema registry all preserve and validate the contract. v1-v3
+remain readable; only v4 is admitted to structured-Q training.
+
+CascadiaFormer adds opt-in `q_decomposition`. The new projection emits three
+action-conditioned score-to-go residuals per action (and per quantile when
+distributional); ordinary `q` is their exact sum. Thus the unchanged serving
+identity remains:
+
+```text
+derived_final_q = exact_afterstate_score_active + sum(predicted components)
+```
+
+The loss uses terminal active-seat components minus the selected action's
+exact afterstate components. It is applied only to the selected real action.
+Every q-valid action still receives scalar/distributional completed-Q
+supervision on the component sum. The default objective weight is `0.5` under
+`gumbel-selfplay-structured-q`. `q-decomposition-head-only` freezes the trunk
+and all incumbent heads; for scalar Q it exposes exactly `3 * (d_model + 1)`
+parameters. Checkpoint/benchmark/exporter provenance now records
+`q_decomposition`, and the bridge reloads/serves the summed output without a
+new wire protocol.
+
+The implementation tests legacy parameter-contract preservation, scalar and
+distributional sum identities, exact target arithmetic, malformed afterstate
+and terminal component rejection, filter/tail/collation survival, v4-only
+trainer admission, head-only freezing, checkpoint reload, and an end-to-end
+two-step v4 training smoke. That smoke uncovered a pre-existing trainer bug:
+packed examples selected by `--overfit-one-batch` were mislabeled as JSONL and
+failed in the JSON collator. An in-memory tensor-corpus wrapper now preserves
+the NPZ dispatch contract.
+
+Final local gate: 150/150 Python 3.12 tests passed with 45 expected
+fixture-dependent skips; 46/46 real-root-exporter tests passed; workspace
+`cargo check` passed with only the pre-existing unused API-field warning; the
+schema registry and changed-file formatting/whitespace checks passed.
+
+Scientific next step: generate a small fresh corrected-rules v4 train/locked-
+validation pair, warm-start the incumbent with `--init-skip-mismatched`, and
+run only the frozen component-head kill test. Full fine-tuning and gameplay
+remain gated on that result.
