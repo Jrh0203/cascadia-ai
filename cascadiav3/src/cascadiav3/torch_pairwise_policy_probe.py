@@ -54,6 +54,7 @@ def run_probe(
     device_name: str,
     batch_size: int,
     max_records: int,
+    policy_top_k: int = 16,
 ) -> dict[str, Any]:
     import torch
     import torch.nn.functional as F
@@ -62,6 +63,8 @@ def run_probe(
         raise ValueError("batch_size must be positive")
     if max_records < 0:
         raise ValueError("max_records must be nonnegative")
+    if policy_top_k <= 1:
+        raise ValueError("policy_top_k must be greater than one")
     manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
     config_payload = manifest_payload.get("config", {})
     if not bool(config_payload.get("pairwise_comparator", False)):
@@ -103,6 +106,8 @@ def run_probe(
         pair_weighted_loss = 0.0
         exact_endgame_roots = 0
         eligible_policy_roots = 0
+        global_best_in_candidate_roots = 0
+        candidate_coverage_roots = 0
 
         with torch.inference_mode():
             for start in range(0, record_count, batch_size):
@@ -121,6 +126,7 @@ def run_probe(
                     pairwise_left_indices=batch["pairwise_left_indices"],
                     pairwise_right_indices=batch["pairwise_right_indices"],
                     return_pairwise_borda=True,
+                    pairwise_borda_top_k=policy_top_k,
                 )
 
                 pair_logits = outputs["pairwise_logits"].float()
@@ -143,14 +149,27 @@ def run_probe(
                 if exact is not None:
                     exact_endgame_roots += int(exact.sum().cpu())
                 q_valid = batch["q_valid"] & batch["action_mask"]
+                candidate_mask = outputs["pairwise_borda_mask"] & q_valid
                 target_q = batch["target_q"]
                 q_count = batch["target_q_count"]
                 q_variance = batch["target_q_variance"]
-                valid_counts = q_valid.sum(dim=1)
-                top_values, top_indices = target_q.masked_fill(~q_valid, -torch.inf).topk(2, dim=1)
+                valid_counts = candidate_mask.sum(dim=1)
+                top_values, top_indices = target_q.masked_fill(
+                    ~candidate_mask,
+                    -torch.inf,
+                ).topk(2, dim=1)
                 best = top_indices[:, 0]
                 second = top_indices[:, 1]
                 rows = torch.arange(target_q.shape[0], device=device)
+                roots_with_candidates = valid_counts >= 1
+                global_best = target_q.masked_fill(~q_valid, -torch.inf).argmax(dim=1)
+                global_best_in_candidate_roots += int(
+                    (
+                        candidate_mask[rows, global_best]
+                        & roots_with_candidates
+                    ).sum().cpu()
+                )
+                candidate_coverage_roots += int(roots_with_candidates.sum().cpu())
                 best_count = q_count[rows, best]
                 second_count = q_count[rows, second]
                 margin = top_values[:, 0] - top_values[:, 1]
@@ -183,7 +202,7 @@ def run_probe(
                 }
                 best_q = top_values[:, 0]
                 for mode, logits in policy_logits.items():
-                    predicted = logits.masked_fill(~q_valid, -torch.inf).argmax(dim=1)
+                    predicted = logits.masked_fill(~candidate_mask, -torch.inf).argmax(dim=1)
                     selected_q = target_q[rows, predicted]
                     mode_totals[mode]["correct"] += float(
                         ((predicted == best) & eligible).sum().cpu()
@@ -199,7 +218,7 @@ def run_probe(
         raise ValueError("probe found no confidence-qualified policy roots/pairs")
     return {
         "status": "pass",
-        "schema_id": "cascadiav3.pairwise_policy_probe.v1",
+        "schema_id": "cascadiav3.pairwise_policy_probe.v2",
         "scientific_eligibility": "offline_policy_routing_only_not_gameplay",
         "ruleset_id": ruleset_ids[0],
         "source_revision": source_revisions[0],
@@ -211,6 +230,16 @@ def run_probe(
             "min_margin": float(model.config.pairwise_min_margin),
             "min_snr": float(model.config.pairwise_min_snr),
             "max_pairs_per_root": int(model.config.pairwise_max_pairs_per_root),
+            "incumbent_policy_top_k": policy_top_k,
+        },
+        "candidate_set": {
+            "root_count": candidate_coverage_roots,
+            "global_completed_q_best_covered_count": global_best_in_candidate_roots,
+            "global_completed_q_best_coverage": (
+                global_best_in_candidate_roots / candidate_coverage_roots
+                if candidate_coverage_roots
+                else None
+            ),
         },
         "pairwise": {
             "directed_pair_count": pair_count,
@@ -236,6 +265,9 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         "",
         f"Records: `{report['record_count']}`",
         f"Eligible policy roots: `{report['eligible_policy_root_count']}`",
+        f"Incumbent policy candidate cap: `{report['confidence_gate']['incumbent_policy_top_k']}`",
+        "Global completed-Q best covered by candidate set: "
+        f"`{report['candidate_set']['global_completed_q_best_coverage']:.2%}`",
         f"Directed pairs: `{report['pairwise']['directed_pair_count']}`",
         f"Pairwise accuracy: `{report['pairwise']['accuracy']:.2%}`",
         f"Weighted pairwise accuracy: `{report['pairwise']['weighted_accuracy']:.2%}`",
@@ -264,6 +296,7 @@ def main() -> None:
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--max-records", type=int, default=0)
+    parser.add_argument("--policy-top-k", type=int, default=16)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--summary-out", type=Path)
     args = parser.parse_args()
@@ -273,6 +306,7 @@ def main() -> None:
         device_name=args.device,
         batch_size=args.batch_size,
         max_records=args.max_records,
+        policy_top_k=args.policy_top_k,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

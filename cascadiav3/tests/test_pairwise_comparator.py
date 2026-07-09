@@ -258,10 +258,18 @@ class PairwiseComparatorTest(unittest.TestCase):
                 device_name="cpu",
                 batch_size=1,
                 max_records=0,
+                policy_top_k=2,
             )
+            self.assertEqual(report["schema_id"], "cascadiav3.pairwise_policy_probe.v2")
             self.assertEqual(report["record_count"], 1)
             self.assertEqual(report["eligible_policy_root_count"], 1)
             self.assertEqual(report["pairwise"]["directed_pair_count"], 2)
+            self.assertEqual(report["confidence_gate"]["incumbent_policy_top_k"], 2)
+            self.assertEqual(report["candidate_set"]["root_count"], 1)
+            self.assertIn(
+                report["candidate_set"]["global_completed_q_best_covered_count"],
+                (0, 1),
+            )
             self.assertEqual(set(report["policy_modes"]), {
                 "logits",
                 "pairwise-borda",

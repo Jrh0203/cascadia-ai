@@ -249,8 +249,10 @@ actions assign support to unseen long-tail actions.
 
 Run `python -m cascadiav3.torch_pairwise_policy_probe` first. It hashes the
 checkpoint and every v3 validation shard, requires one source/rules contract,
-and reports top-1 plus completed-Q regret for all three policy modes only on
-confidence-qualified top-two roots.
+and reports top-1 plus completed-Q regret for all three policy modes within the
+same incumbent candidate mask used by serving (`--policy-top-k 16`). The
+confidence gate is applied to the best two completed-Q actions in that mask,
+and global completed-Q-best coverage is reported separately.
 
 Current data gate: v3 corrected-rules shards only. The July 9 240-root audit
 found 27,360 raw pairs but only 23.33% variance-evaluable; 14.58% of those
