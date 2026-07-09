@@ -81,6 +81,8 @@ Important runners:
 - `run_gumbel_phase_a_gate.sh` (Gumbel vs honest rollout search, 100 paired games)
 - `run_gumbel_ceiling_probe.sh` (512-sim, w=1.0 model-ceiling probe)
 - `run_gumbel_selfplay_cycle.sh` (EI-2+ self-play generation + training)
+- `run_exact_k1_gate.sh` (fresh same-revision n256/d4 baseline versus exact
+  final-personal-turn search, trace-validated before a verdict)
 
 Gumbel exporter modes (see `--help`):
 
@@ -88,6 +90,14 @@ Gumbel exporter modes (see `--help`):
 - `--gumbel-selfplay-tensor-corpus`: schema-v2 self-play training shards with
   completed-Q targets, improved-policy soft targets, and real-outcome value
   labels.
+- `--gumbel-exact-endgame-turns 1`: enumerate the complete legal menu and
+  choose by exact own final score on each seat's last personal turn. The
+  model and simulations are bypassed for those four decisions; optional
+  refresh acceptance is still decided before the hidden replacement draw.
+- `python -m cascadiav3.compare_exact_endgame`: compare exact-off/K1 reports
+  only after validating rules, source, checkpoint name, seeds, all other
+  search settings, exact-decision counts, and identical action traces through
+  ply 75. A pre-K1 divergence invalidates the ablation.
 - `--rollout-determinize`: public-information-legal rollouts for the legacy
   search path (honest baselines).
 

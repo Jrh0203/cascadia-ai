@@ -2283,6 +2283,119 @@ class BenchmarkStatsTest(unittest.TestCase):
         self.assertEqual(low["paired_delta_stats"]["mean"], 1.5)
         self.assertEqual(result["reports"]["cycle4_n256_d4"]["market_decisions"]["declined"], 1)
 
+    def test_exact_endgame_comparator_validates_contract_and_pairs_reports(self) -> None:
+        from cascadiav3.compare_exact_endgame import RULESET_ID, build_comparison
+
+        def report(exact_turns: int, scores: list[float]) -> dict[str, object]:
+            return {
+                "status": "pass",
+                "ruleset_id": RULESET_ID,
+                "source_revision": "tested-revision",
+                "experiment_id": f"exact-{exact_turns}",
+                "manifest": f"/host-{exact_turns}/best_locked_val.manifest.json",
+                "seeds": [1, 2],
+                "search": {
+                    "n_simulations": 16,
+                    "determinizations": 2,
+                    "market_decision_samples": 4,
+                    "exact_endgame_turns": exact_turns,
+                },
+                "control": {"kind": "none"},
+                "strategies": {
+                    "gumbel-search": {
+                        "mean_seat_score": sum(scores) / len(scores),
+                        "mean_total_decision_seconds": 2.0 - 0.5 * exact_turns,
+                    }
+                },
+                "candidate_per_seed": [
+                    {"seed": seed, "mean_score_per_seat": score, "seat_scores": [score] * 4}
+                    for seed, score in zip((1, 2), scores)
+                ],
+                "market_decisions": {"exact_endgame_decisions": 8 * exact_turns},
+                "candidate_decision_seconds_p50": 1.0,
+                "candidate_decision_seconds_p95": 3.0 - exact_turns,
+                "candidate_wall_seconds": 20.0 - 5.0 * exact_turns,
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            baseline_path = root / "baseline.json"
+            exact_path = root / "exact.json"
+            baseline_decisions_path = root / "baseline_decisions.jsonl"
+            exact_decisions_path = root / "exact_decisions.jsonl"
+            baseline_path.write_text(json.dumps(report(0, [90.0, 92.0])), encoding="utf-8")
+            exact_path.write_text(json.dumps(report(1, [91.0, 94.0])), encoding="utf-8")
+            baseline_rows = []
+            exact_rows = []
+            for seed in (1, 2):
+                for ply in range(80):
+                    base = {
+                        "type": "gumbel_decision",
+                        "ruleset_id": RULESET_ID,
+                        "seed": seed,
+                        "ply": ply,
+                        "chosen_action_id": f"action-{seed}-{ply}",
+                        "free_three_of_a_kind_choice": "not_available",
+                        "exact_endgame": False,
+                        "total_simulations_run": 16,
+                        "decision_seconds": 1.0,
+                    }
+                    baseline_rows.append(base)
+                    exact_rows.append(
+                        base
+                        | {
+                            "chosen_action_id": (
+                                base["chosen_action_id"] if ply < 76 else f"exact-{seed}-{ply}"
+                            ),
+                            "exact_endgame": ply >= 76,
+                            "total_simulations_run": 0 if ply >= 76 else 16,
+                        }
+                    )
+            baseline_decisions_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in baseline_rows), encoding="utf-8"
+            )
+            exact_decisions_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in exact_rows), encoding="utf-8"
+            )
+            result = build_comparison(
+                baseline_path,
+                exact_path,
+                baseline_decisions_path,
+                exact_decisions_path,
+                "tested-revision",
+            )
+
+            self.assertEqual(result["paired_delta_stats"]["mean"], 1.5)
+            self.assertEqual(result["exact_decisions"], 8)
+            self.assertEqual(result["exact_frontier"]["action_changes"], 8)
+            self.assertEqual(result["exact_frontier"]["speedup"], 1.0)
+            self.assertEqual(result["seat0_exact_score_deltas"], [1.0, 2.0])
+            self.assertAlmostEqual(result["timing"]["mean_decision_speedup"], 4.0 / 3.0)
+
+            broken = report(1, [91.0, 94.0])
+            broken["market_decisions"] = {"exact_endgame_decisions": 7}
+            exact_path.write_text(json.dumps(broken), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "expected 8"):
+                build_comparison(
+                    baseline_path,
+                    exact_path,
+                    baseline_decisions_path,
+                    exact_decisions_path,
+                )
+
+            exact_path.write_text(json.dumps(report(1, [91.0, 94.0])), encoding="utf-8")
+            exact_rows[5]["chosen_action_id"] = "early-divergence"
+            exact_decisions_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in exact_rows), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "pre-K1 action trace diverges"):
+                build_comparison(
+                    baseline_path,
+                    exact_path,
+                    baseline_decisions_path,
+                    exact_decisions_path,
+                )
+
 
 class GumbelBatchRunnerTest(unittest.TestCase):
     """Contract tests for the --gumbel-benchmark-batch per-seed JSONL path."""
@@ -2383,6 +2496,7 @@ class GumbelBatchRunnerTest(unittest.TestCase):
                 depth_rounds=1,
                 determinizations=2,
                 market_decision_samples=2,
+                exact_endgame_turns=1,
                 blend_weight=1.0,
                 k_interior=3,
                 max_root_actions=None,
@@ -2397,6 +2511,14 @@ class GumbelBatchRunnerTest(unittest.TestCase):
             self.assertEqual(len(result["done"]["scores"]), 4)
             self.assertGreater(len(result["decisions"]), 0)
             self.assertEqual(result["done"]["turns"], len(result["decisions"]))
+            exact_decisions = [
+                decision for decision in result["decisions"] if decision["exact_endgame"]
+            ]
+            self.assertEqual(len(exact_decisions), 4)
+            self.assertTrue(
+                all(decision["total_simulations_run"] == 0 for decision in exact_decisions)
+            )
+            self.assertEqual(result["done"]["search"]["exact_endgame_turns"], 1)
 
 
 class ValidationCliTest(unittest.TestCase):

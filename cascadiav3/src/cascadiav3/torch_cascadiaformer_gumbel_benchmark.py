@@ -77,6 +77,7 @@ def run_gumbel_games(
     rollout_top_k: int,
     model_timeout_ms: int,
     exploration: bool,
+    exact_endgame_turns: int = 0,
     peek: bool = False,
     table_total: bool = False,
     table_native_q: bool = False,
@@ -108,6 +109,8 @@ def run_gumbel_games(
         str(determinizations),
         "--gumbel-market-decision-samples",
         str(market_decision_samples),
+        "--gumbel-exact-endgame-turns",
+        str(exact_endgame_turns),
         "--gumbel-blend-weight",
         str(blend_weight),
         "--gumbel-exploration",
@@ -185,6 +188,7 @@ def run_gumbel_games_batch(
     rollout_top_k: int,
     model_timeout_ms: int,
     exploration: bool,
+    exact_endgame_turns: int = 0,
     peek: bool = False,
     table_total: bool = False,
     table_native_q: bool = False,
@@ -222,6 +226,8 @@ def run_gumbel_games_batch(
             str(determinizations),
             "--gumbel-market-decision-samples",
             str(market_decision_samples),
+            "--gumbel-exact-endgame-turns",
+            str(exact_endgame_turns),
             "--gumbel-blend-weight",
             str(blend_weight),
             "--gumbel-exploration",
@@ -278,6 +284,7 @@ def collect_gumbel_results(lines: list[dict[str, Any]]) -> list[dict[str, Any]]:
                         "turns": line.get("decision_count"),
                         "elapsed_seconds": line.get("elapsed_seconds"),
                         "final_state_hash": None,
+                        "search": line.get("search"),
                     },
                     "decisions": decisions_by_seed.get(seed, []),
                 }
@@ -301,6 +308,7 @@ def summarize_market_decisions(lines: list[dict[str, Any]]) -> dict[str, Any]:
     ]
     return {
         "total_decisions": len(decisions),
+        "exact_endgame_decisions": sum(bool(row.get("exact_endgame")) for row in decisions),
         "available_decisions": available,
         "accepted": counts["accept"],
         "declined": counts["decline"],
@@ -342,6 +350,7 @@ def run_gumbel_benchmark(
     model_timeout_ms: int,
     experiment_id: str,
     batch_runner: bool = False,
+    exact_endgame_turns: int = 0,
     peek: bool = False,
     table_total: bool = False,
     table_native_q: bool = False,
@@ -350,6 +359,12 @@ def run_gumbel_benchmark(
     source_revision: str | None = None,
     decision_rows_path: Path | None = None,
 ) -> dict[str, Any]:
+    if exact_endgame_turns not in (0, 1):
+        raise ValueError("exact_endgame_turns currently supports only 0 or 1")
+    if exact_endgame_turns and (table_total or table_native_q):
+        raise ValueError(
+            "exact final-personal-turn solving is incompatible with table-total objectives"
+        )
     service = model_service or default_model_service_command(manifest, device_name)
 
     candidate_lines: list[dict[str, Any]] = []
@@ -372,6 +387,7 @@ def run_gumbel_benchmark(
                 depth_rounds=depth_rounds,
                 determinizations=determinizations,
                 market_decision_samples=market_decision_samples,
+                exact_endgame_turns=exact_endgame_turns,
                 blend_weight=blend_weight,
                 k_interior=k_interior,
                 max_root_actions=max_root_actions,
@@ -407,6 +423,7 @@ def run_gumbel_benchmark(
                     depth_rounds=depth_rounds,
                     determinizations=determinizations,
                     market_decision_samples=market_decision_samples,
+                    exact_endgame_turns=exact_endgame_turns,
                     blend_weight=blend_weight,
                     k_interior=k_interior,
                     max_root_actions=max_root_actions,
@@ -543,6 +560,7 @@ def run_gumbel_benchmark(
             "depth_rounds": depth_rounds,
             "determinizations": determinizations,
             "market_decision_samples": market_decision_samples,
+            "exact_endgame_turns": exact_endgame_turns,
             "blend_weight": blend_weight,
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
@@ -645,6 +663,13 @@ def main() -> int:
         help="Hidden replacement samples used to decide optional three-of-a-kind refresh",
     )
     parser.add_argument(
+        "--gumbel-exact-endgame-turns",
+        type=int,
+        choices=[0, 1],
+        default=0,
+        help="Use exact own-score action selection on the final personal turn (1=on)",
+    )
+    parser.add_argument(
         "--gumbel-peek",
         action="store_true",
         help="ORACLE ONLY: search on the true hidden state (ceiling measurement)",
@@ -713,6 +738,7 @@ def main() -> int:
         depth_rounds=args.gumbel_depth_rounds,
         determinizations=args.gumbel_determinizations,
         market_decision_samples=args.gumbel_market_decision_samples,
+        exact_endgame_turns=args.gumbel_exact_endgame_turns,
         blend_weight=args.gumbel_blend_weight,
         k_interior=args.k_interior,
         max_root_actions=args.gumbel_max_root_actions or None,

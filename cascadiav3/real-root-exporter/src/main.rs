@@ -80,6 +80,7 @@ struct Args {
     gumbel_depth_rounds: usize,
     gumbel_determinizations: usize,
     gumbel_market_decision_samples: usize,
+    gumbel_exact_endgame_turns: usize,
     gumbel_blend_weight: f64,
     gumbel_exploration: bool,
     gumbel_peek: bool,
@@ -346,6 +347,7 @@ fn parse_args() -> Result<Args> {
         gumbel_depth_rounds: 1,
         gumbel_determinizations: 4,
         gumbel_market_decision_samples: 8,
+        gumbel_exact_endgame_turns: 0,
         gumbel_blend_weight: 0.5,
         gumbel_exploration: false,
         gumbel_peek: false,
@@ -432,6 +434,14 @@ fn parse_args() -> Result<Args> {
                     .context("invalid --gumbel-market-decision-samples")?;
                 if args.gumbel_market_decision_samples == 0 {
                     bail!("--gumbel-market-decision-samples must be positive");
+                }
+            }
+            "--gumbel-exact-endgame-turns" => {
+                args.gumbel_exact_endgame_turns = value()?
+                    .parse()
+                    .context("invalid --gumbel-exact-endgame-turns")?;
+                if args.gumbel_exact_endgame_turns > 1 {
+                    bail!("--gumbel-exact-endgame-turns currently supports only 0 or 1");
                 }
             }
             "--gumbel-blend-weight" => {
@@ -567,6 +577,11 @@ fn parse_args() -> Result<Args> {
         if args.k_interior == 0 {
             bail!("--k-interior must be positive");
         }
+        if args.gumbel_exact_endgame_turns > 0
+            && (args.gumbel_table_total || args.gumbel_table_native_q)
+        {
+            bail!("--gumbel-exact-endgame-turns is incompatible with table-total objectives");
+        }
     }
     if args.mode == Mode::GumbelBenchmarkBatch && args.output_dir.is_none() {
         bail!("--gumbel-benchmark-batch requires --output-dir <dir> for per-seed JSONL outputs");
@@ -679,6 +694,12 @@ Options:
                                (1 = off, max 6). k× eval cost.
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
+  --gumbel-market-decision-samples <n>
+                           Hidden replacement samples used before accepting
+                           an optional three-of-a-kind refresh [8].
+  --gumbel-exact-endgame-turns <0|1>
+                           Replace model/search with exact own final-score
+                           selection on the last personal turn [0].
   --gumbel-blend-weight <w>
                            Leaf value = w*model bootstrap + (1-w)*greedy
                            rollout [0.5].
@@ -2430,6 +2451,7 @@ fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfi
         depth_rounds: args.gumbel_depth_rounds,
         determinization_samples: args.gumbel_determinizations,
         market_decision_samples: args.gumbel_market_decision_samples,
+        exact_endgame_turns: args.gumbel_exact_endgame_turns,
         rollout_blend_weight: args.gumbel_blend_weight,
         rollout_max_actions: args.max_actions,
         rollout_top_k: args.rollout_top_k,
@@ -2970,6 +2992,7 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
         "depth_rounds": args.gumbel_depth_rounds,
         "determinization_samples": args.gumbel_determinizations,
         "market_decision_samples": args.gumbel_market_decision_samples,
+        "exact_endgame_turns": args.gumbel_exact_endgame_turns,
         "rollout_blend_weight": args.gumbel_blend_weight,
         "exploration": args.gumbel_exploration,
         "k_interior": args.k_interior,
@@ -2986,6 +3009,7 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
 fn gumbel_selfplay_root_record(
     row: &gumbel::EvalRow,
     result: &gumbel::GumbelSearchResult,
+    exact_endgame: bool,
     market_branches_searched: usize,
     market_chance_samples: usize,
     total_simulations_run: usize,
@@ -3082,6 +3106,7 @@ fn gumbel_selfplay_root_record(
             "market_branches_searched": market_branches_searched,
             "market_chance_samples": market_chance_samples,
             "total_simulations_run": total_simulations_run,
+            "exact_endgame": exact_endgame,
             "search": gumbel_search_metadata(args, result),
         },
     }))
@@ -3138,11 +3163,13 @@ fn play_gumbel_selfplay_seed(
         let market_branches_searched = decision.market_branches_searched;
         let market_chance_samples = decision.market_chance_samples;
         let total_simulations_run = decision.total_simulations_run;
+        let exact_endgame = decision.exact_endgame;
         let row = decision.row;
         let result = decision.result;
         let record = gumbel_selfplay_root_record(
             &row,
             &result,
+            exact_endgame,
             market_branches_searched,
             market_chance_samples,
             total_simulations_run,
@@ -3380,6 +3407,7 @@ fn play_gumbel_policy_game_seed(
         let market_branches_searched = decision.market_branches_searched;
         let market_chance_samples = decision.market_chance_samples;
         let total_simulations_run = decision.total_simulations_run;
+        let exact_endgame = decision.exact_endgame;
         let row = decision.row;
         let result = decision.result;
         let chosen = &row.afterstates[result.chosen_index];
@@ -3396,6 +3424,7 @@ fn play_gumbel_policy_game_seed(
             "market_branches_searched": market_branches_searched,
             "market_chance_samples": market_chance_samples,
             "total_simulations_run": total_simulations_run,
+            "exact_endgame": exact_endgame,
             "free_three_of_a_kind_choice": if row.prelude.replace_three_of_a_kind {
                 "accept"
             } else if row.staged.market().three_of_a_kind().is_some() {
@@ -3428,6 +3457,7 @@ fn play_gumbel_policy_game_seed(
             "depth_rounds": args.gumbel_depth_rounds,
             "determinization_samples": args.gumbel_determinizations,
             "market_decision_samples": args.gumbel_market_decision_samples,
+            "exact_endgame_turns": args.gumbel_exact_endgame_turns,
             "rollout_blend_weight": args.gumbel_blend_weight,
             "exploration": args.gumbel_exploration,
             "k_interior": args.k_interior,
@@ -3537,6 +3567,7 @@ fn suggest_for_request(
     let market_branches_searched = decision.market_branches_searched;
     let market_chance_samples = decision.market_chance_samples;
     let total_simulations_run = decision.total_simulations_run;
+    let exact_endgame = decision.exact_endgame;
     let row = decision.row;
     let result = decision.result;
     // Candidate actions are relative to their selected staged market. Merge
@@ -3565,6 +3596,7 @@ fn suggest_for_request(
         "market_branches_searched": market_branches_searched,
         "market_chance_samples": market_chance_samples,
         "total_simulations_run": total_simulations_run,
+        "exact_endgame": exact_endgame,
         "free_three_of_a_kind_choice": if row.prelude.replace_three_of_a_kind {
             "accept"
         } else if row.staged.market().three_of_a_kind().is_some() {
@@ -5445,6 +5477,7 @@ mod tests {
             gumbel_depth_rounds: 1,
             gumbel_determinizations: 2,
             gumbel_market_decision_samples: 2,
+            gumbel_exact_endgame_turns: 0,
             gumbel_blend_weight: 1.0,
             gumbel_exploration: false,
             gumbel_max_root_actions: None,

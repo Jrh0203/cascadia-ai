@@ -56,6 +56,42 @@ wildlife `+0.6075`, habitat `+1.8775`, Nature Tokens `+0.8625`. The direct
 transformer policy's clearest edge is therefore habitat construction plus
 resource restraint, not merely larger immediate wildlife patterns.
 
+### Exact final-personal-turn frontier (K1, 2026-07-09)
+
+The first exact-endgame slice is implemented behind
+`--gumbel-exact-endgame-turns 1`. When the active seat has one personal turn
+left, every afterstate already contains that seat's final score. The policy
+therefore enumerates the complete legal menu, ignores the serving root-menu
+cap, and chooses the exact maximum without a model call or simulation. The
+free-refresh branch remains decision → chance → draft: exact accepted-market
+optima are averaged over hidden replacement samples before the real draw is
+revealed. K>1 and table-total combinations are rejected because neither has
+this one-ply terminal identity.
+
+The permanent comparator validates rules, source, checkpoint name, seeds,
+all non-K1 search settings, 80-row trace coverage, identical actions through
+ply 75, exactly four zero-simulation K1 decisions per game, and seat-0 exact
+score non-regression. This caught two invalid MPS comparisons that an ordinary
+paired-score script would have misreported: cross-host execution diverged at
+ply 5; same-host two-worker execution diverged at ply 24. A same-host
+four-worker exact arm also hit a Metal command-buffer OOM. These are ops
+findings, not K1 results.
+
+The valid serial john4 smoke used two matched seeds at n16/d2, pure bootstrap,
+and four market samples. Pre-K1 traces were identical. Baseline and K1 both
+scored `92.25`; per-seed deltas were `0/0`, so the score verdict is
+inconclusive engineering-only evidence. K1 changed 6/8 final actions but chose
+equal-scoring alternatives; seat-0 deltas were `0/0`. The exact frontier was
+`8.86x` faster (`4.212s` → `0.476s` across eight decisions), which became only
+a `1.2%` mean-decision / `1.3%` wall-clock improvement over whole games.
+
+**Verdict: proceed to the preregistered 100-seed corrected n256/d4 CUDA
+gate, but do not claim strength.** The smoke establishes correctness and a
+local cost win, not points. The CUDA gate regenerates both arms from the same
+new revision and rejects any pre-K1 trace divergence. Extending to K2 remains
+conditional on that score/cost verdict; K2 requires a genuine max^n/chance
+tree, not another one-ply shortcut.
+
 ---
 
 ## 1. Architecture
@@ -303,7 +339,7 @@ No points directly; halves the cost of every probe and EI cycle.
 
 ---
 
-## 5. Future research directions (ranked, as of 07-08 evening)
+## 5. Future research directions (ranked, as of 07-09)
 
 1. **Distributional-Q expert iteration** — ACTIVE (EI-1 overnight). The
    quantile head broke training-side saturation (+0.43 CI+ at n256); the
@@ -311,26 +347,29 @@ No points directly; halves the cost of every probe and EI cycle.
    gate falls within a few cycles. Next knobs if EI-1 pays: K=16
    quantiles, quantile-aware serving (risk-adjusted Q instead of mean),
    distq + L capacity retry (capacity was closed for the SCALAR head).
-2. **Serving from john0-class latency** — engineering: multi-bridge
+2. **Exact final-personal-turn K1** — IMPLEMENTED; 2-seed causal MPS smoke
+   was score-flat and made the exact frontier 8.86x faster. Fresh 100-seed
+   corrected n256/d4 CUDA baseline/K1 gate staged. K2 is gated on that result.
+3. **Serving from john0-class latency** — engineering: multi-bridge
    worker partitioning (~2× generation), single-stream CUDA serving for
    interactive/certification use.
-3. **Table-native q head (cycle-7)** — staged but parked: serving-side
+4. **Table-native q head (cycle-7)** — staged but parked: serving-side
    table objectives measured CI− twice (noise multiplier); the
    training-side variant is theoretically distinct (labels average away
    noise). Revisit only if the distq line stalls AND the gate's
    cooperative reading is confirmed acceptable.
-4. **Search-shape re-sweep under distq** — the n1024/d16 peak was
+5. **Search-shape re-sweep under distq** — the n1024/d16 peak was
    established with the scalar head; a better value function can shift
    the optimal sims/worlds trade (maybe fewer worlds needed → cheaper).
-5. **Free-refresh as a search decision — IMPLEMENTED 2026-07-09, awaiting
+6. **Free-refresh as a search decision — IMPLEMENTED 2026-07-09, awaiting
    corrected rebaseline.** The engine and every automated policy now expose
    and value decline and accept. Gumbel searches separate roots and makes the
    same choice at interior plies. This is a rules correction, not an
    experiment to score against the forced-refresh baseline; all old numbers
    are compatibility-broken. See `RULES_CONTRACT.md`.
-6. **1,000-game certification** — run when a corrected-rules champion plausibly clears
+7. **1,000-game certification** — run when a corrected-rules champion plausibly clears
    ~99+ at 100g; currently premature.
-7. **Closed (do not re-propose without new evidence):** oracle/belief
+8. **Closed (do not re-propose without new evidence):** oracle/belief
    modeling, checkpoint ensembles, leaf softmix, symmetry TTA,
    chance-node expectimax, serving-side table-total, capacity/data
    scaling for the scalar head. See §2/§4 for the measurements.

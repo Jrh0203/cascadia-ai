@@ -11,13 +11,13 @@ afterstate grounding is why the q head works at all).
 
 Ranked by my judgment of payoff × plausibility.
 
-## 1. Exact endgame solving (hybrid neural/exact search)
+## 1. Exact endgame solving (hybrid neural/exact search) — K1 implemented
 
-**Idea.** The last 2–3 plies per seat have small menus and zero remaining
-hidden-draw depth that matters; solve them *exactly* (max^n enumeration over
-determinized bags, or full expectimax over the residual bag) instead of
-estimating with the model. Neural search mid-game, tablebase-style exactness
-where points actually crystallize.
+**Idea.** On a player's final personal turn, every legal afterstate already
+contains that player's final score. Enumerate the complete menu and choose the
+engine-scored maximum instead of adding model score-to-go or search noise.
+Neural search remains responsible for the mid-game; exactness takes over at
+the first frontier where the value identity is rigorous.
 
 **Why it fits the evidence.** It removes eval noise entirely from the
 plies where SNR matters most — endgame placements are worth whole points
@@ -25,11 +25,24 @@ and the noise there is the same size as mid-game. Every point of the
 campaign's +10 came from replacing estimates with exactness or averaging;
 this is the terminal version of that move.
 
-**Sketch.** In `gumbel.rs`, when `turns_remaining(root_seat) <= K`, bypass
-Gumbel: enumerate the full action tree per determinized world, score
-terminal states exactly, average over worlds. K=2 is likely free
-(menus ~30² per seat); K=3 needs pruning. Kill-test: 100g at n256/d4 +
-exact-K2 vs baseline — a week of evenings, all serving-side.
+**Implemented K1 (2026-07-09).** `--gumbel-exact-endgame-turns 1` bypasses
+the evaluator and Gumbel simulations when the active seat has one personal
+turn left, ignores the ordinary root-menu cap, and chooses the maximum exact
+afterstate score with deterministic tie-breaking. The optional refresh keeps
+the correct information boundary: compare decline with exact accepted-market
+optima averaged over public-derived hidden samples, commit, then solve the real
+revealed market. Telemetry marks exact decisions and zero simulations. The
+mode rejects table-total objectives because the table's score is not final
+when an individual seat finishes.
+
+**Correction to the original sketch.** K=2 is not “free.” It crosses opponent
+turns and future public draws, so a rigorous K2 needs a real max^n/chance tree
+with common-random-number determinizations (and a precise table-vs-own-score
+objective), not repeated one-ply exact ranking. The trace-validated 2-seed
+n16/d2 MPS smoke was score-flat, changed 6/8 final actions, and made the exact
+frontier 8.86x faster (only 1.2% over whole-game mean decision time). A fresh
+same-revision 100-game corrected n256/d4 CUDA gate is next. Only a CI-positive
+or material gate-scale cost win justifies building K2.
 
 ## 2. Invert the AlphaZero ratio: tiny model, enormous search
 

@@ -52,6 +52,33 @@ The old forced-refresh EI-1 generation and queued battery were stopped before
 deployment (PGIDs `1225249` and `1228689`). Its 825 partial games/66k roots
 are quarantined as legacy and are not inputs to this campaign.
 
+**First exactness ablation (K1, implemented 07-09):**
+`--gumbel-exact-endgame-turns 1` replaces model/search on each seat's final
+personal turn with complete-menu engine scoring. It still decides an optional
+three-of-a-kind refresh over hidden replacement samples before exposing the
+real draw. Exact rows are explicit in telemetry, use zero simulations, and
+ignore the normal root-menu cap. Unsupported K>1 and table-total combinations
+fail loudly. Full local gates passed (43 exporter tests, 106 Python tests with
+45 fixture-dependent skips, release build, and workspace check). MPS exposed
+two useful invalidation modes: a cross-host pair diverged at ply 5, and even a
+same-host two-worker pair diverged at ply 24; a four-worker exact arm also hit
+a Metal command-buffer OOM. None is score evidence. The final one-worker,
+two-seed john4 smoke passed the causal comparator: plies 0–75 were identical,
+all 8 K1 decisions used zero simulations, seat 0 did not regress, and 6/8
+final actions changed. Score was exactly flat (`92.25` both arms, per-seed
+deltas `0/0`). K1's own eight decisions were `8.86x` faster (`4.212s` to
+`0.476s` total), but whole-arm wall/mean-decision time improved only `1.3%` /
+`1.2%`. This is engineering evidence only. A fresh same-revision 100-seed
+corrected n256/d4 baseline/K1 gate is staged for john0 after the current
+rebaseline and verdict watcher exit.
+
+**Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
+pre-correction forced-refresh binary for roughly nine hours. Those process
+trees were killed and verified absent; no Fleet5 shard artifact existed to
+quarantine. john1's Fleet5 pid file was stale and no process/artifact existed.
+The minis remain engineering/data-generation workers only, never promotion
+gate hosts.
+
 ## RESUME HERE (07-08 evening — distq EI-1 + fleet5 running overnight)
 
 **Day's verdicts (all 100g paired):** distq_k8 n256 **+0.43 CI+** (first

@@ -144,6 +144,19 @@ CascadiaFormer uses separate model rows for sampled accepted markets and, only
 after acceptance, for the real revealed market. See
 [RULES_CONTRACT.md](RULES_CONTRACT.md).
 
+**Exact final-personal-turn frontier:** with
+`--gumbel-exact-endgame-turns 1`, search recognizes that an active seat with
+one personal turn remaining has no score-to-go after its action. It enumerates
+the complete legal menu (ignoring serving pre-filters), scores every afterstate
+with the engine, and deterministically chooses the maximum without invoking
+the model or running simulations. When a free three-of-a-kind refresh is
+available, decline is compared with the mean exact accepted-market optimum
+over public-derived hidden samples; only after acceptance wins is the real
+replacement revealed and solved exactly. This frontier is intentionally
+own-score-only and rejects table-total objectives. K>1 is not implemented:
+it requires genuine multi-seat/chance-tree solving rather than this terminal
+identity.
+
 ## Promotion Philosophy
 
 Validation loss, imitation accuracy, and greedy top-1 retention are diagnostics.

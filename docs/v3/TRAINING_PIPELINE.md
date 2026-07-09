@@ -193,6 +193,11 @@ Summary:
   `TRAIN_SOURCE_WEIGHTS` (e.g. `1.0,0.5,0.25`).
 - Leaf-value blend ramp `w`: 0.5 -> 0.75 -> 1.0 across cycles as the value
   head is retrained on real outcomes.
+- Optional exact serving frontier: `--gumbel-exact-endgame-turns 1` replaces
+  the final personal turn for each seat with complete-menu engine scoring.
+  Exported rows identify `exact_endgame=true`, carry zero simulations and a
+  one-hot improved policy, and therefore provide an exact zero-score-to-go
+  terminal target rather than a model/search estimate.
 - Runner: `cascadiav3/scripts/run_gumbel_selfplay_cycle.sh` (delegates to
   the full pipeline with `EXPERT_TENSOR_MODE=gumbel_selfplay`).
 

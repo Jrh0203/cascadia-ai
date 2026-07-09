@@ -52,6 +52,11 @@ pub struct GumbelConfig {
     /// decision. Kept separate from search worlds so high-d serving does not
     /// multiply every eligible root by the full search determinization count.
     pub market_decision_samples: usize,
+    /// Use exact afterstate scores instead of the evaluator/search when the
+    /// active player has this many personal turns remaining. The implemented
+    /// exact frontier is 1: after that move, the player's own final score is
+    /// fully determined even though other seats may still act.
+    pub exact_endgame_turns: usize,
     /// Leaf value = w * value bootstrap + (1-w) * sampled greedy terminal
     /// rollout. w=1.0 disables CPU rollouts entirely.
     pub rollout_blend_weight: f64,
@@ -108,6 +113,7 @@ impl Default for GumbelConfig {
             depth_rounds: 1,
             determinization_samples: 4,
             market_decision_samples: 8,
+            exact_endgame_turns: 0,
             rollout_blend_weight: 0.5,
             rollout_max_actions: 8,
             rollout_top_k: 4,
@@ -173,6 +179,7 @@ pub struct GumbelSearchResult {
 pub struct GumbelTurnDecision {
     pub row: EvalRow,
     pub result: GumbelSearchResult,
+    pub exact_endgame: bool,
     pub market_branches_searched: usize,
     pub market_chance_samples: usize,
     pub total_simulations_run: usize,
@@ -217,6 +224,45 @@ fn selected_completed_q(result: &GumbelSearchResult) -> Result<f64> {
         .get(result.chosen_index)
         .copied()
         .context("chosen gumbel action is absent from completed Q")
+}
+
+/// Exact one-ply solver for a player's final personal turn. Every action's
+/// afterstate already contains that player's exact final score, so model
+/// score-to-go and simulations can only add noise. Strict comparison keeps
+/// the first legal action on ties, matching the engine's deterministic menu
+/// order.
+fn exact_final_turn_result(row: &EvalRow) -> Result<GumbelSearchResult> {
+    let completed_q: Vec<f64> = row
+        .afterstates
+        .iter()
+        .map(|afterstate| afterstate.exact_score_active)
+        .collect();
+    if completed_q.is_empty() {
+        bail!("exact final-turn row has no legal actions");
+    }
+    let mut chosen_index = 0usize;
+    for index in 1..completed_q.len() {
+        if completed_q[index] > completed_q[chosen_index] {
+            chosen_index = index;
+        }
+    }
+
+    let action_count = completed_q.len();
+    let mut improved_policy = vec![0.0; action_count];
+    improved_policy[chosen_index] = 1.0;
+    let mut visit_counts = vec![0; action_count];
+    visit_counts[chosen_index] = 1;
+    let root_value = completed_q[chosen_index];
+    Ok(GumbelSearchResult {
+        completed_q,
+        value_variance: vec![0.0; action_count],
+        improved_policy,
+        visit_counts,
+        root_priors: vec![1.0 / action_count as f64; action_count],
+        root_value,
+        chosen_index,
+        simulations_run: 0,
+    })
 }
 
 fn eval_row_for_prelude(
@@ -811,16 +857,35 @@ pub fn gumbel_search_for_state(
     if game.is_game_over() {
         return Ok(None);
     }
+    if cfg.exact_endgame_turns > 1 {
+        bail!("exact_endgame_turns currently supports only 0 or 1");
+    }
+    if cfg.exact_endgame_turns > 0 && (cfg.table_total || cfg.table_native_q) {
+        bail!("exact final-personal-turn solving is incompatible with table-total objectives");
+    }
+    let exact_endgame = cfg.exact_endgame_turns == 1
+        && game.turns_remaining_for_player(game.current_player()) == 1;
+    // The normal root-menu cap is a performance pre-filter. Exact means the
+    // complete legal menu: even a score-ranked cap could become unsound if a
+    // future rules/scoring change makes that ranking differ from final score.
+    let effective_menu_limit = if exact_endgame { None } else { menu_limit };
+    let mut search_row = |row: &EvalRow| {
+        if exact_endgame {
+            exact_final_turn_result(row)
+        } else {
+            gumbel_search(row, evaluator, cfg)
+        }
+    };
     let choices = game.free_three_of_a_kind_choices()?;
     let accept = choices
         .iter()
         .find(|choice| choice.replace_three_of_a_kind)
         .cloned();
     let decline = MarketPrelude::default();
-    let Some(decline_row) = eval_row_for_prelude(game, decline, menu_limit)? else {
+    let Some(decline_row) = eval_row_for_prelude(game, decline, effective_menu_limit)? else {
         return Ok(None);
     };
-    let decline_result = gumbel_search(&decline_row, evaluator, cfg)?;
+    let decline_result = search_row(&decline_row)?;
     let decline_value = selected_completed_q(&decline_result)?;
     let mut total_simulations_run = 0usize;
     total_simulations_run += decline_result.simulations_run;
@@ -829,6 +894,7 @@ pub fn gumbel_search_for_state(
         return Ok(Some(GumbelTurnDecision {
             row: decline_row,
             result: decline_result,
+            exact_endgame,
             market_branches_searched: 1,
             market_chance_samples: 0,
             total_simulations_run,
@@ -839,9 +905,9 @@ pub fn gumbel_search_for_state(
     let mut accept_total = 0.0;
     for sample_index in 0..market_chance_samples {
         let sampled = sampled_market_state(game, cfg, sample_index);
-        let sampled_row = eval_row_for_prelude(&sampled, accept.clone(), menu_limit)?
+        let sampled_row = eval_row_for_prelude(&sampled, accept.clone(), effective_menu_limit)?
             .context("sampled accepted market produced no gumbel row")?;
-        let sampled_result = gumbel_search(&sampled_row, evaluator, cfg)?;
+        let sampled_result = search_row(&sampled_row)?;
         total_simulations_run += sampled_result.simulations_run;
         accept_total += selected_completed_q(&sampled_result)?;
     }
@@ -851,6 +917,7 @@ pub fn gumbel_search_for_state(
         return Ok(Some(GumbelTurnDecision {
             row: decline_row,
             result: decline_result,
+            exact_endgame,
             market_branches_searched: 2,
             market_chance_samples,
             total_simulations_run,
@@ -859,13 +926,14 @@ pub fn gumbel_search_for_state(
 
     // The decision is now committed. Reveal the real replacement market and
     // search the downstream draft without reusing any sampled chance outcome.
-    let actual_accept_row = eval_row_for_prelude(game, accept, menu_limit)?
+    let actual_accept_row = eval_row_for_prelude(game, accept, effective_menu_limit)?
         .context("accepted real market produced no gumbel row")?;
-    let actual_accept_result = gumbel_search(&actual_accept_row, evaluator, cfg)?;
+    let actual_accept_result = search_row(&actual_accept_row)?;
     total_simulations_run += actual_accept_result.simulations_run;
     Ok(Some(GumbelTurnDecision {
         row: actual_accept_row,
         result: actual_accept_result,
+        exact_endgame,
         market_branches_searched: 2,
         market_chance_samples,
         total_simulations_run,
@@ -1107,6 +1175,127 @@ mod tests {
                 .expect("non-terminal decision");
             assert_eq!(decision.row.prelude.replace_three_of_a_kind, prefer_accept);
         }
+    }
+
+    #[test]
+    fn exact_final_personal_turn_bypasses_model_and_search() {
+        let game = test_state(2_026_071_001, 76);
+        assert_eq!(
+            game.turns_remaining_for_player(game.current_player()),
+            1,
+            "76 completed plies leave the active seat one personal turn"
+        );
+        let mut evaluator = MockEvaluator::new();
+        let cfg = GumbelConfig {
+            exact_endgame_turns: 1,
+            market_decision_samples: 3,
+            ..test_config(0x1eaf)
+        };
+        let decision = gumbel_search_for_state(&game, Some(1), &mut evaluator, &cfg)
+            .expect("exact decision")
+            .expect("non-terminal decision");
+
+        assert!(decision.exact_endgame);
+        assert!(
+            decision.row.afterstates.len() > 1,
+            "exact frontier must ignore the normal root-menu cap"
+        );
+        assert_eq!(decision.result.simulations_run, 0);
+        assert_eq!(decision.total_simulations_run, 0);
+        assert_eq!(evaluator.calls, 0, "exact frontier must not invoke the model");
+        let best_exact = decision
+            .row
+            .afterstates
+            .iter()
+            .map(|afterstate| afterstate.exact_score_active)
+            .fold(f64::NEG_INFINITY, f64::max);
+        assert_eq!(
+            decision.result.completed_q[decision.result.chosen_index],
+            best_exact
+        );
+        assert_eq!(decision.result.root_value, best_exact);
+        assert_eq!(
+            decision.result.improved_policy[decision.result.chosen_index],
+            1.0
+        );
+    }
+
+    #[test]
+    fn exact_final_turn_refresh_decision_respects_hidden_chance_boundary() {
+        let cfg = GumbelConfig {
+            exact_endgame_turns: 1,
+            market_decision_samples: 4,
+            ..test_config(0xdec1de)
+        };
+        let row_best = |row: &EvalRow| {
+            row.afterstates
+                .iter()
+                .map(|afterstate| afterstate.exact_score_active)
+                .fold(f64::NEG_INFINITY, f64::max)
+        };
+        let (game, accept, decline_value, accept_value) = (0..200)
+            .find_map(|offset| {
+                let game = test_state(2_026_072_000 + offset, 76);
+                let accept = game
+                    .free_three_of_a_kind_choices()
+                    .ok()?
+                    .into_iter()
+                    .find(|choice| choice.replace_three_of_a_kind)?;
+                let decline_row = eval_row_for_prelude(&game, MarketPrelude::default(), None)
+                    .ok()??;
+                let decline_value = row_best(&decline_row);
+                let accept_total: f64 = (0..cfg.market_decision_samples)
+                    .map(|sample_index| {
+                        let sampled = sampled_market_state(&game, &cfg, sample_index);
+                        let row = eval_row_for_prelude(&sampled, accept.clone(), None)
+                            .expect("sampled accept row")
+                            .expect("sampled accept remains playable");
+                        row_best(&row)
+                    })
+                    .sum();
+                let accept_value = accept_total / cfg.market_decision_samples as f64;
+                (accept_value > decline_value)
+                    .then_some((game, accept, decline_value, accept_value))
+            })
+            .expect("seed search must find a profitable final-turn refresh");
+
+        let mut evaluator = MockEvaluator::new();
+        let decision = gumbel_search_for_state(&game, Some(1), &mut evaluator, &cfg)
+            .expect("exact refresh decision")
+            .expect("non-terminal decision");
+        assert!(
+            accept_value > decline_value,
+            "fixture must require accepting before the real replacement is known"
+        );
+        assert_eq!(decision.row.prelude, accept);
+        assert!(decision.exact_endgame);
+        assert_eq!(decision.market_chance_samples, cfg.market_decision_samples);
+        assert_eq!(decision.total_simulations_run, 0);
+        assert_eq!(evaluator.calls, 0);
+        assert_eq!(
+            selected_completed_q(&decision.result).expect("chosen exact score"),
+            row_best(&decision.row),
+            "after accepting, the actual revealed market must be solved exactly"
+        );
+    }
+
+    #[test]
+    fn exact_final_turn_rejects_unsupported_frontiers_and_objectives() {
+        let game = test_state(2_026_071_002, 76);
+        let mut evaluator = MockEvaluator::new();
+        let mut cfg = test_config(1);
+        cfg.exact_endgame_turns = 2;
+        let error = gumbel_search_for_state(&game, Some(8), &mut evaluator, &cfg)
+            .err()
+            .expect("frontier two must fail");
+        assert!(error.to_string().contains("only 0 or 1"));
+
+        cfg.exact_endgame_turns = 1;
+        cfg.table_total = true;
+        let error = gumbel_search_for_state(&game, Some(8), &mut evaluator, &cfg)
+            .err()
+            .expect("table-total exact personal-turn mode must fail");
+        assert!(error.to_string().contains("incompatible with table-total"));
     }
 
     #[test]

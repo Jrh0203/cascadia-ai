@@ -3568,3 +3568,55 @@ Nature Tokens `+1.0975` CI `[+0.8988,+1.2962]`. Q minus greedy: wildlife
 Interpretation: most of the model's direct-policy advantage comes from
 longer-horizon habitat structure and resource economy rather than immediate
 wildlife-score greed.
+
+## 2026-07-09 — Exact final-personal-turn K1 implemented; causal smoke flat, frontier 8.86x faster
+
+Implemented the first rigorous slice of `docs/v3/RADICAL_DIRECTIONS.md` #1.
+`--gumbel-exact-endgame-turns 1` recognizes a seat with one personal turn
+remaining, enumerates the complete legal menu (ignoring the normal serving
+cap), and selects by exact engine score with no model or simulations. Optional
+three-of-a-kind refresh still uses hidden replacement samples before the real
+draw is revealed. K>1 and table-total objectives fail loudly because neither
+has the final-own-score identity.
+
+The mode is wired through exporter CLI/help, policy games, self-play rows,
+suggestions, benchmark orchestration, reports, and persistent decision
+telemetry. Exact rows carry a one-hot improved policy, zero variance, one
+chosen visit, and `exact_endgame=true`. The purpose-built comparator refuses
+mismatched rules/source/checkpoint/seeds/search, requires 80 decisions per
+seed, identical action/refresh traces through ply 75, four zero-simulation K1
+decisions per game, and seat-0 non-regression before it will report a result.
+
+Three MPS attempts were intentionally discarded rather than laundered into a
+score:
+
+1. john4 control vs john2 K1 diverged at ply 5 (cross-host MPS variance).
+2. Same-host, two-worker K1 diverged at ply 24 despite identical seeds and
+   settings (cross-game request batching changed numerical choices).
+3. Same-host, four-worker K1 emitted
+   `Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)`;
+   the entire process group was stopped and no report was used.
+
+The valid engineering smoke ran serially on john4 (one worker/bridge), seeds
+`2027071360..2027071361`, cycle4 checkpoint, n16/top8/d2, w1.0, four market
+samples. Comparator verdict:
+
+- plies 0–75 identical for both seeds;
+- baseline/K1 mean seat score `92.25 / 92.25`, paired deltas `0 / 0`;
+- 8/8 exact decisions, zero simulations; seat-0 deltas `0 / 0`;
+- 6/8 final actions changed, all to equal-scoring alternatives;
+- exact-frontier time `4.212s → 0.476s` (`8.86x` faster);
+- whole-arm mean decision `1.584s → 1.565s` (`1.2%` faster), wall
+  `254.5s → 251.4s` (`1.3%` faster); P95 did not improve.
+
+Verdict: **score-inconclusive engineering pass, not promotion evidence.** The
+permanent `run_exact_k1_gate.sh` regenerates both arms from one new revision at
+100 fresh corrected-rules seeds and n256/d4, then applies the same trace and
+solver invariants. It is staged to run on john0 only after the current
+rebaseline and verdict watcher finish. K2 remains gated on that result.
+
+Fleet audit during this work: john2–john4 were still running pre-correction
+Fleet5 binaries after roughly nine hours. All three process trees were killed
+and verified absent; no Fleet5 shard artifacts existed. john1's Fleet5 pid was
+stale and no process/artifact existed. Minis remain generation/engineering
+hosts, never gate hosts.
