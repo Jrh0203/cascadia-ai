@@ -228,6 +228,7 @@ class AuditStructuredQShardsTest(unittest.TestCase):
             self.assertIn(f"arm_one {host} {current} {reserve} {seed}", script)
         self.assertIn("SEED_COUNT=20", script)
         self.assertIn("current expansion validation failed", script)
+        self.assertIn('--manifest "${out%.npz}.manifest.json"', script)
         self.assertIn("no fetch or training action", script)
         self.assertNotIn("ssh john0", script)
 

@@ -54,6 +54,7 @@ env CASCADIA_CGAB_FUSED=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=cascadiav3/src \
   --gumbel-selfplay-tensor-corpus \
   --model-service "$model_service" \
   --model-manifest "$manifest" \
+  --manifest "${out%.npz}.manifest.json" \
   --source-revision "$source_revision" \
   --model-timeout-ms 120000 \
   --first-seed "$first_seed" \
