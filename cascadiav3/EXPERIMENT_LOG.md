@@ -3698,7 +3698,12 @@ distq seed file. Permanently, every runner writes a complete, seed-ordered
 `*_games.jsonl`; reports embed per-seat raw breakdowns and overall/by-seat
 category means, and the writer refuses partial or duplicate seed coverage.
 
-## 2026-07-09 04:25 — Model/search inversion throughput preflight: tiny-model search multiplier is only 2.40x at batch 8 MPS
+## 2026-07-09 04:25 — Raw-request throughput diagnostic: 2.40x tiny/M (SUPERSEDED)
+
+**Superseded at 04:50. Do not use these ratios as serving evidence.** The
+fixed roots were human-auditable raw records, so the timed loop executed
+legacy Python feature extraction. Live Rust search advertises and sends
+precomputed `packed_features`; the corrected production-path entry follows.
 
 Added a deterministic end-to-end bridge throughput benchmark and shell
 runner. It exercises root collation, padded feature/relation tensors,
@@ -3728,3 +3733,85 @@ response work is the asymptote. Run the exact same probe on john0 CUDA before
 distillation. If CUDA plateaus similarly, optimize request amortization and
 rollout topology first; if CUDA has materially larger size leverage, distill
 XS and measure an equal-wall-clock score frontier.
+
+## 2026-07-09 04:50 — Production-packed throughput correction reopens smaller-model/larger-search
+
+Root-cause audit of the surprising `2.40x` ceiling found that the benchmark
+had passed audit roots directly to `_model_eval_batch`. That exercises raw
+Python token/action/relation feature extraction, but production Rust detects
+the bridge's `packed_features` capability, computes those arrays before the
+request, and removes the raw dictionaries. The original measurement was
+internally repeatable but answered the wrong serving question.
+
+Source `543ba6e5` now makes `production-packed` the default, performs the
+conversion before timing, records the canonical prepared-payload hash, and
+retains `--root-format as-is` only as an explicit legacy diagnostic. Source
+root SHA-256 is
+`534d35fe625b7c4ee248a58ffd1cb265be127cff93eafdc0fe48fbcddfbaa35f`;
+prepared payload SHA-256 is
+`e4546f632ddde46e3a5e9ded40f04b3cf78c4be7f0497772ead31aefa688a1f5`.
+The response digests were unchanged between raw and packed paths on the four
+roots, so the correction changes the measured path, not model semantics.
+MPS timing also now synchronizes MPS at phase boundaries; previously its
+asynchronous forward work was mislabeled as device-to-host copy.
+
+Uncontended seven-iteration runs after two warmups on john2–john4 agreed
+closely. Three-host means for representative repeated four-root mixes:
+
+| Model | Parameters | batch 8 roots/s | speedup | batch 32 roots/s | speedup |
+|---|---:|---:|---:|---:|---:|
+| trained cycle4 M | 88,169,543 | 144.996 | 1.00x | 153.743 | 1.00x |
+| trained EI-0 S | 15,016,007 | 443.174 | 3.06x | 518.879 | 3.38x |
+| synthetic XS | 5,121,607 | 700.524 | 4.83x | 866.592 | 5.64x |
+| synthetic tiny | 67,847 | 1,427.867 | 9.85x | 2,100.427 | 13.66x |
+
+Verdict: smaller-model/larger-search is reopened, but with bounded arithmetic.
+A credible 5M XS shape buys roughly `5-6x` in-bridge throughput on MPS; the
+`10-14x` ceiling belongs to a near-zero model with no plausible strength
+claim. Bridge rates also omit Rust search and game-engine work. The immediate
+kill-test is therefore an end-to-end trained checkpoint calibration, not an
+XS training run: three minis are running same-host single-seed M n64/d4 versus
+trained S n192/d12 at sample 4. CUDA and paired score remain mandatory before
+distillation or promotion.
+
+## 2026-07-09 05:05 — Trained S n192 does not preserve the 3x bridge multiplier end to end; equal-wall estimate n130
+
+To separate in-bridge throughput from whole-search throughput, john2–john4
+each ran one same-host serial pair on distinct seeds `2027071700..1702` under
+the corrected rules. Both used one worker, top16, blend 0.5, K16 interior,
+and four market samples. Control was trained cycle4 M at n64/d4; candidate was
+trained EI-0 S at n192/d12, matching the approximately `3x` batch-8 bridge
+ratio. This is a three-game engineering calibration, never a strength gate.
+
+| Host | M score | S score | delta | M wall | S wall | S/M wall |
+|---|---:|---:|---:|---:|---:|---:|
+| john2 | 94.75 | 95.00 | +0.25 | 478.73s | 684.71s | 1.430x |
+| john3 | 98.00 | 96.25 | -1.75 | 350.40s | 628.14s | 1.793x |
+| john4 | 95.50 | 95.25 | -0.25 | 424.68s | 538.83s | 1.269x |
+
+Aggregate M/S means were `96.083 / 95.500` (delta `-0.583`, far too small for
+inference) and `417.94 / 617.23s` per game. The candidate used 81,408 total
+simulations versus 24,256 (`3.356x`), partly because its trajectories saw more
+optional-refresh work. The aggregate wall ratio was `1.477x`; linearly scaling
+the S budget gives n130 at equal wall. A rounded S n128/d8 follow-up was
+launched
+on the same seeds. Aggregate validation/report-ledger SHA-256:
+`393661416b7630f5e4e1e3d016dc4ed40f24653a8aa446f7904be87347fc54a9`.
+
+The S n128/d8 follow-up completed with all three 80-decision traces and raw
+category ledgers valid:
+
+| Host | M n64 score | S n128 score | delta | M wall | S wall | S/M wall |
+|---|---:|---:|---:|---:|---:|---:|
+| john2 | 94.75 | 90.00 | -4.75 | 478.73s | 585.81s | 1.224x |
+| john3 | 98.00 | 95.25 | -2.75 | 350.40s | 369.64s | 1.055x |
+| john4 | 95.50 | 96.50 | +1.00 | 424.68s | 395.68s | 0.932x |
+
+Aggregate S n128 wall was `450.38s` versus M's `417.94s` (`1.078x`), so the
+rounded budget did hit the intended wall neighborhood. Total simulations were
+56,320 versus 24,256 (`2.322x`). Mean score was `93.917` versus `96.083`, a
+paired `-2.167` over three games. This is not statistically usable, but it is
+a negative directional screen and does not authorize XS distillation. Hold
+for the CUDA production-packed multiplier and corrected-distq verdict. The
+validated nine-arm summary SHA-256 is
+`44957b49d4fa5b2dd6df953f9419a210fc9e228aebbc4ff42b5556088f40921e`.

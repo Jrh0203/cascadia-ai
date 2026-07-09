@@ -375,14 +375,18 @@ No points directly; halves the cost of every probe and EI cycle.
    was score-flat and made the exact frontier 8.86x faster. A fresh 100-seed
    corrected n256/d4 CUDA baseline/K1 gate is queued. K2 is gated on that
    result.
-3. **Fix the serving asymptote before tiny-net training.** A fixed-root
-   john2–john4 benchmark found that at batch 8, 88.17M M → 15.02M S → 5.12M
-   XS → 67.8K tiny delivered only `1.00x / 1.84x / 2.05x / 2.40x` complete
-   bridge throughput. A 1,300x parameter reduction does not buy the proposed
-   n8k–n16k search on the current MPS topology. Run the same probe on john0
-   CUDA; if the plateau survives, prioritize collation/encoding amortization,
-   multi-bridge partitioning, and larger units of work per request. Distill
-   XS only if measured equal-wall-clock headroom is real.
+3. **Calibrate smaller-model/larger-search end to end.** The first fixed-root
+   result was wrong for production because it timed raw Python feature
+   extraction; live Rust sends packed features. The corrected john2–john4
+   batch-8 ratios are M/S/XS/tiny `1.00x / 3.06x / 4.83x / 9.85x`, rising to
+   `1.00x / 3.38x / 5.64x / 13.66x` at batch 32. Synthetic XS/tiny have no
+   strength claim. Three serial MPS calibrations of M n64/d4 versus trained S
+   n192/d12 found only a `~2x` equal-wall search-budget multiplier.
+   The rounded S n128/d8 follow-up was near equal wall (`1.078x`) but scored
+   `93.917` versus M n64/d4's `96.083` (three-game delta `-2.167`, smoke only).
+   Run the same packed probe on john0 CUDA, but do not distill XS unless better
+   whole-search leverage or a stronger/distq student recovers this accuracy
+   loss.
 4. **Distributional-Q expert iteration** — PAUSED at the rules boundary.
    The legacy quantile head broke training-side saturation (+0.43 CI+ at
    n256), but the corrected paired verdict owns the next decision. If it

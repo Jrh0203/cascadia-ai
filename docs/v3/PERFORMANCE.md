@@ -60,44 +60,87 @@ games at n256/d4, requires a 95% t-CI lower bound of at least `-0.25` points
 and at least `1.15x` whole-decision speedup, and reuses the exact-K1 control
 only after validating its full rules/source/seeds/search contract.
 
-## Model-Size / Search-Budget Inversion Preflight (2026-07-09)
+## Model-Size / Search-Budget Inversion Preflight (2026-07-09, corrected)
 
-`torch_model_throughput_benchmark.py` measures the complete bridge hot path,
-not a bare Torch forward: JSON-like root collation, relation tensors, model
-execution, and packed response construction. The runner hashes the fixed
-root set, manifests/weights, outputs, environment, and reports; repeated
-iterations must emit the same response digest. The four corrected-rules
-expert roots have 90/225/216/414 actions and SHA-256
+`torch_model_throughput_benchmark.py` measures the in-process bridge hot path,
+not a bare Torch forward: production input collation, device transfer, model
+execution, host copy, and packed response construction. The four corrected-
+rules audit roots have 90/225/216/414 actions and source SHA-256
 `534d35fe625b7c4ee248a58ffd1cb265be127cff93eafdc0fe48fbcddfbaa35f`.
-This is engineering-only evidence: synthetic XS/tiny shapes have random
-weights and say nothing about strength.
+Before the timed loop, the benchmark now converts them to the same
+`packed_features` wire shape live Rust search advertises and sends; the
+canonical prepared payload hash is
+`e4546f632ddde46e3a5e9ded40f04b3cf78c4be7f0497772ead31aefa688a1f5`.
+Manifests/weights, environment, roots, prepared payload, and outputs are
+hashed, and repeated iterations must emit the same response digest.
 
-Three independent M4 hosts (john2–john4, MPS, seven measured iterations after
-two warmups) agreed closely and produced identical output digests per
-model/batch. Mean complete-path throughput:
+**Important correction.** The first 04:25 run used the audit JSON records
+as-is. That accidentally timed legacy Python token/action/relation feature
+extraction, which production bypasses. Its `2.40x` tiny/M batch-8 ratio is a
+valid raw-path diagnostic but not serving evidence and is superseded. The
+tool defaults to `production-packed` as of source `543ba6e5`; `as-is` is
+explicitly legacy diagnostic only. The MPS phase timer was also corrected to
+synchronize MPS, rather than charging asynchronous forward work to host copy.
 
-| Model | Parameters | Batch 1 roots/s | Speedup | Batch 8 roots/s | Speedup |
+An uncontended production-packed run on john2–john4 (MPS, seven iterations
+after two warmups) agreed closely and produced identical response digests per
+model/batch. Batch 8 and 32 both repeat the same four-root mix:
+
+| Model | Parameters | Batch 8 roots/s | Speedup | Batch 32 roots/s | Speedup |
 |---|---:|---:|---:|---:|---:|
-| trained cycle4 M | 88,169,543 | 37.754 | 1.00x | 99.736 | 1.00x |
-| trained EI-0 S | 15,016,007 | 121.619 | 3.22x | 183.178 | 1.84x |
-| synthetic XS shape | 5,121,607 | 183.158 | 4.85x | 204.743 | 2.05x |
-| synthetic tiny shape | 67,847 | 234.785 | 6.22x | 239.585 | 2.40x |
+| trained cycle4 M | 88,169,543 | 144.996 | 1.00x | 153.743 | 1.00x |
+| trained EI-0 S | 15,016,007 | 443.174 | 3.06x | 518.879 | 3.38x |
+| synthetic XS shape | 5,121,607 | 700.524 | 4.83x | 866.592 | 5.64x |
+| synthetic tiny shape | 67,847 | 1,427.867 | 9.85x | 2,100.427 | 13.66x |
 
-Input report hashes were john2
-`e3198e8221446ea3a92b5b1bd90c1ebeee54b61a47f7cbffc43043fe1b27c583`,
-john3 `2ae231d7eb3d8f51e502fd3e513ea3148e926fd187b9109ec004b466a39f35ae`,
-and john4 `e0fe08f9e0d371780dad58b4ce7e71ec6a8114afd6e0fbac785bfb3371febacb`.
+Exact-revision (`543ba6e5cbe3fc8f49157c65f91a31289cf9107e`) input report
+hashes were john2
+`48446b722e1f017969896a508cb1eb57c0834bb6cbebe1fae58f2fcdbde7e3b6`,
+john3 `c6b8ff398a9e6fea4966db74dde0679788c0c313f9371a858f45dca98a791ac9`,
+and john4 `c51f77e7105b10337f3e98ff0dd0842c1a15b97a26b4a8337c4c2874ea85b87e`;
+the aggregate SHA-256 was
+`4a1959cd34964398c4482a833f0595b2285430ace45da34b3b002566f90a03dc`.
 
-The result rejects the original arithmetic behind “distill to 3–10M and buy
-n8k–n16k” for the present batched MPS serving stack. At batch 8, shrinking
-parameters by roughly 1,300x improves complete-path throughput only `2.40x`;
-the asymptote is dominated by fixed collation, feature/relation construction,
-encoding, and response work. XS is still a valid strength/capacity research
-shape, but not an orders-of-magnitude search multiplier. The next decision is
-a same-tool CUDA measurement on john0. If CUDA shows the same plateau, improve
-bridge amortization and move more rollout/search work behind each request
-before paying for a distillation run. If CUDA shows much more leverage, then
-train/distill XS and test the measured equal-wall-clock frontier.
+Synthetic XS/tiny weights are engineering shape probes, not strength
+evidence. The corrected result reopens model/search inversion but narrows the
+claim: a credible 5M XS buys roughly `5-6x` bridge throughput on MPS, while
+only an unrealistically tiny model reaches `10-14x`. That can plausibly move
+n1024 toward n5k for XS, not automatically n8k–n16k. A same-tool CUDA run and
+an end-to-end Rust/search calibration still own the go/no-go decision because
+bridge throughput is not whole-game throughput and a smaller model can lose
+more value accuracy than search recovers.
+
+The first end-to-end calibration makes that distinction concrete. On three
+separate minis, each arm ran serially with one worker, one matched seed,
+sample-4 market decisions, and identical settings except trained cycle4 M at
+n64/d4 versus trained EI-0 S at n192/d12. All six reports have 80 decisions,
+complete category ledgers, and corrected rules provenance. Aggregate results:
+
+| Arm | Games | Mean score | Mean wall/game | Total simulations |
+|---|---:|---:|---:|---:|
+| M n64/d4 | 3 | 96.083 | 417.94s | 24,256 |
+| S n192/d12 | 3 | 95.500 | 617.23s | 81,408 |
+
+The S arm was `1.477x` slower, so the isolated `3.06x` bridge multiplier did
+not fund `3x` whole-search work. Per-host wall ratios were `1.430 / 1.793 /
+1.269`; changed trajectories also raised refresh opportunities and produced
+`3.356x` total simulations. Linear interpolation puts the equal-wall S budget
+near n130; S n128/d8 is the rounded follow-up. The paired score delta was
+`-0.583` over only three games (`+0.25 / -1.75 / -0.25`) and is explicitly
+not strength evidence. Validated aggregate SHA-256:
+`393661416b7630f5e4e1e3d016dc4ed40f24653a8aa446f7904be87347fc54a9`.
+
+The rounded S n128/d8 follow-up on the same seeds landed close to equal wall:
+`450.38s`/game versus M n64's `417.94s` (`1.078x`). It used 56,320 total
+simulations versus 24,256 (`2.322x`). Scores were `90.00 / 95.25 / 96.50`
+versus M's `94.75 / 98.00 / 95.50`, for means `93.917` versus `96.083` and a
+paired delta of `-2.167`. Three games cannot establish strength, but this is a
+negative directional kill-screen: the available trained S model did not trade
+its speed for enough search quality at equal wall. Do not launch XS
+distillation from this evidence. Reconsider only if CUDA shows a materially
+better whole-search multiplier or a stronger/distq student changes the
+accuracy side of the trade. The nine-arm validated summary SHA-256 is
+`44957b49d4fa5b2dd6df953f9419a210fc9e228aebbc4ff42b5556088f40921e`.
 
 ## Tensor Export
 

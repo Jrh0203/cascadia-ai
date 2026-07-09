@@ -44,13 +44,12 @@ frontier 8.86x faster (only 1.2% over whole-game mean decision time). A fresh
 same-revision 100-game corrected n256/d4 CUDA gate is next. Only a CI-positive
 or material gate-scale cost win justifies building K2.
 
-## 2. Invert the AlphaZero ratio: tiny model, enormous search — preflight rejects the original arithmetic
+## 2. Invert the AlphaZero ratio: smaller model, larger search — production preflight reopens the frontier
 
 **Idea.** Distill M into a 3–10M student and spend measured serving savings
-on simulations. The original sketch assumed model FLOPs dominated enough
-that the same wall-clock would buy n8k–n16k with d64+ worlds. That assumption
-is now falsified on the current batched MPS bridge, before spending a training
-day.
+on simulations. The original sketch assumed the same wall-clock might buy
+n8k–n16k with d64+ worlds; the production-shaped preflight supports a real
+multiplier, though not that whole range for a credible 5M model.
 
 **Why it fits.** The SNR analysis says decisions flip on *sampling* noise;
 simulations divide sampling noise by √n regardless of model bias. Nobody
@@ -59,22 +58,31 @@ frontier actually peaks — the campaign only ever moved along the
 fixed-model axis. AlphaZero-family results repeatedly show small-net/big-
 search dominating at fixed compute in exact-scoring games.
 
-**Measured preflight (2026-07-09).** A deterministic four-root benchmark now
-measures the complete bridge path (collate, feature/relation tensors, model,
-packed response). Across john2–john4 at batch 8, trained 88.17M M delivered
-`99.736 roots/s`; trained 15.02M S `183.178` (`1.84x`); synthetic 5.12M XS
-`204.743` (`2.05x`); and a synthetic 67.8K near-zero model `239.585`
-(`2.40x`). Batch-1 speedups were `3.22x / 4.85x / 6.22x`, so batching and
-fixed work dominate the production-shaped path. A roughly 1,300x parameter
-reduction buying `2.40x` cannot fund n8k–n16k from n256/n1024.
+**Measured preflight (2026-07-09, corrected).** The first pass mistakenly fed
+raw audit roots to Python and measured feature extraction that live search
+already performs in Rust. It reported only `2.40x` tiny/M and is superseded.
+The corrected tool pre-packs outside the timed loop to the production
+`packed_features` wire shape and records both source and prepared hashes.
+Across john2–john4 at batch 8, trained 88.17M M delivered `144.996 roots/s`;
+trained 15.02M S `443.174` (`3.06x`); synthetic 5.12M XS `700.524`
+(`4.83x`); and synthetic 67.8K tiny `1,427.867` (`9.85x`). At batch 32 the
+ratios rose to `3.38x / 5.64x / 13.66x`. Response digests matched on all three
+hosts. Synthetic shapes say nothing about strength, but the serving headroom
+is real enough to test.
 
-**Revised sketch.** First run the identical hashed probe on john0 CUDA. If
-CUDA has the same asymptote, optimize serving amortization and move larger
-units of search/rollout work behind each bridge request; do not distill yet.
-If CUDA shows materially more size leverage, distill policy+q+quantiles into
-the now-first-class XS config, then compare XS and M on an empirically equal-
-wall-clock search frontier. The kill-test remains score, but the budget must
-come from measured end-to-end throughput rather than parameter-count folklore.
+**Revised sketch.** First calibrate the trained S checkpoint end-to-end at
+roughly equal model-eval compute. Three one-game MPS pairs showed that S
+n192/d12 was actually `1.477x` slower than M n64/d4; changed trajectories
+consumed `3.356x` simulations, and non-model Rust/game work caps the isolated
+bridge gain. The implied equal-wall point is S n130, so n128/d8 is the rounded
+follow-up. Then run the identical hashed probe on john0 CUDA. If
+the equal-wall S arm preserves score, distill policy+q+quantiles into the
+first-class XS config and repeat the empirical frontier. It did not in the
+first screen: S n128/d8 was close to equal wall (`1.078x`) but averaged
+`93.917` versus M n64/d4's `96.083` (delta `-2.167` over only three games).
+That is insufficient for a strength claim but negative enough not to spend a
+training day yet. Hold for the CUDA multiplier and corrected-distq verdict.
+Budgets must come from measured whole-search throughput, not parameter counts.
 
 ## 3. Pairwise comparator head — train the decision, not the value
 

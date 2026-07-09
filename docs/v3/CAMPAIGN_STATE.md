@@ -114,19 +114,24 @@ candidate. Passing requires t-CI lower bound
 place.
 
 **Model/search inversion preflight (07-09):** a new fixed-root bridge
-benchmark measures the full Python collate → CascadiaFormer → packed-response
-path and pins roots, model parameters, outputs, environment, and report
-hashes. On john2–john4 MPS, batch-8 mean throughput was `99.736 roots/s` for
-the trained 88.17M cycle4 M model, `183.178` (`1.84x`) for the trained 15.02M
-S model, `204.743` (`2.05x`) for a synthetic 5.12M XS shape, and `239.585`
-(`2.40x`) for a synthetic 67.8K near-zero model. Batch-1 gains were larger
-(`3.22x`, `4.85x`, `6.22x`), proving batching changes the bottleneck. A
-1,300x parameter reduction buying only `2.40x` at the serving batch means
-the old “tiny net buys n8k–n16k” premise is false on the current MPS bridge:
-fixed collation/encoding/relation work dominates. A same-tool CUDA probe is
-queued after exact K1 and before the sample-count gate. Do not spend a day on
-distillation unless CUDA shows materially more model-size leverage; otherwise
-fix serving amortization/rollout topology first.
+benchmark pins roots, production-packed payloads, model parameters, outputs,
+environment, and reports. The first raw-input run was invalid as serving
+evidence because it timed Python feature extraction that live Rust search
+bypasses; its `2.40x` tiny/M ratio is superseded. With production-packed roots
+on john2–john4 MPS, batch-8 means were `144.996 roots/s` for trained 88.17M M,
+`443.174` (`3.06x`) for trained 15.02M S, `700.524` (`4.83x`) for synthetic
+5.12M XS, and `1,427.867` (`9.85x`) for synthetic 67.8K tiny. At batch 32 the
+ratios were `3.38x / 5.64x / 13.66x`. This reopens the smaller-model/larger-
+search direction without pretending synthetic shapes are strong. Three
+same-host, single-seed MPS calibrations found that trained S n192/d12 was
+`1.477x` slower than M n64/d4 despite the `3.06x` bridge rate; mean scores were
+`95.500` versus `96.083` (three-game smoke only). The implied equal-wall S
+budget was about n130. The completed S n128/d8 follow-up was near equal wall
+(`1.078x`) but scored `93.917` versus M's `96.083` (delta `-2.167`, three-game
+smoke only). This is negative enough to withhold XS distillation, not a
+strength verdict. A same-tool CUDA probe remains queued after exact K1 and
+before the sample-count gate; only materially better whole-search leverage or
+a stronger/distq student can reopen training.
 
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process
