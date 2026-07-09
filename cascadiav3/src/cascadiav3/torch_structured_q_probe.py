@@ -119,6 +119,26 @@ def summarize_structured_q_observations(
         raise ValueError("structured-Q verdict requires at least two non-exact roots")
     if not all(np.isfinite(value).all() for value in arrays.values()):
         raise ValueError("structured-Q observations must be finite")
+    if arrays["candidate_all_q_errors"].shape != arrays["incumbent_all_q_errors"].shape:
+        raise ValueError("candidate/incumbent completed-Q observations must align")
+    if not np.allclose(target_components.sum(axis=1), arrays["real_final"], rtol=0.0, atol=1e-4):
+        raise ValueError("target components do not sum to real final score")
+    if not np.allclose(
+        candidate_components.sum(axis=1),
+        arrays["candidate_selected"],
+        rtol=0.0,
+        atol=1e-4,
+    ):
+        raise ValueError("candidate components do not sum to selected final Q")
+    if (arrays["candidate_q_regret"] < -1e-6).any() or (
+        arrays["incumbent_q_regret"] < -1e-6
+    ).any():
+        raise ValueError("completed-Q regret must be nonnegative")
+    if not all(
+        np.isin(arrays[name], (0.0, 1.0)).all()
+        for name in ("candidate_q_top1", "incumbent_q_top1")
+    ):
+        raise ValueError("completed-Q top1 observations must be binary")
 
     component_error = candidate_components - target_components
     candidate_error = arrays["candidate_selected"] - arrays["real_final"]
