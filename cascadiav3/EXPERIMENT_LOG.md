@@ -4292,7 +4292,7 @@ wall time. Non-finite timing/GPU data and incomplete profiles fail closed.
 The calibration is queued last in the checksum-pinned post-chain john0
 waiter: corrected n1024 rebaseline and verdict, exact K1, CUDA model-size
 throughput, market sample-4, then concurrency. At 10:26 EDT the live cycle4
-n1024 arm had 36/100 raw games and remained healthy; no CUDA concurrency arm
+n1024 arm had 35/100 raw games and remained healthy; no CUDA concurrency arm
 has run yet, and no default has changed. The implementation gate is 137/137
 Python tests passing with 45 expected fixture skips; `bash -n` and the diff
 whitespace check also pass.

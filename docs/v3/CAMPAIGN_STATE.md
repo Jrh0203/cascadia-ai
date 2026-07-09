@@ -30,7 +30,7 @@ and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
 the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
 completed the 100-game greedy/no-search floor plus both n256/d4 arms and is
-now running cycle4 n1024/d16, with 36/100 raw games complete at 10:26 EDT;
+now running cycle4 n1024/d16, with 35/100 raw games complete at 10:26 EDT;
 distq_k8 n1024/d16 follows on the same fresh seeds. A live sidecar copied the
 growing distq-n256 seed files with overwrite-on-poll semantics; a second
 watcher does the same for both n1024 arms. Each publishes only after strict
