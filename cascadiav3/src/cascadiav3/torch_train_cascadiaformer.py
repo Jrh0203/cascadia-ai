@@ -296,14 +296,17 @@ def _loss_scalars(losses: dict[str, Any], keys: tuple[str, ...]) -> dict[str, fl
     """Fetch scalar loss values with a single device->host synchronization.
 
     Exactly-safe replacement for per-key ``float(loss.detach().cpu())``: each
-    scalar is upcast to float64 (exact for bf16/fp16/fp32) on-device, stacked,
-    and transferred once. Values are bit-identical to the per-key transfers;
-    on CUDA this turns len(keys) synchronizations into one.
+    scalar is stacked in its promoted native device dtype, transferred once,
+    and then upcast to float64 on CPU. The host-side upcast is exact for
+    bf16/fp16/fp32 and is required for MPS, which does not support float64
+    tensors. Values are bit-identical to the per-key transfers; on accelerators
+    this turns len(keys) synchronizations into one.
     """
     import torch
 
-    stacked = torch.stack([losses[key].detach().to(dtype=torch.float64) for key in keys])
-    return dict(zip(keys, stacked.cpu().tolist()))
+    stacked = torch.stack([losses[key].detach() for key in keys])
+    host_values = stacked.cpu().to(dtype=torch.float64)
+    return dict(zip(keys, host_values.tolist()))
 
 
 def _load_corpus(paths: list[Path], *, corpus_format: str) -> Any:

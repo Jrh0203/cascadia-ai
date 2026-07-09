@@ -261,6 +261,22 @@ class DefaultPathBitIdentityTest(unittest.TestCase):
         for key in losses:
             self.assertEqual(values[key], float(losses[key].detach().cpu()))
 
+    def test_loss_scalars_support_mps_without_device_float64(self) -> None:
+        try:
+            import torch
+        except ModuleNotFoundError:
+            self.skipTest("torch unavailable")
+        if not torch.backends.mps.is_available():
+            self.skipTest("MPS unavailable")
+        from cascadiav3.torch_train_cascadiaformer import _loss_scalars
+
+        losses = {
+            "a": torch.tensor(1.25, dtype=torch.float32, device="mps"),
+            "b": torch.tensor(-3.5, dtype=torch.float32, device="mps", requires_grad=True),
+        }
+        values = _loss_scalars(losses, ("a", "b"))
+        self.assertEqual(values, {"a": 1.25, "b": -3.5})
+
 
 class OptInKnobSmokeTest(unittest.TestCase):
     def test_grad_checkpoint_on_matches_off_forward_backward(self) -> None:
