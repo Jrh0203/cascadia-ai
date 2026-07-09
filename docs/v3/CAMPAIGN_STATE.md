@@ -104,6 +104,18 @@ the corresponding hard ceilings are `1.8374` all-q RMSE and `0.8015` mean
 regret. No candidate output was inspected and no hyperparameter was selected
 on the verdict block.
 
+**Quarantined v4 expansion generation (launched 12:09 EDT):** while john0
+remains exclusively on the promotion chain, idle john2–john4 are generating
+three data-only 50-seed blocks at the already validated n8/top4/d1 shape.
+Seeds are `2027073600..49`, `2027073650..99`, and `2027073700..49`; PIDs are
+`90485`, `58489`, and `26369`. Every launch reverified source marker
+`6e89d955`, teacher manifest `b8886c24...`, and weights `33559aab...` before
+starting. Expected output is 4,000 roots per host / 12,000 total. These shards
+are speculative fit-capacity inventory only: keep them out of the fixed
+fit/selection/verdict pilot, do not copy them to john0's queue, and do not
+admit them to any training unless they complete, validate, and the frozen-head
+pilot first passes. john1 remains reserved for the active UI/champion service.
+
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI
 `[+3.8705,+4.7245]`; cycle4 Q head `90.8925`, delta `+3.3475`, CI

@@ -501,6 +501,14 @@ baselines are `1.7499` all-q RMSE and `0.7515` mean completed-Q regret, making
 the corresponding ceilings `1.8374` and `0.8015`. No candidate prediction or
 hyperparameter touched the verdict block during this audit.
 
+The idle data-only fleet is also prefetching a strictly quarantined expansion:
+50 seeds each on john2–john4 (`2027073600..3749`, three disjoint blocks) at the
+same source, teacher, rules, and n8/top4/d1 contract. This is not part of the
+fixed pilot and cannot affect its selection or verdict. If the head-only gate
+passes, the expected 12,000 additional roots remove data-generation latency
+from a larger fit-capacity follow-up; if it fails, they remain unused evidence
+rather than licensing another objective search.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)

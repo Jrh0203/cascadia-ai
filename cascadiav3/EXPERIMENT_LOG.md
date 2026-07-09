@@ -4486,3 +4486,32 @@ RMSE against teacher completed-Q was `1.7499`, mean teacher-Q regret was
 `0.7515`, and top-1 agreement was `36.45%`. The retention ceilings are thus
 candidate all-q RMSE `<= 1.8374` and mean regret `<= 0.8015`. No candidate was
 evaluated and this read did not influence the fixed LR grid or selection rule.
+
+## 2026-07-09 12:09 — Quarantined structured-Q fit expansion launched
+
+Purpose: use otherwise idle data-generation Macs to remove the next corpus
+latency if, and only if, the fixed head-only gate passes. This launch does not
+change the john0 queue or the registered pilot data.
+
+john2, john3, and john4 each reverified source marker
+`6e89d9555f6126bdc29f65657d8431cab3d2c024`, teacher manifest SHA
+`b8886c24cd93e19299e8c4cca4dd7671fe16b685d54949de014d6f9d5aee616d`,
+and weights SHA
+`33559aab05324e74998164d4e59e7adec9fa3c77da531dd4797c718cf4cfd354`
+before launch. The shape exactly matches the pilot generator: n8/top4/d1,
+one determinization, eight market-decision samples, blend 0.5, K8 interior,
+exact K1, full root menus, exploration on, two concurrent games through one
+shared MPS bridge, and no fallback.
+
+| Host | PID | Seeds | Planned roots | Output |
+|---|---:|---|---:|---|
+| john2 | 90485 | 2027073600..49 | 4,000 | `structured_q_v4_expansion_20260709/expansion_a.npz` |
+| john3 | 58489 | 2027073650..99 | 4,000 | `structured_q_v4_expansion_20260709/expansion_b.npz` |
+| john4 | 26369 | 2027073700..49 | 4,000 | `structured_q_v4_expansion_20260709/expansion_c.npz` |
+
+All three exporter/bridge process pairs were alive with empty startup logs
+after launch. The artifacts are quarantined fit-capacity inventory: they must
+complete with v4 provenance and invariant validation, remain disjoint from
+the fixed selection/verdict blocks, and may not enter training unless the
+preregistered head-only pilot passes. john1 was intentionally left to the
+active UI/champion service; john0 remained untouched.
