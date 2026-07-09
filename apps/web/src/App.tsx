@@ -47,6 +47,40 @@ import type {
 const GAME_STORAGE_KEY = "cascadia-v2.saved-game";
 const SEATS_STORAGE_KEY = "cascadia-v2.seats";
 
+/** Threshold tables verified against crates/cascadia-game/src/scoring.rs. */
+const CARD_RULES: Record<string, Record<string, string>> = {
+  bear: {
+    A: "Pairs of bears: 1 pair = 4, 2 = 11, 3 = 19, 4+ = 27",
+    B: "Each group of exactly 3 bears = 10",
+    C: "Groups sized 1/2/3 = 2/5/8; +3 for having all three sizes",
+    D: "Groups sized 2/3/4 = 5/8/13",
+  },
+  elk: {
+    A: "Straight lines: 1/2/3/4 elk = 2/5/9/13 (best disjoint split)",
+    B: "Shape formations (line/triangle/diamond)",
+    C: "Connected groups: 1..8+ elk = 2/4/7/10/14/18/23/28",
+    D: "Rings of elk",
+  },
+  salmon: {
+    A: "Each run: 1..7+ salmon = 2/5/8/12/16/20/25",
+    B: "Each run up to 4: 2/4/9/11",
+    C: "Runs of 3..5+ = 10/12/15",
+    D: "Each salmon + 1 per adjacent salmon",
+  },
+  hawk: {
+    A: "Isolated hawks: 1..8+ = 2/5/8/11/14/18/22/26",
+    B: "Hawks with line of sight to another hawk",
+    C: "Lines of sight between hawk pairs = 3 each",
+    D: "Pairs of hawks by distance",
+  },
+  fox: {
+    A: "Each fox: 1 pt per unique adjacent wildlife species (max 5)",
+    B: "Each fox: 3 pts per adjacent wildlife pair type",
+    C: "Each fox: pts for most abundant adjacent species",
+    D: "Each fox: pts for adjacent pairs of same species",
+  },
+};
+
 const DEFAULT_CONFIG: GameConfig = {
   player_count: 4,
   mode: "Standard",
@@ -777,53 +811,35 @@ export default function App() {
             )}
           </div>
           <div className="panel-section">
-            <h2>Scoring — P{selectedPlayer + 1}</h2>
-            <div className="score-breakdown">
-              {(["bear", "elk", "salmon", "hawk", "fox"] as const).map(
-                (animal, index) => (
-                  <div key={animal} className="score-line">
-                    <span className="score-name">
-                      <WildlifeMark wildlife={animal} size="small" /> {titleCase(animal)}{" "}
-                      <span className="score-card">
-                        card {view.config.scoring_cards[animal]}
-                      </span>
+            <h2>Card rules</h2>
+            <div className="card-rules">
+              {(["bear", "elk", "salmon", "hawk", "fox"] as const).map((animal) => (
+                <div key={animal} className="card-rule">
+                  <span className="card-rule-head">
+                    <WildlifeMark wildlife={animal} size="small" />{" "}
+                    {titleCase(animal)}{" "}
+                    <span className="score-card">
+                      {view.config.scoring_cards[animal]}
                     </span>
-                    <span className="score-points">
-                      {selectedBoard.score.wildlife[index]}
-                    </span>
-                  </div>
-                ),
-              )}
-              <div className="score-divider" />
-              {(
-                ["mountain", "forest", "prairie", "wetland", "river"] as const
-              ).map((terrain, index) => (
-                <div key={terrain} className="score-line">
-                  <span className="score-name">
-                    <i className={`terrain-dot terrain-${terrain}`} />{" "}
-                    {titleCase(terrain)}
-                    {selectedBoard.score.habitat_bonus[index] > 0 && (
-                      <span className="score-card">
-                        {" "}
-                        +{selectedBoard.score.habitat_bonus[index]} bonus
-                      </span>
-                    )}
                   </span>
-                  <span className="score-points">
-                    {selectedBoard.score.habitat[index]}
+                  <span className="card-rule-text">
+                    {CARD_RULES[animal][view.config.scoring_cards[animal]] ??
+                      `variant ${view.config.scoring_cards[animal]}`}
                   </span>
                 </div>
               ))}
-              <div className="score-divider" />
-              <div className="score-line">
-                <span className="score-name">🌲 Nature tokens</span>
-                <span className="score-points">
-                  {selectedBoard.score.nature_tokens}
+              <div className="card-rule">
+                <span className="card-rule-head">Habitats</span>
+                <span className="card-rule-text">
+                  1 pt per tile in your largest corridor of each terrain
+                  {view.config.habitat_bonuses
+                    ? "; +2 bonus for the table's largest (+1 on ties)"
+                    : ""}
                 </span>
               </div>
-              <div className="score-line total">
-                <span className="score-name">Total</span>
-                <span className="score-points">{selectedBoard.score.total}</span>
+              <div className="card-rule">
+                <span className="card-rule-head">🌲 Nature tokens</span>
+                <span className="card-rule-text">1 pt each if unspent</span>
               </div>
             </div>
           </div>

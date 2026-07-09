@@ -3194,3 +3194,14 @@ select {
 .terrain-dot.terrain-river { background: var(--river); }
 /* Emoji marks: drop the colored-chip background sizing to text */
 .wildlife-mark { background: none; }
+
+/* Card rules reference */
+.card-rules { display: flex; flex-direction: column; gap: 6px; }
+.card-rule { display: flex; flex-direction: column; gap: 1px; font-size: 11px; }
+.card-rule-head { color: var(--paper); display: flex; align-items: baseline; gap: 4px; }
+.card-rule-text { color: var(--paper-muted); font-size: 10px; line-height: 1.5; }
+
+/* Bigger board wildlife emojis */
+.board-wildlife text {
+  font-size: 17px;
+}
