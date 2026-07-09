@@ -501,13 +501,17 @@ baselines are `1.7499` all-q RMSE and `0.7515` mean completed-Q regret, making
 the corresponding ceilings `1.8374` and `0.8015`. No candidate prediction or
 hyperparameter touched the verdict block during this audit.
 
-The idle data-only fleet is also prefetching a strictly quarantined expansion:
-50 seeds each on john2–john4 (`2027073600..3749`, three disjoint blocks) at the
-same source, teacher, rules, and n8/top4/d1 contract. This is not part of the
+The strictly quarantined fit expansion is complete: 50 seeds each on
+john2–john4 (`2027073600..3749`, three disjoint blocks) at the same source,
+teacher, rules, and n8/top4/d1 contract. It contributes 12,000 roots and
+5,299,287 actions. Cross-shard audit passes against the fixed pilot with exact
+seed domains and audit SHA `e1edbad3...`. Final-score means
+`91.485 / 91.885 / 91.490`, total score-to-go means
+`45.846 / 46.001 / 45.701`, and teacher RMSE
+`3.169 / 3.375 / 3.287` show no material target drift. This is not part of the
 fixed pilot and cannot affect its selection or verdict. If the head-only gate
-passes, the expected 12,000 additional roots remove data-generation latency
-from a larger fit-capacity follow-up; if it fails, they remain unused evidence
-rather than licensing another objective search.
+passes, it removes fit-generation latency; if the gate fails, it remains
+unused evidence rather than licensing another objective search.
 
 The next three blocks are also fixed before candidate creation, but as
 holdouts rather than fit capacity: selection seeds `2027073750..69`, verdict
@@ -517,7 +521,8 @@ chained behind the current host-local validators and start only if those
 reports pass. This ordering removes future data latency without permitting
 candidate-dependent seed choice. The arming path cannot fetch, admit, train,
 or address john0, and the three semantic roles must remain separate in any
-follow-up design.
+follow-up design. They are now running under corrected chain PIDs
+`2465 / 69950 / 33569`, with explicit role-specific sidecar paths.
 
 Raw-v4 admission is now a permanent cross-shard check rather than a manual
 manifest comparison. `audit_structured_q_shards` reopens every NPZ, binds it
@@ -536,6 +541,13 @@ file could still occupy the wrong semantic role. Both the fit-expansion and
 reserve-holdout harvesters use this mode. The reserve harvest also treats all
 six locked/fit shards as exclusions, so selection, verdict, and replication
 cannot silently overlap any earlier corpus.
+
+Operational lesson: tensor generation requires `--out` and `--manifest` as an
+explicit pair. The expansion launch omitted the latter, so valid NPZs wrote
+their manifests to the CLI default; validators and reserve chains correctly
+failed before admission or reserve generation. Checksums and provenance
+proved the generated manifests belonged to those NPZs, validation was rerun,
+and the permanent reserve launcher now pins and tests the sidecar path.
 
 ---
 

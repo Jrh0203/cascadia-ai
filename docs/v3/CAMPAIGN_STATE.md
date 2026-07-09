@@ -30,7 +30,8 @@ and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
 the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
 completed the 100-game greedy/no-search floor plus both n256/d4 arms and is
-now running cycle4 n1024/d16, with 51/100 raw games complete at 12:00 EDT;
+now running cycle4 n1024/d16, with 67/100 raw games complete and independently
+mirrored/validated at 13:20 EDT;
 distq_k8 n1024/d16 follows on the same fresh seeds. A live sidecar copied the
 growing distq-n256 seed files with overwrite-on-poll semantics; a second
 watcher does the same for both n1024 arms. Each publishes only after strict
@@ -115,45 +116,42 @@ the corresponding hard ceilings are `1.8374` all-q RMSE and `0.8015` mean
 regret. No candidate output was inspected and no hyperparameter was selected
 on the verdict block.
 
-**Quarantined v4 expansion generation (launched 12:09 EDT):** while john0
-remains exclusively on the promotion chain, idle john2–john4 are generating
-three data-only 50-seed blocks at the already validated n8/top4/d1 shape.
-Seeds are `2027073600..49`, `2027073650..99`, and `2027073700..49`; PIDs are
-`90485`, `58489`, and `26369`. Every launch reverified source marker
-`6e89d955`, teacher manifest `b8886c24...`, and weights `33559aab...` before
-starting. Expected output is 4,000 roots per host / 12,000 total. These shards
-are speculative fit-capacity inventory only: keep them out of the fixed
-fit/selection/verdict pilot, do not copy them to john0's queue, and do not
-admit them to any training unless they complete, validate, and the frozen-head
-pilot first passes. john1 remains reserved for the active UI/champion service.
-Completion watchers PIDs `90916 / 58926 / 26606` will reopen each shard and
-write summary/invariant reports only after its producer exits successfully.
-Admission no longer relies on those per-host checks alone: the new
-`audit_structured_q_shards` tool requires all expansion NPZs and sidecars on
-one host, proves one exact contract plus seed disjointness from the locked
-three-way pilot, and fails closed on overlap or sidecar tampering. It has
-already passed against the real locked 2,400-root corpus. Audit schema v2 also
-records per-shard final-score, component score-to-go, selected-teacher error,
-Nature-spending frequency, and q-valid-menu distributions so expansion drift
-is visible before any admission decision.
-Canonical harvest is `cascadiav3/scripts/fetch_structured_q_expansion.sh`.
-It refuses while any producer or validator is live, verifies passing remote
-reports and remote/local NPZ plus manifest hashes, fetches all six artifact
-types, then runs the six-shard audit. It has no john0 or training copy path.
+**Quarantined v4 expansion (complete and audited 13:19 EDT):** john2–john4
+generated three data-only 50-seed blocks at the validated n8/top4/d1 shape on
+seeds `2027073600..49`, `2027073650..99`, and `2027073700..49`. Wall times
+were `3792.6 / 3813.3 / 3806.3s`; each produced 4,000 roots. NPZ hashes are
+`225aeff6... / 0447d69b... / 5dc0860d...`. The canonical harvest verified
+remote/local NPZ and manifest hashes, exact seed domains, passing per-host
+reports, one source/rules/search/execution/teacher contract, and disjointness
+from the locked pilot. The combined audit passes with 150 seeds, 12,000 roots,
+5,299,287 actions, 46,200 q-valid actions, 600 exact rows, maximum Q-identity
+error `3.8147e-6`, and zero component-sum error. Audit SHA-256 is
+`e1edbad3552abef2321808666948f299fbf3ba226b948d50a2314b696fb5eb14`.
 
-Three candidate-blind reserve roles were preregistered before any structured-Q
-candidate exists and chained behind the current per-host validators. If and
-only if those validators publish passing summary and invariant reports, john2
-will generate `reserve_selection` on seeds `2027073750..69`, john3 will
-generate `reserve_verdict` on `2027073770..89`, and john4 will generate
-`reserve_replication` on `2027073790..3809`. Each is a 20-seed / 1,600-root
-raw-v4 block at the identical n8/top4/d1 contract. Sleeping chain PIDs are
-`97051 / 64988 / 30230`; at 12:50 EDT all three original producers and
-validators were still live at 30/50 seeds, all chain logs were empty, and no
-reserve artifact existed. These roles are fixed: they are not extra fit data,
-cannot influence the existing pilot, and cannot be fetched or used for
-training by the arming script. Source and teacher hashes are checked both when
-the chain is armed and immediately before generation.
+Target distributions are stable across the expansion blocks: final means
+`91.485 / 91.885 / 91.490`, total score-to-go means
+`45.846 / 46.001 / 45.701`, selected-teacher RMSE
+`3.169 / 3.375 / 3.287`, and q-valid actions per root exactly `3.85` in each.
+These shards remain speculative fit-capacity inventory only: keep them out of
+the fixed pilot and john0 queue, and admit them to training only if the frozen-
+head pilot passes. john1 remains reserved for the UI/champion service.
+
+The first completion boundary exposed an omitted exporter `--manifest` path:
+all NPZs were valid, but their generated sidecars went to the CLI default, so
+all three validators and reserve chains failed closed before reserve output.
+The default manifests checksum-matched their NPZs and exact provenance, were
+placed at the declared sidecar paths, and both validators were rerun to pass.
+Failed chain evidence is preserved with `.failed_manifest_path` names. Commit
+`4cd9c728` makes every reserve output sidecar explicit and tests that contract.
+
+**Candidate-blind reserves (running from 13:16 EDT):** roles remain fixed
+before any candidate exists: john2 selection seeds `2027073750..69`, john3
+verdict `2027073770..89`, and john4 independent replication
+`2027073790..3809`, each 20 seeds / 1,600 roots at the identical raw-v4
+contract. Corrected chain PIDs are `2465 / 69950 / 33569`; live child commands
+were verified to use role-specific sidecars, and all three published their
+first seed by 13:19. These are not extra fit data and cannot influence the
+existing pilot. The arming script cannot fetch, train, or address john0.
 Canonical reserve harvest is
 `cascadiav3/scripts/fetch_structured_q_reserve_holdouts.sh`. It refuses any
 live chain, requires passing reports plus the completion sentinel, verifies

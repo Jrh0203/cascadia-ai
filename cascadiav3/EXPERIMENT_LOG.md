@@ -4706,3 +4706,50 @@ The new CLI path also passed against the real locked corpus with exact domains:
 3 shards, 30 seeds, 2,400 records, 1,113,755 actions, 9,240 q-valid actions,
 and 120 exact rows. Final Python gate: 168/168 passing with 45 expected
 fixture-dependent skips; `git diff --check` passed.
+
+## 2026-07-09 13:19 — Expansion audited; manifest-boundary failure repaired
+
+All three expansion producers completed successfully:
+
+| Host | Seeds | Seconds | Roots | Actions | NPZ SHA-256 |
+|---|---|---:|---:|---:|---|
+| john2 | 2027073600..49 | 3792.6 | 4,000 | 1,771,087 | `225aeff6dd73e0902b1786d09f8236e7e8c53301beda82441b70c05d0429e74f` |
+| john3 | 2027073650..99 | 3813.3 | 4,000 | 1,791,934 | `0447d69bff7bef39261ef8cfd09bb37e6cbf2bf5545ac82eff3516615776b69a` |
+| john4 | 2027073700..49 | 3806.3 | 4,000 | 1,736,266 | `5dc0860dca996a719d87f2aae33f88e50238bbb37e45536dce96380e3d041959` |
+
+The completion boundary caught a launch defect rather than accepting a
+partial artifact. The ad hoc expansion commands set `--out` but omitted
+`--manifest`, so each exporter wrote its valid sidecar to the CLI default
+`cascadiav3/fixtures/real_roots_manifest.json`. The expected sidecars were
+absent; all validator shells exited before summary generation, and all three
+reserve chains then exited on the missing summary. No reserve NPZ or manifest
+was created.
+
+For each host, the generated default manifest checksum exactly matched the
+681–683 MiB expansion NPZ and declared 4,000 v4 records, the exact expected
+seed domain, corrected rules, source `6e89d955...`, and the fixed teacher
+manifest/weights. That generated sidecar was copied to the declared artifact
+path, the summary and Q-identity validators were rerun, and both reports
+passed. The failed chain logs and PID files were preserved under
+`.failed_manifest_path` names. This is deterministic artifact recovery, not
+data regeneration or relabeling.
+
+Commit `4cd9c728` adds the missing role-specific `--manifest` argument to the
+permanent reserve launcher and a regression assertion. Targeted six-test and
+full 168-test Python gates passed with 45 expected fixture skips; shell syntax
+and whitespace checks passed. Corrected reserve chains launched at 13:16 EDT:
+selection PID `2465`, verdict `69950`, replication `33569`. Their exporter
+children were observed with exact sidecar paths, no premature NPZs, and all
+three completed their first seed by 13:19.
+
+The canonical expansion harvest then hash-matched all three hosts and ran the
+six-shard audit against the locked pilot. Result: pass; 150 seeds, 12,000
+records, 5,299,287 actions, 46,200 q-valid actions, 600 exact rows, maximum
+Q-identity error `3.8146973e-6`, and zero afterstate/terminal component-sum
+error. Expansion final means are `91.485 / 91.885 / 91.490`; total score-to-go
+means `45.846 / 46.001 / 45.701`; Nature-negative fractions
+`10.00% / 6.82% / 8.79%`; selected-teacher RMSE
+`3.169 / 3.375 / 3.287`; q-valid means are exactly `3.85`. Audit SHA-256:
+`e1edbad3552abef2321808666948f299fbf3ba226b948d50a2314b696fb5eb14`.
+The data remains local quarantined fit inventory; nothing was copied to john0
+or added to a training command.
