@@ -3156,3 +3156,23 @@ select {
 }
 .candidate-play:hover:not(:disabled) { background: var(--line-strong); }
 .candidate-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Suggestion wildlife target + candidate row overflow fixes */
+.hex-suggested-wildlife {
+  fill: none;
+  stroke: #ffcc00;
+  stroke-width: 2.5;
+  pointer-events: none;
+  animation: hexSuggestPulse 1.5s ease-in-out infinite;
+}
+.v1-layout { grid-template-columns: 280px minmax(0, 1fr) 300px; }
+.candidate-row { min-width: 0; }
+.candidate-desc {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.candidate-value { flex-shrink: 0; }
+.candidate-play { flex-shrink: 0; }

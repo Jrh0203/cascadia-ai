@@ -36,6 +36,7 @@ interface HexBoardProps {
   draftedWildlife: Wildlife | null;
   preview: PreviewTile | null;
   suggestedCoord: HexCoord | null;
+  suggestedWildlife: HexCoord | null;
   onSelectCoord: (coord: HexCoord) => void;
   onSelectWildlife: (coord: HexCoord) => void;
 }
@@ -89,6 +90,7 @@ export function HexBoard({
   draftedWildlife,
   preview,
   suggestedCoord,
+  suggestedWildlife,
   onSelectCoord,
   onSelectWildlife,
 }: HexBoardProps) {
@@ -224,6 +226,14 @@ export function HexBoard({
               points={cornerPoints(suggestedCoord)
                 .map(([x, y]) => `${x},${y}`)
                 .join(" ")}
+            />
+          )}
+          {suggestedWildlife && (
+            <circle
+              className="hex-suggested-wildlife"
+              cx={center(suggestedWildlife)[0]}
+              cy={center(suggestedWildlife)[1]}
+              r={HEX_SIZE * 0.34}
             />
           )}
         </g>

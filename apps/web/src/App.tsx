@@ -796,6 +796,11 @@ export default function App() {
                 ? suggestion.action.tile.coord
                 : null
             }
+            suggestedWildlife={
+              suggestion && selectedPlayer === currentPlayer && isHumanTurn
+                ? suggestion.action.wildlife
+                : null
+            }
             onSelectCoord={selectPlacement}
             onSelectWildlife={(coord) => {
               setSelectedWildlife(coord);
