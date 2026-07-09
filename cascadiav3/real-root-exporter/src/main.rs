@@ -83,6 +83,7 @@ struct Args {
     gumbel_market_decision_samples: usize,
     gumbel_exact_endgame_turns: usize,
     gumbel_blend_weight: f64,
+    gumbel_parallel_leaf_rollouts: bool,
     gumbel_exploration: bool,
     gumbel_peek: bool,
     gumbel_table_total: bool,
@@ -351,6 +352,7 @@ fn parse_args() -> Result<Args> {
         gumbel_market_decision_samples: 8,
         gumbel_exact_endgame_turns: 0,
         gumbel_blend_weight: 0.5,
+        gumbel_parallel_leaf_rollouts: false,
         gumbel_exploration: false,
         gumbel_peek: false,
         gumbel_table_total: false,
@@ -450,6 +452,7 @@ fn parse_args() -> Result<Args> {
                 args.gumbel_blend_weight =
                     value()?.parse().context("invalid --gumbel-blend-weight")?
             }
+            "--gumbel-parallel-leaf-rollouts" => args.gumbel_parallel_leaf_rollouts = true,
             "--gumbel-exploration" => {
                 args.gumbel_exploration = match value()?.as_str() {
                     "on" | "true" | "1" => true,
@@ -717,6 +720,9 @@ Options:
   --gumbel-blend-weight <w>
                            Leaf value = w*model bootstrap + (1-w)*greedy
                            rollout [0.5].
+  --gumbel-parallel-leaf-rollouts
+                           Resolve independent terminal greedy rollouts on the
+                           Rayon pool; deterministic opt-in execution ablation.
   --gumbel-exploration <on|off>
                            Gumbel exploration noise at the root [off; selfplay
                            mode defaults on].
@@ -2555,6 +2561,7 @@ fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfi
         market_decision_samples: args.gumbel_market_decision_samples,
         exact_endgame_turns: args.gumbel_exact_endgame_turns,
         rollout_blend_weight: args.gumbel_blend_weight,
+        parallel_leaf_rollouts: args.gumbel_parallel_leaf_rollouts,
         rollout_max_actions: args.max_actions,
         rollout_top_k: args.rollout_top_k,
         k_interior: args.k_interior,
@@ -3103,6 +3110,7 @@ fn gumbel_search_metadata(args: &Args, result: &gumbel::GumbelSearchResult) -> V
         "market_decision_samples": args.gumbel_market_decision_samples,
         "exact_endgame_turns": args.gumbel_exact_endgame_turns,
         "rollout_blend_weight": args.gumbel_blend_weight,
+        "parallel_leaf_rollouts": args.gumbel_parallel_leaf_rollouts,
         "exploration": args.gumbel_exploration,
         "k_interior": args.k_interior,
         "max_root_actions": args.gumbel_max_root_actions,
@@ -3449,6 +3457,7 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                 "market_decision_samples": args.gumbel_market_decision_samples,
                 "exact_endgame_turns": args.gumbel_exact_endgame_turns,
                 "rollout_blend_weight": args.gumbel_blend_weight,
+                "parallel_leaf_rollouts": args.gumbel_parallel_leaf_rollouts,
                 "exploration": args.gumbel_exploration,
                 "peek": args.gumbel_peek,
                 "table_total": args.gumbel_table_total,
@@ -3623,6 +3632,7 @@ fn play_gumbel_policy_game_seed(
             "market_decision_samples": args.gumbel_market_decision_samples,
             "exact_endgame_turns": args.gumbel_exact_endgame_turns,
             "rollout_blend_weight": args.gumbel_blend_weight,
+            "parallel_leaf_rollouts": args.gumbel_parallel_leaf_rollouts,
             "exploration": args.gumbel_exploration,
             "k_interior": args.k_interior,
         },
@@ -5780,6 +5790,7 @@ mod tests {
             gumbel_market_decision_samples: 2,
             gumbel_exact_endgame_turns: 0,
             gumbel_blend_weight: 1.0,
+            gumbel_parallel_leaf_rollouts: false,
             gumbel_exploration: false,
             gumbel_max_root_actions: None,
             gumbel_root_menu: 64,

@@ -2665,6 +2665,7 @@ class GumbelBatchRunnerTest(unittest.TestCase):
                 rollout_top_k=2,
                 model_timeout_ms=120_000,
                 exploration=False,
+                parallel_leaf_rollouts=True,
             )
         results = collect_gumbel_results(lines)
         categories = summarize_score_categories(results)
@@ -2688,6 +2689,7 @@ class GumbelBatchRunnerTest(unittest.TestCase):
                 all(decision["total_simulations_run"] == 0 for decision in exact_decisions)
             )
             self.assertEqual(result["done"]["search"]["exact_endgame_turns"], 1)
+            self.assertTrue(result["done"]["search"]["parallel_leaf_rollouts"])
 
 
 class ValidationCliTest(unittest.TestCase):

@@ -163,6 +163,7 @@ def run_gumbel_games(
     table_native_q: bool = False,
     leaf_softmix: float | None = None,
     tta_rotations: int = 1,
+    parallel_leaf_rollouts: bool = False,
 ) -> list[dict[str, Any]]:
     command = [
         str(binary),
@@ -193,6 +194,7 @@ def run_gumbel_games(
         str(exact_endgame_turns),
         "--gumbel-blend-weight",
         str(blend_weight),
+        *(["--gumbel-parallel-leaf-rollouts"] if parallel_leaf_rollouts else []),
         "--gumbel-exploration",
         "on" if exploration else "off",
         *(["--gumbel-peek"] if peek else []),
@@ -274,6 +276,7 @@ def run_gumbel_games_batch(
     table_native_q: bool = False,
     leaf_softmix: float | None = None,
     tta_rotations: int = 1,
+    parallel_leaf_rollouts: bool = False,
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
     process per contiguous seed run (one process total for the usual
@@ -310,6 +313,7 @@ def run_gumbel_games_batch(
             str(exact_endgame_turns),
             "--gumbel-blend-weight",
             str(blend_weight),
+            *(["--gumbel-parallel-leaf-rollouts"] if parallel_leaf_rollouts else []),
             "--gumbel-exploration",
             "on" if exploration else "off",
             *(["--gumbel-peek"] if peek else []),
@@ -512,6 +516,7 @@ def run_gumbel_benchmark(
     q_risk_mode: str = "mean",
     policy_mode: str = "logits",
     pairwise_policy_top_k: int = 16,
+    parallel_leaf_rollouts: bool = False,
 ) -> dict[str, Any]:
     execution = execution_provenance(
         batch_runner=batch_runner,
@@ -576,6 +581,7 @@ def run_gumbel_benchmark(
                 table_native_q=table_native_q,
                 leaf_softmix=leaf_softmix,
                 tta_rotations=tta_rotations,
+                parallel_leaf_rollouts=parallel_leaf_rollouts,
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -612,6 +618,7 @@ def run_gumbel_benchmark(
                     table_native_q=table_native_q,
                     leaf_softmix=leaf_softmix,
                     tta_rotations=tta_rotations,
+                    parallel_leaf_rollouts=parallel_leaf_rollouts,
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -747,6 +754,7 @@ def run_gumbel_benchmark(
             "market_decision_samples": market_decision_samples,
             "exact_endgame_turns": exact_endgame_turns,
             "blend_weight": blend_weight,
+            "parallel_leaf_rollouts": parallel_leaf_rollouts,
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
             "q_risk_mode": q_risk_mode,
@@ -895,6 +903,11 @@ def main() -> int:
         help="Leaf bootstrap softmix temperature (default: classic max-Q)",
     )
     parser.add_argument("--gumbel-blend-weight", type=float, default=0.5)
+    parser.add_argument(
+        "--gumbel-parallel-leaf-rollouts",
+        action="store_true",
+        help="Resolve independent terminal greedy rollouts on the Rust Rayon pool",
+    )
     parser.add_argument("--k-interior", type=int, default=16)
     parser.add_argument("--gumbel-max-root-actions", type=int, default=0, help="0 keeps the full legal set")
     parser.add_argument("--control", choices=["full-search", "none"], default="full-search")
@@ -965,6 +978,7 @@ def main() -> int:
         q_risk_mode=args.q_risk_mode,
         policy_mode=args.policy_mode,
         pairwise_policy_top_k=args.pairwise_policy_top_k,
+        parallel_leaf_rollouts=args.gumbel_parallel_leaf_rollouts,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

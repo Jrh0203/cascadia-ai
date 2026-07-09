@@ -24,6 +24,7 @@ use cascadia_game::{GameSeed, GameState, MarketPrelude, score_game};
 use cascadia_sim::rank_greedy_actions;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use rayon::prelude::*;
 
 use crate::{CandidateAfterstate, candidate_afterstates, complete_with_sampled_greedy};
 
@@ -60,6 +61,11 @@ pub struct GumbelConfig {
     /// Leaf value = w * value bootstrap + (1-w) * sampled greedy terminal
     /// rollout. w=1.0 disables CPU rollouts entirely.
     pub rollout_blend_weight: f64,
+    /// Resolve independent terminal greedy rollouts through the global Rayon
+    /// pool after each batched model step. This is a pure execution change:
+    /// every simulation retains its own deterministic RNG stream and results
+    /// are committed in simulation order.
+    pub parallel_leaf_rollouts: bool,
     /// Sampled-greedy rollout parameters for the (1-w) branch.
     pub rollout_max_actions: usize,
     pub rollout_top_k: usize,
@@ -115,6 +121,7 @@ impl Default for GumbelConfig {
             market_decision_samples: 8,
             exact_endgame_turns: 0,
             rollout_blend_weight: 0.5,
+            parallel_leaf_rollouts: false,
             rollout_max_actions: 8,
             rollout_top_k: 4,
             k_interior: 16,
@@ -418,6 +425,35 @@ struct InteriorRowGroup {
     actual_accept_index: Option<usize>,
 }
 
+struct LeafRolloutTask {
+    simulation_index: usize,
+    state: GameState,
+    rollout_rng: ChaCha8Rng,
+    bootstrap: f64,
+}
+
+fn resolve_leaf_rollout(
+    mut task: LeafRolloutTask,
+    root_seat: usize,
+    table_value: bool,
+    rollout_max_actions: usize,
+    rollout_top_k: usize,
+    blend_weight: f64,
+) -> (usize, Result<f64>) {
+    let result = complete_with_sampled_greedy(
+        task.state,
+        rollout_max_actions,
+        rollout_top_k,
+        &mut task.rollout_rng,
+        None,
+    )
+    .map(|(terminal, _truncated)| {
+        let rollout = terminal_simulation_value(&terminal, root_seat, table_value);
+        blend_weight * task.bootstrap + (1.0 - blend_weight) * rollout
+    });
+    (task.simulation_index, result)
+}
+
 /// Advances every live simulation by one ply (batched model eval), resolving
 /// simulations that hit terminal states or leaf conditions.
 fn advance_simulations(
@@ -502,6 +538,7 @@ fn advance_simulations(
             .zip(evals)
             .map(Some)
             .collect::<Vec<_>>();
+        let mut leaf_rollouts = Vec::new();
         for group in row_groups {
             let branch_value = |row_index: usize| -> Result<f64> {
                 let Some((row, eval)) = evaluated[row_index].as_ref() else {
@@ -571,24 +608,16 @@ fn advance_simulations(
                         own_bootstrap
                     };
                     let w = cfg.rollout_blend_weight.clamp(0.0, 1.0);
-                    let value = if w >= 1.0 {
-                        bootstrap
+                    if w >= 1.0 {
+                        simulation.value = Some(bootstrap);
                     } else {
-                        let (terminal, _truncated) = complete_with_sampled_greedy(
-                            row.staged.clone(),
-                            cfg.rollout_max_actions,
-                            cfg.rollout_top_k,
-                            &mut simulation.rollout_rng,
-                            None,
-                        )?;
-                        let rollout = terminal_simulation_value(
-                            &terminal,
-                            root_seat,
-                            cfg.table_total || cfg.table_native_q,
-                        );
-                        w * bootstrap + (1.0 - w) * rollout
-                    };
-                    simulation.value = Some(value);
+                        leaf_rollouts.push(LeafRolloutTask {
+                            simulation_index: group.sim_index,
+                            state: row.staged,
+                            rollout_rng: simulation.rollout_rng.clone(),
+                            bootstrap,
+                        });
+                    }
                     continue;
                 }
             }
@@ -597,6 +626,33 @@ fn advance_simulations(
             let mut afterstates = row.afterstates;
             let chosen = afterstates.swap_remove(best_index);
             simulation.state = chosen.state;
+        }
+        if !leaf_rollouts.is_empty() {
+            let resolve = |task| {
+                resolve_leaf_rollout(
+                    task,
+                    root_seat,
+                    cfg.table_total || cfg.table_native_q,
+                    cfg.rollout_max_actions,
+                    cfg.rollout_top_k,
+                    cfg.rollout_blend_weight.clamp(0.0, 1.0),
+                )
+            };
+            // Indexed Rayon collection preserves task order. Errors are then
+            // surfaced sequentially, so enabling parallel execution does not
+            // make failure selection or committed simulation state depend on
+            // worker scheduling.
+            let resolved = if cfg.parallel_leaf_rollouts {
+                leaf_rollouts
+                    .into_par_iter()
+                    .map(resolve)
+                    .collect::<Vec<_>>()
+            } else {
+                leaf_rollouts.into_iter().map(resolve).collect::<Vec<_>>()
+            };
+            for (simulation_index, value) in resolved {
+                simulations[simulation_index].value = Some(value?);
+            }
         }
     }
 }
@@ -1606,6 +1662,37 @@ mod tests {
             visited_checked > 0,
             "test requires commonly visited actions"
         );
+    }
+
+    #[test]
+    fn parallel_leaf_rollouts_are_bit_identical() {
+        let game = test_state(2_026_070_650, 8);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |parallel_leaf_rollouts: bool| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(0x5eed);
+            cfg.n_simulations = 32;
+            cfg.top_m = 8;
+            cfg.rollout_blend_weight = 0.5;
+            cfg.parallel_leaf_rollouts = parallel_leaf_rollouts;
+            let result = gumbel_search(&root, &mut evaluator, &cfg).expect("search");
+            (result, evaluator.calls, evaluator.rows_seen)
+        };
+        let (serial, serial_calls, serial_rows) = run(false);
+        let (parallel, parallel_calls, parallel_rows) = run(true);
+
+        assert_eq!(serial_calls, parallel_calls);
+        assert_eq!(serial_rows, parallel_rows);
+        assert_eq!(serial.completed_q, parallel.completed_q);
+        assert_eq!(serial.value_variance, parallel.value_variance);
+        assert_eq!(serial.improved_policy, parallel.improved_policy);
+        assert_eq!(serial.visit_counts, parallel.visit_counts);
+        assert_eq!(serial.root_priors, parallel.root_priors);
+        assert_eq!(serial.root_value, parallel.root_value);
+        assert_eq!(serial.chosen_index, parallel.chosen_index);
+        assert_eq!(serial.simulations_run, parallel.simulations_run);
     }
 
     #[test]
