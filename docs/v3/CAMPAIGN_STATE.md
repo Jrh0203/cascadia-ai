@@ -35,6 +35,9 @@ n1024/d16 on the same fresh seeds. Log/pid:
 `cascadiav3/logs/rules_20260709_rebaseline.{log,pid}`. Canonical launcher:
 `cascadiav3/scripts/run_rules_20260709_rebaseline.sh`; every completed report
 is reused only when both rules ID and source revision match.
+Verdict watcher PID `1268022` waits for the chain and then writes
+`rules_20260709_rebaseline_verdict.{json,md}` with paired distq-minus-cycle4
+intervals at both budgets plus within-model scaling deltas.
 
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI

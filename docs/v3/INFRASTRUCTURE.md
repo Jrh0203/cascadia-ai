@@ -103,6 +103,10 @@ python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
    Key baselines: `gumbel_cycle4_gate_n256.json` (96.95, n256/d4),
    `gumbel_probe4_confirm_n1024_d16.json` (98.28, champion config),
    `gumbel_distq_k8_n256.json` (97.38), `gumbel_distq_k8_n1024_d16.json` (98.40).
+   For the corrected 2026-07-09 four-arm battery, run
+   `python -m cascadiav3.compare_rules_rebaseline --source-revision <rev>`;
+   it rejects rules, revision, seed, or budget mismatches before producing the
+   paired scalar-vs-distq and scaling verdicts.
 3. **EI cycle**: sed-derive from
    `logs/gumbel_selfplay_cycle6_job.sh` (generation n512/d8 w1.0 →
    filter top-64 → materialize relation tail → train M 25k steps with
