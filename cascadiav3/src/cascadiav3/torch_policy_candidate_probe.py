@@ -193,6 +193,8 @@ def run_probe(
     min_margin: float,
     min_snr: float,
     require_prior_top_k_parity: bool = False,
+    min_prior_top_k_overlap: float = 0.0,
+    require_prior_best_coverage_parity: bool = False,
 ) -> dict[str, Any]:
     import numpy as np
     import torch
@@ -203,6 +205,8 @@ def run_probe(
         raise ValueError("max_records must be nonnegative")
     if min_margin < 0.0 or min_snr < 0.0:
         raise ValueError("confidence thresholds must be nonnegative")
+    if not 0.0 <= min_prior_top_k_overlap <= 1.0:
+        raise ValueError("min_prior_top_k_overlap must be in [0, 1]")
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     baseline_model, baseline_payload, baseline_weights = _load_checkpoint(
         baseline_manifest, str(device)
@@ -382,6 +386,24 @@ def run_probe(
             "baseline full-menu top-K does not reproduce stored generator priors: "
             f"{prior_parity_matches}/{prior_parity_eligible}"
         )
+    prior_overlap_rate = (
+        prior_top_k_overlap_total / (prior_parity_eligible * top_k)
+        if prior_parity_eligible
+        else None
+    )
+    if prior_overlap_rate is not None and prior_overlap_rate < min_prior_top_k_overlap:
+        raise ValueError(
+            "baseline full-menu top-K overlap with stored generator priors is below gate: "
+            f"{prior_overlap_rate:.6f} < {min_prior_top_k_overlap:.6f}"
+        )
+    if (
+        require_prior_best_coverage_parity
+        and prior_best_coverage_agreements != prior_parity_eligible
+    ):
+        raise ValueError(
+            "baseline completed-Q-best coverage disagrees with stored generator priors: "
+            f"{prior_best_coverage_agreements}/{prior_parity_eligible}"
+        )
     non_exact_baseline = [row for row in baseline if not row["exact_endgame"]]
     non_exact_candidate = [row for row in candidate if not row["exact_endgame"]]
     return {
@@ -407,11 +429,7 @@ def run_probe(
             "non_exact_root_count": prior_parity_eligible,
             "exact_top_k_set_match_count": prior_parity_matches,
             "exact_top_k_set_match_rate": prior_parity_rate,
-            "mean_top_k_action_overlap_rate": (
-                prior_top_k_overlap_total / (prior_parity_eligible * top_k)
-                if prior_parity_eligible
-                else None
-            ),
+            "mean_top_k_action_overlap_rate": prior_overlap_rate,
             "minimum_top_k_action_overlap_rate": (
                 prior_top_k_overlap_min / top_k if prior_parity_eligible else None
             ),
@@ -421,7 +439,13 @@ def run_probe(
                 else None
             ),
             "mismatches": prior_mismatches,
-            "required": require_prior_top_k_parity,
+            "gates": {
+                "require_exact_top_k_set_parity": require_prior_top_k_parity,
+                "minimum_mean_top_k_action_overlap_rate": min_prior_top_k_overlap,
+                "require_completed_q_best_coverage_parity": (
+                    require_prior_best_coverage_parity
+                ),
+            },
         },
         "baseline": _finalize_checkpoint(baseline, top_k=top_k),
         "candidate": _finalize_checkpoint(candidate, top_k=top_k),
@@ -499,6 +523,8 @@ def main() -> None:
     parser.add_argument("--min-margin", type=float, default=0.25)
     parser.add_argument("--min-snr", type=float, default=1.0)
     parser.add_argument("--require-prior-top-k-parity", action="store_true")
+    parser.add_argument("--min-prior-top-k-overlap", type=float, default=0.0)
+    parser.add_argument("--require-prior-best-coverage-parity", action="store_true")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--summary-out", type=Path)
     args = parser.parse_args()
@@ -513,6 +539,8 @@ def main() -> None:
         min_margin=args.min_margin,
         min_snr=args.min_snr,
         require_prior_top_k_parity=args.require_prior_top_k_parity,
+        min_prior_top_k_overlap=args.min_prior_top_k_overlap,
+        require_prior_best_coverage_parity=args.require_prior_best_coverage_parity,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

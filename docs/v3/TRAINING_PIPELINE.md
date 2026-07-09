@@ -275,9 +275,10 @@ upstream policy projection without perturbing the established Q/value model:
 The training tensors may be filtered for bounded memory, but the routing gate
 may not. `python -m cascadiav3.torch_policy_candidate_probe` requires
 unfiltered training-eligible v3 shards and chunk-scores the exact full legal
-menu. Use `--require-prior-top-k-parity` to prove the baseline reproduces the
-generator's stored policy top-K before comparing candidate recall. A filtered
-top-K metric is not serving evidence.
+menu. Cross-host MPS boundary ties may swap a near-equal Kth action, so gate
+the baseline with `--min-prior-top-k-overlap 0.99
+--require-prior-best-coverage-parity`; exact set equality remains available
+for same-numerics audits. A filtered top-K metric is not serving evidence.
 
 ## Checkpoint Contract
 
