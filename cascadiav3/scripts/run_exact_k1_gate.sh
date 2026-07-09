@@ -17,6 +17,7 @@ RULESET_ID="cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
 MANIFEST="${MANIFEST:-cascadiav3/checkpoints/full_v3_gumbel_selfplay_cycle4/best_locked_val.manifest.json}"
 REPORT_DIR="${REPORT_DIR:-cascadiav3/reports}"
 LOG_DIR="${LOG_DIR:-cascadiav3/logs}"
+DEPLOYED_REVISION_FILE="${DEPLOYED_REVISION_FILE:-$LOG_DIR/exact_k1_deployed_revision.txt}"
 TAG="exact_k1_20260709_n256_d4"
 ZIG_VERSION="0.13.0"
 ZIG_ARCHIVE="zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
@@ -34,12 +35,18 @@ cd "$ROOT"
 mkdir -p "$REPORT_DIR" "$LOG_DIR"
 test -s "$MANIFEST"
 grep -q 'gumbel-exact-endgame-turns' cascadiav3/real-root-exporter/src/main.rs
-if [ "$(git rev-parse HEAD)" != "$SOURCE_REVISION" ]; then
-  echo "[exact-k1] SOURCE_REVISION does not match HEAD" >&2
-  exit 1
-fi
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "[exact-k1] refusing to run from a modified tracked worktree" >&2
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if [ "$(git rev-parse HEAD)" != "$SOURCE_REVISION" ]; then
+    echo "[exact-k1] SOURCE_REVISION does not match HEAD" >&2
+    exit 1
+  fi
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "[exact-k1] refusing to run from a modified tracked worktree" >&2
+    exit 1
+  fi
+elif [ ! -s "$DEPLOYED_REVISION_FILE" ] \
+  || [ "$(tr -d '[:space:]' < "$DEPLOYED_REVISION_FILE")" != "$SOURCE_REVISION" ]; then
+  echo "[exact-k1] source snapshot lacks the exact deployed revision marker" >&2
   exit 1
 fi
 
