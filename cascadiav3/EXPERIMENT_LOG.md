@@ -3524,3 +3524,38 @@ ordered 100-game program on fresh seeds `2027070900..2027070999` is:
 The Gumbel legs share identical seeds and policy settings so the scalar versus
 distributional-Q differences remain pairable. No strength or promotion claim
 is valid until the corrected reports finish.
+
+## 2026-07-09 01:38 — Rebaseline restarted with permanent refresh-decision telemetry
+
+The first corrected no-search floor completed, but a pre-Gumbel report audit
+found that the harness discarded Gumbel's temporary per-ply JSONL after
+reducing it to scores. That preserved final strength but lost the evidence
+needed to audit how often the newly corrected accept/decline policy actually
+fired. Stopped the still-young cycle4 n256 leg before it produced a report.
+
+Revision `d20daf44dc6aa4aad3d03c6ccb7d3a21c3013135` permanently adds:
+
+- persistent Gumbel decision JSONL for every benchmark;
+- report-level accept, decline, opportunity, and acceptance-rate counts;
+- chance-sample and total simulation-overhead accounting;
+- the same accept/decline telemetry for greedy/no-search games;
+- paired t/bootstrap confidence statistics in the no-search report.
+
+The replacement smoke passed with 80/80 decision rows retained. It encountered
+7 legal optional refreshes and chose accept 5 times / decline 2 times, direct
+runtime evidence that the policy is exercising both branches. All opportunities
+used the registered 8 chance samples. The corrected market decision added 976
+simulations above 1,280 chosen-branch simulations in this n16 smoke, a `76.25%`
+whole-game search overhead that must be included in serving-cost comparisons.
+
+The auditable battery is live as PID `1265148` / PGID `1265141` and is
+regenerating the same no-search floor before the four Gumbel legs.
+
+The regenerated no-search floor completed bit-for-bit on scores with 24,000
+decision rows retained. Over 100 paired seeds: greedy `87.5450`; cycle4 policy
+head `91.8425`, delta `+4.2975`, t-CI `[+3.8705,+4.7245]`; cycle4 Q head
+`90.8925`, delta `+3.3475`, t-CI `[+2.8507,+3.8443]`. Refresh telemetry was
+policy accept/decline `594/352`, Q `636/364`, greedy `1005/398`. Caveat: this
+interactive no-search harness delegates the pre-draw refresh decision to
+greedy-v1, then applies the model head to the revealed draft menu. The Gumbel
+legs test the search policy's own refresh choice. cycle4 n256/d4 is now live.

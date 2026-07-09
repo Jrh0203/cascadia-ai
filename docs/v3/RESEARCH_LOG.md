@@ -28,6 +28,26 @@ cannot promote a post-fix model or serve as paired controls. Greedy, no-search,
 and Gumbel baselines must be regenerated under rules semantics
 `cascadia-base-official-2026-07-09`.
 
+### Corrected no-search floor (2026-07-09)
+
+Fresh seeds `2027070900..2027070999`, 100 complete four-player games per arm,
+ruleset and exact source revision enforced:
+
+| Policy | Mean seat score | Paired delta vs greedy | 95% t-CI |
+|---|---:|---:|---:|
+| greedy-v1 | 87.5450 | — | — |
+| cycle4 policy head | **91.8425** | **+4.2975** | **[+3.8705,+4.7245]** |
+| cycle4 Q head | **90.8925** | **+3.3475** | **[+2.8507,+3.8443]** |
+
+All 24,000 per-ply rows are retained. Optional refresh was a real decision:
+the policy arm accepted/declined `594/352`, Q `636/364`, and greedy
+`1005/398`. The no-search interactive harness deliberately uses greedy-v1 to
+make the pre-draw market decision before the selected model head ranks the
+revealed draft, so this result proves the direct draft policy remains strongly
+above greedy under corrected rules; it is not evidence that the model head
+itself learned refresh choice. The in-flight Gumbel baselines make that choice
+through search and are the relevant evidence for that question.
+
 ---
 
 ## 1. Architecture

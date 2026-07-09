@@ -23,16 +23,27 @@ controls. Before resuming EI or a 100-point claim, regenerate greedy,
 no-search, n256/d4, and n1024/d16 baselines with the new rules identity and
 fresh promotion seeds.
 
-**Live corrected rebaseline on john0 (launched 07-09 01:21 EDT):** PID
-`1262885`, PGID `1262878`, source revision
-`863c696dd41e5b4c7e26385851201072a38c22f4`, seeds `2027070900..2027070999`,
+**Live corrected rebaseline on john0 (auditable restart 07-09 01:37 EDT):** PID
+`1265148`, PGID `1265141`, source revision
+`d20daf44dc6aa4aad3d03c6ccb7d3a21c3013135`, seeds `2027070900..2027070999`,
 and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
-the corrected rules ID plus exact source revision. The job is now running the
-100-game greedy/no-search floor, then sequentially runs cycle4 and distq_k8 at
-n256/d4 and n1024/d16 on the same fresh seeds. Log/pid:
+the corrected rules ID plus exact source revision, all 80 per-ply decision
+rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
+completed the 100-game greedy/no-search floor and is now running cycle4
+n256/d4, followed sequentially by distq_k8 n256/d4 and both models at
+n1024/d16 on the same fresh seeds. Log/pid:
 `cascadiav3/logs/rules_20260709_rebaseline.{log,pid}`. Canonical launcher:
 `cascadiav3/scripts/run_rules_20260709_rebaseline.sh`; every completed report
 is reused only when both rules ID and source revision match.
+
+**Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
+cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI
+`[+3.8705,+4.7245]`; cycle4 Q head `90.8925`, delta `+3.3475`, CI
+`[+2.8507,+3.8443]`. All 24,000 decisions are retained. Optional refresh
+accept/decline counts were policy `594/352`, Q `636/364`, and greedy
+`1005/398`. The interactive no-search harness uses greedy-v1 for this
+pre-draw market decision, then the named model head ranks the revealed draft;
+the Gumbel legs are the model/search-driven refresh-decision evidence.
 
 The old forced-refresh EI-1 generation and queued battery were stopped before
 deployment (PGIDs `1225249` and `1228689`). Its 825 partial games/66k roots
