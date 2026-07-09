@@ -4634,3 +4634,47 @@ score-to-go means `45.303 / 46.071 / 46.141`, Nature-negative fractions
 `2.9992 / 3.4929 / 3.5520`, and exactly `3.85` q-valid actions per root.
 The v2 JSON SHA is
 `720a2f84b9f02d28ceb4fb293274e78f6739394ff5b181e1272e269c61ba339b`.
+
+## 2026-07-09 12:48 — Candidate-blind structured-Q reserves preregistered
+
+Purpose: keep the data-only fleet productive after the 50-seed expansion and
+remove the next holdout-generation delay without allowing a future candidate
+to choose its own evaluation seeds. No candidate checkpoint exists, and this
+action does not fetch data, alter the john0 queue, or authorize training.
+
+The roles and disjoint seed blocks were fixed as follows:
+
+| Host | Role | Seeds | Planned roots | Sleeping chain PID |
+|---|---|---|---:|---:|
+| john2 | selection | 2027073750..69 | 1,600 | 97051 |
+| john3 | verdict | 2027073770..89 | 1,600 | 64988 |
+| john4 | replication | 2027073790..3809 | 1,600 | 30230 |
+
+Every reserve uses the current raw-v4 n8/top4/d1 contract: one
+determinization, eight optional-refresh samples, blend 0.5, K8 interior,
+exact K1, 80 plies per seed, full root menus, two concurrent games through a
+shared MPS bridge, and no model fallback. The launcher verifies source marker
+`6e89d9555f6126bdc29f65657d8431cab3d2c024`, teacher manifest SHA
+`b8886c24cd93e19299e8c4cca4dd7671fe16b685d54949de014d6f9d5aee616d`,
+and weights SHA
+`33559aab05324e74998164d4e59e7adec9fa3c77da531dd4797c718cf4cfd354`
+both before arming and after the preceding validator exits. A reserve starts
+only if its host's expansion summary and invariant reports both say `pass`.
+It then generates, summarizes, validates the completed-Q identity, and hashes
+the NPZ plus all sidecars locally. The script contains no fetch, admission,
+training, or john0 path.
+
+The first john2 arming attempt exposed a nested-shell quoting defect before it
+could start generation. PID `96777` exited, no reserve NPZ or manifest was
+created, and the stale chain PID/log were removed. The launcher now transfers
+the remote runner as base64, decodes it into one Bash program, and passes all
+eleven arguments positionally. Shell syntax and the targeted five-test suite
+passed before rearming.
+
+At the final live check, all three new chain PIDs, original exporter PIDs
+`90485 / 58489 / 26369`, and validator PIDs `90916 / 58926 / 26606` were
+alive. Each expansion had reached 30/50 seeds; every reserve chain log was
+zero bytes and every reserve artifact was absent, proving that the chains
+were waiting rather than generating early. Final local gate: 167/167 Python
+tests passed with 45 expected fixture-dependent skips; `bash -n` and
+`git diff --check` passed.

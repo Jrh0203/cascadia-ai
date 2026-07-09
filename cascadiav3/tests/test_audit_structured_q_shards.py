@@ -195,6 +195,23 @@ class AuditStructuredQShardsTest(unittest.TestCase):
         self.assertNotIn("john0:", script)
         self.assertIn("data remains quarantined", script)
 
+    def test_reserve_holdouts_are_preregistered_and_data_only(self) -> None:
+        script = (
+            Path(__file__).resolve().parents[1]
+            / "scripts"
+            / "arm_structured_q_reserve_holdouts.sh"
+        ).read_text(encoding="utf-8")
+        for host, current, reserve, seed in (
+            ("john2", "expansion_a", "reserve_selection", 2027073750),
+            ("john3", "expansion_b", "reserve_verdict", 2027073770),
+            ("john4", "expansion_c", "reserve_replication", 2027073790),
+        ):
+            self.assertIn(f"arm_one {host} {current} {reserve} {seed}", script)
+        self.assertIn("SEED_COUNT=20", script)
+        self.assertIn("current expansion validation failed", script)
+        self.assertIn("no fetch or training action", script)
+        self.assertNotIn("ssh john0", script)
+
 
 if __name__ == "__main__":
     unittest.main()

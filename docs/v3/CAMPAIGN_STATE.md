@@ -141,6 +141,20 @@ It refuses while any producer or validator is live, verifies passing remote
 reports and remote/local NPZ plus manifest hashes, fetches all six artifact
 types, then runs the six-shard audit. It has no john0 or training copy path.
 
+Three candidate-blind reserve roles were preregistered before any structured-Q
+candidate exists and chained behind the current per-host validators. If and
+only if those validators publish passing summary and invariant reports, john2
+will generate `reserve_selection` on seeds `2027073750..69`, john3 will
+generate `reserve_verdict` on `2027073770..89`, and john4 will generate
+`reserve_replication` on `2027073790..3809`. Each is a 20-seed / 1,600-root
+raw-v4 block at the identical n8/top4/d1 contract. Sleeping chain PIDs are
+`97051 / 64988 / 30230`; at 12:50 EDT all three original producers and
+validators were still live at 30/50 seeds, all chain logs were empty, and no
+reserve artifact existed. These roles are fixed: they are not extra fit data,
+cannot influence the existing pilot, and cannot be fetched or used for
+training by the arming script. Source and teacher hashes are checked both when
+the chain is armed and immediately before generation.
+
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI
 `[+3.8705,+4.7245]`; cycle4 Q head `90.8925`, delta `+3.3475`, CI

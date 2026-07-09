@@ -104,6 +104,10 @@ Important runners:
   quarantined john2–john4 expansion; refuses live/partial jobs, rechecks remote
   and local hashes, fetches validation artifacts, and runs the six-shard audit
   without copying anything to john0 or a training input)
+- `arm_structured_q_reserve_holdouts.sh` (preregisters and chains three
+  data-only 20-seed selection/verdict/replication reserves after the current
+  fleet validators pass; fixed before any structured candidate exists and
+  performs no fetch, admission, or training action)
 - `python -m cascadiav3.compare_game_categories` (fail-closed same-seed
   wildlife/habitat/Nature attribution for two candidate-only game ledgers;
   binds both ledgers to passing reports and checks that per-category deltas sum

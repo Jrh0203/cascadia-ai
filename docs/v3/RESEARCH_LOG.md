@@ -509,6 +509,16 @@ passes, the expected 12,000 additional roots remove data-generation latency
 from a larger fit-capacity follow-up; if it fails, they remain unused evidence
 rather than licensing another objective search.
 
+The next three blocks are also fixed before candidate creation, but as
+holdouts rather than fit capacity: selection seeds `2027073750..69`, verdict
+seeds `2027073770..89`, and independent replication seeds
+`2027073790..3809`, each 1,600 roots at the same raw-v4 contract. They are
+chained behind the current host-local validators and start only if those
+reports pass. This ordering removes future data latency without permitting
+candidate-dependent seed choice. The arming path cannot fetch, admit, train,
+or address john0, and the three semantic roles must remain separate in any
+follow-up design.
+
 Raw-v4 admission is now a permanent cross-shard check rather than a manual
 manifest comparison. `audit_structured_q_shards` reopens every NPZ, binds it
 to its sidecar checksum/metadata/counts, verifies selected-Q and exact
