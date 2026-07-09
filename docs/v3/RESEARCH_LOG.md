@@ -321,6 +321,21 @@ broken. Fleet (john1-4) concurrently generating a distq supplementary
 corpus (held out for a safety-tested low-weight fold-in; never
 auto-folded, per the cycle-5 poisoning lesson).
 
+**Quantile-aware serving kill test (corrected rules, 2026-07-09): no CUDA
+gate.** The bridge now exposes provenance-recorded q25/q50/q75 statistics
+without changing default mean serving. On 160 deterministic full-menu roots
+(40,776 actions), the trained K8 head had zero adjacent-head crossings.
+q25/q50/q75 changed direct derived-Q argmax on only
+`3.125%/2.500%/1.875%` of roots, with average mean-Q regret under `0.0001`.
+Search amplifies those small changes into distinct trajectories, but the
+same-host n64/d4 screen did not establish a useful direction: q50 was flat
+(`95.00` vs `95.00`, one seed), q75 was `-1.25` (`95.00` vs `96.25`, one
+seed), and the extended q25 pairs were `+2.25/-0.25/-1.25` (`95.25` vs
+`95.00`, mean `+0.25`, n=3, CI `[-4.23,+4.73]`, wall ratio `1.042x`). This is
+engineering-only evidence. Standalone risk serving is screened out; keep the
+modes as cheap policy-diversity controls for a future league, not as a current
+strength claim.
+
 ### 4.5 Market-refill chance-node expectimax — DEPRIORITIZED (evidence)
 
 The oracle experiment already bounds this: an oracle on the true hidden
@@ -390,8 +405,9 @@ No points directly; halves the cost of every probe and EI cycle.
 4. **Distributional-Q expert iteration** — PAUSED at the rules boundary.
    The legacy quantile head broke training-side saturation (+0.43 CI+ at
    n256), but the corrected paired verdict owns the next decision. If it
-   survives, resume EI with corrected-policy data; next knobs are K=16,
-   quantile-aware serving, and a distq + L capacity retry.
+   survives, resume EI with corrected-policy data; next training knobs are
+   K=16 and a distq + L capacity retry. Quantile-aware serving is implemented
+   but its fixed-root/n=3 screen did not justify a standalone CUDA gate.
 5. **Table-native q head (cycle-7)** — staged but parked: serving-side
    table objectives measured CI− twice (noise multiplier); the
    training-side variant is theoretically distinct (labels average away

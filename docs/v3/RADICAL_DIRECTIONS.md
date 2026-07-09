@@ -144,6 +144,12 @@ emits score_decomposition per seat). Serving: sum the heads instead of
 reading q. Kill-test: one cycle-6-style ablation (identical data/recipe,
 decomposed head vs distq) — the distq playbook, re-run.
 
+**Implementation audit (2026-07-09).** The existing `score_decomposition`
+auxiliary is root-level (`score_head(root_h)`), not action-conditioned. It
+cannot honestly replace per-action Q at serving. This direction therefore
+requires a new action-conditioned decomposition head plus retraining; it is
+not a free serving ablation of the current checkpoint.
+
 ## 6. League self-play (break the self-play attractor)
 
 **Idea.** Fresh-M from scratch converged to the *same point* as champion
@@ -160,6 +166,14 @@ distq quantile head makes personality variants free, which is new.
 **Sketch.** Generation seats draw manifests/serving-configs from a pool;
 one EI cycle; standard ablation battery. Cheap to try once EI-1's verdict
 says whether the flywheel is even turning again.
+
+**Risk-personality preflight (2026-07-09).** q25/q50/q75 serving is now
+implemented with explicit provenance and coherent quantile interpolation.
+The modes do change trajectories, but q25's three-seed n64/d4 result was only
+`+0.25` (`95.25` vs `95.00`, CI spanning roughly -4.2 to +4.7); q50 was flat
+and q75 negative in their one-seed screens. That kills risk shifting as a
+standalone strength gate, not as a league-diversity mechanism. League work
+remains gated on the corrected-rules distq/EI verdict.
 
 ## Explicitly not on this list
 

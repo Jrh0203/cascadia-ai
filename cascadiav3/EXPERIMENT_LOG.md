@@ -3815,3 +3815,55 @@ a negative directional screen and does not authorize XS distillation. Hold
 for the CUDA production-packed multiplier and corrected-distq verdict. The
 validated nine-arm summary SHA-256 is
 `44957b49d4fa5b2dd6df953f9419a210fc9e228aebbc4ff42b5556088f40921e`.
+
+## 2026-07-09 06:05 — Quantile-risk serving changes trajectories but has no gate-scale signal
+
+Purpose: test the cheapest remaining distributional-Q ablation before
+spending training compute. The K8 checkpoint already emits eight per-action
+score-to-go quantiles; established serving averages them. Source `ef5499b7`
+adds explicit q25/q50/q75 selection, linear interpolation at the centered
+quantile levels, per-action monotone rearrangement for crossed heads, mode
+provenance in the bridge hello and benchmark report, scalar-checkpoint
+rejection, and a fixed-root diagnostic. Default mean serving is unchanged.
+
+The exact-revision fixed-root probe ran on john2 MPS against 160 deterministic
+corrected-rules greedy-policy roots with full 256-action menus (40,776 total
+actions). Root source SHA was
+`39f2285a236a184b6f11de3233f108057d9bac680c356b1161b989c2e0c05ff8`;
+selected packed payload SHA was
+`1ef2b966f566462b4ef38dab63faf1bc6df104e1fe1fb357906626f22b31ec25`;
+manifest SHA was
+`02fa7ccab88e2313363882d5251d9b44ae364a05eb23f4045725803da9bd6533`
+and weights SHA was
+`8d0272c971bcaae407fd23f3f47daae6fa50d8326a4af76243046c038c041f40`.
+All 285,432 adjacent quantile pairs were ordered already, so rearrangement was
+a safety invariant rather than an active correction. Direct derived-Q argmax
+flip rates versus mean were q25 `5/160 (3.125%)`, q50 `4/160 (2.500%)`, q75
+`3/160 (1.875%)`. Average within-model mean-Q regret was
+`0.000065/0.000096/0.000058`; the head's risk shift is mostly common-mode
+rather than action-ranking information. Report SHA:
+`0c57c8fa1b0f1def6c70a038325885da499e148631f3ec3fc0009b2fec1c0f9b`.
+
+The end-to-end kill test used the same exact source, rebuilt exporter SHA
+`05118990835d9517e60a85aa665eaff2559cdb0a4a4db784434585c4cf82a250`,
+distq M, n64/top16/d4, blend 0.5, K16 interior, four market samples, one
+worker, and fresh seeds `2027071900..1902`. Every report, 80-ply decision
+ledger, and raw score-category game row passed source/rules/search/seed and
+category-sum validation.
+
+| Host/seed | Mode | Mean | Candidate | Delta | First divergence | Wall ratio |
+|---|---|---:|---:|---:|---:|---:|
+| john2/1900 | q25 | 93.75 | 96.00 | +2.25 | 2 | 0.918x |
+| john3/1901 | q25 | 95.00 | 94.75 | -0.25 | 20 | 1.332x |
+| john4/1902 | q25 | 96.25 | 95.00 | -1.25 | 2 | 0.877x |
+| john3/1901 | q50 | 95.00 | 95.00 | 0.00 | 21 | 0.925x |
+| john4/1902 | q75 | 96.25 | 95.00 | -1.25 | 2 | 1.230x |
+
+q25 pooled only as a directional engineering screen: `95.25` versus `95.00`,
+paired delta `+0.25`, n=3, 95% t-CI `[-4.228,+4.728]`; mean wall ratio
+`1.042x`. The first seed's apparent win did not replicate. Verdict: do not
+spend john0 time on a standalone q-risk gate and keep production at the mean.
+The modes remain useful as essentially free, genuinely trajectory-diverse
+league personalities if the corrected-rules distq/EI line survives. The
+fail-closed 32-artifact aggregate SHA is
+`5304b88265c7d698635be8ba4d08b2e85dcf22654b563b3782b60aa96e71f42b`.

@@ -133,6 +133,26 @@ strength verdict. A same-tool CUDA probe remains queued after exact K1 and
 before the sample-count gate; only materially better whole-search leverage or
 a stronger/distq student can reopen training.
 
+**Distributional-Q risk-serving kill test (07-09):** source `ef5499b7` adds
+explicit mean/q25/q50/q75 bridge modes, records the mode in bridge/report
+provenance, rejects scalar checkpoints before launch, and monotonically
+rearranges independent heads before interpolation (the existing mean is
+unchanged). A fixed corrected-rules corpus of 160 full-menu roots / 40,776
+actions found zero crossed adjacent heads. q25/q50/q75 changed the direct
+derived-Q argmax on only `3.125% / 2.500% / 1.875%` of roots; their average
+mean-policy-Q regret was below `0.0001`. In same-host n64/d4 gameplay, q50 was
+score-flat on one seed and q75 was `-1.25` on one seed. q25 was extended to
+all three precomputed mean-control seeds: deltas `+2.25/-0.25/-1.25`, mean
+`95.25` versus `95.00` (`+0.25`, n=3, 95% t-CI
+`[-4.23,+4.73]`), with `1.042x` mean wall ratio. Risk serving clearly changes
+trajectories (first divergences at plies 2/20/2 for q25) but has too little
+fixed-root ranking leverage and no directional gameplay case for a CUDA gate.
+Keep mean as production default; retain q25/q75 only as cheap future league-
+diversity personalities if corrected-rules EI survives. Fixed-root report SHA
+`0c57c8fa1b0f1def6c70a038325885da499e148631f3ec3fc0009b2fec1c0f9b`;
+validated 32-artifact gameplay summary SHA
+`5304b88265c7d698635be8ba4d08b2e85dcf22654b563b3782b60aa96e71f42b`.
+
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process
 trees were killed and verified absent; no Fleet5 shard artifact existed to

@@ -35,8 +35,10 @@ class CascadiaFormerConfig:
     gradient_checkpointing: bool = False
     model_name: str = "CascadiaFormer-S-v1"
     # >1 turns the scalar score-to-go head into a quantile head (pinball
-    # loss); the serving "q" output is the quantile mean, so bridges and
-    # search need no changes. 1 keeps the legacy scalar head bit-for-bit.
+    # loss). The ordinary "q" output remains the quantile mean for backward
+    # compatibility; the bridge can explicitly select a provenance-recorded
+    # quantile-risk mode for research ablations. 1 keeps the legacy scalar
+    # head bit-for-bit.
     q_quantiles: int = 1
 
     def to_dict(self) -> dict[str, Any]:

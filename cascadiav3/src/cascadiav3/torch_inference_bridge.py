@@ -720,6 +720,17 @@ def select_score_to_go_for_risk(outputs: dict[str, Any], mode: str) -> Any:
     return quantiles[..., lower] * (1.0 - weight) + quantiles[..., lower + 1] * weight
 
 
+def validate_q_risk_manifest(manifest_payload: dict[str, Any], mode: str) -> None:
+    """Fail before model launch when a requested risk statistic is unavailable."""
+    if mode not in Q_RISK_MODES:
+        raise ValueError(f"unsupported q risk mode: {mode}")
+    if mode == "mean":
+        return
+    config = manifest_payload.get("config", manifest_payload)
+    if int(config.get("q_quantiles", 1)) <= 1:
+        raise ValueError(f"q risk mode {mode} requires a distributional-Q checkpoint")
+
+
 def _model_eval_batch(
     model,
     roots: list[dict[str, Any]],
@@ -914,6 +925,18 @@ def serve(
     manifest_payload = None
     if manifest is not None:
         manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+        try:
+            validate_q_risk_manifest(manifest_payload, q_risk_mode)
+        except ValueError as exc:
+            _response(
+                {
+                    "type": "error",
+                    "error": str(exc),
+                    "manifest": str(manifest),
+                    "q_risk_mode": q_risk_mode,
+                }
+            )
+            return 2
     load_checkpoint = checkpoint or manifest
     if load_checkpoint is not None:
         try:

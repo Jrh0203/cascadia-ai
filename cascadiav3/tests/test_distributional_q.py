@@ -52,7 +52,11 @@ class DistributionalQTest(unittest.TestCase):
         self._require_torch()
         import torch
 
-        from cascadiav3.torch_inference_bridge import select_score_to_go_for_risk
+        from cascadiav3.torch_inference_bridge import (
+            select_score_to_go_for_risk,
+            serve,
+            validate_q_risk_manifest,
+        )
 
         quantiles = torch.arange(8, dtype=torch.float32).view(1, 1, 8)
         outputs = {"q": quantiles.mean(dim=-1), "q_quantile_values": quantiles}
@@ -64,6 +68,34 @@ class DistributionalQTest(unittest.TestCase):
             select_score_to_go_for_risk({"q": torch.ones(1, 1)}, "q25")
         with self.assertRaisesRegex(ValueError, "unsupported q risk mode"):
             select_score_to_go_for_risk(outputs, "optimistic-ish")
+        validate_q_risk_manifest({"config": {"q_quantiles": 8}}, "q25")
+        validate_q_risk_manifest({"config": {"q_quantiles": 1}}, "mean")
+        with self.assertRaisesRegex(ValueError, "distributional-Q checkpoint"):
+            validate_q_risk_manifest({"config": {"q_quantiles": 1}}, "q25")
+
+        import contextlib
+        import io
+        import json
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "scalar.manifest.json"
+            manifest.write_text(
+                json.dumps({"config": {"q_quantiles": 1}}), encoding="utf-8"
+            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                return_code = serve(
+                    checkpoint=None,
+                    manifest=manifest,
+                    allow_dry_run_fallback=False,
+                    q_risk_mode="q25",
+                )
+            self.assertEqual(return_code, 2)
+            error = json.loads(output.getvalue())
+            self.assertEqual(error["type"], "error")
+            self.assertIn("distributional-Q checkpoint", error["error"])
 
         crossed = torch.tensor([[[7.0, 0.0, 6.0, 1.0, 5.0, 2.0, 4.0, 3.0]]])
         crossed_outputs = {

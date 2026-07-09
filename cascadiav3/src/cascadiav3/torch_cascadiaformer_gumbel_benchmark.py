@@ -29,7 +29,7 @@ from statistics import mean
 from typing import Any
 
 from .torch_benchmark_stats import paired_delta_stats
-from .torch_inference_bridge import Q_RISK_MODES
+from .torch_inference_bridge import Q_RISK_MODES, validate_q_risk_manifest
 from .torch_cascadiaformer_search_benchmark import (
     _percentile,
     parse_seeds,
@@ -447,6 +447,10 @@ def run_gumbel_benchmark(
         raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
     if model_service is not None and q_risk_mode != "mean":
         raise ValueError("non-mean q risk modes require the generated model service")
+    if q_risk_mode != "mean":
+        validate_q_risk_manifest(
+            json.loads(manifest.read_text(encoding="utf-8")), q_risk_mode
+        )
     service = model_service or default_model_service_command(
         manifest, device_name, q_risk_mode
     )
