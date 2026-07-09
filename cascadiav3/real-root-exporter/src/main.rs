@@ -3464,10 +3464,19 @@ fn suggest_for_request(
     };
     let result = gumbel::gumbel_search(&row, &mut evaluator, &cfg)
         .context("gumbel search for suggestion")?;
+    // The eval row auto-stages the free three-of-a-kind refresh (and any
+    // wipes) before ranking, so the candidate actions are relative to the
+    // STAGED market. Merge the prelude back in so the returned actions
+    // reproduce that market when applied to the real game state.
     let actions = row
         .afterstates
         .iter()
-        .map(|afterstate| serde_json::to_value(&afterstate.candidate.action))
+        .map(|afterstate| {
+            let mut action = afterstate.candidate.action.clone();
+            action.replace_three_of_a_kind = row.prelude.replace_three_of_a_kind;
+            action.wildlife_wipes = row.prelude.wildlife_wipes.clone();
+            serde_json::to_value(&action)
+        })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(json!({
         "type": "suggest_response",
