@@ -254,7 +254,33 @@ No points directly; halves the cost of every probe and EI cycle.
 
 ---
 
-## 5. Historical record (campaign to date, condensed)
+## 5. Future research directions (ranked, as of 07-08 evening)
+
+1. **Distributional-Q expert iteration** — ACTIVE (EI-1 overnight). The
+   quantile head broke training-side saturation (+0.43 CI+ at n256); the
+   open question is compounding. If EI cycles yield even +0.3 each, the
+   gate falls within a few cycles. Next knobs if EI-1 pays: K=16
+   quantiles, quantile-aware serving (risk-adjusted Q instead of mean),
+   distq + L capacity retry (capacity was closed for the SCALAR head).
+2. **Serving from john0-class latency** — engineering: multi-bridge
+   worker partitioning (~2× generation), single-stream CUDA serving for
+   interactive/certification use.
+3. **Table-native q head (cycle-7)** — staged but parked: serving-side
+   table objectives measured CI− twice (noise multiplier); the
+   training-side variant is theoretically distinct (labels average away
+   noise). Revisit only if the distq line stalls AND the gate's
+   cooperative reading is confirmed acceptable.
+4. **Search-shape re-sweep under distq** — the n1024/d16 peak was
+   established with the scalar head; a better value function can shift
+   the optimal sims/worlds trade (maybe fewer worlds needed → cheaper).
+5. **1,000-game certification** — run when a champion plausibly clears
+   ~99+ at 100g; currently premature.
+6. **Closed (do not re-propose without new evidence):** oracle/belief
+   modeling, checkpoint ensembles, leaf softmix, symmetry TTA,
+   chance-node expectimax, serving-side table-total, capacity/data
+   scaling for the scalar head. See §2/§4 for the measurements.
+
+## 6. Historical record (campaign to date, condensed)
 
 - **Baselines:** greedy 87.6 → no-search q-head 89.6 → rollout search
   96.97 (later found hidden-info-leaky; honest rebaseline lower) →

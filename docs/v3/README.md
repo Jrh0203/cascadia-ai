@@ -7,6 +7,14 @@ packed expert tensors with search-supervised action values.
 
 ## Canonical Docs
 
+- [Research Log](RESEARCH_LOG.md): **the experiment record** — architecture,
+  every direction tried with verdicts, scaling laws, decision-SNR
+  measurement, and ranked future directions.
+- [Infrastructure Runbook](INFRASTRUCTURE.md): how to operate john0 + the
+  mac-mini fleet — builds, job patterns, batteries/verdicts, seed registry,
+  fleet rules, and the web UI deployment.
+- [Campaign State](CAMPAIGN_STATE.md): live working state — read the RESUME
+  HERE section first when picking up work.
 - [Gumbel Self-Play Campaign](GUMBEL_SELFPLAY_CAMPAIGN.md): the active
   100-point plan — Gumbel search with neural leaf values, self-play data
   generation, phases, gates, and decision branches.
