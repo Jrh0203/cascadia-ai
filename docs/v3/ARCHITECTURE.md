@@ -172,6 +172,14 @@ seat by its own argmax derived final Q (max^n). A blend weight `w` mixes the
 value bootstrap with sampled greedy terminal rollouts while the value head
 earns trust; `w = 1.0` removes CPU rollouts entirely.
 
+At blended serving weights, each simulation owns an independent terminal
+rollout RNG stream. `--gumbel-parallel-leaf-rollouts` may resolve those tasks
+on the Rayon pool after a batched model step and then commits results in stable
+simulation order. It is therefore an execution-only option, not a policy
+change. The measured 2026-07-09 frontier improved one-game MPS latency by
+about 6% but was 0.7% slower with two concurrent shared-bridge games; batch
+batteries leave it disabled.
+
 **No-peek contract:** search may never observe the true hidden tile-stack or
 bag order. Every simulation redeterminizes hidden state before the root
 action is applied; the legacy rollout path honors the same contract behind

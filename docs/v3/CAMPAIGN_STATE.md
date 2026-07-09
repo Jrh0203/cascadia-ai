@@ -182,6 +182,20 @@ root-value drift, flat wall (`+0.57%`), and `-2.86%` mean decision time. The
 four-seed static arm was already balanced; validation SHA
 `e738e6a9948630ddc7a76a54fefc7d08bf0d9e417bda2ceb40aaa5a1c9958f0d`.
 
+**Parallel leaf-rollout execution frontier (07-09):** blended search's
+independent terminal greedy rollouts can now run on the Rayon pool behind
+`--gumbel-parallel-leaf-rollouts`, with stable per-simulation RNG streams,
+commit order, CLI/report provenance, and a fail-closed trace comparator. On
+two fixed distq-M n16/d2 MPS games, jobs1 improved wall/mean-decision time by
+`1.061x / 1.061x` with 0/160 action changes, identical scores/telemetry, and
+zero root-value drift. The required jobs2 concurrency control was slightly
+worse (`269.197s -> 271.043s`, `0.993x`); action/score parity still passed and
+maximum drift was `4.35e-7`. Keep the option for interactive single-game
+latency only. Do not enable it for fleet generation, promotion batteries, or
+the queued john0 jobs12 chain, and do not mistake this shallow CPU frontier
+for the still-open GPU-native whole-rollout direction. Comparison SHAs:
+jobs1 `c25f7aca...`; jobs2 `3680556a...`.
+
 **Corrected-rules n256 interim result (07-09):** cycle4 scored `97.0675` and
 distq-k8 mean serving scored `97.3075` on the same 100 seeds, a paired
 `+0.2400` with 95% t-CI `[-0.1139, +0.5939]` and bootstrap CI
@@ -224,9 +238,9 @@ more objective variants without materially new supervision or architecture
 and a new untouched root block. Exact recall probe SHA `5b5668bb...`; full
 record is in `cascadiav3/EXPERIMENT_LOG.md`.
 
-**Live john0 high-budget chain (07-09 09:38 EDT):** cycle4 n1024/d16 remains
+**Live john0 high-budget chain (07-09 10:15 EDT):** cycle4 n1024/d16 remains
 healthy under PID `1739796` / exporter `1739797`; the watcher has copied and
-validated 24/100 complete 81-row seed files after roughly 2h50m. Dynamic
+validated 32/100 complete 81-row seed files after roughly 3h27m. Dynamic
 scheduling is backfilling new seeds, and the exporter remains CPU-saturated.
 Distq-k8 n1024/d16 follows on the same fresh seeds, then the verdict watcher
 publishes the paired result. Do not use partial scores as a verdict and do not

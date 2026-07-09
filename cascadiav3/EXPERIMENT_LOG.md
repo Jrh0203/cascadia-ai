@@ -4192,3 +4192,74 @@ reports, metrics/logs, selected checkpoints, filter/invariant reports, three
 v3 tensors, exact probes, and source archive. The final Python 3.12 gate is
 135/135 passing with 45 expected fixture skips. After checksum verification,
 all policy-branch scratch trees were removed from john2 and john3.
+
+## 2026-07-09 10:12 — Parallel leaf rollouts cut single-game latency 6%; batch concurrency is flat
+
+Purpose: exploit the measured host CPU headroom without changing the serving
+objective. At blend 0.5, Gumbel search batches model evaluation across live
+simulations, but after each batch it previously completed every independent
+sampled-greedy terminal leaf serially. This is execution evidence only; no
+strength comparison or champion change is claimed.
+
+Exact source `2544183971befec94fd76dccd95105e664f5f8b1` adds opt-in
+`--gumbel-parallel-leaf-rollouts`. Leaf tasks carry their simulation's cloned
+ChaCha8 RNG state, execute on the global Rayon pool, and are committed in
+original simulation order. The established serial path remains the default.
+The option is plumbed through the Rust CLI and Python benchmark runner and is
+recorded in decision, game, report, and v3 self-play provenance. A unit test
+requires bit-identical completed-Q, variance, improved policy, visits, root
+priors/value, action, and simulation count. The deterministic source archive
+SHA-256 is `130bc95d985ebca100b4c46f0e080840e841362a485895322ce0bc7aeefdcb68`.
+
+The permanent `compare_gumbel_execution` gate validates passing corrected-
+rules candidate-only reports; source, search, execution topology, exporter,
+manifest, and weights identity; complete 80-ply decision coverage; exact
+action/refresh and score parity; simulation telemetry; category sums; and
+root-value drift no greater than `2e-5`. Its performance threshold is at least
+`1.05x` wall speedup. A mistyped source-revision argument on the first launch
+was detected immediately; that process tree was killed before a game/report,
+its directory was deleted, and both admitted arms were regenerated with the
+exact revision above.
+
+### Jobs1: positive interactive-latency frontier
+
+John2 ran serial then parallel on the same two seeds `2027073300..01`, exact
+same-host source/binary/checkpoint, distq M, n16/top8/d2, four market samples,
+blend 0.5, K16 interior, and one shared MPS bridge:
+
+| Metric | Serial | Parallel | Ratio |
+|---|---:|---:|---:|
+| whole-arm wall | 308.144s | 290.442s | **1.061x faster** |
+| mean decision | 1.922396s | 1.811754s | **1.061x faster** |
+| P50 decision | 1.061741s | 1.038425s | 1.022x faster |
+| P95 decision | 7.056486s | 6.498408s | **1.086x faster** |
+
+All 160 actions, refresh choices, scores, simulation telemetry, and root
+values were identical; maximum root-value drift was exactly zero. An
+independent john3 parallel execution took `290.677s` wall and
+`1.805942s`/decision, closely reproducing candidate timing. The same-host
+comparison JSON SHA-256 is
+`c25f7aca4e9bd33128e03d16e3dd11b42133545e4a0c9fbcf9c4398b2163db89`.
+
+### Jobs2: no batch-throughput gain
+
+John4 then ran the same seeds/config with both games concurrent against one
+shared bridge. Serial wall was `269.197s`; parallel was `271.043s`, a
+`0.993x` speed ratio (0.69% slower). Mean decision regressed
+`3.169206s -> 3.203971s`, and P95 regressed `11.334988s -> 11.864051s`.
+All 160 actions and scores remained identical. Cross-game request timing
+changed MPS reduction grouping slightly, but maximum root-value drift was only
+`4.354e-7`, far inside the preregistered `2e-5` execution tolerance.
+Comparison JSON SHA-256:
+`3680556a4614a1385734311e3653a9c720f703fafedc3cd48d0a5b2ab5d928b5`.
+
+**Verdict: keep the opt-in implementation for single-game/interactive
+latency; do not enable it for multi-game generation, promotion batteries, or
+the queued jobs12 CUDA sequence.** Existing game concurrency already consumes
+the host parallelism, so nested Rayon work adds overhead instead of throughput.
+This result does not close GPU-native rollout generation: eliminating the
+engine/device lockstep is materially different from oversubscribing CPU
+terminal rollouts. The complete exporter gate is 46/46 passing; the final
+Python 3.12 gate is 136/136 passing with 45 expected fixture skips. All
+checksum-verified artifacts are under ignored path
+`cascadiav3/reports/parallel_leaf_rollouts_20260709/`.

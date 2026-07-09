@@ -109,6 +109,17 @@ Gumbel exporter modes (see `--help`):
   choose by exact own final score on each seat's last personal turn. The
   model and simulations are bypassed for those four decisions; optional
   refresh acceptance is still decided before the hidden replacement draw.
+- `--gumbel-parallel-leaf-rollouts`: opt in to resolving independent blended
+  terminal greedy rollouts on the Rust Rayon pool. Simulation RNG streams and
+  commit order remain deterministic, and the mode is recorded in every search
+  artifact. Measured use is single-game latency only: jobs1 improved about 6%
+  on MPS, while jobs2 was flat/slightly slower, so production batch runners
+  keep it off.
+- `python -m cascadiav3.compare_gumbel_execution`: fail-closed execution-only
+  comparison for matched reports, decision ledgers, and game ledgers. It
+  requires source/search/execution/artifact identity, complete 80-ply traces,
+  action and score parity, bounded root-value drift, and a caller-visible wall
+  speedup threshold before passing the performance gate.
 - `python -m cascadiav3.compare_exact_endgame`: compare exact-off/K1 reports
   only after validating rules, source, checkpoint name, seeds, all other
   search settings, exact-decision counts, and identical action traces through

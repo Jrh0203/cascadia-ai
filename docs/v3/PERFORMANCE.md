@@ -224,6 +224,41 @@ throughput estimate. Dynamic source archive SHA is
 fail-closed validation artifact SHA is
 `e738e6a9948630ddc7a76a54fefc7d08bf0d9e417bda2ceb40aaa5a1c9958f0d`.
 
+### Parallel blended leaf rollouts
+
+Blended serving still performs a sampled greedy terminal rollout for every
+resolved simulation leaf. Those tasks are independent but were executed
+serially after each batched model step. Source `25441839` adds an explicit
+`--gumbel-parallel-leaf-rollouts` mode: each task carries its own cloned
+ChaCha8 RNG state, runs on the global Rayon pool, and is committed in original
+simulation order. The default remains serial. Search metadata records the
+mode, and a permanent comparator rejects incomplete traces, action/score
+changes, root-value drift above `2e-5`, or less than `1.05x` wall speedup.
+
+The same-host MPS jobs1 screen used distq M, two fixed corrected-rules seeds,
+n16/top8/d2, four market samples, blend 0.5, K16 interior, one shared bridge,
+and identical source/binary/checkpoint hashes. Serial versus parallel was
+`308.144s -> 290.442s` wall (`1.061x`) and
+`1.922396s -> 1.811754s` mean decision (`1.061x`); P95 improved
+`7.0565s -> 6.4984s`. All 160 actions, scores, simulation telemetry, and root
+values were exactly identical. An independent john3 candidate run took
+`290.677s`, closely replicating candidate wall time. Comparison SHA:
+`c25f7aca4e9bd33128e03d16e3dd11b42133545e4a0c9fbcf9c4398b2163db89`.
+
+The concurrency control on john4 ran the same two seeds with jobs2. Serial was
+`269.197s`; parallel was `271.043s` (`0.993x`, 0.69% slower). Mean decision
+also regressed `3.169206s -> 3.203971s`; P95 was
+`11.3350s -> 11.8641s`. All actions and scores remained identical; maximum
+root-value drift from shared-batch timing was only `4.35e-7`. Comparison SHA:
+`3680556a4614a1385734311e3653a9c720f703fafedc3cd48d0a5b2ab5d928b5`.
+
+Verdict: keep the option for single-game/interactive latency, but do not
+enable it for multi-game generation, gates, or the queued jobs12 CUDA chain.
+Existing game-level concurrency already consumes the available CPU parallelism;
+nested rollout work then adds scheduling contention rather than throughput.
+This does not close GPU-native whole-rollout work, which attacks the deeper
+engine/model lockstep boundary rather than oversubscribing host CPU.
+
 ## Tensor Export
 
 Rust-native greedy tensor export on `john0`:

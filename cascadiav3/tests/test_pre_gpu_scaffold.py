@@ -2442,6 +2442,136 @@ class BenchmarkStatsTest(unittest.TestCase):
                     exact_decisions_path,
                 )
 
+    def test_gumbel_execution_comparator_requires_exact_policy_parity(self) -> None:
+        from cascadiav3.compare_gumbel_execution import RULESET_ID, build_comparison
+
+        def report(parallel: bool, wall: float, mean_decision: float) -> dict[str, object]:
+            return {
+                "status": "pass",
+                "scientific_eligibility": "candidate_only_search_arm",
+                "ruleset_id": RULESET_ID,
+                "source_revision": "tested-revision",
+                "seeds": [1, 2],
+                "execution": {"runner": "gumbel-benchmark-batch", "requested_jobs": 1},
+                "search": {
+                    "n_simulations": 16,
+                    "determinizations": 2,
+                    "blend_weight": 0.5,
+                    "parallel_leaf_rollouts": parallel,
+                },
+                "artifacts": {
+                    "binary_sha256": "binary",
+                    "manifest_sha256": "manifest",
+                    "weights_sha256": "weights",
+                    "checkpoint_tag": "best",
+                    "checkpoint_step": 7,
+                    "q_quantiles": 8,
+                },
+                "control": {"kind": "none"},
+                "strategies": {
+                    "gumbel-search": {
+                        "mean_seat_score": 92.0,
+                        "mean_total_decision_seconds": mean_decision,
+                    }
+                },
+                "candidate_wall_seconds": wall,
+                "candidate_decision_seconds_p50": mean_decision / 2,
+                "candidate_decision_seconds_p95": mean_decision * 2,
+            }
+
+        score = {
+            "wildlife": [10, 10, 10, 10, 10],
+            "habitat": [5, 5, 5, 5, 5],
+            "nature_tokens": 5,
+            "total": 80,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            paths = {
+                name: root / name
+                for name in (
+                    "baseline.json",
+                    "candidate.json",
+                    "baseline_decisions.jsonl",
+                    "candidate_decisions.jsonl",
+                    "baseline_games.jsonl",
+                    "candidate_games.jsonl",
+                )
+            }
+            paths["baseline.json"].write_text(
+                json.dumps(report(False, 100.0, 2.0)), encoding="utf-8"
+            )
+            paths["candidate.json"].write_text(
+                json.dumps(report(True, 80.0, 1.6)), encoding="utf-8"
+            )
+            decisions = []
+            games = []
+            for seed in (1, 2):
+                for ply in range(80):
+                    decisions.append(
+                        {
+                            "type": "gumbel_decision",
+                            "ruleset_id": RULESET_ID,
+                            "seed": seed,
+                            "ply": ply,
+                            "action_count": 16,
+                            "chosen_action_id": f"action-{seed}-{ply}",
+                            "free_three_of_a_kind_choice": "not_available",
+                            "root_value": float(seed + ply),
+                            "simulations_run": 16,
+                            "market_branches_searched": 1,
+                            "market_chance_samples": 0,
+                            "total_simulations_run": 16,
+                            "exact_endgame": False,
+                            "decision_seconds": 1.0,
+                        }
+                    )
+                games.append(
+                    {
+                        "type": "gumbel_game_done",
+                        "ruleset_id": RULESET_ID,
+                        "seed": seed,
+                        "scores": [score] * 4,
+                        "decision_count": 80,
+                    }
+                )
+            payload = "".join(json.dumps(row) + "\n" for row in decisions)
+            game_payload = "".join(json.dumps(row) + "\n" for row in games)
+            for name in ("baseline_decisions.jsonl", "candidate_decisions.jsonl"):
+                paths[name].write_text(payload, encoding="utf-8")
+            for name in ("baseline_games.jsonl", "candidate_games.jsonl"):
+                paths[name].write_text(game_payload, encoding="utf-8")
+
+            result = build_comparison(
+                paths["baseline.json"],
+                paths["candidate.json"],
+                paths["baseline_decisions.jsonl"],
+                paths["candidate_decisions.jsonl"],
+                paths["baseline_games.jsonl"],
+                paths["candidate_games.jsonl"],
+                "tested-revision",
+            )
+            self.assertTrue(result["comparison"]["policy_parity"])
+            self.assertTrue(result["comparison"]["exact_numeric_parity"])
+            self.assertEqual(result["timing"]["wall_speedup"], 1.25)
+            self.assertTrue(result["performance_gate_pass"])
+
+            candidate_rows = [dict(row) for row in decisions]
+            candidate_rows[5]["chosen_action_id"] = "different"
+            paths["candidate_decisions.jsonl"].write_text(
+                "".join(json.dumps(row) + "\n" for row in candidate_rows), encoding="utf-8"
+            )
+            failed = build_comparison(
+                paths["baseline.json"],
+                paths["candidate.json"],
+                paths["baseline_decisions.jsonl"],
+                paths["candidate_decisions.jsonl"],
+                paths["baseline_games.jsonl"],
+                paths["candidate_games.jsonl"],
+            )
+            self.assertEqual(failed["comparison"]["action_difference_count"], 1)
+            self.assertFalse(failed["performance_gate_pass"])
+
     def test_market_sample_comparator_validates_causal_divergence_and_cost(self) -> None:
         from cascadiav3.compare_market_samples import RULESET_ID, build_comparison
 

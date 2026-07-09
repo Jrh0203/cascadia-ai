@@ -159,6 +159,17 @@ a JAX/CUDA port of the scoring-relevant game subset so rollouts never
 leave the device. (a) is a week; (b) is a month and only pays if (a)
 saturates.
 
+**CPU-parallel precursor (2026-07-09): bounded, not the solution.** The
+existing blended terminal rollouts are now independently executable on the
+Rayon pool with exact RNG/order provenance. A same-host jobs1 MPS screen was
+bit-identical over 160 decisions and improved wall by `1.061x`, but jobs2 was
+`0.993x` (slightly slower) despite action/score parity. Host parallelism is
+already consumed by concurrent games; nesting more CPU work does not repair
+the production lockstep wall. Keep the opt-in mode for interactive latency,
+leave all batch paths serial, and keep the GPU-native proposal open: its value
+is eliminating device/engine synchronization, not merely spreading terminal
+rollouts across host cores.
+
 ## 5. Structured value: per-scoring-card decomposition heads
 
 **Idea.** Replace the monolithic score-to-go with per-card heads: elk
