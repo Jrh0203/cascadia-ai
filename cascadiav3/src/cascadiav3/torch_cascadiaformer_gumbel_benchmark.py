@@ -29,6 +29,7 @@ from statistics import mean
 from typing import Any
 
 from .torch_benchmark_stats import paired_delta_stats
+from .torch_inference_bridge import Q_RISK_MODES
 from .torch_cascadiaformer_search_benchmark import (
     _percentile,
     parse_seeds,
@@ -39,10 +40,15 @@ from .torch_cascadiaformer_search_benchmark import (
 EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
 
 
-def default_model_service_command(manifest: Path, device: str) -> str:
+def default_model_service_command(
+    manifest: Path, device: str, q_risk_mode: str = "mean"
+) -> str:
+    if q_risk_mode not in Q_RISK_MODES:
+        raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
     return (
         f"{shlex.quote(sys.executable)} -m cascadiav3.torch_inference_bridge "
-        f"--manifest {shlex.quote(str(manifest))} --device {shlex.quote(device)}"
+        f"--manifest {shlex.quote(str(manifest))} --device {shlex.quote(device)} "
+        f"--q-risk-mode {shlex.quote(q_risk_mode)}"
     )
 
 
@@ -429,6 +435,7 @@ def run_gumbel_benchmark(
     source_revision: str | None = None,
     decision_rows_path: Path | None = None,
     game_rows_path: Path | None = None,
+    q_risk_mode: str = "mean",
 ) -> dict[str, Any]:
     if exact_endgame_turns not in (0, 1):
         raise ValueError("exact_endgame_turns currently supports only 0 or 1")
@@ -436,7 +443,13 @@ def run_gumbel_benchmark(
         raise ValueError(
             "exact final-personal-turn solving is incompatible with table-total objectives"
         )
-    service = model_service or default_model_service_command(manifest, device_name)
+    if q_risk_mode not in Q_RISK_MODES:
+        raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
+    if model_service is not None and q_risk_mode != "mean":
+        raise ValueError("non-mean q risk modes require the generated model service")
+    service = model_service or default_model_service_command(
+        manifest, device_name, q_risk_mode
+    )
 
     candidate_lines: list[dict[str, Any]] = []
     started = time.perf_counter()
@@ -638,6 +651,7 @@ def run_gumbel_benchmark(
             "blend_weight": blend_weight,
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
+            "q_risk_mode": q_risk_mode,
         },
         "market_decisions": summarize_market_decisions(candidate_lines),
         "candidate_score_breakdown": summarize_score_categories(candidate_results),
@@ -716,6 +730,7 @@ def main() -> int:
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--model-service", default="")
     parser.add_argument("--device", default="cuda")
+    parser.add_argument("--q-risk-mode", choices=Q_RISK_MODES, default="mean")
     parser.add_argument("--seeds", default="")
     parser.add_argument("--first-seed", type=int, default=2026995000)
     parser.add_argument("--games", type=int, default=100)
@@ -841,6 +856,7 @@ def main() -> int:
         source_revision=args.source_revision or None,
         decision_rows_path=Path(args.decisions_out),
         game_rows_path=Path(args.games_out),
+        q_risk_mode=args.q_risk_mode,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

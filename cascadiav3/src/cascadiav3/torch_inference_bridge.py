@@ -58,6 +58,7 @@ def _response(payload: dict[str, Any]) -> None:
 
 
 PROTOCOL_FEATURES = ["eval_batch", "value_vector", "packed_features", "packed_response"]
+Q_RISK_MODES = ("mean", "q25", "q50", "q75")
 EVAL_BATCH_CHUNK_SIZE = 32
 # The relation-bias layer materializes a [rows, actions, seq, d_model] tensor,
 # so chunking must bound rows * actions * seq, not just rows. 2^21 cells keeps
@@ -686,6 +687,39 @@ def _synchronize_device_for_timing(torch_module: Any, device: Any) -> None:
         torch_module.mps.synchronize()
 
 
+def select_score_to_go_for_risk(outputs: dict[str, Any], mode: str) -> Any:
+    """Select the distributional score-to-go statistic used for serving.
+
+    Quantile heads are trained at centered levels ``(k + 0.5) / K``. q25,
+    q50, and q75 linearly interpolate at those target probabilities instead
+    of silently snapping to an arbitrary neighboring head. Scalar checkpoints
+    fail loudly for non-mean modes.
+    """
+    if mode not in Q_RISK_MODES:
+        raise ValueError(f"unsupported q risk mode: {mode}")
+    if mode == "mean":
+        return outputs["q"]
+    quantiles = outputs.get("q_quantile_values")
+    if quantiles is None:
+        raise ValueError(f"q risk mode {mode} requires a distributional-Q checkpoint")
+    count = int(quantiles.shape[-1])
+    if count <= 0:
+        raise ValueError("distributional-Q output has no quantiles")
+    # Independently parameterized quantile heads can cross. Monotone
+    # rearrangement makes the served empirical quantile function coherent and
+    # preserves its mean exactly, so the established mean policy is unchanged.
+    quantiles = quantiles.sort(dim=-1).values
+    target = {"q25": 0.25, "q50": 0.50, "q75": 0.75}[mode]
+    position = target * count - 0.5
+    if position <= 0.0:
+        return quantiles[..., 0]
+    if position >= count - 1:
+        return quantiles[..., count - 1]
+    lower = int(position)
+    weight = position - lower
+    return quantiles[..., lower] * (1.0 - weight) + quantiles[..., lower + 1] * weight
+
+
 def _model_eval_batch(
     model,
     roots: list[dict[str, Any]],
@@ -693,6 +727,7 @@ def _model_eval_batch(
     device_name: str = "cpu",
     chunk_size: int = EVAL_BATCH_CHUNK_SIZE,
     packed_response: bool = False,
+    q_risk_mode: str = "mean",
 ) -> list[dict[str, Any]]:  # type: ignore[no-untyped-def]
     """One collated forward per chunk of roots. Chunking bounds the dense
     relation_ids tensor (batch x seq x seq int64) at full action menus.
@@ -751,7 +786,7 @@ def _model_eval_batch(
             priors = torch.softmax(masked_logits, dim=1).cpu()
             # One device->host copy per output tensor per chunk; the rows are
             # sliced host-side below. (.float() is a no-op without autocast.)
-            score_to_go_all = outputs["q"].float().cpu()
+            score_to_go_all = select_score_to_go_for_risk(outputs, q_risk_mode).float().cpu()
             uncertainty_all = outputs["uncertainty"].float().cpu()
             value_all = outputs["value_vector"].float().cpu()
             # exact_afterstate never left the host; f32 add matches the
@@ -807,9 +842,14 @@ def _model_eval(
     *,
     device_name: str = "cpu",
     packed_response: bool = False,
+    q_risk_mode: str = "mean",
 ) -> dict[str, Any]:  # type: ignore[no-untyped-def]
     return _model_eval_batch(
-        model, [root], device_name=device_name, packed_response=packed_response
+        model,
+        [root],
+        device_name=device_name,
+        packed_response=packed_response,
+        q_risk_mode=q_risk_mode,
     )[0]
 
 
@@ -866,7 +906,10 @@ def serve(
     manifest: Path | None,
     allow_dry_run_fallback: bool,
     device_name: str = "cpu",
+    q_risk_mode: str = "mean",
 ) -> int:
+    if q_risk_mode not in Q_RISK_MODES:
+        raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
     loaded_model = None
     manifest_payload = None
     if manifest is not None:
@@ -915,6 +958,7 @@ def serve(
             "model_loaded": loaded_model is not None,
             "allow_dry_run_fallback": allow_dry_run_fallback,
             "device": device_name,
+            "q_risk_mode": q_risk_mode,
             "protocol_features": PROTOCOL_FEATURES,
         }
     )
@@ -943,6 +987,7 @@ def serve(
                             root,
                             device_name=device_name,
                             packed_response=packed_response,
+                            q_risk_mode=q_risk_mode,
                         )
                     )
             elif message_type == "eval_batch_request":
@@ -960,6 +1005,7 @@ def serve(
                         roots,
                         device_name=device_name,
                         packed_response=packed_response,
+                        q_risk_mode=q_risk_mode,
                     )
                 _response({"type": "eval_batch_response", "results": results})
             else:
@@ -1035,6 +1081,7 @@ def main() -> int:
     parser.add_argument("--checkpoint")
     parser.add_argument("--manifest")
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--q-risk-mode", choices=Q_RISK_MODES, default="mean")
     parser.add_argument("--allow-dry-run-fallback", action="store_true")
     parser.add_argument("--self-test-root")
     parser.add_argument("--self-test-manifest-resolution", action="store_true")
@@ -1056,6 +1103,7 @@ def main() -> int:
         manifest=Path(args.manifest) if args.manifest else None,
         allow_dry_run_fallback=args.allow_dry_run_fallback,
         device_name=args.device,
+        q_risk_mode=args.q_risk_mode,
     )
 
 

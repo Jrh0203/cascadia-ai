@@ -120,6 +120,17 @@ Gumbel exporter modes (see `--help`):
   provenance and repeated-output determinism checks. `--root-format as-is`
   exists only to diagnose the legacy raw Python-feature path; live Rust search
   advertises and sends `packed_features`. This is not gameplay evidence.
+- `python -m cascadiav3.torch_q_risk_probe`: run a provenance-hashed fixed-root
+  screen of the distributional-Q head. It measures raw quantile crossing and
+  direct derived-Q action flips for `q25`, `q50`, and `q75` after monotone
+  rearrangement. The probe is engineering evidence only; gameplay batteries
+  still decide policy strength.
+- `python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark --q-risk-mode
+  {mean,q25,q50,q75}`: serve a distributional-Q checkpoint with the selected
+  statistic. `mean` is the default and preserves prior behavior. Non-mean
+  modes require the benchmark-generated bridge command so the mode is
+  recorded in both the bridge hello and report; scalar checkpoints fail
+  loudly.
 - `--rollout-determinize`: public-information-legal rollouts for the legacy
   search path (honest baselines).
 

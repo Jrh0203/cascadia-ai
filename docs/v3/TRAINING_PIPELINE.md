@@ -59,6 +59,13 @@ The model's `q_head` predicts score-to-go. Serving derives final Q by adding the
 exact afterstate score back in. Losses must ignore invalid Q targets. Reports
 must separate raw score-to-go error from derived-final-Q regret.
 
+With `--q-quantiles K` (`K > 1`), the head is trained by pinball loss at
+centered quantile levels `(k + 0.5) / K`; its ordinary `q` output remains the
+arithmetic mean. Experimental q25/q50/q75 serving monotonically rearranges the
+independent heads before interpolation, because pinball training does not
+guarantee non-crossing outputs. Fixed-root probes diagnose crossing and action
+rank changes, but only paired gameplay can establish a strength effect.
+
 ## Current Baseline
 
 The transformer has reached the greedy neighborhood but has not beaten greedy:

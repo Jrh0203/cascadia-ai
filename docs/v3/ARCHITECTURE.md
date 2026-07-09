@@ -122,6 +122,16 @@ This is mandatory because exact immediate score can differ across legal
 afterstates. A synthetic rank-flip test must fail if serving ranks by raw
 score-to-go alone.
 
+Distributional-Q checkpoints expose eight independently trained quantile
+heads at centered levels `(k + 0.5) / K`. Established serving uses their
+arithmetic mean. The bridge also supports explicit `q25`, `q50`, and `q75`
+research modes: it first sorts each action's heads (monotone rearrangement),
+then linearly interpolates the requested probability. Rearrangement is needed
+because independent quantile heads can cross; it preserves the arithmetic mean
+exactly, so default `mean` behavior is unchanged. Non-mean modes are
+distributional-checkpoint-only, provenance-recorded ablations, not promotions
+by themselves.
+
 ## Search Semantics
 
 The serving-strength search is Gumbel top-m + sequential halving

@@ -48,6 +48,87 @@ class DistributionalQTest(unittest.TestCase):
         self.assertEqual(out["q_quantile_values"].shape[-1], 8)
         torch.testing.assert_close(out["q"], out["q_quantile_values"].mean(dim=-1))
 
+    def test_risk_modes_interpolate_centered_quantiles_and_fail_on_scalar(self) -> None:
+        self._require_torch()
+        import torch
+
+        from cascadiav3.torch_inference_bridge import select_score_to_go_for_risk
+
+        quantiles = torch.arange(8, dtype=torch.float32).view(1, 1, 8)
+        outputs = {"q": quantiles.mean(dim=-1), "q_quantile_values": quantiles}
+        self.assertEqual(float(select_score_to_go_for_risk(outputs, "mean")), 3.5)
+        self.assertEqual(float(select_score_to_go_for_risk(outputs, "q25")), 1.5)
+        self.assertEqual(float(select_score_to_go_for_risk(outputs, "q50")), 3.5)
+        self.assertEqual(float(select_score_to_go_for_risk(outputs, "q75")), 5.5)
+        with self.assertRaisesRegex(ValueError, "distributional-Q checkpoint"):
+            select_score_to_go_for_risk({"q": torch.ones(1, 1)}, "q25")
+        with self.assertRaisesRegex(ValueError, "unsupported q risk mode"):
+            select_score_to_go_for_risk(outputs, "optimistic-ish")
+
+        crossed = torch.tensor([[[7.0, 0.0, 6.0, 1.0, 5.0, 2.0, 4.0, 3.0]]])
+        crossed_outputs = {
+            "q": crossed.mean(dim=-1),
+            "q_quantile_values": crossed,
+        }
+        self.assertEqual(float(select_score_to_go_for_risk(crossed_outputs, "q25")), 1.5)
+        self.assertEqual(float(select_score_to_go_for_risk(crossed_outputs, "q50")), 3.5)
+        self.assertEqual(float(select_score_to_go_for_risk(crossed_outputs, "q75")), 5.5)
+        self.assertEqual(
+            float(select_score_to_go_for_risk(crossed_outputs, "mean")), 3.5
+        )
+
+    def test_gumbel_default_service_records_risk_mode(self) -> None:
+        from pathlib import Path
+
+        from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
+            default_model_service_command,
+        )
+
+        command = default_model_service_command(Path("checkpoint.json"), "mps", "q25")
+        self.assertIn("--q-risk-mode q25", command)
+        with self.assertRaisesRegex(ValueError, "unsupported q risk mode"):
+            default_model_service_command(Path("checkpoint.json"), "cpu", "tail")
+
+    def test_q_risk_probe_reports_crossing_and_policy_flips(self) -> None:
+        from cascadiav3.torch_q_risk_probe import summarize_q_risk_rows
+
+        quantiles = [
+            [0.0, 0.0, 0.0, 0.0, 8.0, 8.0, 8.0, 8.0],
+            [3.0] * 8,
+            [7.0, 0.0, 6.0, 1.0, 5.0, 2.0, 4.0, 3.0],
+        ]
+        summary = summarize_q_risk_rows(
+            [
+                {
+                    "state_hash": "fixed-root",
+                    "action_ids": ["wide", "safe", "crossed"],
+                    "exact_afterstate_score_active": [0.0, 0.0, 0.0],
+                    "served_mean": [4.0, 3.0, 3.5],
+                    "quantiles": quantiles,
+                }
+            ]
+        )
+        crossing = summary["raw_quantile_crossing"]
+        self.assertEqual(crossing["crossing_pair_count"], 4)
+        self.assertAlmostEqual(crossing["crossing_pair_rate"], 4 / 21)
+        self.assertAlmostEqual(crossing["action_crossing_rate"], 1 / 3)
+        self.assertEqual(
+            summary["serving_modes"]["q25"]["direct_argmax_flip_count_vs_mean"],
+            1,
+        )
+        self.assertEqual(
+            summary["serving_modes"]["q25"]["flip_examples"][0]["risk_action_id"],
+            "safe",
+        )
+        self.assertEqual(
+            summary["serving_modes"]["q50"]["direct_argmax_flip_count_vs_mean"],
+            0,
+        )
+        self.assertEqual(
+            summary["serving_modes"]["q75"]["direct_argmax_flip_count_vs_mean"],
+            0,
+        )
+
     def test_pinball_loss_path_runs_and_is_minimized_at_target(self) -> None:
         self._require_torch()
         import torch
