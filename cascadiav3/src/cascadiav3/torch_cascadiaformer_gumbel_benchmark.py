@@ -285,6 +285,38 @@ def collect_gumbel_results(lines: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return results
 
 
+def summarize_market_decisions(lines: list[dict[str, Any]]) -> dict[str, Any]:
+    decisions = [line for line in lines if line.get("type") == "gumbel_decision"]
+    counts = {choice: 0 for choice in ("accept", "decline", "not_available")}
+    for decision in decisions:
+        choice = str(decision.get("free_three_of_a_kind_choice", "not_available"))
+        if choice not in counts:
+            raise RuntimeError(f"unknown free-three-of-a-kind choice: {choice}")
+        counts[choice] += 1
+    available = counts["accept"] + counts["decline"]
+    chosen_simulations = sum(int(row.get("simulations_run", 0)) for row in decisions)
+    total_simulations = sum(int(row.get("total_simulations_run", 0)) for row in decisions)
+    available_rows = [
+        row for row in decisions if row.get("free_three_of_a_kind_choice") in {"accept", "decline"}
+    ]
+    return {
+        "total_decisions": len(decisions),
+        "available_decisions": available,
+        "accepted": counts["accept"],
+        "declined": counts["decline"],
+        "not_available": counts["not_available"],
+        "acceptance_rate_when_available": counts["accept"] / available if available else None,
+        "mean_chance_samples_when_available": (
+            mean(float(row.get("market_chance_samples", 0)) for row in available_rows)
+            if available_rows
+            else None
+        ),
+        "chosen_branch_simulations": chosen_simulations,
+        "total_simulations_including_market_decision": total_simulations,
+        "market_decision_simulation_overhead": total_simulations - chosen_simulations,
+    }
+
+
 def run_gumbel_benchmark(
     *,
     binary: Path,
@@ -316,6 +348,7 @@ def run_gumbel_benchmark(
     leaf_softmix: float | None = None,
     tta_rotations: int = 1,
     source_revision: str | None = None,
+    decision_rows_path: Path | None = None,
 ) -> dict[str, Any]:
     service = model_service or default_model_service_command(manifest, device_name)
 
@@ -412,6 +445,16 @@ def run_gumbel_benchmark(
         raise RuntimeError(
             f"candidate output ruleset mismatch: expected {EXPECTED_RULESET_ID}, got {ruleset_ids}"
         )
+    if decision_rows_path is not None:
+        decision_rows_path.parent.mkdir(parents=True, exist_ok=True)
+        decision_rows = sorted(
+            (line for line in candidate_lines if line.get("type") == "gumbel_decision"),
+            key=lambda line: (int(line["seed"]), int(line["ply"])),
+        )
+        decision_rows_path.write_text(
+            "".join(json.dumps(row, sort_keys=True) + "\n" for row in decision_rows),
+            encoding="utf-8",
+        )
     candidate_results = sorted(collect_gumbel_results(candidate_lines), key=lambda r: r["seed"])
 
     control_results: list[dict[str, Any]] = []
@@ -504,6 +547,7 @@ def run_gumbel_benchmark(
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
         },
+        "market_decisions": summarize_market_decisions(candidate_lines),
         "control": {
             "kind": control,
             "max_actions": control_max_actions,
@@ -538,6 +582,7 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
         f"Games: `{len(report['seeds'])}` matched seeds",
         f"Search: `{json.dumps(report['search'], sort_keys=True)}`",
         f"Control: `{json.dumps(report['control'], sort_keys=True)}`",
+        f"Market decisions: `{json.dumps(report['market_decisions'], sort_keys=True)}`",
         "",
         "## Gumbel Search",
         "",
@@ -648,6 +693,11 @@ def main() -> int:
     )
     parser.add_argument("--out", default="cascadiav3/reports/gumbel_benchmark.json")
     parser.add_argument("--summary-out", default="cascadiav3/reports/gumbel_benchmark_summary.md")
+    parser.add_argument(
+        "--decisions-out",
+        default="cascadiav3/reports/gumbel_benchmark_decisions.jsonl",
+        help="Persistent per-ply Gumbel decision telemetry JSONL",
+    )
     args = parser.parse_args()
 
     seeds = parse_seeds(seeds=args.seeds, first_seed=args.first_seed, games=args.games)
@@ -681,6 +731,7 @@ def main() -> int:
         leaf_softmix=args.gumbel_leaf_softmix,
         tta_rotations=args.gumbel_tta,
         source_revision=args.source_revision or None,
+        decision_rows_path=Path(args.decisions_out),
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

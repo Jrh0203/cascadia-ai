@@ -813,7 +813,11 @@ class CascadiaFormerBenchmarkContractTest(unittest.TestCase):
 
         from cascadiav3.torch_cascadiaformer_game_benchmark import completed_game_result_row
         from cascadiav3.torch_cascadiaformer_game_benchmark import run_benchmark
-        from cascadiav3.torch_cascadiaformer_game_benchmark import parse_seeds, summarize_game_results
+        from cascadiav3.torch_cascadiaformer_game_benchmark import (
+            parse_seeds,
+            summarize_game_results,
+            summarize_market_decisions,
+        )
 
         self.assertIn("treatment_workers", inspect.signature(run_benchmark).parameters)
         self.assertIn("game_results_path", inspect.signature(run_benchmark).parameters)
@@ -857,6 +861,19 @@ class CascadiaFormerBenchmarkContractTest(unittest.TestCase):
         self.assertEqual(summary["mean_seat_score"], 95)
         self.assertEqual(summary["action_match_rate_vs_greedy_top"], 0.0)
         self.assertEqual(summary["mean_greedy_rank_in_model"], 3)
+        market = summarize_market_decisions(
+            [
+                {
+                    "decisions": [
+                        {"free_three_of_a_kind_choice": "accept"},
+                        {"free_three_of_a_kind_choice": "decline"},
+                        {"free_three_of_a_kind_choice": "not_available"},
+                    ]
+                }
+            ]
+        )
+        self.assertEqual(market["available_decisions"], 2)
+        self.assertEqual(market["acceptance_rate_when_available"], 0.5)
 
     def test_search_benchmark_reports_gate_timing_fields(self) -> None:
         import inspect
@@ -2172,13 +2189,32 @@ class BenchmarkStatsTest(unittest.TestCase):
         from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
             _contiguous_runs,
             collect_gumbel_results,
+            summarize_market_decisions,
         )
 
         self.assertEqual(_contiguous_runs([5, 6, 7, 10, 12, 13]), [(5, 3), (10, 1), (12, 2)])
 
         lines = [
-            {"type": "gumbel_decision", "seed": 5, "ply": 0, "decision_seconds": 0.5},
-            {"type": "gumbel_decision", "seed": 5, "ply": 1, "decision_seconds": 0.7},
+            {
+                "type": "gumbel_decision",
+                "seed": 5,
+                "ply": 0,
+                "decision_seconds": 0.5,
+                "free_three_of_a_kind_choice": "accept",
+                "market_chance_samples": 8,
+                "simulations_run": 16,
+                "total_simulations_run": 160,
+            },
+            {
+                "type": "gumbel_decision",
+                "seed": 5,
+                "ply": 1,
+                "decision_seconds": 0.7,
+                "free_three_of_a_kind_choice": "decline",
+                "market_chance_samples": 8,
+                "simulations_run": 16,
+                "total_simulations_run": 144,
+            },
             {
                 "type": "gumbel_game_done",
                 "seed": 5,
@@ -2192,6 +2228,11 @@ class BenchmarkStatsTest(unittest.TestCase):
         self.assertEqual(results[0]["seed"], 5)
         self.assertEqual(len(results[0]["decisions"]), 2)
         self.assertEqual(results[0]["done"]["scores"][1]["total"], 95)
+        market = summarize_market_decisions(lines)
+        self.assertEqual(market["available_decisions"], 2)
+        self.assertEqual(market["acceptance_rate_when_available"], 0.5)
+        self.assertEqual(market["mean_chance_samples_when_available"], 8.0)
+        self.assertEqual(market["market_decision_simulation_overhead"], 272)
 
         from cascadiav3.torch_cascadiaformer_search_benchmark import summarize_game_results
 

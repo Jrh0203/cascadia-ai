@@ -4183,6 +4183,7 @@ fn run_interactive_policy_game(args: &Args) -> Result<()> {
             "decision_seconds": decision_seconds,
             "rollouts_per_action": args.rollouts_per_action,
             "rollout_top_k": args.rollout_top_k,
+            "free_three_of_a_kind_choice": root_bundle.free_three_of_a_kind_choice,
         });
         writeln!(stdout, "{}", canonical_json(&decision_record))?;
         stdout.flush()?;
@@ -4211,6 +4212,7 @@ struct InteractiveRoot {
     staged: GameState,
     candidates: Vec<GreedyCandidate>,
     active_seat: usize,
+    free_three_of_a_kind_choice: &'static str,
 }
 
 fn build_interactive_root(
@@ -4221,6 +4223,14 @@ fn build_interactive_root(
 ) -> Result<InteractiveRoot> {
     let active_seat = game.current_player();
     let (prelude, staged) = greedy_market_choice(game, Some(args.max_actions))?;
+    let free_three_of_a_kind_available = game.free_three_of_a_kind_choices()?.len() > 1;
+    let free_three_of_a_kind_choice = if prelude.replace_three_of_a_kind {
+        "accept"
+    } else if free_three_of_a_kind_available {
+        "decline"
+    } else {
+        "not_available"
+    };
     let candidates =
         rank_greedy_actions(&staged, &MarketPrelude::default(), Some(args.max_actions))?;
     if candidates.is_empty() {
@@ -4298,6 +4308,7 @@ fn build_interactive_root(
         staged,
         candidates,
         active_seat,
+        free_three_of_a_kind_choice,
     })
 }
 

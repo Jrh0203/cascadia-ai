@@ -75,4 +75,6 @@ for promotion under the corrected action space.
 New artifacts must record the updated ruleset/config identity. Rebaseline
 greedy, no-search model play, and every promoted Gumbel serving configuration
 before making strength claims. Do not mix pre-fix and post-fix games in a
-paired confidence interval.
+paired confidence interval. Benchmark reports must retain per-decision
+accept/decline telemetry and summarize the acceptance rate so a score claim is
+auditable against the corrected policy boundary.

@@ -143,6 +143,7 @@ run_gumbel() {
     --source-revision "$SOURCE_REVISION" \
     --experiment-id "$tag" \
     --out "$report" \
+    --decisions-out "$REPORT_DIR/${tag}_decisions.jsonl" \
     --summary-out "$REPORT_DIR/${tag}.md"
 }
 

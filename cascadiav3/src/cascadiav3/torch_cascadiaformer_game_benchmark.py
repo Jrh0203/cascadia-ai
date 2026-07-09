@@ -19,6 +19,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
+from .torch_benchmark_stats import paired_delta_stats
 from .torch_inference_bridge import _load_model, collate_inference_roots
 
 EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
@@ -288,6 +289,25 @@ def completed_game_result_row(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def summarize_market_decisions(results: list[dict[str, Any]]) -> dict[str, Any]:
+    decisions = [decision for result in results for decision in result["decisions"]]
+    counts = {choice: 0 for choice in ("accept", "decline", "not_available")}
+    for decision in decisions:
+        choice = str(decision.get("free_three_of_a_kind_choice", "not_available"))
+        if choice not in counts:
+            raise RuntimeError(f"unknown free-three-of-a-kind choice: {choice}")
+        counts[choice] += 1
+    available = counts["accept"] + counts["decline"]
+    return {
+        "total_decisions": len(decisions),
+        "available_decisions": available,
+        "accepted": counts["accept"],
+        "declined": counts["decline"],
+        "not_available": counts["not_available"],
+        "acceptance_rate_when_available": counts["accept"] / available if available else None,
+    }
+
+
 def run_benchmark(
     *,
     binary: Path,
@@ -372,15 +392,21 @@ def run_benchmark(
         greedy_results.sort(key=lambda result: int(result["seed"]))
 
     strategies: dict[str, Any] = {"greedy": summarize_game_results(greedy_results)}
+    market_decisions: dict[str, Any] = {"greedy": summarize_market_decisions(greedy_results)}
     paired_by_head: dict[str, list[dict[str, Any]]] = {}
+    paired_stats_by_head: dict[str, dict[str, Any]] = {}
     mean_delta_by_head: dict[str, float | None] = {}
     all_model_results: list[dict[str, Any]] = []
     for selection_head, model_results in model_results_by_head.items():
         key = f"cascadiaformer-{selection_head}"
         all_model_results.extend(model_results)
         strategies[key] = summarize_game_results(model_results)
+        market_decisions[key] = summarize_market_decisions(model_results)
         paired = paired_score_deltas(model_results, greedy_results)
         paired_by_head[selection_head] = paired
+        paired_stats_by_head[selection_head] = paired_delta_stats(
+            [row["delta_cascadiaformer_minus_greedy"] for row in paired]
+        )
         mean_delta_by_head[selection_head] = (
             mean(row["delta_cascadiaformer_minus_greedy"] for row in paired)
             if paired
@@ -421,7 +447,9 @@ def run_benchmark(
             "cuda_available": checkpoint["cuda_available"],
         },
         "strategies": strategies,
+        "market_decisions": market_decisions,
         "paired_score_deltas": paired_by_head,
+        "paired_delta_stats": paired_stats_by_head,
         "mean_paired_delta_cascadiaformer_minus_greedy": mean_delta_by_head,
         "games": [
             completed_game_result_row(result)
@@ -442,6 +470,7 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
         f"Games: `{len(report['seeds'])}` matched seeds",
         f"Max actions/root: `{report['max_actions']}`",
         f"Device: `{report['runtime']['device_name']}`",
+        f"Market decisions: `{json.dumps(report['market_decisions'], sort_keys=True)}`",
         "",
         "## Greedy Baseline",
         "",
@@ -459,6 +488,7 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
                 f"- Mean seat score: `{row['mean_seat_score']:.4f}`",
                 f"- P90 seat score: `{row['p90_seat_score']:.4f}`",
                 f"- Mean paired delta vs greedy: `{report['mean_paired_delta_cascadiaformer_minus_greedy'][selection_head]}`",
+                f"- Paired delta statistics: `{json.dumps(report['paired_delta_stats'][selection_head], sort_keys=True)}`",
                 f"- Action match rate vs greedy top: `{row['action_match_rate_vs_greedy_top']}`",
                 f"- Mean greedy rank in model: `{row['mean_greedy_rank_in_model']}`",
                 f"- Mean model score seconds/root: `{row['mean_model_score_seconds']:.6f}`",
