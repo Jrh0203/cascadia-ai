@@ -31,10 +31,13 @@ the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
 completed the 100-game greedy/no-search floor and cycle4 n256/d4 arm and is
 now running distq_k8 n256/d4, followed sequentially by both models at
-n1024/d16 on the same fresh seeds. Sidecar PID `1281124` copies each completed
-distq-n256 game out of the benchmark's temporary directory; watcher PID
-`1284321` is armed to do the same for both n1024 arms. This preserves category
-scores even though the deployed pre-fix reducer retains totals only. Log/pid:
+n1024/d16 on the same fresh seeds. A live sidecar copies growing distq-n256
+seed files with overwrite-on-poll semantics; a second watcher is armed to do
+the same for both n1024 arms. Each publishes only after strict 100-seed
+validation. This preserves category scores even though the deployed pre-fix
+reducer retains totals only. Watcher pid files are
+`cascadiav3/logs/rules_20260709_distq_k8_n256_raw_watcher.pid` and
+`cascadiav3/logs/rules_20260709_remaining_raw_watcher.pid`. Rebaseline log/pid:
 `cascadiav3/logs/rules_20260709_rebaseline.{log,pid}`. Canonical launcher:
 `cascadiav3/scripts/run_rules_20260709_rebaseline.sh`; every completed report
 is reused only when both rules ID and source revision match.
