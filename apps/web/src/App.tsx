@@ -579,7 +579,7 @@ export default function App() {
                 autoState.current = null;
                 setAutoPlay((current) => !current);
               }}
-              disabled={gameOver || !view}
+              disabled={!view}
             >
               Auto: {autoPlay ? "ON" : "OFF"}
             </button>

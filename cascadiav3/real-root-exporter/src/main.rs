@@ -3444,7 +3444,18 @@ fn suggest_for_request(
     // identical suggestions across requests and restarts.
     let public_hash = row.staged.public_state().canonical_hash();
     let seed = u64::from_le_bytes(public_hash.as_bytes()[..8].try_into().expect("hash prefix"));
-    let cfg = gumbel_config_from_args(args, seed);
+    let mut cfg = gumbel_config_from_args(args, seed);
+    // Per-request search-shape overrides so one server (one loaded model)
+    // can answer at several strength tiers.
+    if let Some(n_simulations) = request.get("n_simulations").and_then(Value::as_u64) {
+        cfg.n_simulations = (n_simulations as usize).clamp(1, 65_536);
+    }
+    if let Some(determinizations) = request.get("determinizations").and_then(Value::as_u64) {
+        cfg.determinization_samples = (determinizations as usize).clamp(1, 256);
+    }
+    if let Some(top_m) = request.get("top_m").and_then(Value::as_u64) {
+        cfg.top_m = (top_m as usize).clamp(1, 256);
+    }
     let mut evaluator = BridgeLeafEvaluator {
         bridge,
         allow_model_fallback: args.allow_model_fallback,

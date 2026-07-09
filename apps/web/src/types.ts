@@ -151,7 +151,7 @@ export interface SuggestionResponse {
 }
 
 export interface StrengthCapability {
-  id: "instant" | "interactive" | "research" | "champion";
+  id: "instant" | "interactive" | "research" | "champion" | "champion-deep";
   label: string;
   available: boolean;
   latency: string;

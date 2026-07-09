@@ -107,9 +107,21 @@ impl ChampionClient {
         }
     }
 
-    fn suggest(&mut self, state: &GameState) -> Result<ChampionSuggestion, String> {
+    fn suggest(
+        &mut self,
+        state: &GameState,
+        overrides: Option<(u64, u64)>,
+    ) -> Result<ChampionSuggestion, String> {
         self.next_id += 1;
-        let request = json!({"id": self.next_id, "game": state});
+        let request = match overrides {
+            Some((n_simulations, determinizations)) => json!({
+                "id": self.next_id,
+                "game": state,
+                "n_simulations": n_simulations,
+                "determinizations": determinizations,
+            }),
+            None => json!({"id": self.next_id, "game": state}),
+        };
         let mut payload = serde_json::to_string(&request)
             .map_err(|error| format!("serializing champion request: {error}"))?;
         payload.push('\n');
@@ -137,8 +149,10 @@ fn client_slot() -> &'static Mutex<Option<ChampionClient>> {
 }
 
 /// One champion suggestion. Spawns the suggest server on first use; drops
-/// and respawns it on the next call after any transport error.
-pub fn suggest(state: &GameState) -> Result<ChampionSuggestion, String> {
+/// and respawns it on the next call after any transport error. `deep`
+/// switches to the full-strength search shape (n1024/d16) via per-request
+/// overrides — same server, same loaded model.
+pub fn suggest(state: &GameState, deep: bool) -> Result<ChampionSuggestion, String> {
     let command = champion_command()
         .ok_or_else(|| "CASCADIA_CHAMPION_CMD is not configured".to_owned())?;
     let mut slot = client_slot()
@@ -148,7 +162,8 @@ pub fn suggest(state: &GameState) -> Result<ChampionSuggestion, String> {
         *slot = Some(ChampionClient::spawn(&command)?);
     }
     let client = slot.as_mut().expect("client just ensured");
-    match client.suggest(state) {
+    let overrides = deep.then_some((1024_u64, 16_u64));
+    match client.suggest(state, overrides) {
         Ok(suggestion) => Ok(suggestion),
         Err(error) => {
             // Kill the wedged child; the next request gets a fresh one.

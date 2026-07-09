@@ -171,6 +171,7 @@ pub enum SuggestionStrength {
     Interactive,
     Research,
     Champion,
+    ChampionDeep,
 }
 
 fn ordered(value: Option<&f64>) -> ordered_float_key::Key {
@@ -406,6 +407,12 @@ async fn capabilities() -> Json<CapabilitiesResponse> {
                 label: "Champion (CascadiaFormer + Gumbel search)",
                 available: champion::champion_available(),
                 latency: "roughly 3-10 s per move",
+            },
+            StrengthCapability {
+                id: "champion-deep",
+                label: "Champion Deep (full n1024/d16 search)",
+                available: champion::champion_available(),
+                latency: "roughly 10-30 s per move",
             },
         ],
         max_players: 4,
@@ -645,8 +652,9 @@ pub fn suggest(request: SuggestRequest) -> Result<SuggestionResponse, ApiError> 
             })
         }
         SuggestionStrength::Research => research_suggestions(&state, current_score, limit),
-        SuggestionStrength::Champion => {
-            let reply = champion::suggest(&state)
+        SuggestionStrength::Champion | SuggestionStrength::ChampionDeep => {
+            let deep = matches!(request.strength, SuggestionStrength::ChampionDeep);
+            let reply = champion::suggest(&state, deep)
                 .map_err(|error| ApiError::bad_request("suggestion-failed", error))?;
             if reply.game_over || reply.actions.is_empty() {
                 return Err(ApiError::bad_request(
@@ -663,7 +671,11 @@ pub fn suggest(request: SuggestRequest) -> Result<SuggestionResponse, ApiError> 
                 left_key.cmp(&right_key)
             });
             Ok(SuggestionResponse {
-                strategy: "cascadiaformer-distq-gumbel".to_owned(),
+                strategy: if deep {
+                    "cascadiaformer-distq-gumbel-n1024d16".to_owned()
+                } else {
+                    "cascadiaformer-distq-gumbel-n256d4".to_owned()
+                },
                 candidates: order
                     .into_iter()
                     .take(limit)
