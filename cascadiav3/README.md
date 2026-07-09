@@ -89,6 +89,9 @@ Important runners:
 - `run_model_throughput_probe.sh` (engineering-only M/S/XS/tiny fixed-root
   bridge throughput; converts audit roots to the production Rust-packed wire
   shape before timing model/search inversion headroom)
+- `run_cuda_concurrency_probe.sh` (engineering-only matched jobs12/16/24 CUDA
+  shared-bridge calibration with one-second GPU telemetry and a fail-closed
+  smallest-near-fastest knee recommendation; never changes defaults)
 
 Gumbel exporter modes (see `--help`):
 
@@ -120,6 +123,13 @@ Gumbel exporter modes (see `--help`):
   requires source/search/execution/artifact identity, complete 80-ply traces,
   action and score parity, bounded root-value drift, and a caller-visible wall
   speedup threshold before passing the performance gate.
+- `python -m cascadiav3.compare_cuda_concurrency`: validate the fixed
+  jobs12/16/24 CUDA calibration. It requires at least 24 identical seeds,
+  corrected-rules candidate-only reports, one shared CUDA bridge, complete
+  decision/game/category ledgers, exact action/refresh/score parity, bounded
+  root-value drift, and at least 30 one-second GPU samples per arm. It retains
+  jobs12 unless the fastest eligible arm is at least 1.05x faster, then chooses
+  the smallest eligible arm within 2% of that fastest wall time.
 - `python -m cascadiav3.compare_exact_endgame`: compare exact-off/K1 reports
   only after validating rules, source, checkpoint name, seeds, all other
   search settings, exact-decision counts, and identical action traces through

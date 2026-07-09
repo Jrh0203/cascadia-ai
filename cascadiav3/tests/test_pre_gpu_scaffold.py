@@ -2572,6 +2572,176 @@ class BenchmarkStatsTest(unittest.TestCase):
             self.assertEqual(failed["comparison"]["action_difference_count"], 1)
             self.assertFalse(failed["performance_gate_pass"])
 
+    def test_cuda_concurrency_comparator_selects_smallest_near_fastest_knee(self) -> None:
+        from cascadiav3.compare_cuda_concurrency import RULESET_ID, build_comparison
+
+        seeds = list(range(100, 124))
+        score = {
+            "wildlife": [10, 10, 10, 10, 10],
+            "habitat": [5, 5, 5, 5, 5],
+            "nature_tokens": 5,
+            "total": 80,
+        }
+
+        def report(jobs: int, wall: float, mean_decision: float) -> dict[str, object]:
+            return {
+                "status": "pass",
+                "scientific_eligibility": "candidate_only_search_arm",
+                "ruleset_id": RULESET_ID,
+                "source_revision": "tested-revision",
+                "seeds": seeds,
+                "execution": {
+                    "runner": "gumbel-benchmark-batch",
+                    "batch_runner": True,
+                    "requested_jobs": jobs,
+                    "seed_count": len(seeds),
+                    "parallel_game_cap": jobs,
+                    "seed_scheduler": "dynamic_seed_queue",
+                    "shared_model_session": True,
+                    "bridge_process_topology": "one_shared_bridge",
+                    "maximum_concurrent_bridge_processes": 1,
+                    "device": "cuda",
+                },
+                "search": {
+                    "n_simulations": 64,
+                    "top_m": 16,
+                    "determinizations": 4,
+                    "blend_weight": 0.5,
+                    "parallel_leaf_rollouts": False,
+                },
+                "artifacts": {
+                    "binary_sha256": "binary",
+                    "manifest_sha256": "manifest",
+                    "weights_sha256": "weights",
+                    "checkpoint_tag": "best",
+                    "checkpoint_step": 7,
+                    "q_quantiles": 8,
+                },
+                "control": {"kind": "none"},
+                "strategies": {
+                    "gumbel-search": {
+                        "mean_seat_score": 92.0,
+                        "mean_total_decision_seconds": mean_decision,
+                    }
+                },
+                "candidate_wall_seconds": wall,
+                "candidate_decision_seconds_p50": mean_decision / 2,
+                "candidate_decision_seconds_p95": mean_decision * 2,
+            }
+
+        decisions = [
+            {
+                "type": "gumbel_decision",
+                "ruleset_id": RULESET_ID,
+                "seed": seed,
+                "ply": ply,
+                "action_count": 16,
+                "chosen_action_id": f"action-{seed}-{ply}",
+                "free_three_of_a_kind_choice": "not_available",
+                "root_value": float(seed + ply),
+                "simulations_run": 64,
+                "market_branches_searched": 1,
+                "market_chance_samples": 0,
+                "total_simulations_run": 64,
+                "exact_endgame": False,
+                "decision_seconds": 1.0,
+            }
+            for seed in seeds
+            for ply in range(80)
+        ]
+        games = [
+            {
+                "type": "gumbel_game_done",
+                "ruleset_id": RULESET_ID,
+                "seed": seed,
+                "scores": [score] * 4,
+                "decision_count": 80,
+            }
+            for seed in seeds
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = {12: (120.0, 2.0), 16: (100.0, 2.5), 24: (99.0, 3.5)}
+            arms = {}
+            profiles = {}
+            for jobs, (wall, mean_decision) in specs.items():
+                report_path = root / f"jobs{jobs}.json"
+                decisions_path = root / f"jobs{jobs}_decisions.jsonl"
+                games_path = root / f"jobs{jobs}_games.jsonl"
+                report_path.write_text(
+                    json.dumps(report(jobs, wall, mean_decision)), encoding="utf-8"
+                )
+                decisions_path.write_text(
+                    "".join(json.dumps(row) + "\n" for row in decisions), encoding="utf-8"
+                )
+                games_path.write_text(
+                    "".join(json.dumps(row) + "\n" for row in games), encoding="utf-8"
+                )
+                arms[jobs] = (report_path, decisions_path, games_path)
+                profile_path = root / f"jobs{jobs}_gpu.csv"
+                profile_path.write_text(
+                    "".join(f"{jobs}, {300 + jobs}, 2500, 60\n" for _ in range(30)),
+                    encoding="utf-8",
+                )
+                profiles[jobs] = profile_path
+
+            result = build_comparison(
+                arms, "tested-revision", gpu_profiles=profiles
+            )
+            self.assertEqual(result["selection"]["fastest_jobs"], 24)
+            self.assertEqual(result["selection"]["recommended_jobs"], 16)
+            self.assertTrue(result["selection"]["change_from_jobs12"])
+            self.assertEqual(
+                result["arms"]["16"]["gpu_profile"]["gpu_utilization_percent"]["mean"],
+                16.0,
+            )
+            self.assertEqual(
+                result["arms"]["24"]["comparison_vs_jobs12"]["action_difference_count"],
+                0,
+            )
+
+            jobs16_rows = [dict(row) for row in decisions]
+            jobs16_rows[5]["chosen_action_id"] = "different"
+            arms[16][1].write_text(
+                "".join(json.dumps(row) + "\n" for row in jobs16_rows), encoding="utf-8"
+            )
+            without_jobs16 = build_comparison(arms, gpu_profiles=profiles)
+            self.assertFalse(
+                without_jobs16["arms"]["16"]["comparison_vs_jobs12"][
+                    "eligible_for_knee_selection"
+                ]
+            )
+            self.assertEqual(without_jobs16["selection"]["recommended_jobs"], 24)
+
+            arms[16][1].write_text(
+                "".join(json.dumps(row) + "\n" for row in decisions), encoding="utf-8"
+            )
+            jobs16_games = [dict(row) for row in games]
+            jobs16_games[0]["decision_count"] = 79
+            arms[16][2].write_text(
+                "".join(json.dumps(row) + "\n" for row in jobs16_games), encoding="utf-8"
+            )
+            mismatched_count = build_comparison(arms, gpu_profiles=profiles)
+            self.assertEqual(
+                mismatched_count["arms"]["16"]["comparison_vs_jobs12"][
+                    "decision_count_difference_seeds"
+                ],
+                [seeds[0]],
+            )
+            self.assertFalse(
+                mismatched_count["arms"]["16"]["comparison_vs_jobs12"][
+                    "eligible_for_knee_selection"
+                ]
+            )
+
+            arms[16][2].write_text(
+                "".join(json.dumps(row) + "\n" for row in games), encoding="utf-8"
+            )
+            profiles[24].write_text("nan, 324, 2500, 60\n" * 30, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "non-finite"):
+                build_comparison(arms, gpu_profiles=profiles)
+
     def test_market_sample_comparator_validates_causal_divergence_and_cost(self) -> None:
         from cascadiav3.compare_market_samples import RULESET_ID, build_comparison
 

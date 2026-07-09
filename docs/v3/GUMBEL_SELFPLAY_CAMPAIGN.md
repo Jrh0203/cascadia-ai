@@ -201,7 +201,10 @@ MODEL_MANIFEST=<incumbent manifest> bash cascadiav3/scripts/run_gumbel_selfplay_
   and GPU model context serve the bounded dynamic Rust worker queue;
   `--model-sessions` is the measured parallel-game knob. Keep policy/search
   settings fixed while tuning it, and require action parity before adopting a
-  new concurrency point.
+  new concurrency point. On john0, use `run_cuda_concurrency_probe.sh` for the
+  preregistered jobs12/16/24 calibration: retain jobs12 unless an eligible arm
+  is at least 1.05x faster, then select the smallest parity-passing point
+  within 2% of the fastest. The probe is advisory and cannot mutate defaults.
 
 ### Phase D — distillation and speed (only after a ≥97 checkpoint exists)
 

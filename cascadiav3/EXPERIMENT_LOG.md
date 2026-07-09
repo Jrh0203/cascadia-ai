@@ -4263,3 +4263,36 @@ terminal rollouts. The complete exporter gate is 46/46 passing; the final
 Python 3.12 gate is 136/136 passing with 45 expected fixture skips. All
 checksum-verified artifacts are under ignored path
 `cascadiav3/reports/parallel_leaf_rollouts_20260709/`.
+
+## 2026-07-09 10:26 — Preregistered jobs12/16/24 CUDA concurrency calibration
+
+Purpose: resolve the live RTX 5090 utilization gap with an exact matched
+throughput/parity measurement, not by extrapolating the four-seed MPS result
+or editing the running corrected-rules chain. This is engineering evidence
+only; it cannot support a strength claim or mutate a serving default.
+
+`run_cuda_concurrency_probe.sh` runs jobs12, jobs16, and jobs24 sequentially
+against one shared CUDA bridge on 48 fixed seeds beginning at `2027073400`.
+Every arm uses the distq-k8 locked checkpoint, n64/top16/d4, eight optional-
+refresh replacement samples, blend 0.5, K16 interior, exact-endgame off, and
+serial leaf rollouts. It records one-second GPU utilization, power, memory,
+and temperature telemetry alongside a complete 3,840-row decision ledger and
+48-row score/category ledger. Reuse is allowed only after the report's exact
+rules/source/seeds/search/topology/device contract and ledger/profile lengths
+match.
+
+`compare_cuda_concurrency` then validates passing corrected-rules candidate-
+only reports, exact source and artifact identity, one shared CUDA bridge,
+dynamic seed scheduling, telemetry invariants, action/refresh/score parity,
+and root-value drift at most `2e-5`. Jobs12 remains the recommendation unless
+the fastest eligible arm is at least `1.05x` faster. If that threshold passes,
+the selected knee is the smallest eligible jobs count within 2% of the fastest
+wall time. Non-finite timing/GPU data and incomplete profiles fail closed.
+
+The calibration is queued last in the checksum-pinned post-chain john0
+waiter: corrected n1024 rebaseline and verdict, exact K1, CUDA model-size
+throughput, market sample-4, then concurrency. At 10:26 EDT the live cycle4
+n1024 arm had 36/100 raw games and remained healthy; no CUDA concurrency arm
+has run yet, and no default has changed. The implementation gate is 137/137
+Python tests passing with 45 expected fixture skips; `bash -n` and the diff
+whitespace check also pass.

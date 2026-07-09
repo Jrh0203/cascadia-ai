@@ -29,13 +29,13 @@ fresh promotion seeds.
 and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
 the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
-completed the 100-game greedy/no-search floor and cycle4 n256/d4 arm and is
-now running distq_k8 n256/d4, followed sequentially by both models at
-n1024/d16 on the same fresh seeds. A live sidecar copies growing distq-n256
-seed files with overwrite-on-poll semantics; a second watcher is armed to do
-the same for both n1024 arms. Each publishes only after strict 100-seed
-validation. This preserves category scores even though the deployed pre-fix
-reducer retains totals only. Watcher pid files are
+completed the 100-game greedy/no-search floor plus both n256/d4 arms and is
+now running cycle4 n1024/d16, with 36/100 raw games complete at 10:26 EDT;
+distq_k8 n1024/d16 follows on the same fresh seeds. A live sidecar copied the
+growing distq-n256 seed files with overwrite-on-poll semantics; a second
+watcher does the same for both n1024 arms. Each publishes only after strict
+100-seed validation. This preserves category scores even though the deployed
+pre-fix reducer retains totals only. Watcher pid files are
 `cascadiav3/logs/rules_20260709_distq_k8_n256_raw_watcher.pid` and
 `cascadiav3/logs/rules_20260709_remaining_raw_watcher.pid`. Rebaseline log/pid:
 `cascadiav3/logs/rules_20260709_rebaseline.{log,pid}`. Canonical launcher:
@@ -93,7 +93,12 @@ armed on john0 from a checksum-pinned final-main snapshot (pid file
 and verdict watcher exit will it install the exact revision-marked `main`
 snapshot, rebuild, and run a fresh same-revision 100-seed corrected n256/d4
 baseline/K1 gate. It then runs the same-revision CUDA model-size throughput
-probe and finally the sample-8 versus sample-4 gate, strictly sequentially.
+probe, the sample-8 versus sample-4 gate, and finally the engineering-only
+jobs12/16/24 CUDA concurrency calibration, strictly sequentially. The
+concurrency arm never mutates a default: it records complete matched traces
+and one-second GPU telemetry, then recommends the smallest parity-passing arm
+within 2% of the fastest only if the best wall speedup over jobs12 is at least
+1.05x.
 
 **Optional-refresh performance ablation (07-09):** a 65-game streamed profile
 of the live corrected cycle4 n256/d4 arm found that 611 refresh-available
@@ -162,8 +167,9 @@ jobs1/2/4, but weak throughput scaling: jobs2 `1.147x`, jobs4 `1.180x`, while
 mean decision latency rose `1.70x/3.12x`. A 2M versus 16M cell-budget control
 was flat (`+0.54%` wall), so bridge chunk sizing is not responsible. Jobs2 is
 the mini operational knee; do not extrapolate it to CUDA or modify the live
-chain. Add a jobs12/16/24 performance-and-parity calibration to a future
-john0 engineering window. Summary SHA
+chain. A resumable jobs12/16/24 performance-and-parity calibration is now
+queued at the end of the checksum-pinned john0 post-chain waiter; it uses 48
+fixed seeds at n64/d4 and cannot alter a runtime default. Summary SHA
 `7d4fb02d1432a8a83c85ee1b123b0a842ce139e92703c9d9932a579d7f163d02`.
 
 **Dynamic seed-queue fix (07-09):** the utilization gap had a concrete

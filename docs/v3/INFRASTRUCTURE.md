@@ -95,6 +95,15 @@ the corrected 2026-07-09 contract from `docs/v3/RULES_CONTRACT.md`. Reports
 from the forced three-of-a-kind refresh era are historical only and must not
 enter a paired verdict against corrected games.
 
+CUDA shared-bridge concurrency is calibrated with
+`cascadiav3/scripts/run_cuda_concurrency_probe.sh`, never by editing a live
+gate. It runs matched jobs12/16/24 arms sequentially, profiles the GPU once per
+second, validates complete traces and parity, and writes an advisory verdict.
+The script is resumable only when every reused arm matches rules, revision,
+seeds, search, topology, device, ledger counts, and telemetry length. Apply a
+recommended jobs change only in a later reviewed commit; the probe itself
+does not modify launchers or defaults.
+
 1. **Benchmark/battery** (100 games, paired seeds):
 ```bash
 python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \

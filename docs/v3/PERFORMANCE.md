@@ -259,6 +259,25 @@ nested rollout work then adds scheduling contention rather than throughput.
 This does not close GPU-native whole-rollout work, which attacks the deeper
 engine/model lockstep boundary rather than oversubscribing host CPU.
 
+### Preregistered CUDA concurrency calibration
+
+`run_cuda_concurrency_probe.sh` closes the outstanding CUDA jobs question
+without contaminating a scientific gate. After the corrected rebaseline, K1,
+model-throughput, and market-sample jobs finish, it runs jobs12, jobs16, and
+jobs24 sequentially against one shared CUDA bridge on the same 48 seeds and
+exact source/exporter/distq-k8 checkpoint. Search is fixed at n64/top16/d4,
+eight market samples, blend 0.5, K16 interior, and serial leaf rollouts.
+
+Each arm must publish all 3,840 decision rows, 48 complete game/category rows,
+the full execution/search/artifact contract, and at least 30 one-second
+`nvidia-smi` samples for utilization, power, memory, and temperature. The
+fail-closed comparator requires action/refresh/score parity with jobs12 and
+root-value drift no greater than `2e-5`. If no eligible arm reaches `1.05x`
+jobs12 throughput, jobs12 remains the recommendation. Otherwise the selected
+knee is the smallest eligible jobs count within 2% of the fastest wall time.
+The completion artifact is advisory engineering evidence; the script never
+changes generation or gate defaults.
+
 ## Tensor Export
 
 Rust-native greedy tensor export on `john0`:
