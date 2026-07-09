@@ -3559,3 +3559,12 @@ policy accept/decline `594/352`, Q `636/364`, greedy `1005/398`. Caveat: this
 interactive no-search harness delegates the pre-draw refresh decision to
 greedy-v1, then applies the model head to the revealed draft menu. The Gumbel
 legs test the search policy's own refresh choice. cycle4 n256/d4 is now live.
+
+No-search mechanism decomposition (paired by seed) is CI-positive in every
+category. Policy minus greedy: wildlife `+0.8100` CI
+`[+0.4458,+1.1742]`, habitat `+2.3900` CI `[+2.1592,+2.6208]`, retained
+Nature Tokens `+1.0975` CI `[+0.8988,+1.2962]`. Q minus greedy: wildlife
+`+0.6075`, habitat `+1.8775`, Nature Tokens `+0.8625`, all CI-positive.
+Interpretation: most of the model's direct-policy advantage comes from
+longer-horizon habitat structure and resource economy rather than immediate
+wildlife-score greed.

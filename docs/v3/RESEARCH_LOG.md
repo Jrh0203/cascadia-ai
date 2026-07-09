@@ -48,6 +48,14 @@ above greedy under corrected rules; it is not evidence that the model head
 itself learned refresh choice. The in-flight Gumbel baselines make that choice
 through search and are the relevant evidence for that question.
 
+The policy-head `+4.2975` mechanism is broad but dominated by planning terms:
+wildlife `+0.8100` (CI `[+0.4458,+1.1742]`), habitat `+2.3900`
+(CI `[+2.1592,+2.6208]`), and retained Nature Tokens `+1.0975`
+(CI `[+0.8988,+1.2962]`). The Q-head decomposition is likewise CI-positive:
+wildlife `+0.6075`, habitat `+1.8775`, Nature Tokens `+0.8625`. The direct
+transformer policy's clearest edge is therefore habitat construction plus
+resource restraint, not merely larger immediate wildlife patterns.
+
 ---
 
 ## 1. Architecture
