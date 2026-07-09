@@ -44,12 +44,13 @@ frontier 8.86x faster (only 1.2% over whole-game mean decision time). A fresh
 same-revision 100-game corrected n256/d4 CUDA gate is next. Only a CI-positive
 or material gate-scale cost win justifies building K2.
 
-## 2. Invert the AlphaZero ratio: tiny model, enormous search
+## 2. Invert the AlphaZero ratio: tiny model, enormous search — preflight rejects the original arithmetic
 
-**Idea.** Distill M (100M params, ~17 ms/eval) into a 3–10M student and
-spend the savings on simulations: same wall-clock buys n8k–n16k with d64+
-worlds. We measured +0.9/doubling of worlds *before* the reversal and the
-reversal may have been budget-shape, not worlds, at fault.
+**Idea.** Distill M into a 3–10M student and spend measured serving savings
+on simulations. The original sketch assumed model FLOPs dominated enough
+that the same wall-clock would buy n8k–n16k with d64+ worlds. That assumption
+is now falsified on the current batched MPS bridge, before spending a training
+day.
 
 **Why it fits.** The SNR analysis says decisions flip on *sampling* noise;
 simulations divide sampling noise by √n regardless of model bias. Nobody
@@ -58,12 +59,22 @@ frontier actually peaks — the campaign only ever moved along the
 fixed-model axis. AlphaZero-family results repeatedly show small-net/big-
 search dominating at fixed compute in exact-scoring games.
 
-**Sketch.** Distill policy+q+quantiles from the distq corpus into an S/XS
-config (both heads exist already; `--model-size S` + `--init-manifest`
-distillation run is a day). Serve at n4096/d32 and sweep. Kill-test: if
-S-at-n4096 can't beat M-at-n1024 at equal wall-clock, the frontier bends
-the other way and we know M's capacity is load-bearing at serving, which
-is itself new information (it currently is NOT load-bearing at n256).
+**Measured preflight (2026-07-09).** A deterministic four-root benchmark now
+measures the complete bridge path (collate, feature/relation tensors, model,
+packed response). Across john2–john4 at batch 8, trained 88.17M M delivered
+`99.736 roots/s`; trained 15.02M S `183.178` (`1.84x`); synthetic 5.12M XS
+`204.743` (`2.05x`); and a synthetic 67.8K near-zero model `239.585`
+(`2.40x`). Batch-1 speedups were `3.22x / 4.85x / 6.22x`, so batching and
+fixed work dominate the production-shaped path. A roughly 1,300x parameter
+reduction buying `2.40x` cannot fund n8k–n16k from n256/n1024.
+
+**Revised sketch.** First run the identical hashed probe on john0 CUDA. If
+CUDA has the same asymptote, optimize serving amortization and move larger
+units of search/rollout work behind each bridge request; do not distill yet.
+If CUDA shows materially more size leverage, distill policy+q+quantiles into
+the now-first-class XS config, then compare XS and M on an empirically equal-
+wall-clock search frontier. The kill-test remains score, but the budget must
+come from measured end-to-end throughput rather than parameter-count folklore.
 
 ## 3. Pairwise comparator head — train the decision, not the value
 
@@ -150,8 +161,8 @@ input-symmetry tricks (representation is already invariant), serving-side
 cooperative objectives (noise multiplier, measured twice), bigger
 monolithic models on the same labels (measured three ways).
 
-*Sequencing suggestion: #1 and #3 are serving-side and cheap — they can
-run during any training-side experiment. #2 gates on a distillation run,
-#5 on the EI-1 verdict, #4 unlocks scale for everything and can start as
-engineering whenever GPU-planning allows. #6 last — it needs the
+*Sequencing suggestion: finish #1's CUDA gate and #2's CUDA throughput
+preflight before committing training compute. #3 is serving-side and cheap.
+#5 gates on the corrected distq verdict; #4 unlocks scale for everything and
+can start as engineering whenever GPU-planning allows. #6 last — it needs the
 flywheel confirmed.*

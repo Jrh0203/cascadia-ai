@@ -92,6 +92,11 @@ Important runners:
 Gumbel exporter modes (see `--help`):
 
 - `--gumbel-policy-game`: all-seat Gumbel-search games, per-decision JSONL.
+- `python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark`: paired or
+  candidate-only Gumbel batteries. In addition to the aggregate report and
+  per-ply decision ledger, `--games-out` persists every completed game's raw
+  wildlife/habitat/Nature/total breakdown in seed order and refuses partial
+  seed coverage.
 - `--gumbel-selfplay-tensor-corpus`: schema-v2 self-play training shards with
   completed-Q targets, improved-policy soft targets, and real-outcome value
   labels.

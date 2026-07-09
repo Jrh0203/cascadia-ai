@@ -15,17 +15,18 @@ its own downstream draft search. Keep this cost separate from the ordinary
 
 ## Corrected Optional-Refresh Cost
 
-A streamed profile of the first 65 complete corrected-rules cycle4 n256/d4
-games on john0 isolated the dominant serving cost. Across 5,200 decisions,
-mean/P50/P95/P99 latency was `11.782 / 6.325 / 60.112 / 74.551` seconds.
-The 611 decisions with an optional refresh averaged `55.452s`; the other 4,589
-averaged `5.968s`. Those refresh decisions added 1,343,744 simulations above
-1,331,200 chosen-branch simulations, more than doubling the search work.
-Action count was not the explanation (correlation with latency was about
-`-0.003`). A live RTX 5090 snapshot showed roughly `83%` GPU utilization,
-`17%` memory utilization, and 2.5 GiB allocated, while the Rust exporter used
-about 7.4 CPU cores and the bridge about 4.1. The first performance lever is
-therefore refresh chance-sample work, not another root-menu cap.
+The complete 100-game corrected-rules cycle4 n256/d4 baseline on john0
+isolated the dominant serving cost. Across 8,000 decisions, mean/P50/P95
+latency was `11.729 / 6.301 / 60.112` seconds. The 952 decisions with an
+optional refresh averaged `54.908s` (P50 `57.350s`); the other 7,048 averaged
+`5.896s` (P50 `6.047s`). Those refresh decisions added 2,094,336 simulations
+above 2,048,000 chosen-branch simulations, more than doubling the search
+work. A 65-game streamed slice found essentially no action-count/latency
+correlation (`r ~= -0.003`). A live RTX 5090 snapshot showed roughly `83%`
+GPU utilization, `17%` memory utilization, and 2.5 GiB allocated, while the
+Rust exporter used about 7.4 CPU cores and the bridge about 4.1. The first
+performance lever is therefore refresh chance-sample work, not another
+root-menu cap.
 
 Cost accounting must distinguish three quantities:
 
@@ -58,6 +59,45 @@ promotion-scale gate compares sample-8 with sample-4 over 100 matched CUDA
 games at n256/d4, requires a 95% t-CI lower bound of at least `-0.25` points
 and at least `1.15x` whole-decision speedup, and reuses the exact-K1 control
 only after validating its full rules/source/seeds/search contract.
+
+## Model-Size / Search-Budget Inversion Preflight (2026-07-09)
+
+`torch_model_throughput_benchmark.py` measures the complete bridge hot path,
+not a bare Torch forward: JSON-like root collation, relation tensors, model
+execution, and packed response construction. The runner hashes the fixed
+root set, manifests/weights, outputs, environment, and reports; repeated
+iterations must emit the same response digest. The four corrected-rules
+expert roots have 90/225/216/414 actions and SHA-256
+`534d35fe625b7c4ee248a58ffd1cb265be127cff93eafdc0fe48fbcddfbaa35f`.
+This is engineering-only evidence: synthetic XS/tiny shapes have random
+weights and say nothing about strength.
+
+Three independent M4 hosts (john2–john4, MPS, seven measured iterations after
+two warmups) agreed closely and produced identical output digests per
+model/batch. Mean complete-path throughput:
+
+| Model | Parameters | Batch 1 roots/s | Speedup | Batch 8 roots/s | Speedup |
+|---|---:|---:|---:|---:|---:|
+| trained cycle4 M | 88,169,543 | 37.754 | 1.00x | 99.736 | 1.00x |
+| trained EI-0 S | 15,016,007 | 121.619 | 3.22x | 183.178 | 1.84x |
+| synthetic XS shape | 5,121,607 | 183.158 | 4.85x | 204.743 | 2.05x |
+| synthetic tiny shape | 67,847 | 234.785 | 6.22x | 239.585 | 2.40x |
+
+Input report hashes were john2
+`e3198e8221446ea3a92b5b1bd90c1ebeee54b61a47f7cbffc43043fe1b27c583`,
+john3 `2ae231d7eb3d8f51e502fd3e513ea3148e926fd187b9109ec004b466a39f35ae`,
+and john4 `e0fe08f9e0d371780dad58b4ce7e71ec6a8114afd6e0fbac785bfb3371febacb`.
+
+The result rejects the original arithmetic behind “distill to 3–10M and buy
+n8k–n16k” for the present batched MPS serving stack. At batch 8, shrinking
+parameters by roughly 1,300x improves complete-path throughput only `2.40x`;
+the asymptote is dominated by fixed collation, feature/relation construction,
+encoding, and response work. XS is still a valid strength/capacity research
+shape, but not an orders-of-magnitude search multiplier. The next decision is
+a same-tool CUDA measurement on john0. If CUDA shows the same plateau, improve
+bridge amortization and move more rollout/search work behind each request
+before paying for a distillation run. If CUDA shows much more leverage, then
+train/distill XS and test the measured equal-wall-clock frontier.
 
 ## Tensor Export
 

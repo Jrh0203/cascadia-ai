@@ -3669,3 +3669,62 @@ fresh 100-seed CUDA candidate at n256/d4 and reuses the exact-K1 sample-8 arm
 only after full contract validation. It is queued after exact K1 on john0;
 failure preserves sample-8. Only a passing same-budget gate would justify a
 separate cost-matched higher-n test.
+
+## 2026-07-09 04:25 — Corrected cycle4 n256 baseline complete: 97.0675; refresh choice doubles search work
+
+The first corrected-policy Gumbel baseline completed on john0 from source
+`d20daf44dc6aa4aad3d03c6ccb7d3a21c3013135`: cycle4 M, seeds
+`2027070900..2027070999`, n256/top16/d4, blend 0.5, K16 interior, eight market
+samples. Report and all 8,000 decision rows passed rules/source/seed coverage
+validation. Copied local/remote SHA-256 values matched: report
+`928bdc78955523d79c35038d76c7ad55e48d2dd5dc4dbcfe647e36daf37a1711`,
+decisions
+`63528a5154c1a4bdeb4aa04226133ae6d794d153450e1127b87c44893a1cda56`,
+and Markdown
+`414c68aabe9d69d3a1940fadf2e2431109de05529c8e815842ed24bc89669321`.
+
+Result: mean seat `97.0675`, P50 `97.0`, P90 `100.1`, and 2/100 game means
+at least 100. Search encountered 952 optional refreshes, accepted 565 and
+declined 387 (`59.35%`). Mean decision time was `11.729s`; refresh decisions
+averaged `54.908s`, ordinary decisions `5.896s`. The chosen branches consumed
+2,048,000 simulations; evaluating the market choice added 2,094,336 more.
+This arm is a corrected baseline, not promotion evidence; the paired distq
+arm is in flight.
+
+Audit limitation: the deployed reducer retained total scores but deleted its
+temporary `gumbel_game_done` category rows. No wildlife/habitat/Nature
+mechanism is claimed for this arm. A sidecar now preserves each in-flight
+distq seed file. Permanently, every runner writes a complete, seed-ordered
+`*_games.jsonl`; reports embed per-seat raw breakdowns and overall/by-seat
+category means, and the writer refuses partial or duplicate seed coverage.
+
+## 2026-07-09 04:25 — Model/search inversion throughput preflight: tiny-model search multiplier is only 2.40x at batch 8 MPS
+
+Added a deterministic end-to-end bridge throughput benchmark and shell
+runner. It exercises root collation, padded feature/relation tensors,
+CascadiaFormer execution, and packed-response construction; records host,
+platform, relevant environment, roots/manifests/weights hashes; and requires
+stable response digests across iterations. The fixed corrected-rules roots
+have 90/225/216/414 actions and SHA-256
+`534d35fe625b7c4ee248a58ffd1cb265be127cff93eafdc0fe48fbcddfbaa35f`.
+XS (`d_model=256`, 6 layers, 8 heads, FFN 1024; 5,121,607 parameters) is now
+a first-class model/trainer config. Synthetic shapes are engineering-only,
+not trained strength evidence.
+
+Seven measured iterations after two warmups on john2–john4 MPS produced
+identical output digests and close host rates. Three-host mean roots/s:
+
+| Model | Parameters | batch 1 | speedup | batch 8 | speedup |
+|---|---:|---:|---:|---:|---:|
+| trained cycle4 M | 88,169,543 | 37.754 | 1.00x | 99.736 | 1.00x |
+| trained EI-0 S | 15,016,007 | 121.619 | 3.22x | 183.178 | 1.84x |
+| synthetic XS | 5,121,607 | 183.158 | 4.85x | 204.743 | 2.05x |
+| synthetic tiny | 67,847 | 234.785 | 6.22x | 239.585 | 2.40x |
+
+Verdict: the original proposal that a 3–10M student would buy n8k–n16k is
+not supported by the current batched MPS serving path. Even a roughly 1,300x
+parameter reduction buys only `2.40x`; fixed collation/encoding/relation and
+response work is the asymptote. Run the exact same probe on john0 CUDA before
+distillation. If CUDA plateaus similarly, optimize request amortization and
+rollout topology first; if CUDA has materially larger size leverage, distill
+XS and measure an equal-wall-clock score frontier.

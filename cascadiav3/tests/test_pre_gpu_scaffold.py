@@ -2190,6 +2190,8 @@ class BenchmarkStatsTest(unittest.TestCase):
             _contiguous_runs,
             collect_gumbel_results,
             summarize_market_decisions,
+            summarize_score_categories,
+            write_completed_game_rows,
         )
 
         self.assertEqual(_contiguous_runs([5, 6, 7, 10, 12, 13]), [(5, 3), (10, 1), (12, 2)])
@@ -2218,7 +2220,12 @@ class BenchmarkStatsTest(unittest.TestCase):
             {
                 "type": "gumbel_game_done",
                 "seed": 5,
-                "scores": [{"total": 90}, {"total": 95}, {"total": 88}, {"total": 92}],
+                "scores": [
+                    {"wildlife": [25, 25], "habitat": [35], "nature_tokens": 5, "total": 90},
+                    {"wildlife": [30, 25], "habitat": [34], "nature_tokens": 6, "total": 95},
+                    {"wildlife": [24, 24], "habitat": [35], "nature_tokens": 5, "total": 88},
+                    {"wildlife": [26, 26], "habitat": [35], "nature_tokens": 5, "total": 92},
+                ],
                 "decision_count": 2,
                 "elapsed_seconds": 3.5,
             },
@@ -2233,6 +2240,24 @@ class BenchmarkStatsTest(unittest.TestCase):
         self.assertEqual(market["acceptance_rate_when_available"], 0.5)
         self.assertEqual(market["mean_chance_samples_when_available"], 8.0)
         self.assertEqual(market["market_decision_simulation_overhead"], 272)
+        categories = summarize_score_categories(results)
+        assert categories is not None
+        self.assertEqual(categories["overall_mean"]["total"], (90 + 95 + 88 + 92) / 4)
+        self.assertEqual(categories["overall_mean"]["wildlife"], (50 + 55 + 48 + 52) / 4)
+        self.assertEqual(categories["games_mean_at_least_100"], 0)
+        self.assertEqual(categories["seat_scores_at_least_100"], 0)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            games_path = Path(tmp) / "nested" / "games.jsonl"
+            write_completed_game_rows(lines, [5], games_path)
+            self.assertEqual(
+                [json.loads(line)["seed"] for line in games_path.read_text().splitlines()],
+                [5],
+            )
+            incomplete_path = Path(tmp) / "incomplete.jsonl"
+            with self.assertRaisesRegex(RuntimeError, "do not match the battery"):
+                write_completed_game_rows(lines, [5, 6], incomplete_path)
+            self.assertFalse(incomplete_path.exists())
 
         from cascadiav3.torch_cascadiaformer_search_benchmark import summarize_game_results
 
@@ -2585,6 +2610,7 @@ class GumbelBatchRunnerTest(unittest.TestCase):
         from cascadiav3.torch_cascadiaformer_gumbel_benchmark import (
             collect_gumbel_results,
             run_gumbel_games_batch,
+            summarize_score_categories,
         )
 
         binary = Path(
@@ -2620,6 +2646,14 @@ class GumbelBatchRunnerTest(unittest.TestCase):
                 exploration=False,
             )
         results = collect_gumbel_results(lines)
+        categories = summarize_score_categories(results)
+        self.assertIsNotNone(categories)
+        assert categories is not None
+        self.assertEqual(categories["overall_mean"]["total"], sum(
+            float(score["total"])
+            for result in results
+            for score in result["done"]["scores"]
+        ) / 8)
         self.assertEqual([result["seed"] for result in results], seeds)
         for result in results:
             self.assertEqual(len(result["done"]["scores"]), 4)

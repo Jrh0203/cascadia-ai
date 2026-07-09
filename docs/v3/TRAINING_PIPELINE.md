@@ -248,6 +248,9 @@ Gates:
 
 Search reports must include:
 
+- exact rules and source revision;
+- a complete seed-ordered raw game ledger with per-seat wildlife, habitat,
+  Nature Token, and total scores;
 - retained count;
 - full-search winner retention;
 - search regret;

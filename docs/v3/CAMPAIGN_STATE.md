@@ -29,9 +29,11 @@ fresh promotion seeds.
 and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
 the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
-completed the 100-game greedy/no-search floor and is now running cycle4
-n256/d4, followed sequentially by distq_k8 n256/d4 and both models at
-n1024/d16 on the same fresh seeds. Log/pid:
+completed the 100-game greedy/no-search floor and cycle4 n256/d4 arm and is
+now running distq_k8 n256/d4, followed sequentially by both models at
+n1024/d16 on the same fresh seeds. A sidecar copies each completed distq game
+out of the benchmark's temporary directory so category scores survive even
+though the deployed pre-fix reducer retains totals only. Log/pid:
 `cascadiav3/logs/rules_20260709_rebaseline.{log,pid}`. Canonical launcher:
 `cascadiav3/scripts/run_rules_20260709_rebaseline.sh`; every completed report
 is reused only when both rules ID and source revision match.
@@ -47,6 +49,19 @@ accept/decline counts were policy `594/352`, Q `636/364`, and greedy
 `1005/398`. The interactive no-search harness uses greedy-v1 for this
 pre-draw market decision, then the named model head ranks the revealed draft;
 the Gumbel legs are the model/search-driven refresh-decision evidence.
+
+**Corrected cycle4 n256/d4 baseline (100 games, complete):** mean seat
+`97.0675`, P50 `97.0`, P90 `100.1`, with 2/100 game means at least 100.
+Across all 8,000 decisions, 952 offered a refresh; search accepted 565 and
+declined 387 (`59.35%` accept). Mean decision latency was `11.729s`; refresh
+opportunities averaged `54.908s` versus `5.896s` ordinarily. Market choice
+added 2,094,336 simulations above the 2,048,000 chosen-branch simulations.
+Report/decision hashes were copied and matched locally. This is the first
+current-rules search baseline, not a promotion comparison. The deployed
+reducer discarded score categories with its temporary game files, so this
+arm cannot support a category-level claim; all newly launched gates now write
+a complete seed-ordered `*_games.jsonl`, embed per-seat score breakdowns, and
+fail instead of publishing an incomplete game ledger.
 
 The old forced-refresh EI-1 generation and queued battery were stopped before
 deployment (PGIDs `1225249` and `1228689`). Its 825 partial games/66k roots
@@ -91,6 +106,21 @@ will follow exact K1 on john0, reuse its identical validated sample-8 arm, and
 run a fresh 100-seed sample-4 candidate. Passing requires t-CI lower bound
 `>= -0.25` and whole-decision speedup `>= 1.15x`; failure leaves sample-8 in
 place.
+
+**Model/search inversion preflight (07-09):** a new fixed-root bridge
+benchmark measures the full Python collate → CascadiaFormer → packed-response
+path and pins roots, model parameters, outputs, environment, and report
+hashes. On john2–john4 MPS, batch-8 mean throughput was `99.736 roots/s` for
+the trained 88.17M cycle4 M model, `183.178` (`1.84x`) for the trained 15.02M
+S model, `204.743` (`2.05x`) for a synthetic 5.12M XS shape, and `239.585`
+(`2.40x`) for a synthetic 67.8K near-zero model. Batch-1 gains were larger
+(`3.22x`, `4.85x`, `6.22x`), proving batching changes the bottleneck. A
+1,300x parameter reduction buying only `2.40x` at the serving batch means
+the old “tiny net buys n8k–n16k” premise is false on the current MPS bridge:
+fixed collation/encoding/relation work dominates. A same-tool CUDA probe is
+queued after exact K1 and before the sample-count gate. Do not spend a day on
+distillation unless CUDA shows materially more model-size leverage; otherwise
+fix serving amortization/rollout topology first.
 
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process

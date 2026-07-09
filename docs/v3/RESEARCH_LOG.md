@@ -56,6 +56,32 @@ wildlife `+0.6075`, habitat `+1.8775`, Nature Tokens `+0.8625`. The direct
 transformer policy's clearest edge is therefore habitat construction plus
 resource restraint, not merely larger immediate wildlife patterns.
 
+### Corrected cycle4 search baseline (2026-07-09)
+
+The first complete corrected-policy search arm used the cycle4 M checkpoint,
+fresh seeds `2027070900..2027070999`, n256/top16/d4, blend 0.5, 16 interior
+actions, and eight hidden replacement samples per optional refresh. Exact
+source revision and corrected rules identity were recorded.
+
+- mean seat score `97.0675`; P50 `97.0`; P90 `100.1`;
+- 2/100 game means at least 100;
+- 952 refresh opportunities: 565 accept, 387 decline (`59.35%` accept);
+- mean decision `11.729s`; refresh decisions `54.908s`, ordinary decisions
+  `5.896s`;
+- 2,048,000 chosen-branch simulations plus 2,094,336 market-decision
+  simulations.
+
+This is a baseline, not a paired promotion verdict; distq on the same seeds
+is in flight. It establishes that the corrected search actually exercises
+both accept and decline at scale and that the score remains near the legacy
+n256 band despite a materially larger policy space. The deployed reducer
+retained total seat scores and all 8,000 decision rows but deleted its
+temporary per-game category rows, so wildlife/habitat/Nature decomposition
+cannot be reconstructed honestly from this artifact. A sidecar is preserving
+the in-flight distq raw game files, and the permanent benchmark now writes a
+complete seed-ordered game ledger plus category aggregates; publication fails
+if any seed is missing. Do not infer category mechanisms from this cycle4 arm.
+
 ### Exact final-personal-turn frontier (K1, 2026-07-09)
 
 The first exact-endgame slice is implemented behind
@@ -341,35 +367,45 @@ No points directly; halves the cost of every probe and EI cycle.
 
 ## 5. Future research directions (ranked, as of 07-09)
 
-1. **Distributional-Q expert iteration** — ACTIVE (EI-1 overnight). The
-   quantile head broke training-side saturation (+0.43 CI+ at n256); the
-   open question is compounding. If EI cycles yield even +0.3 each, the
-   gate falls within a few cycles. Next knobs if EI-1 pays: K=16
-   quantiles, quantile-aware serving (risk-adjusted Q instead of mean),
-   distq + L capacity retry (capacity was closed for the SCALAR head).
+1. **Finish the corrected distq rebaseline** — ACTIVE. Distq n256/d4 and
+   both models at n1024/d16 must establish whether the legacy distributional
+   gain survives the rules compatibility break. No EI corpus or promotion
+   result may cross that boundary.
 2. **Exact final-personal-turn K1** — IMPLEMENTED; 2-seed causal MPS smoke
-   was score-flat and made the exact frontier 8.86x faster. Fresh 100-seed
-   corrected n256/d4 CUDA baseline/K1 gate staged. K2 is gated on that result.
-3. **Serving from john0-class latency** — engineering: multi-bridge
-   worker partitioning (~2× generation), single-stream CUDA serving for
-   interactive/certification use.
-4. **Table-native q head (cycle-7)** — staged but parked: serving-side
+   was score-flat and made the exact frontier 8.86x faster. A fresh 100-seed
+   corrected n256/d4 CUDA baseline/K1 gate is queued. K2 is gated on that
+   result.
+3. **Fix the serving asymptote before tiny-net training.** A fixed-root
+   john2–john4 benchmark found that at batch 8, 88.17M M → 15.02M S → 5.12M
+   XS → 67.8K tiny delivered only `1.00x / 1.84x / 2.05x / 2.40x` complete
+   bridge throughput. A 1,300x parameter reduction does not buy the proposed
+   n8k–n16k search on the current MPS topology. Run the same probe on john0
+   CUDA; if the plateau survives, prioritize collation/encoding amortization,
+   multi-bridge partitioning, and larger units of work per request. Distill
+   XS only if measured equal-wall-clock headroom is real.
+4. **Distributional-Q expert iteration** — PAUSED at the rules boundary.
+   The legacy quantile head broke training-side saturation (+0.43 CI+ at
+   n256), but the corrected paired verdict owns the next decision. If it
+   survives, resume EI with corrected-policy data; next knobs are K=16,
+   quantile-aware serving, and a distq + L capacity retry.
+5. **Table-native q head (cycle-7)** — staged but parked: serving-side
    table objectives measured CI− twice (noise multiplier); the
    training-side variant is theoretically distinct (labels average away
    noise). Revisit only if the distq line stalls AND the gate's
    cooperative reading is confirmed acceptable.
-5. **Search-shape re-sweep under distq** — the n1024/d16 peak was
+6. **Search-shape re-sweep under distq** — the n1024/d16 peak was
    established with the scalar head; a better value function can shift
    the optimal sims/worlds trade (maybe fewer worlds needed → cheaper).
-6. **Free-refresh as a search decision — IMPLEMENTED 2026-07-09, awaiting
-   corrected rebaseline.** The engine and every automated policy now expose
+7. **Free-refresh as a search decision — IMPLEMENTED 2026-07-09.** The
+   engine and every automated policy now expose
    and value decline and accept. Gumbel searches separate roots and makes the
-   same choice at interior plies. This is a rules correction, not an
+   same choice at interior plies; the 100-game cycle4 baseline accepted 565
+   and declined 387 opportunities. This is a rules correction, not an
    experiment to score against the forced-refresh baseline; all old numbers
    are compatibility-broken. See `RULES_CONTRACT.md`.
-7. **1,000-game certification** — run when a corrected-rules champion plausibly clears
+8. **1,000-game certification** — run when a corrected-rules champion plausibly clears
    ~99+ at 100g; currently premature.
-8. **Closed (do not re-propose without new evidence):** oracle/belief
+9. **Closed (do not re-propose without new evidence):** oracle/belief
    modeling, checkpoint ensembles, leaf softmix, symmetry TTA,
    chance-node expectimax, serving-side table-total, capacity/data
    scaling for the scalar head. See §2/§4 for the measurements.

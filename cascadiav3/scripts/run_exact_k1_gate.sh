@@ -148,6 +148,7 @@ run_arm() {
     --experiment-id "$arm_tag" \
     --out "$report" \
     --decisions-out "$REPORT_DIR/${arm_tag}_decisions.jsonl" \
+    --games-out "$REPORT_DIR/${arm_tag}_games.jsonl" \
     --summary-out "$REPORT_DIR/${arm_tag}.md"
 }
 

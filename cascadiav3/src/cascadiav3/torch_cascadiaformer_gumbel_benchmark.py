@@ -325,6 +325,76 @@ def summarize_market_decisions(lines: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def summarize_score_categories(results: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Aggregate exact engine score components retained in game-done rows."""
+    if not results:
+        return None
+    by_seat: list[list[dict[str, float]]] = [[], [], [], []]
+    game_means: list[float] = []
+    for result in results:
+        scores = result["done"]["scores"]
+        if len(scores) != 4:
+            raise RuntimeError(f"seed {result['seed']} emitted {len(scores)} seat scores; expected 4")
+        totals: list[float] = []
+        for seat, score in enumerate(scores):
+            wildlife_raw = score.get("wildlife")
+            habitat_raw = score.get("habitat")
+            if not isinstance(wildlife_raw, list) or not isinstance(habitat_raw, list):
+                raise RuntimeError(f"seed {result['seed']} seat {seat} lacks category arrays")
+            category = {
+                "wildlife": float(sum(wildlife_raw)),
+                "habitat": float(sum(habitat_raw)),
+                "nature_tokens": float(score["nature_tokens"]),
+                "total": float(score["total"]),
+            }
+            category_sum = (
+                category["wildlife"] + category["habitat"] + category["nature_tokens"]
+            )
+            if abs(category_sum - category["total"]) > 1.0e-9:
+                raise RuntimeError(
+                    f"seed {result['seed']} seat {seat} category sum {category_sum} "
+                    f"!= total {category['total']}"
+                )
+            by_seat[seat].append(category)
+            totals.append(category["total"])
+        game_means.append(mean(totals))
+
+    all_rows = [row for seat_rows in by_seat for row in seat_rows]
+
+    def aggregate(rows: list[dict[str, float]]) -> dict[str, float]:
+        return {
+            key: mean(row[key] for row in rows)
+            for key in ("wildlife", "habitat", "nature_tokens", "total")
+        }
+
+    return {
+        "overall_mean": aggregate(all_rows),
+        "by_seat_mean": [aggregate(rows) for rows in by_seat],
+        "games_mean_at_least_100": sum(value >= 100.0 for value in game_means),
+        "seat_scores_at_least_100": sum(row["total"] >= 100.0 for row in all_rows),
+    }
+
+
+def write_completed_game_rows(
+    candidate_lines: list[dict[str, Any]], seeds: list[int], path: Path
+) -> None:
+    """Persist a complete, seed-ordered game ledger or fail without publishing it."""
+    expected_seeds = sorted(seeds)
+    game_rows = sorted(
+        (line for line in candidate_lines if line.get("type") == "gumbel_game_done"),
+        key=lambda line: int(line["seed"]),
+    )
+    actual_seeds = [int(row["seed"]) for row in game_rows]
+    if actual_seeds != expected_seeds:
+        raise RuntimeError(
+            "candidate completed-game seeds do not match the battery: "
+            f"expected {expected_seeds}, got {actual_seeds}"
+        )
+    payload = "".join(json.dumps(row, sort_keys=True) + "\n" for row in game_rows)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(payload, encoding="utf-8")
+
+
 def run_gumbel_benchmark(
     *,
     binary: Path,
@@ -358,6 +428,7 @@ def run_gumbel_benchmark(
     tta_rotations: int = 1,
     source_revision: str | None = None,
     decision_rows_path: Path | None = None,
+    game_rows_path: Path | None = None,
 ) -> dict[str, Any]:
     if exact_endgame_turns not in (0, 1):
         raise ValueError("exact_endgame_turns currently supports only 0 or 1")
@@ -472,6 +543,8 @@ def run_gumbel_benchmark(
             "".join(json.dumps(row, sort_keys=True) + "\n" for row in decision_rows),
             encoding="utf-8",
         )
+    if game_rows_path is not None:
+        write_completed_game_rows(candidate_lines, seeds, game_rows_path)
     candidate_results = sorted(collect_gumbel_results(candidate_lines), key=lambda r: r["seed"])
 
     control_results: list[dict[str, Any]] = []
@@ -540,6 +613,7 @@ def run_gumbel_benchmark(
             "seed": int(result["seed"]),
             "mean_score_per_seat": mean(float(score["total"]) for score in result["done"]["scores"]),
             "seat_scores": [float(score["total"]) for score in result["done"]["scores"]],
+            "seat_score_breakdowns": result["done"]["scores"],
         }
         for result in candidate_results
     ]
@@ -566,6 +640,8 @@ def run_gumbel_benchmark(
             "max_root_actions": max_root_actions,
         },
         "market_decisions": summarize_market_decisions(candidate_lines),
+        "candidate_score_breakdown": summarize_score_categories(candidate_results),
+        "control_score_breakdown": summarize_score_categories(control_results),
         "control": {
             "kind": control,
             "max_actions": control_max_actions,
@@ -607,6 +683,7 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
         f"- Mean seat score: `{candidate['mean_seat_score']:.4f}`",
         f"- P90 seat score: `{candidate['p90_seat_score']:.4f}`",
         f"- Decisions: `{candidate['decisions']}`",
+        f"- Score breakdown: `{json.dumps(report['candidate_score_breakdown'], sort_keys=True)}`",
         f"- Decision seconds p50/p95: `{report['candidate_decision_seconds_p50']:.4f}` / `{report['candidate_decision_seconds_p95']:.4f}`",
     ]
     if control is not None:
@@ -723,6 +800,11 @@ def main() -> int:
         default="cascadiav3/reports/gumbel_benchmark_decisions.jsonl",
         help="Persistent per-ply Gumbel decision telemetry JSONL",
     )
+    parser.add_argument(
+        "--games-out",
+        default="cascadiav3/reports/gumbel_benchmark_games.jsonl",
+        help="Persistent per-seed completed-game score/category JSONL",
+    )
     args = parser.parse_args()
 
     seeds = parse_seeds(seeds=args.seeds, first_seed=args.first_seed, games=args.games)
@@ -758,6 +840,7 @@ def main() -> int:
         tta_rotations=args.gumbel_tta,
         source_revision=args.source_revision or None,
         decision_rows_path=Path(args.decisions_out),
+        game_rows_path=Path(args.games_out),
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

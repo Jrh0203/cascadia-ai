@@ -144,6 +144,7 @@ run_gumbel() {
     --experiment-id "$tag" \
     --out "$report" \
     --decisions-out "$REPORT_DIR/${tag}_decisions.jsonl" \
+    --games-out "$REPORT_DIR/${tag}_games.jsonl" \
     --summary-out "$REPORT_DIR/${tag}.md"
 }
 
