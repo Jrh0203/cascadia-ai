@@ -4007,3 +4007,90 @@ SHA/size, teacher manifest/weights SHA/size, and real creation time. Filtering
 and relation-tail materialization preserve v3; malformed v3 fails closed, and
 fallback/unverified teachers cannot enter a training corpus. The audit CLI is
 covered on Python 3.9+ despite the repository's 3.12 runtime contract.
+
+## 2026-07-09 08:43 — Confidence-aware pairwise comparator learns pairs but fails the routing gate
+
+Purpose: run the bounded kill test authorized by the 240-root label audit.
+The hypothesis was that an antisymmetric action comparator could use reliable
+completed-Q differences more efficiently than another scalar-value target.
+This entry is offline routing evidence only; no gameplay was run and no
+champion changed.
+
+Fresh training-eligible v3 data came from exact source `0f107219`, corrected
+rules, cycle4 M, n16/top8/d2, depth 1, blend 0.5, K8 interior, four optional-
+refresh samples, exploration on, exact K1, root menu 256, and one shared MPS
+bridge. John2/3/4 generated seeds `2027073100..09`, `2027073110..19`, and
+`2027073120..29`; each block has 10 games / 800 roots and took
+`1377.9 / 1433.8 / 1378.6s`. Bridge dedup saved `26.0% / 26.1% / 26.2%` of
+requested rows. The raw NPZ hashes are:
+
+- 3100: `ab5d829371d92775f6ead31e89d4426185d6d6cf469b16897b6481c608e08807`;
+- 3110: `830566c82fafc19344a3ea84afb070f0267fee74da7afd284703e6f50c4a6012`;
+- 3120: `38b43e00509fc036965b874864703c88d2c12571cbd1a8468d9c6ef36e0e68a4`.
+
+Every shard independently reloaded as v3, training-eligible, source/rules
+matched, and contained 40 explicit exact-endgame roots. Across 2,400 roots,
+2,280 (95%) had at least two valid search actions. There were 18,360 valid
+actions and 63,840 undirected pairs. Margins were plentiful (82.10% at least
+0.25; 67.36% at least 0.5), but only 13,680 pairs (21.43%) had variance
+estimates on both actions; 43.25% of that subset reached SNR 1 and 17.21%
+reached SNR 1.96. Median top-two margin/SNR were `0.3192 / 0.6108`.
+
+Top-64 filtering preserved the selected action with zero drops; relation-tail
+materialization and the Q semantic invariant passed for all three blocks. The
+resulting hashes were `db29becc...` (3100), `c630ae20...` (3110), and
+`e942694c...` (3120). Blocks 3100+3110 were the fixed training split; 3120
+was never sampled by the optimizer.
+
+The head-only fit warm-started cycle4 M, froze all 88.17M established
+parameters, and trained exactly 99,072 comparator parameters (rank 64) for
+500 steps / five example passes, batch 16, AdamW LR 1e-3, on john2 MPS. Pairs
+required q-valid, count at least 2/action, margin at least 0.25, SNR at least
+1, and were capped at 32 undirected pairs/root with both orientations. The
+first launch exposed a pre-step MPS metrics bug: the trainer attempted an
+on-device float64 cast, unsupported by MPS. Commit `03296681` moves the single
+stacked metrics transfer to CPU before exact float64 aggregation and adds an
+actual-MPS regression test. No failed-run checkpoint or metric entered the
+experiment.
+
+Locked validation selected step 350: pairwise loss `0.564040` and accuracy
+`65.972%`, versus initialized-head step 1 `0.688984 / 60.424%`. The selected
+manifest/weights hashes are `b281f813...` and `4a9adb35...`; the complete
+training report hash is `2415a4fc...`. This establishes that the head learned
+the pair labels, not that it improved decisions.
+
+The decisive probe used exact source `2c3997e4` (archive SHA
+`2f66c633dae943710d57f136e6832f50b85fb0e52516fc495e14dd5a298df484`)
+and all 800 untouched 3120 roots. It exactly matched serving: the incumbent
+logits first retained top 16, then all three policy modes selected only inside
+that same mask. The mask covered the global completed-Q best on 702/795 roots
+with any valid candidate (`88.302%`). 206 roots passed the within-mask top-two
+count/margin/SNR gate. Comparator pair accuracy was `66.960%` unweighted and
+`69.466%` confidence-weighted over 3,862 directed pairs.
+
+| Routing mode | Top-1 | Mean completed-Q regret | Delta vs logits |
+|---|---:|---:|---:|
+| incumbent logits | 30.583% | 1.1496 | reference |
+| pairwise Borda | 31.553% | 1.2121 | top-1 +0.971 pp; regret +0.0625 |
+| logits + pairwise | 30.583% | 1.1711 | top-1 +0.000 pp; regret +0.0215 |
+
+For pure Borda, candidate-only/logits-only correct counts were 12/10. The
+paired top-1 delta 95% bootstrap CI was `[-3.398,+5.340]` percentage points;
+regret-delta CI was `[-0.0507,+0.1781]` (positive is worse). The sum mode
+changed only four top-1 outcomes (2/2 discordance), with top-1 delta CI
+`[-1.942,+1.942]` points and regret-delta CI `[-0.0524,+0.0896]`. Probe JSON
+SHA: `92834d4e6e523857383132f0621d4f2d833ec29fc31c132c611fe57baa4e0d8c`.
+
+**Verdict: kill this serving branch before gameplay.** It learned pairwise
+labels, but its two extra top-1 hits are noise-sized and paid for by worse
+average completed-Q regret; the additive route did nothing directionally.
+Keep the schema, comparator, safe top-K serving, and probe as reusable
+research infrastructure, but keep incumbent logits in production and do not
+spend john0 time on this checkpoint. Candidate coverage (88.3%) is now the
+more actionable policy-side deficit.
+
+All fetched artifacts are checksum-verified under ignored path
+`cascadiav3/reports/pairwise_v3_n16_20260709/fit/`: three relation-tail
+tensors, filter/invariant reports, full metrics/log/report, selected
+checkpoint, v3 probe, and exact training/probe source archives. The Python
+gate is 130/130 passing with 45 expected fixture skips.

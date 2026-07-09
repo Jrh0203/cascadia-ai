@@ -378,6 +378,28 @@ Variance-reduction levers must change the problem, not the frame.
 ~2× generation wall-clock via worker partitioning across bridge processes.
 No points directly; halves the cost of every probe and EI cycle.
 
+### 4.7 Pairwise action comparator — CLOSED as a serving-strength branch
+
+The complete bounded pilot used 2,400 fresh corrected-rules v3 roots, a fixed
+1,600/800 train/validation seed split, confidence-filtered bidirectional
+pairs, and a 99,072-parameter rank-64 antisymmetric head with the incumbent
+fully frozen. It learned the labels: selected held-out pair accuracy rose from
+60.4% to 66.0%, and the full probe was 69.5% confidence-weighted.
+
+That did not translate into better routing. The serving-aligned probe first
+fixed the incumbent logits' top-16 mask and evaluated all modes inside it. On
+206 qualified roots, pure Borda gained only two net top-1 hits
+(`30.58% -> 31.55%`, paired bootstrap delta CI `[-3.40,+5.34]` percentage
+points) while increasing completed-Q regret (`1.1496 -> 1.2121`). Adding
+logits and Borda was top-1 flat and also worse on regret. No gameplay was run.
+Keep the implementation as infrastructure; do not spend promotion compute on
+this checkpoint.
+
+The useful new signal is upstream: incumbent top-16 contained the global
+completed-Q best on only 88.3% of roots with a valid candidate. Candidate
+recall, not within-set pairwise expressivity, is the policy-side bottleneck
+suggested by this pilot.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)
@@ -427,8 +449,9 @@ No points directly; halves the cost of every probe and EI cycle.
    ~99+ at 100g; currently premature.
 9. **Closed (do not re-propose without new evidence):** oracle/belief
    modeling, checkpoint ensembles, leaf softmix, symmetry TTA,
-   chance-node expectimax, serving-side table-total, capacity/data
-   scaling for the scalar head. See §2/§4 for the measurements.
+   chance-node expectimax, serving-side table-total, pairwise comparator
+   serving, capacity/data scaling for the scalar head. See §2/§4 for the
+   measurements.
 
 ## 6. Historical record (campaign to date, condensed)
 

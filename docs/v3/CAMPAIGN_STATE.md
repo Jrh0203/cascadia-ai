@@ -191,6 +191,28 @@ label is wrong and current source fixes it. The n1024 chain continues.
 Fail-closed interim artifact SHA
 `287555fb6c233a4e7e14d7e362c7f796ebd35dd4f2b2558b1fd9e12c0b3dbdb8`.
 
+**Pairwise-comparator kill test (07-09):** a provenance-safe v3 campaign
+generated 2,400 corrected-rules roots on john2–john4, then trained only the
+99,072-parameter antisymmetric comparator head against two seed blocks and
+held the third out. The head genuinely learned its labels (held-out pair
+accuracy `60.4% -> 66.0%`; confidence-weighted full-probe accuracy `69.5%`),
+but serving-aligned top-16 routing failed. On 206 confidence-qualified held-
+out roots, Borda changed logits' top-1 accuracy `30.58% -> 31.55%` (only two
+net hits; paired 95% bootstrap delta CI `[-3.40,+5.34]` points) while worsening
+completed-Q regret `1.1496 -> 1.2121`. Adding logits and Borda was exactly flat
+on top-1 and also worsened regret. No gameplay was launched; incumbent logits
+remain live. The incumbent top-16 covered the global completed-Q best on only
+`88.3%` of eligible-candidate roots, making policy candidate coverage a more
+promising target than comparator reranking. Probe SHA `92834d4e...`; full
+record is in `cascadiav3/EXPERIMENT_LOG.md`.
+
+**Live john0 high-budget chain (07-09 08:37 EDT):** cycle4 n1024/d16 remains
+healthy under PID `1739796` / exporter `1739797`; 14/100 complete seed files
+are present after roughly 1h52m. Dynamic scheduling is backfilling new seeds,
+and the exporter remains CPU-saturated. Distq-k8 n1024/d16 follows on the same
+fresh seeds, then the verdict watcher publishes the paired result. Do not use
+partial scores as a verdict and do not disturb this chain.
+
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process
 trees were killed and verified absent; no Fleet5 shard artifact existed to

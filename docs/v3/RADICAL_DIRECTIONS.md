@@ -113,6 +113,19 @@ corrected-rules generation is required before the kill test. After an offline
 held-out accuracy gate, compare established logits, pure pairwise Borda, and
 their sum on identical n256/d4 seeds; only gameplay can establish value.
 
+**Result: CLOSED before gameplay.** A larger 2,400-root v3 corpus supplied a
+fixed 1,600/800 train/validation split. The head learned its pair labels
+(selected held-out accuracy `60.4% -> 66.0%`; full confidence-weighted probe
+`69.5%`), but the serving-aligned top-16 gate did not improve decisions. On
+206 qualified held-out roots, Borda gained only two net top-1 hits
+(`30.58% -> 31.55%`, paired bootstrap CI for the delta
+`[-3.40,+5.34]` percentage points) and worsened completed-Q regret
+`1.1496 -> 1.2121`. Logits plus Borda was top-1 flat and also worse on regret.
+No john0 gameplay was launched. Keep the implementation, but do not re-open
+this serving direction without a materially different data/decision model.
+The stronger clue is that incumbent top-16 candidate recall of the global
+completed-Q best was only `88.3%`.
+
 ## 4. Whole-rollout generation on GPU (kill the lockstep wall)
 
 **Idea.** The serving/generation bottleneck is per-ply lockstep: every
