@@ -263,6 +263,22 @@ head clears its preregistered validation threshold should a full fine-tune or
 paired gameplay battery consume GPU time. A lower component loss is not
 promotion evidence.
 
+The validation verdict is produced by
+`python -m cascadiav3.torch_structured_q_probe`. Exact-endgame rows are
+excluded from its primary read. All four gates must pass:
+
+1. selected-action final-score RMSE improves at least 10% over the better of
+   incumbent model Q and selected completed-Q teacher;
+2. the 95% t-CI for paired candidate-minus-baseline absolute error is wholly
+   below zero;
+3. completed-Q RMSE over all retained q-valid actions is no more than 1.05x
+   incumbent;
+4. mean completed-Q regret increases by no more than 0.05 points.
+
+Hyperparameters are selected on a disjoint v4 block. Run the probe once on a
+third untouched seed block for the preregistered verdict; do not pick learning
+rate or checkpoint from that final block.
+
 ### Pairwise comparator pilot
 
 The confidence audit supports a bounded comparator experiment, not indiscriminate

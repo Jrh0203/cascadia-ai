@@ -169,6 +169,11 @@ Gumbel exporter modes (see `--help`):
   `--init-skip-mismatched --q-decomposition-head-only` for the first bounded
   kill test: every incumbent parameter is frozen and only the new projection
   trains. Checkpoint and gameplay provenance records `q_decomposition`.
+- `python -m cascadiav3.torch_structured_q_probe`: one-shot held-out v4 gate
+  for a trained structured checkpoint. It excludes exact-endgame rows, checks
+  selected real-outcome category/total error, and guards completed-Q fit and
+  regret against the incumbent. Teacher hashes, rules, source revision, and
+  action-surface metadata are fail-closed.
 - `python -m cascadiav3.torch_pairwise_label_audit`: audit v2/v3 Gumbel shards
   for valid pair volume, absolute margins, and variance-aware pair SNR. It
   refuses v1 behavior-clone tensors and never treats a one-sample zero

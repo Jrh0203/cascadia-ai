@@ -474,6 +474,10 @@ The preregistered first experiment is deliberately cheap:
 and state-dict contract are unchanged while the feature is disabled. Do not
 open full-model training or gameplay unless this head-only branch improves the
 locked component and total-Q read without a policy/value retention failure.
+The fixed held-out gate requires at least 10% selected-final RMSE improvement
+over the better incumbent baseline, a paired absolute-error CI wholly below
+zero, all-q completed-Q RMSE within 1.05x incumbent, and mean q-regret increase
+at most 0.05. Exact-endgame rows are excluded from the primary read.
 
 ---
 

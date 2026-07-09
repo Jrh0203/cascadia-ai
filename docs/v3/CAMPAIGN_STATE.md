@@ -63,6 +63,13 @@ claim yet. The next authorized action is a small corrected-rules v4 generation
 plus frozen-head validation kill test on an idle host; john0's live n1024
 rebaseline remains untouched.
 
+The verdict is preregistered in `torch_structured_q_probe`: exclude exact K1
+rows; require at least 10% selected-final RMSE improvement over the better of
+incumbent model Q and selected completed-Q teacher; require the paired
+absolute-error t-CI below zero; cap all-q RMSE at 1.05x incumbent and mean
+q-regret increase at 0.05. Learning-rate selection and the final verdict use
+disjoint seed blocks.
+
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI
 `[+3.8705,+4.7245]`; cycle4 Q head `90.8925`, delta `+3.3475`, CI

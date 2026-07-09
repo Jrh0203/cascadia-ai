@@ -60,6 +60,9 @@ EARLY_STOP_AFTER_STEP="${EARLY_STOP_AFTER_STEP:-0}"
 SWA_FRACTION="${SWA_FRACTION:-0.20}"
 SEED="${SEED:-20260630}"
 OBJECTIVE="${OBJECTIVE:-expert}"
+Q_QUANTILES="${Q_QUANTILES:-1}"
+Q_DECOMPOSITION="${Q_DECOMPOSITION:-0}"
+Q_DECOMPOSITION_HEAD_ONLY="${Q_DECOMPOSITION_HEAD_ONLY:-0}"
 PAIRWISE_COMPARATOR="${PAIRWISE_COMPARATOR:-0}"
 PAIRWISE_RANK="${PAIRWISE_RANK:-64}"
 PAIRWISE_MAX_PAIRS_PER_ROOT="${PAIRWISE_MAX_PAIRS_PER_ROOT:-32}"
@@ -150,7 +153,7 @@ fi
 echo "[full-v3] started \$(date -Is)"
 echo "[full-v3] profile=$PROFILE train_seeds=$TRAIN_SEED_COUNT val_seeds=$VAL_SEED_COUNT plies=$PLIES_PER_SEED rollouts_per_action=$ROLLOUTS_PER_ACTION rollout_top_k=$ROLLOUT_TOP_K expert_tensor_mode=$EXPERT_TENSOR_MODE"
 echo "[full-v3] source_revision=$SOURCE_REVISION"
-echo "[full-v3] model_size=$MODEL_SIZE steps=$TRAIN_STEPS batch_size=$BATCH_SIZE grad_accum=$GRAD_ACCUM lr=$LR val_max_batches=$VAL_MAX_BATCHES eval_every_steps=$EVAL_EVERY_STEPS min_selection_greedy_top1=$MIN_SELECTION_GREEDY_TOP1 early_stop_guard_failures=$EARLY_STOP_SELECTION_GUARD_FAILURES early_stop_after_step=$EARLY_STOP_AFTER_STEP filter_top_k=$FILTER_TOP_K filter_mode=$FILTER_MODE objective=$OBJECTIVE selection=$SELECTION_MODE:$SELECTION_METRIC"
+echo "[full-v3] model_size=$MODEL_SIZE steps=$TRAIN_STEPS batch_size=$BATCH_SIZE grad_accum=$GRAD_ACCUM lr=$LR val_max_batches=$VAL_MAX_BATCHES eval_every_steps=$EVAL_EVERY_STEPS min_selection_greedy_top1=$MIN_SELECTION_GREEDY_TOP1 early_stop_guard_failures=$EARLY_STOP_SELECTION_GUARD_FAILURES early_stop_after_step=$EARLY_STOP_AFTER_STEP filter_top_k=$FILTER_TOP_K filter_mode=$FILTER_MODE objective=$OBJECTIVE q_quantiles=$Q_QUANTILES q_decomposition=$Q_DECOMPOSITION q_decomposition_head_only=$Q_DECOMPOSITION_HEAD_ONLY selection=$SELECTION_MODE:$SELECTION_METRIC"
 echo "[full-v3] note: phase0 writes packed expert_tensor_shard.v1 NPZ directly, filters to top-K, then materializes fixed relation-tail tensors for GPU training"
 echo "[full-v3] init_manifest=$INIT_MANIFEST"
 echo "[full-v3] resume_manifest=$RESUME_MANIFEST"
@@ -364,6 +367,13 @@ fi
 if [ '$PAIRWISE_HEAD_ONLY' = '1' ]; then
   TRAINER_PAIRWISE_ARGS+=(--pairwise-head-only)
 fi
+TRAINER_Q_ARGS=(--q-quantiles '$Q_QUANTILES')
+if [ '$Q_DECOMPOSITION' = '1' ]; then
+  TRAINER_Q_ARGS+=(--q-decomposition)
+fi
+if [ '$Q_DECOMPOSITION_HEAD_ONLY' = '1' ]; then
+  TRAINER_Q_ARGS+=(--q-decomposition-head-only)
+fi
 TRAINER_MIX_ARGS=()
 if [ -n '$TRAIN_SOURCE_WEIGHTS' ]; then
   TRAINER_MIX_ARGS=(--train-source-weights '$TRAIN_SOURCE_WEIGHTS')
@@ -398,6 +408,7 @@ python -m cascadiav3.torch_train_cascadiaformer \
   "\${TRAINER_INIT_ARGS[@]}" \
   "\${TRAINER_MIX_ARGS[@]}" \
   "\${TRAINER_PAIRWISE_ARGS[@]}" \
+  "\${TRAINER_Q_ARGS[@]}" \
   $TRAINER_EXTRA_ARGS
 TRAINING_SECONDS="\$(( \$(date +%s) - TRAINING_STARTED ))"
 
@@ -441,6 +452,9 @@ report = {
     "filter_mode": "$FILTER_MODE",
     "expert_tensor_mode": "$EXPERT_TENSOR_MODE",
     "objective": "$OBJECTIVE",
+    "q_quantiles": $Q_QUANTILES,
+    "q_decomposition": "$Q_DECOMPOSITION" == "1" or "$OBJECTIVE" == "gumbel-selfplay-structured-q",
+    "q_decomposition_head_only": "$Q_DECOMPOSITION_HEAD_ONLY" == "1",
     "pairwise_comparator": "$PAIRWISE_COMPARATOR" == "1" or "$OBJECTIVE" == "gumbel-selfplay-pairwise",
     "pairwise_rank": $PAIRWISE_RANK,
     "pairwise_max_pairs_per_root": $PAIRWISE_MAX_PAIRS_PER_ROOT,

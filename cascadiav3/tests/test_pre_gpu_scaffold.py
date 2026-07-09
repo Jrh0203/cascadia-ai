@@ -1987,6 +1987,11 @@ class ModelSmokeTest(unittest.TestCase):
         self.assertIn('TRAIN_INPUT="\\$TRAIN_INPUT,$EXTRA_TRAIN_TAIL_TENSORS"', text)
         self.assertIn('--train "\\$TRAIN_INPUT"', text)
         self.assertIn('"extra_train_tail_tensors": "$EXTRA_TRAIN_TAIL_TENSORS"', text)
+        self.assertIn('Q_DECOMPOSITION="${Q_DECOMPOSITION:-0}"', text)
+        self.assertIn('Q_DECOMPOSITION_HEAD_ONLY="${Q_DECOMPOSITION_HEAD_ONLY:-0}"', text)
+        self.assertIn("TRAINER_Q_ARGS+=(--q-decomposition)", text)
+        self.assertIn("TRAINER_Q_ARGS+=(--q-decomposition-head-only)", text)
+        self.assertIn('"q_decomposition_head_only": "$Q_DECOMPOSITION_HEAD_ONLY" == "1"', text)
 
     def test_ei0_benchmark_runner_can_disable_shadow_full_search(self) -> None:
         script = Path(__file__).resolve().parents[1] / "scripts" / "run_cascadiaformer_ei0_benchmark_suite.sh"

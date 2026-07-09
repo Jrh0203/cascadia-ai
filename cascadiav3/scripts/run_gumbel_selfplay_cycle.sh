@@ -6,8 +6,9 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 #
 # All four seats are played by the incumbent checkpoint through Gumbel search
 # with batched model leaf values over determinized hidden states. Every
-# visited root becomes a v2 training record: completed-Q targets, improved
-# policy soft targets, and real terminal-outcome value labels. The trainer
+# visited root becomes a v4 training record: completed-Q targets, improved
+# policy soft targets, exact category afterstates, and real terminal-outcome
+# value labels. The trainer
 # runs the gumbel-selfplay objective with an example-passes cap.
 #
 # Required:
