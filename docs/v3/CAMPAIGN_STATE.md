@@ -122,6 +122,10 @@ Admission no longer relies on those per-host checks alone: the new
 one host, proves one exact contract plus seed disjointness from the locked
 three-way pilot, and fails closed on overlap or sidecar tampering. It has
 already passed against the real locked 2,400-root corpus.
+Canonical harvest is `cascadiav3/scripts/fetch_structured_q_expansion.sh`.
+It refuses while any producer or validator is live, verifies passing remote
+reports and remote/local NPZ plus manifest hashes, fetches all six artifact
+types, then runs the six-shard audit. It has no john0 or training copy path.
 
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI

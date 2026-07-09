@@ -173,6 +173,25 @@ class AuditStructuredQShardsTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checksum mismatch"):
                 audit_shards({"first": first})
 
+    def test_fetch_script_pins_hosts_hashes_exclusions_and_quarantine(self) -> None:
+        script = (
+            Path(__file__).resolve().parents[1]
+            / "scripts"
+            / "fetch_structured_q_expansion.sh"
+        ).read_text(encoding="utf-8")
+        for host, label in (
+            ("john2", "expansion_a"),
+            ("john3", "expansion_b"),
+            ("john4", "expansion_c"),
+        ):
+            self.assertIn(f"fetch_one {host} {label}", script)
+        self.assertIn("6e89d9555f6126bdc29f65657d8431cab3d2c024", script)
+        self.assertIn("b8886c24cd93e19299e8c4cca4dd7671fe16b685d54949de014d6f9d5aee616d", script)
+        self.assertIn("33559aab05324e74998164d4e59e7adec9fa3c77da531dd4797c718cf4cfd354", script)
+        self.assertEqual(script.count("--exclude-shard"), 3)
+        self.assertNotIn("john0:", script)
+        self.assertIn("data remains quarantined", script)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4556,3 +4556,19 @@ Python gate: 160/160 passing with 45 expected fixture skips. The expansion
 remains quarantined until the same audit can run over all six raw shards.
 Locked-corpus audit JSON SHA-256:
 `ea919618bea4adbfae1ae25befc542ea791f7dac57a0c5f7ca55c94c496d0beb`.
+
+## 2026-07-09 12:28 — Expansion harvest made fail-closed and repeatable
+
+`fetch_structured_q_expansion.sh` is the sole harvest path for the three
+quarantined fleet shards. It refuses while a producer or completion validator
+is live; requires nonempty NPZ, sidecar, summary, invariant, producer-log, and
+validator-log artifacts; requires both validation JSONs to pass; compares
+remote and local NPZ/manifest SHA-256 after resumable `rsync`; and then runs
+the cross-shard auditor against all three locked pilot files as exclusions.
+It never addresses john0 and never emits a training command.
+
+Shell syntax passed, remote-home `rsync` resolution was exercised against
+john2, and a live-producer invocation failed before transfer with the expected
+status 2. Four targeted unit tests pass, including pins for all hosts, source,
+teacher hashes, exclusions, and the quarantine promise. At this checkpoint all
+three producers had streamed 10/50 complete seeds; no fetch was attempted.

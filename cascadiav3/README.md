@@ -99,6 +99,10 @@ Important runners:
   verifies NPZ/sidecar checksums, exact/Q/component identities, one shared
   source/search/execution/teacher contract, and seed disjointness across both
   candidate and explicitly excluded locked shards)
+- `fetch_structured_q_expansion.sh` (orchestrator-only harvest for the
+  quarantined john2–john4 expansion; refuses live/partial jobs, rechecks remote
+  and local hashes, fetches validation artifacts, and runs the six-shard audit
+  without copying anything to john0 or a training input)
 
 Gumbel exporter modes (see `--help`):
 
