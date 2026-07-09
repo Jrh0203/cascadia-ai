@@ -68,9 +68,12 @@ all 8 K1 decisions used zero simulations, seat 0 did not regress, and 6/8
 final actions changed. Score was exactly flat (`92.25` both arms, per-seed
 deltas `0/0`). K1's own eight decisions were `8.86x` faster (`4.212s` to
 `0.476s` total), but whole-arm wall/mean-decision time improved only `1.3%` /
-`1.2%`. This is engineering evidence only. A fresh same-revision 100-seed
-corrected n256/d4 baseline/K1 gate is staged for john0 after the current
-rebaseline and verdict watcher exit.
+`1.2%`. This is engineering evidence only. A checksum-verified waiter is
+armed on john0 (pid file
+`cascadiav3/logs/exact_k1_waiter_main.pid`): only after the current rebaseline
+and verdict watcher exit will it install the exact revision-marked `main`
+snapshot, rebuild, and run a fresh same-revision 100-seed corrected n256/d4
+baseline/K1 gate.
 
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process

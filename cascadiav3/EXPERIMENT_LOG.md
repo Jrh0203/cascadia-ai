@@ -3612,8 +3612,10 @@ samples. Comparator verdict:
 Verdict: **score-inconclusive engineering pass, not promotion evidence.** The
 permanent `run_exact_k1_gate.sh` regenerates both arms from one new revision at
 100 fresh corrected-rules seeds and n256/d4, then applies the same trace and
-solver invariants. It is staged to run on john0 only after the current
-rebaseline and verdict watcher finish. K2 remains gated on that result.
+solver invariants. A checksum-verified waiter is armed on john0 and will not
+install the revision-marked `main` snapshot or start the gate until both the
+current rebaseline and its verdict watcher finish. K2 remains gated on that
+result.
 
 Fleet audit during this work: john2–john4 were still running pre-correction
 Fleet5 binaries after roughly nine hours. All three process trees were killed
