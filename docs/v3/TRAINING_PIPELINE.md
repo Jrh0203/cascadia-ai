@@ -243,6 +243,9 @@ pairwise loss/accuracy, then compare `--policy-mode logits` against
 `pairwise-borda` and `logits-plus-pairwise` on identical seeds. Offline
 pairwise accuracy is a prerequisite, never strength evidence. Only a paired
 gameplay battery can promote the policy mode.
+Both comparator modes are restricted to the incumbent logits' top 16 by
+default (`--pairwise-policy-top-k`); do not let a head trained on searched
+actions assign support to unseen long-tail actions.
 
 Run `python -m cascadiav3.torch_pairwise_policy_probe` first. It hashes the
 checkpoint and every v3 validation shard, requires one source/rules contract,

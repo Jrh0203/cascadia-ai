@@ -187,11 +187,17 @@ class PairwiseComparatorTest(unittest.TestCase):
             },
         }
         logits_response = _model_eval(model, root, policy_mode="logits")
-        pairwise_response = _model_eval(model, root, policy_mode="pairwise-borda")
+        pairwise_response = _model_eval(
+            model,
+            root,
+            policy_mode="pairwise-borda",
+            pairwise_policy_top_k=2,
+        )
 
         self.assertEqual(logits_response["q"], pairwise_response["q"])
         self.assertNotEqual(logits_response["priors"], pairwise_response["priors"])
         self.assertAlmostEqual(sum(pairwise_response["priors"]), 1.0, places=6)
+        self.assertEqual(sum(prior == 0.0 for prior in pairwise_response["priors"]), 1)
         validate_policy_mode_manifest(
             {"config": {"pairwise_comparator": True}},
             "pairwise-borda",
@@ -205,8 +211,10 @@ class PairwiseComparatorTest(unittest.TestCase):
             Path("model.json"),
             "cpu",
             policy_mode="pairwise-borda",
+            pairwise_policy_top_k=2,
         )
         self.assertIn("--policy-mode pairwise-borda", command)
+        self.assertIn("--pairwise-policy-top-k 2", command)
 
     def test_offline_probe_runs_end_to_end_on_v3_shard(self) -> None:
         import torch

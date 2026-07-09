@@ -751,6 +751,7 @@ def _model_eval_batch(
     packed_response: bool = False,
     q_risk_mode: str = "mean",
     policy_mode: str = "logits",
+    pairwise_policy_top_k: int = 16,
 ) -> list[dict[str, Any]]:  # type: ignore[no-untyped-def]
     """One collated forward per chunk of roots. Chunking bounds the dense
     relation_ids tensor (batch x seq x seq int64) at full action menus.
@@ -771,6 +772,8 @@ def _model_eval_batch(
         return []
     if policy_mode not in POLICY_MODES:
         raise ValueError(f"unsupported policy mode: {policy_mode}")
+    if pairwise_policy_top_k <= 1:
+        raise ValueError("pairwise_policy_top_k must be greater than one")
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     autocast_bf16 = _autocast_bf16_requested() and device.type == "cuda"
     timing = _BRIDGE_TIMING
@@ -804,6 +807,9 @@ def _model_eval_batch(
                     relation_ids=inputs.get("relation_ids"),
                     relation_tail=inputs.get("relation_tail"),
                     return_pairwise_borda=policy_mode != "logits",
+                    pairwise_borda_top_k=(
+                        pairwise_policy_top_k if policy_mode != "logits" else None
+                    ),
                 )
             if timing is not None:
                 _synchronize_device_for_timing(torch, device)
@@ -816,7 +822,8 @@ def _model_eval_batch(
                 policy_logits = outputs["logits"] + outputs["pairwise_borda_logits"]
             else:
                 raise ValueError(f"unsupported policy mode: {policy_mode}")
-            masked_logits = policy_logits.float().masked_fill(~inputs["action_mask"], -1.0e9)
+            policy_mask = outputs.get("pairwise_borda_mask", inputs["action_mask"])
+            masked_logits = policy_logits.float().masked_fill(~policy_mask, -1.0e9)
             priors = torch.softmax(masked_logits, dim=1).cpu()
             # One device->host copy per output tensor per chunk; the rows are
             # sliced host-side below. (.float() is a no-op without autocast.)
@@ -878,6 +885,7 @@ def _model_eval(
     packed_response: bool = False,
     q_risk_mode: str = "mean",
     policy_mode: str = "logits",
+    pairwise_policy_top_k: int = 16,
 ) -> dict[str, Any]:  # type: ignore[no-untyped-def]
     return _model_eval_batch(
         model,
@@ -886,6 +894,7 @@ def _model_eval(
         packed_response=packed_response,
         q_risk_mode=q_risk_mode,
         policy_mode=policy_mode,
+        pairwise_policy_top_k=pairwise_policy_top_k,
     )[0]
 
 
@@ -944,11 +953,14 @@ def serve(
     device_name: str = "cpu",
     q_risk_mode: str = "mean",
     policy_mode: str = "logits",
+    pairwise_policy_top_k: int = 16,
 ) -> int:
     if q_risk_mode not in Q_RISK_MODES:
         raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
     if policy_mode not in POLICY_MODES:
         raise ValueError(f"unsupported policy mode: {policy_mode}")
+    if pairwise_policy_top_k <= 1:
+        raise ValueError("pairwise_policy_top_k must be greater than one")
     loaded_model = None
     manifest_payload = None
     if manifest is not None:
@@ -1017,6 +1029,7 @@ def serve(
             "device": device_name,
             "q_risk_mode": q_risk_mode,
             "policy_mode": policy_mode,
+            "pairwise_policy_top_k": pairwise_policy_top_k,
             "protocol_features": PROTOCOL_FEATURES,
         }
     )
@@ -1047,6 +1060,7 @@ def serve(
                             packed_response=packed_response,
                             q_risk_mode=q_risk_mode,
                             policy_mode=policy_mode,
+                            pairwise_policy_top_k=pairwise_policy_top_k,
                         )
                     )
             elif message_type == "eval_batch_request":
@@ -1066,6 +1080,7 @@ def serve(
                         packed_response=packed_response,
                         q_risk_mode=q_risk_mode,
                         policy_mode=policy_mode,
+                        pairwise_policy_top_k=pairwise_policy_top_k,
                     )
                 _response({"type": "eval_batch_response", "results": results})
             else:
@@ -1143,6 +1158,7 @@ def main() -> int:
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--q-risk-mode", choices=Q_RISK_MODES, default="mean")
     parser.add_argument("--policy-mode", choices=POLICY_MODES, default="logits")
+    parser.add_argument("--pairwise-policy-top-k", type=int, default=16)
     parser.add_argument("--allow-dry-run-fallback", action="store_true")
     parser.add_argument("--self-test-root")
     parser.add_argument("--self-test-manifest-resolution", action="store_true")
@@ -1166,6 +1182,7 @@ def main() -> int:
         device_name=args.device,
         q_risk_mode=args.q_risk_mode,
         policy_mode=args.policy_mode,
+        pairwise_policy_top_k=args.pairwise_policy_top_k,
     )
 
 

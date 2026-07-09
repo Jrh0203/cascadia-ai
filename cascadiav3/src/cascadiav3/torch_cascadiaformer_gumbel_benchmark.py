@@ -109,16 +109,20 @@ def default_model_service_command(
     device: str,
     q_risk_mode: str = "mean",
     policy_mode: str = "logits",
+    pairwise_policy_top_k: int = 16,
 ) -> str:
     if q_risk_mode not in Q_RISK_MODES:
         raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
     if policy_mode not in POLICY_MODES:
         raise ValueError(f"unsupported policy mode: {policy_mode}")
+    if pairwise_policy_top_k <= 1:
+        raise ValueError("pairwise_policy_top_k must be greater than one")
     return (
         f"{shlex.quote(sys.executable)} -m cascadiav3.torch_inference_bridge "
         f"--manifest {shlex.quote(str(manifest))} --device {shlex.quote(device)} "
         f"--q-risk-mode {shlex.quote(q_risk_mode)} "
-        f"--policy-mode {shlex.quote(policy_mode)}"
+        f"--policy-mode {shlex.quote(policy_mode)} "
+        f"--pairwise-policy-top-k {pairwise_policy_top_k}"
     )
 
 
@@ -507,6 +511,7 @@ def run_gumbel_benchmark(
     game_rows_path: Path | None = None,
     q_risk_mode: str = "mean",
     policy_mode: str = "logits",
+    pairwise_policy_top_k: int = 16,
 ) -> dict[str, Any]:
     execution = execution_provenance(
         batch_runner=batch_runner,
@@ -524,6 +529,8 @@ def run_gumbel_benchmark(
         raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
     if policy_mode not in POLICY_MODES:
         raise ValueError(f"unsupported policy mode: {policy_mode}")
+    if pairwise_policy_top_k <= 1:
+        raise ValueError("pairwise_policy_top_k must be greater than one")
     if model_service is not None and (q_risk_mode != "mean" or policy_mode != "logits"):
         raise ValueError("non-default Q/policy modes require the generated model service")
     manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -532,7 +539,7 @@ def run_gumbel_benchmark(
     if policy_mode != "logits":
         validate_policy_mode_manifest(manifest_payload, policy_mode)
     service = model_service or default_model_service_command(
-        manifest, device_name, q_risk_mode, policy_mode
+        manifest, device_name, q_risk_mode, policy_mode, pairwise_policy_top_k
     )
     artifacts = model_artifact_provenance(binary, manifest)
 
@@ -744,6 +751,7 @@ def run_gumbel_benchmark(
             "max_root_actions": max_root_actions,
             "q_risk_mode": q_risk_mode,
             "policy_mode": policy_mode,
+            "pairwise_policy_top_k": pairwise_policy_top_k,
         },
         "market_decisions": summarize_market_decisions(candidate_lines),
         "candidate_score_breakdown": summarize_score_categories(candidate_results),
@@ -828,6 +836,7 @@ def main() -> int:
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--q-risk-mode", choices=Q_RISK_MODES, default="mean")
     parser.add_argument("--policy-mode", choices=POLICY_MODES, default="logits")
+    parser.add_argument("--pairwise-policy-top-k", type=int, default=16)
     parser.add_argument("--seeds", default="")
     parser.add_argument("--first-seed", type=int, default=2026995000)
     parser.add_argument("--games", type=int, default=100)
@@ -955,6 +964,7 @@ def main() -> int:
         game_rows_path=Path(args.games_out),
         q_risk_mode=args.q_risk_mode,
         policy_mode=args.policy_mode,
+        pairwise_policy_top_k=args.pairwise_policy_top_k,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

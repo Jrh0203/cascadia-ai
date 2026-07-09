@@ -323,6 +323,7 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             pairwise_left_indices=None,
             pairwise_right_indices=None,
             return_pairwise_borda=False,
+            pairwise_borda_top_k=None,
         ):
             token_h = self.token_proj(tokens)
             token_padding = ~token_mask
@@ -378,10 +379,23 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
                 right = decoded[pairwise_root_indices, pairwise_right_indices]
                 outputs["pairwise_logits"] = self.compare_action_embeddings(left, right)
             if return_pairwise_borda:
+                pairwise_borda_mask = action_mask
+                if pairwise_borda_top_k is not None:
+                    if pairwise_borda_top_k <= 1:
+                        raise ValueError("pairwise_borda_top_k must be greater than one")
+                    candidate_count = min(int(pairwise_borda_top_k), int(action_mask.shape[1]))
+                    candidate_indices = outputs["logits"].masked_fill(
+                        ~action_mask,
+                        -torch.inf,
+                    ).topk(candidate_count, dim=1).indices
+                    pairwise_borda_mask = torch.zeros_like(action_mask)
+                    pairwise_borda_mask.scatter_(1, candidate_indices, True)
+                    pairwise_borda_mask &= action_mask
                 outputs["pairwise_borda_logits"] = self.pairwise_borda_logits(
                     decoded,
-                    action_mask,
+                    pairwise_borda_mask,
                 )
+                outputs["pairwise_borda_mask"] = pairwise_borda_mask
             return outputs
 
     return CascadiaFormer()

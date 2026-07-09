@@ -154,11 +154,13 @@ the hardest pairs above the confidence gate; loss weights scale with SNR and
 are clamped. `--pairwise-head-only` freezes the incumbent trunk and all legacy
 heads for a cheap first kill test.
 
-Serving mode `pairwise-borda` averages the antisymmetric log-odds against every
-other legal action to produce a permutation-equivariant prior score. It changes
+Serving mode `pairwise-borda` first retains the established policy's top-K
+candidate mask (default 16), then averages antisymmetric log-odds against every
+other retained action to produce a permutation-equivariant prior score. This
+keeps unseen long-tail actions out of the comparator's support. It changes
 policy priors only; derived final Q/value semantics stay untouched. The bridge
-and benchmark record `policy_mode`, and non-default modes fail before launch
-unless the checkpoint manifest declares the comparator.
+and benchmark record `policy_mode` plus `pairwise_policy_top_k`, and non-default
+modes fail before launch unless the checkpoint manifest declares the comparator.
 
 ## Search Semantics
 
