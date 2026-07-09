@@ -469,6 +469,33 @@ def _retained_action_indices(  # type: ignore[no-untyped-def]
                 if len(keep) >= top_k:
                     break
         return np.asarray(sorted(keep), dtype=np.int64)
+    if filter_mode == "top-prior-with-q-valid":
+        if priors is None:
+            raise ValueError("top-prior-with-q-valid requires priors")
+        valid = np.asarray(q_valid, dtype=bool)
+        if valid.shape[0] != action_count:
+            raise ValueError("q_valid length must match action_count")
+        mandatory = [int(index) for index in np.flatnonzero(valid)]
+        if selected_action_index not in mandatory:
+            mandatory.append(int(selected_action_index))
+        if len(mandatory) > top_k:
+            raise ValueError(
+                f"top-prior-with-q-valid has {len(mandatory)} mandatory actions above top_k={top_k}"
+            )
+        keep = list(mandatory)
+        seen = set(keep)
+        prior_scores = np.asarray(priors, dtype=np.float32)
+        if prior_scores.shape[0] != action_count:
+            raise ValueError("priors length must match action_count")
+        for index in np.argsort(-prior_scores, kind="stable"):
+            action_index = int(index)
+            if action_index in seen:
+                continue
+            keep.append(action_index)
+            seen.add(action_index)
+            if len(keep) >= top_k:
+                break
+        return np.asarray(sorted(keep), dtype=np.int64)
     if filter_mode != "top-q-with-selected":
         raise ValueError(f"unsupported expert tensor filter mode {filter_mode!r}")
 
@@ -1154,6 +1181,7 @@ def main() -> int:
             "greedy-prefix-with-selected",
             "greedy-prefix-strict",
             "greedy-prefix-plus-prior-with-selected",
+            "top-prior-with-q-valid",
         ],
         default="top-q-with-selected",
     )

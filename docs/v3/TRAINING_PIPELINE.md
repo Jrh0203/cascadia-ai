@@ -280,6 +280,17 @@ the baseline with `--min-prior-top-k-overlap 0.99
 --require-prior-best-coverage-parity`; exact set equality remains available
 for same-numerics audits. A filtered top-K metric is not serving evidence.
 
+If ordinary improved-policy cross-entropy lowers validation loss but does not
+improve exact full-menu recall, the only preregistered objective retry is
+`--objective gumbel-policy-recall`. Build fixed-width top-64 tensors with
+`--filter-mode top-prior-with-q-valid`: retain every Q-valid/selected action,
+then fill from incumbent prior rank. The recall loss uses only exact-endgame
+roots or roots whose top-two Q labels have count at least 2/action, margin at
+least 0.25, and SNR at least 1. It pushes completed-Q best above the 16th
+policy logit by 0.25 while a 0.25-weight improved-policy loss limits drift.
+Select on `locked_val_policy_best_top16` (max), then rerun the exact full-menu
+probe. Do not add more objective variants if this direct test fails.
+
 ## Checkpoint Contract
 
 Save every 1k optimizer steps and at every epoch/block boundary:

@@ -152,6 +152,12 @@ Gumbel exporter modes (see `--help`):
   `python -m cascadiav3.torch_policy_candidate_probe` before gameplay: it
   rejects filtered tensors and chunk-scores every legal action while reusing
   the state encoding, then reports paired top-K recall and oracle regret.
+- `--objective gumbel-policy-recall`: a bounded follow-up for policy-only
+  training. On confidence-qualified roots (plus exact-endgame roots), it
+  applies a margin to keep completed-Q best inside policy top 16 while
+  retaining a 0.25-weight Gumbel improved-policy loss. Prepare its tensors
+  with `--filter-mode top-prior-with-q-valid`: every searched/Q-valid action
+  is mandatory, then incumbent-prior hard negatives fill the fixed width.
 - `python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark --q-risk-mode
   {mean,q25,q50,q75}`: serve a distributional-Q checkpoint with the selected
   statistic. `mean` is the default and preserves prior behavior. Non-mean

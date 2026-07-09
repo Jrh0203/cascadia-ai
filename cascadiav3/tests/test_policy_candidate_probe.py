@@ -8,6 +8,58 @@ import unittest
 
 
 class PolicyCandidateProbeTest(unittest.TestCase):
+    def test_prior_filter_retains_every_q_valid_action_before_filling(self) -> None:
+        import numpy as np
+
+        from cascadiav3.expert_tensor_shards import _retained_action_indices
+
+        keep = _retained_action_indices(
+            np.arange(6, dtype=np.float32),
+            np.array([0, 0, 0, 0, 1, 1], dtype=np.uint8),
+            selected_action_index=3,
+            top_k=4,
+            filter_mode="top-prior-with-q-valid",
+            priors=np.array([0.9, 0.8, 0.7, 0.1, 0.05, 0.04], dtype=np.float32),
+        )
+        self.assertEqual(keep.tolist(), [0, 3, 4, 5])
+
+    def test_policy_recall_hinge_rewards_teacher_best_inside_top16(self) -> None:
+        import torch
+
+        from cascadiav3.torch_train_cascadiaformer import _policy_recall_terms
+
+        logits = torch.arange(20, dtype=torch.float32).unsqueeze(0)
+        action_mask = torch.ones_like(logits, dtype=torch.bool)
+        target_q = torch.zeros_like(logits)
+        target_q[0, 0] = 2.0
+        target_q[0, 1] = 1.0
+        q_valid = torch.zeros_like(logits, dtype=torch.bool)
+        q_valid[0, :2] = True
+        q_count = torch.full_like(logits, 4.0)
+        q_variance = torch.full_like(logits, 0.01)
+        bad_loss, bad_recall, examples = _policy_recall_terms(
+            logits,
+            action_mask,
+            target_q,
+            q_valid,
+            q_count,
+            q_variance,
+        )
+        improved = logits.clone()
+        improved[0, 0] = 30.0
+        good_loss, good_recall, _ = _policy_recall_terms(
+            improved,
+            action_mask,
+            target_q,
+            q_valid,
+            q_count,
+            q_variance,
+        )
+        self.assertEqual(float(examples), 1.0)
+        self.assertGreater(float(bad_loss), float(good_loss))
+        self.assertEqual(float(bad_recall), 0.0)
+        self.assertEqual(float(good_recall), 1.0)
+
     def test_identical_checkpoints_have_zero_paired_deltas(self) -> None:
         import torch
 

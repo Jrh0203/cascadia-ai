@@ -40,6 +40,7 @@ class LossWeights:
     greedy_margin: float = 0.0
     greedy_margin_value: float = 0.25
     pairwise: float = 0.0
+    policy_recall: float = 0.0
 
     def to_dict(self) -> dict[str, float]:
         return asdict(self)
@@ -59,6 +60,7 @@ LOSS_COMPONENT_KEYS = (
     "greedy_policy",
     "greedy_margin",
     "pairwise",
+    "policy_recall",
 )
 RETENTION_METRIC_KEYS = (
     "teacher_top1",
@@ -69,6 +71,8 @@ RETENTION_METRIC_KEYS = (
     "pairwise_accuracy",
     "pairwise_examples",
     "pairwise_mean_snr",
+    "policy_best_top16",
+    "policy_recall_examples",
 )
 AGGREGATE_KEYS = LOSS_COMPONENT_KEYS + RETENTION_METRIC_KEYS
 
@@ -115,6 +119,20 @@ def loss_weights_for_objective(objective: str) -> LossWeights:
             greedy_margin=0.0,
             greedy_margin_value=0.0,
             pairwise=1.0,
+        )
+    if objective == "gumbel-policy-recall":
+        return LossWeights(
+            policy=0.25,
+            q=0.0,
+            value=0.0,
+            score=0.0,
+            rank=0.0,
+            uncertainty=0.0,
+            greedy_policy=0.0,
+            greedy_margin=0.0,
+            greedy_margin_value=0.0,
+            pairwise=0.0,
+            policy_recall=1.0,
         )
     if objective == "k32-greedy-retention":
         return LossWeights(
@@ -561,6 +579,15 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         pairwise_accuracy = pairwise.detach()
         pairwise_examples = pairwise.detach()
         pairwise_mean_snr = pairwise.detach()
+    policy_recall, policy_best_top16, policy_recall_examples = _policy_recall_terms(
+        logits,
+        mask,
+        target_final_q,
+        q_mask,
+        batch.get("target_q_count"),
+        batch.get("target_q_variance"),
+        batch.get("exact_endgame"),
+    )
     total = (
         weights.policy * policy
         + weights.q * q
@@ -571,6 +598,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         + weights.greedy_policy * greedy_policy
         + weights.greedy_margin * greedy_margin
         + weights.pairwise * pairwise
+        + weights.policy_recall * policy_recall
     )
     predicted = logits.argmax(dim=1)
     predicted_by_final_q = predicted_final_q.masked_fill(~mask, -1.0e9).argmax(dim=1)
@@ -596,6 +624,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         "greedy_policy": greedy_policy.detach(),
         "greedy_margin": greedy_margin.detach(),
         "pairwise": pairwise.detach(),
+        "policy_recall": policy_recall.detach(),
         "teacher_top1": (predicted == teacher_target).to(torch.float32).mean().detach(),
         "greedy_top1": (predicted == greedy_target).to(torch.float32).mean().detach(),
         "mean_teacher_rank": teacher_rank.mean().detach(),
@@ -604,7 +633,83 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         "pairwise_accuracy": pairwise_accuracy.detach(),
         "pairwise_examples": pairwise_examples.detach(),
         "pairwise_mean_snr": pairwise_mean_snr.detach(),
+        "policy_best_top16": policy_best_top16.detach(),
+        "policy_recall_examples": policy_recall_examples.detach(),
     }
+
+
+def _policy_recall_terms(
+    logits,
+    action_mask,
+    target_q,
+    q_valid,
+    q_count=None,
+    q_variance=None,
+    exact_endgame=None,
+):  # type: ignore[no-untyped-def]
+    """Confidence-gated hinge for retaining completed-Q best in policy top 16."""
+    import torch
+    import torch.nn.functional as F
+
+    batch_size, action_capacity = logits.shape
+    valid_counts = q_valid.sum(dim=1)
+    has_valid = valid_counts >= 1
+    best_q, best = target_q.masked_fill(~q_valid, -torch.inf).max(dim=1)
+    top_k = min(16, action_capacity)
+    top_indices = logits.topk(top_k, dim=1).indices
+    contains_best = (top_indices == best.unsqueeze(1)).any(dim=1) & has_valid
+    policy_best_top16 = (
+        contains_best[has_valid].to(torch.float32).mean()
+        if has_valid.any()
+        else logits.sum() * 0.0
+    )
+
+    eligible = torch.zeros(batch_size, dtype=torch.bool, device=logits.device)
+    if exact_endgame is not None:
+        eligible |= exact_endgame.to(dtype=torch.bool) & has_valid
+    if action_capacity >= 2:
+        top_values, top_q_indices = target_q.masked_fill(~q_valid, -torch.inf).topk(2, dim=1)
+        rows = torch.arange(batch_size, device=logits.device)
+        counts = q_count if q_count is not None else torch.ones_like(target_q)
+        variances = q_variance if q_variance is not None else torch.zeros_like(target_q)
+        best_count = counts[rows, top_q_indices[:, 0]]
+        second_count = counts[rows, top_q_indices[:, 1]]
+        margin = top_values[:, 0] - top_values[:, 1]
+        se_sq = (
+            variances[rows, top_q_indices[:, 0]].clamp_min(0.0) / best_count.clamp_min(1.0)
+            + variances[rows, top_q_indices[:, 1]].clamp_min(0.0)
+            / second_count.clamp_min(1.0)
+        )
+        snr = torch.where(
+            se_sq > 0.0,
+            margin / torch.sqrt(se_sq.clamp_min(torch.finfo(torch.float32).tiny)),
+            torch.where(
+                margin > 0.0,
+                torch.full_like(margin, torch.inf),
+                torch.zeros_like(margin),
+            ),
+        )
+        eligible |= (
+            (valid_counts >= 2)
+            & (best_count >= 2.0)
+            & (second_count >= 2.0)
+            & torch.isfinite(margin)
+            & (margin >= 0.25)
+            & (snr >= 1.0)
+        )
+    eligible &= has_valid & (action_mask.sum(dim=1) > top_k)
+    if not eligible.any():
+        zero = logits.sum() * 0.0
+        return zero, policy_best_top16, zero.detach()
+    rows = torch.arange(batch_size, device=logits.device)
+    best_logit = logits[rows, best]
+    kth_logit = logits.topk(top_k, dim=1).values[:, -1]
+    losses = F.relu(0.25 - (best_logit - kth_logit))
+    return (
+        losses[eligible].mean(),
+        policy_best_top16,
+        logits.new_tensor(float(eligible.sum())),
+    )
 
 
 def _model_forward(model, batch: dict[str, Any]):  # type: ignore[no-untyped-def]
@@ -1672,8 +1777,8 @@ def run_training(
         raise ValueError("pairwise_head_only requires the pairwise comparator")
     if pairwise_head_only and policy_head_only:
         raise ValueError("pairwise_head_only and policy_head_only are mutually exclusive")
-    if policy_head_only and objective != "gumbel-selfplay":
-        raise ValueError("policy_head_only requires the gumbel-selfplay objective")
+    if policy_head_only and objective not in {"gumbel-selfplay", "gumbel-policy-recall"}:
+        raise ValueError("policy_head_only requires a Gumbel policy objective")
 
     # ---- opt-in performance knobs (defaults preserve bit-identical runs) ----
     data_workers = max(0, int(data_workers or _env_int("CASCADIA_TRAIN_DATA_WORKERS", 0)))
@@ -2337,6 +2442,7 @@ def main() -> int:
             "search-improved-greedy-retention",
             "gumbel-selfplay",
             "gumbel-selfplay-pairwise",
+            "gumbel-policy-recall",
         ],
         default="expert",
     )
@@ -2358,6 +2464,7 @@ def main() -> int:
     parser.add_argument("--greedy-margin-weight", type=float)
     parser.add_argument("--greedy-margin-value", type=float)
     parser.add_argument("--pairwise-loss-weight", type=float)
+    parser.add_argument("--policy-recall-loss-weight", type=float)
     parser.add_argument("--overfit-one-batch", action="store_true")
     parser.add_argument("--out", default="cascadiav3/reports/cascadiaformer_train.json")
     parser.add_argument("--metrics-jsonl", default="cascadiav3/reports/cascadiaformer_metrics.jsonl")
@@ -2464,6 +2571,7 @@ def main() -> int:
         "greedy_margin": args.greedy_margin_weight,
         "greedy_margin_value": args.greedy_margin_value,
         "pairwise": args.pairwise_loss_weight,
+        "policy_recall": args.policy_recall_loss_weight,
     }.items():
         if value is not None:
             loss_weights = replace(loss_weights, **{field_name: value})
