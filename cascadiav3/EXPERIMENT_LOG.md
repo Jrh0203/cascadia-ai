@@ -3622,3 +3622,50 @@ Fleet5 binaries after roughly nine hours. All three process trees were killed
 and verified absent; no Fleet5 shard artifacts existed. john1's Fleet5 pid was
 stale and no process/artifact existed. Minis remain generation/engineering
 hosts, never gate hosts.
+
+## 2026-07-09 04:00 — Optional-refresh search is the serving bottleneck; sample-4 promoted to a CUDA gate, not to production
+
+Profiled the first 65 complete games of the live corrected-rules cycle4
+n256/d4 arm on john0. Across 5,200 decisions, mean/P50/P95/P99 latency was
+`11.782 / 6.325 / 60.112 / 74.551` seconds. The 611 decisions with an optional
+refresh averaged `55.452s`; the 4,589 ordinary decisions averaged `5.968s`.
+The refresh policy added 1,343,744 simulations above 1,331,200 chosen-branch
+simulations. Action count was uncorrelated with latency (`r ~= -0.003`). A
+live snapshot had the RTX 5090 at about 83% compute utilization but only 17%
+memory utilization, with the exporter using roughly 7.4 CPU cores and the
+bridge 4.1. Optional-refresh chance work, not legal-menu width, is the current
+serving bottleneck.
+
+Added `compare_market_samples`, a purpose-built causal and provenance gate.
+It requires identical corrected rules, source revision, manifest path, seeds,
+control, and all search settings except sample count; validates recorded sample
+telemetry; requires all 80 decisions per seed; and rejects action divergence
+before the first point where sample count could affect computation. It reports
+per-opportunity and whole-game cost separately because a changed policy can
+alter the number of later three-of-a-kind markets. Promotion scale is at least
+100 paired games. The preregistered sample-4 gate requires score t-CI lower
+bound `>= -0.25` and whole-decision speedup `>= 1.15x`.
+
+The serial MPS screen itself caught two more invalidation modes:
+
+1. john2 sample-8/sample-4 diverged at seed `2027071503`, ply 3, before any
+   optional refresh. Its entire frontier was discarded.
+2. john3's reduced-sample arms diverged from sample-8 at seed `2027071504`,
+   ply 16, also before any optional refresh. All john3 scores were discarded.
+
+The only causally valid screen was the serial two-seed john4 set (cycle4,
+n16/top8/d2, w1.0, seeds `2027071500..1501`):
+
+| Samples | Mean | Delta vs 8 | Mean decision | Speedup | Opportunities | Refresh sims/opportunity |
+|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 93.875 | - | 1.866s | 1.000x | 11 | 138.18 |
+| 6 | 92.750 | -1.125 | 1.883s | 0.991x | 16 | 104.00 |
+| 4 | 93.500 | -0.375 | 1.476s | 1.264x | 10 | 76.80 |
+| 2 | 93.375 | -0.500 | 1.526s | 1.223x | 28 | 42.86 |
+
+Sample-4 is the sole non-dominated reduced point in this tiny screen. It is
+not strength evidence and is not adopted. `run_market_samples_gate.sh` runs a
+fresh 100-seed CUDA candidate at n256/d4 and reuses the exact-K1 sample-8 arm
+only after full contract validation. It is queued after exact K1 on john0;
+failure preserves sample-8. Only a passing same-budget gate would justify a
+separate cost-matched higher-n test.

@@ -83,6 +83,9 @@ Important runners:
 - `run_gumbel_selfplay_cycle.sh` (EI-2+ self-play generation + training)
 - `run_exact_k1_gate.sh` (fresh same-revision n256/d4 baseline versus exact
   final-personal-turn search, trace-validated before a verdict)
+- `run_market_samples_gate.sh` (fresh same-revision n256/d4 market chance-
+  sample ablation; reuses the exact-K1 sample-8 control only after validating
+  its full rules/source/seeds/search contract)
 
 Gumbel exporter modes (see `--help`):
 
@@ -98,6 +101,11 @@ Gumbel exporter modes (see `--help`):
   only after validating rules, source, checkpoint name, seeds, all other
   search settings, exact-decision counts, and identical action traces through
   ply 75. A pre-K1 divergence invalidates the ablation.
+- `python -m cascadiav3.compare_market_samples`: compare paired market chance-
+  sample counts only after validating rules, source, checkpoint name, seeds,
+  all other search settings, sample-count telemetry, and identical action
+  traces before the first optional-refresh opportunity. Runs below 100 matched
+  games are explicitly engineering smokes, never promotion evidence.
 - `--rollout-determinize`: public-information-legal rollouts for the legacy
   search path (honest baselines).
 

@@ -75,6 +75,23 @@ and verdict watcher exit will it install the exact revision-marked `main`
 snapshot, rebuild, and run a fresh same-revision 100-seed corrected n256/d4
 baseline/K1 gate.
 
+**Optional-refresh performance ablation (07-09):** a 65-game streamed profile
+of the live corrected cycle4 n256/d4 arm found that 611 refresh-available
+decisions averaged `55.452s`, versus `5.968s` for 4,589 ordinary decisions.
+Refresh evaluation added 1,343,744 simulations above 1,331,200 chosen-branch
+simulations; action count had essentially zero latency correlation. Serial
+sample-count screens on john2 and john3 were rejected because MPS traces
+diverged before their first refresh opportunity. The valid two-seed john4
+frontier made sample-4 the only non-dominated reduced count: score
+`93.875 -> 93.500`, mean decision `1.866s -> 1.476s` (`1.264x`), while
+sample-6 and sample-2 were both slower and lower-scoring end to end because
+their changed trajectories encountered more refresh opportunities. This is
+engineering evidence only. A revision-audited `run_market_samples_gate.sh`
+will follow exact K1 on john0, reuse its identical validated sample-8 arm, and
+run a fresh 100-seed sample-4 candidate. Passing requires t-CI lower bound
+`>= -0.25` and whole-decision speedup `>= 1.15x`; failure leaves sample-8 in
+place.
+
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process
 trees were killed and verified absent; no Fleet5 shard artifact existed to

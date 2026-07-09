@@ -13,6 +13,52 @@ hidden replacement samples by default, and an accepted real market receives
 its own downstream draft search. Keep this cost separate from the ordinary
 `d`-world search budget in performance reports.
 
+## Corrected Optional-Refresh Cost
+
+A streamed profile of the first 65 complete corrected-rules cycle4 n256/d4
+games on john0 isolated the dominant serving cost. Across 5,200 decisions,
+mean/P50/P95/P99 latency was `11.782 / 6.325 / 60.112 / 74.551` seconds.
+The 611 decisions with an optional refresh averaged `55.452s`; the other 4,589
+averaged `5.968s`. Those refresh decisions added 1,343,744 simulations above
+1,331,200 chosen-branch simulations, more than doubling the search work.
+Action count was not the explanation (correlation with latency was about
+`-0.003`). A live RTX 5090 snapshot showed roughly `83%` GPU utilization,
+`17%` memory utilization, and 2.5 GiB allocated, while the Rust exporter used
+about 7.4 CPU cores and the bridge about 4.1. The first performance lever is
+therefore refresh chance-sample work, not another root-menu cap.
+
+Cost accounting must distinguish three quantities:
+
+1. per-opportunity refresh-decision cost;
+2. whole-game cost, including how a changed policy alters the number of later
+   refresh opportunities;
+3. score, measured on paired complete games.
+
+Raw total refresh seconds are misleading when candidate policies visit
+different markets. `compare_market_samples` therefore reports both total and
+per-opportunity timing/simulations, rejects any trace divergence before the
+first sample-count exposure, and treats fewer than 100 paired games as an
+engineering smoke only.
+
+A serial n16/d2 MPS screen on john4 (two paired seeds) found the following
+valid causal frontier. The john2 and john3 pairs were rejected because their
+MPS traces diverged before any optional-refresh opportunity; none of their
+scores were used.
+
+| Samples | Mean score | Delta vs 8 | Mean decision | Whole-arm speedup | Refresh opportunities | Refresh sims/opportunity |
+|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 93.875 | - | 1.866s | 1.000x | 11 | 138.18 |
+| 6 | 92.750 | -1.125 | 1.883s | 0.991x | 16 | 104.00 |
+| 4 | 93.500 | -0.375 | 1.476s | 1.264x | 10 | 76.80 |
+| 2 | 93.375 | -0.500 | 1.526s | 1.223x | 28 | 42.86 |
+
+At this tiny scale, sample-4 is the only reduced-sample point that is not
+dominated on both score and end-to-end latency. It is not adopted. The
+promotion-scale gate compares sample-8 with sample-4 over 100 matched CUDA
+games at n256/d4, requires a 95% t-CI lower bound of at least `-0.25` points
+and at least `1.15x` whole-decision speedup, and reuses the exact-K1 control
+only after validating its full rules/source/seeds/search contract.
+
 ## Tensor Export
 
 Rust-native greedy tensor export on `john0`:

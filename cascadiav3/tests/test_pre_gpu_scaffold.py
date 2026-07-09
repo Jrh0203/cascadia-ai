@@ -2396,6 +2396,120 @@ class BenchmarkStatsTest(unittest.TestCase):
                     exact_decisions_path,
                 )
 
+    def test_market_sample_comparator_validates_causal_divergence_and_cost(self) -> None:
+        from cascadiav3.compare_market_samples import RULESET_ID, build_comparison
+
+        def report(samples: int, scores: list[float]) -> dict[str, object]:
+            return {
+                "status": "pass",
+                "ruleset_id": RULESET_ID,
+                "source_revision": "tested-revision",
+                "experiment_id": f"market-samples-{samples}",
+                "manifest": "/same-host/best_locked_val.manifest.json",
+                "seeds": [1, 2],
+                "search": {
+                    "n_simulations": 16,
+                    "determinizations": 2,
+                    "market_decision_samples": samples,
+                    "exact_endgame_turns": 0,
+                },
+                "control": {"kind": "none"},
+                "strategies": {
+                    "gumbel-search": {
+                        "mean_seat_score": sum(scores) / len(scores),
+                        "mean_total_decision_seconds": 1.0 + samples / 8.0,
+                    }
+                },
+                "candidate_per_seed": [
+                    {"seed": seed, "mean_score_per_seat": score, "seat_scores": [score] * 4}
+                    for seed, score in zip((1, 2), scores)
+                ],
+                "market_decisions": {
+                    "mean_chance_samples_when_available": float(samples),
+                    "total_simulations_including_market_decision": 2560 + samples * 100,
+                    "market_decision_simulation_overhead": samples * 100,
+                },
+                "candidate_decision_seconds_p50": 1.0,
+                "candidate_decision_seconds_p95": 2.0 + samples / 8.0,
+                "candidate_wall_seconds": 100.0 + samples,
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            baseline_path = root / "baseline.json"
+            candidate_path = root / "candidate.json"
+            baseline_decisions_path = root / "baseline_decisions.jsonl"
+            candidate_decisions_path = root / "candidate_decisions.jsonl"
+            baseline_path.write_text(json.dumps(report(8, [90.0, 92.0])), encoding="utf-8")
+            candidate_path.write_text(json.dumps(report(4, [90.5, 93.0])), encoding="utf-8")
+            baseline_rows = []
+            candidate_rows = []
+            for seed in (1, 2):
+                for ply in range(80):
+                    choice = "decline" if ply == 10 else "not_available"
+                    base = {
+                        "type": "gumbel_decision",
+                        "ruleset_id": RULESET_ID,
+                        "seed": seed,
+                        "ply": ply,
+                        "chosen_action_id": f"action-{seed}-{ply}",
+                        "free_three_of_a_kind_choice": choice,
+                        "decision_seconds": 2.0 if ply == 10 else 1.0,
+                    }
+                    baseline_rows.append(base)
+                    candidate_rows.append(
+                        base
+                        | (
+                            {
+                                "chosen_action_id": f"sample4-{seed}-{ply}",
+                                "free_three_of_a_kind_choice": (
+                                    "accept" if ply == 10 else choice
+                                ),
+                                "decision_seconds": 1.0,
+                            }
+                            if ply >= 10
+                            else {}
+                        )
+                    )
+            baseline_decisions_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in baseline_rows), encoding="utf-8"
+            )
+            candidate_decisions_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in candidate_rows), encoding="utf-8"
+            )
+            result = build_comparison(
+                baseline_path,
+                candidate_path,
+                baseline_decisions_path,
+                candidate_decisions_path,
+                "tested-revision",
+            )
+
+            self.assertEqual(result["paired_delta_stats"]["mean"], 0.75)
+            self.assertEqual(result["trace"]["causally_changed_seeds"], 2)
+            self.assertEqual(result["trace"]["first_exposure_by_seed"], {"1": 10, "2": 10})
+            self.assertEqual(result["trace"]["first_divergence_by_seed"], {"1": 10, "2": 10})
+            self.assertEqual(result["trace"]["available_decision_speedup"], 2.0)
+            self.assertEqual(result["trace"]["available_total_seconds_ratio"], 2.0)
+            self.assertEqual(
+                result["simulations"]["baseline_market_overhead_per_opportunity"], 400.0
+            )
+            self.assertEqual(
+                result["simulations"]["candidate_market_overhead_per_opportunity"], 200.0
+            )
+            self.assertFalse(result["performance_gate_pass"])
+
+            candidate_rows[5]["chosen_action_id"] = "unrelated-early-divergence"
+            candidate_decisions_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in candidate_rows), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "before market-sample exposure"):
+                build_comparison(
+                    baseline_path,
+                    candidate_path,
+                    baseline_decisions_path,
+                    candidate_decisions_path,
+                )
 
 class GumbelBatchRunnerTest(unittest.TestCase):
     """Contract tests for the --gumbel-benchmark-batch per-seed JSONL path."""
