@@ -9,7 +9,7 @@ mod npz_writer;
 use std::fs::File;
 use std::io::{BufRead, BufWriter, Read, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -96,8 +96,8 @@ struct Args {
     gumbel_root_menu: usize,
     k_interior: usize,
     model_sessions: Option<usize>,
-    /// One shared bridge (one CUDA context) with cross-chunk request
-    /// batching instead of one bridge per rayon chunk.
+    /// One shared bridge (one CUDA context) with cross-worker request
+    /// batching instead of one bridge per persistent seed worker.
     shared_model_session: bool,
     /// Per-seed JSONL output directory for --gumbel-benchmark-batch.
     output_dir: Option<PathBuf>,
@@ -662,7 +662,8 @@ Options:
                            by Gumbel search over model leaf values; emits
                            per-decision JSONL plus a done record per seed.
   --gumbel-benchmark-batch Play many seeds' complete Gumbel policy games in
-                           one process (rayon chunks, optional shared bridge).
+                           one process (dynamic worker queue, optional shared
+                           bridge; no fixed-chunk long tail).
                            Per seed the search/record behavior is identical to
                            --gumbel-policy-game; writes one JSONL file per seed
                            (gumbel_game_seed_<seed>.jsonl) into --output-dir.
@@ -711,11 +712,11 @@ Options:
   --gumbel-root-menu <n>   Root menu enumeration cap before model ranking;
                            0 keeps the full legal set [256].
   --k-interior <n>         Interior-ply menu cap inside simulations [16].
-  --model-sessions <n>     Cap on concurrent model bridge sessions for
-                           selfplay export chunks (with --shared-model-session
-                           this is just the parallel game count).
+  --model-sessions <n>     Cap on persistent model-backed seed workers (with
+                           --shared-model-session this is the parallel game
+                           count, not the bridge-process count).
   --shared-model-session   One bridge process (one CUDA context) serving all
-                           chunks with cross-chunk request batching.
+                           workers with cross-worker request batching.
   --player-count <n>       Must be 4 for the current v3 schema [4]
   --rayon-threads <n>      Set the Rayon worker thread count explicitly
   --tensor-compression <deflate|stored>
@@ -2010,47 +2011,42 @@ fn export_model_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usiz
     let completed_seeds = AtomicU64::new(0);
     let completed_records = AtomicU64::new(0);
     let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
-    let target_chunks = (rayon::current_num_threads() * 2).max(1);
-    let chunk_size = ((seeds.len() + target_chunks - 1) / target_chunks).max(1);
-    let per_chunk = seeds
-        .par_chunks(chunk_size)
-        .map(|seed_chunk| {
-            let mut model_session = model_state_worker_session(args)?;
-            let mut chunk_shards = Vec::with_capacity(seed_chunk.len());
-            for seed_u64 in seed_chunk.iter().copied() {
-                let records = export_model_state_search_bootstrap_seed_records_with_session(
-                    args,
-                    seed_u64,
-                    &mut model_session,
+    // Static Rayon used 2x as many chunks as threads, but could execute only
+    // `current_num_threads()` chunks concurrently. Preserve that actual
+    // session/concurrency ceiling now that every worker is an OS thread.
+    let target_workers = rayon::current_num_threads().max(1);
+    let (mut per_seed, _) = run_dynamic_seed_workers(
+        &seeds,
+        target_workers,
+        |_| model_state_worker_session(args),
+        |model_session, seed_u64| {
+            let records = export_model_state_search_bootstrap_seed_records_with_session(
+                args,
+                seed_u64,
+                model_session,
+            )
+            .with_context(|| {
+                format!("exporting model-state search-bootstrap tensor seed {seed_u64}")
+            })?;
+            let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
+                format!(
+                    "extracting Rust model-state search-bootstrap tensor features for seed {seed_u64}"
                 )
-                .with_context(|| {
-                    format!("exporting model-state search-bootstrap tensor seed {seed_u64}")
-                })?;
-                let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
-                    format!(
-                        "extracting Rust model-state search-bootstrap tensor features for seed {seed_u64}"
-                    )
-                })?;
-                let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
-                let records_done =
-                    completed_records.fetch_add(shard.record_count as u64, Ordering::Relaxed)
-                        + shard.record_count as u64;
-                log_seed_export_progress(
-                    "model-state search-bootstrap tensor",
-                    done,
-                    total_seeds,
-                    records_done,
-                    started,
-                );
-                chunk_shards.push((seed_u64, shard));
-            }
-            Ok(chunk_shards)
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let mut per_seed = per_chunk
-        .into_iter()
-        .flatten()
-        .collect::<Vec<(u64, ExpertTensorShardData)>>();
+            })?;
+            let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
+            let records_done = completed_records
+                .fetch_add(shard.record_count as u64, Ordering::Relaxed)
+                + shard.record_count as u64;
+            log_seed_export_progress(
+                "model-state search-bootstrap tensor",
+                done,
+                total_seeds,
+                records_done,
+                started,
+            );
+            Ok(shard)
+        },
+    )?;
     per_seed.sort_by_key(|(seed, _)| *seed);
 
     let mut shard = ExpertTensorShardData::new();
@@ -2145,6 +2141,95 @@ fn log_seed_export_progress(
         "[real-root-exporter] {label}: completed {completed_seeds}/{total_seeds} seeds, {completed_records} records, elapsed {:.1}s, {:.3} seeds/s, {:.3} records/s",
         elapsed, seed_rate, record_rate
     );
+}
+
+/// Runs variable-duration seeds on a fixed number of persistent workers.
+///
+/// Each worker owns its expensive model session and cache for its full
+/// lifetime, while the atomic queue assigns the next unstarted seed whenever
+/// that worker becomes free. This preserves the hard concurrency/session cap
+/// without the long-tail collapse caused by static contiguous seed chunks.
+/// Results are returned with their seed because completion order is expected
+/// to differ from input order.
+fn run_dynamic_seed_workers<Worker, Output, InitializeWorker, RunSeed>(
+    seeds: &[u64],
+    max_workers: usize,
+    initialize_worker: InitializeWorker,
+    run_seed: RunSeed,
+) -> Result<(Vec<(u64, Output)>, Vec<Worker>)>
+where
+    Worker: Send,
+    Output: Send,
+    InitializeWorker: Fn(usize) -> Result<Worker> + Sync,
+    RunSeed: Fn(&mut Worker, u64) -> Result<Output> + Sync,
+{
+    if seeds.is_empty() {
+        return Ok((Vec::new(), Vec::new()));
+    }
+    let worker_count = max_workers.max(1).min(seeds.len());
+    let next_seed_index = AtomicUsize::new(0);
+    let failed = AtomicBool::new(false);
+    let joined = std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(worker_count);
+        for worker_index in 0..worker_count {
+            let next_seed_index = &next_seed_index;
+            let failed = &failed;
+            let initialize_worker = &initialize_worker;
+            let run_seed = &run_seed;
+            handles.push(
+                scope.spawn(move || -> Result<(Worker, Vec<(u64, Output)>)> {
+                    let mut worker = match initialize_worker(worker_index)
+                        .with_context(|| format!("initializing dynamic seed worker {worker_index}"))
+                    {
+                        Ok(worker) => worker,
+                        Err(error) => {
+                            failed.store(true, Ordering::Release);
+                            return Err(error);
+                        }
+                    };
+                    let mut outputs = Vec::new();
+                    loop {
+                        if failed.load(Ordering::Acquire) {
+                            break;
+                        }
+                        let seed_index = next_seed_index.fetch_add(1, Ordering::Relaxed);
+                        let Some(seed_u64) = seeds.get(seed_index).copied() else {
+                            break;
+                        };
+                        match run_seed(&mut worker, seed_u64) {
+                            Ok(output) => outputs.push((seed_u64, output)),
+                            Err(error) => {
+                                failed.store(true, Ordering::Release);
+                                return Err(error);
+                            }
+                        }
+                    }
+                    Ok((worker, outputs))
+                }),
+            );
+        }
+        handles
+            .into_iter()
+            .map(std::thread::ScopedJoinHandle::join)
+            .collect::<Vec<_>>()
+    });
+
+    let mut outputs = Vec::with_capacity(seeds.len());
+    let mut workers = Vec::with_capacity(worker_count);
+    for worker_result in joined {
+        let (worker, mut worker_outputs) =
+            worker_result.map_err(|_| anyhow::anyhow!("dynamic seed worker panicked"))??;
+        workers.push(worker);
+        outputs.append(&mut worker_outputs);
+    }
+    if outputs.len() != seeds.len() {
+        bail!(
+            "dynamic seed scheduler completed {} of {} seeds without an explicit error",
+            outputs.len(),
+            seeds.len()
+        );
+    }
+    Ok((outputs, workers))
 }
 
 fn export_greedy_state_search_bootstrap_seed_records(
@@ -2632,6 +2717,13 @@ const EVAL_ROW_CACHE_MAX_ENTRIES: usize = 50_000;
 struct EvalRowCache {
     entries: HashMap<[u8; 32], gumbel::EvalOut>,
     stats: EvalDedupStats,
+}
+
+/// Persistent state for one dynamically scheduled model-backed game worker.
+/// The session/client and eval cache intentionally survive across seeds.
+struct GumbelSeedWorker {
+    bridge: ChunkBridge,
+    eval_cache: EvalRowCache,
 }
 
 impl EvalRowCache {
@@ -3209,12 +3301,11 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     let eval_rows_sent = AtomicU64::new(0);
     let eval_cache_hits = AtomicU64::new(0);
     let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
-    let target_chunks = args
+    let target_workers = args
         .model_sessions
-        .unwrap_or_else(|| (rayon::current_num_threads() * 2).max(1))
+        .unwrap_or_else(|| rayon::current_num_threads().max(1))
         .max(1);
-    let chunk_size = ((seeds.len() + target_chunks - 1) / target_chunks).max(1);
-    // Shared bridge: one CUDA context serving all chunks with cross-chunk
+    // Shared bridge: one CUDA context serving all workers with cross-worker
     // request batching. `--model-sessions` then only controls how many games
     // run in parallel.
     let shared_bridge = if args.shared_model_session {
@@ -3230,55 +3321,57 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     } else {
         None
     };
-    let per_chunk = seeds
-        .par_chunks(chunk_size)
-        .map(|seed_chunk| {
-            let mut chunk_bridge = match &shared_bridge {
+    let (mut per_seed, workers) = run_dynamic_seed_workers(
+        &seeds,
+        target_workers,
+        |_| {
+            let bridge = match &shared_bridge {
                 Some(shared) => ChunkBridge::Shared(shared.client()),
                 None => ChunkBridge::Owned(model_state_worker_session(args)?),
             };
-            // One eval cache per chunk: consecutive decisions (and adjacent
-            // seeds early-game) re-visit identical public rows.
-            let mut eval_cache = EvalRowCache::new();
-            let mut chunk_shards = Vec::with_capacity(seed_chunk.len());
-            for seed_u64 in seed_chunk.iter().copied() {
-                let records =
-                    play_gumbel_selfplay_seed(args, seed_u64, &mut chunk_bridge, &mut eval_cache)
-                        .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))?;
-                let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
-                    format!("extracting gumbel selfplay tensor features for seed {seed_u64}")
-                })?;
-                let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
-                let records_done = completed_records
-                    .fetch_add(shard.record_count as u64, Ordering::Relaxed)
-                    + shard.record_count as u64;
-                log_seed_export_progress(
-                    "gumbel selfplay tensor",
-                    done,
-                    total_seeds,
-                    records_done,
-                    started,
-                );
-                chunk_shards.push((seed_u64, shard));
-            }
-            eval_cache.stats.accumulate_into(
-                &eval_rows_requested,
-                &eval_rows_sent,
-                &eval_cache_hits,
+            Ok(GumbelSeedWorker {
+                bridge,
+                eval_cache: EvalRowCache::new(),
+            })
+        },
+        |worker, seed_u64| {
+            let records = play_gumbel_selfplay_seed(
+                args,
+                seed_u64,
+                &mut worker.bridge,
+                &mut worker.eval_cache,
+            )
+            .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))?;
+            let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
+                format!("extracting gumbel selfplay tensor features for seed {seed_u64}")
+            })?;
+            let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
+            let records_done = completed_records
+                .fetch_add(shard.record_count as u64, Ordering::Relaxed)
+                + shard.record_count as u64;
+            log_seed_export_progress(
+                "gumbel selfplay tensor",
+                done,
+                total_seeds,
+                records_done,
+                started,
             );
-            Ok(chunk_shards)
-        })
-        .collect::<Result<Vec<_>>>()?;
+            Ok(shard)
+        },
+    )?;
+    for worker in &workers {
+        worker.eval_cache.stats.accumulate_into(
+            &eval_rows_requested,
+            &eval_rows_sent,
+            &eval_cache_hits,
+        );
+    }
     log_eval_dedup_summary(
         "gumbel selfplay tensor",
         eval_rows_requested.load(Ordering::Relaxed),
         eval_rows_sent.load(Ordering::Relaxed),
         eval_cache_hits.load(Ordering::Relaxed),
     );
-    let mut per_seed = per_chunk
-        .into_iter()
-        .flatten()
-        .collect::<Vec<(u64, ExpertTensorShardData)>>();
     per_seed.sort_by_key(|(seed, _)| *seed);
 
     let mut shard = ExpertTensorShardData::new();
@@ -3639,9 +3732,10 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
 }
 
 /// Many complete Gumbel policy games in one process sharing model bridge
-/// capacity: rayon seed chunks, `--model-sessions` parallel games, and with
+/// capacity: a dynamic seed queue, `--model-sessions` persistent parallel
+/// game workers, and with
 /// `--shared-model-session` one aggregated bridge (one CUDA context) serving
-/// every chunk. Per-seed search/record behavior is identical to
+/// every worker. Per-seed search/record behavior is identical to
 /// `--gumbel-policy-game` (exploration stays off unless explicitly enabled);
 /// each seed's decisions + done records land in
 /// `<output-dir>/gumbel_game_seed_<seed>.jsonl`. Any seed failure aborts the
@@ -3665,11 +3759,10 @@ fn run_gumbel_benchmark_batch(args: &Args) -> Result<()> {
     let eval_rows_sent = AtomicU64::new(0);
     let eval_cache_hits = AtomicU64::new(0);
     let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
-    let target_chunks = args
+    let target_workers = args
         .model_sessions
-        .unwrap_or_else(|| (rayon::current_num_threads() * 2).max(1))
+        .unwrap_or_else(|| rayon::current_num_threads().max(1))
         .max(1);
-    let chunk_size = ((seeds.len() + target_chunks - 1) / target_chunks).max(1);
     let shared_bridge = if args.shared_model_session {
         let command = args
             .model_service
@@ -3683,46 +3776,51 @@ fn run_gumbel_benchmark_batch(args: &Args) -> Result<()> {
     } else {
         None
     };
-    seeds
-        .par_chunks(chunk_size)
-        .map(|seed_chunk| {
-            let mut chunk_bridge = match &shared_bridge {
+    let (_, workers) = run_dynamic_seed_workers(
+        &seeds,
+        target_workers,
+        |_| {
+            let bridge = match &shared_bridge {
                 Some(shared) => ChunkBridge::Shared(shared.client()),
                 None => ChunkBridge::Owned(model_state_worker_session(args)?),
             };
-            let mut eval_cache = EvalRowCache::new();
-            for seed_u64 in seed_chunk.iter().copied() {
-                let records = play_gumbel_policy_game_seed(
-                    args,
-                    seed_u64,
-                    &mut chunk_bridge,
-                    &mut eval_cache,
-                )
-                .with_context(|| format!("gumbel benchmark batch seed {seed_u64} failed"))?;
-                let seed_path = output_dir.join(format!("gumbel_game_seed_{seed_u64}.jsonl"));
-                write_jsonl(&seed_path, &records).with_context(|| {
-                    format!("writing gumbel benchmark batch seed {seed_u64} output")
-                })?;
-                let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
-                let records_done = completed_records
-                    .fetch_add(records.len() as u64, Ordering::Relaxed)
-                    + records.len() as u64;
-                log_seed_export_progress(
-                    "gumbel benchmark batch",
-                    done,
-                    total_seeds,
-                    records_done,
-                    started,
-                );
-            }
-            eval_cache.stats.accumulate_into(
-                &eval_rows_requested,
-                &eval_rows_sent,
-                &eval_cache_hits,
+            Ok(GumbelSeedWorker {
+                bridge,
+                eval_cache: EvalRowCache::new(),
+            })
+        },
+        |worker, seed_u64| {
+            let records = play_gumbel_policy_game_seed(
+                args,
+                seed_u64,
+                &mut worker.bridge,
+                &mut worker.eval_cache,
+            )
+            .with_context(|| format!("gumbel benchmark batch seed {seed_u64} failed"))?;
+            let seed_path = output_dir.join(format!("gumbel_game_seed_{seed_u64}.jsonl"));
+            write_jsonl(&seed_path, &records).with_context(|| {
+                format!("writing gumbel benchmark batch seed {seed_u64} output")
+            })?;
+            let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
+            let records_done = completed_records.fetch_add(records.len() as u64, Ordering::Relaxed)
+                + records.len() as u64;
+            log_seed_export_progress(
+                "gumbel benchmark batch",
+                done,
+                total_seeds,
+                records_done,
+                started,
             );
             Ok(())
-        })
-        .collect::<Result<Vec<()>>>()?;
+        },
+    )?;
+    for worker in &workers {
+        worker.eval_cache.stats.accumulate_into(
+            &eval_rows_requested,
+            &eval_rows_sent,
+            &eval_cache_hits,
+        );
+    }
     log_eval_dedup_summary(
         "gumbel benchmark batch",
         eval_rows_requested.load(Ordering::Relaxed),
@@ -3731,8 +3829,9 @@ fn run_gumbel_benchmark_batch(args: &Args) -> Result<()> {
     );
     let elapsed = started.elapsed().as_secs_f64().max(1.0e-9);
     eprintln!(
-        "[real-root-exporter] gumbel benchmark batch: {total_seeds} seeds complete in {elapsed:.1}s ({:.2} games/h) into {}",
+        "[real-root-exporter] gumbel benchmark batch: {total_seeds} seeds complete in {elapsed:.1}s ({:.2} games/h), dynamic_seed_queue workers={}, into {}",
         total_seeds as f64 * 3600.0 / elapsed,
+        workers.len(),
         output_dir.display(),
     );
     Ok(())
@@ -6144,6 +6243,50 @@ mod tests {
     }
 
     #[test]
+    fn dynamic_seed_workers_backfill_while_a_long_seed_is_running() {
+        use std::sync::Condvar;
+        use std::time::Duration;
+
+        let long_seed_release = Arc::new((Mutex::new(false), Condvar::new()));
+        let release_for_run = Arc::clone(&long_seed_release);
+        let (mut outputs, workers) = run_dynamic_seed_workers(
+            &[0, 1, 2],
+            2,
+            |worker_index| Ok(worker_index),
+            move |worker_index, seed| {
+                if seed == 0 {
+                    let (lock, wake) = &*release_for_run;
+                    let mut released = lock.lock().expect("release lock");
+                    while !*released {
+                        let (next, timeout) = wake
+                            .wait_timeout(released, Duration::from_secs(5))
+                            .expect("release wait");
+                        released = next;
+                        if timeout.timed_out() && !*released {
+                            bail!("dynamic worker failed to backfill seed 2");
+                        }
+                    }
+                } else if seed == 2 {
+                    let (lock, wake) = &*release_for_run;
+                    *lock.lock().expect("release lock") = true;
+                    wake.notify_all();
+                }
+                Ok(*worker_index)
+            },
+        )
+        .expect("dynamic schedule");
+        outputs.sort_by_key(|(seed, _)| *seed);
+
+        assert_eq!(workers.len(), 2);
+        assert_eq!(outputs.len(), 3);
+        assert_ne!(outputs[0].1, outputs[1].1, "first two seeds start apart");
+        assert_eq!(
+            outputs[1].1, outputs[2].1,
+            "worker finishing short seed 1 must backfill seed 2 while seed 0 runs"
+        );
+    }
+
+    #[test]
     fn gumbel_benchmark_batch_matches_single_seed_policy_games() {
         let tempdir =
             std::env::temp_dir().join(format!("cascadia-gumbel-batch-test-{}", std::process::id()));
@@ -6165,7 +6308,7 @@ mod tests {
         }
 
         // Candidate: both seeds through one batch run over the shared
-        // aggregated bridge (two parallel game chunks, one bridge process).
+        // aggregated bridge (two parallel game workers, one bridge process).
         let mut batch_args = gumbel_test_args(&tempdir);
         batch_args.mode = Mode::GumbelBenchmarkBatch;
         batch_args.gumbel_exploration = false;

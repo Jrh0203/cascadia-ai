@@ -137,6 +137,7 @@ class DistributionalQTest(unittest.TestCase):
         )
         self.assertEqual(execution["runner"], "gumbel-benchmark-batch")
         self.assertEqual(execution["parallel_game_cap"], 3)
+        self.assertEqual(execution["seed_scheduler"], "dynamic_seed_queue")
         self.assertEqual(execution["maximum_concurrent_bridge_processes"], 1)
         self.assertTrue(execution["shared_model_session"])
         with self.assertRaisesRegex(ValueError, "jobs must be positive"):

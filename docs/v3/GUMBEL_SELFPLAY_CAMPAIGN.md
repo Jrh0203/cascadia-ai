@@ -112,8 +112,12 @@ the labels — no separate labeling pass):
 - Batched model bridge (`eval_batch` + `protocol_features` detection, chunked
   at 32 rows/forward) and numpy relation-matrix construction (was pure-Python
   O(seq²) lists per request).
-- Self-play exporter reuses bridge sessions per rayon chunk with a
-  `--model-sessions` cap on concurrent GPU-resident bridges.
+- Model-backed seed pipelines use a bounded dynamic worker queue. Each worker
+  retains its bridge client/session and eval cache across seeds, while idle
+  workers immediately backfill from the remaining seed queue; this removes
+  fixed-chunk long-tail collapse. `--model-sessions` caps persistent workers.
+- With `--shared-model-session`, all workers use one aggregated bridge process
+  and one GPU model context with cross-worker request batching.
 
 ## 3. Campaign phases
 
@@ -188,10 +192,11 @@ MODEL_MANIFEST=<incumbent manifest> bash cascadiav3/scripts/run_gumbel_selfplay_
 - **Rejection is not a halt:** a rejected candidate stays in the opponent
   pool; the incumbent remains champion; the next cycle's data still comes
   from the incumbent.
-- **Throughput fallback:** if per-cycle generation exceeds ~12h wall-clock,
-  switch topology to one shared bridge server (single Python process, many
-  Rust workers over a socket) before buying model-quality compromises; the
-  `--model-sessions` cap is the interim knob.
+- **Throughput topology:** use `--shared-model-session` so one Python bridge
+  and GPU model context serve the bounded dynamic Rust worker queue;
+  `--model-sessions` is the measured parallel-game knob. Keep policy/search
+  settings fixed while tuning it, and require action parity before adopting a
+  new concurrency point.
 
 ### Phase D — distillation and speed (only after a ≥97 checkpoint exists)
 

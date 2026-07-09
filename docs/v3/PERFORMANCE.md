@@ -142,6 +142,76 @@ better whole-search multiplier or a stronger/distq student changes the
 accuracy side of the trade. The nine-arm validated summary SHA-256 is
 `44957b49d4fa5b2dd6df953f9419a210fc9e228aebbc4ff42b5556088f40921e`.
 
+## Shared-Batch Concurrency Scaling (2026-07-09)
+
+A live 30-second `nvidia-smi dmon` profile of the corrected distq n256/d4
+batch on john0 (12 parallel games, one shared bridge, fused CGAB, 16M cell
+budget, TF32 off) found substantial headroom but also lockstep bubbles: mean
+SM utilization `65.57%`, range `1-89%`, mean board power `353.5W` against a
+`600W` limit, and only `2,481 MiB` framebuffer allocation. A simultaneous CPU
+snapshot was `55.6%` idle while the exporter used about 8.3 cores and the
+bridge 5.2. This is not a model-memory limit; request/game concurrency and
+per-decision synchronization own the idle intervals.
+
+Before changing CUDA gates, an exact-source MPS screen measured the real
+shared-batch path on the same four corrected-rules seeds, distq M, n16/top8/d2,
+four market samples, fused CGAB, and one bridge. Source was `fbe3f2d2`; the
+exporter/manifest/weights hashes were respectively
+`05118990835d9517e60a85aa665eaff2559cdb0a4a4db784434585c4cf82a250`,
+`02fa7ccab88e2313363882d5251d9b44ae364a05eb23f4045725803da9bd6533`,
+and `8d0272c971bcaae407fd23f3f47daae6fa50d8326a4af76243046c038c041f40`.
+Every report records the runner, jobs, parallel-game cap, bridge topology,
+device, and artifact hashes.
+
+| Arm | Wall (4 games) | Throughput vs jobs1 | Mean decision | Latency ratio | Action differences |
+|---|---:|---:|---:|---:|---:|
+| jobs1, 16M | 573.83s | 1.000x | 1.790s | 1.000x | 0/320 |
+| jobs2, 16M, same host | 500.26s | 1.147x | 3.047s | 1.702x | 0/320 |
+| jobs2, 16M, replica host | 503.38s | 1.140x | 3.053s | 1.706x | 0/320 |
+| jobs4, 16M | 486.13s | 1.180x | 5.589s | 3.122x | 0/320 |
+| jobs4, default 2M | 488.73s | 1.174x | 5.640s | 3.151x | 0/320 |
+
+All arms produced the same four-seat scores (`93.875` mean) and all 320
+actions; maximum root-value drift was `1.6e-5`. The same-host and replica
+jobs2 walls differed by only `0.62%`. Reducing the bridge cell budget changed
+jobs4 wall by only `+0.54%`, proving these merged requests were already below
+the default chunk threshold. Jobs2 is the MPS operational knee: jobs4 adds
+only `2.9%` throughput over jobs2 while doubling concurrency and nearly
+doubling per-decision latency again. This does **not** authorize a john0 jobs
+change: CUDA has different memory/batching behavior and must get its own
+jobs12/16/24 fixed-seed performance-and-parity calibration after the current
+scientific chain. Validated 20-artifact summary SHA:
+`7d4fb02d1432a8a83c85ee1b123b0a842ce139e92703c9d9932a579d7f163d02`.
+
+### Dynamic seed scheduling
+
+The production exporter then exposed a second, independent concurrency loss:
+`par_chunks(ceil(seeds/jobs))` permanently assigned each worker a contiguous
+seed chunk. Game durations vary, so completed chunks could not backfill. The
+live corrected-rules distq n256 battery reached 95/100 with only five games
+left active and fell to 18% GPU utilization even though queued seeds had
+dominated most workers' earlier chunks.
+
+All three model-backed seed pipelines now use one bounded dynamic queue:
+benchmark games, Gumbel self-play tensor export, and model-state bootstrap
+export. Each worker retains its model session/shared-bridge client and eval
+cache, but atomically claims the next seed when it becomes idle. The worker
+count remains capped by `--model-sessions`; when omitted it matches the old
+Rayon concurrency ceiling rather than the old 2x task count. A deterministic
+unit test blocks one long seed and proves that the other worker backfills the
+next seed before the long seed completes. The complete 44-test Rust exporter
+suite, including batch-versus-single policy record equality, passes.
+
+The completed 100-game distq arm provides a realistic counterfactual before a
+post-patch CUDA rerun. Summed per-seed decision times reconstruct the actual
+fixed-chunk wall almost exactly (`9,014.5s` reconstructed versus `9,016.7s`
+reported). Greedy list scheduling of the same observed durations across 12
+workers gives `8,380.2s`, an estimated **1.076x** throughput gain. This is a
+scheduling estimate, not yet a measured post-patch result; contention can
+change individual game durations when full concurrency persists longer.
+Interim comparison artifact SHA:
+`287555fb6c233a4e7e14d7e362c7f796ebd35dd4f2b2558b1fd9e12c0b3dbdb8`.
+
 ## Tensor Export
 
 Rust-native greedy tensor export on `john0`:

@@ -3867,3 +3867,78 @@ The modes remain useful as essentially free, genuinely trajectory-diverse
 league personalities if the corrected-rules distq/EI line survives. The
 fail-closed 32-artifact aggregate SHA is
 `5304b88265c7d698635be8ba4d08b2e85dcf22654b563b3782b60aa96e71f42b`.
+
+## 2026-07-09 06:38 — Shared-batch scaling has a shallow knee; execution provenance hardened
+
+Purpose: use the idle mini fleet to determine whether higher parallel-game
+concurrency can fill the live john0 utilization gap without changing policy.
+A 30-second sample of the corrected distq n256/d4 jobs12 CUDA workload found
+mean SM utilization `65.57%` (range `1-89%`), mean power `353.5W` of 600W,
+2,481 MiB framebuffer allocation, and a contemporaneous `55.6%` CPU-idle
+snapshot. The box is neither memory-, power-, thermal-, nor CPU-saturated.
+
+The first MPS attempt was stopped before publication because reports did not
+record `--batch-runner` or jobs. Source `fbe3f2d2` fixes that permanently:
+every Gumbel report now records execution runner, requested jobs,
+parallel-game cap, shared-bridge topology, device, and SHA/size identities for
+the exporter, manifest, and weights. Candidate-only runs no longer falsely
+label themselves paired rollout comparisons. The full Python suite passed
+`116` tests (`45` expected fixture skips).
+
+The exact-source experiment then used four identical corrected-rules seeds
+`2027072000..2003`, distq M, n16/top8/d2, blend 0.5, K16 interior, four market
+samples, fused CGAB, and one shared MPS bridge. jobs1 and jobs2 ran serially on
+john2; jobs2 was independently replicated on john3; jobs4 ran on john4. A
+jobs4 default-2M-cell-budget arm isolated chunk size from the production-CUDA
+16M override.
+
+| Arm | Wall | Speedup | Mean decision | Latency ratio | Action diffs |
+|---|---:|---:|---:|---:|---:|
+| jobs1 / 16M | 573.83s | 1.000x | 1.790s | 1.000x | 0 |
+| jobs2 / 16M same-host | 500.26s | 1.147x | 3.047s | 1.702x | 0 |
+| jobs2 / 16M replica | 503.38s | 1.140x | 3.053s | 1.706x | 0 |
+| jobs4 / 16M | 486.13s | 1.180x | 5.589s | 3.122x | 0 |
+| jobs4 / 2M | 488.73s | 1.174x | 5.640s | 3.151x | 0 |
+
+All five arms produced `93.875` mean and identical actions at all 320 plies;
+maximum root-value drift was `1.6e-5`. jobs2 replication differed by `0.62%`
+wall. Cell-budget reduction changed jobs4 wall only `+0.54%`: requests were
+already below the default chunk threshold. Verdict: jobs2 is the MPS knee;
+jobs4 adds only `2.9%` throughput above it while greatly increasing latency
+and memory pressure. No CUDA extrapolation and no live-chain modification.
+The equivalent john0 experiment is jobs12/16/24 during an engineering window,
+with action parity mandatory. Validated 20-artifact summary SHA:
+`7d4fb02d1432a8a83c85ee1b123b0a842ce139e92703c9d9932a579d7f163d02`.
+
+## 2026-07-09 06:48 — Corrected-rules n256 is inconclusive; fixed-chunk long tail removed
+
+The first promotion-scale corrected-rules comparison completed on john0:
+identical seeds `2027070900..2027070999`, n256/top16/d4, depth 1, blend 0.5,
+K16 interior, eight hidden replacement samples, jobs12, one shared CUDA
+bridge. Scalar cycle4 scored `97.0675`; distq-k8 mean serving scored `97.3075`.
+The same-seed game-mean delta is `+0.2400` (SE `0.1784`, 95% t-CI
+`[-0.1139, +0.5939]`, bootstrap CI `[-0.1000, +0.5950]`; 52 positive, 7 tied,
+41 negative). Verdict: retain cycle4. The gain is not significant and the
+100-point target remains unmet. These are candidate-only arms; d20 incorrectly
+labels them as paired rollout-search comparisons, a provenance bug fixed by
+`fbe3f2d2` for future reports.
+
+Artifacts were fetched byte-for-byte and validated: all 100 seeds, exactly 80
+decisions per seed, ruleset
+`cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09`, source
+`d20daf44`, and equal search settings. The interim comparison includes exact
+input, remote exporter, manifest, and weights hashes. Its JSON SHA is
+`287555fb6c233a4e7e14d7e362c7f796ebd35dd4f2b2558b1fd9e12c0b3dbdb8`.
+
+The arm also isolated the utilization tail. The old exporter assigned 12
+fixed contiguous seed chunks. At 95/100 only five games remained active and
+GPU utilization fell to 18%; completed workers could not claim remaining
+seeds. Observed per-seed decision times reconstruct the reported 9,016.7s
+wall within 0.03% (9,014.5s). Dynamic list scheduling predicts 8,380.2s,
+`1.076x` faster, before contention effects.
+
+The permanent fix replaces fixed chunks with a bounded atomic seed queue in
+all affected model-backed pipelines. Workers retain their bridge/session and
+eval cache; `--model-sessions` remains the hard concurrency cap. A
+deterministic test proves backfill while a long seed remains blocked, and the
+full 44-test exporter suite including exact batch/single policy parity passes.

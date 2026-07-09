@@ -88,6 +88,9 @@ def execution_provenance(
         "requested_jobs": jobs,
         "seed_count": seed_count,
         "parallel_game_cap": parallel_games,
+        "seed_scheduler": (
+            "dynamic_seed_queue" if batch_runner else "process_pool_executor"
+        ),
         "shared_model_session": batch_runner,
         "bridge_process_topology": (
             "one_shared_bridge" if batch_runner else "one_bridge_per_active_subprocess"
@@ -760,6 +763,7 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
         f"Experiment: `{report['experiment_id']}`",
         f"Execution: `{report.get('execution', {}).get('runner', 'legacy-unrecorded')}`; "
         f"jobs `{report.get('execution', {}).get('requested_jobs', 'legacy-unrecorded')}`; "
+        f"seed scheduler `{report.get('execution', {}).get('seed_scheduler', 'legacy-unrecorded')}`; "
         f"bridge topology `{report.get('execution', {}).get('bridge_process_topology', 'legacy-unrecorded')}`",
         f"Ruleset: `{report['ruleset_id']}`",
         f"Source revision: `{report['source_revision']}`",

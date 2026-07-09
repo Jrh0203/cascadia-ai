@@ -153,6 +153,40 @@ diversity personalities if corrected-rules EI survives. Fixed-root report SHA
 validated 32-artifact gameplay summary SHA
 `5304b88265c7d698635be8ba4d08b2e85dcf22654b563b3782b60aa96e71f42b`.
 
+**Shared-batch utilization and concurrency (07-09):** the live john0 distq
+n256 arm at jobs12 averaged only `65.6%` 5090 SM utilization over 30 seconds
+(range `1-89%`), `353.5W` against 600W, and 2.48 GiB framebuffer use; a CPU
+snapshot was `55.6%` idle. The gap is concurrency/lockstep, not capacity. A
+provenance-complete four-seed MPS screen found exact action parity across
+jobs1/2/4, but weak throughput scaling: jobs2 `1.147x`, jobs4 `1.180x`, while
+mean decision latency rose `1.70x/3.12x`. A 2M versus 16M cell-budget control
+was flat (`+0.54%` wall), so bridge chunk sizing is not responsible. Jobs2 is
+the mini operational knee; do not extrapolate it to CUDA or modify the live
+chain. Add a jobs12/16/24 performance-and-parity calibration to a future
+john0 engineering window. Summary SHA
+`7d4fb02d1432a8a83c85ee1b123b0a842ce139e92703c9d9932a579d7f163d02`.
+
+**Dynamic seed-queue fix (07-09):** the utilization gap had a concrete
+long-tail cause: fixed contiguous seed chunks could not backfill after a
+worker exhausted its chunk. At 95/100 in the live distq arm, only five games
+remained active and GPU utilization had fallen to 18%. Benchmark batch,
+Gumbel self-play export, and model-state bootstrap now share a bounded dynamic
+queue while retaining one bridge client/session and cache per worker. The
+worker/session cap is unchanged. The Rust exporter suite passes 44/44,
+including deterministic backfill and exact batch-versus-single record parity.
+Replaying the completed arm's observed seed durations predicts 9,014.5s
+static versus 8,380.2s dynamic (`1.076x`), explicitly an estimate pending a
+post-chain john0 measurement.
+
+**Corrected-rules n256 interim result (07-09):** cycle4 scored `97.0675` and
+distq-k8 mean serving scored `97.3075` on the same 100 seeds, a paired
+`+0.2400` with 95% t-CI `[-0.1139, +0.5939]` and bootstrap CI
+`[-0.1000, +0.5950]`. Retain cycle4: this is not significant and neither arm
+reaches 100. Both are candidate-only search arms; source d20's eligibility
+label is wrong and current source fixes it. The n1024 chain continues.
+Fail-closed interim artifact SHA
+`287555fb6c233a4e7e14d7e362c7f796ebd35dd4f2b2558b1fd9e12c0b3dbdb8`.
+
 **Mini-fleet audit (07-09):** john2–john4 were still running Fleet5 under the
 pre-correction forced-refresh binary for roughly nine hours. Those process
 trees were killed and verified absent; no Fleet5 shard artifact existed to
