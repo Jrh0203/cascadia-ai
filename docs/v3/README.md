@@ -10,6 +10,10 @@ packed expert tensors with search-supervised action values.
 - [Research Log](RESEARCH_LOG.md): **the experiment record** — architecture,
   every direction tried with verdicts, scaling laws, decision-SNR
   measurement, and ranked future directions.
+- [Radical Directions](RADICAL_DIRECTIONS.md): speculative architecture-level
+  bets (exact endgame solving, tiny-model/huge-search inversion, pairwise
+  comparator head, on-GPU rollouts, decomposed value heads, league play),
+  each judged against the campaign's measured constraints.
 - [Infrastructure Runbook](INFRASTRUCTURE.md): how to operate john0 + the
   mac-mini fleet — builds, job patterns, batteries/verdicts, seed registry,
   fleet rules, and the web UI deployment.
