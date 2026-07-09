@@ -4678,3 +4678,31 @@ zero bytes and every reserve artifact was absent, proving that the chains
 were waiting rather than generating early. Final local gate: 167/167 Python
 tests passed with 45 expected fixture-dependent skips; `bash -n` and
 `git diff --check` passed.
+
+## 2026-07-09 12:56 — Reserve-holdout harvest made fail-closed
+
+The reserve roles now have a canonical retrieval path before any of them
+exists. `fetch_structured_q_reserve_holdouts.sh` refuses a live chain, requires
+nonempty NPZ/manifest/summary/invariant/chain-log artifacts and passing JSON
+reports, checks the exact completion sentinel, hash-matches remote and local
+NPZ plus manifest files, and then runs one cross-shard audit. That audit treats
+the locked fit/selection/verdict pilot and all three quarantined fit-expansion
+blocks as exclusions. No john0 or training copy exists in the script.
+
+The generic auditor now accepts exact expected seed domains for every primary
+label. Expectations are all-or-none, labels must match the primary set, and
+first seed, count, plies per seed, and mode must match exactly. The existing
+expansion harvest now pins its three 50-seed domains; the reserve harvest pins
+selection `2027073750..69`, verdict `2027073770..89`, and replication
+`2027073790..3809`. This prevents a contract-valid and disjoint shard from
+being accepted under the wrong experimental role.
+
+Six targeted tests pass, including a wrong-domain rejection and static pins
+for all hosts, roles, domains, six exclusions, and quarantine behavior. Both
+harvest scripts pass `bash -n`. Live probes correctly refused with status 2:
+the expansion harvester found producer `90485` active and the reserve
+harvester found chain `97051` active. Neither transferred an artifact.
+The new CLI path also passed against the real locked corpus with exact domains:
+3 shards, 30 seeds, 2,400 records, 1,113,755 actions, 9,240 q-valid actions,
+and 120 exact rows. Final Python gate: 168/168 passing with 45 expected
+fixture-dependent skips; `git diff --check` passed.

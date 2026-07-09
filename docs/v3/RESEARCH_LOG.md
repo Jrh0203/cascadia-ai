@@ -530,6 +530,12 @@ Schema v2 of that audit carries the target distributions too; expansion
 admission must compare final-score, component-residual, Nature-spending, and
 teacher-error distributions against the locked blocks rather than relying on
 matching provenance alone.
+Admission can additionally require one exact seed-domain declaration for
+every primary shard, closing the gap where a valid, disjoint, contract-matched
+file could still occupy the wrong semantic role. Both the fit-expansion and
+reserve-holdout harvesters use this mode. The reserve harvest also treats all
+six locked/fit shards as exclusions, so selection, verdict, and replication
+cannot silently overlap any earlier corpus.
 
 ---
 

@@ -108,6 +108,10 @@ Important runners:
   data-only 20-seed selection/verdict/replication reserves after the current
   fleet validators pass; fixed before any structured candidate exists and
   performs no fetch, admission, or training action)
+- `fetch_structured_q_reserve_holdouts.sh` (refuses live reserve chains,
+  hash-verifies all three completed holdout roles, pins their exact seed
+  domains, and audits them against both the locked pilot and fit expansion;
+  performs no john0 or training copy)
 - `python -m cascadiav3.compare_game_categories` (fail-closed same-seed
   wildlife/habitat/Nature attribution for two candidate-only game ledgers;
   binds both ledgers to passing reports and checks that per-category deltas sum

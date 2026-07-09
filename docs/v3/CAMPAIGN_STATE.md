@@ -154,6 +154,13 @@ reserve artifact existed. These roles are fixed: they are not extra fit data,
 cannot influence the existing pilot, and cannot be fetched or used for
 training by the arming script. Source and teacher hashes are checked both when
 the chain is armed and immediately before generation.
+Canonical reserve harvest is
+`cascadiav3/scripts/fetch_structured_q_reserve_holdouts.sh`. It refuses any
+live chain, requires passing reports plus the completion sentinel, verifies
+remote/local NPZ and manifest hashes, pins every role's exact seed domain, and
+audits the three holdouts against both the locked pilot and all three fit-
+expansion shards. It therefore cannot run the final audit until the expansion
+has itself been harvested. The tool has no john0 or training copy path.
 
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from cascadiav3.audit_structured_q_shards import audit_shards, parse_seed_domain
+from cascadiav3.audit_structured_q_shards import SeedDomain, audit_shards, parse_seed_domain
 from cascadiav3.expert_tensor_shards import _save_expert_tensor_shard
 
 
@@ -145,6 +145,10 @@ class AuditStructuredQShardsTest(unittest.TestCase):
             report = audit_shards(
                 {"first": first, "second": second},
                 excluded_shards={"locked": excluded},
+                expected_seed_domains={
+                    "first": SeedDomain(10, 1, 4, "gumbel_selfplay_tensor_corpus"),
+                    "second": SeedDomain(11, 1, 4, "gumbel_selfplay_tensor_corpus"),
+                },
                 expected_source_revision="source",
                 expected_teacher_manifest_sha256="1" * 64,
                 expected_teacher_weights_sha256="2" * 64,
@@ -170,6 +174,20 @@ class AuditStructuredQShardsTest(unittest.TestCase):
                 audit_shards({"first": first, "overlap": overlap})
             with self.assertRaisesRegex(ValueError, "contract mismatch"):
                 audit_shards({"first": first, "mismatch": mismatch})
+            with self.assertRaisesRegex(ValueError, "does not match expectation"):
+                audit_shards(
+                    {"first": first},
+                    expected_seed_domains={
+                        "first": SeedDomain(12, 1, 4, "gumbel_selfplay_tensor_corpus")
+                    },
+                )
+            with self.assertRaisesRegex(ValueError, "labels do not match"):
+                audit_shards(
+                    {"first": first},
+                    expected_seed_domains={
+                        "other": SeedDomain(10, 1, 4, "gumbel_selfplay_tensor_corpus")
+                    },
+                )
             manifest = json.loads(first.with_suffix(".manifest.json").read_text())
             manifest["checksum"] = "0" * 64
             first.with_suffix(".manifest.json").write_text(json.dumps(manifest))
@@ -192,6 +210,7 @@ class AuditStructuredQShardsTest(unittest.TestCase):
         self.assertIn("b8886c24cd93e19299e8c4cca4dd7671fe16b685d54949de014d6f9d5aee616d", script)
         self.assertIn("33559aab05324e74998164d4e59e7adec9fa3c77da531dd4797c718cf4cfd354", script)
         self.assertEqual(script.count("--exclude-shard"), 3)
+        self.assertEqual(script.count("--expected-seed-domain"), 3)
         self.assertNotIn("john0:", script)
         self.assertIn("data remains quarantined", script)
 
@@ -211,6 +230,24 @@ class AuditStructuredQShardsTest(unittest.TestCase):
         self.assertIn("current expansion validation failed", script)
         self.assertIn("no fetch or training action", script)
         self.assertNotIn("ssh john0", script)
+
+    def test_reserve_fetch_pins_roles_domains_exclusions_and_quarantine(self) -> None:
+        script = (
+            Path(__file__).resolve().parents[1]
+            / "scripts"
+            / "fetch_structured_q_reserve_holdouts.sh"
+        ).read_text(encoding="utf-8")
+        for host, label, seed in (
+            ("john2", "reserve_selection", 2027073750),
+            ("john3", "reserve_verdict", 2027073770),
+            ("john4", "reserve_replication", 2027073790),
+        ):
+            self.assertIn(f"fetch_one {host} {label} {seed}", script)
+        self.assertEqual(script.count("--exclude-shard"), 6)
+        self.assertEqual(script.count("--expected-seed-domain"), 3)
+        self.assertIn("structured_q_v4_expansion_20260709", script)
+        self.assertIn("holdouts remain quarantined", script)
+        self.assertNotIn("john0:", script)
 
 
 if __name__ == "__main__":

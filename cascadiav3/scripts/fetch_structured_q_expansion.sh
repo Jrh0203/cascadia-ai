@@ -115,6 +115,12 @@ done
   --shard "expansion_a=$DEST/expansion_a.npz" \
   --shard "expansion_b=$DEST/expansion_b.npz" \
   --shard "expansion_c=$DEST/expansion_c.npz" \
+  --expected-seed-domain \
+  "expansion_a=first_seed=2027073600,seed_count=50,plies_per_seed=80,mode=gumbel_selfplay_tensor_corpus" \
+  --expected-seed-domain \
+  "expansion_b=first_seed=2027073650,seed_count=50,plies_per_seed=80,mode=gumbel_selfplay_tensor_corpus" \
+  --expected-seed-domain \
+  "expansion_c=first_seed=2027073700,seed_count=50,plies_per_seed=80,mode=gumbel_selfplay_tensor_corpus" \
   --exclude-shard "locked_fit=$LOCKED/train_a.npz" \
   --exclude-shard "locked_selection=$LOCKED/train_b.npz" \
   --exclude-shard "locked_verdict=$LOCKED/val.npz" \

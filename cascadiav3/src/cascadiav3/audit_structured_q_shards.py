@@ -287,6 +287,7 @@ def audit_shards(
     shards: dict[str, Path],
     *,
     excluded_shards: dict[str, Path] | None = None,
+    expected_seed_domains: dict[str, SeedDomain] | None = None,
     expected_source_revision: str | None = None,
     expected_teacher_manifest_sha256: str | None = None,
     expected_teacher_weights_sha256: str | None = None,
@@ -301,6 +302,18 @@ def audit_shards(
     excluded = [
         _audit_one(label, path) for label, path in sorted(excluded_shards.items())
     ]
+    if expected_seed_domains is not None:
+        expected_labels = set(expected_seed_domains)
+        primary_labels = set(shards)
+        if expected_labels != primary_labels:
+            raise ValueError(
+                "expected seed-domain labels do not match primary shards: "
+                f"expected={sorted(expected_labels)}, primary={sorted(primary_labels)}"
+            )
+        primary_by_label = {str(row["label"]): row for row in primary}
+        for label, expected in sorted(expected_seed_domains.items()):
+            if primary_by_label[label]["seed_domain"] != expected.to_dict():
+                raise ValueError(f"seed domain for {label} does not match expectation")
     all_rows = primary + excluded
     reference = all_rows[0]["contract"]
     for row in all_rows[1:]:
@@ -352,6 +365,16 @@ def _labeled_paths(values: list[str]) -> dict[str, Path]:
     return result
 
 
+def _labeled_seed_domains(values: list[str]) -> dict[str, SeedDomain]:
+    result: dict[str, SeedDomain] = {}
+    for raw in values:
+        label, separator, seed_domain = raw.partition("=")
+        if not separator or not label or not seed_domain or label in result:
+            raise ValueError(f"invalid or duplicate labeled seed domain {raw!r}")
+        result[label] = parse_seed_domain(seed_domain)
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--shard", action="append", required=True, help="label=raw-v4.npz")
@@ -361,6 +384,15 @@ def main() -> int:
         default=[],
         help="label=raw-v4.npz; validate contract and prove seed disjointness",
     )
+    parser.add_argument(
+        "--expected-seed-domain",
+        action="append",
+        default=None,
+        help=(
+            "label=first_seed=N,seed_count=N,plies_per_seed=N,mode=MODE; "
+            "every primary shard must have one exact expectation"
+        ),
+    )
     parser.add_argument("--expected-source-revision")
     parser.add_argument("--expected-teacher-manifest-sha256")
     parser.add_argument("--expected-teacher-weights-sha256")
@@ -369,6 +401,11 @@ def main() -> int:
     report = audit_shards(
         _labeled_paths(args.shard),
         excluded_shards=_labeled_paths(args.exclude_shard),
+        expected_seed_domains=(
+            _labeled_seed_domains(args.expected_seed_domain)
+            if args.expected_seed_domain is not None
+            else None
+        ),
         expected_source_revision=args.expected_source_revision,
         expected_teacher_manifest_sha256=args.expected_teacher_manifest_sha256,
         expected_teacher_weights_sha256=args.expected_teacher_weights_sha256,
