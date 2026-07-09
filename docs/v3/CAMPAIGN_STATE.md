@@ -115,6 +115,13 @@ are speculative fit-capacity inventory only: keep them out of the fixed
 fit/selection/verdict pilot, do not copy them to john0's queue, and do not
 admit them to any training unless they complete, validate, and the frozen-head
 pilot first passes. john1 remains reserved for the active UI/champion service.
+Completion watchers PIDs `90916 / 58926 / 26606` will reopen each shard and
+write summary/invariant reports only after its producer exits successfully.
+Admission no longer relies on those per-host checks alone: the new
+`audit_structured_q_shards` tool requires all expansion NPZs and sidecars on
+one host, proves one exact contract plus seed disjointness from the locked
+three-way pilot, and fails closed on overlap or sidecar tampering. It has
+already passed against the real locked 2,400-root corpus.
 
 **Corrected no-search floor (100 paired seeds, complete):** greedy `87.5450`;
 cycle4 policy head `91.8425`, delta `+4.2975`, 95% t-CI

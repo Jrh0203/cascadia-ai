@@ -237,9 +237,13 @@ Summary:
   one-hot improved policy, and therefore provide an exact zero-score-to-go
   terminal target rather than a model/search estimate.
 - Before a shard becomes training input, independently verify its NPZ SHA and
-  embedded v3+ provenance. Shards generated before the v3 contract are
-  audit-only when the missing fields cannot be recovered from immutable
-  launch evidence.
+  embedded v3+ provenance. For raw schema-v4 structured-Q data, run
+  `python -m cascadiav3.audit_structured_q_shards` over every candidate shard
+  and pass the locked fit/selection/verdict files as `--exclude-shard`. The
+  audit requires matching NPZ/sidecar checksums, exact/Q/component identities,
+  one source/search/execution/teacher contract, and globally disjoint seed
+  intervals. Shards generated before the v3 contract are audit-only when the
+  missing fields cannot be recovered from immutable launch evidence.
 - Runner: `cascadiav3/scripts/run_gumbel_selfplay_cycle.sh` (delegates to
   the full pipeline with `EXPERT_TENSOR_MODE=gumbel_selfplay`).
 

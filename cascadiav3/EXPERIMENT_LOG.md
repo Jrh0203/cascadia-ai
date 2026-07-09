@@ -4529,3 +4529,28 @@ Interpretation: the GPU still sees intermittent feed gaps while both Rust
 search and Python bridge consume substantial CPU. This is diagnostic evidence
 for the checksum-queued jobs12/16/24 concurrency calibration, not permission
 to alter the 52/100 live scientific arm. No score field was read.
+
+## 2026-07-09 12:23 — Cross-shard structured-Q admission audit implemented
+
+Per-shard shape and Q checks were necessary but insufficient for the
+quarantined expansion: they could not prove that three independently produced
+files share one scientific contract or avoid the locked pilot's seeds.
+`audit_structured_q_shards` now fails closed unless every raw v4 NPZ matches
+its sidecar checksum, metadata, schema, eligibility, seed domain, record count,
+and action count. It rechecks selected-action Q validity, completed-Q identity,
+afterstate component sums, terminal component sums, exact-K1 row counts, and
+the declared records-per-seed contract.
+
+Across files it requires identical rules, source revision, search, execution,
+and teacher manifest/weights identity while deliberately allowing host-local
+generator binary identities. Primary and explicitly excluded locked shards
+must have globally disjoint seed intervals. Optional expected source and
+teacher hashes bind an operating invocation to preregistered artifacts.
+
+The real fixed fit/selection/verdict corpus passed: 3 shards, 30 disjoint
+seeds, 2,400 roots, 1,113,755 actions, 9,240 q-valid actions, 120 exact rows,
+maximum Q-identity error `3.8146973e-6`, and zero afterstate/terminal component
+sum error. Synthetic tests cover valid admission, strict seed-domain parsing,
+overlap rejection, contract mismatch, and sidecar checksum tampering. Full
+Python gate: 160/160 passing with 45 expected fixture skips. The expansion
+remains quarantined until the same audit can run over all six raw shards.

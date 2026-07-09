@@ -95,6 +95,10 @@ Important runners:
 - `run_structured_q_head_pilot.sh` (john0-only frozen-head LR selection on
   disjoint v4 fit/selection blocks, followed by exactly one untouched held-out
   verdict; raw shard SHA-256 values are mandatory and no gameplay auto-launches)
+- `python -m cascadiav3.audit_structured_q_shards` (raw-v4 admission audit;
+  verifies NPZ/sidecar checksums, exact/Q/component identities, one shared
+  source/search/execution/teacher contract, and seed disjointness across both
+  candidate and explicitly excluded locked shards)
 
 Gumbel exporter modes (see `--help`):
 

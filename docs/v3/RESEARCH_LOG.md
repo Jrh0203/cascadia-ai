@@ -509,6 +509,14 @@ passes, the expected 12,000 additional roots remove data-generation latency
 from a larger fit-capacity follow-up; if it fails, they remain unused evidence
 rather than licensing another objective search.
 
+Raw-v4 admission is now a permanent cross-shard check rather than a manual
+manifest comparison. `audit_structured_q_shards` reopens every NPZ, binds it
+to its sidecar checksum/metadata/counts, verifies selected-Q and exact
+component identities, requires one source/rules/search/execution/teacher
+contract, and proves that candidate plus explicitly excluded locked seed
+intervals do not overlap. The real fixed pilot passes as 30 seeds, 2,400
+roots, 1,113,755 actions, 9,240 q-valid actions, and 120 exact rows.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)
