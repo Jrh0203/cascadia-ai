@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-10 10:30 EDT)
+## Status at a glance (updated 2026-07-10 14:05 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -48,10 +48,12 @@ over packed expert tensors with Gumbel search-supervised action values.
   `-0.25` noninferiority margin despite a `1.575x` speedup. The comparator's
   trace-frontier premise was invalid for this knob (42/100 seeds diverge
   pre-exposure by mechanism); it now verdicts on score+speedup only.
-- **Live now:** the approved one-seed d20 replays (cycle4 `2027070908`
-  running, distq `2027070962` next), then the preregistered worlds screen
-  (n256 det4 vs det8, block `2027071500..1599`), then the stage-5
-  jobs12/16/24 concurrency probe relaunch.
+- **Live now (all session-independent on john0):** the preregistered worlds
+  screen (cycle4, n256, K1 on, det4 vs det8, block `2027071500..1599`;
+  smoke config-verified 10/10), then the jobs12/16/24 concurrency probe.
+  Behind it, `worlds_confirm_waiter` computes the screen verdict on-box and
+  launches the n1024 det16/det32 confirmation (~20h, block
+  `2027071600..1699`) only if the preregistered CI+ rule fires.
 - **Recovery CLOSED (07-10):** both one-seed d20 replays validated
   bit-exact and installed; both 100-row category ledgers exist. The paired
   category attribution (distq minus cycle4, n1024/d16) is **flat in every
