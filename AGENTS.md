@@ -61,6 +61,22 @@ transformer stack. The gate: mean seat score ≥ 100 over 1,000 games of
 - **Seeds are allocated, never reused**: pick fresh disjoint blocks and
   record them in the `INFRASTRUCTURE.md` seed registry.
 
+## Autonomy boundary (adopted 2026-07-10)
+
+The agent launches experiments autonomously; John decides what ships.
+
+- The agent **may launch without asking**: preregistered evaluation gates,
+  screens, probes, data generation, and analysis — provided every rule in
+  this file is honored (preregistration, seed registry, one job at a time,
+  logging before launch) and nothing live is displaced or killed. Idle GPU
+  while a preregistered gate waits for permission is a bug, not prudence.
+- **Reserved to John**: champion promotion, starting or resuming a training
+  line, rules/contract changes, methodology rulings on a blocked verdict,
+  spending money, and anything destructive or irreversible.
+- Every autonomous launch is announced (notification or session summary)
+  with its preregistered decision rule, so John can veto mid-flight with a
+  `HOLD_<name>` file rather than being asked in advance.
+
 ## Operational safety
 
 - **Never kill or restart a process without explicit user permission.**
