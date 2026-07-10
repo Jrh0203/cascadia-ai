@@ -2850,17 +2850,21 @@ class BenchmarkStatsTest(unittest.TestCase):
             )
             self.assertFalse(result["performance_gate_pass"])
 
+            # Pre-exposure divergence is expected for this knob (the sample
+            # count reaches every ply through simulated refresh nodes) and is
+            # classified descriptively rather than failing the comparison.
             candidate_rows[5]["chosen_action_id"] = "unrelated-early-divergence"
             candidate_decisions_path.write_text(
                 "".join(json.dumps(row) + "\n" for row in candidate_rows), encoding="utf-8"
             )
-            with self.assertRaisesRegex(ValueError, "before market-sample exposure"):
-                build_comparison(
-                    baseline_path,
-                    candidate_path,
-                    baseline_decisions_path,
-                    candidate_decisions_path,
-                )
+            reclassified = build_comparison(
+                baseline_path,
+                candidate_path,
+                baseline_decisions_path,
+                candidate_decisions_path,
+            )
+            self.assertEqual(reclassified["trace"]["pre_exposure_divergent_seeds"], 1)
+            self.assertEqual(reclassified["trace"]["causally_changed_seeds"], 1)
 
 class GumbelBatchRunnerTest(unittest.TestCase):
     """Contract tests for the --gumbel-benchmark-batch per-seed JSONL path."""

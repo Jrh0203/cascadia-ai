@@ -5118,3 +5118,37 @@ worlds axis is closed at low budget; no high-budget spend without a new
 mechanism argument; report either way. This is a paired score gate, not a
 causal comparator — bit-identical traces are not required, so jobs12
 concurrency is acceptable.
+
+## 2026-07-10 12:05 — Market sample-4 gate: FAIL per preregistration, sample-8 stays; comparator's trace-frontier premise was invalid for this knob
+
+**Verdict (preregistered rule from CAMPAIGN_STATE 07-09: pass requires
+paired t-CI lower bound >= -0.25 AND whole-decision speedup >= 1.15x):**
+candidate samples=4 scored `97.1075` vs the samples=8 baseline `97.2650`
+(same seeds `2027071400..99`, paired n=100): delta `-0.1575`, 95% t-CI
+`[-0.4684, +0.1534]`. The CI floor breaches the `-0.25` noninferiority
+margin, so **the gate FAILS and sample-8 remains in place**, despite a
+clean `1.575x` mean-decision speedup (`2.102x` on refresh-available
+decisions). Artifact:
+`market_samples_20260709_n256_d4_verdict.{json,md}` (SHA `aaeef35d...`),
+published to john0.
+
+**Instrument finding:** the gate script's comparator inherited the exact-K1
+causal-frontier design and crashed ("action trace diverges before
+market-sample exposure at seed 2027071406 ply 16"), killing the chain
+before stage 5. Forensics over both 8,000-row ledgers: only 1/100 seeds
+identical, 57 diverged at/after their first root refresh exposure, and
+**42/100 diverged before it** (many at ply 0-3). That is 42x the measured
+jobs12 concurrency rate and is mechanism, not noise: `market_decision_
+samples` changes interior simulation values at any ply whose search horizon
+reaches a refresh chance node, so the exposure-frontier premise is invalid
+by design for this knob (the rejected MPS screens had shown the same
+signature). The K1 declared-exclusion precedent was NOT applied — this is
+not a contaminated-seed problem. `compare_market_samples` now classifies
+trace divergence descriptively (identical / pre-exposure / post-exposure)
+and verdicts purely on the preregistered score+speedup rule, which never
+required trace identity. Contract tests added; the stale scaffold assertion
+updated; suite 200/200.
+
+**Queue:** GPU is on the approved d20 replays (cycle4 `2027070908` running,
+distq `2027070962` next), then the preregistered worlds screen, then the
+stage-5 jobs12/16/24 concurrency probe relaunch (it never started).
