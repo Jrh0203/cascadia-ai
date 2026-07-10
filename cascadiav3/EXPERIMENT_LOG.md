@@ -4830,3 +4830,37 @@ model throughput, market-sample-4, and jobs12/16/24 concurrency in that order.
 The dead category watcher does not block that automatic sequence. See the
 root `handoff-2026-07-09.md` for the urgent raw-file preservation step and
 complete resume checklist.
+
+## 2026-07-09 21:15 — Distq raw mirror installed; reserve holdouts harvested and globally audited
+
+Session resume executed the handoff's two time-sensitive steps. No scientific
+score was read and no live john0 job was touched.
+
+1. **Distq raw-file preservation.** At 21:09 EDT all six john0 PIDs
+   (`1265148`, `1268022`, `2241595`, `3556049`, `3556050`, `3556053`) were
+   alive and the durable distq mirror directory did not exist. The handoff's
+   copy command mirrored all 40 then-complete 81-row raw files into
+   `cascadiav3/reports/rules_20260709_distq_k8_n1024_d16_raw_games/`. A
+   replacement mirror loop now recopies every 120 seconds until runner
+   `3556049` exits, then performs a final copy. Loop artifacts are
+   `cascadiav3/logs/rules_20260709_distq_n1024_raw_mirror.{sh,log,pid}`
+   (PID `3576186`, a fresh pid file — the failed watcher's pid files were not
+   reused). Completion still requires all 100 files with exactly 81 rows and
+   one game-done row each before any ledger claim.
+
+2. **Reserve-holdout harvest.** `fetch_structured_q_reserve_holdouts.sh`
+   passed end to end: remote/local NPZ and manifest hashes matched for all
+   three roles, exact seed domains pinned, and the nine-shard audit against
+   the locked pilot plus all three fit-expansion shards returned `pass` with
+   3 shards, 60 seeds, 4,800 records, 2,058,733 actions, 18,480 q-valid
+   actions, and 240 exact rows. Combined audit SHA-256 is
+   `aab21d186955f7281fbc1fc0cce9b6ceb8e2b8ed9d9529aa0dc1b6071af5a3d2`.
+   The holdouts remain quarantined; nothing was copied to john0 or any
+   training input.
+
+Verification context at resume: `HEAD == origin/main == 05b11a1f`, only the
+known unrelated untracked operational files present; local web/API service
+healthy (API PID `65336`, suggest exporter PID `68807`, HTTP 200); distq at
+40/100 complete raw games and a last-10 rate near `10 games/hour`, consistent
+with the projected ~02:59 EDT July 10 completion. The scalar seed-0908
+category replay and the post-chain coordination decision remain open.

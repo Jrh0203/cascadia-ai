@@ -41,10 +41,13 @@ running on the same seeds under runner/exporter PIDs `3556049 / 3556050`. At
 The n1024 raw-ledger watcher PID `1284321` is dead. It durably copied 99/100
 scalar games but missed seed `2027070908`; the scalar temporary directory is
 gone. Its log failed closed on that exact missing file, so neither the scalar
-category ledger nor category summary was published. Because the watcher
-exited before distq began, the live distq raw files currently exist only under
-`/tmp/tmphk9xcpuk/gumbel_batch` and are at risk when its benchmark process
-exits. The aggregate scalar report is valid; category attribution is not yet
+category ledger nor category summary was published. **Mitigated 21:15 EDT:**
+the live distq raw files are now mirrored into
+`cascadiav3/reports/rules_20260709_distq_k8_n1024_d16_raw_games/` by a
+replacement copy loop
+(`cascadiav3/logs/rules_20260709_distq_n1024_raw_mirror.{sh,log,pid}`, PID
+`3576186`, 120s cadence, final copy after runner `3556049` exits). The scalar
+seed-0908 exact replay remains the open recovery step. The aggregate scalar report is valid; category attribution is not yet
 recoverable without an exact one-seed scalar replay plus a replacement distq
 raw-file mirror. Watcher pid files are
 `cascadiav3/logs/rules_20260709_distq_k8_n256_raw_watcher.pid` and
@@ -154,7 +157,15 @@ placed at the declared sidecar paths, and both validators were rerun to pass.
 Failed chain evidence is preserved with `.failed_manifest_path` names. Commit
 `4cd9c728` makes every reserve output sidecar explicit and tests that contract.
 
-**Candidate-blind reserves (complete per host; global harvest pending):** roles
+**Candidate-blind reserves (harvested and globally audited 21:15 EDT):** the
+canonical `fetch_structured_q_reserve_holdouts.sh` run passed: remote/local
+hashes matched for all three roles, exact seed domains pinned, and the
+nine-shard audit against the locked pilot plus all three fit-expansion shards
+returned `pass` (3 shards, 60 seeds, 4,800 records, 2,058,733 actions, 18,480
+q-valid actions, 240 exact rows). Combined audit SHA-256
+`aab21d186955f7281fbc1fc0cce9b6ceb8e2b8ed9d9529aa0dc1b6071af5a3d2`. The
+holdouts remain quarantined from john0 and training. Original per-host record:
+roles
 were fixed before any candidate existed: john2 selection seeds
 `2027073750..69`, john3 verdict `2027073770..89`, and john4 independent
 replication `2027073790..3809`, each 20 seeds / 1,600 roots at the identical
