@@ -4864,3 +4864,29 @@ healthy (API PID `65336`, suggest exporter PID `68807`, HTTP 200); distq at
 40/100 complete raw games and a last-10 rate near `10 games/hour`, consistent
 with the projected ~02:59 EDT July 10 completion. The scalar seed-0908
 category replay and the post-chain coordination decision remain open.
+
+## 2026-07-09 22:25 — Rules-of-engagement adoption; john0 checkpoint retention pass
+
+Operational transition, no scientific claim. Commit `b67b5163` adopts the
+approved practices: durable-first raw-games evidence in the Gumbel benchmark
+(`--raw-games-dir` default beside `--out`, stale-file refusal, report
+provenance field, 8 new unit tests; full suite 176 passing), the waiter
+HOLD/heartbeat pattern (`cascadiav3/scripts/lib_waiter.sh`, selftest passing),
+the one-command status snapshot (`cascadiav3/scripts/campaign_status.sh`),
+AGENTS.md rules-of-engagement amendments, the 2027 seed-registry catch-up,
+and the `docs/handoffs/` convention. The post-chain waiter script and pinned
+archive were copied from `/tmp` to `cascadiav3/logs/` (archive SHA verified
+`460857f2...`); the running waiter was not touched.
+
+Checkpoint retention (first application of the new line-close policy):
+deleted 380 `step_*.{pt,weights.pt}` intermediates across 20 closed-line
+checkpoint directories on john0 (EI-0/EI-1 era, phase0/smoke trees, gumbel
+cycles 1-3/3_m/4_l/5/5_nofleet/6/6_fleettrial, ens_m_seed_a/b), freeing
+150.3 GiB (checkpoints 250G -> 52G; john0 disk 50% -> 34%). Kept everywhere:
+`best_locked_val.*`, `swa.*`, every manifest/metrics/report, the highest
+step per line, and the record-referenced selected steps
+(`cycle3_m/step_0005500+0010000`, `cycle4_l/step_0007000`,
+`cycle6/step_0005000`, `ens_m_seed_a/step_0018500`). champion `cycle4`,
+live `distq_k8`, and the loose crt_* pilot checkpoints were untouched.
+Kept-artifact sanity listing passed; the live distq n1024 arm and all
+watcher/waiter PIDs were verified alive after the pass.
