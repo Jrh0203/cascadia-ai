@@ -24,10 +24,15 @@ the in-flight picture changes.
   reserve holdouts stay quarantined. EXPERIMENT_LOG 07-10 10:20.
 - **Stage 3 (CUDA packed throughput): pass, engineering-only.** S only
   `1.9x` M on the 5090 — small-model serving closed on john0.
-- **Stage 4 (market sample-4 gate): RUNNING** — candidate samples=4, seeds
-  `2027071400x100`, paired vs the stage-1 samples=8 baseline report.
-  ~2.5h expected from 10:02 EDT.
-- **Stage 5 (jobs12/16/24 concurrency): queued.**
+- **Stage 4 (market sample-4 gate): FAIL — sample-8 stays.** Paired
+  `-0.1575`, CI `[-0.4684,+0.1534]` breaches the preregistered `-0.25`
+  floor; speedup `1.575x` was not enough. The comparator's exposure-frontier
+  check was invalid for this knob (42/100 pre-exposure divergences by
+  mechanism) and now classifies traces descriptively. Artifact:
+  `market_samples_20260709_n256_d4_verdict.{json,md}`.
+- **Stage 5 (jobs12/16/24 concurrency): never ran** — the stage-4
+  comparator crash killed the chain. Queued for relaunch after the replays
+  and the worlds screen.
 
 **Then (GPU free): the two one-seed d20 replays** — see the recovery
 contract below and `cascadiav3/scripts/run_seed_category_replay.sh`

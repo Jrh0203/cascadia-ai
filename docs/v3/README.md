@@ -43,11 +43,15 @@ over packed expert tensors with Gumbel search-supervised action values.
 - **Smaller-model serving: closed on john0 CUDA (07-10).** The packed
   throughput probe measured S at only `1.9x` M (XS `2.0x`, tiny `2.8x`) —
   far under the MPS ratios and under the >3x already shown insufficient.
-- **Live now:** f35 post-chain stage 4 (`postchain_resume2_f35b0d0b`) —
-  market sample-4 gate, candidate samples=4 on seeds `2027071400x100`
-  paired against the stage-1 samples=8 baseline; then stage 5 jobs
-  concurrency calibration. Pause with
-  `touch cascadiav3/logs/HOLD_postchain_resume` on john0.
+- **Market sample-4 gate: FAIL (07-10) — sample-8 stays.** Paired delta
+  `-0.1575`, CI `[-0.4684,+0.1534]`: the floor breaches the preregistered
+  `-0.25` noninferiority margin despite a `1.575x` speedup. The comparator's
+  trace-frontier premise was invalid for this knob (42/100 seeds diverge
+  pre-exposure by mechanism); it now verdicts on score+speedup only.
+- **Live now:** the approved one-seed d20 replays (cycle4 `2027070908`
+  running, distq `2027070962` next), then the preregistered worlds screen
+  (n256 det4 vs det8, block `2027071500..1599`), then the stage-5
+  jobs12/16/24 concurrency probe relaunch.
 - **Open recovery items:** two one-seed d20 replays — scalar `2027070908`
   and distq `2027070962` (lost to the pre-durable-first temp-dir race). The
   category-mechanism verdict is blocked until both 100-row category ledgers
