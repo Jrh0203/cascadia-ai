@@ -5,7 +5,35 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-09 rules correction — rebaseline before research resumes)
+## RESUME HERE (07-10 03:30 — rebaseline COMPLETE; cycle4 retained; post-chain resumed)
+
+**Final corrected-rules verdict (07-10 ~03:05):** distq-k8 n1024/d16 scored
+`98.3850`; paired distq-minus-cycle4 at n1024/d16 is `+0.0875`, 95% t-CI
+`[-0.2411,+0.4161]`, not significant. **Cycle4 scalar is retained as
+champion.** Within-model n1024/d16-minus-n256/d4 scaling is CI+ for both
+heads (`+1.2300` scalar, `+1.0775` distq). Verdict artifacts:
+`rules_20260709_rebaseline_verdict.{json,md}` on john0.
+
+**Second raw-seed loss:** the mirror captured 99/100 distq raw files; seed
+`2027070962` was destroyed by the d20 harness temp-dir cleanup at process
+exit (same class as scalar `2027070908`). Both seeds need the identical
+one-seed d20 replay under their pinned decision ledgers and seat totals
+before `compare_game_categories` can run. Durable-first raw-games output
+(commit `b67b5163`) removes this failure class from all post-f35 runs.
+
+**Post-chain state:** the original waiter deployed f35 at 02:51 but wrote its
+revision marker to `postchain_deployed_revision.txt` while the gates require
+`exact_k1_deployed_revision.txt`; every stage failed closed and the waiter
+exited without running anything. After re-verifying the deployed tree against
+the durable archive, the marker was copied to the expected name and the stage
+block relaunched verbatim as
+`cascadiav3/logs/postchain_resume_f35b0d0b.{sh,log,pid}` (PID `3620337`,
+heartbeats + `HOLD_postchain_resume` pause file). Stage 1 exact-K1 gate is
+running on seeds `2027071400x100`; then structured-Q head pilot, CUDA model
+throughput, market sample-4, and jobs12/16/24 concurrency, strictly
+sequential.
+
+## PREVIOUS RESUME (07-09 rules correction — rebaseline before research resumes)
 
 The official rules audit found a load-bearing policy-space error: the free
 three-of-a-kind wildlife refresh is optional, but every automated policy had

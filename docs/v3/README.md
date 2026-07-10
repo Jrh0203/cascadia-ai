@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-09 evening)
+## Status at a glance (updated 2026-07-10 03:30 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -18,18 +18,23 @@ over packed expert tensors with Gumbel search-supervised action values.
   before refill) compatibility-broke every earlier number. All promotion
   evidence must carry rules ID `..._rules_2026_07_09`. See
   [RULES_CONTRACT.md](RULES_CONTRACT.md).
-- **Corrected-rules scoreboard (100 games, seeds 2027070900..99):**
+- **Corrected-rules scoreboard (100 games, seeds 2027070900..99), COMPLETE:**
   greedy `87.5450` → no-search policy `91.8425` → cycle4 n256/d4 `97.0675`
-  → distq-k8 n256/d4 `97.3075` (+0.24, not significant) → **cycle4
-  n1024/d16 `98.2975`** (complete). The distq-k8 n1024/d16 arm is the live
-  decisive run; its paired verdict publishes automatically on completion.
-- **After that, john0 runs an automatic queued chain:** exact-K1 100-seed
-  gate → structured-Q frozen-head pilot (preregistered thresholds; data
-  staged and audited) → CUDA packed-throughput probe → market sample-4 gate
-  → jobs concurrency calibration.
-- **Open recovery item:** scalar seed `2027070908` category replay under the
-  exact d20 contract; the category-mechanism verdict is blocked until both
-  100-row category ledgers exist (totals verdict is not blocked).
+  → distq-k8 n256/d4 `97.3075` (+0.24 ns) → cycle4 n1024/d16 `98.2975` →
+  **distq-k8 n1024/d16 `98.3850` (+0.0875 ns vs scalar)**. Verdict:
+  **cycle4 scalar retained as champion** — the heads are statistically tied
+  at high budget (reproducing the legacy tie); distq remains strictly the
+  better low-budget server. High-budget scaling is CI+ within both heads
+  (~+1.1 to +1.2). Gap to 100: ~-1.6.
+- **Live now (resumed 03:25 after a marker-mismatch crash):** the f35
+  post-chain on john0, PID `3620337` — exact-K1 100-seed gate (running) →
+  structured-Q frozen-head pilot → CUDA packed-throughput probe → market
+  sample-4 gate → jobs concurrency calibration. Pause with
+  `touch cascadiav3/logs/HOLD_postchain_resume` on john0.
+- **Open recovery items:** two one-seed d20 replays — scalar `2027070908`
+  and distq `2027070962` (lost to the pre-durable-first temp-dir race). The
+  category-mechanism verdict is blocked until both 100-row category ledgers
+  exist; the totals verdict above is not blocked.
 - **Central scientific finding:** evaluation noise is the binding constraint
   (median decision SNR ≈ 1; ~46% of decisions noise-flippable). Exactness
   beats estimation wherever practical. Ranked directions and closed

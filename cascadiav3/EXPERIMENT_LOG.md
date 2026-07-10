@@ -4890,3 +4890,45 @@ step per line, and the record-referenced selected steps
 live `distq_k8`, and the loose crt_* pilot checkpoints were untouched.
 Kept-artifact sanity listing passed; the live distq n1024 arm and all
 watcher/waiter PIDs were verified alive after the pass.
+
+## 2026-07-10 03:30 — Corrected n1024 verdict: distq ties scalar; one distq raw seed lost; post-chain marker crash fixed and resumed
+
+**Corrected-rules distq-k8 n1024/d16 completed on schedule (100 seeds, source
+d20, rules `..._2026_07_09`): mean seat `98.3850`.** The verdict watcher
+published `rules_20260709_rebaseline_verdict.json` with all four preregistered
+comparisons (n=100 paired):
+
+- **distq minus cycle4 at n1024/d16: `+0.0875`, 95% t-CI `[-0.2411,+0.4161]`,
+  ns — cycle4 scalar is RETAINED as champion at high budget.** This exactly
+  reproduces the legacy tie (98.40 vs 98.28) under corrected rules.
+- distq minus cycle4 at n256/d4: `+0.2400`, CI `[-0.1139,+0.5939]`, ns.
+- cycle4 n1024/d16 minus n256/d4: `+1.2300`, CI `[+0.8564,+1.6036]`, CI+.
+- distq n1024/d16 minus n256/d4: `+1.0775`, CI `[+0.7403,+1.4147]`, CI+.
+
+Within-model high-budget scaling is strongly positive for both heads; the
+head choice is score-neutral at n1024/d16 under corrected rules. Neither arm
+reaches 100 (gap ~-1.6).
+
+**Raw-ledger gap #2:** the replacement mirror loop (120s cadence) captured
+99/100 distq raw files; seed `2027070962` completed in the final window and
+its file was destroyed when the d20 harness deleted its `/tmp` directory at
+process exit, before the post-exit copy ran. All 99 mirrored files have
+exactly 81 rows. Seed 0962's seat totals are pinned in the aggregate report
+and its 80 decision rows are durable, so it joins scalar seed `2027070908`
+under the same one-seed d20 replay contract. The durable-first
+`--raw-games-dir` change (commit `b67b5163`) eliminates this class for all
+future arms; it was not in d20.
+
+**Post-chain crash and resume:** the checksum-pinned waiter (PID 2241595)
+correctly verified and deployed the f35 snapshot at 02:51 and wrote
+`postchain_deployed_revision.txt`, but `run_exact_k1_gate.sh` requires the
+marker at `exact_k1_deployed_revision.txt`; the gate failed closed
+("source snapshot lacks the exact deployed revision marker") and the chain
+stopped before any stage ran. The deployed tree was re-verified against the
+durable archive copy (`tar -d`: content-identical, uid/gid only) and the
+marker copied to the expected filename. The stage block was relaunched
+verbatim as `cascadiav3/logs/postchain_resume_f35b0d0b.{sh,log,pid}` (PID
+`3620337`) with heartbeats and `HOLD_postchain_resume` pause support per the
+new waiter pattern. Stage 1 (exact-K1 gate, seeds `2027071400x100`) rebuilt
+the exporter from f35 and is running. Remaining stages: structured-Q head
+pilot, CUDA model throughput, market sample-4, jobs concurrency.

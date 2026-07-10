@@ -554,14 +554,17 @@ and the permanent reserve launcher now pins and tests the sidecar path.
 
 ## 5. Future research directions (ranked, as of 07-09)
 
-1. **Finish the corrected distq rebaseline** — ACTIVE. At n256/d4, distq's
-   `+0.2400` same-seed gain was inconclusive (95% t-CI
-   `[-0.1139,+0.5939]`). The corrected scalar n1024/d16 arm is now complete at
-   `98.2975`; distq n1024 is the decisive live arm. No EI corpus or promotion
-   result may cross that boundary. Category attribution is temporarily
-   blocked because the raw-ledger watcher missed scalar seed `2027070908` and
-   exited before mirroring distq; the aggregate total-score verdict remains
-   valid once distq completes.
+1. **Corrected distq rebaseline — COMPLETE (07-10).** distq-k8 n1024/d16
+   scored `98.3850` versus scalar `98.2975`: paired `+0.0875`, 95% t-CI
+   `[-0.2411,+0.4161]`, not significant — **cycle4 scalar retained as
+   champion**, exactly reproducing the legacy high-budget tie under corrected
+   rules. distq stays the strictly better low-budget server (97.31 at n256).
+   Within-model n1024/d16 scaling is CI+ for both heads (+1.23 / +1.08).
+   Distq EI resumption is therefore not score-motivated at high budget;
+   revisit only if a future direction needs the quantile head's low-budget
+   or league-diversity properties. Category attribution awaits two one-seed
+   d20 replays (scalar `2027070908`, distq `2027070962` — both lost to the
+   pre-durable-first temp-dir race; totals verdicts are unaffected).
 2. **Exact final-personal-turn K1** — IMPLEMENTED; 2-seed causal MPS smoke
    was score-flat and made the exact frontier 8.86x faster. A fresh 100-seed
    corrected n256/d4 CUDA baseline/K1 gate is queued. K2 is gated on that
