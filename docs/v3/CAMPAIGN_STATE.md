@@ -34,17 +34,17 @@ the in-flight picture changes.
   comparator crash killed the chain. Queued for relaunch after the replays
   and the worlds screen.
 
-**GPU queue (self-driving):** replay `cycle4 2027070908` is generating now
-(orchestrator background task; then `fetch-validate` installs it). Replay
-`distq 2027070962` follows. `cascadiav3/logs/worlds_screen_waiter.{sh,log,pid}`
-on john0 watches both raw dirs and, at 100+100 files with an idle GPU,
-chains the preregistered worlds screen
-(`cascadiav3/logs/run_worlds_screen.sh`, det4 then det8, block
-`2027071500..1599`) and then the stage-5 jobs12/16/24 concurrency probe.
-Pause with `touch cascadiav3/logs/HOLD_worlds_screen`. Screen verdict runs
-orchestrator-side via `cascadiav3.compare_search_shape`. After the ledgers:
-`build_game_ledger` for both arms, `compare_game_categories`, and
-`fetch_rules_n1024_verdict.sh`.
+**GPU queue (session-independent):** `cascadiav3/logs/gpu_autochain.{sh,log,pid}`
+on john0 owns the whole remaining pipeline — cycle4 seed-0908 replay
+(validate+install, regenerating if the in-flight run dies), distq seed-0962
+replay, both category ledgers + the paired category mechanism verdict
+(`rules_20260709_n1024_category_verdict.{json,md}`), then the preregistered
+worlds screen (det4/det8, block `2027071500..1599`), then the stage-5
+jobs12/16/24 concurrency probe. Replay validation failures are logged
+loudly and skipped rather than stranding the GPU. Pause with
+`touch cascadiav3/logs/HOLD_gpu_autochain`. The screen's paired verdict
+runs orchestrator-side via `cascadiav3.compare_search_shape`; the canonical
+harvest is `fetch_rules_n1024_verdict.sh` once the category ledgers exist.
 
 ## PREVIOUS RESUME (07-10 03:30 — rebaseline COMPLETE; cycle4 retained; post-chain resumed)
 
