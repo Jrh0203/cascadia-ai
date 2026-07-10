@@ -5059,3 +5059,33 @@ closed by ruling** — it would need a genuine max^n/chance tree for at most
 the same zero points the model already captures at the frontier, so deeper
 plies stay on model inference. The eval-noise thesis survives intact: the
 final ply is simply the one place the model is already exact-equivalent.
+
+## 2026-07-10 11:00 — Descriptive category profile of the champion: the gap to 100 is diffuse, not a failure mode
+
+CPU-only analysis of the complete published raw game ledgers (99/100 seeds
+per arm, pre-replay; descriptive, no paired claim). Champion cycle4
+n1024/d16 decomposition: **98.301 = wildlife 61.03 + habitat 32.03 + nature
+5.24** (per-species means: fox 15.85, salmon 12.89, hawk 11.87, elk 11.47,
+bear 8.95; habitat 6.2-6.6 per terrain).
+
+Three findings:
+
+1. **No catastrophic seats.** Zero of 396 seats scored below 90; p10/p50/p90
+   is 95/98/102 and 31.3% of seats already clear 100. There is no rescueable
+   failure mode; the remaining ~1.7 points are diffuse marginal decisions.
+   This is exactly what the decision-SNR thesis predicts.
+2. **Bear zeroing is deliberate, near-cost-free triage — not a leak.** Bears
+   score zero in 22.5% of seats (every other species <=1%), forfeiting an
+   11.54 conditional mean. But zero-bear seats total 98.03 vs 98.38 for
+   bear-scoring seats: the engine recovers ~11.2 of the ~11.5 forfeited
+   points elsewhere. Residual cost ~0.08 mean points, uniform across seat
+   positions (22/22/19/26). A "fix bears" direction is dead on arrival.
+3. **High-budget scaling bought habitat, not wildlife.** n1024/d16 vs
+   n256/d4: wildlife +0.25 while habitat +0.60 (31.43 -> 32.03). The budget
+   win concentrates in long-horizon spatial planning — the noisiest, most
+   plan-dependent component — which is direct empirical support for the
+   worlds/determinization sweep (RESEARCH_LOG §5 item 7) as the open lever.
+
+Distq n256/d4 shows the same shape one notch lower (97.311 = 60.78 + 31.43
++ 5.10). Full 100-seed category ledgers still await the two one-seed
+replays; this note carries no verdict weight.
