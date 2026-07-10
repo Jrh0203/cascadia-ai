@@ -52,10 +52,12 @@ over packed expert tensors with Gumbel search-supervised action values.
   running, distq `2027070962` next), then the preregistered worlds screen
   (n256 det4 vs det8, block `2027071500..1599`), then the stage-5
   jobs12/16/24 concurrency probe relaunch.
-- **Open recovery items:** two one-seed d20 replays — scalar `2027070908`
-  and distq `2027070962` (lost to the pre-durable-first temp-dir race). The
-  category-mechanism verdict is blocked until both 100-row category ledgers
-  exist; the totals verdict above is not blocked.
+- **Recovery CLOSED (07-10):** both one-seed d20 replays validated
+  bit-exact and installed; both 100-row category ledgers exist. The paired
+  category attribution (distq minus cycle4, n1024/d16) is **flat in every
+  category** (wildlife `+0.145` ns, habitat `-0.050` ns, nature `-0.008`
+  ns) — no hidden mechanism trade behind the head tie. Canonical artifact
+  set harvested to `cascadiav3/reports/rules_20260709_rebaseline_complete/`.
 - **Central scientific finding:** evaluation noise is the binding constraint
   (median decision SNR ≈ 1; ~46% of decisions noise-flippable). Exactness
   beats estimation wherever practical. Ranked directions and closed

@@ -600,9 +600,11 @@ manifest `c8c80c56...`, verdict shard `218ff1b5...`).
    Within-model n1024/d16 scaling is CI+ for both heads (+1.23 / +1.08).
    Distq EI resumption is therefore not score-motivated at high budget;
    revisit only if a future direction needs the quantile head's low-budget
-   or league-diversity properties. Category attribution awaits two one-seed
-   d20 replays (scalar `2027070908`, distq `2027070962` — both lost to the
-   pre-durable-first temp-dir race; totals verdicts are unaffected).
+   or league-diversity properties. Category attribution completed 07-10
+   after both one-seed d20 replays validated bit-exact: the tie is flat in
+   every category (wildlife `+0.145` ns, habitat `-0.050` ns, nature
+   `-0.008` ns) — the heads are equivalent at n1024, not trading
+   mechanisms. `rules_20260709_n1024_category_verdict.{json,md}`.
 2. **Exact final-personal-turn K1 — ADOPTED (07-10); exact K2 closed by
    ruling.** The 100-seed CUDA gate verdict on 99 causally-valid pairs
    (seed `2027071427` excluded by John's declared ruling — jobs12

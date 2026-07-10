@@ -5,7 +5,16 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-10 10:45 — K1 ADOPTED by ruling; structured-Q pilot FAILED; stage 4 live)
+## RESUME HERE (07-10 13:20 — recovery CLOSED; worlds screen on GPU; confirmation auto-gated)
+
+**Rebaseline recovery is fully closed:** both one-seed d20 replays
+validated bit-exact and installed (ledgers 100/100); category attribution
+is flat in every category (see EXPERIMENT_LOG 13:15); canonical harvest
+complete. The GPU is on the preregistered worlds screen (det4 then det8);
+`worlds_confirm_waiter` will compute the verdict and launch the n1024
+det16/det32 confirmation only on CI+. Earlier same-day context below.
+
+## PREVIOUS RESUME (07-10 10:45 — K1 ADOPTED by ruling; structured-Q pilot FAILED; stage 4 live)
 
 **Post-chain progress (resume2, PID in
 `cascadiav3/logs/postchain_resume2_f35b0d0b.pid`):**
