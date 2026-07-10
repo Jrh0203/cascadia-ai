@@ -5183,3 +5183,17 @@ empirically validates the replay recovery contract itself: a solo rerun
 reproduced a game originally generated under jobs12 shared-bridge
 concurrency, so this seed was not concurrency-perturbed. The autochain is
 now generating the distq seed-2027070962 replay (stage B).
+
+## 2026-07-10 13:00 — Worlds confirmation fully automated behind the preregistered CI+ gate
+
+`cascadiav3/logs/worlds_confirm_waiter.{sh,log,pid}` on john0 waits for
+`gpu_autochain` to finish, computes the screen verdict on-box
+(`worlds_screen_20260710_n256_verdict.{json,md}` via the stdlib-portable
+`compare_search_shape`), and launches
+`run_worlds_confirm.sh` (cycle4 n1024/top16, K1 on, det16 vs det32,
+reserved block `2027071600..1699`, ~20h) ONLY when
+`proceed_to_high_budget` is true — exactly the decision rule preregistered
+at 11:20. A non-CI+ screen logs "worlds axis closed at low budget" and
+spends nothing. Pause with `touch cascadiav3/logs/HOLD_worlds_confirm`.
+With this, every remaining decision point in the preregistered plan
+executes without an orchestrator session.
