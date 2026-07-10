@@ -37,7 +37,7 @@ over packed expert tensors with Gumbel search-supervised action values.
 
 For exact live PIDs, artifact hashes, and the resume checklist, read
 [CAMPAIGN_STATE.md](CAMPAIGN_STATE.md) RESUME HERE first, then the latest
-dated handoff ([handoff-2026-07-09.md](../../handoff-2026-07-09.md) — a
+dated handoff ([handoff-2026-07-09.md](../handoffs/handoff-2026-07-09.md) — a
 timestamped snapshot, weaker than current `main`).
 
 ## Read order for a fresh session
@@ -80,7 +80,7 @@ timestamped snapshot, weaker than current `main`).
 - [Training Pipeline](TRAINING_PIPELINE.md): data formats, objectives, expert
   iteration, checkpointing, and promotion gates.
 - [Performance](PERFORMANCE.md): measured loader/training/gameplay facts.
-- Latest handoff: [handoff-2026-07-09.md](../../handoff-2026-07-09.md).
+- Latest handoff: [handoff-2026-07-09.md](../handoffs/handoff-2026-07-09.md).
 
 The implementation package lives in
 [cascadiav3/README.md](../../cascadiav3/README.md).

@@ -128,7 +128,11 @@ Gumbel exporter modes (see `--help`):
   candidate-only Gumbel batteries. In addition to the aggregate report and
   per-ply decision ledger, `--games-out` persists every completed game's raw
   wildlife/habitat/Nature/total breakdown in seed order and refuses partial
-  seed coverage. Reports hash the exporter, manifest, and weights, and record
+  seed coverage. Raw per-seed game files are written durably to
+  `--raw-games-dir` (default `<out stem>_raw_games` beside `--out`; recorded
+  in the report), and a directory holding stale raw files is refused.
+  `--ephemeral-raw-games` restores the old temporary-directory behavior for
+  throwaway smokes only — never scientific arms. Reports hash the exporter, manifest, and weights, and record
   whether execution used subprocess slices or the shared batch runner plus
   its requested jobs, parallel-game cap, bridge topology, and device.
 - `--gumbel-selfplay-tensor-corpus`: schema-v4 self-play training shards with

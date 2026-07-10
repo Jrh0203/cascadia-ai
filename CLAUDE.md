@@ -18,5 +18,6 @@ Use:
 ```bash
 cargo check --workspace
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=cascadiav3/src python3 -m unittest discover -s cascadiav3/tests -v
+# Cluster suite: only when touching python/, tools/cluster_*, tests/cluster_unit, or infra/
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=python:tools uv run pytest -q tests/cluster_unit tools/test_cluster_*.py
 ```

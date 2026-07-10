@@ -101,6 +101,28 @@ ssh john0 'cd /home/john0/cascadia && (nohup bash cascadiav3/logs/X_job.sh > cas
   consolidated watchdog per work-wave. Monitors die with the session: on
   any resume, first check every in-flight job log.
 
+**Waiter/chain pattern:** queued waiters live under `cascadiav3/logs/`
+(script + pinned inputs — never `/tmp`), source
+`cascadiav3/scripts/lib_waiter.sh`, and call `waiter_wait_for_pids` /
+`waiter_gate` at every stage boundary. Pause an idle waiter by touching
+`cascadiav3/logs/HOLD_<name>`; resume by removing it. Pausing a waiter
+mid-stage requires `kill -STOP <pid>` / `kill -CONT <pid>` (user permission
+required, per AGENTS.md). All waiters and watchers emit timestamped
+heartbeats; `bash cascadiav3/scripts/campaign_status.sh` is the one-command
+read-only snapshot that reports pid liveness, heartbeat freshness, HOLDs,
+raw-ledger progress, GPU state, and fleet reachability.
+
+**Durable-first evidence:** the Gumbel benchmark writes raw per-seed game
+files to `<report>_raw_games/` beside `--out` by default and refuses a
+directory holding stale raw files. `--ephemeral-raw-games` (temp dir) is for
+throwaway smokes only. Never launch a scientific arm whose raw ledger lives
+in `/tmp`.
+
+**Checkpoint retention:** when a research line closes, prune its
+`step_*.pt` intermediates on john0, keeping `best_locked_val*` + SWA +
+final weights plus every manifest, metrics, and report file. Rejected
+candidates keep their best checkpoint (opponent pool).
+
 **Recovery:** resume training only from a matching manifest and source
 identity; never reuse deleted worker-local artifacts as durable evidence.
 If a long run is interrupted, fetch manifests and metrics before deciding
@@ -170,6 +192,14 @@ python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
 | 2026810000 / 2026910000 | distq EI-1 train/val corpus |
 | 2026781000+ | fleet3 shards |
 | 2026805000+ | fleet4 (staged) · 2026815000+: fleet5 shards |
+| 2027070900–0999 | corrected-rules rebaseline battery (all arms, scalar + distq) |
+| 2027071360–2003 | 07-09 engineering smokes (exact-K1 1360+, market samples 1500+, S calibration 1700+, q-risk 1900+, shared-batch 2000+) |
+| 2027073000–3129 | pairwise label audit (3000+) and v3 fit/selection/validation corpus (3100–29) |
+| 2027073300–3301 | parallel leaf-rollout screens |
+| 2027073400–3447 | jobs12/16/24 CUDA concurrency calibration (queued) |
+| 2027073500–3529 | structured-Q pilot: fit / LR-selection / untouched verdict |
+| 2027073600–3749 | structured-Q fit expansion (quarantined) |
+| 2027073750–3809 | structured-Q reserves: selection / verdict / replication |
 
 ## 6. Fleet operations (john1–4)
 

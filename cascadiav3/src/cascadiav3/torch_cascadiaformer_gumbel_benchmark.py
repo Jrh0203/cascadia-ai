@@ -25,6 +25,7 @@ import sys
 import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import ExitStack
 from pathlib import Path
 from statistics import mean
 from typing import Any
@@ -249,6 +250,26 @@ def read_batch_seed_lines(output_dir: Path, seeds: list[int]) -> list[dict[str, 
             raise RuntimeError(f"gumbel benchmark batch output for seed {seed} has no done record")
         lines.extend(seed_lines)
     return lines
+
+
+def default_raw_games_dir(out_path: Path) -> Path:
+    """Durable per-seed raw-games directory derived from the report path.
+
+    Raw game files are scientific evidence; their only copy must never live in
+    a temporary directory (the 2026-07-09 seed-2027070908 category loss)."""
+    return out_path.with_name(out_path.stem + "_raw_games")
+
+
+def prepare_raw_games_dir(raw_games_dir: Path) -> Path:
+    """Create the durable raw-games directory, refusing stale raw files."""
+    raw_games_dir.mkdir(parents=True, exist_ok=True)
+    stale = sorted(str(path) for path in raw_games_dir.glob("gumbel_*.jsonl"))
+    if stale:
+        raise RuntimeError(
+            "raw games directory already contains raw JSONL files; refusing to "
+            f"mix runs: {raw_games_dir} ({len(stale)} files, first {stale[0]})"
+        )
+    return raw_games_dir
 
 
 def run_gumbel_games_batch(
@@ -514,6 +535,7 @@ def run_gumbel_benchmark(
     source_revision: str | None = None,
     decision_rows_path: Path | None = None,
     game_rows_path: Path | None = None,
+    raw_games_dir: Path | None = None,
     q_risk_mode: str = "mean",
     policy_mode: str = "logits",
     pairwise_policy_top_k: int = 16,
@@ -551,8 +573,14 @@ def run_gumbel_benchmark(
 
     candidate_lines: list[dict[str, Any]] = []
     started = time.perf_counter()
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_path = Path(tmp)
+    with ExitStack() as stack:
+        if raw_games_dir is None:
+            # Ephemeral fallback for unit tests and throwaway smokes only:
+            # per-seed raw files vanish with the process. Production entry
+            # points pass a durable directory (durable-first evidence rule).
+            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+        else:
+            tmp_path = prepare_raw_games_dir(raw_games_dir)
 
         if batch_runner:
             # One Rust process for the whole battery: --jobs parallel games
@@ -562,7 +590,7 @@ def run_gumbel_benchmark(
                 seeds=seeds,
                 model_service=service,
                 model_manifest=manifest,
-                output_dir=tmp_path / "gumbel_batch",
+                output_dir=tmp_path,
                 jobs=jobs,
                 n_simulations=n_simulations,
                 top_m=top_m,
@@ -743,6 +771,7 @@ def run_gumbel_benchmark(
         "experiment_id": experiment_id,
         "execution": execution,
         "artifacts": artifacts,
+        "raw_games_dir": str(raw_games_dir) if raw_games_dir is not None else None,
         "binary": str(binary),
         "manifest": str(manifest),
         "model_service": service,
@@ -940,7 +969,27 @@ def main() -> int:
         default="cascadiav3/reports/gumbel_benchmark_games.jsonl",
         help="Persistent per-seed completed-game score/category JSONL",
     )
+    parser.add_argument(
+        "--raw-games-dir",
+        default="",
+        help="Durable directory for per-seed raw game JSONL "
+        "(default: <out stem>_raw_games beside --out)",
+    )
+    parser.add_argument(
+        "--ephemeral-raw-games",
+        action="store_true",
+        help="Write raw per-seed files to a temporary directory that vanishes "
+        "with the process (throwaway smokes only — never scientific arms)",
+    )
     args = parser.parse_args()
+
+    raw_games_dir: Path | None = None
+    if not args.ephemeral_raw_games:
+        raw_games_dir = (
+            Path(args.raw_games_dir)
+            if args.raw_games_dir
+            else default_raw_games_dir(Path(args.out))
+        )
 
     seeds = parse_seeds(seeds=args.seeds, first_seed=args.first_seed, games=args.games)
     report = run_gumbel_benchmark(
@@ -976,6 +1025,7 @@ def main() -> int:
         source_revision=args.source_revision or None,
         decision_rows_path=Path(args.decisions_out),
         game_rows_path=Path(args.games_out),
+        raw_games_dir=raw_games_dir,
         q_risk_mode=args.q_risk_mode,
         policy_mode=args.policy_mode,
         pairwise_policy_top_k=args.pairwise_policy_top_k,
