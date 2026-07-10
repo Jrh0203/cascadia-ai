@@ -1,9 +1,10 @@
-# Cascadia AI
+# Cascadia AI — Agent Rules of Engagement
 
 ## Goal
 
 Build a superhuman Cascadia board-game AI, currently through the Cascadia v3
-transformer stack.
+transformer stack. The gate: mean seat score ≥ 100 over 1,000 games of
+4-player self-play.
 
 ## Standards
 
@@ -13,29 +14,89 @@ transformer stack.
 - No hacks or undocumented shortcuts. If an unavoidable compromise remains,
   document it in `docs/TECH_DEBT.md` with cause, proper fix, and blast radius.
 
-## Current Source Of Truth
+## Source of truth
 
-- Read `docs/v3/README.md` first.
-- Architecture lives in `docs/v3/ARCHITECTURE.md`.
-- Training and promotion methodology lives in `docs/v3/TRAINING_PIPELINE.md`.
-- Implementation details and command entry points live in `cascadiav3/README.md`.
-- Bacalhau worker operation lives in `docs/BACALHAU_USAGE.md`.
+- **Start every session at `docs/v3/README.md`** — the authoritative status
+  and doc map. Then `docs/v3/CAMPAIGN_STATE.md` RESUME HERE for live detail.
+- Current `main` and live artifacts outrank any dated handoff snapshot or
+  remembered state. Before resuming a claimed in-flight job, verify the live
+  host, PIDs, logs, and streamed artifacts yourself.
+- Pre-v3 material lives at tag `archive/pre-v3-repo-cleanup-2026-07-01`;
+  pruned docs at branch `archive/doc-prune-2026-07-09`. Off-repo data
+  archives live at `john0:~/cascadia-archive/` (hash-verified tarballs).
 
-The pre-cleanup v1/v2 archive, legacy teacher bridge, old MLX package, web app,
-and rejected experiment archive are intentionally not on `main`. Recover them
-from `archive/pre-v3-repo-cleanup-2026-07-01` only when reproducing historical
-evidence is explicitly required.
+## Documentation discipline (log as you go, never batch)
 
-## Engineering Rules
+- **Every run gets a `cascadiav3/EXPERIMENT_LOG.md` entry at the time it
+  happens**: purpose, exact config (source revision, rules ID, seeds, search
+  settings, hosts), artifacts with SHA-256, result, and the decision taken.
+  Failed, invalidated, and discarded runs are logged too — say why.
+- `docs/v3/RESEARCH_LOG.md` gets the consolidated verdict whenever a
+  direction opens, closes, or changes rank.
+- `docs/v3/CAMPAIGN_STATE.md` RESUME HERE and the status section of
+  `docs/v3/README.md` are updated at **every material transition** — a job
+  starting/finishing, a verdict landing, a blocker appearing. Durable
+  Markdown must never lag live conclusions.
+- At session end with jobs in flight, write a dated `handoff-YYYY-MM-DD.md`
+  snapshot (live PIDs, hashes, blockers, resume checklist) and link it from
+  `docs/v3/README.md`.
 
-- Keep generated data, checkpoints, reports, dependency directories, and build
-  outputs out of Git.
-- Prefer packed tensor `.npz` paths for real training data. Keep JSONL only for
-  tiny audit fixtures.
+## Scientific discipline
+
+- **Preregister before you peek.** Gates, thresholds, and seed roles are
+  fixed before any candidate output exists. Hyperparameter selection and the
+  final verdict use disjoint seed blocks; verdict blocks are touched exactly
+  once.
+- **Promotion** requires ≥ 100 paired games with the 95% CI excluding zero,
+  on corrected-rules identity, with clean provenance. Validation loss, smoke
+  scores, retention metrics, or a busy process are never strength evidence.
+- **Never read partial scores of a live arm**, and never adapt an experiment
+  to them.
+- **Fail closed.** Hash-pin every artifact; refuse mismatched
+  rules/source/seed/search provenance; an incomplete ledger is not published.
+- **Closed directions stay closed** without materially new evidence — check
+  `RESEARCH_LOG.md` §5 and `RADICAL_DIRECTIONS.md` before proposing work.
+- **Seeds are allocated, never reused**: pick fresh disjoint blocks and
+  record them in the `INFRASTRUCTURE.md` seed registry.
+
+## Operational safety
+
+- **Never kill or restart a process without explicit user permission.**
+  Don't disturb live scientific chains; coordinate with queued waiters
+  instead of racing them.
+- john0 runs strictly one scientific job at a time. The Mac minis
+  (john1–john4) generate training data only — never gates; MPS numbers are
+  never promotion evidence. Fleet shards are never auto-folded into training.
+- Batteries run TF32 **off**; generation may run TF32 on. bf16 serving is
+  label-unsafe.
+- Destructive file operations follow **archive-then-delete**: hash-verify the
+  archived copy (convention: `john0:~/cascadia-archive/<date>/` with
+  SHA256SUMS + README) before removing the original. Never clean another
+  session's operational files without checking what owns them.
+- `cargo check --workspace` does **not** cover the exporter — build
+  `cascadiav3/real-root-exporter` explicitly, and never silence build output
+  inside job scripts.
+- Job/monitor patterns, kill order, and remote build environments are in
+  `docs/v3/INFRASTRUCTURE.md` — follow them exactly.
+
+## Git rules
+
+- `HEAD == origin/main` with a clean worktree is the resting state: commit
+  and push documentation/state updates as they happen, in small focused
+  commits.
+- Keep generated data, checkpoints, reports, tensor shards, dependency
+  directories, and build outputs out of Git. Small curated evidence is fine.
+- Removals of tracked content get an archive tag/branch pointer first, and
+  the commit message says how to recover.
+
+## Engineering rules
+
+- Prefer packed tensor `.npz` paths for real training data (schema v4 for new
+  Gumbel generation). Keep JSONL only for tiny audit fixtures.
 - Radius 6 is the default public board fast path for CascadiaFormer. Exact
   overflow is required for states outside the disk.
-- Do not claim strength from validation loss alone. Promotion needs paired
-  gameplay evidence and score/category breakdowns.
+- Serving must rank by
+  `exact_afterstate_score_active + predicted_score_to_go`.
 - Before shipping code, run the relevant subset of:
 
 ```bash

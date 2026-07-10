@@ -59,6 +59,8 @@ timestamped snapshot, weaker than current `main`).
 
 ## Canonical docs
 
+- [Agent Rules of Engagement](../../AGENTS.md): how agents interact with this
+  repository — logging, scientific, operational, and git discipline.
 - [Campaign State](CAMPAIGN_STATE.md): live working state — in-flight jobs,
   blockers, decision tree.
 - [Research Log](RESEARCH_LOG.md): **the experiment record** — architecture,
