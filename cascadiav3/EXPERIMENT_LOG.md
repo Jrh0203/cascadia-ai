@@ -5024,3 +5024,38 @@ candidate on the same seeds — a paired design at half the GPU cost. The
 seed block registry entry now reflects that block `2027071400-1499` serves
 the whole f35 post-chain, not stage 1 alone. Stage 5 (jobs12/16/24
 concurrency calibration) follows.
+
+## 2026-07-10 10:45 — K1 verdict finalized under John's ruling: ADOPTED for speed; exact K2 closed
+
+John ruled: **keep K1, exclude the one concurrency-divergent seed by
+declaration, leave K2 on model inference.** Implemented as a permanent
+comparator amendment, not a one-off edit: `compare_exact_endgame` now takes
+`--declared-divergent-seed` + `--exclusion-ruling`. The mechanism fails
+closed — a declared seed must actually diverge pre-K1 (a causally clean
+seed is refused), any undeclared divergence still aborts, the ruling text
+and per-seed first-divergent-ply are embedded in the artifact, and the
+eligibility string downgrades to
+`promotion_scale_paired_gate_with_declared_exclusions`. Seven new contract
+tests; suite 197/197.
+
+Verdict on the 99 causally-valid pairs (inputs hash-verified against john0
+before the run; artifact published back to
+`cascadiav3/reports/exact_k1_20260709_n256_d4_verdict.{json,md}`, JSON SHA
+`2ef285e3...`):
+
+- Paired K1-minus-baseline: `-0.0379`, 95% t-CI `[-0.0859, +0.0101]` —
+  inconclusive; **score-neutral**, as the MPS smoke predicted.
+- **Seat-0 mean delta exactly `+0.0000` across all 99 games** while K1
+  changed 332/400 final actions: on the only seat with a provably identical
+  pre-decision state, the incumbent model already selects score-optimal
+  final actions and exactness merely substitutes equal-scoring
+  alternatives. K1 has no points to win at the final ply.
+- Cost: exact frontier `1743.9s -> 60.2s` (**28.99x**, versus 8.86x in the
+  MPS smoke); whole-arm `1.035x` mean-decision / `1.034x` wall at n256/d4.
+
+**Adoption:** `--gumbel-exact-endgame-turns 1` is the serving/benchmark
+default from here on (recorded in README standing contracts). **Exact K2 is
+closed by ruling** — it would need a genuine max^n/chance tree for at most
+the same zero points the model already captures at the frontier, so deeper
+plies stay on model inference. The eval-noise thesis survives intact: the
+final ply is simply the one place the model is already exact-equivalent.

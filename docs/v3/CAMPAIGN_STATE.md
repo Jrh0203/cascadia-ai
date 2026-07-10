@@ -5,15 +5,17 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-10 10:30 — structured-Q pilot FAILED; K1 verdict blocked; stage 4 live)
+## RESUME HERE (07-10 10:45 — K1 ADOPTED by ruling; structured-Q pilot FAILED; stage 4 live)
 
 **Post-chain progress (resume2, PID in
 `cascadiav3/logs/postchain_resume2_f35b0d0b.pid`):**
 
-- **Stage 1 (exact-K1 gate): arms flat (`97.2650` / `97.2350`), verdict
-  BLOCKED** — seed `2027071427` diverged pre-K1 (jobs12 concurrency
-  numerics; 99/100 causally clean). Needs John's ruling: declared one-seed
-  exclusion, lower-concurrency rerun, or invalid-as-run.
+- **Stage 1 (exact-K1 gate): RESOLVED — K1 adopted (John's 07-10 ruling).**
+  Seed `2027071427` excluded by declaration (jobs12 concurrency divergence
+  at ply 18); verdict on 99 pairs `-0.0379`, CI `[-0.0859,+0.0101]`,
+  score-neutral, `28.99x` exact-frontier speedup. K1 is the serving
+  default; exact K2 is closed — deeper plies stay on model inference.
+  Artifact: `exact_k1_20260709_n256_d4_verdict.{json,md}` on john0.
 - **Stage 2 (structured-Q head pilot): FAIL, direction closed.** Verdict
   `structured_q_head_pilot_20260709/heldout_verdict.{json,md}`: candidate
   selected-final RMSE `4.1573` vs teacher `3.5520` (needed <=`3.1968`);

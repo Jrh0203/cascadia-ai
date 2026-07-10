@@ -26,12 +26,13 @@ over packed expert tensors with Gumbel search-supervised action values.
   at high budget (reproducing the legacy tie); distq remains strictly the
   better low-budget server. High-budget scaling is CI+ within both heads
   (~+1.1 to +1.2). Gap to 100: ~-1.6.
-- **Exact-K1 gate: arms complete and flat (97.265 baseline / 97.235 K1);
-  verdict BLOCKED** — the causal comparator failed closed because one seed
-  of 100 diverged pre-K1 (jobs12 concurrency numerics; the other 99 are
-  causally perfect). Needs a methodology ruling: declared one-seed
-  exclusion, lower-concurrency rerun, or invalid-as-run. See EXPERIMENT_LOG
-  2026-07-10 08:35.
+- **Exact-K1: ADOPTED (07-10 ruling); exact K2 closed.** John ruled to keep
+  K1 and exclude the one concurrency-divergent seed by declaration. Verdict
+  on the 99 causally-valid pairs: `-0.0379`, CI `[-0.0859,+0.0101]` —
+  score-neutral with a `28.99x` exact-frontier speedup. Seat-0 delta was
+  exactly zero: the model already picks score-optimal final actions, so K1
+  is pure speed. `--gumbel-exact-endgame-turns 1` is now the
+  serving/benchmark default; K2+ plies stay on model inference.
 - **Structured-Q head pilot: FAILED its preregistered kill test (07-10).**
   Selected-final RMSE `4.1573` vs teacher `3.5520` (`-17.04%` against a
   required `+10%`); paired CI wholly on the wrong side of zero. Retention
@@ -112,6 +113,9 @@ The implementation package lives in
   generation); JSONL only for tiny audit fixtures.
 - Serving must rank by
   `derived_final_q = exact_afterstate_score_active + predicted_score_to_go`.
+- Exact final-personal-turn evaluation is the serving/benchmark default
+  (`--gumbel-exact-endgame-turns 1`, adopted 2026-07-10, score-neutral,
+  ~29x faster frontier); K2 and deeper plies stay on model inference.
 - Promotion requires ≥100 paired games with a 95% CI excluding zero — never
   validation loss, smoke scores, or process activity.
 - john0 runs one scientific job at a time; the Mac minis generate training

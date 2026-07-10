@@ -118,6 +118,26 @@ new revision and rejects any pre-K1 trace divergence. Extending to K2 remains
 conditional on that score/cost verdict; K2 requires a genuine max^n/chance
 tree, not another one-ply shortcut.
 
+**Final verdict (2026-07-10): K1 ADOPTED for speed; K2 closed to model
+inference by ruling.** The 100-seed CUDA gate ran flat (baseline `97.2650`
+vs K1 `97.2350`) but one seed (`2027071427`) diverged at ply 18 from jobs12
+shared-CUDA-bridge concurrency numerics, so the strict comparator failed
+closed. John ruled on 07-10: keep K1, exclude that seed by declaration, and
+leave K2 on model inference. The comparator gained a fail-closed
+declared-exclusion mechanism (the declared seed must actually diverge
+pre-K1; a clean seed is refused; the ruling text is embedded in the
+artifact). On the 99 causally-valid pairs: paired delta `-0.0379`, 95% t-CI
+`[-0.0859, +0.0101]`, inconclusive — score-neutral as expected. Seat 0 (the
+only seat with a provably identical pre-decision state) gained exactly
+`+0.0000` across all 99 games while K1 changed 332/400 final actions: the
+incumbent model already selects score-optimal final actions, and exactness
+substitutes equal-scoring alternatives. The exact frontier ran `28.99x`
+faster (`1743.9s` -> `60.2s`; `1.035x` mean-decision, `1.034x` wall at
+n256/d4). **K1 is the serving/benchmark default going forward
+(`--gumbel-exact-endgame-turns 1`); exact K2 is not pursued — deeper plies
+stay on model inference.** Verdict artifact:
+`exact_k1_20260709_n256_d4_verdict.{json,md}` (SHA `2ef285e3...`), on john0.
+
 ---
 
 ## 1. Architecture
@@ -583,15 +603,15 @@ manifest `c8c80c56...`, verdict shard `218ff1b5...`).
    or league-diversity properties. Category attribution awaits two one-seed
    d20 replays (scalar `2027070908`, distq `2027070962` — both lost to the
    pre-durable-first temp-dir race; totals verdicts are unaffected).
-2. **Exact final-personal-turn K1** — IMPLEMENTED; 2-seed causal MPS smoke
-   was score-flat and made the exact frontier 8.86x faster. The 100-seed
-   corrected n256/d4 CUDA gate completed 07-10 with descriptively flat arms
-   (`97.2650` baseline / `97.2350` K1) but the paired verdict is BLOCKED:
-   one seed of 100 diverged pre-K1 (jobs12 shared-bridge concurrency
-   numerics; the other 99 are causally bit-identical through ply 75).
-   Awaiting a methodology ruling — declared one-seed exclusion,
-   lower-concurrency rerun, or invalid-as-run. K2 is gated on that ruling;
-   on current evidence K1 is speed-motivated, not points-motivated.
+2. **Exact final-personal-turn K1 — ADOPTED (07-10); exact K2 closed by
+   ruling.** The 100-seed CUDA gate verdict on 99 causally-valid pairs
+   (seed `2027071427` excluded by John's declared ruling — jobs12
+   concurrency divergence at ply 18) is `-0.0379`, CI `[-0.0859,+0.0101]`,
+   score-neutral, with a `28.99x` exact-frontier speedup. Seat-0 delta was
+   exactly zero across all 99 games: the model already picks score-optimal
+   final actions. K1 (`--gumbel-exact-endgame-turns 1`) is the
+   serving/benchmark default; K2 and deeper stay on model inference.
+   Verdict: `exact_k1_20260709_n256_d4_verdict.{json,md}`.
 3. **Calibrate smaller-model/larger-search — CLOSED on john0 CUDA (07-10).**
    The first fixed-root result was wrong for production because it timed raw
    Python feature extraction; live Rust sends packed features. The corrected
