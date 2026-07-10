@@ -66,13 +66,20 @@ transformer stack. The gate: mean seat score ≥ 100 over 1,000 games of
 The agent launches experiments autonomously; John decides what ships.
 
 - The agent **may launch without asking**: preregistered evaluation gates,
-  screens, probes, data generation, and analysis — provided every rule in
-  this file is honored (preregistration, seed registry, one job at a time,
-  logging before launch) and nothing live is displaced or killed. Idle GPU
-  while a preregistered gate waits for permission is a bug, not prudence.
-- **Reserved to John**: champion promotion, starting or resuming a training
-  line, rules/contract changes, methodology rulings on a blocked verdict,
-  spending money, and anything destructive or irreversible.
+  screens, probes, data generation, analysis, and — at its discretion —
+  starting or resuming training lines (ruled 2026-07-10) — provided every
+  rule in this file is honored (preregistration, seed registry, one job at
+  a time, logging before launch) and nothing live is displaced or killed.
+  Idle GPU while a preregistered gate waits for permission is a bug, not
+  prudence.
+- **Rules-contract changes** are rare by design. A clear rules *bug* may be
+  fixed without waiting, but the fix must be impossible to miss: push
+  notification, a prominent EXPERIMENT_LOG + RULES_CONTRACT entry, and a
+  new rules identity per the contract process. Deliberate rules *design*
+  changes remain John's call.
+- **Reserved to John**: champion promotion, deliberate rules design
+  changes, methodology rulings on a blocked verdict, spending money, and
+  anything destructive or irreversible.
 - Every autonomous launch is announced (notification or session summary)
   with its preregistered decision rule, so John can veto mid-flight with a
   `HOLD_<name>` file rather than being asked in advance.
