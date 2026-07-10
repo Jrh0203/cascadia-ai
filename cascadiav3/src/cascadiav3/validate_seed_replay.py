@@ -87,7 +87,7 @@ def validate_replay(
         got = replay_by_ply[ply]
         if want.get("ruleset_id") != got.get("ruleset_id"):
             _fail(f"ply {ply}: ruleset mismatch {got.get('ruleset_id')}")
-        if int(want["chosen_action_id"]) != int(got["chosen_action_id"]):
+        if want["chosen_action_id"] != got["chosen_action_id"]:
             _fail(
                 f"ply {ply}: chosen action {got['chosen_action_id']} != "
                 f"ledger {want['chosen_action_id']}"

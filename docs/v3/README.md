@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-10 03:30 EDT)
+## Status at a glance (updated 2026-07-10 08:40 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -26,10 +26,15 @@ over packed expert tensors with Gumbel search-supervised action values.
   at high budget (reproducing the legacy tie); distq remains strictly the
   better low-budget server. High-budget scaling is CI+ within both heads
   (~+1.1 to +1.2). Gap to 100: ~-1.6.
-- **Live now (resumed 03:25 after a marker-mismatch crash):** the f35
-  post-chain on john0, PID `3620337` — exact-K1 100-seed gate (running) →
-  structured-Q frozen-head pilot → CUDA packed-throughput probe → market
-  sample-4 gate → jobs concurrency calibration. Pause with
+- **Exact-K1 gate: arms complete and flat (97.265 baseline / 97.235 K1);
+  verdict BLOCKED** — the causal comparator failed closed because one seed
+  of 100 diverged pre-K1 (jobs12 concurrency numerics; the other 99 are
+  causally perfect). Needs a methodology ruling: declared one-seed
+  exclusion, lower-concurrency rerun, or invalid-as-run. See EXPERIMENT_LOG
+  2026-07-10 08:35.
+- **Live now:** f35 post-chain stages 2-5 (`postchain_resume2_f35b0d0b`) —
+  structured-Q frozen-head pilot (training) → CUDA packed-throughput probe
+  → market sample-4 gate → jobs concurrency calibration. Pause with
   `touch cascadiav3/logs/HOLD_postchain_resume` on john0.
 - **Open recovery items:** two one-seed d20 replays — scalar `2027070908`
   and distq `2027070962` (lost to the pre-durable-first temp-dir race). The

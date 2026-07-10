@@ -4932,3 +4932,36 @@ verbatim as `cascadiav3/logs/postchain_resume_f35b0d0b.{sh,log,pid}` (PID
 new waiter pattern. Stage 1 (exact-K1 gate, seeds `2027071400x100`) rebuilt
 the exporter from f35 and is running. Remaining stages: structured-Q head
 pilot, CUDA model throughput, market sample-4, jobs concurrency.
+
+## 2026-07-10 08:35 — Exact-K1 100-seed gate: arms complete and flat; comparator failed closed on one concurrency-divergent seed
+
+Both stage-1 arms of the f35 post-chain completed on seeds
+`2027071400..2027071499` (corrected rules, n256/top16/d4, jobs12, one shared
+CUDA bridge): baseline mean seat `97.2650`, exact-K1 mean seat `97.2350`,
+both status pass, all four ledgers published (reports, decisions, games).
+Descriptively the arms are flat (`-0.0300` overall); no paired verdict was
+produced because `compare_exact_endgame` failed closed:
+`pre-K1 action trace diverges at seed 2027071427 ply 18`.
+
+Offline divergence forensics over both 8,000-row decision ledgers: 99/100
+seeds have bit-identical action/refresh traces through ply 75 and first
+diverge exactly at the K1 frontier (ply >= 76); exactly one seed
+(`2027071427`) diverges at ply 18. This is the known shared-bridge
+concurrency numerics mode (previously observed on MPS at two workers), now
+measured at 1% frequency at CUDA jobs12 — not a K1 code defect, which would
+shift many seeds. The preregistered comparator has no divergent-seed
+tolerance, so the K1 verdict is BLOCKED pending an explicit methodology
+ruling: (a) amend the comparator with a declared exclusion for pre-K1
+divergent seeds and verdict on the 99 causally-valid pairs, (b) rerun both
+arms at lower concurrency, or (c) record the gate as invalid-as-run. No
+option was exercised without the user.
+
+The crash stopped the chain before stage 2; stages 2-5 were relaunched as
+`cascadiav3/logs/postchain_resume2_f35b0d0b.{sh,log,pid}` under the same f35
+contract with heartbeats and HOLD support. The structured-Q frozen-head
+pilot (stage 2) is training.
+
+Also fixed while validating against the real ledgers: action identities are
+`sha256:` content hashes in both d20 and f35 decision ledgers; the replay
+validator no longer coerces `chosen_action_id` to int (tests updated to
+hash-form IDs).

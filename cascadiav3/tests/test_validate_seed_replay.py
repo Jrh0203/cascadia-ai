@@ -16,11 +16,12 @@ RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
 
 
 def make_decision(ply: int, action: int, refresh=None) -> dict:
+    # Real ledgers use content-hash action identities, not ints.
     return {
         "type": "gumbel_decision",
         "seed": SEED,
         "ply": ply,
-        "chosen_action_id": action,
+        "chosen_action_id": f"sha256:{action:064x}",
         "free_three_of_a_kind_choice": refresh,
         "ruleset_id": RULES,
     }
