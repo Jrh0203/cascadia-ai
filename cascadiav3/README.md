@@ -13,7 +13,7 @@ The governing docs are:
 - [Rules Contract](../docs/v3/RULES_CONTRACT.md)
 - [Architecture](../docs/v3/ARCHITECTURE.md)
 - [Training Pipeline](../docs/v3/TRAINING_PIPELINE.md)
-- [Operations](../docs/v3/OPERATIONS.md)
+- [Infrastructure Runbook](../docs/v3/INFRASTRUCTURE.md)
 - [Performance](../docs/v3/PERFORMANCE.md)
 
 ## Layout

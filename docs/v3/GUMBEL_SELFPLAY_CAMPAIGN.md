@@ -131,7 +131,8 @@ the labels — no separate labeling pass):
 ## 3. Campaign phases
 
 All john0 commands run from `/home/john0/cascadia` inside the torch venv,
-following the OPERATIONS.md launch/status/fetch pattern. EI-1 (rollout-teacher
+following the launch/status/fetch runner pattern in
+[`cascadiav3/README.md`](../../cascadiav3/README.md). EI-1 (rollout-teacher
 model-state bootstrap) was terminated in favor of this campaign; its partial
 artifacts are retained as teacher-comparison evidence only.
 

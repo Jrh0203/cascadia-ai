@@ -83,10 +83,30 @@ ssh john0 'cd /home/john0/cascadia && (nohup bash cascadiav3/logs/X_job.sh > cas
   the stale release binary when a target rebuild cannot be proven.
 - Launch ssh sessions often exit 255 with a benign broken pipe; verify
   via pid file + log, not the ssh exit code.
-- `pgrep -f` self-matches over ssh; use `ps aux | grep -v grep`.
+- `pgrep -f` self-matches over ssh; use `ps aux | grep -v grep`. Quote
+  pkill/pgrep patterns that appear in your own command line; prefer killing
+  by pid file and chaining jobs on done-marker files.
+- Kill order for a stuck job: job pid first, then
+  `pkill -9 -f gumbel-selfplay-tensor-corpus`, then
+  `pkill -9 -f torch_inference_bridge` (bridges launch via `sh -c`, so ppid
+  checks are unreliable — pkill by name only when nothing else runs).
+- macOS ships rsync 2.6.9: ONE remote source per command (use scp when
+  fetching multiple remote paths).
 - Monitors (Claude-side) run in zsh: `status` is a read-only variable;
   break patterns must not substring-match progress lines; scope error
   greps past the preflight-test section (benign BrokenPipe tracebacks).
+- Never end a monitor's remote ssh command with `pgrep`/`grep` whose
+  nonzero no-match exit makes the ssh look failed — end remote pipelines
+  with `| tail -1` or capture output without exit-code coupling. One
+  consolidated watchdog per work-wave. Monitors die with the session: on
+  any resume, first check every in-flight job log.
+
+**Recovery:** resume training only from a matching manifest and source
+identity; never reuse deleted worker-local artifacts as durable evidence.
+If a long run is interrupted, fetch manifests and metrics before deciding
+to resume, restart, or discard. (Bacalhau CPU-fabric scheduling, when used,
+is documented in `docs/BACALHAU_USAGE.md` — the v3 campaign currently
+orchestrates the fleet by direct ssh instead.)
 
 ## 4. Standard experiment workflow
 

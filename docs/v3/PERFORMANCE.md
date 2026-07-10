@@ -340,8 +340,9 @@ against greedy.
 
 Training run:
 
-- source runbook:
-  `docs/v3/EI0_GREEDY_SEARCH_BOOTSTRAP_RUNBOOK.md`;
+- source runbook: `EI0_GREEDY_SEARCH_BOOTSTRAP_RUNBOOK.md` (removed from
+  `main` in the 2026-07-09 doc prune; recover via
+  `git show archive/doc-prune-2026-07-09:docs/v3/EI0_GREEDY_SEARCH_BOOTSTRAP_RUNBOOK.md`);
 - expert tensor mode: `greedy_search_bootstrap`;
 - objective: `search-improved-greedy-retention`;
 - filter: strict greedy-prefix K32;
