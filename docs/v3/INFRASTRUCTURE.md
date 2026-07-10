@@ -195,6 +195,8 @@ python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
 | 2027070900–0999 | corrected-rules rebaseline battery (all arms, scalar + distq) |
 | 2027071360–2003 | 07-09 engineering smokes (exact-K1 1360+, market samples 1500+, S calibration 1700+, q-risk 1900+, shared-batch 2000+) |
 | 2027071400–1499 | f35 post-chain paired gates at n256/d4: stage 1 exact-K1 (baseline + K1 arms) and stage 4 market sample-4 (candidate arm paired against the stage-1 samples=8 baseline report) |
+| 2027071500–1599 | worlds-allocation screen: cycle4 n256 det4 vs det8, K1 on (preregistered 07-10) |
+| 2027071600–1699 | RESERVED (conditional): n1024 det16 vs det32 confirmation, only if the screen is CI+ |
 | 2027073000–3129 | pairwise label audit (3000+) and v3 fit/selection/validation corpus (3100–29) |
 | 2027073300–3301 | parallel leaf-rollout screens |
 | 2027073400–3447 | jobs12/16/24 CUDA concurrency calibration (queued) |

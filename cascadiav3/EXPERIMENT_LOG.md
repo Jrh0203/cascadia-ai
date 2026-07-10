@@ -5089,3 +5089,32 @@ Three findings:
 Distq n256/d4 shows the same shape one notch lower (97.311 = 60.78 + 31.43
 + 5.10). Full 100-seed category ledgers still await the two one-seed
 replays; this note carries no verdict weight.
+
+## 2026-07-10 11:20 — PREREGISTERED: worlds-allocation screen (search-shape re-sweep, RESEARCH_LOG §5 item 7)
+
+First gate launched under the new AGENTS.md autonomy boundary. Motivation:
+(a) determinizations are a free allocation knob, not a cost multiplier —
+`gumbel.rs` cycles `det_index = visit_index % determinization_samples`
+inside the fixed `n_simulations` budget, so more worlds trade per-world
+visit depth for hidden-state coverage at identical wall cost; (b) the
+n1024/d16-over-n256/d4 scaling win concentrated in habitat (long-horizon,
+noise-dominated); (c) the decision-SNR thesis says averaging more worlds
+attacks exactly that noise.
+
+**Screen (launches when the GPU frees, after the two approved d20
+replays):** champion cycle4 scalar (`best_locked_val`, manifest
+`b8886c24...`), corrected rules, source `f35b0d0b`, n256/top16/depth-rounds
+1, K1 on (new default), market samples 8, TF32 off, jobs12. Arm A
+determinizations=4 (64 sims/world at the frontier of the budget cycle) vs
+arm B determinizations=8 (32 sims/world) — the same 64->32 halving the
+champion would see at d16->d32. Fresh disjoint seed block
+`2027071500..1599`, both arms paired on all 100 seeds.
+
+**Preregistered verdict:** paired per-seed mean-seat delta (B minus A),
+95% t-CI, n=100. Decision rule, fixed now: CI+ -> preregister and launch
+the high-budget confirmation (n1024/top16 det16 vs det32, both arms fresh
+on reserved block `2027071600..1699`, ~20h). CI- or inconclusive -> the
+worlds axis is closed at low budget; no high-budget spend without a new
+mechanism argument; report either way. This is a paired score gate, not a
+causal comparator — bit-identical traces are not required, so jobs12
+concurrency is acceptable.
