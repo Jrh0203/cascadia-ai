@@ -5,7 +5,35 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-10 03:30 — rebaseline COMPLETE; cycle4 retained; post-chain resumed)
+## RESUME HERE (07-10 10:30 — structured-Q pilot FAILED; K1 verdict blocked; stage 4 live)
+
+**Post-chain progress (resume2, PID in
+`cascadiav3/logs/postchain_resume2_f35b0d0b.pid`):**
+
+- **Stage 1 (exact-K1 gate): arms flat (`97.2650` / `97.2350`), verdict
+  BLOCKED** — seed `2027071427` diverged pre-K1 (jobs12 concurrency
+  numerics; 99/100 causally clean). Needs John's ruling: declared one-seed
+  exclusion, lower-concurrency rerun, or invalid-as-run.
+- **Stage 2 (structured-Q head pilot): FAIL, direction closed.** Verdict
+  `structured_q_head_pilot_20260709/heldout_verdict.{json,md}`: candidate
+  selected-final RMSE `4.1573` vs teacher `3.5520` (needed <=`3.1968`);
+  paired CI `[+0.4461,+0.6143]` wrong side of zero. Retention gates passed.
+  Per preregistration: no full-model training, no gameplay; expansion and
+  reserve holdouts stay quarantined. EXPERIMENT_LOG 07-10 10:20.
+- **Stage 3 (CUDA packed throughput): pass, engineering-only.** S only
+  `1.9x` M on the 5090 — small-model serving closed on john0.
+- **Stage 4 (market sample-4 gate): RUNNING** — candidate samples=4, seeds
+  `2027071400x100`, paired vs the stage-1 samples=8 baseline report.
+  ~2.5h expected from 10:02 EDT.
+- **Stage 5 (jobs12/16/24 concurrency): queued.**
+
+**Then (GPU free): the two one-seed d20 replays** — see the recovery
+contract below and `cascadiav3/scripts/run_seed_category_replay.sh`
+(`generate cycle4 2027070908`, `fetch-validate cycle4 2027070908`, same for
+`distq 2027070962`), then `build_game_ledger` for both arms,
+`compare_game_categories`, and `fetch_rules_n1024_verdict.sh`.
+
+## PREVIOUS RESUME (07-10 03:30 — rebaseline COMPLETE; cycle4 retained; post-chain resumed)
 
 **Final corrected-rules verdict (07-10 ~03:05):** distq-k8 n1024/d16 scored
 `98.3850`; paired distq-minus-cycle4 at n1024/d16 is `+0.0875`, 95% t-CI

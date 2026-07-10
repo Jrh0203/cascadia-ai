@@ -435,7 +435,7 @@ iterate more losses on these 2,400 roots. Reopening candidate recall requires
 materially different supervision or architecture plus a new untouched root
 block. Probe SHAs: soft `ac2daed8...`; direct `5b5668bb...`.
 
-### 4.9 Action-conditioned structured value — REPRESENTATION GATE PASSED
+### 4.9 Action-conditioned structured value — CLOSED (head-only kill test FAILED 07-10)
 
 The existing category auxiliary is root-level and therefore cannot replace
 per-action Q. Before changing the data/model contract, a provenance-safe
@@ -550,6 +550,24 @@ failed before admission or reserve generation. Checksums and provenance
 proved the generated manifests belonged to those NPZs, validation was rerun,
 and the permanent reserve launcher now pins and tests the sidecar path.
 
+**Verdict (2026-07-10): the preregistered head-only kill test FAILED and the
+direction is closed.** Three frozen-trunk LR arms (100 steps, batch 8)
+trained on the pinned fit block; selection chose lr3e-3. The one-shot verdict
+on the 760 untouched non-exact roots scored candidate selected-final RMSE
+`4.1573` versus the `3.5520` teacher baseline — `-17.04%` against the
+required `+10%` — and the paired absolute-error CI `[+0.4461,+0.6143]` sits
+wholly on the wrong side of zero. The two retention gates passed, and the
+decomposed head is actually the better completed-Q predictor (all-q RMSE
+`1.4162` vs `1.7482`, removing the incumbent's `+1.02` bias), but that is
+not the promotion criterion. The ridge preflight's `+15.99%` closed-form win
+on the same latent did not survive being trained as a head. Per the
+preregistration: no full-model training, no gameplay; the 12,000-root fit
+expansion and the reserve holdouts stay quarantined as unused evidence.
+Reopening requires materially different supervision or architecture plus
+fresh untouched blocks. Verdict artifacts:
+`structured_q_head_pilot_20260709/heldout_verdict.{json,md}` (candidate
+manifest `c8c80c56...`, verdict shard `218ff1b5...`).
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)
@@ -566,36 +584,44 @@ and the permanent reserve launcher now pins and tests the sidecar path.
    d20 replays (scalar `2027070908`, distq `2027070962` — both lost to the
    pre-durable-first temp-dir race; totals verdicts are unaffected).
 2. **Exact final-personal-turn K1** — IMPLEMENTED; 2-seed causal MPS smoke
-   was score-flat and made the exact frontier 8.86x faster. A fresh 100-seed
-   corrected n256/d4 CUDA baseline/K1 gate is queued. K2 is gated on that
-   result.
-3. **Calibrate smaller-model/larger-search end to end.** The first fixed-root
-   result was wrong for production because it timed raw Python feature
-   extraction; live Rust sends packed features. The corrected john2–john4
-   batch-8 ratios are M/S/XS/tiny `1.00x / 3.06x / 4.83x / 9.85x`, rising to
-   `1.00x / 3.38x / 5.64x / 13.66x` at batch 32. Synthetic XS/tiny have no
-   strength claim. Three serial MPS calibrations of M n64/d4 versus trained S
-   n192/d12 found only a `~2x` equal-wall search-budget multiplier.
-   The rounded S n128/d8 follow-up was near equal wall (`1.078x`) but scored
-   `93.917` versus M n64/d4's `96.083` (three-game delta `-2.167`, smoke only).
-   Run the same packed probe on john0 CUDA, but do not distill XS unless better
-   whole-search leverage or a stronger/distq student recovers this accuracy
-   loss.
+   was score-flat and made the exact frontier 8.86x faster. The 100-seed
+   corrected n256/d4 CUDA gate completed 07-10 with descriptively flat arms
+   (`97.2650` baseline / `97.2350` K1) but the paired verdict is BLOCKED:
+   one seed of 100 diverged pre-K1 (jobs12 shared-bridge concurrency
+   numerics; the other 99 are causally bit-identical through ply 75).
+   Awaiting a methodology ruling — declared one-seed exclusion,
+   lower-concurrency rerun, or invalid-as-run. K2 is gated on that ruling;
+   on current evidence K1 is speed-motivated, not points-motivated.
+3. **Calibrate smaller-model/larger-search — CLOSED on john0 CUDA (07-10).**
+   The first fixed-root result was wrong for production because it timed raw
+   Python feature extraction; live Rust sends packed features. The corrected
+   john2–john4 batch-8 ratios are M/S/XS/tiny `1.00x / 3.06x / 4.83x / 9.85x`,
+   rising to `1.00x / 3.38x / 5.64x / 13.66x` at batch 32. Three serial MPS
+   calibrations of M n64/d4 versus trained S n192/d12 found only a `~2x`
+   equal-wall search-budget multiplier, and the rounded S n128/d8 follow-up
+   scored `93.917` versus M n64/d4's `96.083` at near-equal wall. The queued
+   CUDA packed probe completed 07-10
+   (`model_throughput_20260709_cuda.json`, engineering-only): on the RTX
+   5090, S is only `1.89x / 1.68x` (batch 8 / 32), XS `1.98x / 2.01x`, and
+   tiny `2.82x / 2.20x` — fixed per-call overheads dominate, so parameter
+   reduction converts even less to throughput than on MPS. S buys at most
+   ~1.9x search where >3x was already insufficient to close the accuracy
+   loss. Do not distill smaller students for john0 serving; revisit only
+   with an architecture that changes the per-call overhead structure.
 4. **Distributional-Q expert iteration** — PAUSED at the rules boundary.
    The legacy quantile head broke training-side saturation (+0.43 CI+ at
    n256), but the corrected paired verdict owns the next decision. If it
    survives, resume EI with corrected-policy data; next training knobs are
    K=16 and a distq + L capacity retry. Quantile-aware serving is implemented
    but its fixed-root/n=3 screen did not justify a standalone CUDA gate.
-5. **Action-conditioned structured value** — representation gate passed,
-   exact-grounded v4 implementation complete, and the disjoint pilot corpus is
-   staged on john0. The frozen selected-action category head cut held-out
-   real-outcome RMSE by `15.99%` versus the best incumbent comparison on 760
-   untouched non-exact roots. Run the queued head-first kill test after exact
-   K1; do not serve the direct-final ridge preflight or skip directly to a
-   full-model/gameplay run. The 12,000-root fit expansion and three 1,600-root
-   reserve roles remain quarantined unless their respective gates authorize
-   use.
+5. **Action-conditioned structured value — CLOSED (07-10).** The head-only
+   kill test failed its preregistered held-out gate: candidate selected-final
+   RMSE `4.1573` vs teacher `3.5520` (`-17.04%` against a required `+10%`),
+   paired CI wholly on the wrong side of zero. Retention gates passed and the
+   decomposed head is the better completed-Q predictor (ratio `0.8101`, bias
+   `+1.02` -> `+0.05`), but the ridge preflight's `+15.99%` did not survive
+   training. Per preregistration: no full-model run, no gameplay; the
+   12,000-root expansion and reserve holdouts stay quarantined. See §4.9.
 6. **Table-native q head (cycle-7)** — staged but parked: serving-side
    table objectives measured CI− twice (noise multiplier); the
    training-side variant is theoretically distinct (labels average away

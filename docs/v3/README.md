@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-10 08:40 EDT)
+## Status at a glance (updated 2026-07-10 10:30 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -32,9 +32,20 @@ over packed expert tensors with Gumbel search-supervised action values.
   causally perfect). Needs a methodology ruling: declared one-seed
   exclusion, lower-concurrency rerun, or invalid-as-run. See EXPERIMENT_LOG
   2026-07-10 08:35.
-- **Live now:** f35 post-chain stages 2-5 (`postchain_resume2_f35b0d0b`) —
-  structured-Q frozen-head pilot (training) → CUDA packed-throughput probe
-  → market sample-4 gate → jobs concurrency calibration. Pause with
+- **Structured-Q head pilot: FAILED its preregistered kill test (07-10).**
+  Selected-final RMSE `4.1573` vs teacher `3.5520` (`-17.04%` against a
+  required `+10%`); paired CI wholly on the wrong side of zero. Retention
+  gates passed (the decomposed head is the better completed-Q predictor)
+  but per preregistration the direction is **closed**: no full-model run,
+  no gameplay; the 12,000-root expansion and reserve holdouts stay
+  quarantined. See RESEARCH_LOG §4.9.
+- **Smaller-model serving: closed on john0 CUDA (07-10).** The packed
+  throughput probe measured S at only `1.9x` M (XS `2.0x`, tiny `2.8x`) —
+  far under the MPS ratios and under the >3x already shown insufficient.
+- **Live now:** f35 post-chain stage 4 (`postchain_resume2_f35b0d0b`) —
+  market sample-4 gate, candidate samples=4 on seeds `2027071400x100`
+  paired against the stage-1 samples=8 baseline; then stage 5 jobs
+  concurrency calibration. Pause with
   `touch cascadiav3/logs/HOLD_postchain_resume` on john0.
 - **Open recovery items:** two one-seed d20 replays — scalar `2027070908`
   and distq `2027070962` (lost to the pre-durable-first temp-dir race). The

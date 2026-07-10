@@ -4965,3 +4965,62 @@ Also fixed while validating against the real ledgers: action identities are
 `sha256:` content hashes in both d20 and f35 decision ledgers; the replay
 validator no longer coerces `chosen_action_id` to int (tests updated to
 hash-form IDs).
+
+## 2026-07-10 10:20 — Structured-Q head pilot FAILS its preregistered kill test; CUDA throughput probe closes the small-model path; market sample-4 gate running
+
+**Stage 2 (structured-Q frozen-head pilot): FAIL.** The resume2 chain ran the
+pilot at 10:00:19-10:01:21 against the hash-pinned prebuilt v4 splits
+(datasets built 07-09 under source `6e89d955`, fit/selection/verdict NPZ
+`06d550b4/5095d572/cdbd54b0`; training and evaluation under `f35b0d0b`).
+Three frozen-trunk head-only arms (lr 3e-4 / 1e-3 / 3e-3, 100 steps, batch 8)
+trained in about a minute on the 5090; selection chose `lr3e3` (val metric
+`1.1085`; `lr3e4` failed to converge at `4.5463`). One-shot held-out verdict
+on the 760 untouched non-exact verdict roots
+(`structured_q_head_pilot_20260709/heldout_verdict.json`, status **fail**):
+
+- Selected-final RMSE `4.1573` vs best baseline (`selected_teacher_q`)
+  `3.5520` — **-17.04%** against a required **>=+10%** (threshold `3.1968`).
+  FAIL.
+- Paired candidate-minus-baseline absolute error mean `+0.5302`, 95% t-CI
+  `[+0.4461, +0.6143]` — wholly ABOVE zero (candidate significantly worse);
+  the gate required wholly below. FAIL.
+- All-q completed-Q RMSE `1.4162` vs incumbent `1.7482` (ratio `0.8101`,
+  ceiling 1.05). PASS — and notably better: the decomposed head removes the
+  incumbent's `+1.02` completed-Q bias (candidate bias `+0.05`).
+- Mean q-regret `0.7500` vs incumbent `0.7515` (ceiling `0.8015`). PASS.
+
+Component reads on the verdict block: wildlife is the weak axis (RMSE
+`2.9018`, bias `-1.42`), habitat `1.8323`, Nature `1.7403`. Top-1 selected
+agreement 35.7% vs incumbent 36.4%.
+
+**Interpretation:** the exact-grounded decomposition trains a
+better-calibrated completed-Q surface but is substantially worse than the
+teacher's own selected-Q at predicting the real final outcome of the selected
+action. The ridge preflight's `+15.99%` (closed-form fit on the frozen
+latent) did not transfer to a trained frozen-trunk head at pilot scale.
+**Preregistered consequence, executed as written: no full-model training, no
+gameplay; the 12,000-root fit expansion and the three 1,600-root reserve
+holdouts remain quarantined as unused evidence. The direction is closed
+pending materially new evidence** (per the gate text in RESEARCH_LOG §4.9).
+
+**Stage 3 (CUDA packed-throughput probe): pass, engineering-only**
+(`model_throughput_20260709_cuda.json`, `scientific_eligibility:
+engineering_throughput_only`). Production-packed features, batch sweep
+1-32, TF32 off. Throughput speedups vs cycle4-M on the RTX 5090: S (5.87x
+fewer params) only `1.89x` at batch 8 / `1.68x` at batch 32; synthetic XS
+`1.98x / 2.01x`; synthetic tiny (1300x fewer params) `2.82x / 2.20x`. These
+are far below the MPS ratios (S `3.06-3.38x`, tiny `9.85-13.66x`): the 5090
+is dominated by fixed per-call overheads, so parameter reduction does not
+convert to proportional serving throughput. Combined with the MPS equal-wall
+result (S n128/d8 scored `-2.17` vs M n64/d4 at `1.078x` wall), the
+smaller-model/larger-search direction is **closed on john0 CUDA serving** —
+S buys at most ~1.9x search budget where >3x was already insufficient.
+
+**Stage 4 (market sample-4 gate): running.** Smoke passed
+(`market_samples_20260709_n256_d4_s4_smoke.json`). The gate reuses the
+stage-1 baseline (`exact_k1_20260709_n256_d4_baseline.json`, samples=8,
+seeds `2027071400x100`) as the incumbent arm and runs only the samples=4
+candidate on the same seeds — a paired design at half the GPU cost. The
+seed block registry entry now reflects that block `2027071400-1499` serves
+the whole f35 post-chain, not stage 1 alone. Stage 5 (jobs12/16/24
+concurrency calibration) follows.
