@@ -5152,3 +5152,21 @@ updated; suite 200/200.
 **Queue:** GPU is on the approved d20 replays (cycle4 `2027070908` running,
 distq `2027070962` next), then the preregistered worlds screen, then the
 stage-5 jobs12/16/24 concurrency probe relaunch (it never started).
+
+## 2026-07-10 12:05 — GPU queue made session-independent: gpu_autochain on john0
+
+Per John's directive, the remaining pipeline no longer depends on the
+orchestrator session. `cascadiav3/logs/gpu_autochain.{sh,log,pid}` on john0
+(PID `3683183`, HOLD file `HOLD_gpu_autochain`, heartbeats) runs the whole
+queue: (A) wait for the in-flight cycle4 seed-2027070908 replay, then
+validate+install it fail-closed via a portable copy of
+`validate_seed_replay` (`cascadiav3/logs/replay_tools/`); (B) generate,
+validate, and install the distq seed-2027070962 replay under the same d20
+contract; (C) if both installs pass, build both 100-row game ledgers and
+publish the paired category mechanism verdict
+(`rules_20260709_n1024_category_verdict.{json,md}`); (D) the preregistered
+worlds screen (det4 then det8); (E) the stage-5 jobs12/16/24 concurrency
+probe. A replay validation failure is logged loudly and the chain continues
+to the screen rather than stranding the GPU (the superseded
+`worlds_screen_waiter`, which required 100+100 files unconditionally, was
+retired). Estimated pipeline: ~8 GPU-hours queued.
