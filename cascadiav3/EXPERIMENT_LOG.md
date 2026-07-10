@@ -5170,3 +5170,16 @@ probe. A replay validation failure is logged loudly and the chain continues
 to the screen rather than stranding the GPU (the superseded
 `worlds_screen_waiter`, which required 100+100 files unconditionally, was
 retired). Estimated pipeline: ~8 GPU-hours queued.
+
+## 2026-07-10 12:35 — Cycle4 seed-2027070908 replay: validated bit-exact and installed; scalar raw ledger complete at 100/100
+
+The d20-contract solo replay of scalar seed `2027070908` (n1024/d16, TF32
+off, shared session) passed the fail-closed validator on john0: all 80
+chosen-action IDs and refresh decisions match the durable decision ledger,
+and the replayed seat totals `[97, 98, 97, 100]` equal the aggregate
+report's pinned values exactly. Installed by the guarded 99->100 path;
+`rules_20260709_cycle4_n1024_d16_raw_games/` is complete. This also
+empirically validates the replay recovery contract itself: a solo rerun
+reproduced a game originally generated under jobs12 shared-bridge
+concurrency, so this seed was not concurrency-perturbed. The autochain is
+now generating the distq seed-2027070962 replay (stage B).
