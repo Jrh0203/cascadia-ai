@@ -29,14 +29,24 @@ fresh promotion seeds.
 and `market_decision_samples=8`. The one-game n16/d2 smoke passed and recorded
 the corrected rules ID plus exact source revision, all 80 per-ply decision
 rows, and refresh telemetry: 7 opportunities, 5 accepts, 2 declines. The job
-completed the 100-game greedy/no-search floor plus both n256/d4 arms and is
-now running cycle4 n1024/d16, with 67/100 raw games complete and independently
-mirrored/validated at 13:20 EDT;
-distq_k8 n1024/d16 follows on the same fresh seeds. A live sidecar copied the
-growing distq-n256 seed files with overwrite-on-poll semantics; a second
-watcher does the same for both n1024 arms. Each publishes only after strict
-100-seed validation. This preserves category scores even though the deployed
-pre-fix reducer retains totals only. Watcher pid files are
+completed the 100-game greedy/no-search floor, both n256/d4 arms, and the
+cycle4 n1024/d16 arm. The corrected-rules scalar n1024 report passed at 16:50
+EDT: 100 seeds, mean seat `98.2975`, P50 `98.0`, P90 `102.0`, and mean
+decision time `46.2733s`. Report SHA-256 is `8c164dc6...`; its complete
+8,000-row decision ledger is `d42cf655...`. The distq-k8 n1024/d16 arm is now
+running on the same seeds under runner/exporter PIDs `3556049 / 3556050`. At
+20:57 EDT it had 39/100 complete 81-row raw games, a last-10 rate of
+`10.06 games/hour`, and a projected completion around 02:59 EDT on July 10.
+
+The n1024 raw-ledger watcher PID `1284321` is dead. It durably copied 99/100
+scalar games but missed seed `2027070908`; the scalar temporary directory is
+gone. Its log failed closed on that exact missing file, so neither the scalar
+category ledger nor category summary was published. Because the watcher
+exited before distq began, the live distq raw files currently exist only under
+`/tmp/tmphk9xcpuk/gumbel_batch` and are at risk when its benchmark process
+exits. The aggregate scalar report is valid; category attribution is not yet
+recoverable without an exact one-seed scalar replay plus a replacement distq
+raw-file mirror. Watcher pid files are
 `cascadiav3/logs/rules_20260709_distq_k8_n256_raw_watcher.pid` and
 `cascadiav3/logs/rules_20260709_remaining_raw_watcher.pid`. Rebaseline log/pid:
 `cascadiav3/logs/rules_20260709_rebaseline.{log,pid}`. Canonical launcher:
@@ -144,14 +154,18 @@ placed at the declared sidecar paths, and both validators were rerun to pass.
 Failed chain evidence is preserved with `.failed_manifest_path` names. Commit
 `4cd9c728` makes every reserve output sidecar explicit and tests that contract.
 
-**Candidate-blind reserves (running from 13:16 EDT):** roles remain fixed
-before any candidate exists: john2 selection seeds `2027073750..69`, john3
-verdict `2027073770..89`, and john4 independent replication
-`2027073790..3809`, each 20 seeds / 1,600 roots at the identical raw-v4
-contract. Corrected chain PIDs are `2465 / 69950 / 33569`; live child commands
-were verified to use role-specific sidecars, and all three published their
-first seed by 13:19. These are not extra fit data and cannot influence the
-existing pilot. The arming script cannot fetch, train, or address john0.
+**Candidate-blind reserves (complete per host; global harvest pending):** roles
+were fixed before any candidate existed: john2 selection seeds
+`2027073750..69`, john3 verdict `2027073770..89`, and john4 independent
+replication `2027073790..3809`, each 20 seeds / 1,600 roots at the identical
+raw-v4 contract. The corrected chains completed in
+`1530.0 / 1624.4 / 1506.5s`. All three manifests checksum-match their NPZs;
+summary and invariant reports pass. NPZ hashes are selection `48e48e74...`,
+verdict `99b85671...`, and replication `41b5bd60...`; action counts are
+`711,027 / 667,699 / 680,007`. These are not extra fit data and cannot
+influence the existing pilot. The arming script cannot fetch, train, or
+address john0. They still require the canonical local harvest and nine-shard
+audit before any use.
 Canonical reserve harvest is
 `cascadiav3/scripts/fetch_structured_q_reserve_holdouts.sh`. It refuses any
 live chain, requires passing reports plus the completion sentinel, verifies

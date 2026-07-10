@@ -4753,3 +4753,80 @@ means `45.846 / 46.001 / 45.701`; Nature-negative fractions
 `e1edbad3552abef2321808666948f299fbf3ba226b948d50a2314b696fb5eb14`.
 The data remains local quarantined fit inventory; nothing was copied to john0
 or added to a training command.
+
+## 2026-07-09 13:44 — Candidate-blind structured-Q reserves complete per host
+
+The three preregistered reserve roles completed after the repaired launcher
+made each output manifest path explicit. They remain semantically distinct
+holdouts, not additional fit data:
+
+| Host | Role | Seeds | Seconds | Roots | Actions | NPZ SHA-256 |
+|---|---|---|---:|---:|---:|---|
+| john2 | selection | 2027073750..69 | 1530.0 | 1,600 | 711,027 | `48e48e74f0853c434d4ec157d188b092463676d40c1b389059f9a2dca86ad46d` |
+| john3 | verdict | 2027073770..89 | 1624.4 | 1,600 | 667,699 | `99b85671881ae6bde5d49c1a07588b27b368fe3194450aea52e223ed54b668d8` |
+| john4 | replication | 2027073790..3809 | 1506.5 | 1,600 | 680,007 | `41b5bd6098c96b05ab6a14e1a53042ae71104864e111e78bbc6f645b5caab5a7` |
+
+All three manifests checksum-match the NPZs and declare the exact expected
+seed domain, corrected rules, source
+`6e89d9555f6126bdc29f65657d8431cab3d2c024`, teacher manifest
+`b8886c24cd93e19299e8c4cca4dd7671fe16b685d54949de014d6f9d5aee616d`,
+and teacher weights
+`33559aab05324e74998164d4e59e7adec9fa3c77da531dd4797c718cf4cfd354`.
+Per-host summary and completed-Q invariant reports pass. Manifest hashes are
+`0a51fd1c... / 47b51bb9... / 19bd903d...`; summary hashes are
+`577356ac... / 3bc44e46... / 8f97aff6...`; invariant hashes are
+`96de886b... / 09bb7661... / 5cff79c0...`.
+
+This is not yet a cross-shard admission verdict. The canonical orchestrator
+must still run `fetch_structured_q_reserve_holdouts.sh`, which will reverify
+the remote/local hashes and audit these three roles against the locked pilot
+and all three fit-expansion shards. No reserve artifact has been copied to
+john0 or a training command.
+
+## 2026-07-09 20:57 — Corrected scalar n1024 complete; raw-ledger gap; distq live
+
+The corrected-rules cycle4 scalar n1024/d16 arm completed at 16:50 EDT under
+source `d20daf44dc6aa4aad3d03c6ccb7d3a21c3013135`, rules ID
+`cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09`, and
+seeds `2027070900..2027070999`. Its passing 100-game report records mean seat
+`98.2975`, P50 `98.0`, P90 `102.0`, and mean search/decision time
+`46.27328055s`. Report SHA-256 is
+`8c164dc6c05f34633b24c36fb28e9fd4234271670f523c8bd6d4e6abab953761`;
+the complete 8,000-row decision ledger SHA-256 is
+`d42cf655aa26facd2107887250ccb5e6cefab9a0d32260eb27df3419a3ce9922`.
+This is the first current-rules high-budget scalar baseline and lands almost
+exactly on the legacy 98.28 result, but it remains below 100 and is not a
+paired comparison against the old rules.
+
+The raw-ledger watcher failed closed at arm finalization. It copied 99 valid
+81-row scalar game files but missed seed `2027070908`; its log contains:
+
+```text
+missing raw game file: /home/john0/cascadia/cascadiav3/reports/rules_20260709_cycle4_n1024_d16_raw_games/gumbel_game_seed_2027070908.jsonl
+```
+
+The scalar benchmark's temporary directory is gone. The aggregate report and
+decision ledger remain valid, and their candidate-per-seed record pins seed
+`2027070908` to seat scores `97 / 98 / 97 / 100` (mean `98.0`) with all 80
+decision rows present. However, the missing raw game-done row contains the
+category arrays, so the scalar `*_games.jsonl` and category summary were not
+published. A same-source, same-artifact, same-search one-seed replay must
+match all 80 recorded actions/refresh decisions and the pinned seat totals
+before its category row can repair the ledger.
+
+Because watcher PID `1284321` exited before the distq arm began, it is not
+mirroring the live distq raw files. At the 20:57 handoff snapshot, distq runner
+PID `3556049`, exporter PID `3556050`, and bridge PID `3556053` were alive;
+39/100 complete raw games existed only in
+`/tmp/tmphk9xcpuk/gumbel_batch`. The last-10 completion rate was
+`10.06 games/hour`, projecting completion near 02:59 EDT on July 10. The
+distq aggregate report and final paired total verdict do not yet exist.
+
+Main rebaseline PID `1265148`, total-verdict watcher PID `1268022`, and
+checksum-pinned post-chain waiter PID `2241595` remain alive. The post-chain
+waiter will automatically deploy source `f35b0d0b...` after the main and
+verdict PIDs exit, then run exact K1, the structured-Q frozen-head pilot, CUDA
+model throughput, market-sample-4, and jobs12/16/24 concurrency in that order.
+The dead category watcher does not block that automatic sequence. See the
+root `handoff-2026-07-09.md` for the urgent raw-file preservation step and
+complete resume checklist.

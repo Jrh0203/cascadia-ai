@@ -517,12 +517,13 @@ The next three blocks are also fixed before candidate creation, but as
 holdouts rather than fit capacity: selection seeds `2027073750..69`, verdict
 seeds `2027073770..89`, and independent replication seeds
 `2027073790..3809`, each 1,600 roots at the same raw-v4 contract. They are
-chained behind the current host-local validators and start only if those
-reports pass. This ordering removes future data latency without permitting
-candidate-dependent seed choice. The arming path cannot fetch, admit, train,
-or address john0, and the three semantic roles must remain separate in any
-follow-up design. They are now running under corrected chain PIDs
-`2465 / 69950 / 33569`, with explicit role-specific sidecar paths.
+complete on john2–john4 with passing per-host summary/invariant reports,
+checksum-matched manifests, 4,800 total roots, and 2,058,733 total actions.
+NPZ hashes are `48e48e74... / 99b85671... / 41b5bd60...`. This removes future
+data latency without permitting candidate-dependent seed choice. The arming
+path cannot fetch, admit, train, or address john0, and the three semantic roles
+must remain separate. A combined harvest and audit against all six earlier
+pilot/expansion shards remains mandatory before use.
 
 Raw-v4 admission is now a permanent cross-shard check rather than a manual
 manifest comparison. `audit_structured_q_shards` reopens every NPZ, binds it
@@ -553,12 +554,14 @@ and the permanent reserve launcher now pins and tests the sidecar path.
 
 ## 5. Future research directions (ranked, as of 07-09)
 
-1. **Finish the corrected distq rebaseline** — ACTIVE. Distq n256/d4 and
-   both models at n1024/d16 must establish whether the legacy distributional
-   gain survives the rules compatibility break. No EI corpus or promotion
-   result may cross that boundary. The n1024 verdict now includes paired
-   wildlife/habitat/Nature attribution from complete raw game ledgers, not
-   merely a total-score delta.
+1. **Finish the corrected distq rebaseline** — ACTIVE. At n256/d4, distq's
+   `+0.2400` same-seed gain was inconclusive (95% t-CI
+   `[-0.1139,+0.5939]`). The corrected scalar n1024/d16 arm is now complete at
+   `98.2975`; distq n1024 is the decisive live arm. No EI corpus or promotion
+   result may cross that boundary. Category attribution is temporarily
+   blocked because the raw-ledger watcher missed scalar seed `2027070908` and
+   exited before mirroring distq; the aggregate total-score verdict remains
+   valid once distq completes.
 2. **Exact final-personal-turn K1** — IMPLEMENTED; 2-seed causal MPS smoke
    was score-flat and made the exact frontier 8.86x faster. A fresh 100-seed
    corrected n256/d4 CUDA baseline/K1 gate is queued. K2 is gated on that
@@ -581,13 +584,15 @@ and the permanent reserve launcher now pins and tests the sidecar path.
    survives, resume EI with corrected-policy data; next training knobs are
    K=16 and a distq + L capacity retry. Quantile-aware serving is implemented
    but its fixed-root/n=3 screen did not justify a standalone CUDA gate.
-5. **Action-conditioned structured value** — representation gate passed and
-   exact-grounded v4 implementation complete. The frozen selected-action
-   category head cut held-out real-outcome RMSE by
-   `15.99%` versus the best incumbent comparison on 760 untouched non-exact
-   roots. Generate a corrected v4 pilot corpus and run the head-first kill
-   test; do not serve the direct-final ridge preflight or skip directly to a
-   full-model/gameplay run.
+5. **Action-conditioned structured value** — representation gate passed,
+   exact-grounded v4 implementation complete, and the disjoint pilot corpus is
+   staged on john0. The frozen selected-action category head cut held-out
+   real-outcome RMSE by `15.99%` versus the best incumbent comparison on 760
+   untouched non-exact roots. Run the queued head-first kill test after exact
+   K1; do not serve the direct-final ridge preflight or skip directly to a
+   full-model/gameplay run. The 12,000-root fit expansion and three 1,600-root
+   reserve roles remain quarantined unless their respective gates authorize
+   use.
 6. **Table-native q head (cycle-7)** — staged but parked: serving-side
    table objectives measured CI− twice (noise multiplier); the
    training-side variant is theoretically distinct (labels average away

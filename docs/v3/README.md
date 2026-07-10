@@ -7,6 +7,8 @@ packed expert tensors with search-supervised action values.
 
 ## Canonical Docs
 
+- [Current Handoff](../../handoff-2026-07-09.md): timestamped operational
+  snapshot, exact live PIDs/artifacts, blockers, and resume checklist.
 - [Research Log](RESEARCH_LOG.md): **the experiment record** — architecture,
   every direction tried with verdicts, scaling laws, decision-SNR
   measurement, and ranked future directions.
@@ -39,11 +41,11 @@ The implementation package lives in
 
 ## Current Scientific State
 
-Rules compatibility break: all score measurements below predate the
-2026-07-09 correction that made the free three-of-a-kind refresh an explicit
-accept/decline policy action. They remain historical architecture evidence,
-but corrected baselines must be regenerated before promotion. See
-[Rules Contract](RULES_CONTRACT.md).
+Rules compatibility break: the historical score measurements below predate
+the 2026-07-09 correction that made the free three-of-a-kind refresh an
+explicit accept/decline policy action. They remain architecture evidence but
+not promotion controls. Corrected-rules baselines are being regenerated; see
+[Campaign State](CAMPAIGN_STATE.md) and [Rules Contract](RULES_CONTRACT.md).
 
 - Real training data should use packed `.npz` tensor shards.
 - JSONL is retained only for tiny audit fixtures.
@@ -77,6 +79,10 @@ but corrected baselines must be regenerated before promotion. See
   (new generation uses exact-grounded schema v4), and CI-gated promotion at
   100+ paired games. EI-1 was
   terminated in favor of this line.
+- Under corrected rules, cycle4 scored `97.0675` and distq-k8 `97.3075` at
+  n256/d4 over the same 100 seeds; the `+0.2400` delta was inconclusive. The
+  corrected scalar n1024/d16 baseline is complete at `98.2975`; the matching
+  distq n1024 arm is live and owns the next strength decision.
 
 ## Historical Recovery
 
