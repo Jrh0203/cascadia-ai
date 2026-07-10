@@ -34,11 +34,17 @@ the in-flight picture changes.
   comparator crash killed the chain. Queued for relaunch after the replays
   and the worlds screen.
 
-**Then (GPU free): the two one-seed d20 replays** — see the recovery
-contract below and `cascadiav3/scripts/run_seed_category_replay.sh`
-(`generate cycle4 2027070908`, `fetch-validate cycle4 2027070908`, same for
-`distq 2027070962`), then `build_game_ledger` for both arms,
-`compare_game_categories`, and `fetch_rules_n1024_verdict.sh`.
+**GPU queue (self-driving):** replay `cycle4 2027070908` is generating now
+(orchestrator background task; then `fetch-validate` installs it). Replay
+`distq 2027070962` follows. `cascadiav3/logs/worlds_screen_waiter.{sh,log,pid}`
+on john0 watches both raw dirs and, at 100+100 files with an idle GPU,
+chains the preregistered worlds screen
+(`cascadiav3/logs/run_worlds_screen.sh`, det4 then det8, block
+`2027071500..1599`) and then the stage-5 jobs12/16/24 concurrency probe.
+Pause with `touch cascadiav3/logs/HOLD_worlds_screen`. Screen verdict runs
+orchestrator-side via `cascadiav3.compare_search_shape`. After the ledgers:
+`build_game_ledger` for both arms, `compare_game_categories`, and
+`fetch_rules_n1024_verdict.sh`.
 
 ## PREVIOUS RESUME (07-10 03:30 — rebaseline COMPLETE; cycle4 retained; post-chain resumed)
 
