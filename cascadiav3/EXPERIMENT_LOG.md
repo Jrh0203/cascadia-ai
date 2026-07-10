@@ -5197,3 +5197,30 @@ at 11:20. A non-CI+ screen logs "worlds axis closed at low budget" and
 spends nothing. Pause with `touch cascadiav3/logs/HOLD_worlds_confirm`.
 With this, every remaining decision point in the preregistered plan
 executes without an orchestrator session.
+
+## 2026-07-10 13:15 — Distq seed-2027070962 replay bit-exact; category mechanism verdict published; rebaseline recovery CLOSED
+
+The distq seed-`2027070962` solo replay also validated bit-exact (all 80
+ledger actions, pinned totals) and installed: **both n1024/d16 raw ledgers
+are complete at 100/100.** The autochain built both game ledgers +
+category summaries; its `compare_game_categories` invocation failed closed
+on reversed arm orientation (canonical comparison is left=distq,
+right=cycle4) and was rerun correctly orchestrator-side on john0.
+
+**Category attribution (distq minus cycle4, n1024/d16, n=100 paired,
+cross-validated field-for-field against the canonical total verdict):**
+
+| category | delta | 95% t-CI |
+|---|---:|---|
+| wildlife | `+0.1450` | `[-0.1458, +0.4358]` |
+| habitat | `-0.0500` | `[-0.2353, +0.1353]` |
+| nature | `-0.0075` | `[-0.1765, +0.1615]` |
+| total | `+0.0875` | `[-0.2411, +0.4161]` |
+
+The high-budget head tie is flat in EVERY category — no hidden mechanism
+trade behind the aggregate tie; the heads are simply equivalent at n1024.
+`fetch_rules_n1024_verdict.sh` harvested the complete artifact set
+(category verdict SHA `92ea815b...`) into
+`cascadiav3/reports/rules_20260709_rebaseline_complete/` on the
+orchestrator. Every item from the 07-09/10 recovery contract is resolved.
+The worlds screen det4 arm is on the GPU (stage D).
