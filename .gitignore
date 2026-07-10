@@ -27,3 +27,7 @@ cascadiav3/fixtures/
 cascadiav3/logs/
 cascadiav3/reports/
 cascadiav3/real-root-exporter/target/
+
+# local operational state
+venv/
+*.pid
