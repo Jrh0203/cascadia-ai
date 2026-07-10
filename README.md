@@ -6,7 +6,8 @@ Bacalhau-backed worker orchestration for CPU-bound jobs.
 
 ## Start Here
 
-- [Cascadia v3 overview](docs/v3/README.md)
+- **[Cascadia v3 — Source of Truth](docs/v3/README.md)** — the authoritative
+  status of everything; start every session and handoff there.
 - [Transformer architecture](docs/v3/ARCHITECTURE.md)
 - [Training pipeline](docs/v3/TRAINING_PIPELINE.md)
 - [Rules contract](docs/v3/RULES_CONTRACT.md)

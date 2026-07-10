@@ -1,92 +1,114 @@
-# Cascadia V3
+# Cascadia V3 — Source of Truth
+
+**This file is the authoritative entry point for the state of the project.**
+Link this in handoffs. It is updated at every material transition, together
+with [CAMPAIGN_STATE.md](CAMPAIGN_STATE.md) (live operational detail) and
+`cascadiav3/EXPERIMENT_LOG.md` (chronological evidence). If this file and a
+dated handoff snapshot disagree, current `main` wins.
 
 Cascadia v3 is the transformer-based training and search stack for pushing
-four-player Cascadia beyond the previous neural/search plateau. The live path is
-not an NNUE campaign and not a v2 MLX continuation; it is CascadiaFormer over
-packed expert tensors with search-supervised action values.
+four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
+over packed expert tensors with Gumbel search-supervised action values.
 
-## Canonical Docs
+## Status at a glance (updated 2026-07-09 evening)
 
-- [Current Handoff](../../handoff-2026-07-09.md): timestamped operational
-  snapshot, exact live PIDs/artifacts, blockers, and resume checklist.
+- **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
+- **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
+  refresh as a real decision → chance → draft; wildlife returns to the bag
+  before refill) compatibility-broke every earlier number. All promotion
+  evidence must carry rules ID `..._rules_2026_07_09`. See
+  [RULES_CONTRACT.md](RULES_CONTRACT.md).
+- **Corrected-rules scoreboard (100 games, seeds 2027070900..99):**
+  greedy `87.5450` → no-search policy `91.8425` → cycle4 n256/d4 `97.0675`
+  → distq-k8 n256/d4 `97.3075` (+0.24, not significant) → **cycle4
+  n1024/d16 `98.2975`** (complete). The distq-k8 n1024/d16 arm is the live
+  decisive run; its paired verdict publishes automatically on completion.
+- **After that, john0 runs an automatic queued chain:** exact-K1 100-seed
+  gate → structured-Q frozen-head pilot (preregistered thresholds; data
+  staged and audited) → CUDA packed-throughput probe → market sample-4 gate
+  → jobs concurrency calibration.
+- **Open recovery item:** scalar seed `2027070908` category replay under the
+  exact d20 contract; the category-mechanism verdict is blocked until both
+  100-row category ledgers exist (totals verdict is not blocked).
+- **Central scientific finding:** evaluation noise is the binding constraint
+  (median decision SNR ≈ 1; ~46% of decisions noise-flippable). Exactness
+  beats estimation wherever practical. Ranked directions and closed
+  directions: [RESEARCH_LOG.md](RESEARCH_LOG.md) §5.
+
+For exact live PIDs, artifact hashes, and the resume checklist, read
+[CAMPAIGN_STATE.md](CAMPAIGN_STATE.md) RESUME HERE first, then the latest
+dated handoff ([handoff-2026-07-09.md](../../handoff-2026-07-09.md) — a
+timestamped snapshot, weaker than current `main`).
+
+## Read order for a fresh session
+
+1. This file.
+2. [CAMPAIGN_STATE.md](CAMPAIGN_STATE.md) — live state; RESUME HERE first.
+3. `cascadiav3/EXPERIMENT_LOG.md` — chronological evidence, newest entries.
+4. [RESEARCH_LOG.md](RESEARCH_LOG.md) — consolidated verdicts and ranked
+   directions.
+5. [RULES_CONTRACT.md](RULES_CONTRACT.md) — rules identity and compatibility
+   boundary.
+6. [INFRASTRUCTURE.md](INFRASTRUCTURE.md) and
+   [cascadiav3/README.md](../../cascadiav3/README.md) — operations and
+   command entry points.
+7. [RADICAL_DIRECTIONS.md](RADICAL_DIRECTIONS.md),
+   [ARCHITECTURE.md](ARCHITECTURE.md),
+   [TRAINING_PIPELINE.md](TRAINING_PIPELINE.md) — architecture bets and
+   methodology.
+
+## Canonical docs
+
+- [Campaign State](CAMPAIGN_STATE.md): live working state — in-flight jobs,
+  blockers, decision tree.
 - [Research Log](RESEARCH_LOG.md): **the experiment record** — architecture,
   every direction tried with verdicts, scaling laws, decision-SNR
   measurement, and ranked future directions.
-- [Rules Contract](RULES_CONTRACT.md): official wildlife-return ordering,
-  optional three-of-a-kind policy choice, rules identity, and the resulting
-  baseline compatibility boundary.
+- [Rules Contract](RULES_CONTRACT.md): official rules identity and the
+  resulting baseline compatibility boundary.
 - [Radical Directions](RADICAL_DIRECTIONS.md): speculative architecture-level
-  bets (exact endgame solving, tiny-model/huge-search inversion, pairwise
-  comparator head, on-GPU rollouts, decomposed value heads, league play),
-  each judged against the campaign's measured constraints.
+  bets, each judged against the campaign's measured constraints.
 - [Infrastructure Runbook](INFRASTRUCTURE.md): how to operate john0 + the
   mac-mini fleet — builds, job patterns, batteries/verdicts, seed registry,
-  fleet rules, and the web UI deployment.
-- [Campaign State](CAMPAIGN_STATE.md): live working state — read the RESUME
-  HERE section first when picking up work.
+  fleet rules, recovery, and the web UI deployment.
 - [Gumbel Self-Play Campaign](GUMBEL_SELFPLAY_CAMPAIGN.md): the active
-  100-point plan — Gumbel search with neural leaf values, self-play data
-  generation, phases, gates, and decision branches.
+  100-point plan — phases, gates, and decision branches.
 - [Architecture](ARCHITECTURE.md): model shape, tokenization, relation bias,
-  public-boundary rules, and literature basis.
-- [Training Pipeline](TRAINING_PIPELINE.md): data generation, objectives,
-  expert iteration, checkpointing, and promotion gates.
+  serving semantics, and literature basis.
+- [Training Pipeline](TRAINING_PIPELINE.md): data formats, objectives, expert
+  iteration, checkpointing, and promotion gates.
 - [Performance](PERFORMANCE.md): measured loader/training/gameplay facts.
+- Latest handoff: [handoff-2026-07-09.md](../../handoff-2026-07-09.md).
 
 The implementation package lives in
 [cascadiav3/README.md](../../cascadiav3/README.md).
 
-## Current Scientific State
+## Standing contracts (durable, not run-by-run status)
 
-Rules compatibility break: the historical score measurements below predate
-the 2026-07-09 correction that made the free three-of-a-kind refresh an
-explicit accept/decline policy action. They remain architecture evidence but
-not promotion controls. Corrected-rules baselines are being regenerated; see
-[Campaign State](CAMPAIGN_STATE.md) and [Rules Contract](RULES_CONTRACT.md).
+- Real training data is packed `.npz` tensor shards (schema v4 for new Gumbel
+  generation); JSONL only for tiny audit fixtures.
+- Serving must rank by
+  `derived_final_q = exact_afterstate_score_active + predicted_score_to_go`.
+- Promotion requires ≥100 paired games with a 95% CI excluding zero — never
+  validation loss, smoke scores, or process activity.
+- john0 runs one scientific job at a time; the Mac minis generate training
+  data only and never host gates; fleet shards are never auto-folded.
+- Batteries run TF32 off; generation may run TF32 on.
+- Trust streamed artifacts, reports, manifests, and paired verdicts — never a
+  busy process alone.
+- `cargo check --workspace` does **not** cover the exporter; build
+  `cascadiav3/real-root-exporter` explicitly.
 
-- Real training data should use packed `.npz` tensor shards.
-- JSONL is retained only for tiny audit fixtures.
-- The default CascadiaFormer board fast path is radius 6: 127 canonical cells
-  plus exact overflow entities.
-- The model must learn score-to-go, and serving must rank by
-  `exact_afterstate_score_active + predicted_score_to_go`.
-- EI-0 is the first transformer run with positive no-search gameplay evidence:
-  CascadiaFormer-q scored `89.6175` versus greedy `87.5575` over 100 complete
-  games.
-- EI-0 search-integrated K32 retained search reached `95.8000`, but trailed
-  matched full K64 search by `1.1750`.
-- EI-0 K56 retained search narrowed the matched full-K64 gap to `0.5625` and
-  passed the timing gate with a `0.8834` treatment/control ratio, but both K56
-  and full K64 remained below the 100-point target on 20-game mean score.
-- EI-1 model-state expert iteration improved no-search q play to `90.7600`
-  over 100 games, beating matched greedy by `3.2150` and EI-0 q's `89.6175`.
-- EI-1 K56 search remained in the `96-97` score band on recovered evidence:
-  `96.4250` over 20 complete candidate games, with no 100-point breakthrough.
-- The next improvement should change the policy/value/rollout target, not just
-  increase retained width, rollout count, or this exact EI-1 objective.
-- K64/R32 showed that raw rollout count is not the bottleneck: the greedy
-  rollout policy itself caps the teacher.
-- All pre-2026-07-02 search-integrated numbers carry a hidden-information
-  leak (rollouts observed the true hidden tile/bag order) and are treated as
-  legacy-leaky; honest baselines use `--rollout-determinize`.
-- The active strategy is the Gumbel self-play campaign
-  ([GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md)): Gumbel top-m
-  search with batched model leaf values over determinized states, all-seat
-  self-play data with improved-policy targets and real-outcome value labels
-  (new generation uses exact-grounded schema v4), and CI-gated promotion at
-  100+ paired games. EI-1 was
-  terminated in favor of this line.
-- Under corrected rules, cycle4 scored `97.0675` and distq-k8 `97.3075` at
-  n256/d4 over the same 100 seeds; the `+0.2400` delta was inconclusive. The
-  corrected scalar n1024/d16 baseline is complete at `98.2975`; the matching
-  distq n1024 arm is live and owns the next strength decision.
+## Historical recovery
 
-## Historical Recovery
-
-The pre-cleanup v1/v2 archive, older planning memos, v2 MLX package, web app,
-legacy teacher bridge, and rejected experiment attic were removed from `main`.
-Recover them from:
+Pre-v3 material (v1/v2 engines, MLX package, old web app, rejected
+experiments) was removed from `main` on 2026-07-01; superseded docs were
+pruned on 2026-07-09. Recover via:
 
 ```bash
-git show archive/pre-v3-repo-cleanup-2026-07-01:<path>
+git show archive/pre-v3-repo-cleanup-2026-07-01:<path>   # tag, 07-01 cleanup
+git show archive/doc-prune-2026-07-09:<path>             # branch, 07-09 prune
 ```
+
+Off-repo data archives (dead v1/v2 weights, rules-broken fleet shards) live at
+`john0:~/cascadia-archive/` with SHA256SUMS and a README.
