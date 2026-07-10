@@ -42,9 +42,12 @@ replay, both category ledgers + the paired category mechanism verdict
 worlds screen (det4/det8, block `2027071500..1599`), then the stage-5
 jobs12/16/24 concurrency probe. Replay validation failures are logged
 loudly and skipped rather than stranding the GPU. Pause with
-`touch cascadiav3/logs/HOLD_gpu_autochain`. The screen's paired verdict
-runs orchestrator-side via `cascadiav3.compare_search_shape`; the canonical
-harvest is `fetch_rules_n1024_verdict.sh` once the category ledgers exist.
+`touch cascadiav3/logs/HOLD_gpu_autochain`. Behind it,
+`worlds_confirm_waiter.{sh,log,pid}` computes the screen verdict on-box and
+launches `run_worlds_confirm.sh` (n1024 det16 vs det32, block
+`2027071600..1699`, ~20h) only if the preregistered CI+ rule fires; pause
+with `HOLD_worlds_confirm`. The canonical harvest is
+`fetch_rules_n1024_verdict.sh` once the category ledgers exist.
 
 ## PREVIOUS RESUME (07-10 03:30 — rebaseline COMPLETE; cycle4 retained; post-chain resumed)
 
