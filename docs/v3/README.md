@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-11 11:55 EDT)
+## Status at a glance (updated 2026-07-11 19:00 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -72,11 +72,16 @@ over packed expert tensors with Gumbel search-supervised action values.
   rate `0.466 → 0.424`) earns it a seat in a future composed serving-v2
   gate. **R1.1a: no cheap cooperative points at the root** (table delta
   `-0.03`/decision at own-Q parity; R1.1b/c deprioritized).
-- **Live now (session-independent on john0):** the preregistered **R3.6
-  mega-budget ceiling probe** (PID 3843186, rev `a48fc7d3`): n4096/d16
-  25g paired vs the stored champion arm — the portfolio-allocation
-  question (log-linear predicts +0.615; bands in EXPERIMENT_LOG 11:50).
-  Saturate-the-GPU rule now in AGENTS.md.
+- **R3.6 ceiling probe: DECELERATING (07-11 18:41).** n4096/d16 paired
+  `+0.21` vs the stored champion arm (CI `[-0.59, +1.01]`), ~1/3 of the
+  log-linear +0.615 — the selfish scaling lane plausibly tops out under
+  100. Portfolio reweights to **R1.2 ghost opponents** and **R1.4
+  training densification**; velocity stack multiplies.
+- **Live now (session-independent on john0):** R2.1 **puzzle-bank
+  generation** (PID 3888566, rev `e78975a0`): ~727 champion-ledger roots
+  at n4096/d16 x2, worker-pooled jobs12 (first tool under the
+  saturate-the-GPU rule), ~4.5h; preregistered acceptance screens follow
+  before first use (EXPERIMENT_LOG 18:54).
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.

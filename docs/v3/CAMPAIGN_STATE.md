@@ -5,7 +5,21 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-11 11:55 — Tier-0 day-one verdicts all in; R3.6 ceiling probe LIVE (~8h))
+## RESUME HERE (07-11 19:00 — R3.6: DECELERATING; puzzle bank generating overnight; portfolio reweighted to structural programs)
+
+**R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
+stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
+**decelerating** (~1/3 of the +0.615 log-linear prediction; 131.4s/decision
+= 3.1x cost for 4x sims, dedup improves with n). Taken with the day-one
+nulls, weight shifts to **R1.2 ghost opponents** and **R1.4 training
+densification**, with the R2.x velocity stack as multipliers
+(EXPERIMENT_LOG 18:50).
+
+**Live now:** `puzzle_bank_20260711.sh` (PID `3888566`, rev `e78975a0`) —
+R2.1 bank generation: ~727 champion-ledger roots resolved at n4096/d16 x2
+repeats, worker-pooled jobs12 (saturation pattern), ~4.5h. Preregistered
+acceptance check (incumbent + cs025_tk8 screens vs gate truth) runs before
+first use (EXPERIMENT_LOG 18:54).
 
 **Live now:** `ceiling_probe_20260711.sh` (PID `3843186`, rev `a48fc7d3`) —
 the preregistered **R3.6 mega-budget probe**: cycle4 at n4096/d16 (K1 off,
