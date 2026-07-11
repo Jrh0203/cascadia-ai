@@ -4358,6 +4358,14 @@ fn run_search_stability_probe(args: &Args) -> Result<()> {
         .input
         .as_ref()
         .context("--search-stability-probe requires --in <decisions.jsonl>")?;
+    if args.gumbel_blend_weight < 1.0 && args.rollout_top_k <= 1 {
+        bail!(
+            "--search-stability-probe with blended rollouts requires --rollout-top-k > 1: \
+             top-k-1 greedy rollouts are deterministic, so the rollout RNG stream is never \
+             consulted and the paired/unpaired comparison is vacuous (serving uses \
+             --max-actions 64 --rollout-top-k 4)"
+        );
+    }
     let by_seed = read_ledger_decision_rows(input)?;
     let menu_limit = gumbel_root_menu_limit(args);
     let stride = args.probe_stride.max(1);
@@ -4471,6 +4479,8 @@ fn gumbel_search_probe_settings(args: &Args) -> Value {
         "depth_rounds": args.gumbel_depth_rounds,
         "determinizations": args.gumbel_determinizations,
         "rollout_blend_weight": args.gumbel_blend_weight,
+        "rollout_max_actions": args.max_actions,
+        "rollout_top_k": args.rollout_top_k,
         "k_interior": args.k_interior,
         "c_visit": args.gumbel_c_visit,
         "c_scale": args.gumbel_c_scale,

@@ -86,6 +86,22 @@ def analyze(path: Path, variance_reduction_floor: float = 0.20) -> dict[str, Any
         per_root.append(root_row)
     if not per_root:
         raise ValueError("every sampled root was unusable (thin menus?)")
+    # Distinct RNG streams always leave float-level traces in leaf values,
+    # so exact equality of every per-root statistic across the two variants
+    # means rollout randomness never reached the leaves (e.g. rollout
+    # top-k 1 greedy rollouts) — an invalid run, not a null result. Small
+    # synthetic fixtures are exempt.
+    if len(per_root) >= 5 and all(
+        row["unpaired_gap_variance"] == row["paired_gap_variance"]
+        and row["unpaired_mean_gap"] == row["paired_mean_gap"]
+        and row["unpaired_flip_rate"] == row["paired_flip_rate"]
+        for row in per_root
+    ):
+        raise ValueError(
+            "paired and unpaired variants are bit-identical across all roots — "
+            "rollout randomness is not reaching leaf values (vacuous config, "
+            "e.g. --rollout-top-k 1); this run is invalid, not a null"
+        )
 
     pooled_unpaired = sum(row["unpaired_gap_variance"] for row in per_root) / len(per_root)
     pooled_paired = sum(row["paired_gap_variance"] for row in per_root) / len(per_root)

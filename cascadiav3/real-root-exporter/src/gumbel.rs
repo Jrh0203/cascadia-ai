@@ -1946,6 +1946,35 @@ mod tests {
     }
 
     #[test]
+    fn paired_rollouts_change_leaf_values_when_rollouts_are_stochastic() {
+        let game = test_state(2_026_070_650, 8);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |paired_rollouts: bool| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(0x5eed);
+            cfg.n_simulations = 32;
+            cfg.top_m = 8;
+            cfg.rollout_blend_weight = 0.5;
+            cfg.rollout_max_actions = 6;
+            cfg.rollout_top_k = 3;
+            cfg.paired_rollouts = paired_rollouts;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search")
+        };
+        let unpaired = run(false);
+        let paired = run(true);
+        // With stochastic (top-k > 1) rollouts the two stream structures
+        // must reach the leaf values. A bit-identical result would mean the
+        // rollout RNG was never consulted — the vacuous-probe bug class
+        // (DEFAULT_ROLLOUT_TOP_K=1) caught on 2026-07-11.
+        assert_ne!(
+            unpaired.completed_q, paired.completed_q,
+            "paired and unpaired rollout streams produced bit-identical searches"
+        );
+    }
+
+    #[test]
     fn sigma_norm_variants_search_end_to_end() {
         let game = test_state(2_026_070_100, 4);
         let root = eval_row_for_state(&game, None)

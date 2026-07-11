@@ -76,6 +76,16 @@ class AnalyzeSearchStabilityTest(unittest.TestCase):
             self.assertAlmostEqual(report["pooled_gap_variance"]["reduction"], 0.0)
             self.assertFalse(report["proceed_to_gate"])
 
+    def test_bit_identical_variants_are_invalid(self) -> None:
+        rows = []
+        for ply in range(5):
+            for repeat, gap in enumerate([0.0, 0.6, 0.0]):
+                rows.append(search_row(1, ply, False, repeat, 0, gap))
+                rows.append(search_row(1, ply, True, repeat, 0, gap))
+        with TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "bit-identical"):
+                analyze(write_probe(tmp, rows))
+
     def test_missing_summary_fails_closed(self) -> None:
         with TemporaryDirectory() as tmp:
             path = Path(tmp) / "probe.jsonl"

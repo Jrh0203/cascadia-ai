@@ -78,6 +78,8 @@ if [ ! -s "$PROBE_OUT" ]; then
     --gumbel-determinizations 4 \
     --gumbel-market-decision-samples 8 \
     --gumbel-blend-weight 0.5 \
+    --max-actions 64 \
+    --rollout-top-k 4 \
     --k-interior 16 \
     --probe-stride "$PROBE_STRIDE" \
     --probe-repeats "$PROBE_REPEATS" \
