@@ -5,7 +5,19 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-10 22:40 — chain 1 (probe+sigma sweep) LIVE; chain 2 (R0.2 probe + R1.1a audit) armed behind it)
+## RESUME HERE (07-11 09:50 — R0.1 CLOSED (confirm null); jobs12 retained; chain 2 running R0.2 probe → R1.1a audit)
+
+**Overnight verdicts:** (1) **R0.1 sigma calibration CLOSED** — screens
+were 7/7 positive (best cs025_tk8 +0.70) but the 100-seed disjoint-block
+confirm returned `-0.2325`, CI `[-0.5440, +0.0790]`; the screen pattern
+was a shared-baseline artifact (lesson recorded, RESEARCH_LOG §4.10).
+(2) **Concurrency probe RESOLVED: retain jobs12** — throughput flat
+(jobs24 `1.051x`), GPU ~66% util at all settings; the bridge is the
+bound, R2.4 gains must come from bridge-side work. (3) Chain 2 (PID
+`3764249`) deployed rev `927004fd` and is on the **R0.2 stability probe**
+(preregistered: ≥20% pooled gap-variance reduction under paired rollouts →
+n256 gate), then the **R1.1a contention audit**. EXPERIMENT_LOG 04:55,
+09:45.
 
 **Chain 2 armed (PID `3757640`, log/pid `gpu_chain2_20260710_audits.*`,
 pause `HOLD_gpu_chain2_audits`):** waits for chain 1 to exit, then deploys

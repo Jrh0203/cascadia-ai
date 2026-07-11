@@ -5490,3 +5490,37 @@ positive together — the disjoint-block confirm is the arbiter.
 block `2027072200..99`, touched once) auto-launched 04:49:53. CI+ there →
 preregister an n1024 confirmation; else R0.1 closes. Artifacts:
 `sigma_sweep_20260710_n256_*.{json,md}` + `_selection.json` on john0.
+
+## 2026-07-11 09:45 — R0.1 CLOSED (confirm null on the disjoint block); concurrency verdict: retain jobs12 (throughput flat, bridge-bound); chain 2 live
+
+**R0.1 sigma calibration: CLOSED per preregistration.** The 100-seed
+confirm (block `2027072200..99`, touched once) of screen winner cs025_tk8
+(c_scale 0.25, topk:8) vs the incumbent came back `-0.2325`, 95% t-CI
+`[-0.5440, +0.0790]` — inconclusive, mean on the wrong side. The screen's
++0.70 (and the 7/7-positive arm pattern) did not survive the disjoint
+block: it was the shared-baseline artifact called out at screen time — one
+lucky/unlucky incumbent arm shifts every candidate delta together.
+**Methodological note for future sweeps:** a shared-baseline screen floor
+does not protect against baseline luck; prefer two independent baseline
+replicates (floor on the candidate-vs-worse-baseline delta) or an
+ordering-only screen. Wall was also not free: `11.98s -> 12.20s` mean
+decision. Verdict artifact: `sigma_confirm_20260710_n256_verdict.{json,md}`.
+The noise-wall program moves to R0.2 (paired rollouts — offline probe
+running now) and R0.3 (unvisited-Q bias correction).
+
+**Stage-5 concurrency probe: RESOLVED — retain jobs12.** Fixed comparator
+over the three completed arms: jobs16 `1.033x`, jobs24 `1.051x` vs jobs12,
+GPU util ~66% mean at ALL three settings — the shared bridge, not the job
+count, is the throughput bound at n64/d4; R2.4 gains must come from
+bridge-side work (torch.compile, CUDA graphs). Divergence classification:
+1 divergent seed at jobs16, 0 at jobs24 (plus the jobs24 fork seen in the
+crashed run — forks are rare and real). Caveat recorded: knee eligibility
+used the replay-grade root-value drift tolerance (2e-05) while cross-jobs
+drift is inherently ~0.1-0.3, so jobs16/24 were excluded from knee
+selection; the recommendation is unchanged because throughput is flat —
+future cross-jobs runs should pass `--max-root-value-drift` ~0.5.
+Artifacts: `cuda_concurrency_20260709_n64_d4_verdict.{json,md}` + complete
+marker.
+
+**Chain 2 now on stage A** (R0.2 search-stability probe, ~1h), then stage
+B (R1.1a contention audit).

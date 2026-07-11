@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-10 22:40 EDT)
+## Status at a glance (updated 2026-07-11 09:50 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -57,21 +57,22 @@ over packed expert tensors with Gumbel search-supervised action values.
   wall) and lowest conviction-per-GPU-hour next to the portfolio; killed
   cleanly with zero completed det16 games (nothing durable lost). Block
   `2027071600..1699` stays reserved for a future rerun.
-- **Live now (session-independent on john0):** `gpu_chain_20260710_sigma.sh`
-  (PID 3747964, pause `HOLD_gpu_chain_sigma`) at deployed revision
-  `83ffe12a` — concurrency probe attempt 3 (attempt 2 hit the second
-  missing-PATH class, `cargo`; chain env fixes both), then the
-  **preregistered R0.1 sigma-calibration sweep**: 8 arms (c_scale ×
-  sigma-norm) on 25 paired seeds, screen floor +0.25, auto-gated 100-seed
-  confirm (EXPERIMENT_LOG 21:55). R0.1/R0.2 serving knobs
-  (`--gumbel-c-visit/c-scale/sigma-norm/paired-rollouts`) are on `main`
-  with bit-identical defaults; `compare_search_shape` generalized via
-  `--varied-key`. Chain 2 (PID 3757640, pause `HOLD_gpu_chain2_audits`)
-  is armed behind it: the preregistered **R0.2 stability probe** (paired
-  vs unpaired rollout noise on 100 replayed champion roots; ≥20% variance
-  reduction → n256 gate) and the **R1.1a table-contention audit**
-  (cooperative-play prize bound) — new ledger-replay exporter modes +
-  analyzers, EXPERIMENT_LOG 22:36.
+- **R0.1 sigma calibration: CLOSED (07-11).** 8-arm screen was 7/7
+  positive (best c_scale 0.25/topk:8 at +0.70) but the preregistered
+  100-seed disjoint-block confirm returned `-0.2325`, CI
+  `[-0.5440, +0.0790]` — a shared-baseline screen artifact; lesson and
+  knobs (now on `main`, bit-identical defaults) in RESEARCH_LOG §4.10.
+- **Concurrency probe: RESOLVED (07-11) — jobs12 retained.** Throughput
+  flat across jobs12/16/24 (best `1.051x`), GPU ~66% util everywhere: the
+  shared bridge is the bound; R2.4 throughput work moves bridge-side.
+  Comparator now classifies cross-jobs trajectory forks descriptively
+  (divergence-frontier fix).
+- **Live now (session-independent on john0):** chain 2 (PID 3764249,
+  pause `HOLD_gpu_chain2_audits`, rev `927004fd`) — the preregistered
+  **R0.2 stability probe** (paired vs unpaired rollout noise on 100
+  replayed champion roots; ≥20% pooled gap-variance reduction → n256
+  gate), then the **R1.1a table-contention audit** (cooperative-play
+  prize bound). New ledger-replay exporter modes + analyzers on `main`.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.

@@ -588,6 +588,26 @@ fresh untouched blocks. Verdict artifacts:
 `structured_q_head_pilot_20260709/heldout_verdict.{json,md}` (candidate
 manifest `c8c80c56...`, verdict shard `218ff1b5...`).
 
+### 4.10 Gumbel sigma calibration (R0.1) — CLOSED (confirm null, 07-11)
+
+The portfolio's cheapest bet: `sigma(q) = (c_visit + max_visits) * c_scale
+* norm(q)` with hardcoded Go defaults (50 / 1.0 / min-max) under measured
+decision SNR ≈ 1; the Gumbel paper's own noisy-Q mitigation is a smaller
+c_scale. Knobs exposed (`--gumbel-c-visit/c-scale/sigma-norm`, four
+normalization schemes, bit-identical defaults) and swept 8 arms
+(c_scale {0.05, 0.1, 0.25, 1.0} × {minmax, topk:8}) at n256/d4 on 25
+paired seeds: all 7 candidates beat the incumbent (best cs025_tk8 +0.70)
+with a clean dose-response shape — but the preregistered 100-seed confirm
+on the disjoint block came back `-0.2325`, CI `[-0.5440, +0.0790]`.
+**Closed.** Two durable lessons: (1) the screen's 7/7-positive pattern was
+a shared-baseline artifact (one unlucky incumbent arm lifts every delta) —
+future sweep screens need independent baseline replicates or ordering-only
+selection; (2) at n256 the sigma stack is not the binding miscalibration —
+the noise wall lives elsewhere (rollout decorrelation R0.2, unvisited-Q
+bias R0.3, final-selection variance R0.4). Reopening requires n1024-scale
+evidence or a changed Q-noise regime (e.g., after R0.2/R0.3 land).
+Artifacts: `sigma_sweep_20260710_n256_*` + `sigma_confirm_20260710_n256_*`.
+
 ---
 
 ## 5. Future research directions (ranked, as of 07-09)
