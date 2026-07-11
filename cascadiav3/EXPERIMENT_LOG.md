@@ -5470,3 +5470,23 @@ the fixed comparator over the existing three arm artifact sets (no GPU,
 reports reused byte-identical, `--source-revision 83ffe12a` matching the
 arms) and writes the standard verdict + complete marker, then proceeds to
 the R0.2 stability probe and R1.1a contention audit as preregistered.
+
+## 2026-07-11 04:55 — Sigma sweep screens COMPLETE: all 7 candidate arms positive, c_scale=0.25 tops both families; confirm auto-launched (cs025_tk8)
+
+Screen results (25 paired seeds `2027072100..24` vs the incumbent
+cs10_mm arm; per-arm 95% t-CIs all straddle zero, as expected at screen
+scale): `cs025_tk8 +0.70` > `cs025_mm +0.65` > `cs005_tk8 +0.36` >
+`cs01_tk8 +0.34` > `cs01_mm +0.32` > `cs10_tk8 +0.21` > `cs005_mm +0.00`.
+Two reads worth recording: (1) within BOTH normalization families the
+ordering is a dose-response with an interior optimum at c_scale 0.25 —
+consistent with a genuinely miscalibrated sigma rather than noise; (2)
+topk:8 ≈ minmax at equal c_scale (small consistent edge to topk:8), so the
+c_scale shrink is doing most of the work. Caveat: every delta shares the
+single incumbent arm, so incumbent bad luck would shift all seven
+positive together — the disjoint-block confirm is the arbiter.
+
+**Preregistered rule fired:** best mean `+0.70 >= +0.25` floor →
+`proceed_to_confirm=true`; the 100-seed confirm (incumbent vs cs025_tk8,
+block `2027072200..99`, touched once) auto-launched 04:49:53. CI+ there →
+preregister an n1024 confirmation; else R0.1 closes. Artifacts:
+`sigma_sweep_20260710_n256_*.{json,md}` + `_selection.json` on john0.
