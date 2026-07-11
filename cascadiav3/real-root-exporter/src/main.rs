@@ -107,6 +107,12 @@ struct Args {
     shared_model_session: bool,
     /// Per-seed JSONL output directory for --gumbel-benchmark-batch.
     output_dir: Option<PathBuf>,
+    /// Sampling stride over ledger decisions for --search-stability-probe.
+    probe_stride: usize,
+    /// Search repeats per (root, variant) for --search-stability-probe.
+    probe_repeats: usize,
+    /// Total sampled roots cap for --search-stability-probe.
+    probe_max_roots: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -127,6 +133,8 @@ enum Mode {
     GumbelSuggestServer,
     GumbelBenchmarkBatch,
     GumbelSelfplayTensorCorpus,
+    TableContentionAudit,
+    SearchStabilityProbe,
 }
 
 #[derive(Debug, Clone)]
@@ -343,6 +351,12 @@ fn main() -> Result<()> {
                 args.manifest.display()
             );
         }
+        Mode::TableContentionAudit => {
+            run_table_contention_audit(&args)?;
+        }
+        Mode::SearchStabilityProbe => {
+            run_search_stability_probe(&args)?;
+        }
     }
     Ok(())
 }
@@ -393,6 +407,9 @@ fn parse_args() -> Result<Args> {
         model_sessions: None,
         shared_model_session: false,
         output_dir: None,
+        probe_stride: 7,
+        probe_repeats: 6,
+        probe_max_roots: 100,
     };
 
     let mut iter = std::env::args().skip(1);
@@ -420,6 +437,17 @@ fn parse_args() -> Result<Args> {
             "--gumbel-policy-game" => args.mode = Mode::GumbelPolicyGame,
             "--gumbel-suggest-server" => args.mode = Mode::GumbelSuggestServer,
             "--gumbel-benchmark-batch" => args.mode = Mode::GumbelBenchmarkBatch,
+            "--table-contention-audit" => args.mode = Mode::TableContentionAudit,
+            "--search-stability-probe" => args.mode = Mode::SearchStabilityProbe,
+            "--probe-stride" => {
+                args.probe_stride = value()?.parse().context("invalid --probe-stride")?
+            }
+            "--probe-repeats" => {
+                args.probe_repeats = value()?.parse().context("invalid --probe-repeats")?
+            }
+            "--probe-max-roots" => {
+                args.probe_max_roots = value()?.parse().context("invalid --probe-max-roots")?
+            }
             "--output-dir" => args.output_dir = Some(PathBuf::from(value()?)),
             "--gumbel-selfplay-tensor-corpus" => {
                 args.mode = Mode::GumbelSelfplayTensorCorpus;
@@ -763,6 +791,18 @@ Options:
                                rollout stream across root actions at equal
                                (world, visit) index so rollout noise cancels
                                in halving comparisons [off].
+  --table-contention-audit     Replay a decisions ledger (--in) without
+                               search; for every decision compare the chosen
+                               action vs the best model-Q alternative under
+                               the TABLE objective (value-head sums). Bounds
+                               the cooperative-play prize (R1.1a).
+  --search-stability-probe     Replay a decisions ledger (--in) and re-run
+                               root searches repeatedly, unpaired vs paired
+                               (CRN) rollouts, equal repeat = equal search
+                               seed. Offline kill test for R0.2.
+  --probe-stride <k>           Sample every k-th ledger decision [7].
+  --probe-repeats <n>          Search repeats per (root, variant) [6].
+  --probe-max-roots <n>        Total sampled roots cap [100].
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
   --gumbel-market-decision-samples <n>
@@ -3909,6 +3949,534 @@ fn run_gumbel_policy_game(args: &Args) -> Result<()> {
     Ok(())
 }
 
+/// One `gumbel_decision` ledger row, as needed to replay the trajectory.
+#[derive(Debug, Clone)]
+struct LedgerDecisionRow {
+    ply: u64,
+    chosen_action_id: String,
+    free_choice: String,
+    active_seat: Option<u64>,
+    action_count: Option<u64>,
+}
+
+/// Metadata for one reconstructed root, parallel to its `EvalRow`.
+struct ReplayedRootMeta {
+    ply: usize,
+    chosen_index: usize,
+    free_choice: String,
+    /// The chosen action was only found on the uncapped legal menu
+    /// (exact-endgame decisions search the full legal set).
+    full_menu_fallback: bool,
+}
+
+/// Reads `gumbel_decision` rows from a decisions JSONL ledger, grouped by
+/// seed and validated to be contiguous plies from 0.
+fn read_ledger_decision_rows(path: &PathBuf) -> Result<BTreeMap<u64, Vec<LedgerDecisionRow>>> {
+    let contents = std::fs::read_to_string(path)
+        .with_context(|| format!("reading decisions ledger {}", path.display()))?;
+    let mut by_seed: BTreeMap<u64, Vec<LedgerDecisionRow>> = BTreeMap::new();
+    for (line_index, line) in contents.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let value: Value = serde_json::from_str(line)
+            .with_context(|| format!("parsing ledger line {}", line_index + 1))?;
+        if value.get("type").and_then(Value::as_str) != Some("gumbel_decision") {
+            continue;
+        }
+        let seed = value
+            .get("seed")
+            .and_then(Value::as_u64)
+            .with_context(|| format!("ledger line {} lacks a seed", line_index + 1))?;
+        let row = LedgerDecisionRow {
+            ply: value
+                .get("ply")
+                .and_then(Value::as_u64)
+                .with_context(|| format!("ledger line {} lacks a ply", line_index + 1))?,
+            chosen_action_id: value
+                .get("chosen_action_id")
+                .and_then(Value::as_str)
+                .with_context(|| format!("ledger line {} lacks chosen_action_id", line_index + 1))?
+                .to_owned(),
+            free_choice: value
+                .get("free_three_of_a_kind_choice")
+                .and_then(Value::as_str)
+                .unwrap_or("not_available")
+                .to_owned(),
+            active_seat: value.get("active_seat").and_then(Value::as_u64),
+            action_count: value.get("action_count").and_then(Value::as_u64),
+        };
+        by_seed.entry(seed).or_default().push(row);
+    }
+    if by_seed.is_empty() {
+        bail!("no gumbel_decision rows found in {}", path.display());
+    }
+    for (seed, rows) in &mut by_seed {
+        rows.sort_by_key(|row| row.ply);
+        for (index, row) in rows.iter().enumerate() {
+            if row.ply != index as u64 {
+                bail!("ledger seed {seed} has non-contiguous plies (missing ply {index})");
+            }
+        }
+    }
+    Ok(by_seed)
+}
+
+fn find_action_index(row: &gumbel::EvalRow, target: &str) -> Result<Option<usize>> {
+    for (index, afterstate) in row.afterstates.iter().enumerate() {
+        if action_id(&afterstate.candidate.action)? == target {
+            return Ok(Some(index));
+        }
+    }
+    Ok(None)
+}
+
+/// Rebuilds the root row the serving search saw (same greedy menu cap and
+/// market prelude) and locates the ledger's chosen action on it. Falls back
+/// to the uncapped legal menu (exact-endgame decisions search the full set).
+fn reconstruct_row_with_chosen(
+    game: &GameState,
+    prelude: MarketPrelude,
+    menu_limit: Option<usize>,
+    chosen_action_id: &str,
+) -> Result<(gumbel::EvalRow, usize, bool)> {
+    let row = gumbel::eval_row_for_prelude(game, prelude.clone(), menu_limit)?
+        .context("non-terminal ledger decision produced no eval row")?;
+    if let Some(index) = find_action_index(&row, chosen_action_id)? {
+        return Ok((row, index, false));
+    }
+    let full_row = gumbel::eval_row_for_prelude(game, prelude, None)?
+        .context("non-terminal ledger decision produced no full-menu eval row")?;
+    let index = find_action_index(&full_row, chosen_action_id)?
+        .context("chosen action id absent even from the full legal menu")?;
+    Ok((full_row, index, true))
+}
+
+/// Replays one seed's ledger decisions without any search: reconstructs each
+/// root row, locates the chosen action, and advances to its afterstate.
+/// Returns parallel (rows, metas) plus the final reached state. Fails closed
+/// on any divergence from the ledger (seat or menu-size mismatch).
+fn replay_ledger_seed(
+    seed: u64,
+    rows: &[LedgerDecisionRow],
+    menu_limit: Option<usize>,
+    player_count: u8,
+) -> Result<(Vec<gumbel::EvalRow>, Vec<ReplayedRootMeta>, GameState)> {
+    let config = GameConfig::research_aaaaa(player_count)?;
+    let mut game = GameState::new(config, GameSeed::from_u64(seed))
+        .with_context(|| format!("creating replay game for seed {seed}"))?;
+    let mut eval_rows = Vec::with_capacity(rows.len());
+    let mut metas = Vec::with_capacity(rows.len());
+    for ledger_row in rows {
+        if game.is_game_over() {
+            bail!(
+                "ledger seed {seed} ply {} follows a terminal state",
+                ledger_row.ply
+            );
+        }
+        let prelude = match ledger_row.free_choice.as_str() {
+            "accept" => game
+                .free_three_of_a_kind_choices()?
+                .into_iter()
+                .find(|choice| choice.replace_three_of_a_kind)
+                .with_context(|| {
+                    format!(
+                        "ledger seed {seed} ply {} says accept but no accept choice is legal",
+                        ledger_row.ply
+                    )
+                })?,
+            "decline" | "not_available" => MarketPrelude::default(),
+            other => bail!(
+                "ledger seed {seed} ply {}: unknown free_three_of_a_kind_choice {other}",
+                ledger_row.ply
+            ),
+        };
+        let (row, chosen_index, full_menu_fallback) =
+            reconstruct_row_with_chosen(&game, prelude, menu_limit, &ledger_row.chosen_action_id)
+                .with_context(|| format!("reconstructing seed {seed} ply {}", ledger_row.ply))?;
+        if let Some(expected_seat) = ledger_row.active_seat {
+            let actual_seat = row.staged.current_player() as u64;
+            if actual_seat != expected_seat {
+                bail!(
+                    "replay divergence at seed {seed} ply {}: seat {actual_seat} vs ledger {expected_seat}",
+                    ledger_row.ply
+                );
+            }
+        }
+        if !full_menu_fallback {
+            if let Some(expected_count) = ledger_row.action_count {
+                let actual_count = row.afterstates.len() as u64;
+                if actual_count != expected_count {
+                    bail!(
+                        "replay divergence at seed {seed} ply {}: {actual_count} actions vs ledger {expected_count}",
+                        ledger_row.ply
+                    );
+                }
+            }
+        }
+        let chosen = &row.afterstates[chosen_index];
+        let next_game = chosen.state.clone();
+        let truncated = chosen.apply_truncated;
+        metas.push(ReplayedRootMeta {
+            ply: ledger_row.ply as usize,
+            chosen_index,
+            free_choice: ledger_row.free_choice.clone(),
+            full_menu_fallback,
+        });
+        eval_rows.push(row);
+        game = next_game;
+        if truncated {
+            break;
+        }
+    }
+    Ok((eval_rows, metas, game))
+}
+
+fn eval_rows_chunked(
+    evaluator: &mut BridgeLeafEvaluator,
+    rows: &[gumbel::EvalRow],
+    chunk_size: usize,
+) -> Result<Vec<gumbel::EvalOut>> {
+    use gumbel::LeafEvaluator;
+    let mut outs = Vec::with_capacity(rows.len());
+    for slice in rows.chunks(chunk_size.max(1)) {
+        outs.extend(evaluator.evaluate_batch(slice)?);
+    }
+    Ok(outs)
+}
+
+/// Argmax over model derived final Q, optionally excluding one index.
+/// `None` when no eligible action remains (single-action menus).
+fn best_q_index(derived_final_q: &[f64], excluding: Option<usize>) -> Option<usize> {
+    let mut best: Option<usize> = None;
+    for (index, q) in derived_final_q.iter().enumerate() {
+        if Some(index) == excluding {
+            continue;
+        }
+        if best.map_or(true, |current| *q > derived_final_q[current]) {
+            best = Some(index);
+        }
+    }
+    best
+}
+
+/// Estimated table total (sum over all seats' final scores) for one
+/// afterstate: exact terminal score when the game (or a truncation) ends
+/// there, otherwise the sum of the model value head's per-seat predictions.
+fn afterstate_table_estimate(
+    state: &GameState,
+    menu_limit: Option<usize>,
+    evaluator: &mut BridgeLeafEvaluator,
+) -> Result<(f64, bool)> {
+    use gumbel::LeafEvaluator;
+    let row = if state.is_game_over() {
+        None
+    } else {
+        gumbel::eval_row_for_prelude(state, MarketPrelude::default(), menu_limit)?
+    };
+    let Some(row) = row else {
+        let exact: f64 = score_game(state)
+            .iter()
+            .map(|score| f64::from(score.total))
+            .sum();
+        return Ok((exact, true));
+    };
+    let eval = evaluator
+        .evaluate_batch(std::slice::from_ref(&row))?
+        .into_iter()
+        .next()
+        .context("afterstate evaluation returned no output")?;
+    let values = eval.value_vector.context(
+        "model value head (per-seat final predictions) is required for the \
+         table-contention audit; refusing to run on a fallback bridge",
+    )?;
+    Ok((values.iter().sum(), false))
+}
+
+/// R1.1a contention audit: replays stored decision ledgers (no search) and,
+/// for every decision, compares the chosen action against the best
+/// alternative by model Q under the TABLE objective (sum of the value head's
+/// per-seat predictions at each afterstate). Bounds the prize of cooperative
+/// table optimization before any training. The alternative ranking uses
+/// model derived Q (the search's completed-Q runner-up is not recoverable
+/// from ledgers without re-searching) — read the output as a bound
+/// estimator, not a gate.
+fn run_table_contention_audit(args: &Args) -> Result<()> {
+    let input = args
+        .input
+        .as_ref()
+        .context("--table-contention-audit requires --in <decisions.jsonl>")?;
+    let by_seed = read_ledger_decision_rows(input)?;
+    let menu_limit = gumbel_root_menu_limit(args);
+    let mut chunk_bridge = ChunkBridge::Owned(model_state_worker_session(args)?);
+    let mut eval_cache = EvalRowCache::new();
+    let started = Instant::now();
+    let mut records = Vec::new();
+    let mut decisions_audited = 0usize;
+    let mut single_action_skipped = 0usize;
+    let mut replay_skipped_seeds = Vec::new();
+    let seed_count = by_seed.len();
+    for (seed, ledger_rows) in &by_seed {
+        // jobs12-generated ledgers can carry rare concurrency-divergent
+        // seeds (2027071427 precedent); skip them loudly instead of
+        // stranding the audit.
+        let (eval_rows, metas, _final_state) =
+            match replay_ledger_seed(*seed, ledger_rows, menu_limit, args.player_count) {
+                Ok(replayed) => replayed,
+                Err(error) => {
+                    eprintln!("[table-contention-audit] SKIPPING seed {seed}: {error:#}");
+                    replay_skipped_seeds.push(*seed);
+                    continue;
+                }
+            };
+        let mut evaluator = BridgeLeafEvaluator {
+            bridge: &mut chunk_bridge,
+            allow_model_fallback: args.allow_model_fallback,
+            cache: &mut eval_cache,
+            tta_rotations: args.gumbel_tta,
+        };
+        let root_evals = eval_rows_chunked(&mut evaluator, &eval_rows, 32)?;
+        for ((row, meta), root_eval) in eval_rows.iter().zip(&metas).zip(&root_evals) {
+            let derived_q = &root_eval.derived_final_q;
+            if derived_q.len() != row.afterstates.len() {
+                bail!("root eval misaligned with menu at seed {seed} ply {}", meta.ply);
+            }
+            let Some(runner_index) = best_q_index(derived_q, Some(meta.chosen_index)) else {
+                single_action_skipped += 1;
+                continue;
+            };
+            let model_best_index = best_q_index(derived_q, None)
+                .context("non-empty menu must have a model-best action")?;
+            let chosen_after = &row.afterstates[meta.chosen_index];
+            let runner_after = &row.afterstates[runner_index];
+            let (chosen_table, chosen_exact) =
+                afterstate_table_estimate(&chosen_after.state, menu_limit, &mut evaluator)?;
+            let (runner_table, runner_exact) =
+                afterstate_table_estimate(&runner_after.state, menu_limit, &mut evaluator)?;
+            records.push(json!({
+                "type": "contention_decision",
+                "ruleset_id": RULESET_ID,
+                "seed": seed,
+                "ply": meta.ply,
+                "active_seat": row.staged.current_player(),
+                "action_count": row.afterstates.len(),
+                "free_three_of_a_kind_choice": meta.free_choice,
+                "full_menu_fallback": meta.full_menu_fallback,
+                "chosen": {
+                    "index": meta.chosen_index,
+                    "action_id": action_id(&chosen_after.candidate.action)?,
+                    "model_q": derived_q[meta.chosen_index],
+                },
+                "model_best": {
+                    "index": model_best_index,
+                    "action_id": action_id(&row.afterstates[model_best_index].candidate.action)?,
+                    "model_q": derived_q[model_best_index],
+                },
+                "runner": {
+                    "index": runner_index,
+                    "action_id": action_id(&runner_after.candidate.action)?,
+                    "model_q": derived_q[runner_index],
+                },
+                "chosen_table": chosen_table,
+                "chosen_table_exact": chosen_exact,
+                "runner_table": runner_table,
+                "runner_table_exact": runner_exact,
+                "table_delta_runner_minus_chosen": runner_table - chosen_table,
+                "own_q_sacrifice_chosen_minus_runner": derived_q[meta.chosen_index]
+                    - derived_q[runner_index],
+            }));
+            decisions_audited += 1;
+        }
+        eprintln!(
+            "[table-contention-audit] seed {seed} complete ({decisions_audited} decisions so far)"
+        );
+    }
+    if decisions_audited == 0 {
+        bail!("contention audit produced no audited decisions (every seed skipped?)");
+    }
+    records.push(json!({
+        "type": "contention_summary",
+        "ruleset_id": RULESET_ID,
+        "seeds": seed_count,
+        "decisions_audited": decisions_audited,
+        "single_action_skipped": single_action_skipped,
+        "replay_skipped_seeds": replay_skipped_seeds,
+        "menu_limit": menu_limit,
+        "elapsed_seconds": started.elapsed().as_secs_f64(),
+    }));
+    write_jsonl(&args.out, &records)?;
+    eprintln!(
+        "[table-contention-audit] wrote {decisions_audited} decision audits from {seed_count} seeds to {}",
+        args.out.display()
+    );
+    Ok(())
+}
+
+fn stability_probe_seed(seed: u64, ply: usize, repeat: usize) -> u64 {
+    gumbel::splitmix64(
+        seed ^ gumbel::splitmix64(ply as u64 ^ 0x57ab_1e26)
+            ^ gumbel::splitmix64(repeat as u64 ^ 0x0be5_5eed),
+    )
+}
+
+fn stability_top_actions(
+    row: &gumbel::EvalRow,
+    result: &gumbel::GumbelSearchResult,
+    limit: usize,
+    visited_only: bool,
+) -> Result<Vec<Value>> {
+    let mut indexes: Vec<usize> = (0..result.completed_q.len())
+        .filter(|&index| !visited_only || result.visit_counts[index] > 0)
+        .collect();
+    indexes.sort_by(|&left, &right| {
+        result.completed_q[right]
+            .partial_cmp(&result.completed_q[left])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    indexes
+        .into_iter()
+        .take(limit)
+        .map(|index| {
+            Ok(json!({
+                "index": index,
+                "action_id": action_id(&row.afterstates[index].candidate.action)?,
+                "completed_q": result.completed_q[index],
+                "visits": result.visit_counts[index],
+            }))
+        })
+        .collect()
+}
+
+/// R0.2 offline check: replays stored ledgers to sample real serving roots,
+/// then re-runs the root search repeatedly with fresh search seeds, once
+/// per repeat with the incumbent unpaired rollout streams and once with
+/// paired (CRN) rollout streams. Equal repeat indexes share one search seed
+/// across the two variants, so worlds match and only the rollout-noise
+/// structure differs. Exact-K1 frontier roots are skipped (served exactly).
+fn run_search_stability_probe(args: &Args) -> Result<()> {
+    let input = args
+        .input
+        .as_ref()
+        .context("--search-stability-probe requires --in <decisions.jsonl>")?;
+    let by_seed = read_ledger_decision_rows(input)?;
+    let menu_limit = gumbel_root_menu_limit(args);
+    let stride = args.probe_stride.max(1);
+    let repeats = args.probe_repeats.max(2);
+    let max_roots = args.probe_max_roots.max(1);
+    let mut chunk_bridge = ChunkBridge::Owned(model_state_worker_session(args)?);
+    let mut eval_cache = EvalRowCache::new();
+    let started = Instant::now();
+    let mut records = Vec::new();
+    let mut sampled_roots = 0usize;
+    let mut decision_index = 0usize;
+    let mut replay_skipped_seeds = Vec::new();
+    'seeds: for (seed, ledger_rows) in &by_seed {
+        // Same skip-and-count policy as the contention audit for rare
+        // concurrency-divergent ledger seeds.
+        let (eval_rows, metas, _final_state) =
+            match replay_ledger_seed(*seed, ledger_rows, menu_limit, args.player_count) {
+                Ok(replayed) => replayed,
+                Err(error) => {
+                    eprintln!("[search-stability-probe] SKIPPING seed {seed}: {error:#}");
+                    replay_skipped_seeds.push(*seed);
+                    continue;
+                }
+            };
+        for (row, meta) in eval_rows.iter().zip(&metas) {
+            let is_exact_frontier = row
+                .staged
+                .turns_remaining_for_player(row.staged.current_player())
+                == 1;
+            let selected = !is_exact_frontier
+                && row.afterstates.len() > 1
+                && decision_index % stride == 0;
+            decision_index += 1;
+            if !selected {
+                continue;
+            }
+            for paired_rollouts in [false, true] {
+                for repeat in 0..repeats {
+                    let mut cfg =
+                        gumbel_config_from_args(args, stability_probe_seed(*seed, meta.ply, repeat));
+                    cfg.paired_rollouts = paired_rollouts;
+                    let mut evaluator = BridgeLeafEvaluator {
+                        bridge: &mut chunk_bridge,
+                        allow_model_fallback: args.allow_model_fallback,
+                        cache: &mut eval_cache,
+                        tta_rotations: args.gumbel_tta,
+                    };
+                    let result = gumbel::gumbel_search(row, &mut evaluator, &cfg)
+                        .with_context(|| {
+                            format!(
+                                "stability search at seed {seed} ply {} repeat {repeat}",
+                                meta.ply
+                            )
+                        })?;
+                    records.push(json!({
+                        "type": "stability_search",
+                        "ruleset_id": RULESET_ID,
+                        "seed": seed,
+                        "ply": meta.ply,
+                        "action_count": row.afterstates.len(),
+                        "paired_rollouts": paired_rollouts,
+                        "repeat": repeat,
+                        "search_seed": cfg.search_seed,
+                        "chosen_index": result.chosen_index,
+                        "chosen_action_id":
+                            action_id(&row.afterstates[result.chosen_index].candidate.action)?,
+                        "simulations_run": result.simulations_run,
+                        "top_overall": stability_top_actions(row, &result, 3, false)?,
+                        "top_visited": stability_top_actions(row, &result, 3, true)?,
+                    }));
+                }
+            }
+            sampled_roots += 1;
+            if sampled_roots % 10 == 0 {
+                eprintln!(
+                    "[search-stability-probe] {sampled_roots}/{max_roots} roots ({:.1}s elapsed)",
+                    started.elapsed().as_secs_f64()
+                );
+            }
+            if sampled_roots >= max_roots {
+                break 'seeds;
+            }
+        }
+    }
+    if sampled_roots == 0 {
+        bail!("stability probe sampled no roots (ledger too small or all exact-frontier)");
+    }
+    records.push(json!({
+        "type": "stability_summary",
+        "ruleset_id": RULESET_ID,
+        "sampled_roots": sampled_roots,
+        "repeats_per_variant": repeats,
+        "stride": stride,
+        "replay_skipped_seeds": replay_skipped_seeds,
+        "menu_limit": menu_limit,
+        "search": gumbel_search_probe_settings(args),
+        "elapsed_seconds": started.elapsed().as_secs_f64(),
+    }));
+    write_jsonl(&args.out, &records)?;
+    eprintln!(
+        "[search-stability-probe] wrote {sampled_roots} roots x 2 variants x {repeats} repeats to {}",
+        args.out.display()
+    );
+    Ok(())
+}
+
+fn gumbel_search_probe_settings(args: &Args) -> Value {
+    json!({
+        "n_simulations": args.gumbel_n_simulations,
+        "top_m": args.gumbel_top_m,
+        "depth_rounds": args.gumbel_depth_rounds,
+        "determinizations": args.gumbel_determinizations,
+        "rollout_blend_weight": args.gumbel_blend_weight,
+        "k_interior": args.k_interior,
+        "c_visit": args.gumbel_c_visit,
+        "c_scale": args.gumbel_c_scale,
+    })
+}
+
 /// Many complete Gumbel policy games in one process sharing model bridge
 /// capacity: a dynamic seed queue, `--model-sessions` persistent parallel
 /// game workers, and with
@@ -5900,6 +6468,9 @@ mod tests {
             model_sessions: None,
             shared_model_session: false,
             output_dir: None,
+            probe_stride: 7,
+            probe_repeats: 6,
+            probe_max_roots: 100,
         }
     }
 
@@ -6658,6 +7229,165 @@ mod tests {
         assert!(decisions > 0);
         assert_eq!(done["scores"].as_array().unwrap().len(), 4);
         assert_eq!(done["decision_count"].as_u64().unwrap() as usize, decisions);
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    /// Plays one tiny mock-bridge policy game and returns (args, ledger
+    /// lines). Shared fixture for the ledger-replay modes' tests.
+    fn play_tiny_policy_game(tempdir: &std::path::Path, seed: u64) -> (Args, Vec<Value>) {
+        let mut args = gumbel_test_args(tempdir);
+        args.mode = Mode::GumbelPolicyGame;
+        args.out = tempdir.join(format!("ledger_game_{seed}.jsonl"));
+        args.first_seed = seed;
+        args.seed_count = 1;
+        args.gumbel_exploration = false;
+        run_gumbel_policy_game(&args).expect("policy game runs");
+        let contents = std::fs::read_to_string(&args.out).expect("game jsonl");
+        let lines: Vec<Value> = contents
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("jsonl line"))
+            .collect();
+        (args, lines)
+    }
+
+    #[test]
+    fn ledger_replay_reconstructs_policy_game_trajectory() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-ledger-replay-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let seed = 2_026_070_777_u64;
+        let (args, lines) = play_tiny_policy_game(&tempdir, seed);
+        let decision_count = lines
+            .iter()
+            .filter(|line| line["type"] == "gumbel_decision")
+            .count();
+        let done = lines
+            .iter()
+            .find(|line| line["type"] == "gumbel_game_done")
+            .expect("done record");
+
+        let by_seed = read_ledger_decision_rows(&args.out).expect("ledger parses");
+        assert_eq!(by_seed.len(), 1);
+        let rows = by_seed.get(&seed).expect("seed present");
+        assert_eq!(rows.len(), decision_count);
+        let (eval_rows, metas, final_state) =
+            replay_ledger_seed(seed, rows, gumbel_root_menu_limit(&args), args.player_count)
+                .expect("replay succeeds");
+        assert_eq!(eval_rows.len(), decision_count);
+        assert_eq!(metas.len(), decision_count);
+        assert!(metas.iter().all(|meta| !meta.full_menu_fallback));
+
+        // The replayed trajectory must land on exactly the game the ledger
+        // scored: per-seat exact totals equal the done record's totals.
+        let done_totals: Vec<f64> = done["scores"]
+            .as_array()
+            .expect("scores array")
+            .iter()
+            .map(|score| score["total"].as_f64().expect("total"))
+            .collect();
+        let replay_totals: Vec<f64> = score_game(&final_state)
+            .iter()
+            .map(|score| f64::from(score.total))
+            .collect();
+        assert_eq!(done_totals, replay_totals);
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
+    fn table_contention_audit_runs_on_mock_bridge() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-contention-audit-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let seed = 2_026_070_778_u64;
+        let (mut args, _lines) = play_tiny_policy_game(&tempdir, seed);
+        args.mode = Mode::TableContentionAudit;
+        args.input = Some(args.out.clone());
+        args.out = tempdir.join("contention_audit.jsonl");
+        run_table_contention_audit(&args).expect("audit runs");
+
+        let contents = std::fs::read_to_string(&args.out).expect("audit jsonl");
+        let lines: Vec<Value> = contents
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("jsonl line"))
+            .collect();
+        let summary = lines
+            .iter()
+            .find(|line| line["type"] == "contention_summary")
+            .expect("summary record");
+        let audited = summary["decisions_audited"].as_u64().expect("count");
+        assert!(audited > 0);
+        for line in lines.iter().filter(|line| line["type"] == "contention_decision") {
+            assert_ne!(line["chosen"]["index"], line["runner"]["index"]);
+            assert!(line["chosen_table"].as_f64().expect("chosen table").is_finite());
+            assert!(line["runner_table"].as_f64().expect("runner table").is_finite());
+            let delta = line["table_delta_runner_minus_chosen"]
+                .as_f64()
+                .expect("delta");
+            let reconstructed = line["runner_table"].as_f64().unwrap()
+                - line["chosen_table"].as_f64().unwrap();
+            assert!((delta - reconstructed).abs() < 1e-9);
+        }
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
+    fn search_stability_probe_pairs_search_seeds_across_variants() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-stability-probe-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let seed = 2_026_070_779_u64;
+        let (mut args, _lines) = play_tiny_policy_game(&tempdir, seed);
+        args.mode = Mode::SearchStabilityProbe;
+        args.input = Some(args.out.clone());
+        args.out = tempdir.join("stability_probe.jsonl");
+        args.probe_stride = 1;
+        args.probe_repeats = 2;
+        args.probe_max_roots = 2;
+        args.gumbel_blend_weight = 0.5;
+        run_search_stability_probe(&args).expect("probe runs");
+
+        let contents = std::fs::read_to_string(&args.out).expect("probe jsonl");
+        let lines: Vec<Value> = contents
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("jsonl line"))
+            .collect();
+        let searches: Vec<&Value> = lines
+            .iter()
+            .filter(|line| line["type"] == "stability_search")
+            .collect();
+        // 2 roots x 2 variants x 2 repeats.
+        assert_eq!(searches.len(), 8);
+        let summary = lines
+            .iter()
+            .find(|line| line["type"] == "stability_summary")
+            .expect("summary record");
+        assert_eq!(summary["sampled_roots"].as_u64(), Some(2));
+
+        // Equal (ply, repeat) must share one search seed across the two
+        // variants (meta-level CRN), and each root must contribute both
+        // variants.
+        let mut seeds_by_key: HashMap<(u64, u64), Vec<(bool, u64)>> = HashMap::new();
+        for row in &searches {
+            let key = (
+                row["ply"].as_u64().expect("ply"),
+                row["repeat"].as_u64().expect("repeat"),
+            );
+            seeds_by_key.entry(key).or_default().push((
+                row["paired_rollouts"].as_bool().expect("variant"),
+                row["search_seed"].as_u64().expect("search seed"),
+            ));
+        }
+        for ((_ply, _repeat), entries) in seeds_by_key {
+            assert_eq!(entries.len(), 2);
+            assert_ne!(entries[0].0, entries[1].0, "one row per variant");
+            assert_eq!(entries[0].1, entries[1].1, "shared search seed");
+        }
         let _ = std::fs::remove_dir_all(&tempdir);
     }
 

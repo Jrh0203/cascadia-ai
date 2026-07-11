@@ -305,7 +305,7 @@ fn exact_final_turn_result(row: &EvalRow) -> Result<GumbelSearchResult> {
     })
 }
 
-fn eval_row_for_prelude(
+pub(crate) fn eval_row_for_prelude(
     game: &GameState,
     prelude: MarketPrelude,
     menu_limit: Option<usize>,

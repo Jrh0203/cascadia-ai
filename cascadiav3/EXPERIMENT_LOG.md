@@ -5392,3 +5392,49 @@ attempt 3 at the new deployed revision (engineering-only; failure tolerated,
 logged, does not block stage B), stage B = the sigma sweep. New source
 snapshot deployed to john0 with the revision marker updated; exporter
 rebuilt with zig-cc and flag presence preflighted by the sweep script.
+
+## 2026-07-10 22:36 — PREREGISTERED: R0.2 offline stability probe + R1.1a contention audit (ledger-replay modes implemented); chained behind the sigma sweep
+
+**Implementation:** two new exporter modes over a shared no-search ledger
+replayer (reconstructs every root row exactly as serving saw it — same
+greedy menu cap, same market prelude — and advances via the ledger's
+`chosen_action_id`; fails closed on seat/menu divergence, and skips
+concurrency-divergent seeds loudly with a `replay_skipped_seeds` summary
+field, 2027071427 precedent):
+
+- `--search-stability-probe` (R0.2 offline kill test): samples ledger roots
+  (stride 79 spans all 100 games; exact-K1 frontier roots excluded — they
+  serve exactly), re-runs each root search 6x unpaired vs 6x paired (CRN)
+  rollouts at n256/top16/d4, blend 0.5. Equal repeat index = equal search
+  seed across variants, so worlds match and only the rollout-noise
+  structure differs. Analyzer: `cascadiav3.analyze_search_stability`.
+- `--table-contention-audit` (R1.1a): for every ledger decision, table
+  value (value-head per-seat sum; exact at terminals) of the chosen
+  afterstate vs the best model-Q alternative. Analyzer:
+  `cascadiav3.analyze_table_contention` — flip rates + recoverable
+  table/gate points per game, overall and conditioned on own-Q sacrifice
+  <= {0.1, 0.25, 0.5, 1.0}. Measurement only; caveats recorded in the
+  analyzer output (model-Q runner, value-head estimates, first-order).
+
+Tests: 54/54 exporter (3 new: replay round-trip against a played game's
+terminal scores; audit end-to-end on the mock bridge; probe seed-pairing
+contract) + 5/5 analyzer contract tests.
+
+**PREREGISTRATION (R0.2 offline rule, before any probe output exists):**
+proceed to a preregistered n256 paired-rollouts gate iff the probe shows
+pooled top1-top2 completed-Q gap variance (visited actions) at least **20%
+lower** under paired rollouts (`proceed_to_gate` in
+`search_stability_probe_20260710_analysis.json`). Flip-rate deltas are the
+secondary read. All-null => R0.2 closes without a gate. The contention
+audit has no decision rule — it sizes the R1.1 prize (>= 0.3 gate
+points/game at sacrifice <= 0.25 is the portfolio's bar for prioritizing
+R1.1b/c).
+
+**Scheduling:** both run on john0 **after** `gpu_chain_20260710_sigma.sh`
+exits (no CPU contention with the probe/sweep timing): a second chain
+waiter deploys the new revision (tarball staged now; marker + rebuild only
+after chain 1 exits, so the sweep's preflights stay valid), then runs the
+stability probe (~1h GPU) and the contention audit (~8,000 root evals +
+~16,000 afterstate evals, minutes on CUDA). Input ledger:
+`rules_20260709_cycle4_n1024_d16_decisions.jsonl` (champion trajectory at
+champion budget).
