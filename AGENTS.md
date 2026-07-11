@@ -72,6 +72,14 @@ The agent launches experiments autonomously; John decides what ships.
   a time, logging before launch) and nothing live is displaced or killed.
   Idle GPU while a preregistered gate waits for permission is a bug, not
   prudence.
+- **Saturate the GPU (ruled 2026-07-11).** GPU time is the campaign
+  bottleneck: design every GPU tool bridge-bound — a jobs-style worker
+  pool over its independent units (roots/seeds/arms) sharing one bridge,
+  parallel leaf rollouts where proven bit-identical, chained queues so the
+  box never idles between experiments. Single-stream measurement tools are
+  acceptable only when the run is short (<~1h) AND nothing is queued
+  behind it. Bridge-side throughput work multiplies every experiment and
+  is standing high-leverage engineering.
 - **Rules-contract changes** are rare by design. A clear rules *bug* may be
   fixed without waiting, but the fix must be impossible to miss: push
   notification, a prominent EXPERIMENT_LOG + RULES_CONTRACT entry, and a
