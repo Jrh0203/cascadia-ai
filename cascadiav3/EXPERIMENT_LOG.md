@@ -5438,3 +5438,35 @@ stability probe (~1h GPU) and the contention audit (~8,000 root evals +
 ~16,000 afterstate evals, minutes on CUDA). Input ledger:
 `rules_20260709_cycle4_n1024_d16_decisions.jsonl` (champion trajectory at
 champion budget).
+
+## 2026-07-10 23:45 — Concurrency probe attempt 3: ALL THREE ARMS COMPLETE; comparator crashed on a divergence invariant — root-caused and fixed; verdict recompute queued
+
+**The probe's data collection succeeded** (first time through all arms):
+jobs12/16/24 reports + decision/game ledgers + GPU profiles all landed at
+source `83ffe12a` (~53 min total). The chain then failed only in
+`compare_cuda_concurrency`: `decision invariant mismatch at seed 2027073423
+ply 71` — the jobs24 arm flipped one argmax (batch-order float
+nondeterminism, the measured 2027071427 class), and the comparator
+tolerated the action difference but hard-enforced per-ply state invariants
+*downstream of the fork*, where the two arms are legitimately playing
+different games. Design bug, same premise-failure family as the
+market-samples comparator (EXPERIMENT_LOG 07-10 10:20).
+
+**Fix (this commit):** `_compare_arm` now walks each seed to its
+divergence frontier — invariants are enforced strictly up to and including
+the first chosen-action flip (root states there are provably identical, so
+a mismatch is a real bug and still raises), while downstream plies are
+excluded from comparison and the seed is classified in
+`divergent_seeds`/`divergent_seed_count`. Verdict adds paired per-seed
+score-delta stats (t-CI); knee eligibility is now pre-divergence numeric
+parity (full-trajectory parity is unattainable under measured jobs
+nondeterminism — with the old rule the recommendation could only ever
+collapse to jobs12). Markdown surfaces divergent-seed counts and score
+deltas. 5/5 new contract tests; recommendation semantics unchanged
+otherwise (throughput knee, advisory only, never auto-adopted).
+
+**Recompute:** chain 2 re-armed at the new revision; its first stage runs
+the fixed comparator over the existing three arm artifact sets (no GPU,
+reports reused byte-identical, `--source-revision 83ffe12a` matching the
+arms) and writes the standard verdict + complete marker, then proceeds to
+the R0.2 stability probe and R1.1a contention audit as preregistered.
