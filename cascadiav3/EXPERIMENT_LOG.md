@@ -5605,3 +5605,27 @@ output exists):**
   effectively closed for this policy family at feasible budgets. Wall and
   per-decision stats recorded as R0.6 inputs.
 - *Cost.* ~8h at jobs12 (42s/decision anchor x ~4).
+
+## 2026-07-11 18:50 — R3.6 ceiling probe: band = DECELERATING (+0.21 observed vs +0.615 log-linear); portfolio reweights toward structural programs
+
+Mega arm (cycle4 n4096/top16/d16, K1 off, jobs12, 25 games on
+`2027070900..24`, 7.0h wall, mean decision `131.42s` = 3.1x the n1024
+anchor for 4x sims — dedup improves with n): mean seat `98.5300` vs the
+stored champion n1024/d16 baseline `98.3200` on the same seeds. Paired
+delta **`+0.2100`**, 95% t-CI `[-0.5925, +1.0125]`. Preregistered band:
+**decelerating** (+0.15..+0.45): the point estimate is ~1/3 of the
+log-linear prediction, though the 25g CI does not exclude it.
+
+**Portfolio consequence (taken together with day one):** the three cheap
+noise-wall bets (R0.1, R0.2, sigma/CRN family) returned null at n256, root
+contention is ~zero at own-Q parity (R1.1a), and raw budget scaling looks
+sub-log-linear at 4x. Under the portfolio's own falsification framework,
+weight shifts to the structural programs: **R1.2 ghost opponents** (reclaim
+the 3-of-4 opponent-eval tax = ~4x effective budget at equal wall),
+**R1.4 training-signal densification** (un-saturating EI is the only lane
+that raises the policy family itself), **R1.3a coverage audit**, with the
+**R2.x velocity stack** (puzzle bank, bridge throughput) as multipliers.
+A 100-seed completion of the mega arm (~21h) could tighten the scaling
+coefficient but would not change the next actions; not scheduled.
+Artifacts: `ceiling_probe_n4096_20260711{.json,_verdict.json,_verdict.md}`
++ ledgers on john0.
