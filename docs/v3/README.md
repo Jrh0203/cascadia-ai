@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-10 21:10 EDT)
+## Status at a glance (updated 2026-07-10 22:00 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -57,12 +57,16 @@ over packed expert tensors with Gumbel search-supervised action values.
   wall) and lowest conviction-per-GPU-hour next to the portfolio; killed
   cleanly with zero completed det16 games (nothing durable lost). Block
   `2027071600..1699` stays reserved for a future rerun.
-- **Live now (session-independent on john0):** `concurrency_probe_waiter`
-  (PID 3731156, pause `HOLD_concurrency_probe`) auto-fires the jobs12/16/24
-  probe on idle detection (19:10 failure was a silent nvidia-smi PATH
-  preflight, fixed + committed). Behind it, john0 belongs to the break-100
-  Tier-0 program: R0.1 sigma sweep (preregistration pending), R0.2
-  paired-rollout offline check; zero-GPU audits run orchestrator-side.
+- **Live now (session-independent on john0):** `gpu_chain_20260710_sigma.sh`
+  (PID 3747964, pause `HOLD_gpu_chain_sigma`) at deployed revision
+  `83ffe12a` — concurrency probe attempt 3 (attempt 2 hit the second
+  missing-PATH class, `cargo`; chain env fixes both), then the
+  **preregistered R0.1 sigma-calibration sweep**: 8 arms (c_scale ×
+  sigma-norm) on 25 paired seeds, screen floor +0.25, auto-gated 100-seed
+  confirm (EXPERIMENT_LOG 21:55). R0.1/R0.2 serving knobs
+  (`--gumbel-c-visit/c-scale/sigma-norm/paired-rollouts`) are on `main`
+  with bit-identical defaults; `compare_search_shape` generalized via
+  `--varied-key`.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.

@@ -5,7 +5,26 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-10 21:10 — worlds confirmation PAUSED by ruling; john0 on the break-100 portfolio; probe auto-firing)
+## RESUME HERE (07-10 22:00 — R0.1 sigma sweep chain LIVE on john0; R0.1/R0.2 knobs landed; worlds confirmation paused)
+
+**Live now:** `gpu_chain_20260710_sigma.sh` (PID `3747964`, log/pid in
+`cascadiav3/logs/`, pause `HOLD_gpu_chain_sigma`) at deployed revision
+`83ffe12a` — stage A: concurrency probe attempt 3 (attempt 2 failed 21:08 on
+the second missing-PATH class, `cargo`; the chain provides
+`$HOME/.cargo/bin` + `/usr/lib/wsl/lib`), stage B: the **preregistered R0.1
+sigma-calibration sweep** (EXPERIMENT_LOG 21:55): smoke → 8 arms (c_scale
+{0.05,0.1,0.25,1.0} × {minmax,topk:8}, 25 paired seeds `2027072100..24`,
+incumbent = cs10_mm arm) → 7 paired verdicts (`compare_search_shape
+--varied-key`) → screen floor +0.25 → conditional 100-seed confirm
+`2027072200..99` (touched once). Pause `HOLD_sigma_sweep` between arms.
+ETA: probe ~1h + sweep ~5h + conditional confirm ~5h.
+
+**Implementation landed on `main` (83ffe12a):** `--gumbel-c-visit/c-scale`,
+`--gumbel-sigma-norm minmax|zscore|fixed:<s>|topk:<k>`,
+`--gumbel-paired-rollouts` (CRN leaf rollouts, R0.2 — implemented and
+provenance-plumbed, NOT part of the sigma sweep; its offline variance check
+is the next serving experiment). Defaults bit-identical (regression-pinned);
+51/51 exporter + 7/7 comparator tests.
 
 **Worlds det16/det32 n1024 confirmation: PAUSED (John's 21:00 ruling), not
 closed.** Rationale: not wall-matched (scaling anchor predicts ~+0.3 for its
