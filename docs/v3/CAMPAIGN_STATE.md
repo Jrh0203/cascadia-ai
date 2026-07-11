@@ -5,7 +5,20 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-10 22:00 — R0.1 sigma sweep chain LIVE on john0; R0.1/R0.2 knobs landed; worlds confirmation paused)
+## RESUME HERE (07-10 22:40 — chain 1 (probe+sigma sweep) LIVE; chain 2 (R0.2 probe + R1.1a audit) armed behind it)
+
+**Chain 2 armed (PID `3757640`, log/pid `gpu_chain2_20260710_audits.*`,
+pause `HOLD_gpu_chain2_audits`):** waits for chain 1 to exit, then deploys
+revision `a6d590b0`, rebuilds the exporter, and runs two preregistered
+ledger-replay measurements over the champion cycle4 n1024/d16 decisions
+ledger (EXPERIMENT_LOG 22:36): the **R0.2 search-stability probe** (100
+roots × 6 unpaired vs 6 paired-CRN repeats at n256/d4, matched search
+seeds; rule: ≥20% pooled gap-variance reduction → preregister an n256
+gate) and the **R1.1a table-contention audit** (chosen vs best model-Q
+alternative under table value; sizes the cooperative-play prize —
+portfolio bar: ≥0.3 gate pts/game at own-Q sacrifice ≤0.25 prioritizes
+R1.1b/c). New exporter modes + analyzers landed on `main` (54/54 + 5/5
+tests).
 
 **Live now:** `gpu_chain_20260710_sigma.sh` (PID `3747964`, log/pid in
 `cascadiav3/logs/`, pause `HOLD_gpu_chain_sigma`) at deployed revision

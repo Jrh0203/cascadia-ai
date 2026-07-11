@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-10 22:00 EDT)
+## Status at a glance (updated 2026-07-10 22:40 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -66,7 +66,12 @@ over packed expert tensors with Gumbel search-supervised action values.
   confirm (EXPERIMENT_LOG 21:55). R0.1/R0.2 serving knobs
   (`--gumbel-c-visit/c-scale/sigma-norm/paired-rollouts`) are on `main`
   with bit-identical defaults; `compare_search_shape` generalized via
-  `--varied-key`.
+  `--varied-key`. Chain 2 (PID 3757640, pause `HOLD_gpu_chain2_audits`)
+  is armed behind it: the preregistered **R0.2 stability probe** (paired
+  vs unpaired rollout noise on 100 replayed champion roots; ≥20% variance
+  reduction → n256 gate) and the **R1.1a table-contention audit**
+  (cooperative-play prize bound) — new ledger-replay exporter modes +
+  analyzers, EXPERIMENT_LOG 22:36.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.
