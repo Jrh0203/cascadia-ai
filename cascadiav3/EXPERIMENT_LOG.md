@@ -5524,3 +5524,42 @@ marker.
 
 **Chain 2 now on stage A** (R0.2 search-stability probe, ~1h), then stage
 B (R1.1a contention audit).
+
+## 2026-07-11 11:00 — R1.1a contention audit MEASURED: no cheap cooperative points at the root; R1.1b/c deprioritized per the preregistered bar
+
+Audit ran on the full champion cycle4 n1024/d16 ledger (100 games, 8,000
+decisions, 0 replay-skipped seeds) in ~3 min on CUDA. Findings, in order
+of load-bearing-ness:
+
+1. **The naive positive-part bound is noise-dominated and must not be
+   quoted:** +10.2 "recoverable" gate pts/game with a 51% flip rate is
+   what summing `max(0, delta)` over ~80 value-head-noise deltas per game
+   manufactures (98.8% of table pairs are value-head estimates,
+   per-decision delta spread p10/p90 = -1.14/+1.30).
+2. **Sanity check passed:** on the 100 exact-pair decisions (final
+   personal turns, noise-free) flip rate is exactly 0% — mechanically
+   correct: at the last own turn, own-optimal IS table-optimal because the
+   other seats are fixed.
+3. **The signal tracks own-Q, not contention.** Binned by own-Q sacrifice
+   (chosen minus runner), the mean table delta is monotone from `+1.07`
+   (runner own-Q much better, n=153) through `-0.03` at own-Q parity
+   (n=2,962, flip 47.8%) to `-0.67` (runner much worse, n=28): the
+   value-head table sum simply moves with the runner's own seat. The
+   directional per-game sum (+7.1 table pts, CI+ [+3.4, +10.8]) therefore
+   measures search-vs-model own-Q disagreement, not harvestable
+   cooperative headroom.
+4. **Cheap contention ≈ 0.** At |sacrifice| <= 0.1 the mean table delta is
+   `-0.034`/decision — the preregistered bar (>= 0.3 gate pts/game at
+   sacrifice <= 0.25 to prioritize R1.1b/c) is decisively not met.
+
+**Ruling per preregistration: R1.1b (persona-table probe) and R1.1c
+(table-native training) are DEPRIORITIZED.** Caveats that keep R1.1/R3.1
+alive as a *diagnosis* question, not a next-action: the audit only bounds
+root-level action swaps (interior-ply max^n behavior inside simulations
+and trajectory-level strategy shifts are unmeasured), the alternative
+ranking is model-Q (search completed-Q runners are not recoverable without
+re-searching), and a value head trained on own-trajectory outcomes may be
+blind to cross-seat effects. The sharper instrument for the equilibrium
+question remains R3.6 (ceiling measurement). Artifacts:
+`table_contention_audit_20260710{.jsonl,_analysis.json,_analysis.md}` on
+john0; binned analysis in this entry (orchestrator-side).
