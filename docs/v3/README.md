@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-10 19:25 EDT)
+## Status at a glance (updated 2026-07-10 21:10 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -52,13 +52,17 @@ over packed expert tensors with Gumbel search-supervised action values.
   n256, paired `+0.4225`, CI `[+0.1045, +0.7405]` — first CI+ search-shape
   result under corrected rules. Caveat: det8 cost `1.495x` mean decision
   time at n256 (worlds reduce eval dedup), so the knob is not wall-free.
-- **Live now (session-independent on john0):** the auto-launched n1024
-  det16-vs-det32 confirmation (~20h, block `2027071600..1699`, pause
-  `HOLD_worlds_confirm`). Queued behind it:
-  `concurrency_probe_waiter` (PID 3731156, pause `HOLD_concurrency_probe`)
-  relaunches the jobs12/16/24 probe, whose 19:10 instant failure was a
-  silent nvidia-smi PATH preflight in detached shells (fixed loudly in
-  local `main`, uncommitted).
+- **Worlds det16/det32 n1024 confirmation: PAUSED by ruling (07-10 21:10),
+  not closed.** Not wall-matched (scaling predicts ~+0.3 for its ~1.5x
+  wall) and lowest conviction-per-GPU-hour next to the portfolio; killed
+  cleanly with zero completed det16 games (nothing durable lost). Block
+  `2027071600..1699` stays reserved for a future rerun.
+- **Live now (session-independent on john0):** `concurrency_probe_waiter`
+  (PID 3731156, pause `HOLD_concurrency_probe`) auto-fires the jobs12/16/24
+  probe on idle detection (19:10 failure was a silent nvidia-smi PATH
+  preflight, fixed + committed). Behind it, john0 belongs to the break-100
+  Tier-0 program: R0.1 sigma sweep (preregistration pending), R0.2
+  paired-rollout offline check; zero-GPU audits run orchestrator-side.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.

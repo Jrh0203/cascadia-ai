@@ -5,7 +5,26 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-10 19:25 — worlds screen CI+; n1024 det16/det32 confirmation RUNNING (~20h); stage-5 probe re-queued behind it)
+## RESUME HERE (07-10 21:10 — worlds confirmation PAUSED by ruling; john0 on the break-100 portfolio; probe auto-firing)
+
+**Worlds det16/det32 n1024 confirmation: PAUSED (John's 21:00 ruling), not
+closed.** Rationale: not wall-matched (scaling anchor predicts ~+0.3 for its
+~1.5x wall, so even CI+ is ambiguous) and lowest conviction-per-GPU-hour on
+the board next to the portfolio. Confirm tree killed cleanly 21:06 with
+permission (`HOLD_worlds_confirm` set); det16 arm had **zero completed
+games** — nothing durable lost; det32 smoke report intact. Block
+`2027071600..1699` stays reserved; a future rerun repeats both arms under
+the same preregistration. EXPERIMENT_LOG 21:10.
+
+**GPU now:** `concurrency_probe_waiter` (PID 3731156) fires the jobs12/16/24
+probe on idle detection (PATH fix applied; output →
+`cuda_concurrency_probe_run.log`). Behind it: the break-100 Tier-0 program
+(`claude_max_research_ideas.md`) — R0.1 sigma-calibration sweep
+(preregistration pending), R0.2 paired-rollout offline variance check;
+zero-GPU audits (R1.1a contention, R1.3a coverage, R2.3 CUPED) run
+orchestrator-side in parallel.
+
+## PREVIOUS RESUME (07-10 19:25 — worlds screen CI+; n1024 det16/det32 confirmation RUNNING (~20h); stage-5 probe re-queued behind it)
 
 **Worlds screen verdict (n256, det4 vs det8, seeds `2027071500..99`): CI+.**
 det4 `97.1425` vs det8 `97.5650`, paired `+0.4225`, 95% t-CI

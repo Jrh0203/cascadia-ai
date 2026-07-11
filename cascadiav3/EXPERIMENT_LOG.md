@@ -5290,3 +5290,41 @@ direction with a preregisterable kill test. Grounded in a code audit
 hardcoded `c_visit=50/c_scale=1.0` over min-max-normalized Q; per-action
 rollout RNG breaking CRN at leaves; greedy-ranked root-menu truncation at
 256; root refresh = 9–10 full searches) and a salvaged literature sweep.
+
+## 2026-07-10 21:10 — Worlds confirmation PAUSED by ruling; john0 reallocated to the break-100 portfolio; concurrency probe left to auto-fire
+
+**Ruling (John, ~21:00):** the ~20h det16/det32 n1024 confirmation is the
+lowest conviction-per-GPU-hour item on the board — it is not wall-matched
+(the measured scaling anchor of ~+1.1/4x budget predicts ~+0.3 for its
+~1.5x wall multiplier, so even a CI+ verdict is ambiguous between "worlds
+are a special knob" and "1.5x compute helps"), and adoption would tax every
+future gate ~1.5x on both arms. john0 is reallocated to the Tier-0
+root-decision program + velocity items of `claude_max_research_ideas.md`.
+The confirmation is **paused, not closed**: block `2027071600..1699` stays
+reserved for it in the seed registry, and a future rerun repeats both arms
+from scratch under the same preregistration (the benchmark fails closed on
+stale raw dirs; no mixing is possible).
+
+**Actions (21:06–21:07, explicit user permission):** set
+`HOLD_worlds_confirm`; killed the confirm tree in runbook order —
+`run_worlds_confirm.sh` (PID 3730663), benchmark python (3736837), exporter
+batch (3736838), torch bridge (3736841). Verified zero surviving processes
+and GPU idle (0% util, 1138 MiB residual).
+
+**What was preserved / lost:** the det32 one-game smoke report
+(`worlds_confirm_20260710_n1024_det32_smoke.json`, mean decision `42.32s`
+at det32/n1024 — a wall datum consistent with the det8 dedup caveat) is
+intact. The det16 arm (launched 20:11) had **zero completed games** — no
+raw-games directory had been created yet (first games land ~56 min in), so
+nothing durable was lost and no partial scores existed to be read.
+
+**Queue:** `concurrency_probe_waiter` (PID 3731156) was deliberately left
+untouched; with the confirm tree gone it detects the idle box and fires the
+preregistered jobs12/16/24 probe with the PATH fix. Output →
+`cascadiav3/logs/cuda_concurrency_probe_run.log`.
+
+**Next (per portfolio, John's blanket go-ahead "john0 is all yours"):**
+Tier-0 implementation (R0.1 sigma calibration flags, R0.2 paired-rollout
+CRN), preregistered sigma sweep chained behind the probe, and the zero-GPU
+audits (R1.1a contention, R1.3a greedy-256 coverage, R2.3 CUPED) on stored
+ledgers.
