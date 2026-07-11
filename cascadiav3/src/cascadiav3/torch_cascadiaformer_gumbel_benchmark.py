@@ -166,6 +166,10 @@ def run_gumbel_games(
     leaf_softmix: float | None = None,
     tta_rotations: int = 1,
     parallel_leaf_rollouts: bool = False,
+    c_visit: float = 50.0,
+    c_scale: float = 1.0,
+    sigma_norm: str = "minmax",
+    paired_rollouts: bool = False,
 ) -> list[dict[str, Any]]:
     command = [
         str(binary),
@@ -204,6 +208,12 @@ def run_gumbel_games(
         *(["--gumbel-table-native-q"] if table_native_q else []),
         *(["--gumbel-leaf-softmix", str(leaf_softmix)] if leaf_softmix is not None else []),
         *(["--gumbel-tta", str(tta_rotations)] if tta_rotations > 1 else []),
+        # Sigma/CRN knobs are emitted only when non-default so default
+        # invocations stay replayable against older pinned binaries.
+        *(["--gumbel-c-visit", str(c_visit)] if c_visit != 50.0 else []),
+        *(["--gumbel-c-scale", str(c_scale)] if c_scale != 1.0 else []),
+        *(["--gumbel-sigma-norm", sigma_norm] if sigma_norm != "minmax" else []),
+        *(["--gumbel-paired-rollouts"] if paired_rollouts else []),
         "--k-interior",
         str(k_interior),
         "--max-actions",
@@ -299,6 +309,10 @@ def run_gumbel_games_batch(
     leaf_softmix: float | None = None,
     tta_rotations: int = 1,
     parallel_leaf_rollouts: bool = False,
+    c_visit: float = 50.0,
+    c_scale: float = 1.0,
+    sigma_norm: str = "minmax",
+    paired_rollouts: bool = False,
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
     process per contiguous seed run (one process total for the usual
@@ -343,6 +357,12 @@ def run_gumbel_games_batch(
             *(["--gumbel-table-native-q"] if table_native_q else []),
             *(["--gumbel-leaf-softmix", str(leaf_softmix)] if leaf_softmix is not None else []),
             *(["--gumbel-tta", str(tta_rotations)] if tta_rotations > 1 else []),
+            # Sigma/CRN knobs are emitted only when non-default so default
+            # invocations stay replayable against older pinned binaries.
+            *(["--gumbel-c-visit", str(c_visit)] if c_visit != 50.0 else []),
+            *(["--gumbel-c-scale", str(c_scale)] if c_scale != 1.0 else []),
+            *(["--gumbel-sigma-norm", sigma_norm] if sigma_norm != "minmax" else []),
+            *(["--gumbel-paired-rollouts"] if paired_rollouts else []),
             "--k-interior",
             str(k_interior),
             "--max-actions",
@@ -540,6 +560,10 @@ def run_gumbel_benchmark(
     policy_mode: str = "logits",
     pairwise_policy_top_k: int = 16,
     parallel_leaf_rollouts: bool = False,
+    c_visit: float = 50.0,
+    c_scale: float = 1.0,
+    sigma_norm: str = "minmax",
+    paired_rollouts: bool = False,
 ) -> dict[str, Any]:
     execution = execution_provenance(
         batch_runner=batch_runner,
@@ -611,6 +635,10 @@ def run_gumbel_benchmark(
                 leaf_softmix=leaf_softmix,
                 tta_rotations=tta_rotations,
                 parallel_leaf_rollouts=parallel_leaf_rollouts,
+                c_visit=c_visit,
+                c_scale=c_scale,
+                sigma_norm=sigma_norm,
+                paired_rollouts=paired_rollouts,
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -648,6 +676,10 @@ def run_gumbel_benchmark(
                     leaf_softmix=leaf_softmix,
                     tta_rotations=tta_rotations,
                     parallel_leaf_rollouts=parallel_leaf_rollouts,
+                    c_visit=c_visit,
+                    c_scale=c_scale,
+                    sigma_norm=sigma_norm,
+                    paired_rollouts=paired_rollouts,
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -785,6 +817,10 @@ def run_gumbel_benchmark(
             "exact_endgame_turns": exact_endgame_turns,
             "blend_weight": blend_weight,
             "parallel_leaf_rollouts": parallel_leaf_rollouts,
+            "c_visit": c_visit,
+            "c_scale": c_scale,
+            "sigma_norm": sigma_norm,
+            "paired_rollouts": paired_rollouts,
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
             "q_risk_mode": q_risk_mode,
@@ -938,6 +974,28 @@ def main() -> int:
         action="store_true",
         help="Resolve independent terminal greedy rollouts on the Rust Rayon pool",
     )
+    parser.add_argument(
+        "--gumbel-c-visit",
+        type=float,
+        default=50.0,
+        help="Sigma visit constant: sigma = (c_visit + max_visits) * c_scale * norm(q)",
+    )
+    parser.add_argument(
+        "--gumbel-c-scale",
+        type=float,
+        default=1.0,
+        help="Sigma scale (the Gumbel paper shrinks this under noisy Q)",
+    )
+    parser.add_argument(
+        "--gumbel-sigma-norm",
+        default="minmax",
+        help="Sigma Q normalization: minmax|zscore|fixed:<scale>|topk:<k>",
+    )
+    parser.add_argument(
+        "--gumbel-paired-rollouts",
+        action="store_true",
+        help="Common-random-number leaf rollouts across root actions (CRN)",
+    )
     parser.add_argument("--k-interior", type=int, default=16)
     parser.add_argument("--gumbel-max-root-actions", type=int, default=0, help="0 keeps the full legal set")
     parser.add_argument("--control", choices=["full-search", "none"], default="full-search")
@@ -1030,6 +1088,10 @@ def main() -> int:
         policy_mode=args.policy_mode,
         pairwise_policy_top_k=args.pairwise_policy_top_k,
         parallel_leaf_rollouts=args.gumbel_parallel_leaf_rollouts,
+        c_visit=args.gumbel_c_visit,
+        c_scale=args.gumbel_c_scale,
+        sigma_norm=args.gumbel_sigma_norm,
+        paired_rollouts=args.gumbel_paired_rollouts,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

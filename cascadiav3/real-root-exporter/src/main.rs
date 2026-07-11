@@ -89,6 +89,10 @@ struct Args {
     gumbel_table_total: bool,
     gumbel_table_native_q: bool,
     gumbel_leaf_softmix: Option<f64>,
+    gumbel_c_visit: f64,
+    gumbel_c_scale: f64,
+    gumbel_sigma_norm: gumbel::SigmaNormalization,
+    gumbel_paired_rollouts: bool,
     gumbel_tta: u8,
     gumbel_max_root_actions: Option<usize>,
     /// Root menu enumeration cap (immediate-score-ranked pre-filter before
@@ -378,6 +382,10 @@ fn parse_args() -> Result<Args> {
         gumbel_table_total: false,
         gumbel_table_native_q: false,
         gumbel_leaf_softmix: None,
+        gumbel_c_visit: 50.0,
+        gumbel_c_scale: 1.0,
+        gumbel_sigma_norm: gumbel::SigmaNormalization::MinMax,
+        gumbel_paired_rollouts: false,
         gumbel_tta: 1,
         gumbel_max_root_actions: None,
         gumbel_root_menu: 256,
@@ -441,6 +449,22 @@ fn parse_args() -> Result<Args> {
                 args.gumbel_leaf_softmix =
                     Some(value()?.parse().context("invalid --gumbel-leaf-softmix")?);
             }
+            "--gumbel-c-visit" => {
+                args.gumbel_c_visit = value()?.parse().context("invalid --gumbel-c-visit")?;
+                if !(args.gumbel_c_visit >= 0.0) {
+                    bail!("--gumbel-c-visit must be non-negative");
+                }
+            }
+            "--gumbel-c-scale" => {
+                args.gumbel_c_scale = value()?.parse().context("invalid --gumbel-c-scale")?;
+                if !(args.gumbel_c_scale > 0.0) {
+                    bail!("--gumbel-c-scale must be positive");
+                }
+            }
+            "--gumbel-sigma-norm" => {
+                args.gumbel_sigma_norm = parse_sigma_norm(&value()?)?;
+            }
+            "--gumbel-paired-rollouts" => args.gumbel_paired_rollouts = true,
             "--gumbel-tta" => {
                 args.gumbel_tta = value()?.parse().context("invalid --gumbel-tta")?;
                 if args.gumbel_tta < 1 || args.gumbel_tta > 6 {
@@ -729,6 +753,16 @@ Options:
   --gumbel-tta <k>             Symmetry test-time augmentation: average
                                model evals over k rotated board frames
                                (1 = off, max 6). k× eval cost.
+  --gumbel-c-visit <c>         Sigma visit constant: sigma = (c_visit +
+                               max_visits) * c_scale * norm(q) [50].
+  --gumbel-c-scale <c>         Sigma scale; the Gumbel paper shrinks this
+                               under noisy Q (0.1 for Atari) [1.0].
+  --gumbel-sigma-norm <scheme> Q normalization inside sigma:
+                               minmax|zscore|fixed:<scale>|topk:<k> [minmax].
+  --gumbel-paired-rollouts     Common-random-number leaf rollouts: share the
+                               rollout stream across root actions at equal
+                               (world, visit) index so rollout noise cancels
+                               in halving comparisons [off].
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
   --gumbel-market-decision-samples <n>
@@ -2590,9 +2624,40 @@ fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfi
         table_total: args.gumbel_table_total,
         table_native_q: args.gumbel_table_native_q,
         leaf_softmix_temp: args.gumbel_leaf_softmix,
+        c_visit: args.gumbel_c_visit,
+        c_scale: args.gumbel_c_scale,
+        sigma_normalization: args.gumbel_sigma_norm,
+        paired_rollouts: args.gumbel_paired_rollouts,
         search_seed,
         ..gumbel::GumbelConfig::default()
     }
+}
+
+/// Parses `--gumbel-sigma-norm`: `minmax` | `zscore` | `fixed:<scale>` |
+/// `topk:<k>`.
+fn parse_sigma_norm(raw: &str) -> Result<gumbel::SigmaNormalization> {
+    match raw {
+        "minmax" => return Ok(gumbel::SigmaNormalization::MinMax),
+        "zscore" => return Ok(gumbel::SigmaNormalization::ZScore),
+        _ => {}
+    }
+    if let Some(scale) = raw.strip_prefix("fixed:") {
+        let scale: f64 = scale
+            .parse()
+            .context("invalid --gumbel-sigma-norm fixed:<scale>")?;
+        if !(scale > 0.0) {
+            bail!("--gumbel-sigma-norm fixed:<scale> requires a positive scale");
+        }
+        return Ok(gumbel::SigmaNormalization::FixedScale(scale));
+    }
+    if let Some(k) = raw.strip_prefix("topk:") {
+        let k: usize = k.parse().context("invalid --gumbel-sigma-norm topk:<k>")?;
+        if k < 2 {
+            bail!("--gumbel-sigma-norm topk:<k> requires k >= 2");
+        }
+        return Ok(gumbel::SigmaNormalization::TopKRange(k));
+    }
+    bail!("invalid --gumbel-sigma-norm {raw}; use minmax|zscore|fixed:<scale>|topk:<k>")
 }
 
 fn gumbel_search_seed(seed_u64: u64, ply_index: usize) -> u64 {
@@ -5796,6 +5861,10 @@ mod tests {
             gumbel_table_total: false,
             gumbel_table_native_q: false,
             gumbel_leaf_softmix: None,
+            gumbel_c_visit: 50.0,
+            gumbel_c_scale: 1.0,
+            gumbel_sigma_norm: gumbel::SigmaNormalization::MinMax,
+            gumbel_paired_rollouts: false,
             gumbel_tta: 1,
             out: PathBuf::from("/tmp/unused.jsonl"),
             manifest: PathBuf::from("/tmp/unused_manifest.json"),

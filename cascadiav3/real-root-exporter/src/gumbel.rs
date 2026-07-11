@@ -33,6 +33,26 @@ const DETERMINIZATION_STREAM_SALT: u64 = 0x0d5e_ed12_37ab_44c9;
 const ROLLOUT_STREAM_SALT: u64 = 0x77c0_ffee_4bad_5eed;
 const MARKET_DECISION_STREAM_SALT: u64 = 0x3f62_9a17_c4d8_05be;
 
+/// Normalization applied to the Q values entering `sigma` (both the
+/// sequential-halving comparisons and the improved-policy logits). Every
+/// scheme is (weakly) monotone in Q, which is all the Gumbel policy-
+/// improvement argument requires.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SigmaNormalization {
+    /// `(q - min) / (max - min)` over the compared set (incumbent default).
+    /// One terrible candidate stretches the denominator and compresses the
+    /// contenders' gaps.
+    MinMax,
+    /// `(q - min) / scale` with a fixed score-point scale: sigma differences
+    /// track raw point differences regardless of menu spread.
+    FixedScale(f64),
+    /// `(q - mean) / std` over the compared set.
+    ZScore,
+    /// Min-max over the top-k values only; everything below the top-k window
+    /// clamps to 0. Immune to menu-tail outliers by construction.
+    TopKRange(usize),
+}
+
 #[derive(Debug, Clone)]
 pub struct GumbelConfig {
     /// Total simulation budget across all root actions.
@@ -74,9 +94,20 @@ pub struct GumbelConfig {
     /// Gumbel exploration noise at the root (self-play data generation on,
     /// deterministic evaluation off).
     pub exploration: bool,
-    /// sigma(q) = (c_visit + max_visits) * c_scale * minmax_norm(q).
+    /// sigma(q) = (c_visit + max_visits) * c_scale * normalize(q).
     pub c_visit: f64,
     pub c_scale: f64,
+    /// Normalization scheme inside sigma. Default `MinMax` is the incumbent
+    /// behavior.
+    pub sigma_normalization: SigmaNormalization,
+    /// Share leaf-rollout RNG streams across root actions at equal visit
+    /// index (common random numbers). The incumbent seeds rollouts with the
+    /// action index, adding independent rollout noise to exactly the
+    /// pairwise comparisons sequential halving makes; pairing converts that
+    /// into common-mode noise that cancels in comparisons. Paired streams
+    /// derive from the determinization stream, so pinned-seed paired runs
+    /// share rollout randomness across arms as well as across actions.
+    pub paired_rollouts: bool,
     pub search_seed: u64,
     /// Hidden-determinization stream seed. `None` derives it from
     /// `search_seed`; pin it for common-random-number paired comparisons.
@@ -128,6 +159,8 @@ impl Default for GumbelConfig {
             exploration: false,
             c_visit: 50.0,
             c_scale: 1.0,
+            sigma_normalization: SigmaNormalization::MinMax,
+            paired_rollouts: false,
             search_seed: 0,
             determinization_seed: None,
             peek_true_hidden: false,
@@ -354,6 +387,79 @@ fn minmax_normalize(values: &[f64]) -> Vec<f64> {
         .iter()
         .map(|value| (value - min) / (max - min))
         .collect()
+}
+
+/// Applies the configured sigma normalization. Degenerate inputs (empty,
+/// non-finite, zero spread) normalize to all-zeros in every scheme, matching
+/// the incumbent min-max fallback.
+fn normalize_for_sigma(values: &[f64], scheme: SigmaNormalization) -> Vec<f64> {
+    match scheme {
+        SigmaNormalization::MinMax => minmax_normalize(values),
+        SigmaNormalization::FixedScale(scale) => {
+            let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
+            if !min.is_finite() || !(scale > 0.0) {
+                return vec![0.0; values.len()];
+            }
+            values.iter().map(|value| (value - min) / scale).collect()
+        }
+        SigmaNormalization::ZScore => {
+            if values.is_empty() {
+                return Vec::new();
+            }
+            let count = values.len() as f64;
+            let mean = values.iter().sum::<f64>() / count;
+            let variance = values
+                .iter()
+                .map(|value| (value - mean) * (value - mean))
+                .sum::<f64>()
+                / count;
+            let std = variance.sqrt();
+            if !std.is_finite() || std < 1e-9 {
+                return vec![0.0; values.len()];
+            }
+            values.iter().map(|value| (value - mean) / std).collect()
+        }
+        SigmaNormalization::TopKRange(k) => {
+            let mut sorted: Vec<f64> = values.iter().cloned().filter(|v| v.is_finite()).collect();
+            if sorted.is_empty() {
+                return vec![0.0; values.len()];
+            }
+            sorted.sort_by(|left, right| right.partial_cmp(left).unwrap_or(std::cmp::Ordering::Equal));
+            let k = k.max(2).min(sorted.len());
+            let max = sorted[0];
+            let min = sorted[k - 1];
+            if !min.is_finite() || !max.is_finite() || (max - min).abs() < 1e-12 {
+                return vec![0.0; values.len()];
+            }
+            values
+                .iter()
+                .map(|value| ((value - min) / (max - min)).clamp(0.0, 1.0))
+                .collect()
+        }
+    }
+}
+
+/// Deterministic rollout stream seed for one (action, visit) simulation.
+/// Unpaired (incumbent): a distinct stream per action, so rollout noise is
+/// independent exactly across the comparisons halving makes. Paired: the
+/// stream depends only on (determinization stream, visit index), so every
+/// action's k-th visit shares one rollout randomness realization.
+fn rollout_stream_seed(
+    cfg: &GumbelConfig,
+    det_stream: u64,
+    action_index: usize,
+    visit_index: usize,
+) -> u64 {
+    if cfg.paired_rollouts {
+        splitmix64(det_stream ^ ROLLOUT_STREAM_SALT ^ splitmix64(0x1_0000 + visit_index as u64))
+    } else {
+        splitmix64(
+            cfg.search_seed
+                ^ ROLLOUT_STREAM_SALT
+                ^ splitmix64(action_index as u64)
+                ^ splitmix64(0x1_0000 + visit_index as u64),
+        )
+    }
 }
 
 /// Leaf bootstrap over the menu's derived final Q: classic max, or a
@@ -756,12 +862,7 @@ pub fn gumbel_search(
                     state.redeterminize_hidden(GameSeed::from_u64(det_seed));
                 }
                 let action = &root.afterstates[action_index].candidate.action;
-                let rollout_seed = splitmix64(
-                    cfg.search_seed
-                        ^ ROLLOUT_STREAM_SALT
-                        ^ splitmix64(action_index as u64)
-                        ^ splitmix64(0x1_0000 + visit_index as u64),
-                );
+                let rollout_seed = rollout_stream_seed(cfg, det_stream, action_index, visit_index);
                 let mut simulation = Simulation {
                     action_index,
                     state,
@@ -808,7 +909,7 @@ pub fn gumbel_search(
                 }
             })
             .collect();
-        let normalized = minmax_normalize(&mean_values);
+        let normalized = normalize_for_sigma(&mean_values, cfg.sigma_normalization);
         let max_visits = survivors
             .iter()
             .map(|&action_index| visit_counts[action_index])
@@ -862,7 +963,7 @@ pub fn gumbel_search(
             }
         })
         .collect();
-    let normalized_q = minmax_normalize(&completed_q);
+    let normalized_q = normalize_for_sigma(&completed_q, cfg.sigma_normalization);
     let max_visits = visit_counts.iter().cloned().max().unwrap_or(0);
     let improved_logits: Vec<f64> = (0..action_count)
         .map(|action_index| {
@@ -1719,6 +1820,180 @@ mod tests {
         assert_eq!(first.visit_counts, second.visit_counts);
         assert_eq!(first.completed_q, second.completed_q);
         assert_eq!(first.improved_policy, second.improved_policy);
+    }
+
+    #[test]
+    fn sigma_normalization_schemes_behave() {
+        let values = [90.0, 96.0, 100.0, 40.0];
+
+        // MinMax matches the incumbent helper exactly.
+        assert_eq!(
+            normalize_for_sigma(&values, SigmaNormalization::MinMax),
+            minmax_normalize(&values)
+        );
+
+        // FixedScale: differences track raw point differences / scale,
+        // independent of the menu tail.
+        let fixed = normalize_for_sigma(&values, SigmaNormalization::FixedScale(10.0));
+        assert!((fixed[2] - fixed[1] - 0.4).abs() < 1e-12);
+        assert!((fixed[1] - fixed[0] - 0.6).abs() < 1e-12);
+
+        // ZScore: mean 0, unit variance, monotone.
+        let zscore = normalize_for_sigma(&values, SigmaNormalization::ZScore);
+        let mean: f64 = zscore.iter().sum::<f64>() / zscore.len() as f64;
+        assert!(mean.abs() < 1e-9);
+        assert!(zscore[2] > zscore[1] && zscore[1] > zscore[0] && zscore[0] > zscore[3]);
+
+        // TopKRange(3): the outlier 40 no longer stretches the denominator —
+        // the top-3 window [90, 100] maps to [0, 1] and the outlier clamps.
+        let topk = normalize_for_sigma(&values, SigmaNormalization::TopKRange(3));
+        assert!((topk[2] - 1.0).abs() < 1e-12);
+        assert!((topk[0] - 0.0).abs() < 1e-12);
+        assert!((topk[1] - 0.6).abs() < 1e-12);
+        assert_eq!(topk[3], 0.0, "tail outlier clamps to the window floor");
+        // Under MinMax the same top-2 gap is compressed by the outlier.
+        let minmax = normalize_for_sigma(&values, SigmaNormalization::MinMax);
+        assert!(
+            (topk[2] - topk[1]) > (minmax[2] - minmax[1]),
+            "top-k range must widen contender gaps relative to min-max"
+        );
+
+        // Degenerate spread normalizes to zeros in every scheme.
+        for scheme in [
+            SigmaNormalization::MinMax,
+            SigmaNormalization::FixedScale(10.0),
+            SigmaNormalization::ZScore,
+            SigmaNormalization::TopKRange(3),
+        ] {
+            let flat = normalize_for_sigma(&[5.0, 5.0, 5.0], scheme);
+            assert!(flat.iter().all(|v| v.abs() < 1e-12), "{scheme:?}");
+        }
+    }
+
+    #[test]
+    fn rollout_stream_seed_contracts() {
+        let mut cfg = test_config(0xabc);
+        cfg.determinization_seed = Some(0xd5);
+        let det_stream = cfg.determinization_seed.unwrap_or(cfg.search_seed);
+
+        // Unpaired (default) reproduces the legacy formula bit-for-bit and
+        // separates streams across actions.
+        assert!(!cfg.paired_rollouts);
+        let legacy = |action_index: usize, visit_index: usize| {
+            splitmix64(
+                cfg.search_seed
+                    ^ ROLLOUT_STREAM_SALT
+                    ^ splitmix64(action_index as u64)
+                    ^ splitmix64(0x1_0000 + visit_index as u64),
+            )
+        };
+        for action_index in 0..4 {
+            for visit_index in 0..3 {
+                assert_eq!(
+                    rollout_stream_seed(&cfg, det_stream, action_index, visit_index),
+                    legacy(action_index, visit_index)
+                );
+            }
+        }
+        assert_ne!(
+            rollout_stream_seed(&cfg, det_stream, 0, 0),
+            rollout_stream_seed(&cfg, det_stream, 1, 0)
+        );
+
+        // Paired: equal (det stream, visit index) shares one stream across
+        // every action; distinct visits still get distinct streams; and the
+        // stream follows the determinization stream, not the search seed.
+        cfg.paired_rollouts = true;
+        assert_eq!(
+            rollout_stream_seed(&cfg, det_stream, 0, 0),
+            rollout_stream_seed(&cfg, det_stream, 7, 0)
+        );
+        assert_ne!(
+            rollout_stream_seed(&cfg, det_stream, 0, 0),
+            rollout_stream_seed(&cfg, det_stream, 0, 1)
+        );
+        let mut other_search_seed = cfg.clone();
+        other_search_seed.search_seed = 0xdef;
+        assert_eq!(
+            rollout_stream_seed(&other_search_seed, det_stream, 3, 2),
+            rollout_stream_seed(&cfg, det_stream, 3, 2),
+            "paired streams must be search-seed independent so pinned-seed \
+             paired comparisons share rollout randomness across arms"
+        );
+    }
+
+    #[test]
+    fn paired_rollouts_search_is_deterministic_and_well_formed() {
+        let game = test_state(2_026_070_650, 8);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = || {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(0x5eed);
+            cfg.n_simulations = 32;
+            cfg.top_m = 8;
+            cfg.rollout_blend_weight = 0.5;
+            cfg.paired_rollouts = true;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search")
+        };
+        let first = run();
+        let second = run();
+        assert_eq!(first.completed_q, second.completed_q);
+        assert_eq!(first.chosen_index, second.chosen_index);
+        assert_eq!(first.visit_counts, second.visit_counts);
+        assert!(first.chosen_index < root.afterstates.len());
+    }
+
+    #[test]
+    fn sigma_norm_variants_search_end_to_end() {
+        let game = test_state(2_026_070_100, 4);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        for scheme in [
+            SigmaNormalization::MinMax,
+            SigmaNormalization::FixedScale(20.0),
+            SigmaNormalization::ZScore,
+            SigmaNormalization::TopKRange(4),
+        ] {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(7);
+            cfg.sigma_normalization = scheme;
+            let result = gumbel_search(&root, &mut evaluator, &cfg).expect("search completes");
+            assert!(result.chosen_index < root.afterstates.len(), "{scheme:?}");
+            let policy_sum: f64 = result.improved_policy.iter().sum();
+            assert!((policy_sum - 1.0).abs() < 1e-9, "{scheme:?} policy sums to 1");
+        }
+    }
+
+    #[test]
+    fn smaller_c_scale_trusts_noisy_q_less() {
+        let game = test_state(2_026_070_100, 4);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |c_scale: f64| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(7);
+            cfg.c_scale = c_scale;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search completes")
+        };
+        let sharp = run(1.0);
+        let soft = run(0.01);
+        let l1 = |policy: &[f64], priors: &[f64]| -> f64 {
+            policy
+                .iter()
+                .zip(priors.iter())
+                .map(|(p, q)| (p - q).abs())
+                .sum()
+        };
+        // sigma shrinks with c_scale, so the improved policy must sit closer
+        // to the raw priors when c_scale is small.
+        assert!(
+            l1(&soft.improved_policy, &soft.root_priors)
+                < l1(&sharp.improved_policy, &sharp.root_priors)
+        );
     }
 
     #[test]
