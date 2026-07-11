@@ -5439,7 +5439,7 @@ stability probe (~1h GPU) and the contention audit (~8,000 root evals +
 `rules_20260709_cycle4_n1024_d16_decisions.jsonl` (champion trajectory at
 champion budget).
 
-## 2026-07-10 23:45 — Concurrency probe attempt 3: ALL THREE ARMS COMPLETE; comparator crashed on a divergence invariant — root-caused and fixed; verdict recompute queued
+## 2026-07-10 23:37 — Concurrency probe attempt 3: ALL THREE ARMS COMPLETE; comparator crashed on a divergence invariant — root-caused and fixed; verdict recompute queued
 
 **The probe's data collection succeeded** (first time through all arms):
 jobs12/16/24 reports + decision/game ledgers + GPU profiles all landed at
