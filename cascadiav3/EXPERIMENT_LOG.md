@@ -5629,3 +5629,37 @@ A 100-seed completion of the mega arm (~21h) could tighten the scaling
 coefficient but would not change the next actions; not scheduled.
 Artifacts: `ceiling_probe_n4096_20260711{.json,_verdict.json,_verdict.md}`
 + ledgers on john0.
+
+## 2026-07-11 18:54 — PREREGISTERED: R2.1 puzzle bank (mega-budget root resolution, launching tonight)
+
+**Implementation:** `--puzzle-bank` exporter mode — ledger replay +
+stride-selected root resolution, worker-pooled across seeds against one
+shared bridge (the saturation pattern; first tool built under the 07-11
+rule). One JSONL shard per seed + a bank manifest; the same mode at
+candidate flags with repeats=1 produces a screen run, scored against the
+bank by `cascadiav3.analyze_puzzle_screen` (bank-regret: bank-best mean
+completed-Q minus bank value of the candidate's chosen action). 56/56
+exporter tests (1 new end-to-end on the mock bridge) + 9/9 analyzer tests
+(3 new).
+
+**Bank design (preregistered):** champion cycle4 n1024/d16 ledger, stride
+11 (~727 roots spanning all 100 games and phases), resolution =
+n4096/top16/d16, repeats 2 averaged (repeat-agreement recorded per root as
+a quality signal), serving rollout params (64/4), K1 setting irrelevant
+(exact-frontier roots excluded), jobs12 shared bridge. Est. ~4.5h.
+Artifacts → `cascadiav3/reports/puzzle_bank_20260711_n4096/`.
+
+**Preregistered acceptance check (before first use as a screen):** run two
+screens against the bank — the incumbent config and the R0.1 confirm loser
+cs025_tk8 (both n256/d4, repeats 1, ~35 min each). The bank is accepted as
+a screening instrument iff (a) incumbent mean bank-regret is materially
+positive (searches at 1/16 budget must show regret vs n4096 truth), and
+(b) cs025_tk8 does NOT show materially lower regret than the incumbent
+(the 100-seed confirm measured it -0.23 +/- 0.31 — a screen that ranks it
+clearly better contradicts gate truth and fails validation). Quantified:
+(a) incumbent mean regret >= +0.05; (b) regret(cs025_tk8) - 
+regret(incumbent) >= -0.02. Fail either => the bank is not used for
+go/no-go decisions until the discrepancy is understood.
+
+**Use policy:** screens rank candidates and allocate gates; they are never
+promotion evidence and never overrule a paired gate.

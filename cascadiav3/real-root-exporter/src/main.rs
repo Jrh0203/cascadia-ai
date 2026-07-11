@@ -135,6 +135,7 @@ enum Mode {
     GumbelSelfplayTensorCorpus,
     TableContentionAudit,
     SearchStabilityProbe,
+    PuzzleBank,
 }
 
 #[derive(Debug, Clone)]
@@ -357,6 +358,9 @@ fn main() -> Result<()> {
         Mode::SearchStabilityProbe => {
             run_search_stability_probe(&args)?;
         }
+        Mode::PuzzleBank => {
+            run_puzzle_bank(&args)?;
+        }
     }
     Ok(())
 }
@@ -439,6 +443,7 @@ fn parse_args() -> Result<Args> {
             "--gumbel-benchmark-batch" => args.mode = Mode::GumbelBenchmarkBatch,
             "--table-contention-audit" => args.mode = Mode::TableContentionAudit,
             "--search-stability-probe" => args.mode = Mode::SearchStabilityProbe,
+            "--puzzle-bank" => args.mode = Mode::PuzzleBank,
             "--probe-stride" => {
                 args.probe_stride = value()?.parse().context("invalid --probe-stride")?
             }
@@ -803,6 +808,13 @@ Options:
   --probe-stride <k>           Sample every k-th ledger decision [7].
   --probe-repeats <n>          Search repeats per (root, variant) [6].
   --probe-max-roots <n>        Total sampled roots cap [100].
+  --puzzle-bank                Replay a decisions ledger (--in) and resolve
+                               stride-selected roots with the configured
+                               search, worker-pooled across seeds
+                               (--model-sessions/--shared-model-session).
+                               Mega flags + repeats>=2 = frozen bank;
+                               candidate flags + repeats=1 = screen run
+                               (scored by analyze_puzzle_screen).
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
   --gumbel-market-decision-samples <n>
@@ -4487,6 +4499,200 @@ fn gumbel_search_probe_settings(args: &Args) -> Value {
     })
 }
 
+/// R2.1 puzzle bank / screen mode: replays a decisions ledger and resolves
+/// every stride-selected root with the configured search, worker-pooled
+/// across ledger seeds against one shared bridge (the saturation pattern —
+/// AGENTS.md 2026-07-11). One JSONL shard per seed lands under
+/// `--output-dir`. With mega-budget flags this generates the frozen bank
+/// (use `--probe-repeats 2+` to average away value noise); with candidate
+/// serving flags and `--probe-repeats 1` the same mode produces a screen
+/// run, scored against the bank by `cascadiav3.analyze_puzzle_screen`.
+/// Exact-K1 frontier roots and single-action menus are excluded, matching
+/// the stability probe. Divergent ledger seeds are skipped loudly.
+fn run_puzzle_bank(args: &Args) -> Result<()> {
+    let input = args
+        .input
+        .as_ref()
+        .context("--puzzle-bank requires --in <decisions.jsonl>")?;
+    let output_dir = args
+        .output_dir
+        .as_ref()
+        .context("--puzzle-bank requires --output-dir")?;
+    std::fs::create_dir_all(output_dir)
+        .with_context(|| format!("creating --output-dir {}", output_dir.display()))?;
+    let by_seed = read_ledger_decision_rows(input)?;
+    let menu_limit = gumbel_root_menu_limit(args);
+    let stride = args.probe_stride.max(1);
+    let repeats = args.probe_repeats.max(1);
+    let started = Instant::now();
+    let seeds: Vec<u64> = by_seed.keys().copied().collect();
+    let total_seeds = seeds.len() as u64;
+    let completed_seeds = AtomicU64::new(0);
+    let resolved_roots = AtomicU64::new(0);
+    let skipped_seeds = Mutex::new(Vec::<u64>::new());
+    let target_workers = args
+        .model_sessions
+        .unwrap_or_else(|| rayon::current_num_threads().max(1))
+        .max(1);
+    let shared_bridge = if args.shared_model_session {
+        let command = args
+            .model_service
+            .as_ref()
+            .context("--shared-model-session requires --model-service")?;
+        Some(SharedBridge::spawn(
+            command,
+            &BridgeConfig::from_args(args),
+            model_bridge::shared_row_cap(),
+        )?)
+    } else {
+        None
+    };
+    let (_, workers) = run_dynamic_seed_workers(
+        &seeds,
+        target_workers,
+        |_| {
+            let bridge = match &shared_bridge {
+                Some(shared) => ChunkBridge::Shared(shared.client()),
+                None => ChunkBridge::Owned(model_state_worker_session(args)?),
+            };
+            Ok(GumbelSeedWorker {
+                bridge,
+                eval_cache: EvalRowCache::new(),
+            })
+        },
+        |worker, seed| {
+            let ledger_rows = &by_seed[&seed];
+            let (eval_rows, metas, _final_state) =
+                match replay_ledger_seed(seed, ledger_rows, menu_limit, args.player_count) {
+                    Ok(replayed) => replayed,
+                    Err(error) => {
+                        eprintln!("[puzzle-bank] SKIPPING seed {seed}: {error:#}");
+                        skipped_seeds.lock().expect("skip list lock").push(seed);
+                        return Ok(());
+                    }
+                };
+            let mut records = Vec::new();
+            for (index, (row, meta)) in eval_rows.iter().zip(&metas).enumerate() {
+                let is_exact_frontier = row
+                    .staged
+                    .turns_remaining_for_player(row.staged.current_player())
+                    == 1;
+                if is_exact_frontier || row.afterstates.len() < 2 || index % stride != 0 {
+                    continue;
+                }
+                let action_count = row.afterstates.len();
+                let mut mean_completed_q = vec![0.0_f64; action_count];
+                let mut total_visits = vec![0_u64; action_count];
+                let mut repeat_chosen = Vec::with_capacity(repeats);
+                for repeat in 0..repeats {
+                    let cfg =
+                        gumbel_config_from_args(args, stability_probe_seed(seed, meta.ply, repeat));
+                    let mut evaluator = BridgeLeafEvaluator {
+                        bridge: &mut worker.bridge,
+                        allow_model_fallback: args.allow_model_fallback,
+                        cache: &mut worker.eval_cache,
+                        tta_rotations: args.gumbel_tta,
+                    };
+                    let result = gumbel::gumbel_search(row, &mut evaluator, &cfg)
+                        .with_context(|| {
+                            format!("puzzle search at seed {seed} ply {} repeat {repeat}", meta.ply)
+                        })?;
+                    for action in 0..action_count {
+                        mean_completed_q[action] += result.completed_q[action];
+                        total_visits[action] += u64::from(result.visit_counts[action]);
+                    }
+                    repeat_chosen.push(result.chosen_index);
+                }
+                for value in &mut mean_completed_q {
+                    *value /= repeats as f64;
+                }
+                let action_ids = row
+                    .afterstates
+                    .iter()
+                    .map(|afterstate| action_id(&afterstate.candidate.action))
+                    .collect::<Result<Vec<_>>>()?;
+                let first_choice = repeat_chosen[0];
+                let repeat_agreement = repeat_chosen
+                    .iter()
+                    .filter(|&&chosen| chosen == first_choice)
+                    .count() as f64
+                    / repeats as f64;
+                records.push(json!({
+                    "type": "puzzle_root",
+                    "ruleset_id": RULESET_ID,
+                    "seed": seed,
+                    "ply": meta.ply,
+                    "active_seat": row.staged.current_player(),
+                    "action_count": action_count,
+                    "ledger_chosen_action_id": ledger_rows[meta.ply].chosen_action_id,
+                    "action_ids": action_ids,
+                    "mean_completed_q": mean_completed_q,
+                    "total_visits": total_visits,
+                    "repeat_chosen_indexes": repeat_chosen,
+                    "repeat_agreement": repeat_agreement,
+                    "repeats": repeats,
+                    "search": gumbel_search_probe_settings(args),
+                }));
+                resolved_roots.fetch_add(1, Ordering::Relaxed);
+            }
+            let shard_path = output_dir.join(format!("puzzle_seed_{seed}.jsonl"));
+            write_jsonl(&shard_path, &records)
+                .with_context(|| format!("writing puzzle shard for seed {seed}"))?;
+            let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
+            eprintln!(
+                "[puzzle-bank] seed {seed} complete ({done}/{total_seeds} seeds, {} roots, {:.1}s elapsed)",
+                resolved_roots.load(Ordering::Relaxed),
+                started.elapsed().as_secs_f64()
+            );
+            Ok(())
+        },
+    )?;
+    let mut eval_rows_requested = AtomicU64::new(0);
+    let mut eval_rows_sent = AtomicU64::new(0);
+    let mut eval_cache_hits = AtomicU64::new(0);
+    for worker in &workers {
+        worker.eval_cache.stats.accumulate_into(
+            &eval_rows_requested,
+            &eval_rows_sent,
+            &eval_cache_hits,
+        );
+    }
+    log_eval_dedup_summary(
+        "puzzle bank",
+        *eval_rows_requested.get_mut(),
+        *eval_rows_sent.get_mut(),
+        *eval_cache_hits.get_mut(),
+    );
+    let skipped = skipped_seeds.into_inner().expect("skip list lock");
+    let total_roots = resolved_roots.load(Ordering::Relaxed);
+    if total_roots == 0 {
+        bail!("puzzle bank resolved no roots (ledger too small or all excluded)");
+    }
+    let manifest_path = output_dir.join("puzzle_bank_manifest.json");
+    let manifest = json!({
+        "type": "puzzle_bank_manifest",
+        "ruleset_id": RULESET_ID,
+        "source_revision": args.source_revision,
+        "ledger": input.display().to_string(),
+        "seeds": seeds.len(),
+        "replay_skipped_seeds": skipped,
+        "resolved_roots": total_roots,
+        "stride": stride,
+        "repeats": repeats,
+        "menu_limit": menu_limit,
+        "search": gumbel_search_probe_settings(args),
+        "elapsed_seconds": started.elapsed().as_secs_f64(),
+    });
+    std::fs::write(&manifest_path, format!("{}\n", canonical_json(&manifest)))
+        .with_context(|| format!("writing {}", manifest_path.display()))?;
+    eprintln!(
+        "[puzzle-bank] complete: {total_roots} roots across {} seeds -> {}",
+        seeds.len(),
+        output_dir.display()
+    );
+    Ok(())
+}
+
 /// Many complete Gumbel policy games in one process sharing model bridge
 /// capacity: a dynamic seed queue, `--model-sessions` persistent parallel
 /// game workers, and with
@@ -7398,6 +7604,53 @@ mod tests {
             assert_ne!(entries[0].0, entries[1].0, "one row per variant");
             assert_eq!(entries[0].1, entries[1].1, "shared search seed");
         }
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
+    fn puzzle_bank_resolves_roots_into_per_seed_shards() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-puzzle-bank-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let seed = 2_026_070_781_u64;
+        let (mut args, _lines) = play_tiny_policy_game(&tempdir, seed);
+        args.mode = Mode::PuzzleBank;
+        args.input = Some(args.out.clone());
+        args.output_dir = Some(tempdir.join("bank"));
+        args.probe_stride = 3;
+        args.probe_repeats = 2;
+        args.model_sessions = Some(2);
+        run_puzzle_bank(&args).expect("puzzle bank runs");
+
+        let shard = tempdir.join("bank").join(format!("puzzle_seed_{seed}.jsonl"));
+        let contents = std::fs::read_to_string(&shard).expect("shard exists");
+        let mut roots = 0usize;
+        for line in contents.lines() {
+            let record: Value = serde_json::from_str(line).expect("jsonl line");
+            assert_eq!(record["type"], "puzzle_root");
+            let action_count = record["action_count"].as_u64().expect("count") as usize;
+            assert_eq!(record["action_ids"].as_array().unwrap().len(), action_count);
+            assert_eq!(
+                record["mean_completed_q"].as_array().unwrap().len(),
+                action_count
+            );
+            assert_eq!(record["repeats"].as_u64(), Some(2));
+            assert_eq!(
+                record["repeat_chosen_indexes"].as_array().unwrap().len(),
+                2
+            );
+            roots += 1;
+        }
+        assert!(roots > 0, "at least one root resolved");
+        let manifest_path = tempdir.join("bank").join("puzzle_bank_manifest.json");
+        let manifest: Value = serde_json::from_str(
+            &std::fs::read_to_string(&manifest_path).expect("manifest"),
+        )
+        .expect("manifest json");
+        assert_eq!(manifest["resolved_roots"].as_u64(), Some(roots as u64));
+        assert_eq!(manifest["repeats"].as_u64(), Some(2));
         let _ = std::fs::remove_dir_all(&tempdir);
     }
 
