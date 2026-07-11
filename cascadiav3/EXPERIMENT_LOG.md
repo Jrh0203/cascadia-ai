@@ -5328,3 +5328,67 @@ Tier-0 implementation (R0.1 sigma calibration flags, R0.2 paired-rollout
 CRN), preregistered sigma sweep chained behind the probe, and the zero-GPU
 audits (R1.1a contention, R1.3a greedy-256 coverage, R2.3 CUPED) on stored
 ledgers.
+
+## 2026-07-10 21:55 — PREREGISTERED: R0.1 sigma-calibration sweep (n256 screens + auto-gated confirm); R0.1/R0.2 knobs implemented; comparator generalized; probe cargo-PATH failure diagnosed
+
+**Implementation landed (commit `5815718f` + follow-up):**
+`--gumbel-c-visit`, `--gumbel-c-scale`, `--gumbel-sigma-norm
+(minmax|zscore|fixed:<scale>|topk:<k>)`, and `--gumbel-paired-rollouts`
+(CRN leaf rollouts: stream keyed to (determinization stream, visit index)
+instead of (search seed, action index, visit index)). Defaults are
+bit-identical to the incumbent — the legacy unpaired seed formula is
+regression-pinned by test; 51/51 exporter tests pass (5 new).
+`cascadiav3.compare_search_shape` generalized with repeatable
+`--varied-key` (default `determinizations`, back-compatible; 7/7 contract
+tests pass). Benchmark plumbing records all four knobs in `search`
+provenance; flags are emitted to the exporter only when non-default so
+default invocations stay replayable against older pinned binaries.
+
+**Concurrency probe attempt 2 FAILED at 21:08:47 — second missing-PATH
+class:** the waiter's `/usr/lib/wsl/lib` fix exposed the next gap:
+`cargo: command not found` (line 92 of the pinned f35 script; `$HOME/.cargo/bin`
+is also absent in detached shells). The fixed script (committed 04381253)
+makes this loud. Remedy: the relaunch chain (below) exports
+`PATH="$HOME/.cargo/bin:$PATH:/usr/lib/wsl/lib"` before invoking the probe.
+The one-shot waiter exited after its failure branch; superseded by the chain.
+
+**PREREGISTRATION — R0.1 sigma-calibration sweep (before any candidate
+output exists):**
+
+- *Motivation.* `sigma(q) = (c_visit + max_visits) * c_scale * minmax(q)`
+  with c_visit=50 / c_scale=1.0 hardcoded Go defaults; measured decision SNR
+  ~= 1; the Gumbel paper's own mitigation for noisy Q is a smaller c_scale
+  (0.1 for Atari); min-max normalization lets one terrible candidate
+  compress contender gaps (topk:<k> windowing is immune by construction).
+- *Config (all arms).* cycle4 scalar `best_locked_val`, corrected rules,
+  n256/top16/d4/depth1, K1 on, market samples 8, blend 0.5, k-interior 16,
+  jobs12, batch runner, control none, TF32 off, CUDA on john0.
+- *Screen arms (8).* c_scale in {0.05, 0.1, 0.25, 1.0} x sigma-norm in
+  {minmax, topk:8} on 25 paired seeds `2027072100..24` (selection block;
+  registry updated). The (1.0, minmax) arm IS the incumbent and is the
+  paired baseline for the other 7. One-game smoke of the most exotic arm
+  (0.05, topk:8) runs first.
+- *Screen rule.* Best candidate arm by paired mean delta vs incumbent
+  proceeds to the confirm iff mean >= +0.25 (7-arm selection is expected to
+  inflate the best mean under the null; the confirm on a disjoint block is
+  the arbiter). No CI requirement at screen scale (25 seeds is selection,
+  not verdict). All-arms-below-floor => R0.1 CLOSED with the sweep table as
+  the artifact.
+- *Confirm rule (the R0.1 kill test).* Winner vs incumbent, 100 paired seeds
+  `2027072200..99` (touched once), campaign-standard 95% t-CI
+  (`compare_search_shape --varied-key c_scale --varied-key sigma_norm`).
+  CI+ => preregister an n1024 confirmation on a fresh block before any
+  adoption; inconclusive or CI- => R0.1 CLOSED.
+- *No partial reads.* Verdicts are computed on-box by
+  `cascadiav3/scripts/run_sigma_sweep.sh` (checked in; smoke -> 8 arms ->
+  7 verdicts -> selection -> conditional confirm -> complete marker
+  `sigma_sweep_20260710_n256_complete.json`). Pause: `HOLD_sigma_sweep`.
+- *Cost estimate.* ~36 min/screen arm (worlds-screen anchor: 85 s/game at
+  n256/d4 jobs12) => ~4.8 h + smoke; conditional confirm ~2 x 2.4 h.
+
+**Chain:** deployed as `gpu_chain_20260710_sigma.sh` on john0 (session-
+independent, pause `HOLD_gpu_chain_sigma`): stage A = concurrency probe
+attempt 3 at the new deployed revision (engineering-only; failure tolerated,
+logged, does not block stage B), stage B = the sigma sweep. New source
+snapshot deployed to john0 with the revision marker updated; exporter
+rebuilt with zig-cc and flag presence preflighted by the sweep script.

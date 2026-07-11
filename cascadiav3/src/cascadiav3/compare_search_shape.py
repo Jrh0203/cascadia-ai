@@ -1,10 +1,14 @@
-"""Paired verdict for search-shape ablations (worlds/determinizations).
+"""Paired verdict for search-shape ablations (worlds, sigma calibration, ...).
 
-Determinizations are cycled inside the fixed simulation budget, so changing
-the world count alters evaluations at every ply — like market sample counts
-and unlike exact-K1, trace identity is not a validity condition and is not
-checked. The verdict is the campaign-standard paired per-seed score delta
-with a 95% t-CI over >=100 matched seeds.
+The default varied key is `determinizations` (worlds allocation): worlds are
+cycled inside the fixed simulation budget, so changing the count alters
+evaluations at every ply — like market sample counts and unlike exact-K1,
+trace identity is not a validity condition and is not checked. Pass
+`--varied-key` (repeatable) to compare arms that differ in other search
+knobs (e.g. `c_scale`, `sigma_norm`, `paired_rollouts`); every search
+setting outside the varied set must still match exactly. The verdict is the
+campaign-standard paired per-seed score delta with a 95% t-CI over >=100
+matched seeds.
 """
 
 from __future__ import annotations
@@ -17,7 +21,7 @@ from typing import Any
 from .torch_benchmark_stats import paired_delta_stats
 
 RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
-VARIED_KEY = "determinizations"
+DEFAULT_VARIED_KEYS = ("determinizations",)
 
 
 def _load_report(path: Path) -> dict[str, Any]:
@@ -31,9 +35,10 @@ def _load_report(path: Path) -> dict[str, Any]:
     return report
 
 
-def _search_without_varied(report: dict[str, Any]) -> dict[str, Any]:
+def _search_without_varied(report: dict[str, Any], varied_keys: tuple[str, ...]) -> dict[str, Any]:
     search = dict(report.get("search", {}))
-    search.pop(VARIED_KEY, None)
+    for key in varied_keys:
+        search.pop(key, None)
     return search
 
 
@@ -61,7 +66,10 @@ def build_comparison(
     baseline_path: Path,
     candidate_path: Path,
     source_revision: str | None = None,
+    varied_keys: tuple[str, ...] = DEFAULT_VARIED_KEYS,
 ) -> dict[str, Any]:
+    if not varied_keys:
+        raise ValueError("at least one varied search key is required")
     baseline = _load_report(baseline_path)
     candidate = _load_report(candidate_path)
     baseline_revision = baseline.get("source_revision")
@@ -72,12 +80,26 @@ def build_comparison(
         raise ValueError("reports do not match the required source revision")
     if baseline.get("seeds") != candidate.get("seeds"):
         raise ValueError("seed mismatch between reports")
-    if _search_without_varied(baseline) != _search_without_varied(candidate):
-        raise ValueError(f"search settings differ beyond {VARIED_KEY}")
-    baseline_worlds = baseline.get("search", {}).get(VARIED_KEY)
-    candidate_worlds = candidate.get("search", {}).get(VARIED_KEY)
-    if not baseline_worlds or not candidate_worlds or baseline_worlds == candidate_worlds:
-        raise ValueError("arms must use two distinct positive world counts")
+    if _search_without_varied(baseline, varied_keys) != _search_without_varied(
+        candidate, varied_keys
+    ):
+        raise ValueError(f"search settings differ beyond {'/'.join(varied_keys)}")
+    varied: dict[str, dict[str, Any]] = {}
+    for key in varied_keys:
+        varied[key] = {
+            "baseline": baseline.get("search", {}).get(key),
+            "candidate": candidate.get("search", {}).get(key),
+        }
+    if varied_keys == DEFAULT_VARIED_KEYS:
+        worlds = varied["determinizations"]
+        if (
+            not worlds["baseline"]
+            or not worlds["candidate"]
+            or worlds["baseline"] == worlds["candidate"]
+        ):
+            raise ValueError("arms must use two distinct positive world counts")
+    elif all(entry["baseline"] == entry["candidate"] for entry in varied.values()):
+        raise ValueError(f"arms are identical across the varied keys {'/'.join(varied_keys)}")
     baseline_manifest = str(baseline.get("manifest", ""))
     if not baseline_manifest or baseline_manifest != str(candidate.get("manifest", "")):
         raise ValueError("model manifest identity mismatch")
@@ -94,6 +116,11 @@ def build_comparison(
     verdict = _score_verdict(stats)
     promotion_scale = len(seeds) >= 100
 
+    varied_provenance: dict[str, Any] = {}
+    for key, entry in varied.items():
+        varied_provenance[f"baseline_{key}"] = entry["baseline"]
+        varied_provenance[f"candidate_{key}"] = entry["candidate"]
+
     baseline_summary = baseline["strategies"]["gumbel-search"]
     candidate_summary = candidate["strategies"]["gumbel-search"]
     return {
@@ -105,11 +132,8 @@ def build_comparison(
         "source_revision": baseline_revision,
         "manifest_name": Path(baseline_manifest).name,
         "seeds": seeds,
-        "search": _search_without_varied(baseline)
-        | {
-            "baseline_determinizations": baseline_worlds,
-            "candidate_determinizations": candidate_worlds,
-        },
+        "varied_keys": list(varied_keys),
+        "search": _search_without_varied(baseline, varied_keys) | varied_provenance,
         "baseline_mean_seat_score": float(baseline_summary["mean_seat_score"]),
         "candidate_mean_seat_score": float(candidate_summary["mean_seat_score"]),
         "paired_score_deltas": [
@@ -134,26 +158,34 @@ def build_comparison(
 def write_markdown(report: dict[str, Any], path: Path) -> None:
     stats = report["paired_delta_stats"]
     timing = report["timing"]
+    varied_keys = report.get("varied_keys", list(DEFAULT_VARIED_KEYS))
+    varied_lines = [
+        f"- {key}: `{report['search'].get(f'baseline_{key}')}` -> "
+        f"`{report['search'].get(f'candidate_{key}')}`"
+        for key in varied_keys
+    ]
     lines = [
-        "# Search-Shape (Worlds) Verdict",
+        "# Search-Shape Verdict",
         "",
         f"Ruleset: `{report['ruleset_id']}`",
         f"Source revision: `{report['source_revision']}`",
         f"Games: `{len(report['seeds'])}` matched seeds",
         f"Scientific eligibility: `{report['scientific_eligibility']}`",
         "",
+        "## Varied settings",
+        "",
+        *varied_lines,
+        "",
         "## Score",
         "",
-        f"- det{report['search']['baseline_determinizations']} mean seat score: "
-        f"`{report['baseline_mean_seat_score']:.4f}`",
-        f"- det{report['search']['candidate_determinizations']} mean seat score: "
-        f"`{report['candidate_mean_seat_score']:.4f}`",
+        f"- Baseline mean seat score: `{report['baseline_mean_seat_score']:.4f}`",
+        f"- Candidate mean seat score: `{report['candidate_mean_seat_score']:.4f}`",
         f"- Paired delta: `{stats['mean']:+.4f}`",
         f"- 95% t-CI: `[{stats['t_ci_low']:+.4f}, {stats['t_ci_high']:+.4f}]`",
         f"- Verdict: `{report['score_verdict']}`",
         f"- Proceed to high-budget confirmation: `{report['proceed_to_high_budget']}`",
         "",
-        "## Cost (worlds cycle inside the fixed simulation budget)",
+        "## Cost",
         "",
         f"- Mean decision seconds: `{timing['baseline_mean_decision_seconds']:.4f}` -> "
         f"`{timing['candidate_mean_decision_seconds']:.4f}`",
@@ -169,13 +201,22 @@ def main() -> int:
     parser.add_argument("--baseline", required=True)
     parser.add_argument("--candidate", required=True)
     parser.add_argument("--source-revision", default="")
+    parser.add_argument(
+        "--varied-key",
+        action="append",
+        default=None,
+        help="Search key allowed (and required, jointly) to differ between "
+        "arms; repeatable. Default: determinizations.",
+    )
     parser.add_argument("--out", required=True)
     parser.add_argument("--summary-out", required=True)
     args = parser.parse_args()
+    varied_keys = tuple(args.varied_key) if args.varied_key else DEFAULT_VARIED_KEYS
     report = build_comparison(
         Path(args.baseline),
         Path(args.candidate),
         args.source_revision or None,
+        varied_keys=varied_keys,
     )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

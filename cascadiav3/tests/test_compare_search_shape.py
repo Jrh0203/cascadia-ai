@@ -84,6 +84,49 @@ class CompareSearchShapeTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "one non-empty source revision"):
                 build_comparison(baseline, candidate)
 
+    def test_custom_varied_keys_compare_sigma_arms(self) -> None:
+        with TemporaryDirectory() as tmp:
+            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
+            base_payload["search"]["c_scale"] = 1.0
+            base_payload["search"]["sigma_norm"] = "minmax"
+            cand_payload = make_report(4, {31: 97.5, 32: 97.25, 33: 97.75})
+            cand_payload["search"]["c_scale"] = 0.1
+            cand_payload["search"]["sigma_norm"] = "topk:8"
+            baseline = write(tmp, "b.json", base_payload)
+            candidate = write(tmp, "c.json", cand_payload)
+            report = build_comparison(
+                baseline, candidate, varied_keys=("c_scale", "sigma_norm")
+            )
+            self.assertEqual(report["paired_delta_stats"]["mean"], 0.5)
+            self.assertEqual(report["varied_keys"], ["c_scale", "sigma_norm"])
+            self.assertEqual(report["search"]["baseline_c_scale"], 1.0)
+            self.assertEqual(report["search"]["candidate_c_scale"], 0.1)
+            self.assertEqual(report["search"]["candidate_sigma_norm"], "topk:8")
+            # determinizations must now MATCH (it is not a varied key here).
+            self.assertEqual(report["search"]["determinizations"], 4)
+
+    def test_custom_varied_keys_refuse_identical_arms(self) -> None:
+        with TemporaryDirectory() as tmp:
+            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
+            base_payload["search"]["c_scale"] = 1.0
+            cand_payload = make_report(4, {s: 97.5 for s in SEEDS})
+            cand_payload["search"]["c_scale"] = 1.0
+            baseline = write(tmp, "b.json", base_payload)
+            candidate = write(tmp, "c.json", cand_payload)
+            with self.assertRaisesRegex(ValueError, "identical across the varied keys"):
+                build_comparison(baseline, candidate, varied_keys=("c_scale",))
+
+    def test_custom_varied_keys_still_refuse_other_deltas(self) -> None:
+        with TemporaryDirectory() as tmp:
+            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
+            base_payload["search"]["c_scale"] = 1.0
+            cand_payload = make_report(8, {s: 97.5 for s in SEEDS})
+            cand_payload["search"]["c_scale"] = 0.1
+            baseline = write(tmp, "b.json", base_payload)
+            candidate = write(tmp, "c.json", cand_payload)
+            with self.assertRaisesRegex(ValueError, "differ beyond c_scale"):
+                build_comparison(baseline, candidate, varied_keys=("c_scale",))
+
 
 if __name__ == "__main__":
     unittest.main()
