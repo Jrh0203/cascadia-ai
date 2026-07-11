@@ -192,7 +192,7 @@ python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
 | 2026810000 / 2026910000 | distq EI-1 train/val corpus |
 | 2026781000+ | fleet3 shards |
 | 2026805000+ | fleet4 (staged) · 2026815000+: fleet5 shards |
-| 2027070900–0999 | corrected-rules rebaseline battery (all arms, scalar + distq) |
+| 2027070900–0999 | corrected-rules rebaseline battery (all arms, scalar + distq); 0900–24 also n4096 ceiling-probe arm (07-11) |
 | 2027071360–2003 | 07-09 engineering smokes (exact-K1 1360+, market samples 1500+, S calibration 1700+, q-risk 1900+, shared-batch 2000+) |
 | 2027071400–1499 | f35 post-chain paired gates at n256/d4: stage 1 exact-K1 (baseline + K1 arms) and stage 4 market sample-4 (candidate arm paired against the stage-1 samples=8 baseline report) |
 | 2027071500–1599 | worlds-allocation screen: cycle4 n256 det4 vs det8, K1 on (preregistered 07-10) |

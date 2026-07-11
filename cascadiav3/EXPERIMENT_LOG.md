@@ -5563,3 +5563,45 @@ blind to cross-seat effects. The sharper instrument for the equilibrium
 question remains R3.6 (ceiling measurement). Artifacts:
 `table_contention_audit_20260710{.jsonl,_analysis.json,_analysis.md}` on
 john0; binned analysis in this entry (orchestrator-side).
+
+## 2026-07-11 11:50 — R0.2 CLOSED at the preregistered rule (secondary CI+ noted); PREREGISTERED: R3.6 mega-budget ceiling probe (n4096/d16, launching now)
+
+**R0.2 valid rerun (94 roots, serving-matched rollout params):** primary
+pooled top1-top2 gap variance `0.020538 -> 0.021438` = **-4.4%** against
+the preregistered >=20% floor — `proceed_to_gate=false`, **R0.2 CLOSED**.
+Secondary (registered as secondary): chosen-action flip rate across
+repeats dropped `0.4663 -> 0.4238`, per-root delta `+0.0426`, 95% t-CI
+`[+0.0051, +0.0800]` — CI+. Reading: pairing measurably stabilizes the
+final selection but the across-repeat gap variance is dominated by world
+resampling, which pairing does not touch (a metric-design lesson recorded
+for future offline probes: operationalize decision stability, not gap
+dispersion). Standing disposition: paired rollouts ride along in a future
+composed serving-v2 candidate gate (Tier-0 composition), no standalone
+gate. Artifacts: `search_stability_probe_20260710{.jsonl,_analysis.*}`;
+the invalid top-k-1 run is archived beside them as `*_invalid_topk1*`.
+
+**PREREGISTRATION — R3.6 mega-budget ceiling probe (before any candidate
+output exists):**
+
+- *Question.* Does budget scaling continue at 4x the champion's simulation
+  count, i.e., is the selfish-policy asymptote plausibly >= 100? This is
+  the portfolio-allocation question (noise-reduction lane vs objective
+  lane).
+- *Design.* One arm: cycle4 scalar, n4096/top16/d16/depth1, market samples
+  8, blend 0.5, k-interior 16, **K1 off** (exact-endgame-turns 0) to match
+  the stored baseline exactly, jobs12 batch runner, TF32 off, 25 games on
+  seeds `2027070900..24` — the rebaseline battery block, added-arm
+  pattern; paired per-seed against the stored champion n1024/d16 scores
+  from `rules_20260709_cycle4_n1024_d16.json` (25-seed baseline mean
+  98.32). Revision note: arms run at `a48fc7d3` vs baseline `f35b0d0b`;
+  default-path serving is bit-identical between them (regression-pinned),
+  recorded here because compare_search_shape would refuse the revision
+  mismatch — the verdict is computed by a pinned inline analysis instead.
+- *Preregistered reads (informative probe, NOT promotion evidence; 25g CI
+  ~ +/-0.6):* log-linear budget extrapolation from the measured +1.23/16x
+  anchor predicts **+0.615** for this 4x step. Bands: paired mean >= +0.45
+  => scaling lane OPEN; +0.15..+0.45 => decelerating, asymptote likely
+  just under 100, objective work co-prioritized; <= +0.15 => scaling lane
+  effectively closed for this policy family at feasible budgets. Wall and
+  per-decision stats recorded as R0.6 inputs.
+- *Cost.* ~8h at jobs12 (42s/decision anchor x ~4).
