@@ -46,11 +46,26 @@ trap stop_profile EXIT
 
 cd "$ROOT"
 mkdir -p "$REPORT_DIR" "$LOG_DIR"
-test -s "$MANIFEST"
-test "$GAMES" -ge 24
-command -v nvidia-smi >/dev/null
-grep -q 'dynamic_seed_queue' cascadiav3/src/cascadiav3/torch_cascadiaformer_gumbel_benchmark.py
-test -s cascadiav3/src/cascadiav3/compare_cuda_concurrency.py
+preflight() {
+  local label="$1"
+  shift
+  if ! "$@"; then
+    echo "[cuda-concurrency] preflight failed: $label" >&2
+    exit 1
+  fi
+}
+preflight "manifest missing or empty: $MANIFEST" test -s "$MANIFEST"
+preflight "GAMES must be >= 24 (got $GAMES)" test "$GAMES" -ge 24
+# Detached shells (autochain, waiters) lack /usr/lib/wsl/lib on PATH; resolve
+# nvidia-smi explicitly instead of assuming the interactive environment.
+NVIDIA_SMI="${NVIDIA_SMI:-$(command -v nvidia-smi || true)}"
+if [ -z "$NVIDIA_SMI" ] && [ -x /usr/lib/wsl/lib/nvidia-smi ]; then
+  NVIDIA_SMI=/usr/lib/wsl/lib/nvidia-smi
+fi
+preflight "nvidia-smi not found on PATH or /usr/lib/wsl/lib" test -n "$NVIDIA_SMI"
+preflight "benchmark runner lacks dynamic_seed_queue" \
+  grep -q 'dynamic_seed_queue' cascadiav3/src/cascadiav3/torch_cascadiaformer_gumbel_benchmark.py
+preflight "comparator missing" test -s cascadiav3/src/cascadiav3/compare_cuda_concurrency.py
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if [ "$(git rev-parse HEAD)" != "$SOURCE_REVISION" ]; then
     echo "[cuda-concurrency] SOURCE_REVISION does not match HEAD" >&2
@@ -174,7 +189,7 @@ PY
 start_profile() {
   local path="$1"
   rm -f "$path" "${path}.stderr"
-  nvidia-smi \
+  "$NVIDIA_SMI" \
     --query-gpu=utilization.gpu,power.draw,memory.used,temperature.gpu \
     --format=csv,noheader,nounits \
     -l 1 > "$path" 2> "${path}.stderr" &

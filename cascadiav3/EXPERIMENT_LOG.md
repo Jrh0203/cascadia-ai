@@ -5224,3 +5224,69 @@ trade behind the aggregate tie; the heads are simply equivalent at n1024.
 `cascadiav3/reports/rules_20260709_rebaseline_complete/` on the
 orchestrator. Every item from the 07-09/10 recovery contract is resolved.
 The worlds screen det4 arm is on the GPU (stage D).
+
+## 2026-07-10 19:20 — Worlds screen CI+ (det8 over det4); n1024 det16/det32 confirmation auto-launched; stage-E probe failure diagnosed (silent nvidia-smi PATH guard) and re-queued
+
+**Worlds screen verdict (preregistered 07-10 11:20, computed on-box by
+`worlds_confirm_waiter` at 19:15:31):** cycle4 scalar, corrected rules, source
+`f35b0d0b`, n256/top16/d1, K1 on, jobs12, fresh block `2027071500..99`, 100
+matched seeds per arm. det4 mean seat `97.1425`; det8 mean seat `97.5650`;
+paired delta **`+0.4225`, 95% t-CI `[+0.1045, +0.7405]` — CI+**, the first
+CI-positive search-shape result under corrected rules. Artifacts:
+`worlds_screen_20260710_n256_{det4,det8}.{json,md}` + decision/game ledgers,
+`worlds_screen_20260710_n256_verdict.{json,md}`.
+
+**Cost caveat (do not quote this as a free knob):** the screen's premise was
+that worlds cycle inside a fixed `n_simulations` budget at identical wall
+cost. Measured: mean decision `12.2913s -> 18.3761s` (`1.495x`), whole-arm
+wall `8513.7s -> 12778.2s`. More distinct worlds lower the eval-row dedup hit
+rate, so det8 buys its `+0.42` at ~1.5x wall at n256. The preregistered
+verdict rule (paired score CI, not wall-matched) still fires as written, but
+any adoption decision after the confirmation must weigh the wall multiplier,
+and a cost-matched det4-at-higher-n comparison remains the fair frontier
+question.
+
+**Confirmation launched automatically (19:15:31), exactly per the
+preregistered CI+ rule:** `run_worlds_confirm.sh` — cycle4 n1024/top16, K1
+on, det16 vs det32, reserved block `2027071600..1699`, det32 one-game smoke
+first, ~20h total. Pause file `HOLD_worlds_confirm`. Note the prior related
+evidence: legacy n2048/d32 was CI− vs n1024/d16 (that comparison held 64
+sims/world in both arms); this confirmation instead halves per-world visits
+(32 -> 16... i.e. 64/world at det16 vs 32/world at det32) at fixed n=1024 —
+the same trade the screen just validated at n256.
+
+**Stage E (jobs12/16/24 concurrency probe) failed instantly at 19:10:50 with
+no output; root cause found:** `run_cuda_concurrency_probe.sh` preflights
+with bare `test`/`grep`/`command -v` lines under `set -euo pipefail`;
+`command -v nvidia-smi` fails in detached shells because `nvidia-smi` lives
+only at `/usr/lib/wsl/lib/nvidia-smi` on john0 and `/usr/lib/wsl/lib` is not
+on the non-interactive PATH. The guard exited silently (no message), so the
+autochain logged only `CONCURRENCY-PROBE-FAILED`. Verified by rerunning each
+guard individually over ssh: manifest OK, dynamic_seed_queue grep OK,
+comparator OK, `command -v nvidia-smi` exit 1.
+
+**Fixes:** (1) local `main` edit to
+`cascadiav3/scripts/run_cuda_concurrency_probe.sh` (uncommitted): a loud
+`preflight` helper for every guard, explicit `NVIDIA_SMI` resolution with an
+`/usr/lib/wsl/lib` fallback, and `start_profile` now invokes `"$NVIDIA_SMI"`.
+The pinned f35 tree on john0 was deliberately not modified. (2) The probe was
+re-queued session-independently:
+`cascadiav3/logs/concurrency_probe_waiter.{sh,log,pid}` on john0 (PID
+`3731156`, pause file `HOLD_concurrency_probe`) waits for the worlds
+confirmation and exporter/bridge idle, then relaunches the pinned probe with
+`PATH="$PATH:/usr/lib/wsl/lib" SOURCE_REVISION=f35b0d0b...`; probe output
+streams to `cascadiav3/logs/cuda_concurrency_probe_run.log`. This restores
+the preregistered queue order (screen -> probe -> confirmation) as closely as
+possible given the confirmation had already claimed the GPU when the failure
+was diagnosed.
+
+**Also this session (research planning, no score claim):**
+`claude_max_research_ideas.md` written at the repo root — a tiered
+break-100 research portfolio (root-decision variance engineering, opponent
+marginalization, cooperative/table-native reframe, factored compound
+actions, training-signal densification, velocity infrastructure), each
+direction with a preregisterable kill test. Grounded in a code audit
+(4 model evals/simulation at depth_rounds=1, 3 of them animating opponents;
+hardcoded `c_visit=50/c_scale=1.0` over min-max-normalized Q; per-action
+rollout RNG breaking CRN at leaves; greedy-ranked root-menu truncation at
+256; root refresh = 9–10 full searches) and a salvaged literature sweep.

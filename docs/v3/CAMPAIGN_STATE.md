@@ -5,7 +5,34 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-10 13:20 — recovery CLOSED; worlds screen on GPU; confirmation auto-gated)
+## RESUME HERE (07-10 19:25 — worlds screen CI+; n1024 det16/det32 confirmation RUNNING (~20h); stage-5 probe re-queued behind it)
+
+**Worlds screen verdict (n256, det4 vs det8, seeds `2027071500..99`): CI+.**
+det4 `97.1425` vs det8 `97.5650`, paired `+0.4225`, 95% t-CI
+`[+0.1045, +0.7405]` — first CI-positive search-shape result under corrected
+rules. `worlds_confirm_waiter` fired the preregistered rule at 19:15:31 and
+launched `run_worlds_confirm.sh`: **cycle4 n1024/top16, K1 on, det16 vs
+det32, block `2027071600..1699`, ~20h** (det32 smoke first). Pause with
+`HOLD_worlds_confirm`. Cost caveat recorded in EXPERIMENT_LOG 19:20: det8 at
+n256 cost `1.495x` mean decision time (worlds reduce eval-dedup hits), so the
+"free allocation knob" premise is wrong on wall — weigh this at adoption
+time; a cost-matched det4-at-higher-n frontier question stays open.
+
+**Stage E concurrency probe failed at 19:10:50 — root-caused and re-queued.**
+Silent preflight: `command -v nvidia-smi` fails in detached shells
+(`/usr/lib/wsl/lib` not on PATH) and `set -e` exits without a message. Local
+`main` fix (uncommitted) makes every preflight loud and resolves
+`NVIDIA_SMI` explicitly. On john0, `concurrency_probe_waiter.{sh,log,pid}`
+(PID `3731156`, pause `HOLD_concurrency_probe`) waits for the confirmation +
+idle exporter/bridge, then relaunches the pinned probe with
+`PATH="$PATH:/usr/lib/wsl/lib"`; output →
+`cascadiav3/logs/cuda_concurrency_probe_run.log`.
+
+**Research planning:** `claude_max_research_ideas.md` (repo root) — tiered
+break-100 portfolio with kill tests; see EXPERIMENT_LOG 19:20 for the code
+audit facts it rests on.
+
+## PREVIOUS RESUME (07-10 13:20 — recovery CLOSED; worlds screen on GPU; confirmation auto-gated)
 
 **Rebaseline recovery is fully closed:** both one-seed d20 replays
 validated bit-exact and installed (ledgers 100/100); category attribution
