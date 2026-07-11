@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-11 09:50 EDT)
+## Status at a glance (updated 2026-07-11 11:55 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -67,12 +67,16 @@ over packed expert tensors with Gumbel search-supervised action values.
   shared bridge is the bound; R2.4 throughput work moves bridge-side.
   Comparator now classifies cross-jobs trajectory forks descriptively
   (divergence-frontier fix).
-- **Live now (session-independent on john0):** chain 2 (PID 3764249,
-  pause `HOLD_gpu_chain2_audits`, rev `927004fd`) — the preregistered
-  **R0.2 stability probe** (paired vs unpaired rollout noise on 100
-  replayed champion roots; ≥20% pooled gap-variance reduction → n256
-  gate), then the **R1.1a table-contention audit** (cooperative-play
-  prize bound). New ledger-replay exporter modes + analyzers on `main`.
+- **R0.2 paired rollouts: CLOSED at the preregistered floor (07-11)** —
+  gap-variance `-4.4%` vs required `-20%`; secondary CI+ (selection flip
+  rate `0.466 → 0.424`) earns it a seat in a future composed serving-v2
+  gate. **R1.1a: no cheap cooperative points at the root** (table delta
+  `-0.03`/decision at own-Q parity; R1.1b/c deprioritized).
+- **Live now (session-independent on john0):** the preregistered **R3.6
+  mega-budget ceiling probe** (PID 3843186, rev `a48fc7d3`): n4096/d16
+  25g paired vs the stored champion arm — the portfolio-allocation
+  question (log-linear predicts +0.615; bands in EXPERIMENT_LOG 11:50).
+  Saturate-the-GPU rule now in AGENTS.md.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.

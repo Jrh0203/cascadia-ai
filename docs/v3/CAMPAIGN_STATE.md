@@ -5,7 +5,30 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-11 09:50 — R0.1 CLOSED (confirm null); jobs12 retained; chain 2 running R0.2 probe → R1.1a audit)
+## RESUME HERE (07-11 11:55 — Tier-0 day-one verdicts all in; R3.6 ceiling probe LIVE (~8h))
+
+**Live now:** `ceiling_probe_20260711.sh` (PID `3843186`, rev `a48fc7d3`) —
+the preregistered **R3.6 mega-budget probe**: cycle4 at n4096/d16 (K1 off,
+matching the stored baseline), 25 games on `2027070900..24` paired against
+the stored champion n1024/d16 per-seed scores. Bands: mean ≥ +0.45 scaling
+lane OPEN; +0.15..+0.45 decelerating; ≤ +0.15 lane closed (log-linear
+prediction +0.615). Informative probe, never promotion evidence.
+
+**Day-one Tier-0 verdicts (EXPERIMENT_LOG 04:55 → 11:50):**
+- **R0.1 sigma calibration: CLOSED** (screen 7/7-positive was a
+  shared-baseline artifact; 100-seed confirm `-0.2325` CI
+  `[-0.544,+0.079]`).
+- **R0.2 paired rollouts: CLOSED at the preregistered floor** (gap-variance
+  `-4.4%` vs required `-20%`); secondary CI+ (flip rate `0.466 → 0.424`,
+  CI `[+0.005,+0.080]`) → rides along in a future composed serving-v2
+  gate. First probe run was invalid (rollout top-k defaulted to 1 —
+  vacuous); fixed at four layers, archived as `*_invalid_topk1*`.
+- **R1.1a contention audit: no cheap cooperative points at the root**
+  (table delta `-0.03`/decision at own-Q parity; naive +10/game bound is
+  value-head noise-harvest, do not quote). R1.1b/c deprioritized.
+- **Concurrency: retain jobs12** (throughput flat, bridge-bound ~66% util
+  at all settings) — R2.4 bridge work is the standing throughput lever.
+- **Saturate-the-GPU rule added to AGENTS.md (John's 07-11 ruling).**
 
 **Overnight verdicts:** (1) **R0.1 sigma calibration CLOSED** — screens
 were 7/7 positive (best cs025_tk8 +0.70) but the 100-seed disjoint-block
