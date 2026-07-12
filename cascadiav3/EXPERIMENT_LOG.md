@@ -5663,3 +5663,40 @@ go/no-go decisions until the discrepancy is understood.
 
 **Use policy:** screens rank candidates and allocate gates; they are never
 promotion evidence and never overrule a paired gate.
+
+## 2026-07-12 01:02 — PREREGISTERED: Tier-0.5 screen wave (ghost opponents, bias correction, LCB, combo) + R1.3a coverage audit; autonomous pipeline complete
+
+**Code complete (commit cf3528e9 + queue orchestrator):** four new serving
+flags with bit-identical defaults and full provenance —
+`--gumbel-ghost-opponents` (R1.2A: interior non-root plies via CPU greedy,
+zero model evals), `--gumbel-q-bias-correction` (R0.3), `--gumbel-lcb-c`
+(R0.4), `--gumbel-refresh-sample-divisor` (R0.6i). 61/61 exporter tests
+(5 new). Plus: `run_bank_screen.sh` (generic EXTRA_FLAGS candidate screen
+vs the frozen n4096 bank), `run_menu_coverage_audit.sh` +
+`analyze_menu_coverage` (R1.3a), and `run_experiment_queue.sh` +
+`experiment_queue.py` (JSONL-config sequential queue runner: HOLD pause,
+done-marker resume, per-stage logs, failure-tolerant). The full research
+loop is now CLI+config operable: queue file -> screens -> verdicts.
+
+**PREREGISTRATION — screen wave (queue_20260712_screen_wave.jsonl), gated
+on bank acceptance passing:** all screens at the candidate tier (n256/d4,
+repeats 1) on the bank's 700 roots; metric = mean bank-regret vs the
+incumbent screen (puzzle_screen_20260711_incumbent). Proceed-to-gate rules
+(screens select, gates decide):
+- `ghost_opponents`: proceed to a preregistered WALL-MATCHED n256 gate iff
+  its equal-budget regret penalty vs incumbent is <= +0.020 (the screen
+  measures ghost bias only; the gate buys the reclaimed ~3x evals back as
+  n/d).
+- `q_bias_correction`: proceed to an n256 gate iff regret delta <= -0.010.
+- `lcb_c1`: proceed iff <= -0.010.
+- `qbias_lcb_combo`: proceed iff <= -0.015.
+- `refresh_sample_divisor` is NOT bank-screenable (the bank mode never
+  exercises the refresh machinery); its test is a wall-matched 25g probe
+  (speed reallocation), to be preregistered separately.
+- R1.3a coverage audit is measurement (drop rate + regret of the greedy-256
+  cap vs full menus at n1024/d8); the portfolio's R1.3 program stands or
+  falls on it (drop rate <1% and regret <0.01/root => close R1.3a-c).
+
+Queue launches autonomously after the bank acceptance verdict; results in
+`cascadiav3/reports/puzzle_screen_<name>_analysis.{json,md}` and
+`menu_coverage_20260712_analysis.{json,md}`.
