@@ -170,6 +170,10 @@ def run_gumbel_games(
     c_scale: float = 1.0,
     sigma_norm: str = "minmax",
     paired_rollouts: bool = False,
+    ghost_opponents: bool = False,
+    q_bias_correction: bool = False,
+    lcb_c: float = 0.0,
+    refresh_sample_divisor: int = 1,
 ) -> list[dict[str, Any]]:
     command = [
         str(binary),
@@ -214,6 +218,14 @@ def run_gumbel_games(
         *(["--gumbel-c-scale", str(c_scale)] if c_scale != 1.0 else []),
         *(["--gumbel-sigma-norm", sigma_norm] if sigma_norm != "minmax" else []),
         *(["--gumbel-paired-rollouts"] if paired_rollouts else []),
+        *(["--gumbel-ghost-opponents"] if ghost_opponents else []),
+        *(["--gumbel-q-bias-correction"] if q_bias_correction else []),
+        *(["--gumbel-lcb-c", str(lcb_c)] if lcb_c > 0.0 else []),
+        *(
+            ["--gumbel-refresh-sample-divisor", str(refresh_sample_divisor)]
+            if refresh_sample_divisor != 1
+            else []
+        ),
         "--k-interior",
         str(k_interior),
         "--max-actions",
@@ -313,6 +325,10 @@ def run_gumbel_games_batch(
     c_scale: float = 1.0,
     sigma_norm: str = "minmax",
     paired_rollouts: bool = False,
+    ghost_opponents: bool = False,
+    q_bias_correction: bool = False,
+    lcb_c: float = 0.0,
+    refresh_sample_divisor: int = 1,
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
     process per contiguous seed run (one process total for the usual
@@ -363,6 +379,22 @@ def run_gumbel_games_batch(
             *(["--gumbel-c-scale", str(c_scale)] if c_scale != 1.0 else []),
             *(["--gumbel-sigma-norm", sigma_norm] if sigma_norm != "minmax" else []),
             *(["--gumbel-paired-rollouts"] if paired_rollouts else []),
+            *(["--gumbel-ghost-opponents"] if ghost_opponents else []),
+            *(["--gumbel-q-bias-correction"] if q_bias_correction else []),
+            *(["--gumbel-lcb-c", str(lcb_c)] if lcb_c > 0.0 else []),
+            *(
+                ["--gumbel-refresh-sample-divisor", str(refresh_sample_divisor)]
+                if refresh_sample_divisor != 1
+                else []
+            ),
+        *(["--gumbel-ghost-opponents"] if ghost_opponents else []),
+        *(["--gumbel-q-bias-correction"] if q_bias_correction else []),
+        *(["--gumbel-lcb-c", str(lcb_c)] if lcb_c > 0.0 else []),
+        *(
+            ["--gumbel-refresh-sample-divisor", str(refresh_sample_divisor)]
+            if refresh_sample_divisor != 1
+            else []
+        ),
             "--k-interior",
             str(k_interior),
             "--max-actions",
@@ -564,6 +596,10 @@ def run_gumbel_benchmark(
     c_scale: float = 1.0,
     sigma_norm: str = "minmax",
     paired_rollouts: bool = False,
+    ghost_opponents: bool = False,
+    q_bias_correction: bool = False,
+    lcb_c: float = 0.0,
+    refresh_sample_divisor: int = 1,
 ) -> dict[str, Any]:
     execution = execution_provenance(
         batch_runner=batch_runner,
@@ -639,6 +675,10 @@ def run_gumbel_benchmark(
                 c_scale=c_scale,
                 sigma_norm=sigma_norm,
                 paired_rollouts=paired_rollouts,
+                ghost_opponents=ghost_opponents,
+                q_bias_correction=q_bias_correction,
+                lcb_c=lcb_c,
+                refresh_sample_divisor=refresh_sample_divisor,
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -680,6 +720,10 @@ def run_gumbel_benchmark(
                     c_scale=c_scale,
                     sigma_norm=sigma_norm,
                     paired_rollouts=paired_rollouts,
+                    ghost_opponents=ghost_opponents,
+                    q_bias_correction=q_bias_correction,
+                    lcb_c=lcb_c,
+                    refresh_sample_divisor=refresh_sample_divisor,
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -821,6 +865,10 @@ def run_gumbel_benchmark(
             "c_scale": c_scale,
             "sigma_norm": sigma_norm,
             "paired_rollouts": paired_rollouts,
+            "ghost_opponents": ghost_opponents,
+            "q_bias_correction": q_bias_correction,
+            "lcb_c": lcb_c,
+            "refresh_sample_divisor": refresh_sample_divisor,
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
             "q_risk_mode": q_risk_mode,
@@ -996,6 +1044,28 @@ def main() -> int:
         action="store_true",
         help="Common-random-number leaf rollouts across root actions (CRN)",
     )
+    parser.add_argument(
+        "--gumbel-ghost-opponents",
+        action="store_true",
+        help="R1.2A: interior non-root plies advance by CPU greedy (zero model evals)",
+    )
+    parser.add_argument(
+        "--gumbel-q-bias-correction",
+        action="store_true",
+        help="R0.3: offset unvisited-action model Q by the per-root visited bias",
+    )
+    parser.add_argument(
+        "--gumbel-lcb-c",
+        type=float,
+        default=0.0,
+        help="R0.4: final selection by mean - c*SE among well-visited actions (0=off)",
+    )
+    parser.add_argument(
+        "--gumbel-refresh-sample-divisor",
+        type=int,
+        default=1,
+        help="R0.6: refresh sample searches at n/k budget (1=full)",
+    )
     parser.add_argument("--k-interior", type=int, default=16)
     parser.add_argument("--gumbel-max-root-actions", type=int, default=0, help="0 keeps the full legal set")
     parser.add_argument("--control", choices=["full-search", "none"], default="full-search")
@@ -1092,6 +1162,10 @@ def main() -> int:
         c_scale=args.gumbel_c_scale,
         sigma_norm=args.gumbel_sigma_norm,
         paired_rollouts=args.gumbel_paired_rollouts,
+        ghost_opponents=args.gumbel_ghost_opponents,
+        q_bias_correction=args.gumbel_q_bias_correction,
+        lcb_c=args.gumbel_lcb_c,
+        refresh_sample_divisor=args.gumbel_refresh_sample_divisor,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

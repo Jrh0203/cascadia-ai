@@ -93,6 +93,10 @@ struct Args {
     gumbel_c_scale: f64,
     gumbel_sigma_norm: gumbel::SigmaNormalization,
     gumbel_paired_rollouts: bool,
+    gumbel_ghost_opponents: bool,
+    gumbel_q_bias_correction: bool,
+    gumbel_lcb_c: f64,
+    gumbel_refresh_sample_divisor: usize,
     gumbel_tta: u8,
     gumbel_max_root_actions: Option<usize>,
     /// Root menu enumeration cap (immediate-score-ranked pre-filter before
@@ -404,6 +408,10 @@ fn parse_args() -> Result<Args> {
         gumbel_c_scale: 1.0,
         gumbel_sigma_norm: gumbel::SigmaNormalization::MinMax,
         gumbel_paired_rollouts: false,
+        gumbel_ghost_opponents: false,
+        gumbel_q_bias_correction: false,
+        gumbel_lcb_c: 0.0,
+        gumbel_refresh_sample_divisor: 1,
         gumbel_tta: 1,
         gumbel_max_root_actions: None,
         gumbel_root_menu: 256,
@@ -498,6 +506,22 @@ fn parse_args() -> Result<Args> {
                 args.gumbel_sigma_norm = parse_sigma_norm(&value()?)?;
             }
             "--gumbel-paired-rollouts" => args.gumbel_paired_rollouts = true,
+            "--gumbel-ghost-opponents" => args.gumbel_ghost_opponents = true,
+            "--gumbel-q-bias-correction" => args.gumbel_q_bias_correction = true,
+            "--gumbel-lcb-c" => {
+                args.gumbel_lcb_c = value()?.parse().context("invalid --gumbel-lcb-c")?;
+                if !(args.gumbel_lcb_c >= 0.0) {
+                    bail!("--gumbel-lcb-c must be non-negative");
+                }
+            }
+            "--gumbel-refresh-sample-divisor" => {
+                args.gumbel_refresh_sample_divisor = value()?
+                    .parse()
+                    .context("invalid --gumbel-refresh-sample-divisor")?;
+                if args.gumbel_refresh_sample_divisor == 0 {
+                    bail!("--gumbel-refresh-sample-divisor must be positive");
+                }
+            }
             "--gumbel-tta" => {
                 args.gumbel_tta = value()?.parse().context("invalid --gumbel-tta")?;
                 if args.gumbel_tta < 1 || args.gumbel_tta > 6 {
@@ -796,6 +820,19 @@ Options:
                                rollout stream across root actions at equal
                                (world, visit) index so rollout noise cancels
                                in halving comparisons [off].
+  --gumbel-ghost-opponents     R1.2A: interior non-root plies advance by the
+                               CPU greedy policy (refresh declined) with zero
+                               model evals — removes the 3-of-4 opponent
+                               eval tax [off].
+  --gumbel-q-bias-correction   R0.3: offset unvisited-action model Q by the
+                               per-root mean (sim mean - model Q) over
+                               visited actions [off].
+  --gumbel-lcb-c <c>           R0.4: final action = argmax(mean - c*SE) among
+                               actions with >= half the max visit count
+                               [0 = last halving survivor].
+  --gumbel-refresh-sample-divisor <k>
+                               R0.6: refresh hidden-replacement sample
+                               searches run at n/k budget [1 = full].
   --table-contention-audit     Replay a decisions ledger (--in) without
                                search; for every decision compare the chosen
                                action vs the best model-Q alternative under
@@ -2680,6 +2717,10 @@ fn gumbel_config_from_args(args: &Args, search_seed: u64) -> gumbel::GumbelConfi
         c_scale: args.gumbel_c_scale,
         sigma_normalization: args.gumbel_sigma_norm,
         paired_rollouts: args.gumbel_paired_rollouts,
+        ghost_opponents: args.gumbel_ghost_opponents,
+        q_bias_correction: args.gumbel_q_bias_correction,
+        lcb_c: args.gumbel_lcb_c,
+        refresh_sample_divisor: args.gumbel_refresh_sample_divisor,
         search_seed,
         ..gumbel::GumbelConfig::default()
     }
@@ -6649,6 +6690,10 @@ mod tests {
             gumbel_c_scale: 1.0,
             gumbel_sigma_norm: gumbel::SigmaNormalization::MinMax,
             gumbel_paired_rollouts: false,
+            gumbel_ghost_opponents: false,
+            gumbel_q_bias_correction: false,
+            gumbel_lcb_c: 0.0,
+            gumbel_refresh_sample_divisor: 1,
             gumbel_tta: 1,
             out: PathBuf::from("/tmp/unused.jsonl"),
             manifest: PathBuf::from("/tmp/unused_manifest.json"),

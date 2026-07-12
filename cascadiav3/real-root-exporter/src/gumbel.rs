@@ -139,6 +139,26 @@ pub struct GumbelConfig {
     /// optimality for lower bias and variance. Interior advance stays
     /// argmax either way.
     pub leaf_softmix_temp: Option<f64>,
+    /// R1.2A ghost opponents: interior plies of non-root seats advance by
+    /// the CPU greedy policy (menu rank-1, refresh always declined) with
+    /// ZERO model evals, instead of model argmax-Q. Removes the ~3-of-4
+    /// opponent eval tax; the reclaimed budget is reinvested via n/d.
+    pub ghost_opponents: bool,
+    /// R0.3 unvisited-Q bias correction: the raw model Q used for unvisited
+    /// actions (halving fallbacks and completed-Q export) is offset by the
+    /// per-root mean (simulation mean − model Q) over visited actions —
+    /// the measured model-Q heat (+1.02 on the structured-Q holdouts).
+    pub q_bias_correction: bool,
+    /// R0.4 variance-aware final selection: when > 0, the final action is
+    /// argmax of (mean − lcb_c · SE) among actions with at least half the
+    /// maximum visit count, instead of the last halving survivor. 0 = off.
+    pub lcb_c: f64,
+    /// R0.6(i) refresh economics: the hidden-replacement SAMPLE searches of
+    /// an optional market refresh run at n_simulations / divisor (the
+    /// accept/decline valuation needs less precision than the move choice).
+    /// The decline search and the post-accept draft search keep the full
+    /// budget. 1 = off.
+    pub refresh_sample_divisor: usize,
 }
 
 impl Default for GumbelConfig {
@@ -167,6 +187,10 @@ impl Default for GumbelConfig {
             table_total: false,
             table_native_q: false,
             leaf_softmix_temp: None,
+            ghost_opponents: false,
+            q_bias_correction: false,
+            lcb_c: 0.0,
+            refresh_sample_divisor: 1,
         }
     }
 }
@@ -439,6 +463,27 @@ fn normalize_for_sigma(values: &[f64], scheme: SigmaNormalization) -> Vec<f64> {
     }
 }
 
+/// R0.3: mean (simulation mean − model derived Q) over visited actions —
+/// the per-root measured model-Q heat, used to offset unvisited fallbacks.
+/// Zero when nothing is visited yet.
+fn visited_model_q_offset(
+    visit_counts: &[u32],
+    value_sums: &[f64],
+    derived_q: &[f64],
+    shift: f64,
+) -> f64 {
+    let mut total = 0.0_f64;
+    let mut count = 0_usize;
+    for index in 0..visit_counts.len() {
+        if visit_counts[index] > 0 {
+            total += value_sums[index] / f64::from(visit_counts[index])
+                - (derived_q[index] + shift);
+            count += 1;
+        }
+    }
+    if count == 0 { 0.0 } else { total / count as f64 }
+}
+
 /// Deterministic rollout stream seed for one (action, visit) simulation.
 /// Unpaired (incumbent): a distinct stream per action, so rollout noise is
 /// independent exactly across the comparisons halving makes. Paired: the
@@ -575,6 +620,27 @@ fn advance_simulations(
         for sim_index in 0..simulations.len() {
             if simulations[sim_index].value.is_some() {
                 continue;
+            }
+            if cfg.ghost_opponents {
+                // R1.2A: fast-forward non-root plies by the CPU greedy
+                // policy (menu rank-1, refresh declined) — zero model evals.
+                loop {
+                    let state = &simulations[sim_index].state;
+                    if state.is_game_over() || state.current_player() == root_seat {
+                        break;
+                    }
+                    let Some(row) =
+                        eval_row_for_prelude(state, MarketPrelude::default(), Some(1))?
+                    else {
+                        break; // truncation: valued as its own terminal below
+                    };
+                    let chosen = &row.afterstates[0];
+                    let truncated = chosen.apply_truncated;
+                    simulations[sim_index].state = chosen.state.clone();
+                    if truncated {
+                        break;
+                    }
+                }
             }
             let state = &simulations[sim_index].state;
             let Some(decline_row) =
@@ -899,11 +965,21 @@ pub fn gumbel_search(
         if survivors.len() == 1 {
             break;
         }
+        let fallback_offset = if cfg.q_bias_correction {
+            visited_model_q_offset(
+                &visit_counts,
+                &value_sums,
+                &root_eval.derived_final_q,
+                root_q_shift,
+            )
+        } else {
+            0.0
+        };
         let mean_values: Vec<f64> = survivors
             .iter()
             .map(|&action_index| {
                 if visit_counts[action_index] == 0 {
-                    root_eval.derived_final_q[action_index] + root_q_shift
+                    root_eval.derived_final_q[action_index] + root_q_shift + fallback_offset
                 } else {
                     value_sums[action_index] / f64::from(visit_counts[action_index])
                 }
@@ -939,13 +1015,46 @@ pub fn gumbel_search(
             .collect();
     }
 
-    let chosen_index = *survivors.first().context("no surviving root action")?;
+    let mut chosen_index = *survivors.first().context("no surviving root action")?;
+    if cfg.lcb_c > 0.0 {
+        // R0.4: final pick by lower confidence bound among actions with at
+        // least half the maximum visit count.
+        let max_visits = visit_counts.iter().cloned().max().unwrap_or(0);
+        let visit_floor = (max_visits / 2).max(1);
+        let mut best: Option<(usize, f64)> = None;
+        for index in 0..action_count {
+            let visits = visit_counts[index];
+            if visits < visit_floor {
+                continue;
+            }
+            let count = f64::from(visits);
+            let mean = value_sums[index] / count;
+            let variance = (value_sq_sums[index] / count - mean * mean).max(0.0);
+            let lcb = mean - cfg.lcb_c * (variance / count).sqrt();
+            if best.map_or(true, |(_, current)| lcb > current) {
+                best = Some((index, lcb));
+            }
+        }
+        if let Some((index, _)) = best {
+            chosen_index = index;
+        }
+    }
 
     // Completed Q over the full root menu.
+    let final_fallback_offset = if cfg.q_bias_correction {
+        visited_model_q_offset(
+            &visit_counts,
+            &value_sums,
+            &root_eval.derived_final_q,
+            root_q_shift,
+        )
+    } else {
+        0.0
+    };
     let completed_q: Vec<f64> = (0..action_count)
         .map(|action_index| {
             if visit_counts[action_index] == 0 {
-                root_eval.derived_final_q[action_index] + root_q_shift
+                root_eval.derived_final_q[action_index] + root_q_shift + final_fallback_offset
             } else {
                 value_sums[action_index] / f64::from(visit_counts[action_index])
             }
@@ -1026,11 +1135,11 @@ pub fn gumbel_search_for_state(
     // complete legal menu: even a score-ranked cap could become unsound if a
     // future rules/scoring change makes that ranking differ from final score.
     let effective_menu_limit = if exact_endgame { None } else { menu_limit };
-    let mut search_row = |row: &EvalRow| {
+    let mut search_row = |row: &EvalRow, cfg_use: &GumbelConfig| {
         if exact_endgame {
             exact_final_turn_result(row)
         } else {
-            gumbel_search(row, evaluator, cfg)
+            gumbel_search(row, evaluator, cfg_use)
         }
     };
     let choices = game.free_three_of_a_kind_choices()?;
@@ -1042,7 +1151,7 @@ pub fn gumbel_search_for_state(
     let Some(decline_row) = eval_row_for_prelude(game, decline, effective_menu_limit)? else {
         return Ok(None);
     };
-    let decline_result = search_row(&decline_row)?;
+    let decline_result = search_row(&decline_row, cfg)?;
     let decline_value = selected_completed_q(&decline_result)?;
     let mut total_simulations_run = 0usize;
     total_simulations_run += decline_result.simulations_run;
@@ -1059,12 +1168,22 @@ pub fn gumbel_search_for_state(
     };
 
     let market_chance_samples = cfg.market_decision_samples.max(1);
+    // R0.6(i): accept/decline valuation needs less precision than the move
+    // choice — sample searches may run at a reduced simulation budget.
+    let sample_cfg = if cfg.refresh_sample_divisor > 1 && !exact_endgame {
+        let mut reduced = cfg.clone();
+        reduced.n_simulations =
+            (cfg.n_simulations / cfg.refresh_sample_divisor).max(cfg.top_m.max(1));
+        Some(reduced)
+    } else {
+        None
+    };
     let mut accept_total = 0.0;
     for sample_index in 0..market_chance_samples {
         let sampled = sampled_market_state(game, cfg, sample_index);
         let sampled_row = eval_row_for_prelude(&sampled, accept.clone(), effective_menu_limit)?
             .context("sampled accepted market produced no gumbel row")?;
-        let sampled_result = search_row(&sampled_row)?;
+        let sampled_result = search_row(&sampled_row, sample_cfg.as_ref().unwrap_or(cfg))?;
         total_simulations_run += sampled_result.simulations_run;
         accept_total += selected_completed_q(&sampled_result)?;
     }
@@ -1085,7 +1204,7 @@ pub fn gumbel_search_for_state(
     // search the downstream draft without reusing any sampled chance outcome.
     let actual_accept_row = eval_row_for_prelude(game, accept, effective_menu_limit)?
         .context("accepted real market produced no gumbel row")?;
-    let actual_accept_result = search_row(&actual_accept_row)?;
+    let actual_accept_result = search_row(&actual_accept_row, cfg)?;
     total_simulations_run += actual_accept_result.simulations_run;
     Ok(Some(GumbelTurnDecision {
         row: actual_accept_row,
@@ -2022,6 +2141,131 @@ mod tests {
         assert!(
             l1(&soft.improved_policy, &soft.root_priors)
                 < l1(&sharp.improved_policy, &sharp.root_priors)
+        );
+    }
+
+    #[test]
+    fn ghost_opponents_skip_opponent_evals() {
+        let game = test_state(2_026_070_100, 4);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |ghost_opponents: bool| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(7);
+            cfg.n_simulations = 16;
+            cfg.top_m = 4;
+            cfg.ghost_opponents = ghost_opponents;
+            let result = gumbel_search(&root, &mut evaluator, &cfg).expect("search completes");
+            (result, evaluator.rows_seen)
+        };
+        let (normal, normal_rows) = run(false);
+        let (ghost, ghost_rows) = run(true);
+        // Ghosting removes every opponent-ply model row; only the root eval
+        // and root re-entry leaf rows remain.
+        assert!(
+            ghost_rows < normal_rows,
+            "ghost mode must evaluate fewer rows ({ghost_rows} vs {normal_rows})"
+        );
+        assert!(ghost.chosen_index < root.afterstates.len());
+        assert_eq!(ghost.completed_q.len(), normal.completed_q.len());
+        // Determinism: same config, same result.
+        let (ghost_again, _) = run(true);
+        assert_eq!(ghost.completed_q, ghost_again.completed_q);
+        assert_eq!(ghost.chosen_index, ghost_again.chosen_index);
+    }
+
+    #[test]
+    fn visited_model_q_offset_measures_heat() {
+        // Two visited actions run 1.0 and 3.0 below their model Q; one
+        // unvisited action contributes nothing.
+        let visit_counts = [2_u32, 0, 4];
+        let value_sums = [2.0 * 89.0, 0.0, 4.0 * 87.0];
+        let derived_q = [90.0, 95.0, 90.0];
+        let offset = visited_model_q_offset(&visit_counts, &value_sums, &derived_q, 0.0);
+        assert!((offset - (-2.0)).abs() < 1e-12, "offset {offset}");
+        assert_eq!(
+            visited_model_q_offset(&[0, 0], &[0.0, 0.0], &[1.0, 2.0], 0.0),
+            0.0,
+            "no visited actions -> zero offset"
+        );
+    }
+
+    #[test]
+    fn q_bias_correction_shifts_unvisited_completed_q() {
+        let game = test_state(2_026_070_100, 4);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |q_bias_correction: bool| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(7);
+            cfg.q_bias_correction = q_bias_correction;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search completes")
+        };
+        let plain = run(false);
+        let corrected = run(true);
+        // Where BOTH runs left an action unvisited, the corrected fallback
+        // must differ from the raw model Q by one shared offset.
+        let mut shared_offset: Option<f64> = None;
+        for index in 0..plain.completed_q.len() {
+            if plain.visit_counts[index] == 0 && corrected.visit_counts[index] == 0 {
+                let delta = corrected.completed_q[index] - plain.completed_q[index];
+                match shared_offset {
+                    None => shared_offset = Some(delta),
+                    Some(existing) => assert!((existing - delta).abs() < 1e-9),
+                }
+            }
+        }
+        let offset = shared_offset.expect("test root must leave unvisited actions");
+        assert!(offset.abs() > 1e-9, "mock evaluator Q runs hot; offset must be nonzero");
+    }
+
+    #[test]
+    fn lcb_final_selection_is_well_formed_and_off_by_default() {
+        let game = test_state(2_026_070_100, 4);
+        let root = eval_row_for_state(&game, None)
+            .expect("root row")
+            .expect("non-terminal root");
+        let run = |lcb_c: f64| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(7);
+            cfg.n_simulations = 16;
+            cfg.top_m = 4;
+            cfg.lcb_c = lcb_c;
+            gumbel_search(&root, &mut evaluator, &cfg).expect("search completes")
+        };
+        let default_pick = run(0.0);
+        let lcb_pick = run(2.0);
+        // The LCB pick must be a sufficiently-visited action.
+        let max_visits = lcb_pick.visit_counts.iter().cloned().max().unwrap();
+        assert!(lcb_pick.visit_counts[lcb_pick.chosen_index] >= (max_visits / 2).max(1));
+        // Everything except the final pick is untouched by the flag.
+        assert_eq!(default_pick.completed_q, lcb_pick.completed_q);
+        assert_eq!(default_pick.visit_counts, lcb_pick.visit_counts);
+    }
+
+    #[test]
+    fn refresh_sample_divisor_reduces_refresh_budget() {
+        let game = state_with_three_of_a_kind();
+        let run = |divisor: usize| {
+            let mut evaluator = MockEvaluator::new();
+            let mut cfg = test_config(9);
+            cfg.n_simulations = 32;
+            cfg.top_m = 4;
+            cfg.refresh_sample_divisor = divisor;
+            gumbel_search_for_state(&game, None, &mut evaluator, &cfg)
+                .expect("search completes")
+                .expect("non-terminal decision")
+        };
+        let full = run(1);
+        let reduced = run(4);
+        assert!(full.market_chance_samples > 0, "state must offer a refresh");
+        assert!(
+            reduced.total_simulations_run < full.total_simulations_run,
+            "reduced sample budget must lower total simulations ({} vs {})",
+            reduced.total_simulations_run,
+            full.total_simulations_run
         );
     }
 
