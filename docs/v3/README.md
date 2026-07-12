@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-12 06:00 EDT)
+## Status at a glance (updated 2026-07-12 10:50 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -88,11 +88,18 @@ over packed expert tensors with Gumbel search-supervised action values.
   pure speed, the second adopted serving default after exact-K1.
   `--gumbel-refresh-sample-divisor 4` is now the serving/benchmark
   default.
-- **Live now (session-independent on john0):** R1.2A **ghost wall-matched
-  gate** (launched 07-12 05:45): n512/d4 ghost opponents vs n256/d4
-  champion, 100 paired seeds `2027072400..99`, ~5-6h; CI+ at ≤1.25x wall
-  graduates ghost to an n1024-tier confirmation. The R1.3a coverage-audit
-  rerun waiter is chained behind it (deploys rev `1c9211a5`).
+- **R1.2A ghost opponents: CI+ at the wall-matched gate (07-12 10:30) —
+  the campaign's first CI+ wall-matched search improvement.** Ghost
+  n512/d4 (opponent plies fast-forwarded by top-1 policy, zero model
+  evals; reclaimed budget reinvested as 2x sims) vs champion n256/d4:
+  paired **`+0.5450`**, CI **`[+0.1823, +0.9077]`**, at `1.049x` wall.
+  Graduates per the preregistered rule.
+- **Live now (session-independent on john0):** R1.3a coverage-audit rerun
+  (rev `1c9211a5` deployed 10:30), then the **ghost n1024-tier
+  confirmation** (waiter armed: champion n1024/d16 vs ghost n2048/d16,
+  both arms div4, 100 paired seeds `2027072600..99`, ~13-17h;
+  preregistered 10:45). CI+ at ≤1.25x wall makes ghost n2048/d16
+  **champion-designate** — John alone rules on promotion.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.

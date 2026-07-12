@@ -5791,3 +5791,52 @@ Chain state after this verdict: ghost wall-matched gate running (n512/d4
 ghost vs n256/d4 champion, seeds `2027072400..99`, ~5-6h); coverage-audit
 rerun waiter armed behind it (deploys rev `1c9211a5`, then reruns
 `run_menu_coverage_audit.sh`).
+
+## 2026-07-12 10:35 — R1.2A ghost wall-matched gate: CI+ (+0.545 at 1.05x wall) — GRADUATES to n1024-tier confirmation
+
+**Verdict (preregistered 01:25, applied literally):** ghost opponents at
+n512/d4 vs champion n256/d4 K1, 100 paired seeds `2027072400..99`, rev
+`e252d68e`:
+
+- Paired score delta **`+0.5450`**, 95% t-CI **`[+0.1823, +0.9077]`** —
+  `ci_positive`. ✓
+- Mean decision seconds `11.9383 -> 12.5289` = **`1.049x`** wall, inside
+  the preregistered `<=1.25x` bound. ✓
+
+**First CI+ wall-matched search improvement of the campaign.** Replacing
+opponent-ply model evals with top-1 policy fast-forward (zero evals) and
+reinvesting the reclaimed budget as 2x simulations buys ~half a point at
+essentially equal wall. Both rule conditions hold => R1.2A graduates.
+Artifact: `gate_ghost_wallmatched_20260712_verdict.{md,json}` on john0.
+
+Per-sim cost from the timing block: baseline `11.9383/256 = 0.04663 s`,
+ghost `12.5289/512 = 0.02447 s` — ghost fits `1.906x` sims at wall
+parity.
+
+## 2026-07-12 10:45 — PREREGISTERED: ghost n1024-tier confirmation (block 2027072600..99) — armed behind the coverage rerun
+
+**Arms:** baseline = champion serving config n1024/d16 K1; candidate =
+`--gumbel-ghost-opponents` n2048/d16 K1. CAND_N derivation (from the
+gate's timing, per the 01:25 graduation clause): parity n = `1024 x
+1.906 ≈ 1952`, rounded to the power-of-two `2048` — predicted wall
+`~1.05x`, the same premium the completed gate measured. Both arms carry
+`--gumbel-refresh-sample-divisor 4` (BASE_FLAGS — the serving default
+adopted 05:50; the paired delta measures ghost under the config we would
+actually serve). 100 paired seeds `2027072600..99` (registered
+INFRASTRUCTURE §5). Rev `1c9211a5` (deployed 10:30 by the coverage
+rerun; gameplay path unchanged from `e252d68e` — the diff is
+replay-cap-only). VARIED_KEYS `ghost_opponents n_simulations`. Expected
+wall ~13-17h total (both arms, jobs12).
+
+**Rule:** paired 95% t-CI above zero AND candidate mean decision seconds
+`<= 1.25x` baseline => ghost n2048/d16 becomes **champion-designate**:
+promotion evidence is presented to John, who alone rules on champion
+adoption (standing contract). CI ns => the ghost gain does not survive
+high-budget pricing — R1.2A closes as a low-budget-only win (still
+valuable for data generation and cheap serving); revisit via R1.2B/C.
+CI- => ghost bias dominates at depth; cap R1.2 at Stage A.
+
+**Launch:** `ghost_confirm_20260712.sh` waiter on john0 — waits for the
+coverage-rerun chain (PID 3938586) to exit, then runs
+`run_paired_gate.sh` with the env above. One scientific job at a time is
+preserved by construction.

@@ -5,7 +5,7 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-12 06:00 — refresh-div4 ADOPTED; ghost wall-matched gate RUNNING; see the "ADDENDUM (07-12 06:00)" section at the END of this file for the live picture; earlier 07-11 state below)
+## RESUME HERE (07-12 10:50 — GHOST GATE CI+ (+0.545 @ 1.05x wall); n1024-tier confirmation ARMED; refresh-div4 ADOPTED; see the "ADDENDUM (07-12 10:50)" section at the END of this file; earlier 07-11 state below)
 
 **R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
 stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
@@ -680,3 +680,24 @@ EXPERIMENT_LOG 01:15 → 05:50):
   (replay-cap fix), reruns `run_menu_coverage_audit.sh`; preregistered
   read: drop rate <1% AND regret <0.01/root => close R1.3a-c.
 - Morning digest: `ssh john0 'bash /home/john0/cascadia/cascadiav3/scripts/morning_report.sh'`.
+
+## ADDENDUM (07-12 10:50 — ghost CI+; n1024-tier confirmation armed)
+
+- **Ghost wall-matched gate: CI+ (10:30).** `+0.5450`, CI
+  `[+0.1823, +0.9077]`, `1.049x` wall (12.53s vs 11.94s/decision) — both
+  preregistered conditions hold; R1.2A graduates (EXPERIMENT_LOG 10:35).
+  First CI+ wall-matched search improvement of the campaign.
+- **Live now:** R1.3a coverage-audit rerun at rev `1c9211a5` (deployed
+  10:30 by its waiter; replay-cap fix). Preregistered read: drop rate <1%
+  AND regret <0.01/root => close R1.3a-c.
+- **Armed behind it:** ghost n1024-tier confirmation
+  (`ghost_confirm_20260712.{sh,log,pid}`, waiter PID 3979458;
+  preregistered EXPERIMENT_LOG 10:45): baseline champion n1024/d16 vs
+  candidate ghost n2048/d16 (parity n from gate timing: 1024x1.906≈1952
+  → 2048, predicted ~1.05x wall), both arms
+  `--gumbel-refresh-sample-divisor 4`, seeds `2027072600..99`, rev
+  `1c9211a5`, ~13-17h. Rule: CI+ AND ≤1.25x wall => ghost n2048/d16 is
+  **champion-designate; John alone rules on promotion**; ns => R1.2A is
+  a low-budget-only win, revisit via R1.2B/C; CI- => cap R1.2 at Stage A.
+- Refresh-div4 remains ADOPTED (05:50 entry); verdict artifacts for both
+  completed gates are on john0 under `cascadiav3/reports/gate_*_verdict.md`.
