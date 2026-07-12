@@ -92,6 +92,28 @@ ssh john0 'cd /home/john0/cascadia && (nohup env \
    — apply the preregistered rule, record the outcome in EXPERIMENT_LOG,
    update `docs/v3/README.md` status, commit and push.
 
+### 3b. Sequential gates (stop early when the answer is already clear)
+
+Add `LOOKS="40 60 80 100"` to any gate above and it becomes a
+group-sequential gate: the arms run in alternating chunks and after 40,
+60, 80, 100 pairs the runner computes a **repeated confidence interval**
+against Lan-DeMets alpha-spending boundaries (z = 3.099 / 2.553 / 2.254 /
+2.064 for this schedule) and stops the moment the verdict category is
+decided — a strong effect ends the gate at 40-80 pairs instead of always
+paying for 100. Overall false-positive rate stays exactly 5%; the price
+is a final CI ~5% wider than a fixed-N gate.
+
+- Superiority (default, `SEQ_RULE=superiority`): stops when the RCI
+  excludes zero, either side.
+- Noninferiority speed knobs (`SEQ_RULE=noninferiority SEQ_MARGIN=-0.25`):
+  stops when the RCI clears (or wholly misses) the margin.
+- An RCI straddling the threshold always continues; "inconclusive" can
+  only happen at the final look. Interim verdicts land in
+  `..._look<k>_verdict.md`; the latest is always copied to `..._verdict.md`.
+- **Preregister the looks** with the rest of the gate (they are part of
+  the design); LOOKS must end at GAMES. The naive 95% CI in the verdict
+  is reference only — the RCI is the evidence (AGENTS.md, 07-12 ruling).
+
 ## 4. Run several experiments as an unattended sequence
 
 Write a queue file (JSONL; `#` comments allowed) in `cascadiav3/queues/`:

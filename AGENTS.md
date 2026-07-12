@@ -52,8 +52,16 @@ transformer stack. The gate: mean seat score ≥ 100 over 1,000 games of
 - **Promotion** requires ≥ 100 paired games with the 95% CI excluding zero,
   on corrected-rules identity, with clean provenance. Validation loss, smoke
   scores, retention metrics, or a busy process are never strength evidence.
+- **Group-sequential gates (ruled by John 2026-07-12)** are the one sanctioned
+  early-stop: a gate preregistered with a planned final look of ≥ 100 pairs,
+  fixed interim looks, and Lan-DeMets alpha-spending boundaries
+  (`run_paired_gate.sh` LOOKS mode; verdicts via `sequential_gate`) may stop
+  at an interim look, and its repeated CI is then full promotion evidence.
+  The looks and rule must be in the preregistration entry before launch;
+  stopping any other way is still reading a live arm.
 - **Never read partial scores of a live arm**, and never adapt an experiment
-  to them.
+  to them. (An interim look of a preregistered sequential gate, executed by
+  the runner at its planned boundary, is not a partial read.)
 - **Fail closed.** Hash-pin every artifact; refuse mismatched
   rules/source/seed/search provenance; an incomplete ledger is not published.
 - **Closed directions stay closed** without materially new evidence — check

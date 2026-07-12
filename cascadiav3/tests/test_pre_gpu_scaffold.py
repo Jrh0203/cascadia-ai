@@ -2702,22 +2702,23 @@ class BenchmarkStatsTest(unittest.TestCase):
                 16.0,
             )
             self.assertEqual(
-                result["arms"]["24"]["comparison_vs_jobs12"]["action_difference_count"],
+                result["arms"]["24"]["comparison_vs_jobs12"]["divergent_seed_count"],
                 0,
             )
 
+            # A chosen-action flip is a divergent seed (descriptive), not a
+            # disqualification: eligibility is pre-divergence numeric parity.
             jobs16_rows = [dict(row) for row in decisions]
             jobs16_rows[5]["chosen_action_id"] = "different"
             arms[16][1].write_text(
                 "".join(json.dumps(row) + "\n" for row in jobs16_rows), encoding="utf-8"
             )
-            without_jobs16 = build_comparison(arms, gpu_profiles=profiles)
-            self.assertFalse(
-                without_jobs16["arms"]["16"]["comparison_vs_jobs12"][
-                    "eligible_for_knee_selection"
-                ]
-            )
-            self.assertEqual(without_jobs16["selection"]["recommended_jobs"], 24)
+            with_divergence = build_comparison(arms, gpu_profiles=profiles)
+            comparison_16 = with_divergence["arms"]["16"]["comparison_vs_jobs12"]
+            self.assertTrue(comparison_16["eligible_for_knee_selection"])
+            self.assertEqual(comparison_16["divergent_seed_count"], 1)
+            self.assertFalse(comparison_16["policy_parity"])
+            self.assertEqual(with_divergence["selection"]["recommended_jobs"], 16)
 
             arms[16][1].write_text(
                 "".join(json.dumps(row) + "\n" for row in decisions), encoding="utf-8"
@@ -2734,7 +2735,14 @@ class BenchmarkStatsTest(unittest.TestCase):
                 ],
                 [seeds[0]],
             )
+            # Descriptive under the divergence-frontier design: a forked
+            # trajectory length breaks policy parity but not eligibility.
             self.assertFalse(
+                mismatched_count["arms"]["16"]["comparison_vs_jobs12"][
+                    "policy_parity"
+                ]
+            )
+            self.assertTrue(
                 mismatched_count["arms"]["16"]["comparison_vs_jobs12"][
                     "eligible_for_knee_selection"
                 ]

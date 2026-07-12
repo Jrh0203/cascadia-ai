@@ -5867,3 +5867,44 @@ complete.
 
 Chain: ghost n1024-tier confirmation launched 10:38 (waiter fired on
 schedule); exporter PID 3980015; verdict expected ~13-17h.
+
+## 2026-07-12 — PREREGISTERED METHODOLOGY (ruled by John): group-sequential paired gates
+
+John ruled to adopt group-sequential early stopping for paired gates
+("yes please incorporate that"). Design, fixed here before any gate uses
+it:
+
+- **Standard schedule:** interim looks at 40/60/80 pairs, final at 100
+  (information fractions 0.4/0.6/0.8/1.0). Two-sided alpha `0.05`,
+  Lan-DeMets **O'Brien-Fleming-like spending**; z boundaries for this
+  schedule: `3.0992 / 2.5533 / 2.2538 / 2.0635` (computed by
+  `sequential_boundaries.py`; final-look t-critical ~2.09 at df 99 vs
+  fixed-N 1.98 — the whole cost of four looks).
+- **Decision = repeated confidence interval** (mean ± t_k·SE, t_k from
+  the look's boundary): superiority gates stop when the RCI excludes
+  zero either side; noninferiority gates stop when the RCI is entirely
+  above/below the margin. A straddling RCI ALWAYS continues; only the
+  final look can return inconclusive. The final look spends all
+  remaining alpha, so overall type-I error is exactly 0.05 (fixed-seed
+  Monte Carlo check in tests: realized 0.05 ± 0.003).
+- **Evidence rule:** for a preregistered sequential gate (planned final
+  ≥100 pairs, looks fixed in the preregistration), the RCI at a stop IS
+  promotion evidence; the naive 95% CI is reported for reference only.
+  Interim looks executed by the runner at planned boundaries are not
+  "reading a live arm" (AGENTS.md amended).
+- **Machinery** (all tested, 38 new tests green; deploy AFTER the live
+  ghost confirmation finishes): `sequential_boundaries.py` (spending +
+  recursive boundary solver, validated against analytic identities and
+  Monte Carlo), `merge_benchmark_reports.py` (chunk reports merged by
+  re-running the real summarizers on concatenated rows — single-chunk
+  merge is bit-exact), `sequential_gate.py` (RCI verdict wrapping
+  `compare_search_shape`'s arm validation), `run_paired_gate.sh`
+  `LOOKS`/`SEQ_RULE`/`SEQ_MARGIN` mode (alternating per-look chunks,
+  resume-safe, HOLD-aware; default fixed-N path byte-identical in
+  behavior).
+- **Scope:** applies to gates preregistered AFTER this entry. The live
+  ghost n1024-tier confirmation keeps its fixed-N 100-pair design.
+  Retro-check on today's completed gates: both the ghost wall-matched
+  gate and the refresh gate would have stopped at the 80-pair look
+  (~20% GPU saved each); expected savings 20-60% per gate depending on
+  effect strength.
