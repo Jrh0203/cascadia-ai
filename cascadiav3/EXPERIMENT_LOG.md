@@ -5733,3 +5733,21 @@ gate truth on the one cross-checkable case; the bank is accepted for
 candidate ranking.** Screens complete in ~6 min each (worker-pooled).
 The five-stage screen wave launched at rev `e252d68e` (01:14); the
 refresh-divisor gate waiter is armed behind it. Task R2.1 complete.
+
+## 2026-07-12 01:25 — Ghost screen PASS (+0.0074 vs +0.020 bar); PREREGISTERED + ARMED: ghost wall-matched gate
+
+Screen: ghost mean bank-regret `0.2425` vs incumbent `0.2351` on the same
+700 roots — bias penalty `+0.0074`, well under the preregistered `+0.020`.
+Removing ALL opponent model evals costs ~nothing in root-decision quality
+at equal n. Wall: ghost `1.65x` faster at n256 (230.5s vs 379.4s per
+screen).
+
+**PREREGISTRATION — ghost wall-matched gate (armed, runs after the refresh
+gate):** baseline = champion n256/d4 K1-on; candidate = ghost + n512/d4
+(reinvesting the reclaimed evals; expected wall ~1.2x baseline). 100
+paired seeds `2027072400..99`. Rules: verdict CI+ (paired score, 95% t-CI
+above zero) AND candidate mean decision seconds <= 1.25x baseline =>
+R1.2A graduates to an n1024-tier confirmation (fresh preregistration);
+CI- => ghost bias dominates, cap R1.2 at Stage A and revisit; ns => the
+reclaimed budget buys nothing at this tier — retest at n1024 pricing
+before closing. Varied keys: ghost_opponents + n_simulations.
