@@ -463,6 +463,27 @@ fn normalize_for_sigma(values: &[f64], scheme: SigmaNormalization) -> Vec<f64> {
     }
 }
 
+/// Rebuilds a root row's action menu at a different cap on the SAME staged
+/// state. Trajectory reconstruction must use the ledger-era cap; resolution
+/// may want another menu (e.g. the full legal set for coverage audits).
+pub(crate) fn rebuild_row_with_menu(
+    row: &EvalRow,
+    menu_limit: Option<usize>,
+) -> Result<EvalRow> {
+    let candidates =
+        match rank_greedy_actions(&row.staged, &MarketPrelude::default(), menu_limit) {
+            Ok(candidates) => candidates,
+            Err(error) => return Err(error).context("re-ranking root menu"),
+        };
+    let afterstates =
+        candidate_afterstates(&row.staged, &candidates, row.staged.current_player())?;
+    Ok(EvalRow {
+        staged: row.staged.clone(),
+        prelude: row.prelude.clone(),
+        afterstates,
+    })
+}
+
 /// R0.3: mean (simulation mean − model derived Q) over visited actions —
 /// the per-root measured model-Q heat, used to offset unvisited fallbacks.
 /// Zero when nothing is visited yet.

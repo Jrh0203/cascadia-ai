@@ -4562,7 +4562,15 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
     std::fs::create_dir_all(output_dir)
         .with_context(|| format!("creating --output-dir {}", output_dir.display()))?;
     let by_seed = read_ledger_decision_rows(input)?;
-    let menu_limit = gumbel_root_menu_limit(args);
+    // Trajectory reconstruction must use the cap the ledger was recorded
+    // with. A capped --gumbel-root-menu applies to both replay and
+    // resolution (the normal case); the FULL menu (0) applies only to the
+    // RESOLVED roots (coverage audits), with replay falling back to the
+    // serving-era cap of 256.
+    const LEDGER_ROOT_MENU_CAP: usize = 256;
+    let search_menu_limit = gumbel_root_menu_limit(args);
+    let replay_menu_limit = search_menu_limit.or(Some(LEDGER_ROOT_MENU_CAP));
+    let rebuild_search_menu = search_menu_limit != replay_menu_limit;
     let stride = args.probe_stride.max(1);
     let repeats = args.probe_repeats.max(1);
     let started = Instant::now();
@@ -4604,7 +4612,8 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         |worker, seed| {
             let ledger_rows = &by_seed[&seed];
             let (eval_rows, metas, _final_state) =
-                match replay_ledger_seed(seed, ledger_rows, menu_limit, args.player_count) {
+                match replay_ledger_seed(seed, ledger_rows, replay_menu_limit, args.player_count)
+                {
                     Ok(replayed) => replayed,
                     Err(error) => {
                         eprintln!("[puzzle-bank] SKIPPING seed {seed}: {error:#}");
@@ -4613,14 +4622,25 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                     }
                 };
             let mut records = Vec::new();
-            for (index, (row, meta)) in eval_rows.iter().zip(&metas).enumerate() {
-                let is_exact_frontier = row
+            for (index, (replayed_row, meta)) in eval_rows.iter().zip(&metas).enumerate() {
+                let is_exact_frontier = replayed_row
                     .staged
-                    .turns_remaining_for_player(row.staged.current_player())
+                    .turns_remaining_for_player(replayed_row.staged.current_player())
                     == 1;
-                if is_exact_frontier || row.afterstates.len() < 2 || index % stride != 0 {
+                if is_exact_frontier || replayed_row.afterstates.len() < 2 || index % stride != 0
+                {
                     continue;
                 }
+                let rebuilt_row;
+                let row: &gumbel::EvalRow = if rebuild_search_menu {
+                    rebuilt_row = gumbel::rebuild_row_with_menu(replayed_row, search_menu_limit)
+                        .with_context(|| {
+                            format!("rebuilding menu at seed {seed} ply {}", meta.ply)
+                        })?;
+                    &rebuilt_row
+                } else {
+                    replayed_row
+                };
                 let action_count = row.afterstates.len();
                 let mut mean_completed_q = vec![0.0_f64; action_count];
                 let mut total_visits = vec![0_u64; action_count];
@@ -4720,7 +4740,8 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         "resolved_roots": total_roots,
         "stride": stride,
         "repeats": repeats,
-        "menu_limit": menu_limit,
+        "replay_menu_limit": replay_menu_limit,
+        "search_menu_limit": search_menu_limit,
         "search": gumbel_search_probe_settings(args),
         "elapsed_seconds": started.elapsed().as_secs_f64(),
     });
