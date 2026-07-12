@@ -5751,3 +5751,17 @@ R1.2A graduates to an n1024-tier confirmation (fresh preregistration);
 CI- => ghost bias dominates, cap R1.2 at Stage A and revisit; ns => the
 reclaimed budget buys nothing at this tier — retest at n1024 pricing
 before closing. Varied keys: ghost_opponents + n_simulations.
+
+## 2026-07-12 01:35 — Screen wave verdicts: ghost PASS (gate armed); qbias structurally null at serving; LCB + combo flat
+
+Final screen table (mean bank-regret vs incumbent `0.2351`, bar in
+parens): **ghost `+0.0074` (≤+0.020, PASS — wall-matched gate armed)**;
+q_bias_correction `0.0000` (≤-0.010, no) — structurally null for the root
+CHOICE at n256 because every top-m action gets visited, so the unvisited
+correction never touches the chosen action; its value moves to
+improved-policy training targets (R1.4 program); lcb_c1 `-0.0002` (≤-0.010,
+no); combo `-0.0002` (≤-0.015, no — as implied by its components). The
+serving-v2 composition idea is closed at n256 serving; paired rollouts'
+CI+ selection stability remains available to future compositions. Coverage
+audit runs next, then the refresh and ghost gates. Morning digest:
+`morning_report.sh`; handoff: `docs/handoffs/handoff-2026-07-12.md`.
