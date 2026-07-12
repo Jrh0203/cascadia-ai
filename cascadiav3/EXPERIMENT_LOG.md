@@ -5722,3 +5722,14 @@ below margin => R0.6(i) closes.
 .jsonl`): their launch conditions and (for ghost) the wall-parity CAND_N
 come from the screen-wave results; each requires its own completed
 preregistration entry before launch.
+
+## 2026-07-12 01:15 — R2.1 puzzle bank ACCEPTED; screen wave running
+
+Acceptance verdict (preregistered 07-11 18:54): incumbent n256/d4 mean
+bank-regret `0.2351` (check a: material, >= 0.05) and cs025_tk8 `0.2290`
+(check b: delta `-0.006`, not materially better — matching the 100-seed
+gate truth of `-0.23 +/- 0.31` ns). **The screen instrument agrees with
+gate truth on the one cross-checkable case; the bank is accepted for
+candidate ranking.** Screens complete in ~6 min each (worker-pooled).
+The five-stage screen wave launched at rev `e252d68e` (01:14); the
+refresh-divisor gate waiter is armed behind it. Task R2.1 complete.
