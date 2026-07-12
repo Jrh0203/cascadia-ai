@@ -34,12 +34,11 @@ PYTHONPATH=cascadiav3/src python3 -m cascadiav3.experiment_queue cascadiav3/queu
 ## Launching on john0
 
 ```bash
-ssh john0 'cd /home/john0/cascadia && (nohup bash cascadiav3/scripts/run_experiment_queue.sh cascadiav3/queues/<file>.jsonl > cascadiav3/logs/queue_<date>.log 2>&1 & echo $! > cascadiav3/logs/queue_<date>.pid)'
+ssh john0 'cd /home/john0/cascadia && (nohup env SOURCE_REVISION=<rev> bash cascadiav3/scripts/run_experiment_queue.sh cascadiav3/queues/<file>.jsonl > cascadiav3/logs/queue_<date>.log 2>&1 & echo $! > cascadiav3/logs/queue_<date>.pid)'
 ```
 
-with `SOURCE_REVISION=<rev>` exported in the remote command (the runner
-refuses to start unless it matches `HEAD`, or the deployed-revision marker
-on snapshot hosts). The runner writes its own pid to
+The runner refuses to start unless `SOURCE_REVISION` matches `HEAD` (or the
+deployed-revision marker on snapshot hosts). It writes its own pid to
 `cascadiav3/logs/queue_runner.pid` and refuses to start while another queue
 runner is live. Heartbeats land in the nohup log every `WAITER_POLL_SECONDS`
 (default 60) — a silent runner is presumed dead.

@@ -637,3 +637,19 @@ text with:
 ```bash
 git show archive/doc-prune-2026-07-09:docs/v3/CAMPAIGN_STATE.md
 ```
+
+## ADDENDUM (07-12 01:10 — fully autonomous pipeline armed)
+
+The complete research loop is now CLI+config: `run_experiment_queue.sh
+<queue.jsonl>` runs preregistered stages sequentially (HOLD pause,
+done-marker resume, failure-tolerant); `run_bank_screen.sh` screens any
+serving flag combo against the frozen n4096 bank in ~35 min. Live chain on
+john0 (`screen_wave_20260712.{sh,log,pid}`, PID 3931619): bank acceptance
+(running) → acceptance-gated deploy of rev `e252d68e` → the preregistered
+screen wave (ghost opponents R1.2A, q-bias R0.3, LCB R0.4, combo) + the
+R1.3a menu-coverage audit (EXPERIMENT_LOG 01:02). New serving flags all
+default-off with provenance. Results land in
+`cascadiav3/reports/puzzle_screen_*_analysis.md` and
+`menu_coverage_20260712_analysis.md`; proceed-to-gate rules are in the
+preregistration. The worlds det16/32 confirmation resume and the refresh
+divisor wall-matched probe are the next queue candidates (not scheduled).
