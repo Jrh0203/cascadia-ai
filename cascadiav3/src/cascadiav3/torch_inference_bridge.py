@@ -155,6 +155,17 @@ def _bucket_enabled() -> bool:
     return os.environ.get("CASCADIA_BRIDGE_BUCKET") == "1"
 
 
+def _pipeline_enabled() -> bool:
+    """CASCADIA_BRIDGE_PIPELINE=1 selects the pipelined serve loop (R2.4
+    lever #1, Python half): a stdin reader thread plus a one-deep deferred
+    finalize for model-backed eval_batch requests, so the host-side decode +
+    collate of request N+1 overlaps the device forward of request N. Pairs
+    with the Rust client's CASCADIA_SHARED_INFLIGHT=2+ (model_bridge.rs).
+    Default OFF: the serve loop stays the historical single-threaded,
+    strictly serial code path (same thread count, byte-identical behavior)."""
+    return os.environ.get("CASCADIA_BRIDGE_PIPELINE") == "1"
+
+
 def _bucket_dim(size: int) -> int:
     """Next power of two with a floor of EVAL_BUCKET_MIN; above EVAL_BUCKET_CAP
     fall back to multiples of EVAL_BUCKET_STEP_ABOVE_CAP so huge menus do not
@@ -686,6 +697,7 @@ def bridge_env_provenance() -> dict[str, Any]:
         "cgab_fused": os.environ.get("CASCADIA_CGAB_FUSED") == "1",
         "eval_cell_budget": _eval_cell_budget(),
         "eval_chunk_rows": _eval_chunk_rows(),
+        "pipeline": _pipeline_enabled(),
         "pinned_h2d": True,
         "timing": _BRIDGE_TIMING is not None,
         "ensemble_size": 1 + len(_ensemble_manifest_paths()),
@@ -1028,6 +1040,397 @@ def _ensemble_manifest_paths() -> list[Path]:
     return [Path(part.strip()) for part in raw.split(",") if part.strip()]
 
 
+# --- Pipelined serving (CASCADIA_BRIDGE_PIPELINE=1, default off) --------------
+#
+# R2.4 lever #1, Python half. The Rust shared bridge (model_bridge.rs,
+# CASCADIA_SHARED_INFLIGHT=2+) writes up to K merged eval_batch_requests
+# before reading responses; this side overlaps the host-only phases of
+# request N+1 (stdin read, json decode, chunking, collate) with the device
+# forward of request N while preserving strict FIFO response order:
+#
+#   read + prepare(N+1)  ->  finalize + write(N)  ->  launch(N+1)
+#
+# When no next line is buffered yet the loop finalizes N immediately instead
+# of blocking for N+1 — holding response N hostage to a future request would
+# deadlock a serial (inflight=1) client. The overlap therefore engages
+# exactly when the client actually pipelines, and degrades to serial-order
+# processing (never to a hang) when it does not.
+#
+# The default serve loop is untouched: with the knob unset there is no reader
+# thread, no queue, and no phase split — byte-identical current behavior.
+
+_PIPELINE_QUEUE_MAXSIZE = 4
+_PIPELINE_EOF = object()
+
+
+def _stdin_reader_loop(line_queue) -> None:  # type: ignore[no-untyped-def]
+    """Pushes raw stdin lines into the bounded pipeline queue. Always delivers
+    the EOF sentinel — even if the stdin iterator raises — so the consumer can
+    drain the outstanding request and exit instead of blocking forever."""
+    try:
+        for raw_line in sys.stdin:
+            line_queue.put(raw_line)
+    except Exception as exc:  # pragma: no cover - stdin read errors are rare.
+        print(
+            f"bridge: stdin reader thread failed ({exc}); treating as EOF",
+            file=sys.stderr,
+            flush=True,
+        )
+    finally:
+        line_queue.put(_PIPELINE_EOF)
+
+
+class _PipelinedEvalBatch:
+    """Phase-split twin of _model_eval_batch for the pipelined serve loop.
+
+    prepare()  — host only: chunking + collate to CPU tensors (no CUDA work).
+    launch()   — per chunk: H2D + forward under inference_mode; head outputs
+                 stay on the device (no .cpu()).
+    finalize() — D2H copies, host-side final_q, response-row building.
+
+    MAINTENANCE CONTRACT: prepare/launch/finalize together must perform
+    operation-for-operation exactly what _model_eval_batch performs; that
+    function stays the untouched PIPELINE=0 path, and the shared helpers
+    (_eval_batch_chunks, collate_inference_roots, _model_inputs_to_device,
+    select_score_to_go_for_risk, _packed_response_fields) do the heavy
+    lifting in both. tests/test_bridge_pipeline.py pins exact (==) output
+    equality of the two paths, including packed responses. Ensembles need no
+    special casing: _EnsembleModel is invoked exactly like a plain model in
+    launch() and averages on-device.
+
+    With CASCADIA_BRIDGE_TIMING=1 the per-chunk phase accounting is preserved
+    (collate measured in prepare, h2d/forward in launch — with the same
+    explicit device syncs as the serial path, which intentionally trades
+    overlap for accurate attribution — d2h/encode in finalize; record_chunk
+    fires once per chunk at finalize time, in chunk order).
+    """
+
+    def __init__(
+        self,
+        model,
+        roots: list[dict[str, Any]],
+        *,
+        device_name: str = "cpu",
+        chunk_size: int | None = None,
+        packed_response: bool = False,
+        q_risk_mode: str = "mean",
+        policy_mode: str = "logits",
+        pairwise_policy_top_k: int = 16,
+    ) -> None:  # type: ignore[no-untyped-def]
+        self._model = model
+        self._roots = roots
+        self._device_name = device_name
+        self._chunk_size = chunk_size
+        self._packed_response = packed_response
+        self._q_risk_mode = q_risk_mode
+        self._policy_mode = policy_mode
+        self._pairwise_policy_top_k = pairwise_policy_top_k
+        self._entries: list[dict[str, Any]] = []
+
+    def prepare(self) -> None:
+        """json roots -> chunked collated CPU tensors. Mirrors the
+        _model_eval_batch preamble + per-chunk collate_inference_roots."""
+        if not self._roots:
+            return
+        if self._policy_mode not in POLICY_MODES:
+            raise ValueError(f"unsupported policy mode: {self._policy_mode}")
+        if self._pairwise_policy_top_k <= 1:
+            raise ValueError("pairwise_policy_top_k must be greater than one")
+        chunk_size = self._chunk_size
+        if chunk_size is None:
+            chunk_size = _eval_chunk_rows()
+        timing = _BRIDGE_TIMING
+        for chunk in _eval_batch_chunks(self._roots, chunk_size=max(1, chunk_size)):
+            t_chunk_start = time.perf_counter() if timing is not None else 0.0
+            batch = collate_inference_roots(chunk)
+            collate_s = time.perf_counter() - t_chunk_start if timing is not None else 0.0
+            self._entries.append({"chunk": chunk, "batch": batch, "collate_s": collate_s})
+
+    def launch(self) -> None:
+        """Per chunk: H2D + forward. Outputs are kept on the device so the
+        caller can overlap the next request's host work with this compute."""
+        if not self._entries:
+            return
+        import contextlib
+
+        import torch
+
+        device = torch.device(
+            self._device_name
+            if self._device_name != "cuda" or torch.cuda.is_available()
+            else "cpu"
+        )
+        autocast_bf16 = _autocast_bf16_requested() and device.type == "cuda"
+        timing = _BRIDGE_TIMING
+        for entry in self._entries:
+            if timing is not None:
+                t_launch_start = time.perf_counter()
+            inputs = _model_inputs_to_device(entry["batch"], device)
+            if timing is not None:
+                _synchronize_device_for_timing(torch, device)
+                t_transferred = time.perf_counter()
+            with torch.inference_mode():
+                forward_context = (
+                    torch.autocast("cuda", dtype=torch.bfloat16)
+                    if autocast_bf16
+                    else contextlib.nullcontext()
+                )
+                with forward_context:
+                    outputs = self._model(
+                        inputs["tokens"],
+                        inputs["token_mask"],
+                        inputs["actions"],
+                        inputs["action_mask"],
+                        relation_ids=inputs.get("relation_ids"),
+                        relation_tail=inputs.get("relation_tail"),
+                        return_pairwise_borda=self._policy_mode != "logits",
+                        pairwise_borda_top_k=(
+                            self._pairwise_policy_top_k
+                            if self._policy_mode != "logits"
+                            else None
+                        ),
+                    )
+            if timing is not None:
+                _synchronize_device_for_timing(torch, device)
+                entry["h2d_s"] = t_transferred - t_launch_start
+                entry["forward_s"] = time.perf_counter() - t_transferred
+            entry["inputs"] = inputs
+            entry["outputs"] = outputs
+
+    def finalize(self) -> list[dict[str, Any]]:
+        """D2H + response building. Mirrors the _model_eval_batch post-forward
+        tail exactly (same ops in the same order -> bit-identical results)."""
+        if not self._entries:
+            return []
+        import torch
+
+        timing = _BRIDGE_TIMING
+        responses: list[dict[str, Any]] = []
+        for entry in self._entries:
+            chunk = entry["chunk"]
+            batch = entry["batch"]
+            inputs = entry.pop("inputs")
+            outputs = entry.pop("outputs")
+            if timing is not None:
+                t_finalize_start = time.perf_counter()
+            with torch.inference_mode():
+                if self._policy_mode == "logits":
+                    policy_logits = outputs["logits"]
+                elif self._policy_mode == "pairwise-borda":
+                    policy_logits = outputs["pairwise_borda_logits"]
+                elif self._policy_mode == "logits-plus-pairwise":
+                    policy_logits = outputs["logits"] + outputs["pairwise_borda_logits"]
+                else:
+                    raise ValueError(f"unsupported policy mode: {self._policy_mode}")
+                policy_mask = outputs.get("pairwise_borda_mask", inputs["action_mask"])
+                masked_logits = policy_logits.float().masked_fill(~policy_mask, -1.0e9)
+                priors = torch.softmax(masked_logits, dim=1).cpu()
+                score_to_go_all = (
+                    select_score_to_go_for_risk(outputs, self._q_risk_mode).float().cpu()
+                )
+                uncertainty_all = outputs["uncertainty"].float().cpu()
+                value_all = outputs["value_vector"].float().cpu()
+                final_q_all = batch["exact_afterstate_score_active"] + score_to_go_all
+            priors_np = priors.numpy()
+            score_to_go_np = score_to_go_all.numpy()
+            final_q_np = final_q_all.numpy()
+            uncertainty_np = uncertainty_all.numpy()
+            value_np = value_all.numpy()
+            if timing is not None:
+                t_copied = time.perf_counter()
+            for row_index, root in enumerate(chunk):
+                action_count = batch["action_counts"][row_index]
+                response: dict[str, Any] = {
+                    "type": "eval_response",
+                    "schema_id": root.get("schema_id"),
+                    "state_hash": root.get("state_hash"),
+                    "action_ids": batch["action_ids"][row_index],
+                    "model_fallback": False,
+                }
+                if self._packed_response:
+                    response["packed"] = _packed_response_fields(
+                        priors_np[row_index, :action_count],
+                        final_q_np[row_index, :action_count],
+                        score_to_go_np[row_index, :action_count],
+                        uncertainty_np[row_index, :action_count],
+                        value_np[row_index],
+                    )
+                else:
+                    response["priors"] = priors_np[row_index, :action_count].tolist()
+                    response["q"] = final_q_np[row_index, :action_count].tolist()
+                    response["score_to_go"] = score_to_go_np[row_index, :action_count].tolist()
+                    response["uncertainty"] = uncertainty_np[row_index, :action_count].tolist()
+                    response["value"] = value_np[row_index].tolist()
+                responses.append(response)
+            if timing is not None:
+                timing.record_chunk(
+                    rows=len(chunk),
+                    actions=sum(batch["action_counts"]),
+                    collate_s=entry["collate_s"],
+                    h2d_s=entry.get("h2d_s", 0.0),
+                    forward_s=entry.get("forward_s", 0.0),
+                    d2h_s=t_copied - t_finalize_start,
+                    encode_s=time.perf_counter() - t_copied,
+                )
+        return responses
+
+
+def _serve_pipeline_loop(
+    loaded_model,
+    *,
+    allow_dry_run_fallback: bool,
+    device_name: str,
+    q_risk_mode: str,
+    policy_mode: str,
+    pairwise_policy_top_k: int,
+) -> int:  # type: ignore[no-untyped-def]
+    """Pipelined replacement for the serve() message loop (flag-gated).
+
+    Every message class other than a model-backed eval_batch_request first
+    drains the outstanding request (FIFO), then is handled inline with the
+    exact dispatch the serial loop uses — including the model-less uniform
+    fallback, single eval_request, hello, shutdown, unknown types, and
+    malformed JSON. Exceptions in prepare/launch/finalize of request N emit
+    the {"type": "error"} response in N's FIFO slot and never touch any other
+    request's state.
+    """
+    import queue
+    import threading
+
+    print(
+        "bridge: pipeline mode ON (CASCADIA_BRIDGE_PIPELINE=1):"
+        f" stdin reader thread (queue {_PIPELINE_QUEUE_MAXSIZE})"
+        " + one-deep deferred eval_batch finalize; FIFO response order preserved",
+        file=sys.stderr,
+        flush=True,
+    )
+    line_queue: queue.Queue = queue.Queue(maxsize=_PIPELINE_QUEUE_MAXSIZE)
+    reader = threading.Thread(
+        target=_stdin_reader_loop,
+        args=(line_queue,),
+        name="bridge-stdin-reader",
+        daemon=True,
+    )
+    reader.start()
+
+    outstanding: _PipelinedEvalBatch | None = None
+
+    def finalize_outstanding() -> None:
+        """Finalize + write the launched request (request N) in FIFO order."""
+        nonlocal outstanding
+        if outstanding is None:
+            return
+        state, outstanding = outstanding, None
+        try:
+            results = state.finalize()
+            _response({"type": "eval_batch_response", "results": results})
+        except Exception as exc:
+            _response({"type": "error", "error": str(exc)})
+
+    while True:
+        if outstanding is not None:
+            # Overlap window: only take a line that is already buffered. A
+            # blocking read here would deadlock a client that waits for
+            # response N before writing N+1.
+            try:
+                raw_line = line_queue.get_nowait()
+            except queue.Empty:
+                finalize_outstanding()
+                continue
+        else:
+            raw_line = line_queue.get()
+        if raw_line is _PIPELINE_EOF:
+            finalize_outstanding()
+            return 0
+
+        # Phase A — host-side decode (+ prepare when model-backed eval_batch)
+        # of line N+1 while request N is still outstanding on the device.
+        # Failures are stashed so they surface in this line's own FIFO slot,
+        # strictly after response N.
+        message: Any = None
+        prepared: _PipelinedEvalBatch | None = None
+        pending_error: Exception | None = None
+        try:
+            message = json.loads(raw_line)
+            if message.get("type") == "eval_batch_request" and loaded_model is not None:
+                roots = message["roots"]
+                packed_response = bool(message.get("packed_response", False))
+                if not isinstance(roots, list) or not roots:
+                    raise ValueError("eval_batch_request requires a non-empty roots list")
+                prepared = _PipelinedEvalBatch(
+                    loaded_model,
+                    roots,
+                    device_name=device_name,
+                    packed_response=packed_response,
+                    q_risk_mode=q_risk_mode,
+                    policy_mode=policy_mode,
+                    pairwise_policy_top_k=pairwise_policy_top_k,
+                )
+                prepared.prepare()
+        except Exception as exc:
+            pending_error = exc
+            prepared = None
+
+        # Phase B — response N is always written before anything from N+1.
+        finalize_outstanding()
+
+        # Phase C — this line's own handling, now in its FIFO slot.
+        if pending_error is not None:
+            _response({"type": "error", "error": str(pending_error)})
+            continue
+        if prepared is not None:
+            try:
+                prepared.launch()
+            except Exception as exc:
+                _response({"type": "error", "error": str(exc)})
+                continue
+            outstanding = prepared
+            continue
+        # Non-pipelinable message: inline dispatch, exactly the serial loop's.
+        try:
+            message_type = message.get("type")
+            if message_type == "hello":
+                _response({"type": "hello", "protocol": "cascadiav3.torch_jsonl_stdio.v1"})
+            elif message_type == "shutdown":
+                _response({"type": "shutdown", "status": "ok"})
+                return 0
+            elif message_type == "eval_request":
+                root = message["root"]
+                packed_response = bool(message.get("packed_response", False))
+                if loaded_model is None:
+                    if not allow_dry_run_fallback and not message.get("allow_model_fallback", False):
+                        raise RuntimeError("no model loaded and dry-run fallback is disabled")
+                    # Uniform fallback stays JSON; consumers key packed
+                    # decoding on the per-response "packed" field.
+                    _response(_uniform_eval(root, model_fallback=True))
+                else:
+                    _response(
+                        _model_eval(
+                            loaded_model,
+                            root,
+                            device_name=device_name,
+                            packed_response=packed_response,
+                            q_risk_mode=q_risk_mode,
+                            policy_mode=policy_mode,
+                            pairwise_policy_top_k=pairwise_policy_top_k,
+                        )
+                    )
+            elif message_type == "eval_batch_request":
+                # Model-backed batches were prepared in Phase A; only the
+                # model-less fallback path reaches this branch.
+                roots = message["roots"]
+                if not isinstance(roots, list) or not roots:
+                    raise ValueError("eval_batch_request requires a non-empty roots list")
+                if not allow_dry_run_fallback and not message.get("allow_model_fallback", False):
+                    raise RuntimeError("no model loaded and dry-run fallback is disabled")
+                results = [_uniform_eval(root, model_fallback=True) for root in roots]
+                _response({"type": "eval_batch_response", "results": results})
+            else:
+                raise ValueError(f"unknown message type {message_type!r}")
+        except Exception as exc:
+            _response({"type": "error", "error": str(exc)})
+
+
 def serve(
     *,
     checkpoint: Path | None,
@@ -1117,6 +1520,15 @@ def serve(
             "bridge_env": bridge_env_provenance(),
         }
     )
+    if _pipeline_enabled():
+        return _serve_pipeline_loop(
+            loaded_model,
+            allow_dry_run_fallback=allow_dry_run_fallback,
+            device_name=device_name,
+            q_risk_mode=q_risk_mode,
+            policy_mode=policy_mode,
+            pairwise_policy_top_k=pairwise_policy_top_k,
+        )
     for line in sys.stdin:
         try:
             message = json.loads(line)

@@ -252,6 +252,19 @@ impl ModelServiceSession {
                 .map(|root_request| self.eval(root_request))
                 .collect();
         }
+        self.send_eval_batch_request(root_requests)?;
+        self.recv_eval_batch_response(root_requests)
+    }
+
+    /// Writes one eval_batch request without waiting for the response. The
+    /// bridge answers strictly in request order (its serve loop is FIFO), so
+    /// callers pipelining multiple requests must pair each send with a
+    /// `recv_eval_batch_response` in the same order. Requires `eval_batch`
+    /// protocol support.
+    pub fn send_eval_batch_request(&mut self, root_requests: &[Value]) -> Result<()> {
+        if !self.supports_eval_batch() {
+            bail!("model service does not support eval_batch pipelining");
+        }
         let request = json!({
             "type": "eval_batch_request",
             "roots": root_requests,
@@ -263,8 +276,15 @@ impl ModelServiceSession {
             .context("writing model eval batch request")?;
         self.stdin
             .flush()
-            .context("flushing model eval batch request")?;
+            .context("flushing model eval batch request")
+    }
 
+    /// Receives the next eval_batch response and parses it against the root
+    /// requests it answers (FIFO pairing with `send_eval_batch_request`).
+    pub fn recv_eval_batch_response(
+        &mut self,
+        root_requests: &[Value],
+    ) -> Result<Vec<ModelEval>> {
         let scale = (root_requests.len() as u32).min(BATCH_TIMEOUT_SCALE_CAP).max(1);
         let response_line = recv_model_line(
             &self.line_rx,
@@ -805,6 +825,18 @@ pub fn shared_row_cap() -> usize {
     env_usize("CASCADIA_SHARED_ROW_CAP", 192)
 }
 
+/// Maximum merged requests in flight to the bridge (request pipelining,
+/// R2.4 lever #1). `CASCADIA_SHARED_INFLIGHT`, default 1 = today's strictly
+/// serial write-then-read loop. At 2+, the aggregator keeps gathering and
+/// writing merged requests while earlier responses are still being computed,
+/// overlapping the bridge's host phases (decode/collate/encode) with GPU
+/// forward time. Responses are demuxed in FIFO order — the Python serve
+/// loop answers strictly in request order. Capped at 8: beyond double
+/// buffering the returns vanish while queue latency grows.
+pub fn shared_inflight() -> usize {
+    env_usize("CASCADIA_SHARED_INFLIGHT", 1).min(8)
+}
+
 pub struct SharedBridge {
     tx: std::sync::mpsc::Sender<AggregateJob>,
     packed_features: bool,
@@ -819,44 +851,164 @@ pub struct SharedBridgeClient {
 impl SharedBridge {
     /// `max_rows` bounds how many rows one merged request may carry; the
     /// gather window is short (default 2ms, `CASCADIA_SHARED_GATHER_US`) so
-    /// lone jobs are not delayed.
+    /// lone jobs are not delayed. In-flight depth comes from
+    /// `CASCADIA_SHARED_INFLIGHT` (default 1 = serial).
     pub fn spawn(command: &str, config: &BridgeConfig, max_rows: usize) -> Result<Self> {
+        Self::spawn_with_options(command, config, max_rows, shared_inflight())
+    }
+
+    /// Like `spawn`, with an explicit in-flight depth (tests use this so the
+    /// process-global env stays untouched). `inflight` <= 1 reproduces the
+    /// serial gather -> send -> recv loop exactly; at 2+ the aggregator keeps
+    /// gathering and sending merged requests while up to `inflight - 1`
+    /// earlier responses are still outstanding, and demuxes responses in
+    /// FIFO order (the bridge serve loop answers strictly in request order).
+    pub fn spawn_with_options(
+        command: &str,
+        config: &BridgeConfig,
+        max_rows: usize,
+        inflight: usize,
+    ) -> Result<Self> {
         let mut session = ModelServiceSession::spawn(command, config)?;
         let packed_features = session.supports_packed_features();
+        let pipelining = inflight.max(1) > 1 && session.supports_eval_batch();
+        if inflight.max(1) > 1 && !session.supports_eval_batch() {
+            eprintln!(
+                "shared bridge: CASCADIA_SHARED_INFLIGHT={} requested but the bridge \
+                 lacks eval_batch support; running serial",
+                inflight
+            );
+        }
+        if pipelining {
+            eprintln!(
+                "shared bridge: request pipelining ON (inflight {})",
+                inflight.max(1)
+            );
+        }
+        let inflight = if pipelining { inflight.max(1) } else { 1 };
         let gather_window = shared_gather_window();
         let (tx, rx) = std::sync::mpsc::channel::<AggregateJob>();
         std::thread::spawn(move || {
-            while let Ok(first) = rx.recv() {
-                let mut jobs = vec![first];
-                let mut rows = jobs[0].requests.len();
-                while rows < max_rows {
-                    match rx.recv_timeout(gather_window) {
-                        Ok(job) => {
-                            rows += job.requests.len();
-                            jobs.push(job);
+            // Each pending entry is one sent-but-unanswered merged request:
+            // the jobs it merged plus the merged roots needed to parse its
+            // response. FIFO: front is always the oldest outstanding request.
+            let mut pending: std::collections::VecDeque<(Vec<AggregateJob>, Vec<Value>)> =
+                std::collections::VecDeque::new();
+            let mut accepting = true;
+            loop {
+                // Gather a new merged request whenever there is capacity.
+                // With responses outstanding we must not block indefinitely
+                // on new jobs (the workers they belong to are blocked on
+                // those very responses), so wait at most one gather window
+                // before falling through to reap the oldest response.
+                let first = if accepting && pending.len() < inflight {
+                    if pending.is_empty() {
+                        match rx.recv() {
+                            Ok(job) => Some(job),
+                            Err(_) => {
+                                accepting = false;
+                                None
+                            }
                         }
-                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => break,
-                        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                    } else {
+                        match rx.recv_timeout(gather_window) {
+                            Ok(job) => Some(job),
+                            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => None,
+                            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                                accepting = false;
+                                None
+                            }
+                        }
                     }
+                } else {
+                    None
+                };
+
+                if let Some(first) = first {
+                    let mut jobs = vec![first];
+                    let mut rows = jobs[0].requests.len();
+                    while rows < max_rows {
+                        match rx.recv_timeout(gather_window) {
+                            Ok(job) => {
+                                rows += job.requests.len();
+                                jobs.push(job);
+                            }
+                            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => break,
+                            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                                accepting = false;
+                                break;
+                            }
+                        }
+                    }
+                    let merged: Vec<Value> = jobs
+                        .iter()
+                        .flat_map(|job| job.requests.iter().cloned())
+                        .collect();
+                    if pipelining {
+                        match session.send_eval_batch_request(&merged) {
+                            Ok(()) => pending.push_back((jobs, merged)),
+                            Err(error) => {
+                                let message = format!("{error:#}");
+                                for job in jobs {
+                                    let _ = job.reply.send(Err(message.clone()));
+                                }
+                            }
+                        }
+                        // Loop: try to gather (and send) more work before the
+                        // oldest response is reaped — this is the overlap.
+                        continue;
+                    }
+                    match session.eval_batch(&merged) {
+                        Ok(mut evals) => {
+                            for job in jobs {
+                                let rest = evals.split_off(job.requests.len());
+                                let mine = std::mem::replace(&mut evals, rest);
+                                let _ = job.reply.send(Ok(mine));
+                            }
+                        }
+                        Err(error) => {
+                            let message = format!("{error:#}");
+                            for job in jobs {
+                                let _ = job.reply.send(Err(message.clone()));
+                            }
+                        }
+                    }
+                    continue;
                 }
-                let merged: Vec<Value> = jobs
-                    .iter()
-                    .flat_map(|job| job.requests.iter().cloned())
-                    .collect();
-                match session.eval_batch(&merged) {
-                    Ok(mut evals) => {
-                        for job in jobs {
-                            let rest = evals.split_off(job.requests.len());
-                            let mine = std::mem::replace(&mut evals, rest);
-                            let _ = job.reply.send(Ok(mine));
+
+                // No new work gathered: reap the oldest outstanding response.
+                if let Some((jobs, merged)) = pending.pop_front() {
+                    match session.recv_eval_batch_response(&merged) {
+                        Ok(mut evals) => {
+                            for job in jobs {
+                                let rest = evals.split_off(job.requests.len());
+                                let mine = std::mem::replace(&mut evals, rest);
+                                let _ = job.reply.send(Ok(mine));
+                            }
+                        }
+                        Err(error) => {
+                            // The response stream is positional; a failed read
+                            // desynchronizes every later outstanding request.
+                            // Fail them all loudly rather than misattribute.
+                            let message = format!("{error:#}");
+                            for job in jobs {
+                                let _ = job.reply.send(Err(message.clone()));
+                            }
+                            while let Some((doomed_jobs, _)) = pending.pop_front() {
+                                let doomed = format!(
+                                    "shared bridge response stream desynchronized by an earlier failure: {message}"
+                                );
+                                for job in doomed_jobs {
+                                    let _ = job.reply.send(Err(doomed.clone()));
+                                }
+                            }
                         }
                     }
-                    Err(error) => {
-                        let message = format!("{error:#}");
-                        for job in jobs {
-                            let _ = job.reply.send(Err(message.clone()));
-                        }
-                    }
+                    continue;
+                }
+
+                if !accepting {
+                    break;
                 }
             }
             session.shutdown();
@@ -931,6 +1083,39 @@ mod shared_tests {
     fn shared_bridge_demuxes_concurrent_jobs_correctly() {
         let shared =
             SharedBridge::spawn(&mock_command(), &config(), 64).expect("spawn shared bridge");
+        run_demux_load(&shared);
+    }
+
+    #[test]
+    fn pipelined_shared_bridge_demuxes_and_orders_correctly() {
+        // inflight 2: merged requests are written while earlier responses are
+        // still outstanding; the mock answers FIFO, and q = exact + 1 makes
+        // any demux/order slip visible per request.
+        let shared = SharedBridge::spawn_with_options(&mock_command(), &config(), 64, 2)
+            .expect("spawn pipelined shared bridge");
+        run_demux_load(&shared);
+    }
+
+    #[test]
+    fn pipelined_single_worker_never_deadlocks() {
+        // One serial client: after each send the worker blocks on its reply,
+        // so no new job ever arrives while a response is outstanding — the
+        // aggregator must fall through its gather wait and reap.
+        let shared = SharedBridge::spawn_with_options(&mock_command(), &config(), 64, 4)
+            .expect("spawn pipelined shared bridge");
+        let client = shared.client();
+        for round in 0..6usize {
+            let actions = 2 + (round % 3);
+            let evals = client
+                .eval_batch(&[request(round, actions)])
+                .expect("pipelined single-worker eval");
+            let expected: Vec<f64> =
+                (0..actions).map(|i| (round * 10 + i) as f64 + 1.0).collect();
+            assert_eq!(evals[0].q.as_ref().expect("q"), &expected);
+        }
+    }
+
+    fn run_demux_load(shared: &SharedBridge) {
         let mut handles = Vec::new();
         for worker in 0..8usize {
             let client = shared.client();

@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -80,6 +81,21 @@ def model_artifact_provenance(binary: Path, manifest: Path) -> dict[str, Any]:
     }
 
 
+def shared_inflight_from_env() -> int:
+    """Effective CASCADIA_SHARED_INFLIGHT for run attribution. Mirrors the
+    Rust knob resolution exactly (model_bridge.rs shared_inflight/env_usize):
+    positive integer from the environment, default 1 (strictly serial),
+    capped at 8; blank/invalid/non-positive values fall back to the default."""
+    raw = os.environ.get("CASCADIA_SHARED_INFLIGHT", "").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return 1
+    if value <= 0:
+        return 1
+    return min(value, 8)
+
+
 def execution_provenance(
     *, batch_runner: bool, jobs: int, seed_count: int, device_name: str
 ) -> dict[str, Any]:
@@ -103,6 +119,12 @@ def execution_provenance(
         ),
         "maximum_concurrent_bridge_processes": 1 if batch_runner else parallel_games,
         "device": device_name,
+        # R2.4 lever #1 runtime knobs (request pipelining). Recorded so every
+        # report attributes whether the Rust client had >1 merged request in
+        # flight and whether the Python bridge served with the phase-split
+        # pipelined loop.
+        "shared_inflight": shared_inflight_from_env(),
+        "bridge_pipeline": os.environ.get("CASCADIA_BRIDGE_PIPELINE") == "1",
     }
 
 

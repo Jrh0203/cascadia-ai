@@ -107,7 +107,7 @@ Ranking = expected gain × confidence ÷ cost, given the measured 63.8% util.
 
 | # | Candidate | Mechanism | Expected gain | Exactness | Cost | How to measure on john0 |
 |---|---|---|---|---|---|---|
-| 1 | **Request pipelining / double-buffering** (Rust: allow 2 in-flight merged requests; or Python: decode+collate thread feeding a GPU thread) | Overlap host phases (steps 5-8, 10-12) with GPU forward; the aggregator currently blocks end-to-end | up to ~1.5x (1/0.64 bound if forward saturates; realistically 1.2–1.4x) | bit-identical (same chunks, same order per session; response demux unchanged) | medium (Rust aggregator: second outstanding request + reorder-safe demux; Python: stdin reader thread + queue) | TIMING=1 phase split first; then paired jobs12 run, GPU util + games/h |
+| 1 | **Request pipelining / double-buffering** — LANDED 2026-07-12, both halves, default off: Rust `CASCADIA_SHARED_INFLIGHT=2+` (aggregator sends while responses are outstanding, FIFO demux, desync fails all in-flight loudly; `model_bridge.rs spawn_with_options`) + Python `CASCADIA_BRIDGE_PIPELINE=1` (stdin reader thread + one-deep deferred finalize; §4) | Overlap host phases (steps 5-8, 10-12) with GPU forward; the serial aggregator blocked end-to-end | up to ~1.5x (1/0.64 bound if forward saturates; realistically 1.2–1.4x) | bit-identical per request (torch-CPU-proven for the Python phase split; batch composition may regroup under timing, same drift class as jobs concurrency — the A/B checks per-seed score identity) | zero (landed) | armed A/B behind the throughput chain: 12-game n1024/d16 serial vs INFLIGHT=2+PIPELINE=1, per-seed score identity + wall ratio |
 | 2 | **`CASCADIA_EVAL_CHUNK_ROWS=192`** (landed, default 32) | One merged request = 1-2 forwards instead of ≥6; fewer launch/D2H/sync rounds; larger GPU batches | 1.1–1.3x | numerics-drift (chunk-max padding regroups reductions, ~1e-7 class — same drift class the chunker already admits when membership shifts) | zero (landed) | bridge_throughput_probe batch 192 rows/s vs eager; then paired gate |
 | 3 | **`CASCADIA_BRIDGE_COMPILE=1` + `CASCADIA_BRIDGE_BUCKET=1`** (compile mode now defaults to `reduce-overhead`, `CASCADIA_BRIDGE_COMPILE_MODE` to override) | CUDA graphs eliminate per-kernel launch overhead; bucketing keeps the recompile set finite | 1.1–1.5x of the forward phase (launch-bound share unknown); CPU smoke shows compiled ≈ eager on tiny shapes, GPU is the real test | numerics-drift (measured on CPU probe smoke: max abs diff ~2e-6 on q, ~6e-8 on priors → **needs paired score gate**) | zero (landed; warmup covers bucket shapes) | probe arms compile / compile_bucket; watch first-chunk latency + recompile count |
 | 4 | Bigger effective batches from the client: raise `CASCADIA_SHARED_ROW_CAP` (192→384) and/or gather window once #2 is in | Amortize per-request wire+decode over more rows; GPU batches closer to saturation | 1.05–1.2x | bit-identical per response, but batch composition changes → reduction-order drift in practice | trivial (env) | sweep ROW_CAP × CHUNK_ROWS in a jobs12 paired probe |
@@ -148,6 +148,31 @@ per-session batching left to merge.
   `bridge_env` (`:1117`) so every run is attributable.
 - `torch_model_throughput_benchmark.py` environment block now records
   `bridge_compile_mode` and `eval_chunk_rows`.
+- **`CASCADIA_BRIDGE_PIPELINE=1`** (candidate #1, Python half; landed
+  2026-07-12): pipelined serve loop — a stdin reader thread feeds a bounded
+  queue (maxsize 4), and model-backed `eval_batch_request`s run phase-split
+  (`_PipelinedEvalBatch`: `prepare` = decode+chunk+collate on the host,
+  `launch` = H2D + forward with outputs left on device, `finalize` = D2H +
+  row building) with a one-deep deferred finalize:
+  `read+prepare(N+1) → finalize+write(N) → launch(N+1)`. Strict FIFO
+  response order is preserved; when no next line is buffered the loop
+  finalizes immediately instead of blocking (holding response N for a
+  future request would deadlock an inflight-1 client), so overlap engages
+  exactly when the Rust side pipelines (`CASCADIA_SHARED_INFLIGHT=2+`,
+  `model_bridge.rs`). Every other message class (hello, shutdown, single
+  eval_request, model-less fallback, malformed lines) drains the
+  outstanding request first, then runs the serial loop's inline dispatch.
+  `_model_eval_batch` itself is untouched — the phase split is an
+  operation-for-operation twin, pinned to exact (`==`) output equality
+  (incl. packed responses, pairwise/quantile modes, ensembles, TIMING
+  accounting) by `tests/test_bridge_pipeline.py`. Default OFF = the
+  historical single-threaded serial loop, byte-identical. Reported as
+  `pipeline` in `bridge_env`; activation prints one loud
+  `bridge: pipeline mode ON ...` stderr line.
+- `torch_cascadiaformer_gumbel_benchmark.py` `execution_provenance` now
+  records `shared_inflight` (mirrors the Rust `shared_inflight()`
+  resolution: default 1, cap 8) and `bridge_pipeline`, so reports
+  attribute both halves of the pipelining experiment.
 
 Tests: `cascadiav3/tests/test_bridge_throughput_knobs.py` (13 tests —
 defaults-off provenance, hello payload, compile-mode plumbing, compile and

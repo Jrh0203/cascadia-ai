@@ -5932,6 +5932,49 @@ eager loudly), `bridge_env` block in the bridge hello payload, compile-mode
 selection. 13 new tests; suite green (remaining local errors are this
 Mac's missing-torch set, unchanged).
 
+## 2026-07-12 — R2.4 lever #1 LANDED: request pipelining (both halves, default off); PREREGISTERED serial-vs-pipelined A/B
+
+John directed implementing the ranked performance levers. Levers #2/#3
+were already flag-complete; #1 (the serial-pipeline bound) is now built:
+
+- **Rust (`CASCADIA_SHARED_INFLIGHT`, default 1 = bit-identical serial
+  loop):** `SharedBridge` aggregator splits send/recv
+  (`send_eval_batch_request` / `recv_eval_batch_response`), keeps up to
+  K merged requests outstanding, gathers new work while the GPU
+  computes, demuxes responses strictly FIFO, and on any response-stream
+  failure fails ALL in-flight requests loudly (positional stream —
+  never misattribute). Deadlock-free by construction: with responses
+  outstanding it waits at most one gather window for new jobs before
+  reaping. 63/63 exporter tests (3 new: pipelined demux under 8-worker
+  load, single-worker no-deadlock, serial parity).
+- **Python (`CASCADIA_BRIDGE_PIPELINE=1`, default off):** stdin reader
+  thread + one-deep deferred finalize; request N+1 is decoded/collated
+  while N's forward runs on the GPU; write(N) always precedes
+  launch(N+1) so FIFO holds. Phase-split (`prepare/launch/finalize`)
+  proven EXACTLY equal to `_model_eval_batch` on CPU torch (JSON +
+  packed, multi-chunk, pairwise, quantile, ensemble — 14 new tests);
+  serial path untouched. Provenance: `bridge_env.pipeline` in the hello
+  payload; benchmark execution block records `shared_inflight` +
+  `bridge_pipeline`.
+- Measure-first micro-candidates (#6-#9) remain data-gated per the memo;
+  #5 (second bridge process) is an alternative to #1, not additive —
+  revisit only if the A/B disappoints.
+
+**PREREGISTERED — pipelining A/B (engineering, armed behind the
+throughput chain):** two 12-game runs at production topology
+(n1024/d16, jobs12, div4, engineering seeds `1111120000..11`, identical
+between arms): arm A serial, arm B `CASCADIA_SHARED_INFLIGHT=2` +
+`CASCADIA_BRIDGE_PIPELINE=1`. Read: (a) per-seed mean scores compared
+exactly; (b) wall + mean-decision ratio. Rules: **>=10% decision
+throughput gain AND per-seed scores bit-identical => adopt pipelining
+as the generation/serving default** (batteries/gates keep serial until
+a follow-up battery-replay check); gain without bit-identity =>
+classify the drift (expected class: gather regrouping, same as jobs
+concurrency) and route through a sequential noninferiority gate before
+any adoption; <10% gain => leave default-off, revisit after CHUNK_ROWS
+lands (levers compose: pipelining hides host time that CHUNK_ROWS
+shrinks). Never strength evidence.
+
 **PREREGISTERED probe plan (engineering-only, never strength evidence):**
 step 0 after the ghost confirmation ends — deploy, run one
 `CASCADIA_BRIDGE_TIMING=1` production-shape sample for the phase split,
