@@ -6,6 +6,10 @@ Bacalhau-backed worker orchestration for CPU-bound jobs.
 
 ## Start Here
 
+- **[Research Pipeline Guide](docs/v3/RESEARCH_PIPELINE_GUIDE.md)** — the
+  operator manual: how to read results and run every experiment (screens,
+  gates, queues, deploys) end to end with exact commands. Start here to
+  RUN things.
 - **[Cascadia v3 — Source of Truth](docs/v3/README.md)** — the authoritative
   status of everything; start every session and handoff there.
 - [Transformer architecture](docs/v3/ARCHITECTURE.md)

@@ -104,7 +104,10 @@ timestamped snapshot, weaker than current `main`).
 ## Read order for a fresh session
 
 1. This file.
-2. [CAMPAIGN_STATE.md](CAMPAIGN_STATE.md) — live state; RESUME HERE first.
+2. **[RESEARCH_PIPELINE_GUIDE.md](RESEARCH_PIPELINE_GUIDE.md) — the
+   operator manual: read results, run screens/gates/queues, deploy —
+   every command, end to end, no prior context assumed.**
+3. [CAMPAIGN_STATE.md](CAMPAIGN_STATE.md) — live state; RESUME HERE first.
 3. `cascadiav3/EXPERIMENT_LOG.md` — chronological evidence, newest entries.
 4. [RESEARCH_LOG.md](RESEARCH_LOG.md) — consolidated verdicts and ranked
    directions.
