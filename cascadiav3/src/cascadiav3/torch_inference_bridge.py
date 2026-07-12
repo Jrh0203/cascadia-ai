@@ -61,6 +61,11 @@ PROTOCOL_FEATURES = ["eval_batch", "value_vector", "packed_features", "packed_re
 Q_RISK_MODES = ("mean", "q25", "q50", "q75")
 POLICY_MODES = ("logits", "pairwise-borda", "logits-plus-pairwise")
 EVAL_BATCH_CHUNK_SIZE = 32
+# torch.compile mode when CASCADIA_BRIDGE_COMPILE=1 and no explicit
+# CASCADIA_BRIDGE_COMPILE_MODE is set. reduce-overhead enables CUDA graphs,
+# which target exactly the launch-overhead regime the serving profile shows;
+# set CASCADIA_BRIDGE_COMPILE_MODE=default for torch.compile's default mode.
+DEFAULT_COMPILE_MODE = "reduce-overhead"
 # The relation-bias layer materializes a [rows, actions, seq, d_model] tensor,
 # so chunking must bound rows * actions * seq, not just rows. 2^21 cells keeps
 # the peak CGAB intermediate near 3 GB for d_model 384.
@@ -91,6 +96,36 @@ def _eval_cell_budget() -> int:
                 file=sys.stderr,
             )
     return EVAL_BATCH_CELL_BUDGET
+
+
+def _eval_chunk_rows() -> int:
+    """CASCADIA_EVAL_CHUNK_ROWS overrides the per-chunk row cap (default
+    EVAL_BATCH_CHUNK_SIZE = 32). The shared Rust bridge merges cross-worker
+    requests up to CASCADIA_SHARED_ROW_CAP (default 192) rows, so with the
+    default cap one merged request becomes several serial forwards; raising
+    this trades peak memory (still bounded by the cell budget) for fewer,
+    larger GPU launches. Invalid or non-positive values fall back to the
+    default. Purely a chunk-boundary knob: chunking-at-32 output parity for
+    identical chunk boundaries is unchanged, but different boundaries change
+    padded shapes, which admits the same reduction-order drift class the
+    default chunk-max padding already has."""
+    raw = os.environ.get("CASCADIA_EVAL_CHUNK_ROWS", "").strip()
+    if raw:
+        try:
+            value = int(raw)
+        except ValueError:
+            print(
+                f"bridge: ignoring invalid CASCADIA_EVAL_CHUNK_ROWS={raw!r}",
+                file=sys.stderr,
+            )
+        else:
+            if value > 0:
+                return value
+            print(
+                f"bridge: ignoring non-positive CASCADIA_EVAL_CHUNK_ROWS={value}",
+                file=sys.stderr,
+            )
+    return EVAL_BATCH_CHUNK_SIZE
 
 # --- Shape bucketing (CASCADIA_BRIDGE_BUCKET=1, default off) -----------------
 #
@@ -509,39 +544,62 @@ def _load_model(
     return model
 
 
+def _compile_mode() -> str:
+    """Effective torch.compile mode for CASCADIA_BRIDGE_COMPILE=1.
+
+    CASCADIA_BRIDGE_COMPILE_MODE selects the mode ("default" maps to
+    torch.compile's built-in default); unset means DEFAULT_COMPILE_MODE
+    (reduce-overhead / CUDA graphs)."""
+    raw = os.environ.get("CASCADIA_BRIDGE_COMPILE_MODE", "").strip()
+    return raw or DEFAULT_COMPILE_MODE
+
+
 def _maybe_compile_model(model, device):  # type: ignore[no-untyped-def]
     """CASCADIA_BRIDGE_COMPILE=1 wraps the model in torch.compile (default off).
 
-    Default mode is used for portability; on the CUDA box mode="reduce-overhead"
-    (CUDA graphs) is worth benchmarking once shapes are bounded. Pair with
+    Mode comes from CASCADIA_BRIDGE_COMPILE_MODE (default "reduce-overhead" =
+    CUDA graphs; "default" selects torch.compile's default mode). Pair with
     CASCADIA_BRIDGE_BUCKET=1 so the recompile set stays finite — without
     bucketing every fresh (tokens, actions) shape triggers a recompile. Falls
-    back to the eager model if torch.compile is unavailable or fails.
+    back to the eager model — loudly, never fatally — if torch.compile is
+    unavailable, raises, or fails during the CUDA warmup forward (compilation
+    is lazy, so the warmup is where most real compile failures surface).
     """
     import torch
 
     if not hasattr(torch, "compile"):
-        print("bridge: torch.compile unavailable; serving eager", file=sys.stderr)
+        print("bridge: WARNING torch.compile unavailable; serving eager", file=sys.stderr)
         return model
+    mode = _compile_mode()
+    compile_kwargs = {} if mode == "default" else {"mode": mode}
     try:
-        compiled = torch.compile(model)
-    except Exception as exc:  # pragma: no cover - depends on local toolchain
-        print(f"bridge: torch.compile failed ({exc}); serving eager", file=sys.stderr)
+        compiled = torch.compile(model, **compile_kwargs)
+    except Exception as exc:
+        print(
+            f"bridge: WARNING torch.compile(mode={mode!r}) failed ({exc}); serving eager",
+            file=sys.stderr,
+        )
         return model
-    if device.type == "cuda":
-        _warmup_compiled_model(compiled, device)
+    if device.type == "cuda" and not _warmup_compiled_model(compiled, device):
+        print(
+            f"bridge: WARNING torch.compile(mode={mode!r}) warmup failed; serving eager",
+            file=sys.stderr,
+        )
+        return model
     return compiled
 
 
-def _warmup_compiled_model(model, device) -> None:  # type: ignore[no-untyped-def]
+def _warmup_compiled_model(model, device) -> bool:  # type: ignore[no-untyped-def]
     """Pre-trigger compilation for a few representative bucketed shapes so the
     first real chunks do not pay compile latency. CUDA-only: on CPU the compile
-    cost outweighs the warmup benefit for a serving process."""
+    cost outweighs the warmup benefit for a serving process. Returns False when
+    the warmup forward raises, which the caller treats as a compile failure and
+    reverts to eager."""
     import torch
 
     cfg = getattr(model, "config", None)
     if cfg is None:
-        return
+        return True
     shapes = [(64, 32), (64, 256)] if _bucket_enabled() else [(64, 32)]
     try:
         with torch.inference_mode():
@@ -557,7 +615,9 @@ def _warmup_compiled_model(model, device) -> None:  # type: ignore[no-untyped-de
                     ),
                 )
     except Exception as exc:  # pragma: no cover - warmup must never block serving
-        print(f"bridge: compile warmup skipped ({exc})", file=sys.stderr)
+        print(f"bridge: compile warmup raised ({exc})", file=sys.stderr)
+        return False
+    return True
 
 
 def _move_batch_to_device(batch: dict[str, Any], device):  # type: ignore[no-untyped-def]
@@ -609,6 +669,27 @@ def _autocast_bf16_requested() -> bool:
     applied on CUDA devices (no-op on cpu/mps).
     """
     return os.environ.get("CASCADIA_BRIDGE_AUTOCAST", "").strip().lower() == "bf16"
+
+
+def bridge_env_provenance() -> dict[str, Any]:
+    """Snapshot of every serving-relevant env knob, reported in the hello
+    payload (and reusable by probes) so throughput/gate runs are attributable
+    to their exact bridge configuration. pinned_h2d is not a knob: pinned
+    staging + non_blocking H2D is the unconditional CUDA path in
+    _model_inputs_to_device, recorded here so reports stay self-describing."""
+    return {
+        "compile": os.environ.get("CASCADIA_BRIDGE_COMPILE") == "1",
+        "compile_mode": _compile_mode(),
+        "tf32": os.environ.get("CASCADIA_BRIDGE_TF32") == "1",
+        "autocast": os.environ.get("CASCADIA_BRIDGE_AUTOCAST", "").strip().lower(),
+        "bucket": _bucket_enabled(),
+        "cgab_fused": os.environ.get("CASCADIA_CGAB_FUSED") == "1",
+        "eval_cell_budget": _eval_cell_budget(),
+        "eval_chunk_rows": _eval_chunk_rows(),
+        "pinned_h2d": True,
+        "timing": _BRIDGE_TIMING is not None,
+        "ensemble_size": 1 + len(_ensemble_manifest_paths()),
+    }
 
 
 _TIMING_EMIT_EVERY = 50
@@ -747,7 +828,7 @@ def _model_eval_batch(
     roots: list[dict[str, Any]],
     *,
     device_name: str = "cpu",
-    chunk_size: int = EVAL_BATCH_CHUNK_SIZE,
+    chunk_size: int | None = None,
     packed_response: bool = False,
     q_risk_mode: str = "mean",
     policy_mode: str = "logits",
@@ -774,6 +855,8 @@ def _model_eval_batch(
         raise ValueError(f"unsupported policy mode: {policy_mode}")
     if pairwise_policy_top_k <= 1:
         raise ValueError("pairwise_policy_top_k must be greater than one")
+    if chunk_size is None:
+        chunk_size = _eval_chunk_rows()
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     autocast_bf16 = _autocast_bf16_requested() and device.type == "cuda"
     timing = _BRIDGE_TIMING
@@ -1031,6 +1114,7 @@ def serve(
             "policy_mode": policy_mode,
             "pairwise_policy_top_k": pairwise_policy_top_k,
             "protocol_features": PROTOCOL_FEATURES,
+            "bridge_env": bridge_env_provenance(),
         }
     )
     for line in sys.stdin:

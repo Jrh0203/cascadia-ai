@@ -167,6 +167,9 @@ timestamped snapshot, weaker than current `main`).
 - [Training Pipeline](TRAINING_PIPELINE.md): data formats, objectives, expert
   iteration, checkpointing, and promotion gates.
 - [Performance](PERFORMANCE.md): measured loader/training/gameplay facts.
+- [Bridge Throughput](BRIDGE_THROUGHPUT.md): R2.4 serving-path
+  investigation — request lifecycle, the serial-pipeline bound, ranked
+  levers, and the staged GPU probe.
 - Latest handoff: [handoff-2026-07-10.md](../handoffs/handoff-2026-07-10.md).
 
 The implementation package lives in

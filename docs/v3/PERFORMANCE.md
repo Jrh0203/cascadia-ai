@@ -626,11 +626,16 @@ behavior is unchanged (legacy chunker parity is unit-test pinned).
    already admits this drift class. CPU cost: 32 mixed-menu rows,
    CascadiaFormer-S: 657ms -> 675ms min (~3% padding overhead); the intended
    win is CUDA kernel-cache stability and a finite compile shape set.
-3. **`CASCADIA_BRIDGE_COMPILE=1` torch.compile.** Wraps the loaded model
-   (default mode; `mode="reduce-overhead"` worth benchmarking on the CUDA
-   box). Pair with bucketing so recompiles are finite. Falls back to eager on
+3. **`CASCADIA_BRIDGE_COMPILE=1` torch.compile.** Wraps the loaded model.
+   Since the R2.4 pass (2026-07-12) the mode defaults to `reduce-overhead`
+   (CUDA graphs); `CASCADIA_BRIDGE_COMPILE_MODE` overrides it (`default` =
+   torch's default mode). Pair with bucketing so recompiles are finite. Falls
+   back to eager — loudly, never fatally — on compile failure or CUDA warmup
    failure; CUDA-only warmup over representative bucket shapes at load time.
-   CPU smoke-tested (tiny config, tolerance-gated vs eager).
+   CPU smoke-tested (tiny config, tolerance-gated vs eager). See
+   `docs/v3/BRIDGE_THROUGHPUT.md` for the serving-path investigation, the
+   `CASCADIA_EVAL_CHUNK_ROWS` chunk-row knob, the `bridge_env` hello
+   provenance, and the staged `run_bridge_throughput_probe.sh` probe.
 4. **`CASCADIA_BRIDGE_TIMING=1` per-phase timing.** Accumulates per-chunk wall
    time for collate/H2D/forward/D2H/encode plus rows and actions, emits a
    one-line stderr summary every 50 chunks and at shutdown, e.g.

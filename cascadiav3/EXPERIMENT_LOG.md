@@ -5908,3 +5908,40 @@ it:
   gate and the refresh gate would have stopped at the 80-pair look
   (~20% GPU saved each); expected savings 20-60% per gate depending on
   effect strength.
+
+## 2026-07-12 — R2.4 bridge throughput: investigation complete (memo + opt-in knobs + staged probe); PREREGISTERED probe plan
+
+**Memo:** `docs/v3/BRIDGE_THROUGHPUT.md` — full request-lifecycle map with
+line references. **Central structural finding: the serving pipeline is
+strictly serial end-to-end** — the Rust aggregator blocks on each merged
+192-row request and the Python serve loop is single-threaded, so the GPU
+idles through every host phase (decode/collate/encode). That alone
+explains the 63.8% mean util with dips to 2%. Also corrected stale
+assumptions: COMPILE/TF32/bf16/bucketing/timing knobs and pinned
+non-blocking H2D already existed; bf16 serving already ruled label-unsafe.
+
+**Ranked levers:** (1) request pipelining/double-buffering — bit-identical,
+realistic 1.2-1.4x, next build (R2.4b); (2) `CASCADIA_EVAL_CHUNK_ROWS=192`
+(new knob) — today one merged 192-row request becomes >=6 serial 32-row
+forwards; 1.1-1.3x, padding-drift class; (3) `CASCADIA_BRIDGE_COMPILE=1` +
+`BUCKET=1` (reduce-overhead CUDA graphs) — 1.1-1.5x of forward time.
+
+**Code (default-off, provenance-stamped):** chunk-rows knob, hardened
+compile fallback (compile exceptions AND CUDA warmup failures fall back to
+eager loudly), `bridge_env` block in the bridge hello payload, compile-mode
+selection. 13 new tests; suite green (remaining local errors are this
+Mac's missing-torch set, unchanged).
+
+**PREREGISTERED probe plan (engineering-only, never strength evidence):**
+step 0 after the ghost confirmation ends — deploy, run one
+`CASCADIA_BRIDGE_TIMING=1` production-shape sample for the phase split,
+then `run_bridge_throughput_probe.sh` (refuses unless GPU idle; arms
+eager / bucket / compile / compile+bucket at batches 8/32/96/192, TF32
+off; reports rows/s + max-abs numerics diff vs eager). Adoption rules:
+a knob goes to a score gate only if it delivers >=10% rows/s at batch
+192; **compile is NOT bit-identical** (CPU smoke: ~2e-6 q drift), so any
+adoption of compile/bucket/chunk-rows serving defaults requires a paired
+noninferiority score gate — which is exactly what the new sequential
+LOOKS mode makes cheap (expected ~3h instead of ~5h at n256/d4). Order:
+CHUNK_ROWS first, then compile+bucket, then build R2.4b pipelining
+(bit-identical: throughput A/B only, no score gate).

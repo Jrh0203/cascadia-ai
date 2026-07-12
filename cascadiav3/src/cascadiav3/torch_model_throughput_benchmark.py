@@ -432,9 +432,11 @@ def run_benchmark(
             "cgab_fused": os.environ.get("CASCADIA_CGAB_FUSED") == "1",
             "bridge_bucket": os.environ.get("CASCADIA_BRIDGE_BUCKET") == "1",
             "bridge_compile": os.environ.get("CASCADIA_BRIDGE_COMPILE") == "1",
+            "bridge_compile_mode": os.environ.get("CASCADIA_BRIDGE_COMPILE_MODE", ""),
             "bridge_tf32": os.environ.get("CASCADIA_BRIDGE_TF32") == "1",
             "bridge_autocast": os.environ.get("CASCADIA_BRIDGE_AUTOCAST", ""),
             "eval_cell_budget": os.environ.get("CASCADIA_EVAL_CELL_BUDGET", ""),
+            "eval_chunk_rows": os.environ.get("CASCADIA_EVAL_CHUNK_ROWS", ""),
         },
         "roots": {
             "path": str(roots_path),
