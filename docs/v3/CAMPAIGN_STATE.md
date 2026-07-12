@@ -717,3 +717,13 @@ EXPERIMENT_LOG 01:15 → 05:50):
   (AGENTS.md amended; looks 40/60/80/100, Lan-DeMets OBF, RCIs); the
   serving pipeline's serial-bound analysis is in
   `docs/v3/BRIDGE_THROUGHPUT.md`.
+- **Armed behind the throughput chain (19:37):** R2.4 lever #1 A/B
+  (`pipeline_ab_20260713.{sh,log,pid}`, waiter PID 4019282): deploys
+  rev `c2e75cab` (request pipelining, both halves, default-off), then
+  12-game n1024/d16 arms serial vs `CASCADIA_SHARED_INFLIGHT=2` +
+  `CASCADIA_BRIDGE_PIPELINE=1` on identical engineering seeds
+  `1111120000..11`; verdict `pipeline_ab_20260713_verdict.md` (exact
+  per-seed score identity + wall ratio). Preregistered adoption rule in
+  EXPERIMENT_LOG. Full john0 night queue: ghost confirmation (fixed-N)
+  -> throughput probe + TIMING sample (rev d6cae30b) -> pipelining A/B
+  (rev c2e75cab). Three monitors armed, one per chain.
