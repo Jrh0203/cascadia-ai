@@ -5700,3 +5700,25 @@ incumbent screen (puzzle_screen_20260711_incumbent). Proceed-to-gate rules
 Queue launches autonomously after the bank acceptance verdict; results in
 `cascadiav3/reports/puzzle_screen_<name>_analysis.{json,md}` and
 `menu_coverage_20260712_analysis.{json,md}`.
+
+## 2026-07-12 01:20 — PREREGISTERED: generic paired-gate runner + refresh-divisor gate; conditional gate templates registered
+
+**`run_paired_gate.sh` (new):** every future gate is now a queue entry —
+two arms on one registered block, env-parameterized flags/budgets, verdict
+via `compare_search_shape --varied-key ...`. Seed blocks registered:
+`2027072300..99` (refresh gate), `2027072400..99` (ghost, conditional),
+`2027072500..99` (serving-v2 combo, conditional).
+
+**PREREGISTRATION — refresh-divisor gate (unconditional, may launch in any
+free GPU window):** baseline = champion n256/d4 K1-on vs candidate = same
++ `--gumbel-refresh-sample-divisor 4`, 100 paired seeds `2027072300..99`.
+Rule (mirrors the market-samples pattern): candidate is adopted for the
+serving default iff the paired score CI floor is above the `-0.25`
+noninferiority margin AND the verdict timing shows a mean-decision-seconds
+saving (refresh plies are ~1/3 of wall; expect ~15-25% overall). CI floor
+below margin => R0.6(i) closes.
+
+**Ghost + combo gates are templates only** (`queue_20260712_gates_template
+.jsonl`): their launch conditions and (for ghost) the wall-parity CAND_N
+come from the screen-wave results; each requires its own completed
+preregistration entry before launch.
