@@ -76,6 +76,5 @@ artifacts under `cascadiav3/reports/` (e.g. `<tag>.json`, `<tag>_verdict.json`,
 ## Files
 
 - `queue_20260712_example.jsonl` — worked two-stage example (worlds-confirm
-  resume, then the ghost-opponents bank screen). Note: stage 2's
-  `run_bank_screen.sh` lands with the ghost-opponents workstream; until it
-  exists, validation fails closed on this file by design.
+  resume, then the ghost-opponents bank screen via
+  `run_bank_screen.sh` + `EXTRA_FLAGS`).

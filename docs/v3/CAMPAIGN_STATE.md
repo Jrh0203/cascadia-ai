@@ -5,7 +5,7 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-11 19:00 — R3.6: DECELERATING; puzzle bank generating overnight; portfolio reweighted to structural programs)
+## RESUME HERE (07-12 01:10 — autonomous screen-wave chain ARMED; see the "ADDENDUM (07-12 01:10)" section at the END of this file for the live picture; earlier 07-11 state below)
 
 **R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
 stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
