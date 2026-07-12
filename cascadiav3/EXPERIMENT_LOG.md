@@ -5840,3 +5840,30 @@ CI- => ghost bias dominates at depth; cap R1.2 at Stage A.
 coverage-rerun chain (PID 3938586) to exit, then runs
 `run_paired_gate.sh` with the env above. One scientific job at a time is
 preserved by construction.
+
+## 2026-07-12 10:55 — R1.3a coverage audit (valid rerun at rev 1c9211a5): drop rate 1.5% — R1.3 program stays OPEN
+
+The replay-cap fix worked: **200/200 roots joined, 0 skipped** (the
+07-12 first run at `e252d68e` skipped every seed and was logged
+INVALID). Measurements (`menu_coverage_20260712_analysis.{json,md}`,
+n1024/d8, median menu 256 capped vs 1258 full):
+
+- Full-menu best action dropped by the greedy-256 cap: `3/200` =
+  **`1.5%`** — ABOVE the preregistered `<1%` close bar.
+- Mean regret overall: **`+0.0045`**/root (95% t-CI
+  `[-0.0024, +0.0114]`), P95 `0.0000` — under the `<0.01` bar.
+- Mean regret when dropped: `+0.3013` — misses are rare but material.
+
+**Preregistered rule (01:02) applied literally: close required BOTH
+bars; the drop-rate bar fails => R1.3a-c does NOT close.** Reading: the
+greedy-256 cap is safe on average (expected ~0.0045/decision on the Q
+scale) but has a thin tail — ~1 in 67 decisions silently loses the true
+best action at ~0.30 Q each. Aggregated over ~83 decisions/game that
+tail bounds a ~0.37 Q/game recoverable pool — same order as the ghost
+gate's +0.545. R1.3b/c (smarter menu selection / cap raise where cheap)
+stays a live modest-upside lane, priced by this measurement. The audit
+is measurement only, never promotion evidence. Task R1.3a itself is
+complete.
+
+Chain: ghost n1024-tier confirmation launched 10:38 (waiter fired on
+schedule); exporter PID 3980015; verdict expected ~13-17h.

@@ -94,12 +94,17 @@ over packed expert tensors with Gumbel search-supervised action values.
   evals; reclaimed budget reinvested as 2x sims) vs champion n256/d4:
   paired **`+0.5450`**, CI **`[+0.1823, +0.9077]`**, at `1.049x` wall.
   Graduates per the preregistered rule.
-- **Live now (session-independent on john0):** R1.3a coverage-audit rerun
-  (rev `1c9211a5` deployed 10:30), then the **ghost n1024-tier
-  confirmation** (waiter armed: champion n1024/d16 vs ghost n2048/d16,
-  both arms div4, 100 paired seeds `2027072600..99`, ~13-17h;
-  preregistered 10:45). CI+ at ≤1.25x wall makes ghost n2048/d16
-  **champion-designate** — John alone rules on promotion.
+- **R1.3a coverage audit: measured (07-12 10:55) — R1.3 stays open.**
+  Valid rerun at rev `1c9211a5` (200/200 roots): greedy-256 cap drops
+  the full-menu best in `1.5%` of decisions (above the `<1%` close bar)
+  at `+0.30` regret each; mean overall `+0.0045`/root. The cap is safe
+  on average with a thin material tail (~0.37 Q/game bound) — R1.3b/c
+  remains a priced, modest-upside lane.
+- **Live now (session-independent on john0):** the **ghost n1024-tier
+  confirmation** (launched 07-12 10:38: champion n1024/d16 vs ghost
+  n2048/d16, both arms div4, 100 paired seeds `2027072600..99`,
+  ~13-17h; preregistered 10:45). CI+ at ≤1.25x wall makes ghost
+  n2048/d16 **champion-designate** — John alone rules on promotion.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.

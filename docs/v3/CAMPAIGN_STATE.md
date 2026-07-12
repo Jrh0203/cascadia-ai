@@ -687,10 +687,11 @@ EXPERIMENT_LOG 01:15 → 05:50):
   `[+0.1823, +0.9077]`, `1.049x` wall (12.53s vs 11.94s/decision) — both
   preregistered conditions hold; R1.2A graduates (EXPERIMENT_LOG 10:35).
   First CI+ wall-matched search improvement of the campaign.
-- **Live now:** R1.3a coverage-audit rerun at rev `1c9211a5` (deployed
-  10:30 by its waiter; replay-cap fix). Preregistered read: drop rate <1%
-  AND regret <0.01/root => close R1.3a-c.
-- **Armed behind it:** ghost n1024-tier confirmation
+- **R1.3a coverage audit COMPLETE (10:38, valid at rev `1c9211a5`):**
+  200/200 roots; drop rate `1.5%` (close bar `<1%` FAILS), mean regret
+  `+0.0045` (bar passes) => **R1.3 stays open** per the preregistered
+  both-bars rule; tail bound ~0.37 Q/game (EXPERIMENT_LOG 10:55).
+- **Launched behind it (10:38):** ghost n1024-tier confirmation
   (`ghost_confirm_20260712.{sh,log,pid}`, waiter PID 3979458;
   preregistered EXPERIMENT_LOG 10:45): baseline champion n1024/d16 vs
   candidate ghost n2048/d16 (parity n from gate timing: 1024x1.906≈1952
