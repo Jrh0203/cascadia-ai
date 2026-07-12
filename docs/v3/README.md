@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-11 19:00 EDT)
+## Status at a glance (updated 2026-07-12 06:00 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
@@ -77,11 +77,22 @@ over packed expert tensors with Gumbel search-supervised action values.
   log-linear +0.615 — the selfish scaling lane plausibly tops out under
   100. Portfolio reweights to **R1.2 ghost opponents** and **R1.4
   training densification**; velocity stack multiplies.
-- **Live now (session-independent on john0):** R2.1 **puzzle-bank
-  generation** (PID 3888566, rev `e78975a0`): ~727 champion-ledger roots
-  at n4096/d16 x2, worker-pooled jobs12 (first tool under the
-  saturate-the-GPU rule), ~4.5h; preregistered acceptance screens follow
-  before first use (EXPERIMENT_LOG 18:54).
+- **R2.1 puzzle bank: ACCEPTED (07-12 01:15).** 700 champion-ledger roots
+  resolved at n4096/d16x2 are the frozen screening truth; incumbent bank
+  regret `0.2351`, cross-checked against gate truth. Screens now cost ~6
+  min. First wave: **ghost PASS** (`+0.0074` vs `+0.020` bar); q-bias
+  structurally null at n256 serving; LCB and combo flat.
+- **R0.6(i) refresh-divisor 4: ADOPTED (07-12 05:50).** Paired
+  `+0.0375`, CI `[-0.1611, +0.2361]` (floor above the preregistered
+  `-0.25` margin) with a `1.243x` mean-decision speedup — score-neutral
+  pure speed, the second adopted serving default after exact-K1.
+  `--gumbel-refresh-sample-divisor 4` is now the serving/benchmark
+  default.
+- **Live now (session-independent on john0):** R1.2A **ghost wall-matched
+  gate** (launched 07-12 05:45): n512/d4 ghost opponents vs n256/d4
+  champion, 100 paired seeds `2027072400..99`, ~5-6h; CI+ at ≤1.25x wall
+  graduates ghost to an n1024-tier confirmation. The R1.3a coverage-audit
+  rerun waiter is chained behind it (deploys rev `1c9211a5`).
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.
@@ -158,6 +169,9 @@ The implementation package lives in
 - Exact final-personal-turn evaluation is the serving/benchmark default
   (`--gumbel-exact-endgame-turns 1`, adopted 2026-07-10, score-neutral,
   ~29x faster frontier); K2 and deeper plies stay on model inference.
+- Refresh-decision sub-searches run at 1/4 budget
+  (`--gumbel-refresh-sample-divisor 4`, adopted 2026-07-12, score-neutral
+  noninferior, 1.24x mean-decision speedup); the sample count stays 8.
 - Promotion requires ≥100 paired games with a 95% CI excluding zero — never
   validation loss, smoke scores, or process activity.
 - john0 runs one scientific job at a time; the Mac minis generate training

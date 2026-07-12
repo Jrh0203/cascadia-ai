@@ -5765,3 +5765,29 @@ serving-v2 composition idea is closed at n256 serving; paired rollouts'
 CI+ selection stability remains available to future compositions. Coverage
 audit runs next, then the refresh and ghost gates. Morning digest:
 `morning_report.sh`; handoff: `docs/handoffs/handoff-2026-07-12.md`.
+
+## 2026-07-12 05:50 — R0.6(i) refresh-divisor gate: ADOPTED (noninferior, 1.24x decision speedup); ghost gate launched
+
+**Verdict (preregistered 01:20, applied literally):** candidate
+(champion n256/d4 K1 + `--gumbel-refresh-sample-divisor 4`) vs baseline on
+100 paired seeds `2027072300..99` at rev `e252d68e`:
+
+- Paired score delta `+0.0375`, 95% t-CI `[-0.1611, +0.2361]` — CI floor
+  is above the preregistered `-0.25` noninferiority margin. ✓
+- Mean decision seconds `11.4195 -> 9.1872` (`1.243x`); whole-arm wall
+  `7902.4s -> 6391.1s` (`1.236x`) — inside the preregistered 15-25%
+  expectation. ✓
+
+Both conditions hold => **`--gumbel-refresh-sample-divisor 4` is adopted
+as the serving/benchmark default** (mirrors the exact-K1 adoption
+pattern: score-neutral, pure speed; the market sample-4 knob it replaces
+failed this same rule on 07-10). Refresh-decision *sample count* stays 8;
+only the per-sample search budget is divided. Adoption applies to future
+invocations — the ghost gate already running (preregistered 01:25,
+launched 05:45) keeps its preregistered divisor-1 arms untouched.
+Artifact: `gate_refresh_div4_20260712_verdict.{md,json}` on john0.
+
+Chain state after this verdict: ghost wall-matched gate running (n512/d4
+ghost vs n256/d4 champion, seeds `2027072400..99`, ~5-6h); coverage-audit
+rerun waiter armed behind it (deploys rev `1c9211a5`, then reruns
+`run_menu_coverage_audit.sh`).

@@ -5,7 +5,7 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-12 01:10 — autonomous screen-wave chain ARMED; see the "ADDENDUM (07-12 01:10)" section at the END of this file for the live picture; earlier 07-11 state below)
+## RESUME HERE (07-12 06:00 — refresh-div4 ADOPTED; ghost wall-matched gate RUNNING; see the "ADDENDUM (07-12 06:00)" section at the END of this file for the live picture; earlier 07-11 state below)
 
 **R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
 stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
@@ -653,3 +653,30 @@ default-off with provenance. Results land in
 `menu_coverage_20260712_analysis.md`; proceed-to-gate rules are in the
 preregistration. The worlds det16/32 confirmation resume and the refresh
 divisor wall-matched probe are the next queue candidates (not scheduled).
+
+## ADDENDUM (07-12 06:00 — refresh-div4 ADOPTED; ghost gate running)
+
+Overnight chain results (all preregistered rules applied literally, see
+EXPERIMENT_LOG 01:15 → 05:50):
+
+- **Bank ACCEPTED**; screen wave verdicts: ghost PASS (`+0.0074` bias vs
+  `+0.020` bar, 1.65x faster), q-bias structurally null at n256 serving,
+  LCB flat, combo flat.
+- **Refresh-divisor gate ADOPTED (05:50):** `+0.0375` paired, CI
+  `[-0.1611, +0.2361]`, `1.243x` mean-decision speedup — CI floor above
+  the `-0.25` margin + wall saving => `--gumbel-refresh-sample-divisor 4`
+  is the new serving/benchmark default (second adoption after exact-K1).
+- **Live now:** ghost wall-matched gate (launched 05:45, PID file
+  `gate_ghost_wallmatched_20260712.pid` via `ghost_gate_20260712.sh`):
+  n512/d4 `--gumbel-ghost-opponents` vs n256/d4 champion, seeds
+  `2027072400..99`, ~5-6h. Preregistered rule (01:25): CI+ AND ≤1.25x
+  wall => graduate to n1024-tier confirmation (block `2027072600..99`
+  registered; template stage 4 in
+  `cascadiav3/queues/queue_20260712_gates_template.jsonl`, needs fresh
+  preregistration + CAND_N from the gate's timing); CI- => cap R1.2 at
+  Stage A; ns => retest at n1024 pricing before closing.
+- **Chained behind it:** coverage-audit rerun waiter
+  (`coverage_rerun_20260712.sh`, PID 3938586) — deploys rev `1c9211a5`
+  (replay-cap fix), reruns `run_menu_coverage_audit.sh`; preregistered
+  read: drop rate <1% AND regret <0.01/root => close R1.3a-c.
+- Morning digest: `ssh john0 'bash /home/john0/cascadia/cascadiav3/scripts/morning_report.sh'`.
