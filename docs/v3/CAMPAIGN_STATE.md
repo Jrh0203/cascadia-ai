@@ -702,3 +702,18 @@ EXPERIMENT_LOG 01:15 → 05:50):
   a low-budget-only win, revisit via R1.2B/C; CI- => cap R1.2 at Stage A.
 - Refresh-div4 remains ADOPTED (05:50 entry); verdict artifacts for both
   completed gates are on john0 under `cascadiav3/reports/gate_*_verdict.md`.
+- **Armed behind the confirmation (18:56):** R2.4 engineering chain
+  (`throughput_chain_20260713.{sh,log,pid}`, waiter PID 4016261): deploys
+  rev `d6cae30b` (sequential-gate machinery + bridge knobs), runs
+  `run_bridge_throughput_probe.sh` (eager/bucket/compile arms + numerics
+  diff), then a 12-game `CASCADIA_BRIDGE_TIMING=1` production-topology
+  sample on engineering seeds `1111110000..11` (n1024/d16, div4).
+  Engineering only — never strength evidence. Morning reads: ghost
+  confirmation verdict (fixed-N rule, 10:45 entry) -> probe report ->
+  timing phase split -> if probe clears >=10% rows/s at batch 192,
+  preregister the first SEQUENTIAL noninferiority gate (LOOKS mode,
+  cbd2d214) for CASCADIA_EVAL_CHUNK_ROWS on a fresh registered block.
+- **Methodology since 07-12:** group-sequential gates are sanctioned
+  (AGENTS.md amended; looks 40/60/80/100, Lan-DeMets OBF, RCIs); the
+  serving pipeline's serial-bound analysis is in
+  `docs/v3/BRIDGE_THROUGHPUT.md`.
