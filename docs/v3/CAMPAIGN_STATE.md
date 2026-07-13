@@ -5,7 +5,7 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-12 10:50 — GHOST GATE CI+ (+0.545 @ 1.05x wall); n1024-tier confirmation ARMED; refresh-div4 ADOPTED; see the "ADDENDUM (07-12 10:50)" section at the END of this file; earlier 07-11 state below)
+## RESUME HERE (07-13 00:20 — GHOST CONFIRMATION ns: R1.2A closed low-budget-only, champion unchanged; R2.4 engineering night queue running; see the "ADDENDUM (07-13 00:20)" section at the END of this file; earlier 07-11 state below)
 
 **R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
 stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
@@ -727,3 +727,27 @@ EXPERIMENT_LOG 01:15 → 05:50):
   EXPERIMENT_LOG. Full john0 night queue: ghost confirmation (fixed-N)
   -> throughput probe + TIMING sample (rev d6cae30b) -> pipelining A/B
   (rev c2e75cab). Three monitors armed, one per chain.
+
+## ADDENDUM (07-13 00:20 — ghost confirmation ns; R1.2A closed low-budget-only; night queue reordered)
+
+- **Ghost n1024-tier confirmation: INCONCLUSIVE (00:14).** Champion
+  n1024/d16 `98.2825` vs ghost n2048/d16 `98.2000`; paired `-0.0825`,
+  CI `[-0.3985, +0.2335]`, wall `0.978x`. Preregistered ns branch
+  applied: **R1.2A closes as a low-budget-only win** (CI+ `+0.545` at
+  n256-tier stands for data generation / cheap serving); no
+  champion-designate; champion remains cycle4 n1024/d16. Surviving
+  hypothesis: R1.2B/C — reinvest reclaimed opponent budget into
+  NON-sim axes (d32 determinizations, wider top-m, menu-cap relief),
+  since the own-sims axis is saturated (matches R3.6). EXPERIMENT_LOG
+  07-13 00:15.
+- **Throughput probe failed at init (00:16) — no GPU work lost;
+  re-armed.** `git rev-parse` in a tarball tree; script fixed
+  (marker-file fallback, committed) and `probe_rerun_20260713.{sh,log,pid}`
+  waiter (PID 4040310) armed behind the pipelining A/B with
+  `SOURCE_REVISION` passed explicitly. Night queue is now: TIMING
+  sample (running at rev `d6cae30b`) -> pipelining A/B (rev `c2e75cab`)
+  -> throughput probe. Monitors live on all three.
+- Morning reads, in order: `bridge_timing_sample_20260713.md` phase
+  split -> `pipeline_ab_20260713_verdict.md` (adopt if >=10% decision
+  gain AND bit-identical) -> `bridge_throughput_probe.md` (knob to a
+  sequential noninferiority gate only if >=10% rows/s at batch 192).

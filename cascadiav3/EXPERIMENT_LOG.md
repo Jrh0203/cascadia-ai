@@ -5988,3 +5988,65 @@ noninferiority score gate — which is exactly what the new sequential
 LOOKS mode makes cheap (expected ~3h instead of ~5h at n256/d4). Order:
 CHUNK_ROWS first, then compile+bucket, then build R2.4b pipelining
 (bit-identical: throughput A/B only, no score gate).
+
+## 2026-07-13 00:15 — R1.2 ghost n1024-tier confirmation: INCONCLUSIVE — ghost gain does NOT survive high-budget pricing; R1.2A closes as a low-budget-only win
+
+Verdict (`gate_ghost_n1024tier_20260712_verdict.{json,md}` on john0, 100
+paired seeds `2027072600..99`, rev `1c9211a5`, fixed-N design per its
+preregistration):
+
+- Baseline (champion n1024/d16 K1 div4): mean seat score `98.2825`.
+- Candidate (ghost n2048/d16 K1 div4): mean `98.2000`.
+- **Paired delta `-0.0825`, 95% t-CI `[-0.3985, +0.2335]` —
+  inconclusive.** Cost was fine: mean decision `35.15s -> 34.38s`
+  (`0.978x`, well under the `1.25x` cap; the parity-n derivation was
+  accurate — ghost n2048 prices almost exactly like champion n1024).
+
+**Preregistered rule (10:45) applied literally: CI ns => the ghost gain
+does not survive high-budget pricing — R1.2A closes as a low-budget-only
+win.** No champion-designate; the champion remains cycle4 n1024/d16
+(98.2975 under `..._rules_2026_07_09`).
+
+Scientific reading: at n256-tier the reclaimed opponent budget bought
+`+0.545` CI+; at n1024-tier doubling sims through ghosting bought
+nothing (`-0.08` ns). This matches the R3.6 ceiling probe: the selfish
+scaling curve is already decelerating at n1024→n4096 (+0.21 ns), so
+converting opponent evals into MORE OWN SIMS reinvests into a saturated
+axis. Ghost's value is real but budget-local — it moves points only
+where sims are scarce. Consequences:
+
+- **R1.2A standing use:** data generation and cheap/fast serving tiers
+  (n256-class), where it is CI+ at ~1x wall. Not a champion lever.
+- **R1.2B/C (revisit per the rule):** reinvesting reclaimed budget into
+  something OTHER than sim count — deeper determinization (d16→d32),
+  wider top-m, or R1.3b menu-cap relief — is the surviving hypothesis
+  shape: spend reclaimed budget on axes that are NOT saturated. Any such
+  arm gets its own preregistration and, now, a SEQUENTIAL gate design.
+- Retro-check: a sequential design would NOT have saved GPU here — the
+  RCI straddles zero at every look; inconclusive only resolves at the
+  final look. (Sequential saves on decided gates, not null ones.)
+
+Night queue continues automatically: the throughput-chain waiter (PID
+4016261) fires next (deploy `d6cae30b` -> probe -> TIMING sample), then
+the pipelining A/B (rev `c2e75cab`).
+
+## 2026-07-13 00:18 — throughput chain: probe FAILED at init (no GPU work lost); fixed + re-armed behind the pipelining A/B
+
+The bridge throughput probe died 9s after deploy: `run_bridge_throughput_probe.sh`
+line 32 stamps provenance via `git rev-parse`, but john0 deploys are
+tarball extracts with no `.git`, and the chain script did not pass
+`SOURCE_REVISION` — `set -e` killed the script at variable init, before
+root export or any model work. The chain correctly proceeded to the
+`CASCADIA_BRIDGE_TIMING=1` production-topology sample (running, GPU
+busy).
+
+Fixes:
+- `run_bridge_throughput_probe.sh` now falls back to
+  `cascadiav3/logs/exact_k1_deployed_revision.txt` when git is absent
+  (committed).
+- `probe_rerun_20260713.sh` armed on john0 (waiter PID 4040310, monitor
+  live): waits for the pipelining A/B chain to exit, then runs the probe
+  with `SOURCE_REVISION` passed explicitly from the deploy marker — the
+  tree will be at `c2e75cab` by then, which contains everything the
+  probe needs. Night queue is now: TIMING sample (running) -> pipelining
+  A/B -> throughput probe. Preregistered reads unchanged.

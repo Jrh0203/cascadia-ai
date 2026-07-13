@@ -29,7 +29,9 @@ if [ -n "$NVIDIA_SMI" ]; then
 fi
 
 ROOT="${ROOT:-/home/john0/cascadia}"
-SOURCE_REVISION="${SOURCE_REVISION:-$(git -C "$ROOT" rev-parse HEAD)}"
+# john0 deploys are tarball extracts (no .git); fall back to the deploy marker.
+SOURCE_REVISION="${SOURCE_REVISION:-$(git -C "$ROOT" rev-parse HEAD 2>/dev/null \
+  || cat "$ROOT/cascadiav3/logs/exact_k1_deployed_revision.txt")}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 DEVICE="${DEVICE:-cuda}"

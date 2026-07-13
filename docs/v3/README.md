@@ -88,23 +88,30 @@ over packed expert tensors with Gumbel search-supervised action values.
   pure speed, the second adopted serving default after exact-K1.
   `--gumbel-refresh-sample-divisor 4` is now the serving/benchmark
   default.
-- **R1.2A ghost opponents: CI+ at the wall-matched gate (07-12 10:30) —
-  the campaign's first CI+ wall-matched search improvement.** Ghost
-  n512/d4 (opponent plies fast-forwarded by top-1 policy, zero model
-  evals; reclaimed budget reinvested as 2x sims) vs champion n256/d4:
-  paired **`+0.5450`**, CI **`[+0.1823, +0.9077]`**, at `1.049x` wall.
-  Graduates per the preregistered rule.
+- **R1.2A ghost opponents: CI+ at low budget, ns at champion tier —
+  closed as a low-budget-only win (07-13 00:15).** Wall-matched gate
+  (n512/d4 ghost vs n256/d4): **`+0.5450`**, CI `[+0.1823, +0.9077]` at
+  `1.049x` wall — the campaign's first CI+ wall-matched search
+  improvement. n1024-tier confirmation (ghost n2048/d16 vs champion
+  n1024/d16, 100 pairs): `-0.0825`, CI `[-0.3985, +0.2335]` at `0.978x`
+  wall — inconclusive; reclaimed opponent budget reinvested as more own
+  sims hits the same saturated scaling axis R3.6 found. Ghost stays
+  valuable for data generation / cheap serving; R1.2B/C (reinvest into
+  non-sim axes: d32, wider top-m, menu-cap relief) is the surviving
+  hypothesis shape. Champion remains cycle4 n1024/d16.
 - **R1.3a coverage audit: measured (07-12 10:55) — R1.3 stays open.**
   Valid rerun at rev `1c9211a5` (200/200 roots): greedy-256 cap drops
   the full-menu best in `1.5%` of decisions (above the `<1%` close bar)
   at `+0.30` regret each; mean overall `+0.0045`/root. The cap is safe
   on average with a thin material tail (~0.37 Q/game bound) — R1.3b/c
   remains a priced, modest-upside lane.
-- **Live now (session-independent on john0):** the **ghost n1024-tier
-  confirmation** (launched 07-12 10:38: champion n1024/d16 vs ghost
-  n2048/d16, both arms div4, 100 paired seeds `2027072600..99`,
-  ~13-17h; preregistered 10:45). CI+ at ≤1.25x wall makes ghost
-  n2048/d16 **champion-designate** — John alone rules on promotion.
+- **Live now (session-independent on john0):** the R2.4 engineering
+  night queue — bridge throughput probe + `CASCADIA_BRIDGE_TIMING=1`
+  phase-split sample (rev `d6cae30b`, fired 07-13 00:16), then the
+  request-pipelining A/B (rev `c2e75cab`, serial vs
+  `CASCADIA_SHARED_INFLIGHT=2`+`CASCADIA_BRIDGE_PIPELINE=1`).
+  Engineering only, never strength evidence; adoption rules
+  preregistered in EXPERIMENT_LOG 07-12.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.
