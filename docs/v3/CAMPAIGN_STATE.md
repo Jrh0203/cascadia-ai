@@ -764,3 +764,23 @@ EXPERIMENT_LOG 01:15 → 05:50):
   `ghost_d32_gate_20260713.{sh,log,pid}` PID 4041081, armed behind the
   probe re-run; monitor live. Full queue now: TIMING sample ->
   pipelining A/B -> probe re-run -> ghost+d32 sequential gate.
+
+## ADDENDUM (07-13 03:30 — R2.4 CLOSED, all levers below bar; ghost+d32 sequential gate LIVE)
+
+- **Engineering night queue complete, R2.4 closed (03:25).** TIMING
+  phase split: forwards = 84% of bridge time but ~55% of wall, ~30-row
+  mean chunks. Pipelining A/B: **bit-identical on CUDA**, +4.2% — below
+  the 10% bar, stays default-off. Probe: eager forward saturates by
+  batch 32 (CHUNK_ROWS bound +3.9%), compile +0.5% (bit-identical
+  datum), bucket negative + drifting. **Serving is within ~5% of the
+  architectural ceiling; remaining wall is Rust search compute.** All
+  knobs stay landed/default-off for zero-risk revisit.
+- **LIVE NOW: R1.2B ghost+d32 sequential gate** (launched 03:22, waiter
+  PID 4041081 fired on schedule): champion n1024/d16 vs ghost n1024/d32,
+  seeds `2027072700..99`, looks 40/60/80/100 (first live sequential
+  gate), rev `c2e75cab`. Verdict rule in EXPERIMENT_LOG 07-13 00:35;
+  artifacts `gate_ghost_d32_seq_20260713_*`. Expected: first look
+  verdict after ~40 pairs both arms (~4.5-5h), full run ~11-12h if no
+  early stop.
+- Ghost n1024-tier confirmation verdict (00:14, ns) and its R1.2A
+  closure are in the 00:20 addendum above.

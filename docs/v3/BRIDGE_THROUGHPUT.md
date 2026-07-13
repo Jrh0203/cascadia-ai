@@ -1,8 +1,14 @@
 # Bridge Throughput Investigation (R2.4)
 
-Status: memo + opt-in fast paths landed 2026-07-12 (this doc); GPU probe
-staged, NOT yet run (john0 mid-experiment). All line references are to the
-working tree as of this memo.
+Status: **CLOSED 2026-07-13** — every lever measured, none cleared its
+preregistered bar (EXPERIMENT_LOG 07-13 03:25): pipelining +4.2%
+(bit-identical on CUDA, below the 10% bar), CHUNK_ROWS +3.9% bound (eager
+forward saturates by batch 32), compile +0.5%, bucket negative and
+numerics-drifting. Serving throughput is within ~5% of what this
+architecture yields; the remaining ~45% of wall is Rust-side search
+compute. All knobs stay landed and default-off — re-price if the model or
+topology changes (bigger model raises the forward share). Line references
+are to the working tree as of the 07-12 memo.
 
 Measured production facts driving this memo (n1024/d16, jobs12, RTX 5090,
 WSL2): GPU util mean/P50/P90 = 63.8%/66%/85% (observed range 2–88%), 350 W,

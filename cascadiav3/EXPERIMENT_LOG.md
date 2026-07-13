@@ -6151,3 +6151,33 @@ value, if any, returns only after those shift the balance — exactly
 the revisit clause. Positive side-product: the pipelining machinery is
 validated bit-exact end-to-end, so a future revisit is a pure config
 flip, no new risk.
+
+## 2026-07-13 03:25 — R2.4 CLOSES: probe measured (all arms); every micro-lever below its preregistered bar; serving stack is within ~5% of architectural ceiling
+
+`bridge_throughput_probe.{json,md}` (rev `c2e75cab`, TF32 off,
+serving-realistic menus, batches 8/32/96/192):
+
+- **Eager forward saturates by batch 32**: `250.8 -> 346.5 -> 358.5 ->
+  359.9 rows/s` (b8/32/96/192). Production runs at ~30-row mean chunks
+  (01:20 sample), i.e. already ~96% of the b192 rate — **CHUNK_ROWS
+  upper bound is +3.9%, below its >=10% bar. Not advanced to a gate.**
+- **compile (reduce-overhead)**: `1.005x` at b192 — nothing to buy.
+  (Datum: bit-identical vs eager on this stack, contradicting the CPU
+  smoke's ~2e-6 drift — CUDA-graph capture of the same kernels. Recorded
+  for any future revisit; irrelevant now given no gain.)
+- **bucket / compile_bucket**: NEGATIVE (`0.93-0.96x`) and NOT
+  bit-identical (~3e-5 q drift) — dead on both counts.
+
+**R2.4 verdict across the whole program:** pipelining +4.2%
+(bit-identical, below bar), CHUNK_ROWS +3.9% bound, compile +0.5%,
+bucket negative. The 01:20 phase split showed forwards at ~55% of wall;
+the probe shows the forward itself is batch-saturated and the bridge
+host phases are already thin. The remaining ~45% is Rust-side search
+compute between eval requests — outside the bridge program's scope, and
+the earlier jobs concurrency calibration already set jobs12 as the
+operating point. **R2.4 closes: serving throughput is within ~5% of
+what this architecture yields.** All knobs stay landed and default-off
+(zero-risk revisit if the model or topology changes: bigger model =>
+forward share rises => pipelining/CHUNK_ROWS re-price). GPU hours go to
+scientific gates, starting with the R1.2B ghost+d32 sequential gate
+(fires next in the queue).
