@@ -6050,3 +6050,54 @@ Fixes:
   tree will be at `c2e75cab` by then, which contains everything the
   probe needs. Night queue is now: TIMING sample (running) -> pipelining
   A/B -> throughput probe. Preregistered reads unchanged.
+
+## 2026-07-13 00:35 — PREREGISTERED: R1.2B ghost+d32 sequential gate (block 2027072700..99) — the FIRST live group-sequential gate; armed behind the probe re-run
+
+**Hypothesis (the ns branch's surviving shape, executed):** ghost's
+reclaimed opponent-eval budget is real (~50% of champion-tier eval cost,
+measured twice) but reinvesting it into MORE OWN SIMS is worthless (00:15
+ns; sims axis saturated per R3.6). Reinvest it instead into **more
+determinization worlds** — the knob that attacks evaluation noise, the
+campaign's binding constraint, and the one knob with a CI+ screen
+(det8>det4 at n256: `+0.4225`, CI `[+0.1045,+0.7405]`). The det16→det32
+n1024 confirmation was paused by John's 07-10 21:10 ruling BECAUSE it
+was not wall-matched (~1.5x dedup tax on every future gate). Ghost pays
+that tax: det32/n1024 smoke measured `1.204x` champion wall (42.32s
+07-10) and ghost's per-eval factor is ~0.49 (00:14 gate) — the composed
+arm is predicted **≤0.8x champion wall**, i.e. wall-FAVORABLE where the
+paused design was wall-adverse. This is a new design on a fresh block;
+block `2027071600..99` stays reserved for the paused pure-worlds
+confirmation, unchanged.
+
+**Arms:** baseline = champion n1024/d16 K1 div4 (identical to the 00:14
+gate's baseline). Candidate = **ghost n1024/d32** K1 div4
+(`--gumbel-ghost-opponents`, `--gumbel-determinizations 32`, same
+n_simulations — worlds cycle inside the fixed sim budget; per-world
+visits halve 64→32, exactly the trade the n256 screen validated).
+VARIED_KEYS `ghost_opponents determinizations`. Rev `c2e75cab` (will
+already be deployed + built by the pipelining A/B chain).
+
+**Design — first live GROUP-SEQUENTIAL gate (methodology entry 07-12):**
+`LOOKS="40 60 80 100"`, superiority rule, alpha `0.05`, Lan-DeMets
+O'Brien-Fleming spending (z boundaries `3.0992/2.5533/2.2538/2.0635`).
+Seeds `2027072700..99` (registered). The RCI at a stop is the verdict.
+
+**Rule (applied literally on completion):**
+- **Stop/final POSITIVE and candidate mean decision seconds `<= 1.05x`
+  baseline** => ghost n1024/d32 is **champion-designate**: evidence goes
+  to John, who alone rules on promotion.
+- Positive at `> 1.05x` wall => no designation; present to John with the
+  wall tradeoff quantified (his call entirely).
+- Final INCONCLUSIVE => **R1.2B closes**; the R1.2 program ends with
+  ghost as a data-generation/cheap-serving tool only (any R1.2C
+  reinvestment needs a fresh screened case).
+- Stop/final NEGATIVE => same closure, plus: ghost bias composes badly
+  with world-thinning — record as a constraint on future world knobs.
+
+**Launch:** `ghost_d32_gate_20260713.sh` waiter on john0 — waits for the
+probe re-run chain (PID 4040310) to exit, verifies the deploy marker is
+`c2e75cab`, then runs `run_paired_gate.sh` in LOOKS mode. One scientific
+job at a time holds by construction (the engineering queue is strictly
+ahead of it). Expected wall: baseline chunks ~24.6ks + candidate chunks
+~15-18ks if it runs to 100 pairs (~11-12h); an interim stop saves
+20-60%.

@@ -751,3 +751,16 @@ EXPERIMENT_LOG 01:15 → 05:50):
   split -> `pipeline_ab_20260713_verdict.md` (adopt if >=10% decision
   gain AND bit-identical) -> `bridge_throughput_probe.md` (knob to a
   sequential noninferiority gate only if >=10% rows/s at batch 192).
+- **PREREGISTERED + ARMED (00:35): R1.2B ghost+d32 sequential gate** —
+  the first live group-sequential gate (looks 40/60/80/100, OBF,
+  superiority RCIs). Champion n1024/d16 vs **ghost n1024/d32** (reinvest
+  ghost's ~50% reclaimed eval budget into doubled worlds = noise
+  reduction, not saturated sims), fresh block `2027072700..99`
+  (registered), rev `c2e75cab`. Predicted candidate wall ≤0.8x champion
+  — answers the wall objection that paused the pure det16/32
+  confirmation (block 2027071600..99 stays reserved for that, unchanged).
+  Rule: positive stop at ≤1.05x wall => champion-designate (John alone
+  rules); inconclusive => R1.2B closes. Waiter
+  `ghost_d32_gate_20260713.{sh,log,pid}` PID 4041081, armed behind the
+  probe re-run; monitor live. Full queue now: TIMING sample ->
+  pipelining A/B -> probe re-run -> ghost+d32 sequential gate.
