@@ -5,7 +5,7 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-13 00:20 — GHOST CONFIRMATION ns: R1.2A closed low-budget-only, champion unchanged; R2.4 engineering night queue running; see the "ADDENDUM (07-13 00:20)" section at the END of this file; earlier 07-11 state below)
+## RESUME HERE (07-13 16:05 — R1.2B CLOSED final-inconclusive; ghost+d32 is 1.68x FASTER at floor -0.09 => speed-default noninferiority gate LIVE (PID 4110505); R2.4 closed, all levers below bar; see ADDENDA 07-13 at END; earlier 07-11 state below)
 
 **R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
 stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
@@ -784,3 +784,19 @@ EXPERIMENT_LOG 01:15 → 05:50):
   early stop.
 - Ghost n1024-tier confirmation verdict (00:14, ns) and its R1.2A
   closure are in the 00:20 addendum above.
+
+## ADDENDUM (07-13 16:05 — R1.2B closed (final inconclusive, +0.18); ghost+d32 1.68x speed observation; noninferiority speed-default gate LIVE)
+
+- **R1.2B ghost+d32 sequential gate: FINAL_INCONCLUSIVE (15:51).**
+  `98.2975` (a clean champion replication) vs `98.4750`; delta
+  `+0.1775`, RCI `[-0.0935, +0.4485]`. All four looks executed;
+  **R1.2 program CLOSED per rule** — no champion-designate. Cost:
+  candidate **`0.595x` wall (21.09s vs 35.46s/decision)** — the
+  prediction held.
+- **PREREGISTERED + LAUNCHED (16:00/15:54): ghost+d32 speed-default
+  NONINFERIORITY gate** — fresh block `2027072800..99`, same arms,
+  margin `-0.25`, looks 40/60/80/100, PID 4110505, monitor live.
+  Noninferior stop at ≤0.8x wall => ADOPT as serving/gate-arm speed
+  default (the K1/div4 class; NOT a strength claim; champion promotion
+  stays with John). Expected stop at the 60/80-pair look (~7-10h).
+- R2.4 remains closed (03:30 addendum). john0 queue: this gate only.

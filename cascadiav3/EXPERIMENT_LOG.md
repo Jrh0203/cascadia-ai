@@ -6181,3 +6181,79 @@ what this architecture yields.** All knobs stay landed and default-off
 forward share rises => pipelining/CHUNK_ROWS re-price). GPU hours go to
 scientific gates, starting with the R1.2B ghost+d32 sequential gate
 (fires next in the queue).
+
+## 2026-07-13 15:55 — R1.2B ghost+d32 sequential gate: FINAL_INCONCLUSIVE — R1.2B closes per rule; BUT candidate is 1.68x faster at floor -0.09 (speed-default candidate)
+
+First live group-sequential gate completed
+(`gate_ghost_d32_seq_20260713_verdict.md`, 100 pairs `2027072700..99`,
+rev `c2e75cab`, looks 40/60/80/100 all executed by the runner —
+continue/continue/continue/final):
+
+- Champion n1024/d16: mean `98.2975` (identical to its canonical
+  battery mean — a clean replication on a fresh block). Ghost n1024/d32:
+  `98.4750`. Paired delta **`+0.1775`**, repeated CI (final boundary z
+  `2.0635`) **`[-0.0935, +0.4485]`** — straddles zero.
+  **FINAL_INCONCLUSIVE. Preregistered rule applied: R1.2B CLOSES; the
+  R1.2 program ends** with ghost as a data-generation/cheap-serving
+  tool. No champion-designate.
+- **Cost: candidate mean decision `21.09s` vs baseline `35.46s` =
+  `0.595x` wall (1.68x faster)** — the ≤0.8x prediction held with room;
+  whole-arm `16.7ks` vs `28.2ks`.
+
+**Honest post-hoc observation (NOT evidence, motivates a new
+preregistration):** under the speed-knob noninferiority template
+(margin `-0.25`, the refresh-div4 standard) this result would have been
+a clear pass — RCI floor `-0.0935` is far above the margin, with a
+1.68x speedup that would cut EVERY future gate's arm cost ~40% and
+re-price all data generation. The superiority rule asked "is d32+ghost
+BETTER"; the answer is "not provably — but it is provably-as-good at
+0.6x price" is exactly the adoption class of exact-K1 and refresh-div4.
+Per methodology, that claim needs its own preregistered noninferiority
+gate on a fresh block (hypothesis from this data, tested on new data) —
+preregistered next entry. Retro-note on sequential value: a
+noninferiority-rule gate on this data would have stopped at the 80-pair
+look (floor -0.16 > -0.25 at z 2.2538); the superiority question could
+never stop early because the truth sits near zero — both behaviors are
+the design working as intended.
+
+## 2026-07-13 16:00 — PREREGISTERED: ghost+d32 SPEED-DEFAULT noninferiority gate (block 2027072800..99) — launching now (GPU idle)
+
+**Question (new, motivated by the 15:55 closure's cost column, tested on
+fresh data):** is ghost n1024/d32 score-noninferior to the champion
+serving config, so that its measured `~1.68x` speedup can be adopted as
+the serving/gate-arm speed default — the exact-K1 / refresh-div4
+adoption class? This is a SPEED claim, not a strength claim; champion
+promotion remains John's alone and is not at stake here.
+
+**Arms (identical configs to the closed 07-13 gate, fresh block):**
+baseline = champion n1024/d16 K1 div4; candidate = ghost n1024/d32 K1
+div4 (`--gumbel-ghost-opponents`, CAND_DET=32). Seeds `2027072800..99`
+(registered). Rev `c2e75cab`. VARIED_KEYS
+`ghost_opponents determinizations`.
+
+**Design:** group-sequential NONINFERIORITY, margin `-0.25` (the
+standing speed-knob standard), looks `40/60/80/100`, alpha `0.05`, OBF
+spending. The RCI at a stop is the evidence.
+
+**Rule (applied literally):**
+- Stop/final NONINFERIOR (RCI floor above `-0.25`) AND candidate mean
+  decision seconds `<= 0.8x` baseline => **ghost+d32 is ADOPTED as the
+  serving/benchmark/gate-arm default** (third adopted speed default
+  after exact-K1 and refresh-div4). Consequences on adoption: future
+  gate arms carry `--gumbel-ghost-opponents --gumbel-determinizations
+  32` in BASE_FLAGS/CAND defaults (~40% cheaper arms); data generation
+  re-prices; the champion's canonical score reference stays the
+  existing battery until a fresh canonical battery is run under the new
+  default.
+- INFERIOR (RCI entirely below `-0.25`) or final inconclusive-below =>
+  no adoption; serving default unchanged; ghost stays data-gen only.
+- Wall condition failing (>0.8x — not expected; two independent
+  measurements say ~0.6x) => no adoption, investigate the discrepancy.
+
+**Expected cost/behavior:** if the true delta is ~+0.18 (the closed
+gate's point estimate), the RCI floor clears the margin at the 60- or
+80-pair look — expected stop ~7-10h. A stop_noninferior at look ≤3 is
+also the first live demonstration of sequential early stopping.
+
+**Launch:** direct (GPU idle, no waiter): `ghost_d32_noninf_20260713.sh`
+on john0, nohup + pid + monitor.

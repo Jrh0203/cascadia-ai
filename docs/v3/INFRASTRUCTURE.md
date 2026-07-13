@@ -204,6 +204,7 @@ python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
 | 2027072500–2599 | RESERVED: serving-v2 combo gate (conditional on screens) |
 | 2027072600–2699 | RESERVED: ghost n1024-tier confirmation (conditional on the wall-matched gate) |
 | 2027072700–2799 | RESERVED: R1.2B ghost+d32 sequential gate at n1024 (preregistered 07-13) |
+| 2027072800–2899 | RESERVED: ghost+d32 speed-default noninferiority gate (preregistered 07-13 16:00) |
 | 2027073000–3129 | pairwise label audit (3000+) and v3 fit/selection/validation corpus (3100–29) |
 | 2027073300–3301 | parallel leaf-rollout screens |
 | 2027073400–3447 | jobs12/16/24 CUDA concurrency calibration (queued) |
