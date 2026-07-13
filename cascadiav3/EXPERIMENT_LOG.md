@@ -6124,3 +6124,30 @@ Reads (descriptive; adoption rules unchanged):
   a rows/s number on batch 192 vs ~30.
 - Ceiling arithmetic: if pipelining hid ALL non-forward time, wall would
   drop ~45% (1.8x); realistic one-deep pipelining bounds at the A/B.
+
+## 2026-07-13 03:20 — R2.4 lever #1 A/B verdict: BIT-IDENTICAL but +4.2% — below the 10% bar; stays default-off per rule
+
+`pipeline_ab_20260713_verdict.md` (12 games n1024/d16 div4 K1 jobs12,
+identical engineering seeds `1111120000..11`, rev `c2e75cab`):
+
+- **Per-seed seat scores bit-identical across all 12 seeds** — the
+  FIFO demux + one-deep deferred finalize is exactness-safe in
+  production on CUDA, not just in the CPU-torch proof.
+- Mean decision seconds `37.47 -> 35.98` (**1.042x**); whole-arm wall
+  `3672.5s -> 3548.2s` (**1.035x**).
+
+**Preregistered rule applied: <10% gain => pipelining stays default-off;
+revisit after CHUNK_ROWS.** Why the 45% non-forward gap yielded only 4%:
+one-deep pipelining can only overlap the bridge-host phases (~10% of
+wall) with forwards, and only when a second merged request is actually
+waiting — but each Rust worker blocks on its own result (data
+dependency: the search cannot proceed without the evals), so the
+aggregator rarely has a second full batch ready inside the gather
+window. The ~35% outside-bridge time is Rust search compute, which no
+bridge-side pipelining can hide. Consequence for the memo's ranking:
+the realistic lever order is CHUNK_ROWS (kills per-chunk overhead on
+~30-row chunks) and compile (shrinks forward itself); pipelining's
+value, if any, returns only after those shift the balance — exactly
+the revisit clause. Positive side-product: the pipelining machinery is
+validated bit-exact end-to-end, so a future revisit is a pure config
+flip, no new risk.
