@@ -6101,3 +6101,26 @@ job at a time holds by construction (the engineering queue is strictly
 ahead of it). Expected wall: baseline chunks ~24.6ks + candidate chunks
 ~15-18ks if it runs to 100 pairs (~11-12h); an interim stop saves
 20-60%.
+
+## 2026-07-13 01:20 — R2.4 TIMING phase split measured (12-game production sample at d6cae30b): forward = 84% of bridge time but only ~55% of wall; chunks average ~30 rows
+
+`bridge_timing_sample_20260713` (n1024/d16 div4 K1, jobs12, engineering
+seeds `1111110000..11`, mean seat `98.42` — engineering datum only).
+Bridge-side accumulator (`gumbel_batch_0.stderr.log`, final): chunks
+`97645`, rows `2,971,626`, collate `153.6s` / h2d `144.0s` / forward
+`1994.6s` / d2h `51.0s` / encode `18.9s`, total in-bridge `2362.0s`,
+`1258 rows/s`.
+
+Reads (descriptive; adoption rules unchanged):
+- **Forward is 84.4% of bridge time but the bridge is busy only ~65% of
+  the ~3621s wall — the GPU computes forwards ~55% of wall.** The other
+  ~45%: ~10% bridge host phases (collate+h2d+d2h+encode — the
+  PIPELINE=1 target) and ~35% outside the bridge (Rust search between
+  requests, 2ms gather windows, JSONL transport — the INFLIGHT=2
+  target). Both halves of lever #1 aim at exactly the measured gap.
+- **Mean forward batch is ~30 rows** (2.97M rows / 97.6k chunks) at
+  `1258 rows/s` — the eval-chunk fragmentation lever #2
+  (`CASCADIA_EVAL_CHUNK_ROWS=192`) addresses; the probe re-run will put
+  a rows/s number on batch 192 vs ~30.
+- Ceiling arithmetic: if pipelining hid ALL non-forward time, wall would
+  drop ~45% (1.8x); realistic one-deep pipelining bounds at the A/B.
