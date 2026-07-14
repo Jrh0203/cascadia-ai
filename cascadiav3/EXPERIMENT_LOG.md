@@ -6417,3 +6417,26 @@ Next in queue (automatic): depth-2 screen (running 23:21) -> deploy
 R3.2 gate if screen passes, on the NEW baseline (ghost n1024/d32 vs
 same + depth2, VARIED_KEYS=depth_rounds, SEQ_CUPED=1, block
 2027072900..99).
+
+## 2026-07-13 23:30 — R3.2 depth-2 own-turn: screen FAILS the bar (+0.0586 vs <=+0.020) — R3.2 CLOSES at kill-test cost
+
+`puzzle_screen_ghost_depth2_analysis.md` (700/700 roots joined, rev
+`6cc01ab5`-era tree at c2e75cab, screen ran 23:21-23:26): mean bank
+regret **`+0.2937`** (CI `[+0.2664, +0.3210]`) vs incumbent `0.2351` —
+penalty **`+0.0586`**, ~3x over the preregistered `<= +0.020` proceed
+bar. Chose-bank-best `29.1%`.
+
+**Rule applied: R3.2 closes.** At equal simulation count, diverting
+sims to animate our own second turn costs the ROOT decision more than
+the lookahead returns — the same shape as the legacy depth2-flat
+result, now confirmed under ghost pricing. The gate never launches;
+registered block `2027072900..99` is RELEASED (never touched).
+
+Honest caveat for any future revisit: the screen runs at n256/d4 where
+per-candidate visits are scarce; a depth-2 case at n1024-tier budgets
+would need a fresh preregistered screen making that argument
+explicitly. Nothing in tonight's data motivates it — the campaign's
+own-turn-depth lane is done. Portfolio consequence: Tier-3 search
+reformulations narrow to R3.3 exactness expansion; the queue's center
+of gravity moves fully to R1.4 (Stage 0 running, PID 4149025: cycle4
+raw + top64 passes).
