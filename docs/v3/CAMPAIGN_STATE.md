@@ -858,3 +858,16 @@ EXPERIMENT_LOG 01:15 → 05:50):
   behind the battery.
 - R3.2 CLOSED (23:30, screen +0.0586 vs +0.020 bar); block 2027072900
   RELEASED.
+
+## ADDENDUM (07-14 04:05 — canonical battery done: 98.3925 descriptive; menu512 screen running; Stage 1 chain next)
+
+- Canonical battery COMPLETE (03:58, 4h13m):
+  `rules_20260713_cycle4_ghost_d32_canonical` = **98.3925** mean seat
+  on `2027070900..0999` under the adopted ghost+d32 serving default
+  (same block, pre-ghost champion config: 98.2975). Descriptive
+  reference only; champion identity and canonical champion score
+  unchanged. Fresh 8,000-decision serving-default ledger now exists
+  (D1 pilot substrate).
+- menu512 bank screen auto-started 03:58 (~10 min); Stage 1 retrain
+  chain (waiter PID 4153213) deploys 55e8d4c1 and starts v1b when the
+  screen exits.

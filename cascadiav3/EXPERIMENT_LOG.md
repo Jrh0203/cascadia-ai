@@ -6565,3 +6565,25 @@ anywhere cannot idle the GPU.
   queue/scoreboard at docs/v3/, linked from the root README and the v3
   source-of-truth README. Stale session monitors cleaned (8 stopped; 3
   live: battery, menu512, stage1).
+
+## 2026-07-14 04:05 — Canonical battery COMPLETE: adopted ghost+d32 default reads 98.3925 on the rebaseline block (descriptive)
+
+- `rules_20260713_cycle4_ghost_d32_canonical` (100 games, seeds
+  `2027070900..0999`, rev `6cc01ab5`, adopted serving default: ghost
+  opponents, d32, exact-K1, refresh-div4, n1024): **mean seat
+  `98.3925`**, P90 `102.0`, seats >=100: `129/400`, games with mean
+  >=100: `10/100`. Per-seat means 98.34/98.48/98.66/98.09 — flat, no
+  seat artifact. Decision seconds p50 `17.39` / p95 `77.84`; battery
+  wall 4h13m (23:45->03:58).
+- Same block under the pre-ghost champion config read `98.2975`
+  (07-13 replication). Descriptive delta `+0.095` — consistent with
+  the noninferiority gate's point estimate (+0.333, RCI straddling
+  zero). **Reference number only, never evidence**; the canonical
+  CHAMPION score remains 98.2975 at the champion config, and champion
+  identity is unchanged (promotion is John's ruling).
+- Fresh serving-default ledgers now exist for downstream supervision:
+  `..._decisions.jsonl` (8,000 decisions, 4.2 MB) and
+  `..._games.jsonl` — these are the D1 pilot's substrate (queue #4)
+  and future R0.5/R3.4 adaptive-budget supervision.
+- Chain advanced automatically: menu512 bank screen started 03:58
+  (queue #2, ~10 min), Stage 1 retrain chain armed behind it.
