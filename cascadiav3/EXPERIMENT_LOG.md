@@ -6699,3 +6699,40 @@ anywhere cannot idle the GPU.
   read, preregister the off-metric evaluation channel WITH the arm —
   selection-on-q + warm-start-on-converged-data otherwise degenerates
   to "return the incumbent".
+
+## 2026-07-14 12:40 — Stage 1 chain done (all four arms select step 1); D1 bank died on K1 ledger rows, root-caused + refixed; R1.3b gate LIVE
+
+- **Stage 1 v3 chain COMPLETE (12:18).** All four arms trained clean
+  (~1.9h each) and ALL FOUR selected step 1: q-regret at the warm start
+  (0.2549-0.2565) never beaten across any 2500-step trajectory. Bank
+  screens of the selected checkpoints read incumbent-noise
+  (v1b +0.2398). Two structural observations, both preregistered into
+  the 06:30 measurement-channel fix before the later arms landed:
+  (1) warm start + converged corpora + q-regret selection degenerates
+  to "return the incumbent"; (2) every arm's late-step locked_val_q
+  converges to ~0.221-0.224 (v1b 0.2217, v2q8 0.2228, c1x4 0.2223,
+  t0pc 0.2240) — a shared attractor pointing at continued-training,
+  not any flag; the ctrl arm decides. Also noted: v2q8's fresh
+  quantile head trained 47.9 -> 0.73 pinball by step 1250 (real
+  convergence, invisible to selection); t0pc's path-consistency loss
+  14.74 -> ~5.5. Offline-bar verdicts wait on the unmixed re-eval
+  (RUNNING on CPU since 12:21, parallel with the gate).
+- **D1 pilot attempt 1 FAILED (12:18, zero roots), root-caused:** every
+  seed's replay died at ply 76 — exact-K1 rows record the FULL legal
+  enumeration (2,037-7,038 actions) while replay reconstructs the
+  greedy-256 menu, and `replay_ledger_seed` bails the whole seed on the
+  count mismatch. The existing `full_menu_fallback` path only covers a
+  chosen action OUTSIDE the capped menu; when the exact solver's pick
+  also sits inside greedy-256, the count check still fired. Two fixes:
+  (a) TONIGHT'S RUN: exact-filtered ledger (`..._noexact.jsonl`, 7,600
+  rows kept / 400 exact rows dropped) — scientifically the right
+  substrate anyway, exact decisions carry zero label noise so D1 has
+  nothing to relabel there (the bank's own sampler already excludes
+  exact-frontier roots); (b) ROOT FIX (committed): replay tolerates a
+  ledger action_count above the replay cap (the K1 wider-menu
+  signature; seat + chosen-action checks still validate), so future
+  K1-era ledgers replay without pre-filtering. cargo test 63/63.
+- **R1.3b gate LIVE (12:20)** on block 2027073000 (ghost+d32 vs
+  +root-menu-512, sequential CUPED superiority). Chain order now:
+  gate (~6-8.5h) -> ctrl arm (~2h + CPU re-eval) -> D1 pilot v2
+  (~1.2h, waiter PID 17200). GPU gap from the D1 failure: ~2 min.

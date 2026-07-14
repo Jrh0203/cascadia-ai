@@ -4159,7 +4159,15 @@ fn replay_ledger_seed(
         if !full_menu_fallback {
             if let Some(expected_count) = ledger_row.action_count {
                 let actual_count = row.afterstates.len() as u64;
-                if actual_count != expected_count {
+                // A ledger count above the replay cap means the recorded
+                // search enumerated a wider menu than replay reconstructs —
+                // the exact-endgame (K1) signature, where the solver searches
+                // the full legal set but can still pick an action that also
+                // sits inside the capped menu. Seat and chosen-action checks
+                // above still validate the trajectory.
+                let ledger_searched_wider_menu = menu_limit
+                    .map_or(false, |cap| expected_count > cap as u64);
+                if !ledger_searched_wider_menu && actual_count != expected_count {
                     bail!(
                         "replay divergence at seed {seed} ply {}: {actual_count} actions vs ledger {expected_count}",
                         ledger_row.ply
