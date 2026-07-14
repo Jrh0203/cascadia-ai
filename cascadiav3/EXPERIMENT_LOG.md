@@ -6492,3 +6492,44 @@ battery blocks host all reference arms by precedent — gate blocks stay
 touch-once). Purpose: the new canonical score reference + fresh
 decision ledgers at the serving default (feeds R0.5/R1.3/D1). ~4.5h.
 Descriptive only, never promotion evidence.
+
+## 2026-07-14 00:05 — PREREGISTERED: the next-24h GPU slate (primary chain + three independent fillers; no idle windows)
+
+Ordered queue (each item independently preregistered so the GPU never
+waits on code or a verdict):
+
+1. **Canonical battery** (running, PID 4150464, ~04:15 done).
+2. **R1.3b menu-widening screen** (immediate post-battery filler, ~6-10
+   min): bank screen `SCREEN_NAME=menu512`,
+   `EXTRA_FLAGS="--max-actions 512"` (menu-construction cap; screens
+   run at 64, serving at 256 — the screen reads whether widening buys
+   regret at all). **Bar: regret delta vs incumbent `<= -0.010`**
+   (strength-knob template) => preregister a champion-tier sequential
+   CUPED gate (ghost+d32 baseline vs same + `--max-actions 512`) on a
+   fresh block; else R1.3b closes (R1.3c cap-raise economics may still
+   be revisited under D1 evidence).
+3. **R1.4 Stage 1 retrains x4** (V1b, V2, C1, T0; ~3h each) as soon as
+   the trainer flags land + verify — each followed by locked-val eval
+   and a bank screen (~35 min). Offline bar per the 23:45 entry.
+4. **D1 label-movement pilot** (fits any gap; ~4-5h): resolve a
+   stride-sampled ~700-root subset of TONIGHT'S canonical ghost+d32
+   ledger at n2048/d16x2 via the puzzle-bank machinery (fresh bank dir,
+   never touching the frozen 20260711 bank), then a label-movement
+   analysis vs the ledger's serving-time choices. **Bar for D1
+   continuation: mega-budget argmax differs from the serving choice on
+   >= 20% of measured-hard roots** (if mega labels agree with cheap
+   ones, D1's premise dies and 30-60h is saved). Analyzer is CPU, built
+   in parallel.
+5. **Survivor gates** (any Stage-1 arm clearing offline bar + screen):
+   n256-tier sequential CUPED gates on fresh registered blocks —
+   preregistered individually at launch time.
+6. **Ghost-label safety-fold corpus** (backstop filler, ~2h): generate a
+   ~20k-root ghosted corpus (adopted default shape) for the R1_4 §8
+   teacher-safety question; the fold retrain + locked-val read is a
+   later Stage-1-class item. Generation only; labels quarantined until
+   the fold clears.
+
+Estimated GPU occupancy: 4.5h (battery) + 0.2h (menu512) + 12h
+(retrains) + 2h (screens) + 4.5h (D1 pilot) + gates ≈ 25-28h of queued
+work; fillers 4/6 are independent of the Stage-1 code path, so a slip
+anywhere cannot idle the GPU.
