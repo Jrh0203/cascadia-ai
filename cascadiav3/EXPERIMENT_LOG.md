@@ -6318,3 +6318,31 @@ missing-torch baseline): `sequential_gate.py --cuped` /
   correlate with baseline seed difficulty; even r=0.3-0.5 buys 10-25%
   variance reduction, compounding with sequential stopping and
   ghost-priced arms.
+
+## 2026-07-13 17:20 — PREREGISTERED: R3.2 depth-2 own-turn screen (bank, no registered seeds) — armed behind the live noninferiority gate
+
+**Hypothesis:** at `depth_rounds=1` the search never sees our second
+move; commitment decisions are where lookahead should pay. Depth-2 was
+closed flat at 1.8x cost in the 4-evals/ply era; ghost+d32 repriced
+own-turn depth (~0.6x wall base), so the frontier question reopens
+exactly as the portfolio anticipated ("retest after R1.2").
+
+**Design (screen; measurement only, never promotion evidence):**
+`run_bank_screen.sh` with `SCREEN_NAME=ghost_depth2`,
+`EXTRA_FLAGS="--gumbel-ghost-opponents --gumbel-depth-rounds 2"` (the
+exporter's arg parser is last-wins, so the depth override composes with
+the script's fixed n256/d4 candidate shape), rev `c2e75cab`, vs the
+frozen n4096 bank (700 roots).
+
+**Rule:** proceed to a preregistered champion-tier sequential gate iff
+the screen's bank-regret penalty vs the incumbent screen
+(`puzzle_screen_20260711_incumbent`, regret `0.2351`) is `<= +0.020` —
+the ghost-screen template: the screen reads bias/allocation sanity at
+equal n; the gate buys the depth cost back with ghost's reclaimed
+budget. Fail => R3.2 closes cheaply (the kill test's purpose). The gate
+(if earned) gets its own preregistration on block `2027072900..99`
+AFTER tonight's speed-default verdict fixes the baseline config, and
+will be the first SEQ_CUPED=1 gate.
+
+**Launch:** `ghost_depth2_screen_20260713.sh` waiter on john0, armed on
+the noninferiority gate's pid (4110505); ~10-15 min GPU when it fires.

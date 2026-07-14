@@ -800,3 +800,25 @@ EXPERIMENT_LOG 01:15 → 05:50):
   default (the K1/div4 class; NOT a strength claim; champion promotion
   stays with John). Expected stop at the 60/80-pair look (~7-10h).
 - R2.4 remains closed (03:30 addendum). john0 queue: this gate only.
+
+## ADDENDUM (07-13 17:30 — queue realigned by John's ruling; CUPED landed; R3.2 screen armed)
+
+- **RULED BY JOHN (16:30 entry):** research queue realigned to maximize
+  break-100 probability: (1) R3.2 depth-2 kill test, (2) R1.4
+  densification build, (3) R2.3 CUPED [DONE], (4) R0.5/R3.4 + R1.3b,
+  (5) R1.1c/R3.1 after R1.4 infra. Deprioritized: R3.5, R0.7, R0.8.
+- **R2.3 CUPED LANDED (be7cddbc):** `SEQ_CUPED=1` on any sequential
+  gate; covariate fixed = baseline per-seed seat score; RCI narrows
+  10-25% expected; scope = gates preregistered after the 17:10
+  methodology entry.
+- **R3.2 screen ARMED (waiter PID 4135978, monitor live):**
+  ghost+depth2 vs frozen bank behind the live noninferiority gate;
+  proceed bar `<= +0.020` regret vs incumbent; pass => sequential
+  SEQ_CUPED=1 gate on `2027072900..99` (preregister after the
+  speed-default verdict).
+- **R1.4 design doc in progress** (agent drafting
+  `docs/v3/R1_4_DENSIFICATION_DESIGN.md` from the actual trainer/
+  exporter code).
+- john0 queue: ghost+d32 noninferiority gate (live, PID 4110505) ->
+  ghost+depth2 screen (~15 min) -> GPU free for the R3.2 gate launch
+  decision + R1.4 staging.
