@@ -6533,3 +6533,35 @@ Estimated GPU occupancy: 4.5h (battery) + 0.2h (menu512) + 12h
 (retrains) + 2h (screens) + 4.5h (D1 pilot) + gates ≈ 25-28h of queued
 work; fillers 4/6 are independent of the Stage-1 code path, so a slip
 anywhere cannot idle the GPU.
+
+## 2026-07-14 00:20 — Stage 1 trainer flags LANDED (55e8d4c1, bitwise-identical defaults); retrain chain ARMED; RESEARCH_AGENDA.md created
+
+- **Trainer flags committed** (`55e8d4c1`): V1b
+  (`--value-target-search-mix`, phase-gated at tile_count>=13, active
+  seat only), V2 (`--value-quantiles K`, pinball, quantile-mean scalar
+  keeps every downstream consumer contract), C1 (weight aliases of the
+  pre-existing `--*-loss-weight` flags), T0
+  (`--path-consistency-weight`; target-side variant: value(t) vs
+  stop-grad collated `search_root_value` at t+4 same-game/same-seat —
+  exactly the design memo's T1(i) formulation; pairing precomputed per
+  shard in numpy, epoch shuffle safe). Defaults proven BITWISE
+  identical end-to-end (pristine-HEAD vs new source: identical
+  checkpoints, all 45 tensors; golden loss regression; torch suite
+  353/OK, torch-free suite at the 15-error baseline).
+- **Bar note (recorded):** a V1b arm's `locked_val_value` is measured
+  against MIXED targets by construction — the preregistered "value RMSE
+  -10%" comparison will be computed via an unmixed re-eval of the V1b
+  checkpoint, not read off its training metrics.
+- **Retrain chain armed** (`stage1_retrains_20260714.sh`, waiter PID
+  4153213, behind the menu512 screen): deploys `55e8d4c1` (python-only,
+  binary unchanged from c2e75cab), then per arm (v1b, v2q8, c1x4, t0pc)
+  trains the manifest-recovered champion recipe (3 relation_tail
+  corpora at `--train-source-weights 4,2,1`, 2500 steps, batch 192, lr
+  1e-4, wd 0.05, warmup 0.02, seed 20260630, eval-every 250,
+  val-max-batches 8, selection locked_val_final_q_regret min, SWA 0.20,
+  warm start incumbent) + a puzzle-bank screen of its best_locked_val
+  checkpoint. ~3.5h/arm; chain ~14h.
+- **RESEARCH_AGENDA.md** (976e7b0b): living prioritized
+  queue/scoreboard at docs/v3/, linked from the root README and the v3
+  source-of-truth README. Stale session monitors cleaned (8 stopped; 3
+  live: battery, menu512, stage1).
