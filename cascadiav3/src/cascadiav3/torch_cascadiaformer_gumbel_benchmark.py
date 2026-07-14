@@ -196,6 +196,7 @@ def run_gumbel_games(
     q_bias_correction: bool = False,
     lcb_c: float = 0.0,
     refresh_sample_divisor: int = 1,
+    root_menu: int = 256,
 ) -> list[dict[str, Any]]:
     command = [
         str(binary),
@@ -248,6 +249,7 @@ def run_gumbel_games(
             if refresh_sample_divisor != 1
             else []
         ),
+        *(["--gumbel-root-menu", str(root_menu)] if root_menu != 256 else []),
         "--k-interior",
         str(k_interior),
         "--max-actions",
@@ -351,6 +353,7 @@ def run_gumbel_games_batch(
     q_bias_correction: bool = False,
     lcb_c: float = 0.0,
     refresh_sample_divisor: int = 1,
+    root_menu: int = 256,
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
     process per contiguous seed run (one process total for the usual
@@ -409,14 +412,7 @@ def run_gumbel_games_batch(
                 if refresh_sample_divisor != 1
                 else []
             ),
-        *(["--gumbel-ghost-opponents"] if ghost_opponents else []),
-        *(["--gumbel-q-bias-correction"] if q_bias_correction else []),
-        *(["--gumbel-lcb-c", str(lcb_c)] if lcb_c > 0.0 else []),
-        *(
-            ["--gumbel-refresh-sample-divisor", str(refresh_sample_divisor)]
-            if refresh_sample_divisor != 1
-            else []
-        ),
+            *(["--gumbel-root-menu", str(root_menu)] if root_menu != 256 else []),
             "--k-interior",
             str(k_interior),
             "--max-actions",
@@ -622,6 +618,7 @@ def run_gumbel_benchmark(
     q_bias_correction: bool = False,
     lcb_c: float = 0.0,
     refresh_sample_divisor: int = 1,
+    root_menu: int = 256,
 ) -> dict[str, Any]:
     execution = execution_provenance(
         batch_runner=batch_runner,
@@ -701,6 +698,7 @@ def run_gumbel_benchmark(
                 q_bias_correction=q_bias_correction,
                 lcb_c=lcb_c,
                 refresh_sample_divisor=refresh_sample_divisor,
+                root_menu=root_menu,
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -746,6 +744,7 @@ def run_gumbel_benchmark(
                     q_bias_correction=q_bias_correction,
                     lcb_c=lcb_c,
                     refresh_sample_divisor=refresh_sample_divisor,
+                    root_menu=root_menu,
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -891,6 +890,7 @@ def run_gumbel_benchmark(
             "q_bias_correction": q_bias_correction,
             "lcb_c": lcb_c,
             "refresh_sample_divisor": refresh_sample_divisor,
+            "root_menu": root_menu,
             "k_interior": k_interior,
             "max_root_actions": max_root_actions,
             "q_risk_mode": q_risk_mode,
@@ -1090,6 +1090,14 @@ def main() -> int:
     )
     parser.add_argument("--k-interior", type=int, default=16)
     parser.add_argument("--gumbel-max-root-actions", type=int, default=0, help="0 keeps the full legal set")
+    parser.add_argument(
+        "--gumbel-root-menu",
+        type=int,
+        default=256,
+        help="greedy-ranked root menu cap forwarded to the exporter "
+        "(exporter default 256; emitted only when non-default so default "
+        "invocations stay replayable against older pinned binaries)",
+    )
     parser.add_argument("--control", choices=["full-search", "none"], default="full-search")
     parser.add_argument("--control-max-actions", type=int, default=64)
     parser.add_argument("--control-rollouts-per-action", type=int, default=16)
@@ -1188,6 +1196,7 @@ def main() -> int:
         q_bias_correction=args.gumbel_q_bias_correction,
         lcb_c=args.gumbel_lcb_c,
         refresh_sample_divisor=args.gumbel_refresh_sample_divisor,
+        root_menu=args.gumbel_root_menu,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

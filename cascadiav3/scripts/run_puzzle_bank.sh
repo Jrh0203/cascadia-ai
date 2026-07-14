@@ -23,6 +23,10 @@ DEPLOYED_REVISION_FILE="${DEPLOYED_REVISION_FILE:-$LOG_DIR/exact_k1_deployed_rev
 STRIDE="${STRIDE:-11}"
 REPEATS="${REPEATS:-2}"
 JOBS="${JOBS:-12}"
+# Search budget of the bank labels. Defaults reproduce the frozen 20260711
+# bank; the R1.4 D1 pilot builds a separate n2048 bank on its own ledger.
+N_SIMULATIONS="${N_SIMULATIONS:-4096}"
+DETERMINIZATIONS="${DETERMINIZATIONS:-16}"
 
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH="cascadiav3/src"
@@ -66,7 +70,7 @@ if [ -f /home/john0/venvs/torch/bin/activate ]; then
   source /home/john0/venvs/torch/bin/activate
 fi
 
-echo "[puzzle-bank] $(date '+%F %T') generating (stride=$STRIDE repeats=$REPEATS jobs=$JOBS n4096/d16)"
+echo "[puzzle-bank] $(date '+%F %T') generating (stride=$STRIDE repeats=$REPEATS jobs=$JOBS n$N_SIMULATIONS/d$DETERMINIZATIONS)"
 "$BINARY" \
   --puzzle-bank \
   --in "$LEDGER" \
@@ -75,10 +79,10 @@ echo "[puzzle-bank] $(date '+%F %T') generating (stride=$STRIDE repeats=$REPEATS
   --model-manifest "$MANIFEST" \
   --model-timeout-ms 600000 \
   --source-revision "$SOURCE_REVISION" \
-  --gumbel-n-simulations 4096 \
+  --gumbel-n-simulations "$N_SIMULATIONS" \
   --gumbel-top-m 16 \
   --gumbel-depth-rounds 1 \
-  --gumbel-determinizations 16 \
+  --gumbel-determinizations "$DETERMINIZATIONS" \
   --gumbel-market-decision-samples 8 \
   --gumbel-exact-endgame-turns 0 \
   --gumbel-blend-weight 0.5 \
