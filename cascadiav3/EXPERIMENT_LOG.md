@@ -6376,3 +6376,44 @@ if Stages 1-3 move nothing, EI saturation survives its strongest
 challenge and training-side work stops being resourced.
 
 Stage 0 analyzer build starts now (CPU-side; runs parallel to gates).
+
+## 2026-07-13 23:25 — ghost+d32 speed-default gate: STOP_NONINFERIOR at 60 pairs — ADOPTED (third speed default); first live sequential early stop
+
+`gate_ghost_d32_noninf_20260713_verdict.md` (fresh block 2027072800..59
+used, 60 of 100 planned pairs, rev `c2e75cab`):
+
+- **STOP_NONINFERIOR at look 2/4**: paired delta `+0.3333`, RCI at z
+  `2.5533` = `[-0.2122, +0.8788]` — floor above the `-0.25` margin.
+  Point estimate positive for the third consecutive fresh block
+  (+0.545 n256, +0.178 n1024 superiority, +0.333 here) — ghost+d32 is
+  plausibly slightly better, provably not meaningfully worse.
+- **Wall `0.688x`** (23.73s vs 34.48s/decision) — under the `<= 0.8x`
+  adoption condition.
+
+**Preregistered rule applied: ghost n1024/d32 (`--gumbel-ghost-opponents
+--gumbel-determinizations 32`, with K1 + div4) is ADOPTED as the
+serving/benchmark/gate-arm speed default** — the third adopted speed
+default after exact-K1 (07-10) and refresh-div4 (07-12). NOT a strength
+claim; the champion's canonical reference remains the cycle4 n1024/d16
+battery (98.2975) until a fresh canonical battery runs under the new
+default; champion promotion remains John's alone.
+
+Consequences, effective for work preregistered after this entry:
+- Gate arms default to the ghost+d32 config on BOTH sides (a candidate
+  varies its own knobs on top). ~31% cheaper arms; with sequential
+  stopping (this gate: stopped at 60/100, ~40% saved — the FIRST live
+  early stop) and CUPED, gate cost is now ~3-4x cheaper than the
+  fixed-N 07-12 baseline.
+- Data generation re-prices at ~0.69x per decision at n1024-tier.
+- Ghost-generated labels as TRAINING teachers remain UNVALIDATED
+  (R1_4 design §8) — generation for corpora keeps the non-ghost config
+  until the safety fold clears.
+- Seeds 2027072860..99 of the block were never touched (early stop) —
+  they stay burned with the block per registry discipline (blocks are
+  touched once).
+
+Next in queue (automatic): depth-2 screen (running 23:21) -> deploy
+6cc01ab5 (CUPED + Stage 0 analyzer) -> Stage 0 label audit (CPU) ->
+R3.2 gate if screen passes, on the NEW baseline (ghost n1024/d32 vs
+same + depth2, VARIED_KEYS=depth_rounds, SEQ_CUPED=1, block
+2027072900..99).

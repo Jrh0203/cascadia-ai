@@ -5,7 +5,7 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-13 16:05 — R1.2B CLOSED final-inconclusive; ghost+d32 is 1.68x FASTER at floor -0.09 => speed-default noninferiority gate LIVE (PID 4110505); R2.4 closed, all levers below bar; see ADDENDA 07-13 at END; earlier 07-11 state below)
+## RESUME HERE (07-13 23:30 — ghost+d32 ADOPTED as speed default (0.688x wall, first sequential early stop); depth-2 screen running; R1.4 Stage 0 analyzer landed; see ADDENDA 07-13 at END)
 
 **R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
 stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
@@ -822,3 +822,19 @@ EXPERIMENT_LOG 01:15 → 05:50):
 - john0 queue: ghost+d32 noninferiority gate (live, PID 4110505) ->
   ghost+depth2 screen (~15 min) -> GPU free for the R3.2 gate launch
   decision + R1.4 staging.
+
+## ADDENDUM (07-13 23:30 — ghost+d32 ADOPTED at 60-pair early stop; depth-2 screen running)
+
+- **ADOPTED (23:25, preregistered rule): ghost n1024/d32 is the
+  serving/gate-arm speed default** (K1 + div4 + ghost + d32).
+  STOP_NONINFERIOR at look 2 (60 pairs, seeds 2027072800..59): delta
+  `+0.3333`, RCI `[-0.2122, +0.8788]` vs margin `-0.25`, wall `0.688x`.
+  First live sequential early stop (~40% of the gate saved). Champion
+  identity and canonical score reference unchanged; ghost labels NOT
+  yet cleared for training corpora (needs the safety fold, R1_4 §8).
+- Depth-2 bank screen running (fired 23:21, ~15 min). Next, in order:
+  deploy `6cc01ab5` (CUPED + Stage 0 analyzer), run Stage 0 label audit
+  (CPU), and if the screen clears `<= +0.020` regret vs incumbent,
+  preregister + launch the R3.2 gate on block `2027072900..99` as the
+  first SEQ_CUPED=1 gate, on the NEW default baseline (ghost n1024/d32
+  vs same + `--gumbel-depth-rounds 2`, VARIED_KEYS=depth_rounds).

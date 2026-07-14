@@ -105,13 +105,25 @@ over packed expert tensors with Gumbel search-supervised action values.
   at `+0.30` regret each; mean overall `+0.0045`/root. The cap is safe
   on average with a thin material tail (~0.37 Q/game bound) — R1.3b/c
   remains a priced, modest-upside lane.
-- **Live now (session-independent on john0):** the R2.4 engineering
-  night queue — bridge throughput probe + `CASCADIA_BRIDGE_TIMING=1`
-  phase-split sample (rev `d6cae30b`, fired 07-13 00:16), then the
-  request-pipelining A/B (rev `c2e75cab`, serial vs
-  `CASCADIA_SHARED_INFLIGHT=2`+`CASCADIA_BRIDGE_PIPELINE=1`).
-  Engineering only, never strength evidence; adoption rules
-  preregistered in EXPERIMENT_LOG 07-12.
+- **Ghost+d32 ADOPTED as the serving speed default (07-13 23:25)** —
+  the third speed default after exact-K1 and refresh-div4, and the
+  first live sequential early stop (STOP_NONINFERIOR at 60/100 pairs:
+  RCI floor `-0.2122` above the `-0.25` margin at **`0.688x` wall**).
+  Gate arms, benchmarks, and serving now default to
+  `--gumbel-ghost-opponents --gumbel-determinizations 32` (+K1+div4);
+  the champion's canonical score reference stays the cycle4 n1024/d16
+  battery until rerun. Gate economics after the 07-13 velocity stack
+  (ghost pricing × sequential stopping × CUPED): ~3-4x cheaper than the
+  07-12 fixed-N baseline.
+- **R2.4 throughput program CLOSED (07-13 03:25):** every lever measured
+  below its bar (pipelining +4.2% bit-identical, CHUNK_ROWS bound +3.9%,
+  compile +0.5%, bucket negative); serving is within ~5% of the
+  architectural ceiling. Knobs stay landed, default-off.
+- **Queue realigned by ruling (07-13 16:30):** R3.2 depth-2 kill test
+  (screen live), R1.4 densification (design memo + Stage 0 analyzer
+  landed — [R1_4_DENSIFICATION_DESIGN.md](R1_4_DENSIFICATION_DESIGN.md)),
+  CUPED landed, then adaptive budgets / menu relief / cooperative
+  values.
 - **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
   (repo root, 07-10) — tiered break-100 research portfolio with
   preregisterable kill tests.
