@@ -6768,3 +6768,30 @@ anywhere cannot idle the GPU.
   with q-regret intact, ctrl's own SWA checkpoint becomes a legitimate
   bank-screen candidate (champion recipe, zero new flags) — the
   cheapest possible training-side candidate this program has produced.
+
+## 2026-07-14 14:10 — Stage 1 OFFLINE VERDICT: all four arms FAIL the value bar; no arm advances to a gate
+
+- **Direct value-MSE instrument COMPLETE** (self-checks passed:
+  incumbent 2.9793 = sqrt of its locked_val_value; scalar arms
+  reproduce the 13:25 numbers exactly). V2's honest numbers:
+  step-2500 RMSE `2.8846` (−3.2%), SWA `2.8775` (−3.4%) — the
+  quantile-mean is no better calibrated against outcomes than the
+  scalar head. (Its step-1 selected checkpoint reads 95.3 — the
+  random-init head, confirming selection never saw the trained head.)
+- **Preregistered bar (value RMSE −10%, q-regret +0.05): V1b −5.3%
+  FAIL · V2 −3.4% FAIL · T0 −2.1% FAIL · C1 −3.7% (comparator; its
+  non-degradation bar met, no positive signal). No Stage 1 arm
+  advances to an n256 gate.** Ranking within the nulls: v1b (search
+  -value mixing) moved value RMSE the most — the PCZero mechanism is
+  real but a factor ~2 too small at this corpus/recipe, and the ctrl
+  arm may yet absorb part of it.
+- Program read (R1_4 §5 kill ladder): trainer-only value densification
+  (V1b/V2) and target-side path consistency (T0) are measured NULLs at
+  this scale — consistent with §2.1 (value head not load-bearing at
+  serving). R1.4 survivors: **D1** (pilot tonight), **P1** (label-side
+  q-bias correction, needs a generation run), ctrl-SWA q-improvement
+  lead (if ctrl reproduces q −14%, screen ctrl SWA). Stage 2/3 bundle
+  retrains are NOT funded by these results.
+- Still pending to interpret Stage 1 fully: ctrl arm (running after
+  the R1.3b gate) — attributes the shared −2..−5% RMSE and −14% q
+  drift to continued-training vs flags.
