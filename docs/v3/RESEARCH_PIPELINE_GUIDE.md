@@ -113,6 +113,12 @@ is a final CI ~5% wider than a fixed-N gate.
 - **Preregister the looks** with the rest of the gate (they are part of
   the design); LOOKS must end at GAMES. The naive 95% CI in the verdict
   is reference only — the RCI is the evidence (AGENTS.md, 07-12 ruling).
+- **CUPED variance reduction** (`SEQ_CUPED=1`, R2.3, methodology entry
+  07-13): the RCI uses paired deltas adjusted on the baseline arm's
+  per-seed seat score — the covariate is FIXED by the methodology, never
+  chosen per gate. The point estimate is untouched; only the interval
+  narrows (typically 10-25%). Preregister the flag with the gate; df is
+  n-2 so a useless covariate costs one degree of freedom.
 
 ## 4. Run several experiments as an unattended sequence
 

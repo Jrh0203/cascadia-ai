@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 from cascadiav3.sequential_gate import (
     build_sequential_verdict,
+    cuped_adjust,
     parse_looks,
     sequential_decision,
 )
@@ -176,6 +177,102 @@ class BuildSequentialVerdictTest(unittest.TestCase):
                 report["scientific_eligibility"], "engineering_smoke_only"
             )
             self.assertFalse(report["proceed_to_high_budget"])
+
+
+def correlated_reports(tmp: str, pairs: int, mean_delta: float):
+    """Baseline varies by seed; delta = mean_delta + 0.6*(baseline - 97)
+    + alternating wiggle, so the covariate explains most delta variance
+    and the RAW deltas are too noisy to decide at early looks."""
+    seeds = list(range(1000, 1000 + pairs))
+    baseline_scores = {
+        seed: 97.0 + ((index % 9) - 4.0) for index, seed in enumerate(seeds)
+    }
+    candidate_scores = {
+        seed: base
+        + mean_delta
+        + 0.6 * (base - 97.0)
+        + (0.05 if index % 2 == 0 else -0.05)
+        for index, (seed, base) in enumerate(baseline_scores.items())
+    }
+    baseline = write(tmp, "b.json", make_report(4, baseline_scores))
+    candidate = write(tmp, "c.json", make_report(8, candidate_scores))
+    return baseline, candidate
+
+
+class CupedAdjustTest(unittest.TestCase):
+    def test_hand_computed_theta_and_perfect_fit(self) -> None:
+        # deltas perfectly linear in the covariate: theta = 0.1, residual 0.
+        result = cuped_adjust([1.0, 2.0, 3.0], [10.0, 20.0, 30.0])
+        self.assertAlmostEqual(result["theta"], 0.1)
+        self.assertAlmostEqual(result["correlation"], 1.0)
+        self.assertAlmostEqual(result["se_adjusted"], 0.0)
+        self.assertAlmostEqual(result["variance_reduction_fraction"], 1.0)
+        self.assertEqual(result["df"], 1)
+
+    def test_constant_covariate_falls_back_to_unadjusted(self) -> None:
+        result = cuped_adjust([1.0, 2.0, 3.0, 4.0], [5.0, 5.0, 5.0, 5.0])
+        self.assertEqual(result["theta"], 0.0)
+        self.assertTrue(result["fallback_constant_covariate"])
+        self.assertEqual(result["se_adjusted"], result["se_unadjusted"])
+        self.assertEqual(result["df"], 3)
+
+    def test_uncorrelated_covariate_costs_only_a_df(self) -> None:
+        # Orthogonal covariate: theta ~ 0, adjusted SE within a hair of raw
+        # (the df 3 -> 2 change moves the variance denominator, not the SS).
+        result = cuped_adjust([1.0, -1.0, 1.0, -1.0], [1.0, 1.0, -1.0, -1.0])
+        self.assertAlmostEqual(result["theta"], 0.0)
+        self.assertAlmostEqual(
+            result["se_adjusted"],
+            result["se_unadjusted"] * (3.0 / 2.0) ** 0.5,
+        )
+
+    def test_too_few_pairs_refused(self) -> None:
+        with self.assertRaisesRegex(ValueError, "at least 3"):
+            cuped_adjust([1.0, 2.0], [1.0, 2.0])
+        with self.assertRaisesRegex(ValueError, "pair 1:1"):
+            cuped_adjust([1.0, 2.0, 3.0], [1.0, 2.0])
+
+
+class CupedVerdictTest(unittest.TestCase):
+    def test_cuped_narrows_rci_and_preserves_the_mean(self) -> None:
+        with TemporaryDirectory() as tmp:
+            baseline, candidate = correlated_reports(tmp, pairs=60, mean_delta=0.3)
+            plain = build_sequential_verdict(baseline, candidate, LOOKS)
+            adjusted = build_sequential_verdict(baseline, candidate, LOOKS, cuped=True)
+            self.assertIsNone(plain["sequential"]["cuped"])
+            cuped = adjusted["sequential"]["cuped"]
+            self.assertIsNotNone(cuped)
+            # The point estimate is untouched; only the interval shrinks.
+            self.assertEqual(
+                plain["paired_delta_stats"]["mean"],
+                adjusted["paired_delta_stats"]["mean"],
+            )
+            self.assertLess(cuped["se_adjusted"], cuped["se_unadjusted"])
+            self.assertGreater(cuped["variance_reduction_fraction"], 0.5)
+            plain_width = (
+                plain["sequential"]["rci_high"] - plain["sequential"]["rci_low"]
+            )
+            adjusted_width = (
+                adjusted["sequential"]["rci_high"] - adjusted["sequential"]["rci_low"]
+            )
+            self.assertLess(adjusted_width, plain_width * 0.75)
+
+    def test_cuped_can_decide_what_raw_noise_cannot(self) -> None:
+        with TemporaryDirectory() as tmp:
+            baseline, candidate = correlated_reports(tmp, pairs=40, mean_delta=0.3)
+            plain = build_sequential_verdict(baseline, candidate, LOOKS)
+            adjusted = build_sequential_verdict(baseline, candidate, LOOKS, cuped=True)
+            self.assertEqual(plain["sequential"]["decision"], "continue")
+            self.assertEqual(adjusted["sequential"]["decision"], "stop_positive")
+            self.assertTrue(adjusted["proceed_to_high_budget"])
+
+    def test_constant_baseline_fixture_uses_fallback(self) -> None:
+        with TemporaryDirectory() as tmp:
+            baseline, candidate = paired_reports(tmp, pairs=60, mean_delta=0.0)
+            report = build_sequential_verdict(baseline, candidate, LOOKS, cuped=True)
+            cuped = report["sequential"]["cuped"]
+            self.assertTrue(cuped["fallback_constant_covariate"])
+            self.assertEqual(cuped["se_adjusted"], cuped["se_unadjusted"])
 
 
 if __name__ == "__main__":

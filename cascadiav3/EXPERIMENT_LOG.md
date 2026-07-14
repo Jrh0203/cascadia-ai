@@ -6257,3 +6257,64 @@ also the first live demonstration of sequential early stopping.
 
 **Launch:** direct (GPU idle, no waiter): `ghost_d32_noninf_20260713.sh`
 on john0, nohup + pid + monitor.
+
+## 2026-07-13 16:30 — RULED BY JOHN: research queue realigned to maximize break-100 probability
+
+John ruled ("i trust your judgement, align the research queue as you see
+fit to maximize our chance of breaking past 100"). The aligned queue,
+with rationale grounded in the 13 verdicts to date (all serving-side
+estimation ideas null => the noise wall must be attacked at its sources:
+the value function's training signal, and unseen own-turn depth; plus
+velocity multipliers that compound):
+
+1. **R3.2 deep own-turn planning (kill test now):** depth-2 was closed
+   flat at 1.8x cost when opponents ate 3/4 evals; ghost+d32 repriced it
+   (~0.6x wall base). Screen behind the live noninferiority gate
+   (~15 min GPU, no registered seeds): candidate n256/d4 + ghost +
+   depth2 vs incumbent bank regret, proceed bar `<= +0.020` (bias-only
+   read, budget buyback is the gate's job — the ghost-screen template).
+   Screen pass => preregistered sequential gate on fresh block
+   `2027072900..99` (designed after tonight's adoption verdict fixes
+   the baseline config).
+2. **R1.4 training densification (top expected value, build starts
+   now):** design doc being drafted from the actual trainer/exporter
+   code; staged kill tests before any full retraining cycle.
+3. **R2.3 CUPED verdicts (velocity, no GPU, building now):** opt-in
+   covariate adjustment (covariate fixed = baseline per-seed seat
+   score) in the sequential-gate machinery; expected 10-30% CI
+   shrinkage on top of sequential stopping and ghost-priced arms.
+4. **R0.5/R3.4 adaptive budgets** (puzzle bank supervises for free) and
+   **R1.3b menu relief** (priced ~0.37/game) — queued behind 1-3.
+5. **R1.1c/R3.1 cooperative table values** — the only single idea whose
+   ceiling covers the whole remaining gap; sequenced after R1.4's
+   training infrastructure exists.
+
+Deprioritized: R3.5 smarter worlds (family returns small effects; d32
+ns), R0.7/R0.8 (the root-estimation class is 0-for-4). Scope note:
+CUPED applies to gates preregistered after its own methodology entry
+(to be written when the code lands + tests green).
+
+## 2026-07-13 17:10 — PREREGISTERED METHODOLOGY: CUPED variance reduction for sequential gates (R2.3); code landed + tested
+
+Landed (29/29 sequential tests green, 7 new; full suite at the known
+missing-torch baseline): `sequential_gate.py --cuped` /
+`run_paired_gate.sh SEQ_CUPED=1`.
+
+- **Covariate is FIXED by this preregistration** — the baseline arm's
+  per-seed seat score (now carried in `paired_score_deltas` rows). No
+  per-gate covariate shopping, ever. theta = cov(delta, x)/var(x),
+  re-estimated at each look on the accumulated pairs (standard
+  group-sequential ANCOVA practice); residual variance uses df = n-2, so
+  a useless covariate costs exactly one degree of freedom; a constant
+  covariate falls back to the unadjusted estimator, flagged.
+- The point estimate is UNTOUCHED (the correction is mean-centered) —
+  CUPED only narrows the interval. The RCI (and thus the stopping
+  decision) uses the adjusted SE; the naive CI stays raw,
+  reference-only. Verdict JSON/md carry the full cuped block (theta, r,
+  raw vs adjusted SE, variance-reduction fraction).
+- **Scope: gates preregistered AFTER this entry** may set SEQ_CUPED=1 in
+  their preregistration. The live ghost+d32 noninferiority gate keeps
+  its no-CUPED design. Expected effect: paired seat-score deltas
+  correlate with baseline seed difficulty; even r=0.3-0.5 buys 10-25%
+  variance reduction, compounding with sequential stopping and
+  ghost-priced arms.

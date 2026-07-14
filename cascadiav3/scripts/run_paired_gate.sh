@@ -30,6 +30,9 @@ set -euo pipefail
 #   SEQ_MARGIN      [-0.25] noninferiority margin (SEQ_RULE=noninferiority)
 #   SEQ_ALPHA       [0.05]
 #   SEQ_SPENDING    [obrien_fleming] or pocock
+#   SEQ_CUPED       [0] 1 => CUPED variance reduction (R2.3): the RCI uses
+#                   deltas adjusted on the baseline per-seed seat score
+#                   (fixed covariate, df n-2). Preregister per gate.
 #
 # Wall-matched gates: set CAND_N so the candidate's expected wall matches
 # the baseline (from screen timing), and preregister a wall-parity bound —
@@ -57,6 +60,7 @@ SEQ_RULE="${SEQ_RULE:-superiority}"
 SEQ_MARGIN="${SEQ_MARGIN:--0.25}"
 SEQ_ALPHA="${SEQ_ALPHA:-0.05}"
 SEQ_SPENDING="${SEQ_SPENDING:-obrien_fleming}"
+SEQ_CUPED="${SEQ_CUPED:-0}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 MANIFEST="${MANIFEST:-cascadiav3/checkpoints/full_v3_gumbel_selfplay_cycle4/best_locked_val.manifest.json}"
@@ -197,6 +201,10 @@ merge_arm() {
     --out "$REPORT_DIR/${TAG}_${arm}.json" >/dev/null
 }
 
+CUPED_ARGS=()
+if [ "$SEQ_CUPED" = "1" ]; then
+  CUPED_ARGS=(--cuped)
+fi
 prev=0
 completed_looks=()
 decision="continue"
@@ -219,6 +227,7 @@ for look in $LOOKS; do
     --spending "$SEQ_SPENDING" \
     --rule "$SEQ_RULE" \
     --margin "$SEQ_MARGIN" \
+    "${CUPED_ARGS[@]}" \
     --out "$REPORT_DIR/${TAG}_look${look}_verdict.json" \
     --summary-out "$REPORT_DIR/${TAG}_look${look}_verdict.md" | tail -1)
   cp "$REPORT_DIR/${TAG}_look${look}_verdict.json" "$REPORT_DIR/${TAG}_verdict.json"

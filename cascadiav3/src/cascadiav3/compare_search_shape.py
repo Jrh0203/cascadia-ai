@@ -137,7 +137,8 @@ def build_comparison(
         "baseline_mean_seat_score": float(baseline_summary["mean_seat_score"]),
         "candidate_mean_seat_score": float(candidate_summary["mean_seat_score"]),
         "paired_score_deltas": [
-            {"seed": seed, "delta": delta} for seed, delta in zip(seeds, deltas, strict=True)
+            {"seed": seed, "delta": delta, "baseline_score": baseline_scores[seed]}
+            for seed, delta in zip(seeds, deltas, strict=True)
         ],
         "paired_delta_stats": stats,
         "score_verdict": verdict,

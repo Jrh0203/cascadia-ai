@@ -37,6 +37,66 @@ from .sequential_boundaries import (
 from .torch_benchmark_stats import t_quantile
 
 RULES = ("superiority", "noninferiority")
+CUPED_COVARIATE = "baseline_per_seed_seat_score"
+
+
+def cuped_adjust(deltas: list[float], covariates: list[float]) -> dict[str, Any]:
+    """CUPED variance reduction (R2.3): regress paired deltas on a
+    preregistered covariate and remove the explained component.
+
+    covariate here is ALWAYS the baseline arm's per-seed seat score — fixed
+    by the methodology preregistration, not a per-gate choice. The adjusted
+    mean equals the raw mean exactly (the correction is mean-centered); only
+    the SE shrinks, by ~sqrt(1 - r^2). The residual variance uses df = n - 2
+    (one fitted slope), so a useless covariate costs one degree of freedom
+    and nothing else. Falls back to the unadjusted estimate (theta = 0,
+    df = n - 1) when the covariate is constant.
+    """
+    n = len(deltas)
+    if n != len(covariates):
+        raise ValueError("deltas and covariates must pair 1:1")
+    if n < 3:
+        raise ValueError("CUPED requires at least 3 pairs (df = n - 2)")
+    mean_d = sum(deltas) / n
+    mean_x = sum(covariates) / n
+    ss_x = sum((x - mean_x) ** 2 for x in covariates)
+    raw_var = sum((d - mean_d) ** 2 for d in deltas) / (n - 1)
+    se_raw = (raw_var / n) ** 0.5
+    if ss_x == 0.0:
+        return {
+            "covariate": CUPED_COVARIATE,
+            "theta": 0.0,
+            "correlation": 0.0,
+            "se_unadjusted": se_raw,
+            "se_adjusted": se_raw,
+            "variance_reduction_fraction": 0.0,
+            "df": n - 1,
+            "fallback_constant_covariate": True,
+        }
+    cov_dx = sum(
+        (d - mean_d) * (x - mean_x) for d, x in zip(deltas, covariates, strict=True)
+    )
+    theta = cov_dx / ss_x
+    residual_ss = sum(
+        (d - mean_d - theta * (x - mean_x)) ** 2
+        for d, x in zip(deltas, covariates, strict=True)
+    )
+    adjusted_var = residual_ss / (n - 2)
+    se_adjusted = (adjusted_var / n) ** 0.5
+    ss_d = sum((d - mean_d) ** 2 for d in deltas)
+    correlation = cov_dx / (ss_d * ss_x) ** 0.5 if ss_d > 0.0 else 0.0
+    return {
+        "covariate": CUPED_COVARIATE,
+        "theta": theta,
+        "correlation": correlation,
+        "se_unadjusted": se_raw,
+        "se_adjusted": se_adjusted,
+        "variance_reduction_fraction": (
+            1.0 - (se_adjusted / se_raw) ** 2 if se_raw > 0.0 else 0.0
+        ),
+        "df": n - 2,
+        "fallback_constant_covariate": False,
+    }
 
 
 def parse_looks(raw: str) -> list[int]:
@@ -88,6 +148,7 @@ def build_sequential_verdict(
     spending: str = "obrien_fleming",
     rule: str = "superiority",
     margin: float = -0.25,
+    cuped: bool = False,
 ) -> dict[str, Any]:
     if rule not in RULES:
         raise ValueError(f"rule must be one of {RULES}, got {rule!r}")
@@ -112,6 +173,20 @@ def build_sequential_verdict(
     if mean is None or se is None or se == 0.0:
         raise ValueError("sequential verdict requires nonzero-variance paired deltas")
     df = pairs - 1
+    cuped_block: dict[str, Any] | None = None
+    if cuped:
+        rows = comparison["paired_score_deltas"]
+        cuped_block = cuped_adjust(
+            [float(row["delta"]) for row in rows],
+            [float(row["baseline_score"]) for row in rows],
+        )
+        se = cuped_block["se_adjusted"]
+        df = cuped_block["df"]
+        if se == 0.0:
+            raise ValueError(
+                "CUPED-adjusted deltas have zero residual variance; "
+                "sequential verdict undefined"
+            )
     if boundary_z >= NO_EXIT_BOUNDARY:
         t_critical = float("inf")
         rci_low, rci_high = float("-inf"), float("inf")
@@ -153,6 +228,7 @@ def build_sequential_verdict(
         "rci_high": rci_high,
         "naive_ci_low_non_inferential": stats["t_ci_low"],
         "naive_ci_high_non_inferential": stats["t_ci_high"],
+        "cuped": cuped_block,
         "decision": decision,
     }
     return comparison
@@ -179,6 +255,18 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         if seq["rule"] == "noninferiority"
         else []
     )
+    cuped = seq.get("cuped")
+    cuped_lines = (
+        [
+            f"- CUPED (covariate `{cuped['covariate']}`): theta "
+            f"`{cuped['theta']:+.4f}`, r `{cuped['correlation']:+.3f}`, SE "
+            f"`{cuped['se_unadjusted']:.4f}` -> `{cuped['se_adjusted']:.4f}` "
+            f"(variance -{cuped['variance_reduction_fraction']:.1%}, df "
+            f"`{cuped['df']}`)",
+        ]
+        if cuped is not None
+        else []
+    )
     lines = [
         "# Sequential Gate Verdict",
         "",
@@ -201,6 +289,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"- Repeated CI (boundary z `{seq['boundary_z']:.4f}`, t "
         f"`{seq['t_critical']:.4f}`): `[{seq['rci_low']:+.4f}, {seq['rci_high']:+.4f}]`",
         *margin_line,
+        *cuped_lines,
         f"- Naive 95% CI (reference only, NOT evidence): "
         f"`[{seq['naive_ci_low_non_inferential']:+.4f}, "
         f"{seq['naive_ci_high_non_inferential']:+.4f}]`",
@@ -250,6 +339,12 @@ def main() -> int:
         default=-0.25,
         help="Noninferiority margin (used only with --rule noninferiority).",
     )
+    parser.add_argument(
+        "--cuped",
+        action="store_true",
+        help="CUPED variance reduction (R2.3): adjust the RCI using the "
+        "baseline per-seed seat score as the (fixed, preregistered) covariate.",
+    )
     parser.add_argument("--out", required=True)
     parser.add_argument("--summary-out", required=True)
     args = parser.parse_args()
@@ -264,6 +359,7 @@ def main() -> int:
         spending=args.spending,
         rule=args.rule,
         margin=args.margin,
+        cuped=args.cuped,
     )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
