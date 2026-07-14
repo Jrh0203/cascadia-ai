@@ -6656,3 +6656,46 @@ anywhere cannot idle the GPU.
   (~14h, to ~18:30) -> D1 bank+analysis (~1.2h) -> R1.3b gate
   (~5-8.5h, sequential stop possible). Survivor gates and the
   ghost-label safety fold remain the on-deck fillers.
+
+## 2026-07-14 06:30 — v1b: selection is blind to value-target work (step-1 selected); measurement channel fixed by preregistration; control arm queued
+
+- **v1b TRAIN COMPLETE (06:11, 1.9h) — and the champion selection rule
+  picked STEP 1** (locked_val_final_q_regret 0.25492 at the warm start
+  vs incumbent's recorded 0.25756; no training step beat it; trajectory
+  0.259-0.293 across 2500 steps). Structural reading, not a null yet:
+  the recipe warm-starts the incumbent on the exact corpora it already
+  converged on, so q-regret (the selection metric) has no fresh signal
+  to improve, and value-target work is INVISIBLE to selection — the
+  arm's selected product is ~the incumbent (bank screen confirms:
+  +0.2398 vs incumbent +0.2351, one 4e-6 step of drift, no signal).
+  Meanwhile the q-head loss improved late (locked_val_q 0.2539 ->
+  0.2217 at steps 2000-2500) — cause unknown (flag vs continued
+  training), which motivates the control below.
+- **Measurement-channel fix, PREREGISTERED NOW** (before v2q8/c1x4/t0pc
+  finish and before any re-eval data exists): the Stage 1 offline bar
+  is evaluated by ONE shared unmixed instrument —
+  `_evaluate_records` with no Stage1TargetOptions on the trainer's
+  exact locked-val slice (first 8x192 of cycle4 val), CPU — applied to
+  incumbent + each arm's {selected, step-2500, SWA} checkpoints. Bar
+  UNCHANGED in thresholds: value RMSE <= 0.90x incumbent AND q-regret
+  <= incumbent + 0.05, both from the same instrument; ANY passing
+  checkpoint qualifies its arm (that checkpoint is what proceeds to
+  screen/gate). This is a channel fix (selection can't see value
+  targets), not a bar move. Driver
+  `stage1_unmixed_reeval_20260714.py` + chain armed (waiter PID
+  4182622, fires with the D1 chain; CPU nice'd, no GPU contention).
+  `torch_cascadiaformer_checkpoint_eval.py` gained `--max-batches` for
+  future locked-slice re-evals (versioned).
+- **Pure-control arm PREREGISTERED and chained** (`stage1_ctrl_
+  20260714.sh`, waiter PID 4182962, behind the R1.3b gate): champion
+  recipe rerun with ZERO Stage 1 flags, warm-started from the
+  incumbent + the same unmixed re-eval. Role: causal control only —
+  if ctrl reproduces the late-step q improvement, that movement is
+  continued-training, not any flag; if ctrl's value RMSE matches
+  incumbent while an arm's beats the bar, the flag is causal. Not a
+  champion candidate.
+- Design lesson recorded for Stage-1-class experiments: when the
+  candidate mechanism targets a head the selection metric does not
+  read, preregister the off-metric evaluation channel WITH the arm —
+  selection-on-q + warm-start-on-converged-data otherwise degenerates
+  to "return the incumbent".

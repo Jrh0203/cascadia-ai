@@ -29,6 +29,7 @@ def evaluate_manifests(
     val_format: str,
     batch_size: int,
     device_name: str,
+    max_batches: int | None = None,
 ) -> dict[str, Any]:
     import torch
 
@@ -50,7 +51,7 @@ def evaluate_manifests(
                 weights=weights,
                 device=device,
                 batch_size=batch_size,
-                max_batches=None,
+                max_batches=max_batches,
             )
             rows.append(
                 {
@@ -91,6 +92,13 @@ def main() -> int:
     parser.add_argument("--val-format", choices=["jsonl", "npz"], default="npz")
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--device", default="cuda")
+    parser.add_argument(
+        "--max-batches",
+        type=int,
+        default=0,
+        help="cap validation batches (0 = full corpus); 8 with --batch-size "
+        "192 reproduces the trainer's locked-val slice",
+    )
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     report = evaluate_manifests(
@@ -99,6 +107,7 @@ def main() -> int:
         val_format=args.val_format,
         batch_size=args.batch_size,
         device_name=args.device,
+        max_batches=args.max_batches if args.max_batches > 0 else None,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
