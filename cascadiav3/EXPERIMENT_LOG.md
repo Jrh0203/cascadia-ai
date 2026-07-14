@@ -6346,3 +6346,33 @@ will be the first SEQ_CUPED=1 gate.
 
 **Launch:** `ghost_depth2_screen_20260713.sh` waiter on john0, armed on
 the noninferiority gate's pid (4110505); ~10-15 min GPU when it fires.
+
+## 2026-07-13 17:50 — R1.4 design complete (docs/v3/R1_4_DENSIFICATION_DESIGN.md); hypothesis revised by code audit; Stage 0 build starts
+
+Design memo landed. Central corrections to the R1.4 brief (code-cited):
+policy targets are ALREADY full-menu soft distributions and Q regression
+ALREADY covers all visited actions with SE-confidence weighting — the
+KataGo-dense share assumed available is smaller than the portfolio
+priced. What genuinely remains sparse: (2.1) value/score/rank labels =
+one Monte-Carlo outcome per position; (2.2) Q labels carry
+generation-grade (n256-512) search noise vs n1024/d16 serving; (2.3)
+improved-policy information covers only top_m≈16 of ≤256 retained
+(unvisited mass is self-distillation); (2.4) zero spatial targets;
+(2.5) packed v4 shards cannot express trajectory linkage. **Cheapest
+lever found: `search_root_value` is exported, contract-required,
+collated into every batch (torch_train_cascadiaformer.py:319-321), and
+consumed by NO loss** — a low-noise value target sitting unread (V1).
+
+Ranked menu: V1 (search-value target, S, zero regen) > P1 (label-side
+q-bias correction at generation) > V2 (distributional value head) > D1
+(targeted hard-root reanalyze) > T1 (v5 trajectory fields) > O1
+(per-hex ownership, L). Structured-Q stays CLOSED (failed pilot 07-10;
+the design forbids relitigating it). Staged kill plan: Stage 0 zero-GPU
+label-noise audit with the preregistered V1 continuation bar
+(search_root_value must cut value-target RMSE >=20% vs raw outcome at
+|bias| <= 0.5) -> data-free retrains -> gates; whole qualification
+bundle <= ~2 GPU-days before touching any corpus. Portfolio kill rule:
+if Stages 1-3 move nothing, EI saturation survives its strongest
+challenge and training-side work stops being resourced.
+
+Stage 0 analyzer build starts now (CPU-side; runs parallel to gates).
