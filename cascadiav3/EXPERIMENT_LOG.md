@@ -6440,3 +6440,55 @@ own-turn-depth lane is done. Portfolio consequence: Tier-3 search
 reformulations narrow to R3.3 exactness expansion; the queue's center
 of gravity moves fully to R1.4 (Stage 0 running, PID 4149025: cycle4
 raw + top64 passes).
+
+## 2026-07-13 23:45 — R1.4 Stage 0 verdict: V1 bar FAILS (closes) but late-game mechanism confirmed => V1b preregistered; adjacency CONFIRMED (T1(i) drops to S-cost); canonical battery launched
+
+**Stage 0 results** (`r1_4_stage0_cycle4_raw.{json,md}`, 100,000 records
+= the full cycle4 corpus, phase = tile-count proxy, 0 unknown-phase):
+
+- **V1 preregistered bar: FAIL — V1 closes without a retrain.** Overall
+  RMSE(outcome, search_root_value) `4.745` vs within-phase baseline
+  `2.711` (-75% "reduction"); bias `-2.861`. BUT the preregistered
+  phase-stratified read shows the mechanism is REAL and phase-gated:
+  bias is monotone (opening `-7.29` -> endgame `+0.51`) and srv BEATS
+  the noise baseline in the late game (late_mid RMSE `2.45` < `2.71`;
+  endgame `1.46` = **46% better than the 1-sample noise floor**).
+  Search values are total-score-calibrated but ~7 points pessimistic at
+  the opening, converging by endgame — a generation-model calibration
+  drift, not noise.
+- **Density census:** q-valid fraction locked at `0.0626` (=16/256
+  always); improved-policy mass on unvisited actions mean `0.3295`
+  (median 0 — strongly bimodal: most roots ~0, a heavy tail near-total).
+  P1 (label-side bias correction) strengthens.
+- **Hard-root census:** `54.6%` of corpus roots are noise-flippable
+  (top1-top2 gap < pairwise SE) — worse than the 46% serving estimate;
+  even endgame is `49%`. D1's targeting pool is enormous.
+- **Trajectory adjacency: CONFIRMED** — 1,249 identical-final-score
+  runs of mean length 80.06 (=1,250 games x 80 plies, contiguous).
+  **Packed record order preserves whole games => path-consistency
+  targets need NO v5 schema.** T1(i) reprices from M to S.
+
+**PREREGISTERED — Stage 1 arms** (data-free retrains on the champion
+recipe, one variable each; offline bar per design §5: locked-val value
+RMSE -10% without q-regret degradation >0.05; then bank screen; then
+n256-tier sequential CUPED gate for arms clearing both):
+- **V1b (new, from Stage 0 evidence):** value target mixes
+  search_root_value ONLY where it beats the noise floor — lambda by
+  phase: 0 for tile_count<13, 0.5 for >=13 (late_mid+endgame). Trainer
+  flag, default-off, bit-identical when unset.
+- **V2:** K-quantile distributional value head (pinball loss, distq
+  template).
+- **C1:** aux weight sweep (score/rank/uncertainty x4).
+- **T0 (new, unlocked by adjacency):** path-consistency prototype —
+  L2 between value(t) and stop-gradient value at the same seat's next
+  root, adjacency-derived, weight 0.1. Zero schema work.
+Trainer changes build now (flags default-off, R0.x pattern);
+retrains chain behind the canonical battery.
+
+**GPU (23:45): canonical battery launched** (PID 4150464): adopted
+default ghost n1024/d32 K1 div4 on the rebaseline battery block
+`2027070900..0999` (same seeds as the champion's canonical 98.2975;
+battery blocks host all reference arms by precedent — gate blocks stay
+touch-once). Purpose: the new canonical score reference + fresh
+decision ledgers at the serving default (feeds R0.5/R1.3/D1). ~4.5h.
+Descriptive only, never promotion evidence.

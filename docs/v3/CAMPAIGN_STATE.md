@@ -5,7 +5,7 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-13 23:30 — ghost+d32 ADOPTED as speed default (0.688x wall, first sequential early stop); depth-2 screen running; R1.4 Stage 0 analyzer landed; see ADDENDA 07-13 at END)
+## RESUME HERE (07-13 23:50 — ghost+d32 ADOPTED; R3.2 closed by screen; R1.4 Stage 0 done (V1 closed, V1b/T0/P1 live); canonical battery on GPU; Stage 1 trainer flags building; see ADDENDA 07-13 at END)
 
 **R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
 stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
@@ -838,3 +838,23 @@ EXPERIMENT_LOG 01:15 → 05:50):
   preregister + launch the R3.2 gate on block `2027072900..99` as the
   first SEQ_CUPED=1 gate, on the NEW default baseline (ghost n1024/d32
   vs same + `--gumbel-depth-rounds 2`, VARIED_KEYS=depth_rounds).
+
+## ADDENDUM (07-13 23:50 — Stage 0 verdict; V1 closed, V1b/T0 unlocked; canonical battery running)
+
+- **R1.4 Stage 0 COMPLETE** (7s per pass — vectorized; full cycle4
+  corpus, 100k records): V1 bar FAILS (overall bias `-2.86`) => V1
+  closed without a retrain; BUT srv beats the 1-sample noise floor in
+  the late game (endgame RMSE `1.46` vs `2.71`) => **V1b preregistered**
+  (phase-gated mixing, tile_count>=13). **Adjacency CONFIRMED** (1,249
+  contiguous games) => T0 path-consistency needs no schema change.
+  Hard-root fraction `54.6%`. Unvisited improved-policy mass mean
+  `0.33` (bimodal) => P1 strengthens.
+- **GPU: canonical battery running** (PID 4150464, launched 23:45,
+  ~4.5h): adopted default ghost n1024/d32 on the rebaseline block
+  `2027070900..0999` => new canonical reference + fresh serving-default
+  decision ledgers.
+- **Building now:** Stage 1 trainer flags (V1b, V2 quantile value head,
+  C1 weight flags, T0) — default-off, bit-identical; retrains chain
+  behind the battery.
+- R3.2 CLOSED (23:30, screen +0.0586 vs +0.020 bar); block 2027072900
+  RELEASED.
