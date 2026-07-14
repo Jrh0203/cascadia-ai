@@ -6736,3 +6736,35 @@ anywhere cannot idle the GPU.
   +root-menu-512, sequential CUPED superiority). Chain order now:
   gate (~6-8.5h) -> ctrl arm (~2h + CPU re-eval) -> D1 pilot v2
   (~1.2h, waiter PID 17200). GPU gap from the D1 failure: ~2 min.
+
+## 2026-07-14 13:40 — Stage 1 offline bars: V1b/C1/T0 FAIL the value bar (scalar arms −2% to −5% vs −10% required); V2's number was pinball, honest metric re-running
+
+- **Unmixed re-eval COMPLETE (13:25, CPU).** Instrument cross-check
+  passed: incumbent q-regret 0.25763 on the re-eval vs 0.25756 at
+  training time. Incumbent unmixed value RMSE `2.9793`; bar `2.6813`
+  (−10%); q-regret allowance `0.30763`.
+- **Scalar arms (comparable, MSE path) — all FAIL the value bar:**
+  v1b step-2500 `2.8202` (−5.3%), SWA `2.8205`; c1x4 `2.8686` (−3.7%);
+  t0pc `2.9181` (−2.1%). q-regret within allowance everywhere
+  (0.262-0.269). Per the preregistered bar, **V1b and T0 do not
+  advance to gates** unless the ctrl arm shows continued-training
+  alone yields ~0% (it will more likely absorb most of the −2..−5%).
+  C1's own bar was non-degradation: met (q loss improved, policy flat)
+  — but with no positive signal, C1 stays a comparator, not a gate
+  candidate.
+- **V2's `pass=True` was an instrument artifact, caught before any
+  verdict:** `_loss_components` selects pinball whenever the MODEL
+  emits quantiles (branches on outputs, not on the eval flag), so
+  v2q8's "RMSE 0.9648" is sqrt(pinball) — wrong units (its
+  training-time pinball at step 2500 was 0.936, matching). Honest
+  head-shape-independent metric now running: direct
+  MSE(`value_vector`, `target_value`) on the same locked slice for all
+  13 checkpoints (`stage1_value_mse_reeval_20260714.py`); the
+  incumbent's direct MSE must reproduce ~8.88 as a self-check. V2's
+  offline verdict WAITS on this number; bar unchanged.
+- **Shared q-loss improvement across ALL arms at SWA** (locked_val_q
+  ~0.2165-0.2179 vs incumbent 0.2533, ~-14%): flag-independent →
+  provisionally continued-training+SWA. If the ctrl arm reproduces it
+  with q-regret intact, ctrl's own SWA checkpoint becomes a legitimate
+  bank-screen candidate (champion recipe, zero new flags) — the
+  cheapest possible training-side candidate this program has produced.
