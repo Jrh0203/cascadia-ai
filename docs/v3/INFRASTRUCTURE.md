@@ -181,6 +181,13 @@ python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
 `CASCADIA_EVAL_CELL_BUDGET=16777216`, shard mmap on by default
 (`CASCADIA_SHARD_MMAP=0` disables), `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`.
 
+**WARNING (2026-07-14):** `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`
+is **serving/bridge-only**. On john0 (WSL2 + RTX 5090 + torch 2.11.0+cu128)
+it deterministically kills TRAINER processes at the first forward with
+`CUDA driver error: unknown error` (bisected 07-14 after it burned a full
+Stage 1 retrain slate twice). Never export it in a script that launches
+`torch_train_cascadiaformer`.
+
 ## 5. Seed-range registry (do not collide)
 
 | Range | Owner |
@@ -206,6 +213,7 @@ python -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
 | 2027072700–2799 | RESERVED: R1.2B ghost+d32 sequential gate at n1024 (preregistered 07-13) |
 | 2027072800–2899 | ghost+d32 speed-default noninferiority gate (07-13): stopped at 60 pairs, 2860+ untouched but burned with the block |
 | 2027072900–2999 | RELEASED (07-13 23:30): R3.2 depth-2 gate never launched — screen failed its bar; block never touched, safe to re-register |
+| 2027073000–3099 | RESERVED (07-14 04:30): R1.3b root-menu-512 champion-tier sequential CUPED gate (ghost+d32 default vs same + `--gumbel-root-menu 512`; chained behind the D1 pilot) |
 | 2027073000–3129 | pairwise label audit (3000+) and v3 fit/selection/validation corpus (3100–29) |
 | 2027073300–3301 | parallel leaf-rollout screens |
 | 2027073400–3447 | jobs12/16/24 CUDA concurrency calibration (queued) |

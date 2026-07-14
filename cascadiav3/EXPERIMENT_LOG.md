@@ -6587,3 +6587,72 @@ anywhere cannot idle the GPU.
   and future R0.5/R3.4 adaptive-budget supervision.
 - Chain advanced automatically: menu512 bank screen started 03:58
   (queue #2, ~10 min), Stage 1 retrain chain armed behind it.
+
+## 2026-07-14 04:30 — menu512 screen VOID (instrument no-op, wrong flag); R1.3b goes to a direct gate; Stage 1 chain lost to a fatal env var, root-caused, relaunched; D1 pilot preregistered and chained
+
+- **menu512 screen verdict: VOID, not a close.** Mean regret `+0.235148`
+  / chose-best `0.3486` — BIT-identical to the incumbent screen. Two
+  independent reasons the instrument measured nothing: (1) bank screens
+  replay the ledger's STORED action menus (`analyze_puzzle_screen`
+  hard-errors on menu drift, none occurred), so no flag can widen them;
+  (2) the serving menu cap is `--gumbel-root-menu` (main.rs:417, default
+  256) — `--max-actions` (the flag the screen varied) only governs
+  greedy/rollout ranking. The preregistered close rule cannot be applied
+  to a measurement that never engaged the candidate. Recorded
+  instrument limitation: **bank screens cannot rank menu-widening
+  candidates**; the same bit-identity retroactively explains the R0.3
+  q-bias serving screen (also `0.235148`).
+- **R1.3b straight to a gate** (per "screens rank, gates decide": the
+  R1.3a audit is the ranking evidence — priced tail +0.37/game ceiling,
+  1.5% of decisions drop the true best at +0.30 each). PREREGISTERED:
+  champion-tier sequential CUPED SUPERIORITY gate on fresh registered
+  block `2027073000..3099` (INFRASTRUCTURE.md), baseline = adopted
+  ghost+d32 default, candidate = same + `--gumbel-root-menu 512`, looks
+  40/60/80/100, alpha 0.05 OBF, SEQ_CUPED=1. Decision rule: RCI
+  excludes 0 upward at any look => menu widening is real, adopt-or-gate
+  further per wall cost (timing block recorded); RCI excludes +0.10
+  downward or final look ns => R1.3b CLOSES (the 0.37 ceiling does not
+  survive contact with play). Harness change landed for this
+  (`df8e024b`): `--gumbel-root-menu` passthrough + `root_menu` in
+  search provenance (always recorded), plus removal of a duplicated
+  behavior-neutral argv block. Chained behind the D1 pilot
+  (`r13b_gate_20260714.sh`, waiter PID 4173895).
+- **Stage 1 chain incident + root cause (2 attempts lost, ~30 min):**
+  all four arms died at the first forward with `CUDA driver error:
+  unknown error`. Controlled bisect on john0: identical tiny job
+  SUCCEEDS without `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`
+  and FAILS with it — deterministic env-var kill on WSL2 + RTX 5090 +
+  torch 2.11.0+cu128 trainer workloads (the inference bridge tolerates
+  the same var; every screen/gate ran fine with it). The var had been
+  copied into the trainer chain from the bridge-side script pattern.
+  Fix: never set it for trainer processes (v3 chain script carries the
+  warning comment; INFRASTRUCTURE john0 notes updated). Relaunched
+  04:18 (`stage1_retrains_v3_20260714.sh`, PID via waiter 4173058) with
+  a CUDA warm-up gate + one retry per arm; v1b confirmed training (GPU
+  100%, 31.6 GiB). GPU idle time from the incident: ~13 min.
+- **D1 label-movement pilot PREREGISTERED (before any pilot data
+  exists).** The 00:05 entry left "measured-hard" undefined; fixed now,
+  strictly: benchmark ledgers carry no per-action serving data, so
+  hardness is measured from the pilot's own repeat structure.
+  (a) *Stratifier:* mega repeat agreement at n2048/d16 x2 —
+  repeat-UNSTABLE fraction is reported as the noise-flippable census
+  (frozen n4096 bank precedent: 39% unstable, 57.6% raw movement,
+  median top-2 gap 0.049 — computed on the frozen instrument, not
+  pilot data). (b) *Primary bar (STRICTER than the loose reading, and
+  non-circular):* movement (mega argmax != serving choice) on
+  repeat-STABLE roots >= 20% => D1 stays funded; below => D1 dies.
+  (c) *Guard (recorded now):* if the bar passes but mean mega-regret
+  per moved stable root < 0.05 points, the movement is near-tie churn
+  and the verdict says so regardless of the rate. (d) *Spec:* stride-11
+  ~727 roots of `rules_20260713_cycle4_ghost_d32_canonical_decisions
+  .jsonl`, n2048/d16, repeats 2, FRESH dir `puzzle_bank_20260714_d1_
+  n2048`, NO ghost (D1 labels are candidate teachers; ghost labels not
+  safety-cleared). Analyzer `analyze_label_movement.py` (7 tests
+  green) reports movement/regret overall, by stratum, and by phase
+  (tile-count proxy, late >= 13 matching the V1b gate). Chained behind
+  Stage 1 (`d1_pilot_20260714.sh`, waiter PID 4173887; deploys
+  `df8e024b` python-only, zero exporter diff).
+- **Night queue (GPU saturated ~24h):** Stage 1 v3 retrains+screens
+  (~14h, to ~18:30) -> D1 bank+analysis (~1.2h) -> R1.3b gate
+  (~5-8.5h, sequential stop possible). Survivor gates and the
+  ghost-label safety fold remain the on-deck fillers.

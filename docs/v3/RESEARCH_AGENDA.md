@@ -39,9 +39,9 @@ you see fit to maximize our chance of breaking past 100").
 | # | Item | State | Decision rule (preregistered) |
 |---|---|---|---|
 | 1 | Canonical battery of adopted default (rebaseline block) | **DONE 07-14**: 98.3925 (descriptive; pre-ghost config read 98.2975 on the same block) | descriptive reference + fresh serving-default ledgers; never evidence |
-| 2 | R1.3b menu-widening screen (`--max-actions 512`) | RUNNING | regret ≤ −0.010 vs incumbent ⇒ champion-tier sequential CUPED gate; else R1.3b closes |
-| 3 | R1.4 Stage 1 retrains: **V1b** (phase-gated search-value target), **V2** (quantile value head), **C1** (aux-weight sweep), **T0** (path consistency) | trainer flags building | offline bar: locked-val value RMSE −10% w/o q-regret damage > 0.05 ⇒ bank screen ⇒ n256 sequential CUPED gate |
-| 4 | R1.4 D1 pilot: mega-relabel ~700 roots of tonight's ledger at n2048/d16×2, label-movement analysis | after #1 | movement ≥ 20% on hard roots ⇒ fund D1 (targeted 30-60h relabel); else D1 dies |
+| 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier, block 2027073000) | armed behind #4 | screen instrument proven VOID for menu widening (frozen menus + wrong flag, 07-14); sequential CUPED superiority gate: RCI>0 ⇒ real; ns at final look ⇒ R1.3b closes |
+| 3 | R1.4 Stage 1 retrains: **V1b** (phase-gated search-value target), **V2** (quantile value head), **C1** (aux-weight sweep), **T0** (path consistency) | RUNNING (~18:30; restarted 04:18 after env-var incident) | offline bar: locked-val value RMSE −10% w/o q-regret damage > 0.05 ⇒ bank screen ⇒ n256 sequential CUPED gate |
+| 4 | R1.4 D1 pilot: mega-relabel ~727 roots of the 07-13 canonical ledger at n2048/d16×2 (no ghost), label-movement analysis | armed behind #3 | movement ≥ 20% on repeat-STABLE roots ⇒ fund D1; near-tie churn guard at 0.05 pts (preregistered 07-14 04:30) |
 | 5 | Survivor gates from #3 | conditional | per-arm preregistration at launch |
 | 6 | Ghost-label safety-fold corpus (~20k ghosted roots) | backstop filler | generation only; labels quarantined until the fold retrain clears locked-val |
 

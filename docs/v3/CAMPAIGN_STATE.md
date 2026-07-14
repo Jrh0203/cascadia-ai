@@ -871,3 +871,25 @@ EXPERIMENT_LOG 01:15 → 05:50):
 - menu512 bank screen auto-started 03:58 (~10 min); Stage 1 retrain
   chain (waiter PID 4153213) deploys 55e8d4c1 and starts v1b when the
   screen exits.
+
+## ADDENDUM (07-14 04:35 — Stage 1 relaunched after env-var incident; menu512 screen VOID; D1 + R1.3b gate chained)
+
+- **Stage 1 chain v3 RUNNING** (PID via waiter 4173058, started 04:18):
+  v1b training confirmed (GPU 100%). Incident: `PYTORCH_CUDA_ALLOC_CONF=
+  expandable_segments:True` is FATAL for trainers on this box (bisected;
+  bridge tolerates it) — burned two chain attempts, ~13 min GPU idle,
+  fix is never setting it for trainer processes (INFRASTRUCTURE.md
+  warning added).
+- menu512 bank screen = VOID (bit-identical to incumbent: frozen menus
+  can't widen + `--max-actions` was the wrong flag; real cap is
+  `--gumbel-root-menu`, default 256). R1.3b goes straight to a
+  preregistered champion-tier sequential CUPED superiority gate
+  (block 2027073000..3099) — chained LAST (`r13b_gate_20260714.sh`,
+  waiter PID 4173895).
+- D1 pilot chained behind Stage 1 (`d1_pilot_20260714.sh`, waiter PID
+  4173887): deploys df8e024b (python-only), builds
+  `puzzle_bank_20260714_d1_n2048` (stride 11, x2 repeats, no ghost),
+  runs `analyze_label_movement`. Hard-root definition + bar + churn
+  guard preregistered 04:30 BEFORE data generation.
+- Night queue: Stage 1 (~18:30) -> D1 (~1.2h) -> R1.3b gate (~5-8.5h).
+  Monitors: b4icf50gw (Stage 1 v3), bqdgb1bp2 (D1 + gate).
