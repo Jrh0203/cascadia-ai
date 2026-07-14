@@ -124,9 +124,12 @@ over packed expert tensors with Gumbel search-supervised action values.
   landed — [R1_4_DENSIFICATION_DESIGN.md](R1_4_DENSIFICATION_DESIGN.md)),
   CUPED landed, then adaptive budgets / menu relief / cooperative
   values.
-- **Research planning:** [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
-  (repo root, 07-10) — tiered break-100 research portfolio with
-  preregisterable kill tests.
+- **Research agenda (living):** [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md)
+  — the prioritized queue, every program's status, standing decision
+  rules, and the scoreboard of adopted/closed verdicts. Original tiered
+  portfolio with mechanisms and literature:
+  [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md)
+  (repo root, 07-10).
 - **Recovery CLOSED (07-10):** both one-seed d20 replays validated
   bit-exact and installed; both 100-row category ledgers exist. The paired
   category attribution (distq minus cycle4, n1024/d16) is **flat in every

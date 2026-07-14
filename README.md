@@ -12,6 +12,8 @@ Bacalhau-backed worker orchestration for CPU-bound jobs.
   RUN things.
 - **[Cascadia v3 — Source of Truth](docs/v3/README.md)** — the authoritative
   status of everything; start every session and handoff there.
+- **[Research Agenda](docs/v3/RESEARCH_AGENDA.md)** — the living break-100
+  experiment queue: priorities, decision rules, and the verdict scoreboard.
 - [Transformer architecture](docs/v3/ARCHITECTURE.md)
 - [Training pipeline](docs/v3/TRAINING_PIPELINE.md)
 - [Rules contract](docs/v3/RULES_CONTRACT.md)
