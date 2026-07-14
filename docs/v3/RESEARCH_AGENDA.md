@@ -40,7 +40,7 @@ you see fit to maximize our chance of breaking past 100").
 |---|---|---|---|
 | 1 | Canonical battery of adopted default (rebaseline block) | **DONE 07-14**: 98.3925 (descriptive; pre-ghost config read 98.2975 on the same block) | descriptive reference + fresh serving-default ledgers; never evidence |
 | 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier, block 2027073000) | armed behind #4 | screen instrument proven VOID for menu widening (frozen menus + wrong flag, 07-14); sequential CUPED superiority gate: RCI>0 ⇒ real; ns at final look ⇒ R1.3b closes |
-| 3 | R1.4 Stage 1 retrains: **V1b** (phase-gated search-value target), **V2** (quantile value head), **C1** (aux-weight sweep), **T0** (path consistency) | RUNNING (~18:30; restarted 04:18 after env-var incident) | offline bar: locked-val value RMSE −10% w/o q-regret damage > 0.05 ⇒ bank screen ⇒ n256 sequential CUPED gate |
+| 3 | R1.4 Stage 1 retrains: **V1b**, **V2**, **C1**, **T0** | **VERDICT 07-14: ALL FAIL the value bar** (−5.3/−3.4/−3.7/−2.1% vs −10%); no gates | ctrl arm (running) attributes the residual drift; if ctrl SWA reproduces the shared q −14%, screen ctrl SWA |
 | 4 | R1.4 D1 pilot: mega-relabel ~727 roots of the 07-13 canonical ledger at n2048/d16×2 (no ghost), label-movement analysis | armed behind #3 | movement ≥ 20% on repeat-STABLE roots ⇒ fund D1; near-tie churn guard at 0.05 pts (preregistered 07-14 04:30) |
 | 5 | Survivor gates from #3 | conditional | per-arm preregistration at launch |
 | 6 | Ghost-label safety-fold corpus (~20k ghosted roots) | backstop filler | generation only; labels quarantined until the fold retrain clears locked-val |
@@ -53,13 +53,15 @@ table values (after R1.4 infrastructure), R3.3 exactness expansion.
 
 ### Open
 
-- **R1.4 Densify the training signal** — the top-EV program; design:
+- **R1.4 Densify the training signal** — design:
   [`R1_4_DENSIFICATION_DESIGN.md`](R1_4_DENSIFICATION_DESIGN.md).
-  Stage 0 (07-13): V1 closed (search values −7 biased at opening), V1b
-  born (endgame RMSE 1.46 vs 2.71 noise floor), adjacency confirmed (T0
-  needs no schema), hard-root fraction 54.6%, unvisited policy mass 33%.
-  Stage 1 arms queued (see queue #3). Kill rule: if Stages 1-3 move
-  nothing, EI saturation survives and training-side work stops.
+  Stage 0 (07-13): V1 closed, V1b born, adjacency confirmed, hard-root
+  fraction 54.6%. **Stage 1 (07-14): V1b/V2/T0 measured NULL (value
+  RMSE −2..−5% vs −10% bar), C1 comparator flat — trainer-only value
+  densification does not clear its bar at this corpus/recipe.**
+  Survivors: D1 (pilot in queue), P1 (needs a generation run), and the
+  ctrl-SWA q-loss lead. Kill rule intact: if D1/P1 also fail, EI
+  saturation survives and training-side work stops.
 - **R1.3b/c menu coverage** — priced ~0.37 pts/game recoverable tail
   (R1.3a: greedy-256 drops the true best in 1.5% of decisions at +0.30
   each). Screen in queue (#2).
