@@ -17,6 +17,14 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .analyze_label_density import (
+    OWNER_SEAT_SCALE,
+    TILE_COUNT_SCALE,
+    TOKEN_COL_KIND_PLAYER,
+    TOKEN_COL_OWNER_SEAT,
+    TOKEN_COL_RELATIVE_SEAT,
+    TOKEN_COL_TILE_COUNT,
+)
 from .expert_tensor_shards import ExpertTensorCorpus, collate_expert_tensor_examples
 from .replay import read_replay_jsonl
 from .schema import (
@@ -46,6 +54,12 @@ class LossWeights:
     pairwise: float = 0.0
     policy_recall: float = 0.0
     q_decomposition: float = 0.0
+    # R1.4 Stage 1 arm T0 (--path-consistency-weight): L2 between the ACTIVE
+    # seat's value prediction at record t and the stop-gradient exported
+    # search_root_value of the same seat's next root (t+4 in packed shard
+    # order), masked to validated same-game pairs. 0.0 keeps the term (and
+    # its contribution to the total) entirely out of the loss graph.
+    path_consistency: float = 0.0
 
     def to_dict(self) -> dict[str, float]:
         return asdict(self)
@@ -67,6 +81,7 @@ LOSS_COMPONENT_KEYS = (
     "pairwise",
     "policy_recall",
     "q_decomposition",
+    "path_consistency",
 )
 RETENTION_METRIC_KEYS = (
     "teacher_top1",
@@ -183,6 +198,152 @@ def loss_weights_for_objective(objective: str) -> LossWeights:
             greedy_margin_value=0.25,
         )
     raise ValueError(f"unsupported objective {objective!r}")
+
+
+@dataclass(frozen=True)
+class Stage1TargetOptions:
+    """R1.4 Stage 1 preregistered target options (EXPERIMENT_LOG 2026-07-13
+    23:45; design memo `docs/v3/R1_4_DENSIFICATION_DESIGN.md` sections 4-5).
+
+    All defaults are inert: with these defaults (and
+    ``LossWeights.path_consistency == 0``) `_loss_components` is bit-identical
+    to the pre-Stage-1 trainer — the R0.x default-off pattern.
+
+    V1b (``--value-target-search-mix``): for records whose ACTIVE player has
+    at least ``value_target_search_mix_min_tiles`` tiles (the analyzer's
+    tile-count phase proxy; 13 tiles == own turn 10 == late_mid onward, where
+    Stage 0 showed search_root_value beats the 1-sample outcome noise floor),
+    the active seat's value target becomes
+    ``(1 - lambda) * final_outcome + lambda * search_root_value``. All other
+    seats, below-threshold records, and records whose active-player token row
+    is not recoverable keep the pure realized outcome.
+    """
+
+    value_target_search_mix: float = 0.0
+    value_target_search_mix_min_tiles: int = 13
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def _active_seat_and_tile_count(batch: dict[str, Any]):  # type: ignore[no-untyped-def]
+    """Recover per-record (active_seat, seat_valid, tile_count, tile_valid).
+
+    Vectorized batch-side port of ``analyze_label_density.
+    _active_player_token_row`` / ``_record_phase_fields`` — the shared column
+    constants are imported from that module so the two extractions cannot
+    drift. The ACTIVE player's public token row is the unique row with the
+    ``player`` kind one-hot set and ``relative_seat == 0``; it stores
+    ``tile_count / TILE_COUNT_SCALE`` at ``TOKEN_COL_TILE_COUNT``. Records
+    without exactly one such row are marked invalid (the analyzer's
+    ``phase == unknown``). A packed ``active_seat`` tensor (v4 shards) takes
+    precedence over the token-derived seat, matching the analyzer.
+    """
+    import torch
+
+    tokens = batch["tokens"]
+    token_mask = batch["token_mask"]
+    is_player = tokens[..., TOKEN_COL_KIND_PLAYER] > 0.5
+    is_active = tokens[..., TOKEN_COL_RELATIVE_SEAT].abs() < 0.5 / OWNER_SEAT_SCALE
+    candidates = is_player & is_active & token_mask
+    row_recoverable = candidates.sum(dim=1) == 1
+    row_index = candidates.to(torch.uint8).argmax(dim=1)
+    rows = torch.arange(tokens.shape[0], device=tokens.device)
+    active_row = tokens[rows, row_index]
+    tile_count = torch.round(active_row[:, TOKEN_COL_TILE_COUNT] * TILE_COUNT_SCALE).to(torch.long)
+    token_seat = torch.round(active_row[:, TOKEN_COL_OWNER_SEAT] * OWNER_SEAT_SCALE).to(torch.long)
+    packed_seat = batch.get("active_seat")
+    if packed_seat is not None:
+        active_seat = packed_seat.to(torch.long)
+        seat_valid = (active_seat >= 0) & (active_seat < 4)
+    else:
+        active_seat = token_seat
+        seat_valid = row_recoverable & (active_seat >= 0) & (active_seat < 4)
+    return active_seat, seat_valid, tile_count, row_recoverable
+
+
+# The active seat cycles mod 4 inside a packed game run, so record i+4 is the
+# SAME seat's next root within the same game (Stage 0 adjacency verdict).
+_PATH_CONSISTENCY_STRIDE = 4
+
+
+def _shard_path_consistency_pairs(final_score_vector, search_root_value, active_seat):  # type: ignore[no-untyped-def]
+    """Per-shard T0 pairing: (targets float32[n], valid bool[n]) in numpy.
+
+    Adjacency assumption (verified by Stage 0, EXPERIMENT_LOG 2026-07-13
+    23:45: 1,249 contiguous identical-final-score runs of mean length 80.06 =
+    1,250 games x 80 plies): packed record order preserves whole games, and
+    the active seat cycles mod 4 inside a game, so record ``i + 4`` is the
+    same seat's next search root. ``targets[i]`` is the exported
+    ``search_root_value`` of record ``i + 4``; ``valid[i]`` requires the
+    same-game guard — a bit-identical backfilled ``final_score_vector`` row
+    (mirroring ``analyze_label_density._shard_adjacency``'s run detection;
+    distinct adjacent games colliding on all four scores would slip through,
+    exactly as in the analyzer) and, when the shard packs ``active_seat``, a
+    matching seat. Pairs never cross shard boundaries; the last records of
+    each game run are unpaired by construction.
+    """
+    import numpy as np
+
+    scores = np.asarray(final_score_vector)
+    record_count = int(scores.shape[0])
+    targets = np.zeros(record_count, dtype=np.float32)
+    valid = np.zeros(record_count, dtype=bool)
+    stride = _PATH_CONSISTENCY_STRIDE
+    if record_count > stride:
+        same_game = (scores[:-stride] == scores[stride:]).all(axis=1)
+        if active_seat is not None:
+            seats = np.asarray(active_seat)
+            same_game &= seats[:-stride] == seats[stride:]
+        targets[:-stride] = np.asarray(search_root_value, dtype=np.float32)[stride:]
+        valid[:-stride] = same_game
+    return targets, valid
+
+
+def _corpus_path_consistency_arrays(corpus: Any):  # type: ignore[no-untyped-def]
+    """Corpus-level T0 target/valid tensors, indexed by global record index."""
+    import numpy as np
+    import torch
+
+    shards = getattr(corpus, "shards", None)
+    if shards is None:
+        raise ValueError(
+            "path consistency requires a packed ExpertTensorCorpus (NPZ shards); "
+            "packed record order carries the trajectory adjacency"
+        )
+    target_parts = []
+    valid_parts = []
+    for shard in shards:
+        if shard.search_root_value is None:
+            raise ValueError(
+                f"path consistency requires v2+ shards with search_root_value: {shard.path}"
+            )
+        targets, valid = _shard_path_consistency_pairs(
+            shard.final_score_vector,
+            shard.search_root_value,
+            shard.active_seat,
+        )
+        target_parts.append(targets)
+        valid_parts.append(valid)
+    return (
+        torch.from_numpy(np.concatenate(target_parts)),
+        torch.from_numpy(np.concatenate(valid_parts)),
+    )
+
+
+def _attach_path_consistency(batch: dict[str, Any], arrays, indices) -> None:  # type: ignore[no-untyped-def]
+    """Attach the T0 pair target/valid rows for this batch's record indices.
+
+    Runs on the host after collation (both the in-process path and the
+    DataLoader path recompute identical index lists from the seeded batch
+    functions, so indexing corpus-level arrays here is exact for both).
+    """
+    import torch
+
+    targets, valid = arrays
+    index_tensor = torch.as_tensor(list(indices), dtype=torch.long)
+    batch["path_consistency_target"] = targets[index_tensor]
+    batch["path_consistency_valid"] = valid[index_tensor]
 
 
 def _sha256(path: Path) -> str:
@@ -510,7 +671,12 @@ def _add_pairwise_supervision(batch: dict[str, Any], config: Any) -> None:
     batch["pairwise_snr"] = concatenate_or_empty(snrs, dtype=torch.float32)
 
 
-def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: LossWeights):  # type: ignore[no-untyped-def]
+def _loss_components(
+    outputs: dict[str, Any],
+    batch: dict[str, Any],
+    weights: LossWeights,
+    options: Stage1TargetOptions | None = None,
+):  # type: ignore[no-untyped-def]
     import torch
     import torch.nn.functional as F
 
@@ -593,7 +759,58 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
     else:
         teacher_se_sq = torch.zeros_like(target_final_q)
         q = outputs["q"].sum() * 0.0
-    value = F.mse_loss(outputs["value_vector"], batch["target_value"])
+    # ---- V1b: phase-gated search-value target mixing (default-off) ----
+    # Guarded so the flag-off path leaves target_value the SAME tensor object
+    # and the value-loss graph byte-identical to the pre-Stage-1 trainer.
+    target_value = batch["target_value"]
+    value_target_search_mix = 0.0 if options is None else float(options.value_target_search_mix)
+    if value_target_search_mix > 0.0:
+        search_root_value = batch.get("search_root_value")
+        if search_root_value is None:
+            raise ValueError(
+                "value_target_search_mix requires search_root_value in every batch "
+                "(v2+ shards / gumbel self-play records)"
+            )
+        mix_seat, mix_seat_valid, tile_count, tile_valid = _active_seat_and_tile_count(batch)
+        gate = (
+            mix_seat_valid
+            & tile_valid
+            & (tile_count >= int(options.value_target_search_mix_min_tiles))
+        )
+        rows = torch.arange(target_value.shape[0], device=target_value.device)
+        seat_index = mix_seat.clamp(0, target_value.shape[1] - 1)
+        outcome_active = target_value[rows, seat_index]
+        mixed_active = torch.where(
+            gate,
+            (1.0 - value_target_search_mix) * outcome_active
+            + value_target_search_mix * search_root_value,
+            outcome_active,
+        )
+        target_value = target_value.clone()
+        target_value[rows, seat_index] = mixed_active
+    # ---- V2: K-quantile distributional value head (default-off) ----
+    # "value_quantile_values" exists only when the model was built with
+    # config.value_quantiles > 0 (--value-quantiles K). Pinball loss at
+    # levels (k+0.5)/K per seat, mirroring the q-head quantile machinery
+    # above; the served/reported "value_vector" is the quantile mean.
+    value_quantile_values = outputs.get("value_quantile_values")
+    if value_quantile_values is not None:
+        value_levels_count = value_quantile_values.shape[-1]
+        value_levels = (
+            torch.arange(
+                value_levels_count,
+                dtype=value_quantile_values.dtype,
+                device=value_quantile_values.device,
+            )
+            + 0.5
+        ) / value_levels_count
+        value_residual = target_value.unsqueeze(-1) - value_quantile_values
+        value = torch.maximum(
+            value_levels * value_residual,
+            (value_levels - 1.0) * value_residual,
+        ).mean()
+    else:
+        value = F.mse_loss(outputs["value_vector"], target_value)
     score = F.mse_loss(outputs["score_decomposition"], batch["target_score"])
     rank = F.cross_entropy(outputs["rank_logits"].reshape(-1, 4), batch["target_rank"].reshape(-1))
     uncertainty_target = torch.sqrt(teacher_se_sq.clamp_min(0.0)).masked_select(q_mask)
@@ -670,6 +887,37 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         pairwise_accuracy = pairwise.detach()
         pairwise_examples = pairwise.detach()
         pairwise_mean_snr = pairwise.detach()
+    # ---- T0: adjacency path consistency (default-off) ----
+    # Target-side formulation (design memo section 4, T1(i)): L2 between the
+    # ACTIVE seat's value prediction at record t and the COLLATED
+    # search_root_value of the same seat's next root t+4 in packed order (a
+    # constant behind a stop-gradient — the detach() is belt-and-braces
+    # documentation). The trainer's epoch shuffle scatters a game's records
+    # across batches, so a model-vs-model value(t)/value(t+4) pair would need
+    # either paired feature serving (doubling batch memory and forward
+    # compute) or a loader restructure; the collated-scalar variant needs one
+    # extra scalar array (see _shard_path_consistency_pairs) and is the
+    # honestly implementable prototype. Limitation: the t+4 side is the
+    # generation-time search posterior, not the current model — this is
+    # consistency-toward-search, not pure self-consistency.
+    path_consistency_target = batch.get("path_consistency_target")
+    if path_consistency_target is not None:
+        path_consistency_valid = batch.get("path_consistency_valid")
+        if path_consistency_valid is None:
+            raise ValueError("path_consistency_target requires path_consistency_valid")
+        pc_seat, pc_seat_valid, _, _ = _active_seat_and_tile_count(batch)
+        pc_rows = torch.arange(path_consistency_target.shape[0], device=path_consistency_target.device)
+        pc_prediction = outputs["value_vector"][
+            pc_rows, pc_seat.clamp(0, outputs["value_vector"].shape[1] - 1)
+        ]
+        pc_mask = path_consistency_valid & pc_seat_valid
+        if pc_mask.any():
+            pc_residual = pc_prediction[pc_mask] - path_consistency_target[pc_mask].detach()
+            path_consistency = (pc_residual * pc_residual).mean()
+        else:
+            path_consistency = outputs["value_vector"].sum() * 0.0
+    else:
+        path_consistency = outputs["value_vector"].sum() * 0.0
     (
         policy_recall,
         policy_best_top16,
@@ -698,6 +946,11 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         + weights.policy_recall * policy_recall
         + weights.q_decomposition * q_decomposition
     )
+    if weights.path_consistency != 0.0:
+        # Guarded add: with the default weight 0.0 the total expression above
+        # is byte-identical to the pre-Stage-1 trainer (no extra graph node,
+        # no zero-add), preserving the R0.x bit-identity contract.
+        total = total + weights.path_consistency * path_consistency
     predicted = logits.argmax(dim=1)
     predicted_by_final_q = predicted_final_q.masked_fill(~mask, -1.0e9).argmax(dim=1)
     teacher_target_logit = logits.gather(1, teacher_target.unsqueeze(1)).squeeze(1)
@@ -724,6 +977,7 @@ def _loss_components(outputs: dict[str, Any], batch: dict[str, Any], weights: Lo
         "pairwise": pairwise.detach(),
         "policy_recall": policy_recall.detach(),
         "q_decomposition": q_decomposition.detach(),
+        "path_consistency": path_consistency.detach(),
         "teacher_top1": (predicted == teacher_target).to(torch.float32).mean().detach(),
         "greedy_top1": (predicted == greedy_target).to(torch.float32).mean().detach(),
         "mean_teacher_rank": teacher_rank.mean().detach(),
@@ -1370,6 +1624,8 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
     device,
     batch_size: int,
     max_batches: int | None,
+    options: Stage1TargetOptions | None = None,
+    path_consistency_arrays=None,
 ) -> dict[str, Any]:
     record_count = _corpus_len(records)
     if record_count <= 0:
@@ -1392,9 +1648,11 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
             batch_records = _corpus_examples(records, indices, corpus_format=corpus_format)
             host_batch = _collate_examples(batch_records, corpus_format=corpus_format)
             _add_pairwise_supervision(host_batch, model.config)
+            if path_consistency_arrays is not None:
+                _attach_path_consistency(host_batch, path_consistency_arrays, indices)
             batch = _move_to_device(host_batch, device)
             outputs = _model_forward(model, batch)
-            losses = _loss_components(outputs, batch, weights)
+            losses = _loss_components(outputs, batch, weights, options=options)
             batch_weight = len(batch_records)
             record_total += batch_weight
             loss_values = _loss_scalars(losses, AGGREGATE_KEYS)
@@ -1631,6 +1889,7 @@ def _resume_identity(
     early_stop_selection_guard_failures: int,
     early_stop_after_step: int,
     train_source_weights: list[float] | None,
+    stage1_target_options: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "schema_ids": schema_ids,
@@ -1654,6 +1913,7 @@ def _resume_identity(
         "early_stop_selection_guard_failures": early_stop_selection_guard_failures,
         "early_stop_after_step": early_stop_after_step,
         "train_source_weights": train_source_weights,
+        "stage1_target_options": stage1_target_options,
     }
 
 
@@ -1842,6 +2102,9 @@ def run_training(
     val_format: str,
     model_size: str,
     q_quantiles: int = 1,
+    value_quantiles: int = 0,
+    value_target_search_mix: float = 0.0,
+    value_target_search_mix_min_tiles: int = 13,
     q_decomposition: bool = False,
     pairwise_comparator: bool = False,
     pairwise_rank: int = 64,
@@ -1920,6 +2183,12 @@ def run_training(
         raise ValueError("--init-manifest and --resume are mutually exclusive")
     if q_quantiles <= 0:
         raise ValueError("q_quantiles must be positive")
+    if value_quantiles < 0:
+        raise ValueError("value_quantiles must be nonnegative (0 keeps the scalar value head)")
+    if not 0.0 <= value_target_search_mix <= 1.0:
+        raise ValueError("value_target_search_mix must be in [0, 1]")
+    if value_target_search_mix_min_tiles < 0:
+        raise ValueError("value_target_search_mix_min_tiles must be nonnegative")
     q_decomposition = q_decomposition or objective == "gumbel-selfplay-structured-q"
     if pairwise_rank <= 0:
         raise ValueError("pairwise_rank must be positive")
@@ -1971,9 +2240,32 @@ def run_training(
         raise ValueError("early_stop_selection_guard_failures must be nonnegative")
     if early_stop_after_step < 0:
         raise ValueError("early_stop_after_step must be nonnegative")
+    # Loss weights and Stage 1 target options resolve before data loading so
+    # the T0 corpus checks below can see the final path_consistency weight.
+    # (Hoisted from below the corpus load; `loss_weights_for_objective` is a
+    # pure function, so the move is behavior-neutral.)
+    weights = loss_weights or loss_weights_for_objective(objective)
+    stage1_target_options = Stage1TargetOptions(
+        value_target_search_mix=value_target_search_mix,
+        value_target_search_mix_min_tiles=value_target_search_mix_min_tiles,
+    )
+    path_consistency_enabled = weights.path_consistency != 0.0
+    if path_consistency_enabled and (train_format != "npz" or val_format != "npz"):
+        raise ValueError(
+            "path consistency requires packed NPZ train and validation corpora "
+            "(packed record order carries the trajectory adjacency)"
+        )
     device = torch.device(device_name if device_name != "cuda" or torch.cuda.is_available() else "cpu")
     train_records = _load_corpus(train_paths, corpus_format=train_format)
     val_records = _load_corpus(val_paths, corpus_format=val_format)
+    # T0 pair arrays are built against the FULL packed corpora before any
+    # overfit slicing so global record indices stay aligned with packed order.
+    train_path_consistency = (
+        _corpus_path_consistency_arrays(train_records) if path_consistency_enabled else None
+    )
+    val_path_consistency = (
+        _corpus_path_consistency_arrays(val_records) if path_consistency_enabled else None
+    )
     loaded_schema_ids = _schema_ids_for_loaded_corpora(
         (train_records, train_format),
         (val_records, val_format),
@@ -2006,6 +2298,7 @@ def run_training(
         )
         val_records = train_records
         val_format = train_format
+        val_path_consistency = train_path_consistency
         train_source_lengths = None
         normalized_train_source_weights = None
     if max_example_passes > 0.0 and not overfit_one_batch:
@@ -2023,7 +2316,6 @@ def run_training(
                     flush=True,
                 )
                 steps = max_steps
-    weights = loss_weights or loss_weights_for_objective(objective)
     config = config_for_size(model_size)
     pairwise_comparator = pairwise_comparator or objective == "gumbel-selfplay-pairwise"
     model_name = config.model_name
@@ -2041,6 +2333,7 @@ def run_training(
         config,
         model_name=model_name,
         q_quantiles=q_quantiles,
+        value_quantiles=value_quantiles,
         q_decomposition=q_decomposition,
         pairwise_comparator=pairwise_comparator,
         pairwise_rank=pairwise_rank,
@@ -2167,6 +2460,7 @@ def run_training(
         early_stop_selection_guard_failures=early_stop_selection_guard_failures,
         early_stop_after_step=early_stop_after_step,
         train_source_weights=normalized_train_source_weights,
+        stage1_target_options=stage1_target_options.to_dict(),
     )
     report_base = {
         "schema_ids": schema_ids,
@@ -2210,6 +2504,23 @@ def run_training(
                 if normalized_train_source_weights is not None
                 else {"mode": "deterministic_epoch_shuffle"}
             ),
+            # R1.4 Stage 1 preregistered arms (EXPERIMENT_LOG 2026-07-13
+            # 23:45). All default-off; recorded here so every recipe stays
+            # replayable.
+            "stage1": {
+                "value_quantiles": value_quantiles,
+                "value_target_search_mix": value_target_search_mix,
+                "value_target_search_mix_min_tiles": value_target_search_mix_min_tiles,
+                "path_consistency_weight": weights.path_consistency,
+                "path_consistency_formulation": (
+                    "L2(value_vector[active_seat] at t, stop-grad collated "
+                    "search_root_value at t+4 same-shard packed order); pairs "
+                    "valid iff bit-identical final_score_vector and matching "
+                    "active_seat (same-game adjacency guard)"
+                    if weights.path_consistency != 0.0
+                    else None
+                ),
+            },
         },
         "objective": objective,
         "selection_metric": selection_metric,
@@ -2311,6 +2622,12 @@ def run_training(
                 batch_examples = _corpus_examples(train_records, indices, corpus_format=train_format)
                 host_batch = _collate_examples(batch_examples, corpus_format=train_format)
             _add_pairwise_supervision(host_batch, config)
+            if train_path_consistency is not None:
+                # `indices` is recomputed identically above for both the
+                # in-process and DataLoader paths (the loader's sampler runs
+                # the same seeded index functions), so corpus-level T0 arrays
+                # can be attached here for either path.
+                _attach_path_consistency(host_batch, train_path_consistency, indices)
             timer.stop("data", phase_started)
             phase_started = timer.start()
             batch = _move_to_device(host_batch, device, non_blocking=pin_memory)
@@ -2331,7 +2648,7 @@ def run_training(
                 enabled=autocast_enabled,
             ):
                 outputs = _model_forward(train_model, batch)
-                losses = _loss_components(outputs, batch, weights)
+                losses = _loss_components(outputs, batch, weights, options=stage1_target_options)
                 loss = losses["total"] / grad_accum
             timer.stop("forward", phase_started)
             phase_started = timer.start()
@@ -2358,6 +2675,8 @@ def run_training(
                     device=device,
                     batch_size=batch_size,
                     max_batches=val_max_batches,
+                    options=stage1_target_options,
+                    path_consistency_arrays=val_path_consistency,
                 )
             timer.stop("eval", phase_started)
             loader_cursor = {
@@ -2600,6 +2919,32 @@ def main() -> int:
         help="K>1 trains a distributional (quantile) score-to-go head with pinball loss",
     )
     parser.add_argument(
+        "--value-quantiles",
+        type=int,
+        default=0,
+        help="R1.4 Stage 1 V2: K>0 trains a per-seat K-quantile distributional value head with "
+        "pinball loss at levels (k+0.5)/K; the served/reported value_vector is the quantile "
+        "mean. The head reshapes 4 -> 4K, so warm starts from scalar-value checkpoints need "
+        "--init-skip-mismatched. 0 keeps the legacy scalar head bit-for-bit",
+    )
+    parser.add_argument(
+        "--value-target-search-mix",
+        type=float,
+        default=0.0,
+        help="R1.4 Stage 1 V1b: lambda in [0, 1]. For records whose active player has at least "
+        "--value-target-search-mix-min-tiles tiles, the ACTIVE seat's value target becomes "
+        "(1-lambda)*final_outcome + lambda*search_root_value; other seats and earlier records "
+        "keep pure outcomes. 0.0 is bit-identical to the unmixed trainer",
+    )
+    parser.add_argument(
+        "--value-target-search-mix-min-tiles",
+        type=int,
+        default=13,
+        help="V1b phase gate: minimum active-player tile count (analyze_label_density phase "
+        "proxy; 13 = own turn 10 = late_mid onward, where Stage 0 showed search_root_value "
+        "beats the outcome noise floor)",
+    )
+    parser.add_argument(
         "--q-decomposition",
         action="store_true",
         help="Predict score-to-go as exact-grounded wildlife/habitat/Nature components (v4 NPZ only)",
@@ -2667,11 +3012,25 @@ def main() -> int:
     parser.add_argument("--selection-metric", default="locked_val_total")
     parser.add_argument("--selection-mode", choices=["min", "max"], default="min")
     parser.add_argument("--policy-weight", type=float)
-    parser.add_argument("--q-loss-weight", type=float)
-    parser.add_argument("--value-loss-weight", type=float)
-    parser.add_argument("--score-loss-weight", type=float)
-    parser.add_argument("--rank-loss-weight", type=float)
-    parser.add_argument("--uncertainty-loss-weight", type=float)
+    # R1.4 Stage 1 C1 short spellings are aliases of the legacy --*-loss-weight
+    # flags; both map to the same destination and override the objective's
+    # LossWeights exactly like --policy-weight (None = keep the objective's
+    # value).
+    parser.add_argument("--q-loss-weight", "--q-weight", type=float)
+    parser.add_argument("--value-loss-weight", "--value-weight", type=float)
+    parser.add_argument("--score-loss-weight", "--score-weight", type=float)
+    parser.add_argument("--rank-loss-weight", "--rank-weight", type=float)
+    parser.add_argument("--uncertainty-loss-weight", "--uncertainty-weight", type=float)
+    parser.add_argument(
+        "--path-consistency-weight",
+        type=float,
+        help="R1.4 Stage 1 T0 (default off): weight for the adjacency path-consistency loss — "
+        "L2 between the ACTIVE seat's value prediction at record t and the stop-gradient "
+        "COLLATED search_root_value of the same seat's next root (t+4 in packed shard order; "
+        "target-side variant, so no second forward pass), masked to pairs validated by "
+        "bit-identical final_score_vector and matching active_seat. Requires packed NPZ v2+ "
+        "train/val corpora served in packed order",
+    )
     parser.add_argument("--greedy-policy-weight", type=float)
     parser.add_argument("--greedy-margin-weight", type=float)
     parser.add_argument("--greedy-margin-value", type=float)
@@ -2786,6 +3145,7 @@ def main() -> int:
         "pairwise": args.pairwise_loss_weight,
         "policy_recall": args.policy_recall_loss_weight,
         "q_decomposition": args.q_decomposition_loss_weight,
+        "path_consistency": args.path_consistency_weight,
     }.items():
         if value is not None:
             loss_weights = replace(loss_weights, **{field_name: value})
@@ -2797,6 +3157,9 @@ def main() -> int:
         val_format=args.val_format,
         model_size=args.model_size,
         q_quantiles=args.q_quantiles,
+        value_quantiles=args.value_quantiles,
+        value_target_search_mix=args.value_target_search_mix,
+        value_target_search_mix_min_tiles=args.value_target_search_mix_min_tiles,
         q_decomposition=args.q_decomposition,
         pairwise_comparator=args.pairwise_comparator,
         pairwise_rank=args.pairwise_rank,

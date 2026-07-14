@@ -40,6 +40,14 @@ class CascadiaFormerConfig:
     # quantile-risk mode for research ablations. 1 keeps the legacy scalar
     # head bit-for-bit.
     q_quantiles: int = 1
+    # R1.4 Stage 1 V2: >0 turns the 4-seat scalar value head into a per-seat
+    # K-quantile head (pinball loss at levels (k+0.5)/K in the trainer). The
+    # served "value_vector" output becomes the per-seat quantile mean, so
+    # every downstream consumer keeps its scalar contract. 0 preserves the
+    # legacy scalar head bit-for-bit (same parameter shape, same init RNG
+    # stream). The head reshape (4 -> 4K) means warm starts from scalar-value
+    # checkpoints require --init-skip-mismatched.
+    value_quantiles: int = 0
     # Opt-in structured score-to-go head. Each action predicts wildlife,
     # habitat (including habitat bonuses), and Nature-token residuals; their
     # sum is the ordinary q output. Disabled preserves the legacy q_head and
@@ -227,7 +235,9 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
                 else None
             )
             self.uncertainty_head = nn.Linear(cfg.d_model, 1)
-            self.value_head = nn.Linear(cfg.d_model, cfg.seats)
+            # value_quantiles == 0 keeps the legacy scalar head bit-for-bit:
+            # max(1, 0) == 1, so shape AND init RNG consumption are unchanged.
+            self.value_head = nn.Linear(cfg.d_model, cfg.seats * max(1, cfg.value_quantiles))
             self.rank_head = nn.Linear(cfg.d_model, cfg.seats * cfg.seats)
             self.differential_head = nn.Linear(cfg.d_model, cfg.seats)
             self.score_head = nn.Linear(cfg.d_model, len(cfg.score_categories) * cfg.seats)
@@ -442,13 +452,20 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
                     q_out = q_raw.mean(dim=-1)
                 else:
                     q_out = q_raw.squeeze(-1)
+            value_raw = self.value_head(root_h)
+            if cfg.value_quantiles > 0:
+                value_quantile_values = value_raw.view(-1, cfg.seats, cfg.value_quantiles)
+                value_vector = value_quantile_values.mean(dim=-1)
+            else:
+                value_quantile_values = None
+                value_vector = value_raw
             outputs = {
                 "logits": self.legal_logits(decoded).squeeze(-1),
                 "q": q_out,
                 "uncertainty": torch.nn.functional.softplus(
                     self.uncertainty_head(decoded).squeeze(-1)
                 ),
-                "value_vector": self.value_head(root_h),
+                "value_vector": value_vector,
                 "rank_logits": self.rank_head(root_h).view(-1, cfg.seats, cfg.seats),
                 "differential": self.differential_head(root_h),
                 "score_decomposition": self.score_head(root_h).view(
@@ -462,6 +479,8 @@ def build_cascadiaformer(config: CascadiaFormerConfig | None = None):
             }
             if cfg.q_quantiles > 1:
                 outputs["q_quantile_values"] = q_raw
+            if value_quantile_values is not None:
+                outputs["value_quantile_values"] = value_quantile_values
             if component_means is not None:
                 outputs["q_score_to_go_components"] = component_means
                 if cfg.q_quantiles > 1:

@@ -99,13 +99,16 @@ PHASE_NAMES = tuple(name for name, _, _ in PHASE_BINS) + ("unknown",)
 # feature_tensors.rs::public_token_features): 6 token-kind one-hots,
 # owner_seat/3, relative_seat/3, market_slot/3, 6 coord features, then
 # nature_tokens/10 at 15 and tile_count/23 at 16.
-_TOKEN_COL_KIND_PLAYER = 0
-_TOKEN_COL_OWNER_SEAT = 6
-_TOKEN_COL_RELATIVE_SEAT = 7
-_TOKEN_COL_TILE_COUNT = 16
-_OWNER_SEAT_SCALE = 3.0
-_TILE_COUNT_SCALE = 23.0
-_STARTER_TILE_COUNT = 3
+# Public on purpose: `torch_train_cascadiaformer._active_seat_and_tile_count`
+# (R1.4 Stage 1 V1b phase gate) imports these so the trainer's batch-side
+# extraction and this analyzer's per-record extraction cannot drift.
+TOKEN_COL_KIND_PLAYER = 0
+TOKEN_COL_OWNER_SEAT = 6
+TOKEN_COL_RELATIVE_SEAT = 7
+TOKEN_COL_TILE_COUNT = 16
+OWNER_SEAT_SCALE = 3.0
+TILE_COUNT_SCALE = 23.0
+STARTER_TILE_COUNT = 3
 _TURNS_PER_PLAYER = 20
 
 # Fall back to record-index stratification when tile-count recovery fails
@@ -170,8 +173,8 @@ def _active_player_token_row(shard: ExpertTensorShard, index: int) -> Any | None
     tokens = np.asarray(shard.tokens[token_start:token_end], dtype=np.float32)
     if tokens.size == 0:
         return None
-    is_player = tokens[:, _TOKEN_COL_KIND_PLAYER] > 0.5
-    is_active = np.abs(tokens[:, _TOKEN_COL_RELATIVE_SEAT]) < 0.5 / _OWNER_SEAT_SCALE
+    is_player = tokens[:, TOKEN_COL_KIND_PLAYER] > 0.5
+    is_active = np.abs(tokens[:, TOKEN_COL_RELATIVE_SEAT]) < 0.5 / OWNER_SEAT_SCALE
     rows = np.flatnonzero(is_player & is_active)
     if rows.shape[0] != 1:
         return None
@@ -181,8 +184,8 @@ def _active_player_token_row(shard: ExpertTensorShard, index: int) -> Any | None
 def _record_phase_fields(shard: ExpertTensorShard, index: int) -> dict[str, Any]:
     """Recover active seat, tile count, and turn phase for one record."""
     row = _active_player_token_row(shard, index)
-    token_seat = None if row is None else int(round(float(row[_TOKEN_COL_OWNER_SEAT]) * _OWNER_SEAT_SCALE))
-    tile_count = None if row is None else int(round(float(row[_TOKEN_COL_TILE_COUNT]) * _TILE_COUNT_SCALE))
+    token_seat = None if row is None else int(round(float(row[TOKEN_COL_OWNER_SEAT]) * OWNER_SEAT_SCALE))
+    tile_count = None if row is None else int(round(float(row[TOKEN_COL_TILE_COUNT]) * TILE_COUNT_SCALE))
     if shard.active_seat is not None:
         active_seat = int(shard.active_seat[index])
     else:
@@ -190,7 +193,7 @@ def _record_phase_fields(shard: ExpertTensorShard, index: int) -> dict[str, Any]
     turns_played = None
     phase = "unknown"
     if tile_count is not None:
-        turns_played = max(0, min(_TURNS_PER_PLAYER - 1, tile_count - _STARTER_TILE_COUNT))
+        turns_played = max(0, min(_TURNS_PER_PLAYER - 1, tile_count - STARTER_TILE_COUNT))
         phase = _phase_for_turn(turns_played)
     return {
         "active_seat": active_seat,
