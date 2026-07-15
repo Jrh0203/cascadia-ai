@@ -893,3 +893,22 @@ EXPERIMENT_LOG 01:15 → 05:50):
   guard preregistered 04:30 BEFORE data generation.
 - Night queue: Stage 1 (~18:30) -> D1 (~1.2h) -> R1.3b gate (~5-8.5h).
   Monitors: b4icf50gw (Stage 1 v3), bqdgb1bp2 (D1 + gate).
+
+## ADDENDUM (07-15 18:15 — Stage A tooling landed; night pipeline armed: fold verdict -> rebuild -> Stage A generation)
+
+- **D1 FUNDED** (pilot 43.2% stable movement at 0.40 pts stake;
+  full-ledger replication 43.6% on 7,600 roots). Stage A preregistered
+  (EXPERIMENT_LOG 07-15 18:00): tooling complete (`--probe-roots`,
+  `--decisions-out`, `--hard-roots-out`; 65/65 exporter tests).
+- **Stage 1 fully closed** (all four flag arms + ctrl-SWA lead: nulls;
+  everything was continued training). **R1.3b closed** (root-menu 512
+  ns at final look).
+- **Live on john0:** ghost-fold chain (PID 148805: corpus gen ~1.5h ->
+  fold retrain ~2h -> CPU re-eval -> SWA screen). Behind it
+  (waiter 150316): Stage A generation — deploys a449b162, REBUILDS the
+  exporter, applies the fold safety bar mechanically (ghost ON only on
+  a clean numeric pass; fallback OFF), generates 1,250 seeds
+  (2026794000..5249) with both sidecars (~7-10h).
+- **Awaiting John:** the Stage A relabel tranche (~26h GPU at 15k
+  roots) + the remaining bank-mode training-record emission feature.
+  Monitors: bsfmncz84 (fold), b6f1ousg5 (Stage A gen).
