@@ -7006,3 +7006,23 @@ anywhere cannot idle the GPU.
 - Fold-vs-ctrl descriptives (same-instrument): value RMSE 2.8697 vs
   2.8056, q 0.2298 vs 0.2198 — the ghost fold sits inside the
   continued-training band on every axis.
+
+## 2026-07-15 18:45 — Pricing correction: ghost generation is ~2x SLOWER in all-seats selfplay (safety unaffected); Stage A gen ETA revised
+
+- The fold corpus measured it: 250 ghosted seeds at 46.4 s/seed vs
+  cycle4's 21.4 s/seed non-ghost (same n256 grade; session configs
+  differ — 12 shared vs cycle4's setting — so treat as approximate).
+  Mechanism: at SERVING, ghosting replaces opponent search and is a
+  0.688x win; in all-seats SELFPLAY every seat ghosts its opponents'
+  interior nodes via model policy evals, ADDING bridge traffic
+  instead. **Ghost pricing is a serving-side win only; do not assume
+  it for generation.** The safety clearance (18:35) stands — labels
+  are teacher-safe — but the economic motive for ghost generation is
+  gone pending a direct A/B.
+- Stage A generation (running, ghost ON per the mechanical bar): ETA
+  widens to ~7-16h (ends between ~02:00 and ~10:30). Letting it run:
+  the corpus is scientifically valid either way, a restart would burn
+  finished work, and the ghost-vs-clean generation A/B becomes free
+  descriptive data (this corpus vs cycle4's timing at matched grade).
+- Stage A relabel/retrain plans unchanged; the relabel tranche still
+  awaits John's go.
