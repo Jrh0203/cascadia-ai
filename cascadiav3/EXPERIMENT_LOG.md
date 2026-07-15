@@ -6886,3 +6886,41 @@ anywhere cannot idle the GPU.
   screens for training-side candidates. R1.4 lives exclusively through
   D1 (funded, Stage A design pending) and P1 (generation-side).
 - GPU: full-ledger relabel running (~13h, to ~14:45).
+
+## 2026-07-15 15:10 — Full-ledger relabel REPLICATES the pilot at 10x; Stage A must be generation-first (raw records gone); ghost safety fold LAUNCHED
+
+- **Full relabel COMPLETE (13.0h, 7,600 roots):** stable movement
+  **43.6%** (pilot 43.2%), unstable fraction 42.6% (pilot 45.7%), mean
+  moved regret 0.361 (pilot 0.397), phase gradient identical (opening
+  50.3% > mid 49.5% > late 36.9%). The D1 label-noise measurement is
+  now precise: `puzzle_bank_20260715_d1_full_n2048` (7,600 mega-labeled
+  roots) is the standing benchmark for D1 Stage A eval and R0.5/R3.4
+  adaptive-budget supervision.
+- **Stage A design constraint discovered:** cycle4's raw per-root
+  generation records are GONE from john0 (only packed npz shards
+  remain, and packing discards seed/ply + per-action arrays — the
+  known v4 limitation). Hard-root harvesting from the existing corpus
+  is therefore impossible; **D1 Stage A becomes generation-first**:
+  regenerate a corpus with raw retention -> harvest hard roots (Stage
+  0 criterion) -> mega-relabel 10-20k (needs a small exporter feature:
+  probe selection by (seed,ply) mask, since stride can't target) ->
+  fold as weighted shards -> retrain with the distq head -> screen ->
+  gate. Estimated 40-50h GPU end to end. This is the queue's top item
+  but is deliberately NOT launched yet — John should see the plan
+  first (it locks the GPU for ~2 days).
+- **Ghost-label safety fold LAUNCHED** (queue #6; PID 148805;
+  preregistered here BEFORE any read): 250-seed corpus at EXACT
+  cycle-4 generation grade (n256/top16/d4/blend0.5, exact-endgame 0,
+  TF32 on, M teacher) + `--gumbel-ghost-opponents` as the only
+  variable, seeds 2026793000..3249 (registered), then top64+tail
+  filtering, then a fold retrain (champion recipe + ghost shard at
+  weight 1 on the 4,2,1 scale = 0.25 old units, the fleet-fold
+  precedent), then reads vs the ctrl arm (same recipe, no fold — a
+  perfect paired control). **Safety bar (preregistered): fold SWA bank
+  regret within +-0.015 of ctrl SWA's +0.2470 AND unmixed q-regret
+  within +0.01 of ctrl => ghost labels SAFE at 0.25-fold** (unlocking
+  ~0.69x generation pricing for Stage A); any excess keeps the
+  quarantine. Chain: gen (~1.5h) -> shard pipeline -> retrain (~2h) ->
+  CPU re-eval -> SWA bank screen (~6 min). Note the step-1 selection
+  degeneracy is expected again; all reads use step-2500/SWA vs ctrl's
+  matching checkpoints.
