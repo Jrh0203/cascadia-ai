@@ -215,6 +215,7 @@ Stage 1 retrain slate twice). Never export it in a script that launches
 | 2027072900–2999 | RELEASED (07-13 23:30): R3.2 depth-2 gate never launched — screen failed its bar; block never touched, safe to re-register |
 | 2027073000–3099 | R1.3b root-menu-512 gate (07-14): FINAL_INCONCLUSIVE at look 4, R1.3b closed — block burned |
 | 2026793000–3249 | RESERVED (07-15): ghost-label safety-fold corpus generation (250 seeds, cycle4 grade + ghost opponents; labels quarantined pending the fold read) |
+| 2026794000–5249 | RESERVED (07-15): D1 Stage A generation corpus (1,250 seeds, cycle grade, decisions+hard-roots sidecars; ghost per fold verdict) |
 | 2027073000–3129 | pairwise label audit (3000+) and v3 fit/selection/validation corpus (3100–29) |
 | 2027073300–3301 | parallel leaf-rollout screens |
 | 2027073400–3447 | jobs12/16/24 CUDA concurrency calibration (queued) |

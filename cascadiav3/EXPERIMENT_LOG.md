@@ -6924,3 +6924,42 @@ anywhere cannot idle the GPU.
   CPU re-eval -> SWA bank screen (~6 min). Note the step-1 selection
   degeneracy is expected again; all reads use step-2500/SWA vs ctrl's
   matching checkpoints.
+
+## 2026-07-15 18:00 — D1 Stage A PREREGISTERED (design + tooling landed); generation launches tonight after the fold verdict; relabel tranche awaits John
+
+**Stage A tooling (all committed, 65/65 exporter tests):**
+- `--probe-roots` (95adb44f): puzzle-bank root selection by (seed,ply)
+  JSONL mask — replaces stride, skips unlisted seeds without replay.
+- `--decisions-out` + `--hard-roots-out` (a34b269a): selfplay-corpus
+  generation sidecars — a replayable gumbel_decision ledger (proven to
+  round-trip through the puzzle-bank replay in-test) and a per-root
+  Stage 0 hardness census (top1-top2 completed-Q gap vs pairwise SE)
+  computed in Rust at generation time. Together these remove the
+  blocker found at 15:10 (packed shards discard provenance).
+
+**Stage A preregistered plan:**
+1. **Generation** (LAUNCHES TONIGHT after the ghost-fold verdict; a
+   fresh corpus is reusable for any future cycle regardless of D1's
+   fate): 1,250 seeds x 80 plies at cycle grade (n256/top16/d4/blend
+   0.5, M incumbent teacher, TF32 on), seeds `2026794000..5249`
+   (registered below), with BOTH sidecars. Ghost opponents ON iff the
+   fold verdict is SAFE (0.69x pricing), else OFF. Requires a john0
+   exporter rebuild (Rust changed) — done in the gap after the fold
+   chain exits. ~7-10h.
+2. **Harvest** (CPU): (seed,ply) mask = census rows with hard==true,
+   stratified sample capped at 15k roots weighted toward opening/mid
+   (movement 50/49% vs late 37%).
+3. **Relabel tranche 1** (**AWAITS JOHN — ~26h GPU at 15k roots x2 at
+   n2048/d16**): `--puzzle-bank --probe-roots` on the generation
+   ledger, no ghost (teacher labels).
+4. **Fold + retrain**: needs one more exporter feature (bank-mode
+   training-record emission — bank rows are analysis records, not v4
+   training records); build tomorrow. Retrain = champion recipe +
+   relabeled shard, **distq head (--q-quantiles 8)** per the §4-D1
+   precondition (Stage 1 proved scalar heads can't absorb better
+   labels). Offline read vs ctrl; bank screen; n256 sequential CUPED
+   gate on a fresh block, preregistered at launch.
+5. **Kill rules**: if the retrain's bank regret does not improve
+   >= 0.010 vs ctrl-SWA's +0.2470 at screen, D1 dies before any gate;
+   if the gate is ns at final look, D1 closes and with it R1.4's
+   training side (EI saturation confirmed at the label margin).
