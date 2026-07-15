@@ -39,7 +39,7 @@ you see fit to maximize our chance of breaking past 100").
 | # | Item | State | Decision rule (preregistered) |
 |---|---|---|---|
 | 1 | Canonical battery of adopted default (rebaseline block) | **DONE 07-14**: 98.3925 (descriptive; pre-ghost config read 98.2975 on the same block) | descriptive reference + fresh serving-default ledgers; never evidence |
-| 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier, block 2027073000) | armed behind #4 | screen instrument proven VOID for menu widening (frozen menus + wrong flag, 07-14); sequential CUPED superiority gate: RCI>0 ⇒ real; ns at final look ⇒ R1.3b closes |
+| 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier) | **CLOSED 07-14**: final look ns, delta −0.03, RCI [−0.27, +0.21] | menu widening is a measured null; R3.3 exact top-k is the surviving route to coverage |
 | 3 | R1.4 Stage 1 retrains: **V1b**, **V2**, **C1**, **T0** | **VERDICT 07-14: ALL FAIL the value bar** (−5.3/−3.4/−3.7/−2.1% vs −10%); no gates | ctrl arm (running) attributes the residual drift; if ctrl SWA reproduces the shared q −14%, screen ctrl SWA |
 | 4 | R1.4 D1 pilot: mega-relabel ~727 roots of the 07-13 canonical ledger at n2048/d16×2 (no ghost), label-movement analysis | armed behind #3 | movement ≥ 20% on repeat-STABLE roots ⇒ fund D1; near-tie churn guard at 0.05 pts (preregistered 07-14 04:30) |
 | 5 | Survivor gates from #3 | conditional | per-arm preregistration at launch |
@@ -62,9 +62,11 @@ table values (after R1.4 infrastructure), R3.3 exactness expansion.
   Survivors: D1 (pilot in queue), P1 (needs a generation run), and the
   ctrl-SWA q-loss lead. Kill rule intact: if D1/P1 also fail, EI
   saturation survives and training-side work stops.
-- **R1.3b/c menu coverage** — priced ~0.37 pts/game recoverable tail
-  (R1.3a: greedy-256 drops the true best in 1.5% of decisions at +0.30
-  each). Screen in queue (#2).
+- ~~**R1.3b/c menu coverage**~~ — **CLOSED 07-14**: root-menu 512 gate
+  final-look ns (delta −0.03, RCI [−0.27, +0.21]); the R1.3a ceiling
+  (+0.37) is not capturable by wider greedy menus. Bank screens proven
+  VOID for menu candidates (frozen menus). Coverage survives only via
+  R3.3 exact top-k retrieval.
 - **R0.5/R3.4 adaptive compute allocation** — 46-55% of decisions are
   noise-flippable; puzzle bank + stability probes supervise for free.
   Queued behind the R1.4 slate.

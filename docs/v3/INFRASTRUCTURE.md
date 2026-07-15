@@ -213,7 +213,7 @@ Stage 1 retrain slate twice). Never export it in a script that launches
 | 2027072700–2799 | RESERVED: R1.2B ghost+d32 sequential gate at n1024 (preregistered 07-13) |
 | 2027072800–2899 | ghost+d32 speed-default noninferiority gate (07-13): stopped at 60 pairs, 2860+ untouched but burned with the block |
 | 2027072900–2999 | RELEASED (07-13 23:30): R3.2 depth-2 gate never launched — screen failed its bar; block never touched, safe to re-register |
-| 2027073000–3099 | RESERVED (07-14 04:30): R1.3b root-menu-512 champion-tier sequential CUPED gate (ghost+d32 default vs same + `--gumbel-root-menu 512`; chained behind the D1 pilot) |
+| 2027073000–3099 | R1.3b root-menu-512 gate (07-14): FINAL_INCONCLUSIVE at look 4, R1.3b closed — block burned |
 | 2027073000–3129 | pairwise label audit (3000+) and v3 fit/selection/validation corpus (3100–29) |
 | 2027073300–3301 | parallel leaf-rollout screens |
 | 2027073400–3447 | jobs12/16/24 CUDA concurrency calibration (queued) |

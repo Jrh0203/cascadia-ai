@@ -6795,3 +6795,24 @@ anywhere cannot idle the GPU.
 - Still pending to interpret Stage 1 fully: ctrl arm (running after
   the R1.3b gate) — attributes the shared −2..−5% RMSE and −14% q
   drift to continued-training vs flags.
+
+## 2026-07-14 22:15 — R1.3b CLOSED: root-menu 512 is a measured null at champion tier (final look ns)
+
+- Gate `r13b_rootmenu512` (block 2027073000x100, ghost+d32 vs same +
+  `--gumbel-root-menu 512`, sequential CUPED superiority): ran all 4
+  looks, **FINAL_INCONCLUSIVE** — paired delta `-0.0275`, RCI
+  `[-0.2664, +0.2114]`. Per the preregistered rule, **R1.3b CLOSES**:
+  the R1.3a-priced recoverable tail (+0.37/game ceiling, 1.5% of
+  decisions) is NOT captured by widening the greedy menu 256->512;
+  the true effect is small-to-zero (upper RCI +0.21). R1.3c residual
+  menu ideas deprioritized with it — the family needs a fundamentally
+  different retrieval mechanism (R3.3's exact top-k bounds remain the
+  live route to menu coverage).
+- Wall: candidate was NOT more expensive (21.17 vs 22.37 s/decision) —
+  menu width is not the serving cost driver (forwards batch by 256
+  chunks; ranking is Rust-cheap). Whole gate ~9.7h.
+- Methodology: first champion-tier CUPED gate to a FINAL look —
+  variance reduction 20.1% (theta -0.507, r -0.457), on top of ghost
+  pricing. Block 2027073000..3099 burned with the verdict.
+- Chain advanced: stage1 ctrl arm now training (~2h + CPU re-eval),
+  then D1 pilot v2 (~1.2h).
