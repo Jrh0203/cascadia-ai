@@ -41,7 +41,7 @@ you see fit to maximize our chance of breaking past 100").
 | 1 | Canonical battery of adopted default (rebaseline block) | **DONE 07-14**: 98.3925 (descriptive; pre-ghost config read 98.2975 on the same block) | descriptive reference + fresh serving-default ledgers; never evidence |
 | 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier) | **CLOSED 07-14**: final look ns, delta −0.03, RCI [−0.27, +0.21] | menu widening is a measured null; R3.3 exact top-k is the surviving route to coverage |
 | 3 | R1.4 Stage 1 retrains: **V1b**, **V2**, **C1**, **T0** | **VERDICT 07-14: ALL FAIL the value bar** (−5.3/−3.4/−3.7/−2.1% vs −10%); no gates | ctrl arm (running) attributes the residual drift; if ctrl SWA reproduces the shared q −14%, screen ctrl SWA |
-| 4 | R1.4 D1 pilot: mega-relabel ~727 roots of the 07-13 canonical ledger at n2048/d16×2 (no ghost), label-movement analysis | armed behind #3 | movement ≥ 20% on repeat-STABLE roots ⇒ fund D1; near-tie churn guard at 0.05 pts (preregistered 07-14 04:30) |
+| 4 | R1.4 D1 pilot | **PASSED 07-15: 43.2% stable movement (bar 20%), 0.40 pts mean stake — D1 FUNDED** | next: full-ledger relabel running (~13h); D1 Stage A (corpus hard-root harvest + distq-head retrain, 30-60h) to be preregistered in daylight |
 | 5 | Survivor gates from #3 | conditional | per-arm preregistration at launch |
 | 6 | Ghost-label safety-fold corpus (~20k ghosted roots) | backstop filler | generation only; labels quarantined until the fold retrain clears locked-val |
 

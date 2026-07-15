@@ -6840,3 +6840,32 @@ anywhere cannot idle the GPU.
   the lead dies with the screen (locked-val q-loss improvements that
   don't move bank regret are calmer numbers decisions never consult —
   the exact null shape §5 predicted).
+
+## 2026-07-15 01:45 — D1 PILOT PASSES ITS BAR DECISIVELY: 43.2% stable-label movement at 0.40 pts mean stake — D1 is FUNDED
+
+- **Verdict (preregistered bar applied):** on the 380 repeat-STABLE
+  roots (of 700 resolved), the n2048x2 mega argmax differs from the
+  serving choice on **43.2%** (bar 20%) — and it is NOT near-tie
+  churn: mean mega-regret of moved roots `0.397` (median `0.265`, p95
+  `1.22`; 43 roots >= 0.5, 19 >= 1.0). **D1's premise is confirmed:
+  serving-time labels are materially wrong exactly where decisions
+  are contested.**
+- Cross-checks: repeat-unstable fraction `45.7%` independently
+  reproduces the ~46% noise-flippable census (R0.5). Phase gradient
+  matches Stage 0's calibration drift: movement opening 57.1% > mid
+  44.7% > late 33.9% — the OPENING is where cheap labels are worst.
+- **Design-doc precondition honored:** §4-D1's caution — run D1's
+  retrain only with a non-saturated head — now BINDS, because Stage 1
+  proved the scalar heads can't absorb better targets (all flag arms
+  <= control). D1 Stage A therefore pairs relabeled data with the
+  **distq (q-quantiles 8) head** (the only CI+ training-side result),
+  not the scalar champion head. Full Stage A design (substrate:
+  training-corpus hard roots; harvest via Stage 0 criteria; fold
+  weights; retrain recipe; gate) to be preregistered in daylight —
+  it is a 30-60h GPU commitment and the queue's new top item.
+- **Overnight filler launched** (`d1_full_relabel_20260715.sh`,
+  waiter PID 79802, behind the ctrl-SWA screen): stride-1 relabel of
+  ALL 7,600 non-exact canonical-ledger roots (~13h) => 10x-precision
+  movement read + the complete mega-label benchmark for D1 Stage A
+  eval and R0.5/R3.4 adaptive-budget supervision. Data generation
+  only.
