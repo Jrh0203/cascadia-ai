@@ -6869,3 +6869,20 @@ anywhere cannot idle the GPU.
   movement read + the complete mega-label benchmark for D1 Stage A
   eval and R0.5/R3.4 adaptive-budget supervision. Data generation
   only.
+
+## 2026-07-15 01:50 — Ctrl-SWA lead DIES on the bank screen; R1.4 Stage 1 now fully closed
+
+- Ctrl-SWA bank screen: mean regret `+0.2470` (CI `[0.2208, 0.2732]`),
+  chose-best `33.0%` — WORSE than the incumbent's `+0.2351` and far
+  from the preregistered `<= 0.2251` continuation rule. **The
+  continued-training q-loss improvement (−13.2% locked-val) does not
+  translate to decisions** — the exact §5 null shape ("calmer numbers
+  decisions never consult"), now measured twice (values in Stage 1,
+  q here).
+- **R1.4 Stage 1 is fully closed: V1b, V2, C1, T0, and the ctrl-SWA
+  lead — all nulls.** Central lesson strengthened: at this corpus and
+  recipe, locked-val loss improvements of order 5-15% carry ZERO
+  decision-level signal; only bank regret and paired gates count as
+  screens for training-side candidates. R1.4 lives exclusively through
+  D1 (funded, Stage A design pending) and P1 (generation-side).
+- GPU: full-ledger relabel running (~13h, to ~14:45).
