@@ -6816,3 +6816,27 @@ anywhere cannot idle the GPU.
   pricing. Block 2027073000..3099 burned with the verdict.
 - Chain advanced: stage1 ctrl arm now training (~2h + CPU re-eval),
   then D1 pilot v2 (~1.2h).
+
+## 2026-07-15 00:30 — Ctrl arm CLOSES Stage 1: every flag effect was continued training; ctrl-SWA earns the preregistered screen
+
+- **Ctrl (flagless champion recipe, warm-started) on the unmixed
+  instrument:** step-2500 value RMSE `2.7953` (−6.2% vs incumbent),
+  SWA `2.8056` (−5.8%) — MORE improvement than any flag arm (v1b's
+  −5.3% was the best of them). Late-step q loss hits the same ~0.223
+  attractor; SWA q `0.2198` (−13.2%) with q-regret `0.26311`
+  (+0.0055, within allowance). Selection degenerated to step 1 again,
+  as expected.
+- **Attribution final: V1b, V2, T0 CLOSE OUTRIGHT** — the shared
+  −2..−6% value drift and the −13-14% SWA q improvement are
+  continued-training(+SWA) effects, present without any flag. No
+  Stage 1 mechanism produced signal beyond the control. C1 closes as
+  a flat comparator. R1.4's training-side survivors: D1 (bank building
+  now) and P1 (generation-side).
+- **Ctrl-SWA screen launched** (preregistered rule met): the −13.2%
+  q-loss with intact regret is real and costs nothing new — bank
+  screen behind the D1 chain (`ctrl_swa_screen_20260715.sh`, waiter
+  PID 71185). Rule at launch: screen regret <= `0.2251` (incumbent
+  0.2351 − 0.010) => preregister an n256 sequential CUPED gate; else
+  the lead dies with the screen (locked-val q-loss improvements that
+  don't move bank regret are calmer numbers decisions never consult —
+  the exact null shape §5 predicted).
