@@ -6963,3 +6963,26 @@ anywhere cannot idle the GPU.
    >= 0.010 vs ctrl-SWA's +0.2470 at screen, D1 dies before any gate;
    if the gate is ns at final look, D1 closes and with it R1.4's
    training side (EI saturation confirmed at the label margin).
+
+## 2026-07-15 18:20 — Fold retrain ran 11x faster and exposed a recipe-fidelity gap: CGAB_FUSED env accelerates the trainer
+
+- The ghost-fold retrain completed 2,500 genuine steps in ~10 min
+  (0.24 s/step) because `CASCADIA_CGAB_FUSED=1` — exported in the fold
+  script for the generation bridge — also accelerates the TRAINER's
+  forward (the fused relation-bias kernel; validated EXACT-parity on
+  the serving stack, 07-04 25-game A/B). The Stage 1 arms and ctrl ran
+  UNFUSED (2.7 s/step, ~1.9h each — ~9h of avoidable GPU across the
+  slate).
+- **Validity notes:** (a) Stage 1's verdicts are UNAFFECTED — every
+  arm-vs-ctrl comparison ran on the same (unfused, fp32) stack, and
+  the re-eval instrument scored all checkpoints identically. (b) The
+  fold-vs-ctrl comparison mixes fused (fold) with unfused (ctrl)
+  training; under the byte-identical parity precedent this is a
+  speed-only difference — recorded as a caveat, and the fold verdict
+  bar (±0.015 regret) is wide relative to any conceivable kernel
+  epsilon. (c) RECIPE-FIDELITY GAP recorded: cycle4's champion trained
+  with `--data-workers 4 --prefetch-factor 4 --tf32 --fused-optimizer
+  --cgab-fused`; my manifest-recovered recipe carried none of these
+  runtime knobs (tf32 in particular changes training numerics). Future
+  champion-recipe retrains (incl. the Stage A distq retrain) must use
+  the full optimized invocation — both for fidelity and ~10-40x cost.
