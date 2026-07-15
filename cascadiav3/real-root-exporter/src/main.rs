@@ -121,6 +121,13 @@ struct Args {
     /// rows. When set it replaces stride sampling — only listed roots are
     /// resolved (D1-style targeted relabeling of harvested hard roots).
     probe_roots: Option<PathBuf>,
+    /// Optional replay ledger sidecar for --gumbel-selfplay-tensor-corpus:
+    /// one gumbel_decision row per root, replayable by --puzzle-bank.
+    decisions_out: Option<PathBuf>,
+    /// Optional hardness census sidecar for --gumbel-selfplay-tensor-corpus:
+    /// one row per root with the Stage 0 criterion (top1-top2 completed-Q
+    /// gap vs pairwise SE over q-valid actions) evaluated at generation time.
+    hard_roots_out: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -427,6 +434,8 @@ fn parse_args() -> Result<Args> {
         probe_repeats: 6,
         probe_max_roots: 100,
         probe_roots: None,
+        decisions_out: None,
+        hard_roots_out: None,
     };
 
     let mut iter = std::env::args().skip(1);
@@ -467,6 +476,8 @@ fn parse_args() -> Result<Args> {
                 args.probe_max_roots = value()?.parse().context("invalid --probe-max-roots")?
             }
             "--probe-roots" => args.probe_roots = Some(PathBuf::from(value()?)),
+            "--decisions-out" => args.decisions_out = Some(PathBuf::from(value()?)),
+            "--hard-roots-out" => args.hard_roots_out = Some(PathBuf::from(value()?)),
             "--output-dir" => args.output_dir = Some(PathBuf::from(value()?)),
             "--gumbel-selfplay-tensor-corpus" => {
                 args.mode = Mode::GumbelSelfplayTensorCorpus;
@@ -854,6 +865,12 @@ Options:
   --probe-roots <file>         Puzzle-bank root selection: JSONL rows with
                                numeric seed and ply fields; replaces
                                stride sampling with the listed roots only.
+  --decisions-out <file>       Selfplay-corpus sidecar: replayable
+                               gumbel_decision ledger rows (one per root),
+                               consumable by --puzzle-bank --in.
+  --hard-roots-out <file>      Selfplay-corpus sidecar: per-root Stage 0
+                               hardness census (top1-top2 gap vs pairwise
+                               SE), the D1 harvest input.
   --puzzle-bank                Replay a decisions ledger (--in) and resolve
                                stride-selected roots with the configured
                                search, worker-pooled across seeds
@@ -3436,16 +3453,63 @@ fn backfill_final_outcome(records: &mut [Value], final_scores: &[ScoreBreakdown]
     Ok(())
 }
 
+/// Per-seed selfplay output: packed-tensor records plus the two optional
+/// generation sidecars (replay ledger rows, hardness census rows).
+struct SelfplaySeedOutput {
+    records: Vec<Value>,
+    decision_rows: Vec<Value>,
+    hard_root_rows: Vec<Value>,
+}
+
+/// Stage 0 hardness criterion at generation time: top1-top2 completed-Q gap
+/// (over actions with positive simulation count) vs the pairwise SE
+/// sqrt(var1/n1 + var2/n2). Mirrors `analyze_label_density.py`.
+fn hard_root_row(result: &gumbel::GumbelSearchResult, seed_u64: u64, ply_index: usize) -> Value {
+    let mut valid: Vec<usize> = (0..result.completed_q.len())
+        .filter(|&index| result.visit_counts[index] > 0)
+        .collect();
+    if valid.len() < 2 {
+        return json!({
+            "type": "hard_root",
+            "seed": seed_u64,
+            "ply": ply_index,
+            "eligible": false,
+            "hard": false,
+        });
+    }
+    valid.sort_by(|&a, &b| {
+        result.completed_q[b]
+            .partial_cmp(&result.completed_q[a])
+            .expect("completed_q is finite")
+    });
+    let (top1, top2) = (valid[0], valid[1]);
+    let gap = result.completed_q[top1] - result.completed_q[top2];
+    let pairwise_se = (result.value_variance[top1] / result.visit_counts[top1] as f64
+        + result.value_variance[top2] / result.visit_counts[top2] as f64)
+        .sqrt();
+    json!({
+        "type": "hard_root",
+        "seed": seed_u64,
+        "ply": ply_index,
+        "eligible": true,
+        "hard": gap < pairwise_se,
+        "top1_top2_gap": gap,
+        "pairwise_se": pairwise_se,
+    })
+}
+
 fn play_gumbel_selfplay_seed(
     args: &Args,
     seed_u64: u64,
     bridge: &mut ChunkBridge,
     eval_cache: &mut EvalRowCache,
-) -> Result<Vec<Value>> {
+) -> Result<SelfplaySeedOutput> {
     let config = GameConfig::research_aaaaa(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating gumbel selfplay seed {seed_u64}"))?;
     let mut records = Vec::new();
+    let mut decision_rows = Vec::new();
+    let mut hard_root_rows = Vec::new();
     let mut ply_index = 0usize;
     while !game.is_game_over() && ply_index < args.plies_per_seed {
         let cfg = gumbel_config_from_args(args, gumbel_search_seed(seed_u64, ply_index));
@@ -3482,6 +3546,27 @@ fn play_gumbel_selfplay_seed(
             args,
         )?;
         records.push(record);
+        if args.decisions_out.is_some() {
+            decision_rows.push(json!({
+                "type": "gumbel_decision",
+                "seed": seed_u64,
+                "ply": ply_index,
+                "active_seat": row.staged.current_player(),
+                "chosen_action_id":
+                    action_id(&row.afterstates[result.chosen_index].candidate.action)?,
+                "action_count": row.afterstates.len(),
+                "free_three_of_a_kind_choice": if row.prelude.replace_three_of_a_kind {
+                    "accept"
+                } else if row.staged.market().three_of_a_kind().is_some() {
+                    "decline"
+                } else {
+                    "not_available"
+                },
+            }));
+        }
+        if args.hard_roots_out.is_some() {
+            hard_root_rows.push(hard_root_row(&result, seed_u64, ply_index));
+        }
         let chosen = &row.afterstates[result.chosen_index];
         game = chosen.state.clone();
         if chosen.apply_truncated {
@@ -3491,7 +3576,11 @@ fn play_gumbel_selfplay_seed(
     }
     let final_scores = score_game(&game);
     backfill_final_outcome(&mut records, &final_scores)?;
-    Ok(records)
+    Ok(SelfplaySeedOutput {
+        records,
+        decision_rows,
+        hard_root_rows,
+    })
 }
 
 fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
@@ -3520,6 +3609,21 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     let eval_rows_sent = AtomicU64::new(0);
     let eval_cache_hits = AtomicU64::new(0);
     let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
+    let open_sidecar = |path: &Option<PathBuf>, label: &str| -> Result<Option<Mutex<BufWriter<File>>>> {
+        match path {
+            Some(path) => {
+                if let Some(parent) = path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                let file = File::create(path)
+                    .with_context(|| format!("creating {label} {}", path.display()))?;
+                Ok(Some(Mutex::new(BufWriter::new(file))))
+            }
+            None => Ok(None),
+        }
+    };
+    let decisions_writer = open_sidecar(&args.decisions_out, "--decisions-out")?;
+    let hard_roots_writer = open_sidecar(&args.hard_roots_out, "--hard-roots-out")?;
     let target_workers = args
         .model_sessions
         .unwrap_or_else(|| rayon::current_num_threads().max(1))
@@ -3554,16 +3658,30 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
             })
         },
         |worker, seed_u64| {
-            let records = play_gumbel_selfplay_seed(
+            let output = play_gumbel_selfplay_seed(
                 args,
                 seed_u64,
                 &mut worker.bridge,
                 &mut worker.eval_cache,
             )
             .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))?;
-            let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
-                format!("extracting gumbel selfplay tensor features for seed {seed_u64}")
-            })?;
+            let shard = ExpertTensorShardData::from_records(&output.records).with_context(
+                || format!("extracting gumbel selfplay tensor features for seed {seed_u64}"),
+            )?;
+            if let Some(writer) = &decisions_writer {
+                let mut writer = writer.lock().expect("decisions writer lock");
+                for row in &output.decision_rows {
+                    writeln!(writer, "{}", canonical_json(row))
+                        .context("writing --decisions-out row")?;
+                }
+            }
+            if let Some(writer) = &hard_roots_writer {
+                let mut writer = writer.lock().expect("hard-roots writer lock");
+                for row in &output.hard_root_rows {
+                    writeln!(writer, "{}", canonical_json(row))
+                        .context("writing --hard-roots-out row")?;
+                }
+            }
             let done = completed_seeds.fetch_add(1, Ordering::Relaxed) + 1;
             let records_done = completed_records
                 .fetch_add(shard.record_count as u64, Ordering::Relaxed)
@@ -3591,6 +3709,18 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
         eval_rows_sent.load(Ordering::Relaxed),
         eval_cache_hits.load(Ordering::Relaxed),
     );
+    for (writer, label) in [
+        (&decisions_writer, "--decisions-out"),
+        (&hard_roots_writer, "--hard-roots-out"),
+    ] {
+        if let Some(writer) = writer {
+            writer
+                .lock()
+                .expect("sidecar writer lock")
+                .flush()
+                .with_context(|| format!("flushing {label}"))?;
+        }
+    }
     per_seed.sort_by_key(|(seed, _)| *seed);
 
     let mut shard = ExpertTensorShardData::new();
@@ -6827,6 +6957,8 @@ mod tests {
             probe_repeats: 6,
             probe_max_roots: 100,
             probe_roots: None,
+            decisions_out: None,
+            hard_roots_out: None,
         }
     }
 
@@ -6978,6 +7110,56 @@ mod tests {
     }
 
     #[test]
+    fn gumbel_selfplay_sidecars_replay_and_census() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-gumbel-sidecar-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let mut args = gumbel_test_args(&tempdir);
+        args.decisions_out = Some(tempdir.join("decisions.jsonl"));
+        args.hard_roots_out = Some(tempdir.join("hard_roots.jsonl"));
+        let seed = 2_026_070_601_u64;
+        let session = model_state_worker_session(&args).expect("mock session");
+        let mut bridge = ChunkBridge::Owned(session);
+        let mut eval_cache = EvalRowCache::new();
+        let output = play_gumbel_selfplay_seed(&args, seed, &mut bridge, &mut eval_cache)
+            .expect("selfplay seed plays");
+        assert_eq!(output.decision_rows.len(), output.records.len());
+        assert_eq!(output.hard_root_rows.len(), output.records.len());
+
+        // The decisions sidecar must replay through the puzzle-bank path.
+        let ledger_path = tempdir.join("decisions.jsonl");
+        let mut lines = String::new();
+        for row in &output.decision_rows {
+            lines.push_str(&canonical_json(row));
+            lines.push('\n');
+        }
+        std::fs::write(&ledger_path, lines).expect("ledger written");
+        let by_seed = read_ledger_decision_rows(&ledger_path).expect("ledger parses");
+        let rows = &by_seed[&seed];
+        assert_eq!(rows.len(), output.records.len());
+        let menu_limit = gumbel_root_menu_limit(&args);
+        let (eval_rows, metas, _final_state) =
+            replay_ledger_seed(seed, rows, menu_limit, args.player_count)
+                .expect("sidecar ledger replays");
+        assert_eq!(eval_rows.len(), output.records.len());
+        assert_eq!(metas.len(), output.records.len());
+
+        // Hardness census rows carry the Stage 0 fields when eligible.
+        for row in &output.hard_root_rows {
+            assert_eq!(row["type"], "hard_root");
+            if row["eligible"].as_bool().expect("eligible") {
+                let gap = row["top1_top2_gap"].as_f64().expect("gap");
+                let se = row["pairwise_se"].as_f64().expect("se");
+                assert!(gap >= 0.0);
+                assert_eq!(row["hard"].as_bool(), Some(gap < se));
+            }
+        }
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
     fn gumbel_selfplay_records_roundtrip_into_v4_shard() {
         let tempdir =
             std::env::temp_dir().join(format!("cascadia-gumbel-test-{}", std::process::id()));
@@ -6989,7 +7171,8 @@ mod tests {
         let mut bridge = ChunkBridge::Owned(session);
         let mut eval_cache = EvalRowCache::new();
         let records = play_gumbel_selfplay_seed(&args, 2_026_070_600, &mut bridge, &mut eval_cache)
-            .expect("selfplay seed plays");
+            .expect("selfplay seed plays")
+            .records;
         assert!(!records.is_empty());
         assert!(eval_cache.stats.rows_requested > 0);
         assert!(eval_cache.stats.rows_sent <= eval_cache.stats.rows_requested);
