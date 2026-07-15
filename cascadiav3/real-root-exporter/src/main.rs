@@ -117,6 +117,10 @@ struct Args {
     probe_repeats: usize,
     /// Total sampled roots cap for --search-stability-probe.
     probe_max_roots: usize,
+    /// Explicit root selection for --puzzle-bank: JSONL of {"seed","ply"}
+    /// rows. When set it replaces stride sampling — only listed roots are
+    /// resolved (D1-style targeted relabeling of harvested hard roots).
+    probe_roots: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -422,6 +426,7 @@ fn parse_args() -> Result<Args> {
         probe_stride: 7,
         probe_repeats: 6,
         probe_max_roots: 100,
+        probe_roots: None,
     };
 
     let mut iter = std::env::args().skip(1);
@@ -461,6 +466,7 @@ fn parse_args() -> Result<Args> {
             "--probe-max-roots" => {
                 args.probe_max_roots = value()?.parse().context("invalid --probe-max-roots")?
             }
+            "--probe-roots" => args.probe_roots = Some(PathBuf::from(value()?)),
             "--output-dir" => args.output_dir = Some(PathBuf::from(value()?)),
             "--gumbel-selfplay-tensor-corpus" => {
                 args.mode = Mode::GumbelSelfplayTensorCorpus;
@@ -845,6 +851,9 @@ Options:
   --probe-stride <k>           Sample every k-th ledger decision [7].
   --probe-repeats <n>          Search repeats per (root, variant) [6].
   --probe-max-roots <n>        Total sampled roots cap [100].
+  --probe-roots <file>         Puzzle-bank root selection: JSONL rows with
+                               numeric seed and ply fields; replaces
+                               stride sampling with the listed roots only.
   --puzzle-bank                Replay a decisions ledger (--in) and resolve
                                stride-selected roots with the configured
                                search, worker-pooled across seeds
@@ -4022,6 +4031,45 @@ struct ReplayedRootMeta {
     full_menu_fallback: bool,
 }
 
+/// Reads a `{"seed": u64, "ply": u64}` JSONL root-selection mask for
+/// `--puzzle-bank` targeted relabeling (R1.4 D1): only listed roots are
+/// resolved, and ledger seeds absent from the mask are skipped without
+/// replay. Duplicate rows are tolerated (set semantics).
+fn read_probe_roots_mask(path: &Path) -> Result<BTreeMap<u64, HashSet<u64>>> {
+    let file = File::open(path)
+        .with_context(|| format!("opening --probe-roots {}", path.display()))?;
+    let reader = std::io::BufReader::new(file);
+    let mut mask: BTreeMap<u64, HashSet<u64>> = BTreeMap::new();
+    for (line_index, line) in reader.lines().enumerate() {
+        let line = line.with_context(|| {
+            format!("reading --probe-roots {} line {}", path.display(), line_index + 1)
+        })?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let value: serde_json::Value = serde_json::from_str(&line).with_context(|| {
+            format!("parsing --probe-roots {} line {}", path.display(), line_index + 1)
+        })?;
+        let seed = value
+            .get("seed")
+            .and_then(serde_json::Value::as_u64)
+            .with_context(|| {
+                format!("--probe-roots line {} lacks a numeric \"seed\"", line_index + 1)
+            })?;
+        let ply = value
+            .get("ply")
+            .and_then(serde_json::Value::as_u64)
+            .with_context(|| {
+                format!("--probe-roots line {} lacks a numeric \"ply\"", line_index + 1)
+            })?;
+        mask.entry(seed).or_default().insert(ply);
+    }
+    if mask.is_empty() {
+        bail!("--probe-roots {} selects no roots", path.display());
+    }
+    Ok(mask)
+}
+
 /// Reads `gumbel_decision` rows from a decisions JSONL ledger, grouped by
 /// seed and validated to be contiguous plies from 0.
 fn read_ledger_decision_rows(path: &PathBuf) -> Result<BTreeMap<u64, Vec<LedgerDecisionRow>>> {
@@ -4581,8 +4629,19 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
     let rebuild_search_menu = search_menu_limit != replay_menu_limit;
     let stride = args.probe_stride.max(1);
     let repeats = args.probe_repeats.max(1);
+    let probe_roots_mask = match &args.probe_roots {
+        Some(path) => Some(Arc::new(read_probe_roots_mask(path)?)),
+        None => None,
+    };
     let started = Instant::now();
-    let seeds: Vec<u64> = by_seed.keys().copied().collect();
+    let mut seeds: Vec<u64> = by_seed.keys().copied().collect();
+    if let Some(mask) = &probe_roots_mask {
+        // Seeds with no selected roots are skipped without replay.
+        seeds.retain(|seed| mask.contains_key(seed));
+        if seeds.is_empty() {
+            bail!("--probe-roots selects no seed present in the ledger");
+        }
+    }
     let total_seeds = seeds.len() as u64;
     let completed_seeds = AtomicU64::new(0);
     let resolved_roots = AtomicU64::new(0);
@@ -4635,8 +4694,13 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                     .staged
                     .turns_remaining_for_player(replayed_row.staged.current_player())
                     == 1;
-                if is_exact_frontier || replayed_row.afterstates.len() < 2 || index % stride != 0
-                {
+                let selected = match &probe_roots_mask {
+                    Some(mask) => mask
+                        .get(&seed)
+                        .is_some_and(|plies| plies.contains(&(meta.ply as u64))),
+                    None => index % stride == 0,
+                };
+                if is_exact_frontier || replayed_row.afterstates.len() < 2 || !selected {
                     continue;
                 }
                 let rebuilt_row;
@@ -4747,6 +4811,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         "replay_skipped_seeds": skipped,
         "resolved_roots": total_roots,
         "stride": stride,
+        "probe_roots": args.probe_roots.as_ref().map(|path| path.display().to_string()),
         "repeats": repeats,
         "replay_menu_limit": replay_menu_limit,
         "search_menu_limit": search_menu_limit,
@@ -6761,6 +6826,7 @@ mod tests {
             probe_stride: 7,
             probe_repeats: 6,
             probe_max_roots: 100,
+            probe_roots: None,
         }
     }
 
@@ -7725,6 +7791,66 @@ mod tests {
         .expect("manifest json");
         assert_eq!(manifest["resolved_roots"].as_u64(), Some(roots as u64));
         assert_eq!(manifest["repeats"].as_u64(), Some(2));
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
+    fn puzzle_bank_probe_roots_mask_selects_exact_roots() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-puzzle-bank-mask-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let seed = 2_026_070_782_u64;
+        let (mut args, _lines) = play_tiny_policy_game(&tempdir, seed);
+        args.mode = Mode::PuzzleBank;
+        args.input = Some(args.out.clone());
+        args.output_dir = Some(tempdir.join("bank"));
+        args.probe_stride = 1;
+        args.probe_repeats = 2;
+        args.model_sessions = Some(2);
+        // Select plies 0 and 4 explicitly; include an absent seed to prove
+        // seed-level filtering skips it without replay.
+        let mask_path = tempdir.join("probe_roots.jsonl");
+        std::fs::write(
+            &mask_path,
+            format!(
+                "{{\"seed\":{seed},\"ply\":0}}\n{{\"seed\":{seed},\"ply\":4}}\n{{\"seed\":1,\"ply\":0}}\n"
+            ),
+        )
+        .expect("mask written");
+        args.probe_roots = Some(mask_path);
+        run_puzzle_bank(&args).expect("puzzle bank runs");
+
+        let shard = tempdir.join("bank").join(format!("puzzle_seed_{seed}.jsonl"));
+        let contents = std::fs::read_to_string(&shard).expect("shard exists");
+        let plies: Vec<u64> = contents
+            .lines()
+            .map(|line| {
+                let record: Value = serde_json::from_str(line).expect("jsonl line");
+                assert_eq!(record["type"], "puzzle_root");
+                record["ply"].as_u64().expect("ply")
+            })
+            .collect();
+        assert_eq!(plies, vec![0, 4], "exactly the masked roots resolve");
+        assert!(
+            !tempdir.join("bank").join("puzzle_seed_1.jsonl").exists(),
+            "absent seed is skipped without replay"
+        );
+        let manifest: Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                tempdir.join("bank").join("puzzle_bank_manifest.json"),
+            )
+            .expect("manifest"),
+        )
+        .expect("manifest json");
+        assert_eq!(manifest["resolved_roots"].as_u64(), Some(2));
+        assert!(
+            manifest["probe_roots"]
+                .as_str()
+                .expect("probe_roots recorded")
+                .ends_with("probe_roots.jsonl")
+        );
         let _ = std::fs::remove_dir_all(&tempdir);
     }
 
