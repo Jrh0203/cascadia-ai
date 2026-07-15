@@ -31,8 +31,11 @@ you see fit to maximize our chance of breaking past 100").
   `--gumbel-ghost-opponents --gumbel-determinizations 32
   --gumbel-exact-endgame-turns 1 --gumbel-refresh-sample-divisor 4` at
   n1024. Gate cost is ~3-4x below the 07-12 fixed-N baseline.
-- Ghost-generated labels are NOT yet cleared as training teachers
-  (safety fold pending — see queue item 6).
+- **Ghost-generated labels CLEARED as teachers at 0.25-fold weight**
+  (07-15 safety fold: both preregistered legs passed). Caveats: cleared
+  at n256/d4 generation grade; higher fold weights need their own
+  trial. Ghost pricing is a SERVING-side win only — generation with
+  ghosts measured ~2× slower in all-seats selfplay.
 
 ## Active queue (07-14)
 
@@ -43,7 +46,7 @@ you see fit to maximize our chance of breaking past 100").
 | 3 | R1.4 Stage 1 retrains: **V1b**, **V2**, **C1**, **T0** (+ctrl) | **FULLY CLOSED 07-15**: all flag effects = continued training (ctrl −6.2% beat every arm); ctrl-SWA lead died on the bank screen (+0.2470 vs 0.2351) | lesson: locked-val loss deltas of 5-15% carry zero decision signal — only bank regret + gates screen training candidates |
 | 4 | R1.4 D1 pilot | **PASSED 07-15: 43.2% stable movement (bar 20%), 0.40 pts mean stake — D1 FUNDED** | next: full-ledger relabel running (~13h); D1 Stage A (corpus hard-root harvest + distq-head retrain, 30-60h) to be preregistered in daylight |
 | 5 | Survivor gates from #3 | conditional | per-arm preregistration at launch |
-| 6 | Ghost-label safety-fold corpus (~20k ghosted roots) | backstop filler | generation only; labels quarantined until the fold retrain clears locked-val |
+| 6 | Ghost-label safety fold | **CLEARED 07-15**: both preregistered legs passed (regret Δ0.0046 vs ±0.015; q-regret better than ctrl) | ghost labels are teacher-safe at 0.25-fold; ghost pricing is serving-only (generation measured ~2× slower) |
 
 Next up after this slate: R0.5/R3.4 adaptive per-root budgets (supervision
 free from the puzzle bank + tonight's ledgers), R1.1c/R3.1 cooperative
