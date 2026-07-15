@@ -6986,3 +6986,23 @@ anywhere cannot idle the GPU.
   runtime knobs (tf32 in particular changes training numerics). Future
   champion-recipe retrains (incl. the Stage A distq retrain) must use
   the full optimized invocation — both for fidelity and ~10-40x cost.
+
+## 2026-07-15 18:35 — GHOST LABELS CLEARED AS TEACHERS at 0.25-fold (safety bar passed on both legs)
+
+- **Fold verdict (preregistered bar, both legs PASS):** fold SWA bank
+  regret `+0.2516` vs ctrl SWA `+0.2470` (delta 0.0046 vs ±0.015
+  allowance); fold SWA unmixed q-regret `0.25804` vs bar 0.27311
+  (actually better than ctrl's 0.26311). A corpus with 20k ghosted
+  roots folded at weight 1-on-the-4,2,1-scale trains a model
+  indistinguishable from the clean-fold control on every instrument.
+- **Consequence: R1_4 §8 quarantine LIFTS for generation.** Ghost
+  opponents are now cleared for corpus generation at cycle grade —
+  the Stage A corpus generates ghost-priced tonight (mechanical bar in
+  the chain), and future cycles may use ghost generation with this
+  fold entry as the precedent. Caveats recorded: cleared at n256/d4
+  generation grade and 0.25-fold weight; higher fold weights need
+  their own trial (fleet precedent pattern); fold trained fused vs
+  ctrl unfused (byte-parity precedent, 18:20 entry).
+- Fold-vs-ctrl descriptives (same-instrument): value RMSE 2.8697 vs
+  2.8056, q 0.2298 vs 0.2198 — the ghost fold sits inside the
+  continued-training band on every axis.
