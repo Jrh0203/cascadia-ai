@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 DEFAULT_MIN_WALL_SPEEDUP = 1.05
 DEFAULT_MAX_ROOT_VALUE_DRIFT = 2.0e-5
 

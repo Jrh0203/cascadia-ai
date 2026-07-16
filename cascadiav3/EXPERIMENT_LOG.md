@@ -7153,3 +7153,27 @@ anywhere cannot idle the GPU.
   rerun can produce admissible evidence, reconcile `RULES_CONTRACT.md` with
   the per-resolution return semantics in `45fb5072`, assign a new rules/config
   identity, and fail closed on July-9/July-16 mixtures. john0 remains idle.
+
+## 2026-07-16 03:50 — Rules identity repaired: `..._rules_2026_07_16` / `cascadia-base-official-2026-07-16`
+
+- Stage A attempt 3 confirmed dead: john0/WSL rebooted 01:32 (~35 min
+  in); zero-byte run log and sidecars, no tensor/manifest; box idle,
+  deployed revision still 45fb5072. The reboot is a host-side event
+  (likely Windows Update), not a job failure.
+- **Repair executed** (prerequisite per the 07-16 agenda ruling before
+  any new scientific run): `RULES_SEMANTICS_ID` →
+  `cascadia-base-official-2026-07-16` (cascadia-game), `RULESET_ID` /
+  `EXPECTED_RULESET_ID` → `..._rules_2026_07_16` (exporter + all fresh-
+  run benchmark/compare modules + their tests). Historical analyzers
+  under `cascadiav3/reports/` deliberately keep the 07-09 stamp — they
+  belong to their artifacts. RULES_CONTRACT.md rewritten: overpopulation
+  is per-resolution return (John's conservation ruling), regression test
+  named, and a second compatibility-break section added (07-09 identity
+  = closed historical evidence boundary; the 98.2975 champion number
+  needs a fresh canonical battery under 07-16 before use as a paired
+  control; never mix identities in one CI).
+- Tests: workspace green (cascadia-game 59, search 61, exporter 65);
+  the 32 local python errors are the pre-existing no-numpy/torch Mac
+  environment, not the bump.
+- **Awaiting John:** explicit restart permission for Stage A generation
+  (per the 07-16 agenda), now to be stamped under the 07-16 identity.

@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 from cascadiav3.compare_exact_endgame import build_comparison
 
-RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 SEEDS = [11, 12, 13]
 RULING = "user ruling 2026-07-10: concurrency-divergent seed excluded by declaration"
 

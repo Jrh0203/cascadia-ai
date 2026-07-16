@@ -9,7 +9,7 @@ from typing import Any
 
 from .torch_benchmark_stats import paired_delta_stats
 
-RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 
 
 def _load(path: Path) -> dict[str, Any]:

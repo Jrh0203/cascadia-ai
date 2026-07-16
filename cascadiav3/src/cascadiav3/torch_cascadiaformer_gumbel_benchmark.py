@@ -46,7 +46,7 @@ from .torch_cascadiaformer_search_benchmark import (
     summarize_game_results,
 )
 
-EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 
 
 def _sha256(path: Path) -> str:

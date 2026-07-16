@@ -12,7 +12,7 @@ from cascadiav3.sequential_gate import (
     sequential_decision,
 )
 
-RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 LOOKS = [40, 60, 80, 100]
 
 

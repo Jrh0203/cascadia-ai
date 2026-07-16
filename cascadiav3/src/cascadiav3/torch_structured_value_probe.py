@@ -23,7 +23,7 @@ import numpy as np
 from .expert_tensor_shards import ExpertTensorShard, SHARD_VERSION_V3
 from .torch_inference_bridge import _load_model, resolve_checkpoint_path
 
-RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 DEFAULT_RIDGE_LAMBDAS = (0.01, 0.1, 1.0, 10.0, 100.0, 1_000.0, 10_000.0)
 DEFAULT_MIN_RELATIVE_RMSE_GAIN = 0.10
 SCORE_CATEGORIES = ("wildlife", "habitat", "nature_tokens")

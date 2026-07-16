@@ -18,7 +18,7 @@ from typing import Any
 
 from .torch_benchmark_stats import paired_delta_stats
 
-RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 DEFAULT_BASELINE_SAMPLES = 8
 DEFAULT_CANDIDATE_SAMPLES = 4
 NONINFERIORITY_MARGIN = -0.25

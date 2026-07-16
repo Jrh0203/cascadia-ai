@@ -22,7 +22,7 @@ from typing import Any
 from .torch_benchmark_stats import paired_delta_stats
 from .torch_inference_bridge import _load_model, collate_inference_roots
 
-EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 
 
 def parse_seeds(*, seeds: str, first_seed: int, games: int) -> list[int]:

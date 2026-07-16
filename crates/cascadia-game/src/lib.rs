@@ -6,7 +6,7 @@
 /// Rules-semantics identity for reports, APIs, and promotion provenance.
 /// Changing an official rule or the legal policy action space requires a new
 /// value and a fresh baseline campaign.
-pub const RULES_SEMANTICS_ID: &str = "cascadia-base-official-2026-07-09";
+pub const RULES_SEMANTICS_ID: &str = "cascadia-base-official-2026-07-16";
 
 mod board;
 mod game;

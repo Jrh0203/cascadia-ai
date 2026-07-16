@@ -12,7 +12,7 @@ from cascadiav3.validate_seed_replay import (
 )
 
 SEED = 2027070962
-RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09"
+RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 
 
 def make_decision(ply: int, action: int, refresh=None) -> dict:
