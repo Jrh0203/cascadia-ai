@@ -1265,6 +1265,73 @@ def _batch_indices_for_global_batch(
     }
 
 
+def audit_source_exposure(
+    *,
+    source_lengths: list[int],
+    source_weights: list[float],
+    seed: int,
+    batch_size: int,
+    total_batches: int,
+    tolerance: float = 0.02,
+) -> dict[str, Any]:
+    """Fail-closed per-source draw audit (D1 preregistration, 07-16).
+
+    Replays the exact deterministic production sampler for every planned
+    batch and totals draws per source. Raises when any source's realized
+    draw share deviates from its normalized weight by more than
+    ``tolerance`` (absolute), or when a positive-weight source receives
+    zero draws. Because the sampler is a pure function of
+    (seed, global_batch), this preflight audit reports precisely what
+    training will consume — run it before spending GPU.
+    """
+    weights = _normalize_source_weights(source_weights, len(source_lengths))
+    if weights is None:
+        raise ValueError("audit requires explicit source weights")
+    totals = [0 for _ in source_lengths]
+    for global_batch in range(1, total_batches + 1):
+        _, stats = _weighted_batch_indices_for_global_batch(
+            global_batch=global_batch,
+            batch_size=batch_size,
+            source_lengths=source_lengths,
+            source_weights=source_weights,
+            seed=seed,
+        )
+        for source_index, count in enumerate(stats["source_counts"]):
+            totals[source_index] += count
+    total_draws = sum(totals)
+    shares = [count / total_draws for count in totals]
+    failures = []
+    for source_index, (weight, share, count) in enumerate(
+        zip(weights, shares, totals, strict=True)
+    ):
+        if weight > 0.0 and count == 0:
+            failures.append(f"source {source_index}: positive weight but zero draws")
+        if abs(share - weight) > tolerance:
+            failures.append(
+                f"source {source_index}: share {share:.4f} vs weight {weight:.4f} "
+                f"(tolerance {tolerance})"
+            )
+    report = {
+        "type": "source_exposure_audit",
+        "seed": seed,
+        "batch_size": batch_size,
+        "total_batches": total_batches,
+        "total_draws": total_draws,
+        "source_lengths": source_lengths,
+        "normalized_weights": weights,
+        "source_draws": totals,
+        "source_shares": shares,
+        "expected_passes_per_record": [
+            count / length for count, length in zip(totals, source_lengths, strict=True)
+        ],
+        "tolerance": tolerance,
+        "failures": failures,
+    }
+    if failures:
+        raise ValueError(f"source exposure audit FAILED: {failures}; report: {report}")
+    return report
+
+
 def _loader_cursor_for_next_batch(
     *,
     next_global_batch: int,
