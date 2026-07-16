@@ -233,3 +233,76 @@ and exactness is the weapon. That convergence raises confidence in the
 DIRECTION. Skepticism should be allocated in proportion to how much
 unvalidated novelty each proposal stacks on top of those two facts — which is
 precisely the ordering above.
+
+---
+
+## Addendum (2026-07-16 evening): evaluation of Cascadia Rival
+
+[Cascadia Rival](cascadia_rival_final_architecture_proposal_7_16.md) is the
+finalized synthesis produced after John's objective ruling. Assessment: **the
+strongest of the four documents; adopt it as the ranked-first post-D1
+program, superseding the standalone Anchor recommendation above.**
+
+### What it gets right
+
+1. **It solves Anchor's central flaw with the correct statistical tool.**
+   Rival-MF makes the cheap continuation a control variate whose measured
+   correlation with paired full-incumbent continuations buys variance
+   reduction while the high-fidelity one-deviation estimand stays unbiased —
+   neither "exact but absurd" (A-EXACT alone; the doc's own §19.3 arithmetic:
+   ~15 serial hours per root) nor "cheap but wrong estimand" (A-DIRECT). The
+   variance algebra is honest, and rho is treated as the load-bearing unknown
+   rather than assumed. The single best design idea in the four documents.
+2. **The offline-first reframe makes Rival D1-shaped.** V1 is a labeling
+   instrument: terminally confirmed one-deviation preferences become a
+   hash-pinned relabel tranche -> ordinary retrain -> fresh paired gate ->
+   promotion only by John's ruling. Structurally identical to the running D1
+   pipeline, so its machinery (masked training views, matched-control retrain
+   path, exposure audits, model-vs-model gates, relabel tooling) is directly
+   reusable. Composition risk is deferred to an ordinary frozen policy that
+   standard gates can judge.
+3. **Best epistemics in the set.** A genuinely hostile red-team section
+   (nested-cost arithmetic; "unbiased yet useless" control variates;
+   winner's-curse cohort discipline; "terminal is not synonymous with
+   precise"; D1-overlap with effect addition forbidden), and a 25–35% headline
+   forecast with a conditional ladder keyed to the measured baseline gap —
+   the exact opposite of the withdrawn 76%.
+4. **It respects the objective ruling cleanly:** selfish-only,
+   Foundry-Commons categorically rejected, Foundry reduced to seat-local
+   contracts and unilateral tomography — while retaining this document's
+   tomography carve-out in its legal form.
+
+### Where the skepticism belongs
+
+- **The affordability–power tension is the crux.** Even with MF, the
+  full-incumbent panel n_H must be tiny for affordability, and the guard's
+  power scales as sigma_H/sqrt(n_H) against a terminal variance the doc
+  concedes is high. The likeliest failure is not bias or systems collapse but
+  a statistically sound wrapper that admits almost no overrides at affordable
+  budgets — exactly what the equal-wall control will expose. The program's
+  value therefore concentrates in one early number: **measured low/high
+  action-difference correlation rho on paired panels.** rho >= ~0.7 in the
+  strata where appeals matter and the economics work; below ~0.5 the online
+  form should close fast. Elevate the rho calibration to THE decisive early
+  experiment, ahead of most of the Layer 2–4 build.
+- **Two owned priors bear on rho and belong in the calibration design:**
+  ghost continuations (a crude opponent proxy) were score-noninferior at
+  serving — weak positive evidence that cheap continuations preserve
+  decision-relevant ordering; and the D1 repeat/audit data bounds how noisy
+  action differences are under the exact policy itself — an upper bound on
+  any continuation correlation.
+- **Scope discipline:** despite "NX must earn its role," Layers 2–4 are most
+  of NX's engineering bill; the evidence ladder stages it correctly, but the
+  Layer-2/3 build must not run ahead of the cheap falsifiers. The 3,000
+  post-D1 GPU-hour cap is honest and material (~four months of john0 at
+  recent utilization).
+
+### Revised sequencing
+
+1. D1 to verdict (running).
+2. Gate 0: fresh July-16 canonical baseline.
+3. Selfish ceiling tomography (T1/T2 legal forms).
+4. **rho calibration on paired low/high continuation panels** — the decisive
+   scientific unknown; promote it ahead of the full systems build.
+5. Exact-GPU parity + throughput gates; bounded W_k shadow instrument.
+6. First Rival relabel iteration through the standard screen/gate ladder.
