@@ -29,6 +29,8 @@ const SOURCE_ROOTS: &[&str] = &[
     "crates/cascadia-eval",
     "crates/cascadia-search",
     "crates/cascadia-provenance",
+    "crates/cascadia-api",
+    "crates/cascadia-rival",
 ];
 
 /// Recursive fallback exclusions for source archives that are no longer in a
@@ -237,6 +239,37 @@ mod tests {
         let mut files = Vec::new();
         collect_files(&root, &mut files).unwrap();
         assert_eq!(files, vec![root.join("src/lib.rs")]);
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn scientific_digest_covers_api_and_rival_workspace_crates() {
+        assert!(SOURCE_ROOTS.contains(&"crates/cascadia-api"));
+        assert!(SOURCE_ROOTS.contains(&"crates/cascadia-rival"));
+
+        // Use an archive-style directory with no Git metadata so this test is
+        // hermetic and cannot perturb the working tree while other provenance
+        // tests run in parallel.
+        let root = env::temp_dir().join(format!(
+            "cascadia-provenance-new-roots-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let api = root.join("crates/cascadia-api/src/lib.rs");
+        let rival = root.join("crates/cascadia-rival/src/lib.rs");
+        fs::create_dir_all(api.parent().unwrap()).unwrap();
+        fs::create_dir_all(rival.parent().unwrap()).unwrap();
+        fs::write(&api, b"api-v1").unwrap();
+        fs::write(&rival, b"rival-v1").unwrap();
+
+        let initial = source_digest(&root).unwrap();
+        fs::write(&api, b"api-v2").unwrap();
+        let api_changed = source_digest(&root).unwrap();
+        assert_ne!(initial, api_changed);
+        fs::write(&rival, b"rival-v2").unwrap();
+        let rival_changed = source_digest(&root).unwrap();
+        assert_ne!(api_changed, rival_changed);
+
         fs::remove_dir_all(&root).unwrap();
     }
 }

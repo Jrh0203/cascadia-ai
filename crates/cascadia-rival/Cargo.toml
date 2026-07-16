@@ -1,0 +1,24 @@
+[package]
+name = "cascadia-rival"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "CPU reference contracts and scientific identity for Cascadia Rival"
+
+[features]
+default = ["cpu-reference"]
+cpu-reference = []
+
+[dependencies]
+blake3.workspace = true
+cascadia-game = { path = "../cascadia-game" }
+postcard.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

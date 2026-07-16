@@ -8,6 +8,7 @@ members = [
     "crates/cascadia-search",
     "crates/cascadia-provenance",
     "crates/cascadia-api",
+    "crates/cascadia-rival",
 ]
 exclude = [
     "cascadiav3/real-root-exporter",
@@ -26,6 +27,7 @@ rayon = "1.11"
 rustc-hash = "2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.10"
 thiserror = "2.0"
 axum = "0.8"
 clap = { version = "4", features = ["derive"] }
