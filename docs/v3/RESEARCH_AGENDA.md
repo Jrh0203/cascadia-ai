@@ -7,11 +7,20 @@ blow-by-blow evidence lives in
 PIDs and resume state in [`CAMPAIGN_STATE.md`](CAMPAIGN_STATE.md), and the
 original tiered portfolio (rationale, mechanisms, literature) in
 [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md).
+The complete July 16 external-research scope and verdicts are in
+[`research_questions_7_16.md`](../../research_questions_7_16.md) and
+[`research_answers_7_16.md`](../../research_answers_7_16.md).
 
-**Goal:** mean seat score ≥ 100 over 1,000 games under
+**Goal:** mean seat score ≥ 100 over 1,000 games under the pinned four-player
+all-A/no-habitat-bonus rules identity current at the time of the gate.
+**Historical scoreboard identity:**
 `cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09`.
-**Champion:** cycle4 scalar M at n1024/d16, **98.30** (98.2975 canonical;
-replicated 98.2975 on a fresh block 07-13). Gap ≈ 1.7 points, diffuse.
+Commit `45fb5072` corrected an additional rules bug, so this identity is now a
+historical evidence boundary; a successor identity is required before new
+scientific runs.
+**Historical champion under the July-9 identity:** cycle4 scalar M at
+n1024/d16, **98.30** (98.2975 canonical; reproduced as 98.2975 on a fresh block
+07-13). The historical observed gap is approximately 1.7 points and diffuse.
 **Priority order ruled by John 2026-07-13** ("align the research queue as
 you see fit to maximize our chance of breaking past 100").
 
@@ -37,37 +46,41 @@ you see fit to maximize our chance of breaking past 100").
   trial. Ghost pricing is a SERVING-side win only — generation with
   ghosts measured ~2× slower in all-seats selfplay.
 
-## Active queue (07-14)
+## Active queue (07-16)
 
 | # | Item | State | Decision rule (preregistered) |
 |---|---|---|---|
 | 1 | Canonical battery of adopted default (rebaseline block) | **DONE 07-14**: 98.3925 (descriptive; pre-ghost config read 98.2975 on the same block) | descriptive reference + fresh serving-default ledgers; never evidence |
 | 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier) | **CLOSED 07-14**: final look ns, delta −0.03, RCI [−0.27, +0.21] | menu widening is a measured null; R3.3 exact top-k is the surviving route to coverage |
 | 3 | R1.4 Stage 1 retrains: **V1b**, **V2**, **C1**, **T0** (+ctrl) | **FULLY CLOSED 07-15**: all flag effects = continued training (ctrl −6.2% beat every arm); ctrl-SWA lead died on the bank screen (+0.2470 vs 0.2351) | lesson: locked-val loss deltas of 5-15% carry zero decision signal — only bank regret + gates screen training candidates |
-| 4 | R1.4 D1 pilot | **PASSED 07-15: 43.2% stable movement (bar 20%), 0.40 pts mean stake — D1 FUNDED** | next: full-ledger relabel running (~13h); D1 Stage A (corpus hard-root harvest + distq-head retrain, 30-60h) to be preregistered in daylight |
-| 5 | Survivor gates from #3 | conditional | per-arm preregistration at launch |
+| 4 | R1.4 D1 pilot / Stage A | **PILOT PASSED 07-15; Stage A attempt 3 FAILED 07-16 when john0/WSL rebooted at 01:32. Zero-byte run/sidecars; no tensor or manifest; john0 idle.** | D1 remains funded, but rerun only after rules-contract/new-ID repair and John's explicit restart permission; the 15k n2048/d16x2 relabel remains a separate John decision |
+| 5 | D1 relabel/retrain/screen/gate | conditional on a complete Stage A corpus | freeze the proposed sampling, repeat aggregation, per-head masks, 12.5% draw share, matched K=8 no-D1 control, and gate-launch rule before their data boundaries; bank screen requires ≥0.010 improvement over that matched control plus the historical ≤0.237 continuity bar, and the fresh n256 gate compares D1 with the pinned champion |
 | 6 | Ghost-label safety fold | **CLEARED 07-15**: both preregistered legs passed (regret Δ0.0046 vs ±0.015; q-regret better than ctrl) | ghost labels are teacher-safe at 0.25-fold; ghost pricing is serving-only (generation measured ~2× slower) |
 
-Next up after this slate: R0.5/R3.4 adaptive per-root budgets (supervision
-free from the puzzle bank + tonight's ledgers), R1.1c/R3.1 cooperative
-table values (after R1.4 infrastructure), R3.3 exactness expansion.
+Current ordering supersedes the earlier “adaptive/table/exactness next” text:
+repair rules identity → authorized Stage A rerun → separately authorized D1
+relabel/retrain/screen/gate; exact-rules human calibration may proceed in
+parallel. A bounded adversarial diagnostic follows D1. Adaptive allocation,
+table-native values, reliability-sigma, stratified worlds, and exactness
+expansion remain behind direct offline evidence and the funded line.
 
-## Literature-inspired candidates (07-16 light research pass)
+## Literature-inspired candidates (07-16 full Q1–Q10 synthesis)
 
-Mapped from KataGo methods, MuZero Reanalyze, and Gumbel-MuZero
-literature onto our four measured constraints; ranked by (fit to
-measured evidence × cost). None are queue-jumpers over Stage A.
+Mapped from the primary-source synthesis in
+[`research_answers_7_16.md`](../../research_answers_7_16.md) onto the measured
+campaign constraints. Literature supports mechanisms much more strongly than
+transferable constants. None jump the repaired Stage A/D1 line.
 
 | # | Candidate | Maps to | Sketch |
 |---|---|---|---|
-| L1 | Continuous reanalyze (MuZero Reanalyze / ReZero) | label ceiling | D1 generalized: every future cycle relabels replay shards with the current champion at higher budget; reanalyzed targets drove ~80% of MuZero updates. Stage A is the pilot; if it gates +, make relabeling a standing pipeline stage, not a one-shot. |
-| L2 | Phase-keyed value bias correction at search (KataGo subtree value bias, ~30-60 Elo in Go) | decision noise | We already measured the phase-monotone calibration drift (−7 opening → +0.5 endgame). Correct Q at search time keyed on phase (later: pattern buckets). Cheap Rust change; bank screen then gate. |
-| L3 | Variance-scaled Gumbel sigma (KataGo dynamic variance-scaled cPUCT, ~75 Elo in Go) | decision noise | Our completed-Q sigma scale is hardcoded (gumbel.rs); scale it by empirical per-root utility variance. Cheap; screen+gate. |
-| L4 | Mixed-grade generation (KataGo playout cap randomization) | label ceiling / data volume | Generate most seeds at n256 (volume) and a random fraction at n1024+ (quality value labels); relieves the value-vs-policy target tension at any single budget. Next corpus. |
-| L5 | Surprise/uncertainty-weighted training (KataGo policy surprise weighting + uncertainty targets) | label ceiling | Weight samples by label movement / repeat disagreement / top2 gap — all already measured in the bank sidecars for free. Trainer-side but NOT a loss-shaping null: it reweights toward roots where labels carry real signal. |
-| L6 | Root softmax temperature / shaped noise in generation only | fixed point | Cheap coverage widener for selfplay corpora (blind-spot discovery); serving stays untouched. |
-| L7 | Opponent-seat auxiliary targets (KataGo aux policy; feeds R1.1c) | multi-seat | Predict other seats' next actions/outcomes as aux losses — the cheap on-ramp to cooperative table values. |
-| L8 | League/exploiter populations (AlphaStar) | fixed point | DEPRIORITIZED: our objective is mean seat score vs a fixed field, not head-to-head win rate; non-transitivity pressure is weak. Revisit only if table-value work exposes exploitable strategy cycles. |
+| L1 | Continuous reanalyze (MuZero Reanalyze / ReZero) | label ceiling | D1 is the offline pilot. Do **not** make it standing infrastructure after one win: require a positive paired game gate and one independent fresh-cycle replication. Published `80–99.5%` replay ratios are not fold-weight recipes for this targeted shard. |
+| L2 | Phase-keyed value-bias correction | decision noise | Retain as a low-ranked offline calibration question; the July 16 synthesis did not validate a transferable KataGo effect size or search-time correction. It does not displace D1. |
+| L3 | Reliability-scaled Gumbel Q | decision noise | **DEFER.** Keep `c_visit=50`, `c_scale=1.0`, min-max. Any future rule must first estimate a disjoint low- versus high-budget reliability curve; do not launch another static sweep. |
+| L4 | Mixed-grade generation | label ceiling / data volume | KataGo supports the mechanism, not a Cascadia ratio. Consider only in a later corpus recipe after D1 establishes whether high-budget label correction transfers to play. |
+| L5 | Targeted relabel weighting | label ceiling | Fold into D1 rather than open a second arm: preserve a uniform base-data floor, use a 15k phase/hardness-stratified shard, and audit actual weighted draws. Repeat disagreement is estimator noise to average/audit, not a return target. |
+| L6 | Adversarial diagnostic probe bank | blind spots / rules | **BOUNDED AFTER D1 and the rules-ID repair.** Require high-budget confirmation, cross-checkpoint transfer, diversity caps, and natural-frequency estimates before any adversarial training. |
+| L7 | Cooperative table values | multi-seat | Existing `value_vector` already predicts four final scores. The real R1.1c intervention is table-native **per-action Q plus table-derived improved-policy labels**, requiring John's explicit selfish-versus-cooperative objective ruling. |
+| L8 | League/exploiter populations / Suphx oracle detours | fixed point | **DEPRIORITIZED/CLOSED for the current objective.** Do not queue GRP, raw oracle dropout, pMCPA, or luck-corrected rewards. Revisit a privileged posterior critic only after D1 and only through exact public-state marginalization. |
 
 Reassuring negative result from the same pass: Gumbel-with-few-sims,
 sequential halving, and stochastic-game determinization — our existing
@@ -84,7 +97,8 @@ scaffold itself is the bottleneck.
   fraction 54.6%. **Stage 1 (07-14): V1b/V2/T0 measured NULL (value
   RMSE −2..−5% vs −10% bar), C1 comparator flat — trainer-only value
   densification does not clear its bar at this corpus/recipe.**
-  Survivors: D1 (pilot in queue), P1 (needs a generation run), and the
+  Survivors: D1 (pilot passed; Stage A corpus still absent after the 07-16
+  reboot), P1 (needs a generation run), and the
   ctrl-SWA q-loss lead. Kill rule intact: if D1/P1 also fail, EI
   saturation survives and training-side work stops.
 - ~~**R1.3b/c menu coverage**~~ — **CLOSED 07-14**: root-menu 512 gate

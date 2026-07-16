@@ -10,15 +10,35 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-12 10:50 EDT)
+## Status at a glance (updated 2026-07-16 02:36 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
-- **Rules boundary:** the 2026-07-08/09 corrections (optional three-of-a-kind
-  refresh as a real decision → chance → draft; wildlife returns to the bag
-  before refill) compatibility-broke every earlier number. All promotion
-  evidence must carry rules ID `..._rules_2026_07_09`. See
-  [RULES_CONTRACT.md](RULES_CONTRACT.md).
-- **Corrected-rules scoreboard (100 games, seeds 2027070900..99), COMPLETE:**
+- **Live operational state:** john0 is idle. D1 Stage A generation attempt 3
+  (PID `204702`, rev `45fb5072`) was terminated by the john0/WSL reboot at
+  01:32 EDT. Its run log and both sidecars are empty and no tensor or manifest
+  exists, so it produced **no usable corpus**. The failure is recorded in the
+  experiment log; no restart was attempted without John's permission.
+- **Rules/provenance blocker:** the 2026-07-08/09 corrections established rules
+  ID `..._rules_2026_07_09`, but commit `45fb5072` then fixed a distinct
+  consecutive-four-of-a-kind bug by returning each wiped set before resolving
+  the next wipe. The implementation is corrected while
+  [RULES_CONTRACT.md](RULES_CONTRACT.md) and the exporter identity still encode
+  the pre-fix semantics. Assign a new rules ID and fail closed on mixed
+  July-9/July-16 artifacts before any Stage A rerun. Existing July-9 evidence
+  remains historical evidence for its pinned identity.
+- **R1.4-D1 remains the funded strength line:** the pilot moved the label on
+  `43.2–43.6%` of repeat-stable roots, but Stage A has not completed. Its next
+  steps are the rules-identity repair, an explicitly authorized Stage A
+  restart, then John's separately reserved 15k relabel-tranche decision.
+- **External research packet (07-16):** the frozen
+  [question/context brief](../../research_questions_7_16.md) and complete
+  [ten-question answer](../../research_answers_7_16.md) retain `100` as an
+  internal engineering gate, reject Suphx/luck-target and risk-serving detours,
+  keep sequential halving and current Gumbel constants, and specify the D1
+  tranche/targets/exposure/gates. No production BGA Cascadia corpus existed at
+  the cutoff; a human-superhuman claim needs direct exact-rules calibration.
+- **Historical July-9 corrected-rules scoreboard (100 games, seeds
+  2027070900..99), COMPLETE for that pinned identity:**
   greedy `87.5450` → no-search policy `91.8425` → cycle4 n256/d4 `97.0675`
   → distq-k8 n256/d4 `97.3075` (+0.24 ns) → cycle4 n1024/d16 `98.2975` →
   **distq-k8 n1024/d16 `98.3850` (+0.0875 ns vs scalar)**. Verdict:
@@ -175,6 +195,10 @@ timestamped snapshot, weaker than current `main`).
 - [Research Log](RESEARCH_LOG.md): **the experiment record** — architecture,
   every direction tried with verdicts, scaling laws, decision-SNR
   measurement, and ranked future directions.
+- [July 16 research brief](../../research_questions_7_16.md) and
+  [answers](../../research_answers_7_16.md): frozen external-research scope,
+  primary-source synthesis, gated Q1–Q10 decisions, and the complete D1
+  prescription.
 - [Rules Contract](RULES_CONTRACT.md): official rules identity and the
   resulting baseline compatibility boundary.
 - [Radical Directions](RADICAL_DIRECTIONS.md): speculative architecture-level

@@ -7117,3 +7117,39 @@ anywhere cannot idle the GPU.
   for the notebook: a `pkill -f` pattern in the kill sequence matched
   the ssh session's own command string and killed it mid-sequence —
   kill by PID, never by `-f` pattern that appears in your own argv.
+
+## 2026-07-16 02:08 — Stage A generation attempt 3 FAILED: john0/WSL reboot; zero usable output; no restart
+
+- **Purpose/config:** continuation of the preregistered D1 Stage A corpus
+  generation recorded at 00:56: source
+  `45fb5072ec330103a45e80fc3f9e22d571f3f908`, incumbent cycle4
+  `best_locked_val`, seeds `2026794000..5249`, 80 plies/seed, n256/top16/d4,
+  blend 0.5, ghost off, exact-endgame 0, TF32 on, `--rayon-threads 32`, owned
+  per-worker bridge sessions, durable decision/hard-root sidecars. The process
+  still declared the exporter’s existing July-9 rules ID; the newly found
+  rules-ID mismatch is recorded below as a blocker.
+- **Observed failure:** `campaign_status.sh` at 02:08 found PID `204702` dead,
+  john0 GPU idle (`0%`, `5.26 W`), and no Stage A helper live. The wrapper log
+  contains deploy, successful build, and the 00:56:58 “generating” heartbeat,
+  with no `COMPLETE` or `FAILED` line. Read-only host evidence gives boot time
+  `2026-07-16 01:32:13` (`who -b`: 01:33); the WSL reboot terminated the run.
+  No partial score or scientific result was read.
+- **Durable evidence and SHA-256 (john0):**
+  - `cascadiav3/logs/stage_a_generation_v3_20260716.sh` (3,383 bytes):
+    `927bd0379452030be5aba53f38b8068b5f619ef4dd73ee672d2f1ba1674b712e`;
+  - `cascadiav3/logs/stage_a_generation_v3_20260716.log` (372 bytes):
+    `6f17b879bf3af6e90842514f783d0dde7d6ddcf0e2fdca94c4c0da2671a92311`;
+  - `cascadiav3/logs/stage_a_gen_v3_20260716_build.log` (319 bytes):
+    `7e0f304d2be2b556c555bb1d403ce24cb859cacfd96d925c9443717add0ef779`;
+  - `stage_a_gen_v3_20260716_run.log`,
+    `stage_a_20260715_decisions.jsonl`, and
+    `stage_a_20260715_hard_roots.jsonl` are all 0 bytes, each SHA-256
+    `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`;
+  - `stage_a_20260715_tensor.npz` and
+    `stage_a_20260715_manifest.json` do not exist.
+- **Verdict:** operationally failed/invalid; no corpus, label, or strength
+  evidence exists. The registered seed block remains allocated to Stage A.
+- **Decision:** do **not** restart without John’s explicit permission. Before a
+  rerun can produce admissible evidence, reconcile `RULES_CONTRACT.md` with
+  the per-resolution return semantics in `45fb5072`, assign a new rules/config
+  identity, and fail closed on July-9/July-16 mixtures. john0 remains idle.

@@ -765,16 +765,147 @@ the permanent record of what closed and what it taught.
 
 - **R1.4-D1 label correction**: pilot PASSED 07-15 — mega-search
   (n2048/d16) moves the label on **43.2-43.6% of repeat-stable roots**
-  (bar 20%), 0.40 pts mean regret at stake, replicated on 7,600 roots.
-  The only training-side idea with a measured mechanism; Stage A corpus
-  generation in flight. Externally validated by MuZero Reanalyze
-  (relabeling drove ~80% of its updates).
-- Next after Stage A: adaptive per-root budgets (R0.5/R3.4), cooperative
-  table values (R1.1c/R3.1), exactness expansion (R3.3), plus the
-  literature candidates **L1-L8** in
-  [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md) (07-16 light research pass:
-  KataGo bias-correction/variance-scaling/mixed-grade generation,
-  continuous reanalyze, surprise weighting, opponent-seat aux targets).
+  (bar 20%), with mean moved-root regret `0.397` in the pilot and `0.361` in
+  the full run. The pilot signal persisted in the repeat-stable subset of the
+  full 7,600-root run (which contains the pilot, so this is not an independent
+  replication).
+  The only training-side idea with a measured mechanism. Stage A attempt 3
+  was terminated by the 07-16 john0/WSL reboot before any usable corpus row;
+  a rules-ID repair and explicit restart permission now precede its rerun.
+  MuZero Reanalyze supports the general current-teacher refresh mechanism but
+  does not validate Cascadia's targeted fraction, budget, or fold weight.
+- The July 16 research ordering supersedes the earlier “adaptive/table/
+  exactness next” queue: rules-ID repair → authorized Stage A → separately
+  authorized D1 relabel/retrain/screen/gate, with human calibration in
+  parallel, then bounded adversarial diagnostics. Adaptive allocation,
+  table-native values, reliability-sigma, stratified worlds, and exactness
+  expansion are deferred behind direct offline evidence. See the reprioritized
+  **L1-L8** in [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md).
 
 Full chronological detail: `cascadiav3/EXPERIMENT_LOG.md`.
 Resume state / decision history: `docs/v3/CAMPAIGN_STATE.md`.
+
+## 8. External research verdict — 2026-07-16
+
+Frozen scope: [`research_questions_7_16.md`](../../research_questions_7_16.md).
+Complete primary-source synthesis, exact measurements, caveats, source ledger,
+and D1 prescription:
+[`research_answers_7_16.md`](../../research_answers_7_16.md). These are
+literature/repository decisions, not new promotion evidence.
+
+### 8.1 External ceiling and target
+
+- No production Board Game Arena Cascadia population existed at the
+  2026-07-16 cutoff, and no public exact-rules expert/bot dataset or solver
+  benchmark was located.
+- WBC is the best public human proxy but uses random wildlife cards,
+  habitat-majority scoring, tournament incentives, and a different opponent
+  distribution. The 2025 final's recorded `107/101/99/99` minus its published
+  `7/6/2/4` majority bonuses gives **bonus-stripped recorded**
+  `100/95/97/95`, mean `96.75`. This is not counterfactual no-bonus play and
+  cannot calibrate the exact-rules ceiling.
+- The champion's `98.2975` is a 100-game estimate replicated on a fresh
+  100-game block, not its known expectation or a passed 1,000-game gate.
+- **Decision:** retain `100` as the frozen internal engineering gate. Do not
+  call it a human-superhuman threshold until strong humans are measured
+  directly under the exact identity with a blinded variance pilot and a
+  precision-derived sample size. A model-only standard-rules bridge is
+  sensitivity analysis, not a substitute.
+
+### 8.2 Imperfect-information transfer
+
+- Suphx GRP redistributes final rank credit across Mahjong rounds; it is not
+  luck correction. Suphx oracle guiding anneals privileged hands/wall features
+  away, and its raw-dropout evidence is weaker than VLOG's
+  public-prior/privileged-posterior value learner or AlphaStar's training-only
+  privileged critic.
+- A realized hidden order is exogenous in Cascadia. A one-realization oracle
+  label adds realization noise; only exact-conditional hidden-world averaging
+  can estimate a public action value. Evaluation control variates must preserve
+  conditional expectation and cannot redefine the score target.
+- **Decision:** close GRP, raw oracle dropout, pMCPA, and a “luck-corrected”
+  reward. A privileged posterior critic is at most a post-D1 falsifier.
+
+### 8.3 D1 relabeling recipe
+
+- MuZero/Reanalyze, EfficientZero, Expert Iteration, KataGo, ReZero, and PER
+  support current-teacher refresh, soft target replacement, recent/on-policy
+  coverage, and a uniform floor. They do **not** publish a transferable
+  hard-state fraction, search budget, repeat count, or fold weight.
+- The July 15 preregistration already fixed the 15k cap, opening/mid emphasis,
+  n2048/d16x2 no-ghost teacher, K=8 distq, `>=0.010` bank bar, fresh
+  sequential-CUPED n256 gate, and final-n256-null close rule. The July 16
+  report proposes, but does not retroactively preregister, `6k/6k/3k` phase
+  quotas, gap/SE deciles, deterministic per-game caps/top-up, exact repeat
+  aggregation, per-head replacement masks, raw fold weights `[4,2,1,1]`,
+  optional 5k/10k descriptives, exact gate looks, and a second-cycle standing
+  rule. Freeze each amendment before its relevant data boundary.
+- Repeat aggregation must average the two improved policies, pool Q only over
+  visited estimates, average root values, and use deterministic action-ID tie
+  breaking. For population variances, omit invalid repeats and use
+  `Q=sum(n_i Q_i)/N` and
+  `var=sum(n_i*(v_i+(Q_i-Q)^2))/N`, `N=sum(n_i)`. Summing visits and rerunning
+  the Gumbel transform would spuriously sharpen the target.
+- A versioned schema/loader/trainer change must mask policy and every duplicated
+  behavior-outcome loss (value, score, rank, and outcome-derived Q) on D1
+  duplicates. The existing global exposure guard is not source-weight aware;
+  add a fail-closed actual-draw audit. `[4,2,1,1]` targets a 12.5% D1 share,
+  60k expected draws, and four expected passes over 15k roots.
+- **Decision:** D1 stays first because the n2048/d16 hard-root label movement
+  persisted from the pilot (`43.2%`) through the full ledger (`43.6%`). The complete 15k masked
+  fold, student improvement, and gameplay effect remain untested. Reanalysis
+  becomes a standing pipeline only after a positive paired game gate and one
+  fresh-cycle replication.
+
+### 8.4 Search, targets, robustness, and serving
+
+1. **Best-arm allocation:** retain sequential halving. If D1 produces a model
+   that materially changes the Q regime, defer until then a frozen-root,
+   measured-wall-matched comparison with successive rejects and one
+   variance-adaptive halving method. Preserve CRN; freeze the high-budget
+   action reference/ties independently.
+2. **Gumbel constants:** retain `c_visit=50`, `c_scale=1.0`, and min-max. The
+   selected `c_scale=.25` plus top-k:8 candidate failed fresh confirmation,
+   closing that preregistered static sweep rather than every lower scale. Any
+   future L3 needs a disjoint low/high-budget reliability curve and must apply
+   reliability after normalization (`c_scale_eff=rho*c_scale`), because
+   positive affine shrinkage before min-max cancels. Published 2048/EWN work
+   found that fewer *training simulations* could outperform more in stochastic
+   variants, but did not isolate `c_visit`/`c_scale` or provide a
+   variance-to-scale law.
+3. **Multiplayer targets:** Cascadia already has a four-seat state value head.
+   R1.1c's genuine intervention is table-native **per-action Q and
+   table-derived improved-policy labels**, with table utility at root and
+   interior. This changes selfish play into cooperative table planning and
+   remains reserved to John's methodology ruling.
+4. **Determinizations:** basic root-world CRN is already implemented. R0.2
+   paired only the remaining rollout RNG and increased the measured gap
+   variance by 4.4% (`0.020538 -> 0.021438`) against the required 20%
+   reduction. Close “add pairing”; defer any formally unbiased stratified
+   world sampler.
+5. **Symmetry:** close the tested three-rotation inference TTA configuration.
+   Do not prioritize a standalone trainer-augmentation arm; random D6 training
+   remains unmeasured and is eligible only as a cost-neutral shadow arm after
+   reflection transforms/tests exist.
+6. **Adversarial probes:** after D1 and the rules-ID repair, run only a bounded
+   diverse diagnostic bank with high-budget confirmation, cross-checkpoint
+   transfer, held-out generator families, and natural-frequency accounting.
+   Do not start full adversarial training from the KataGo analogy alone.
+7. **Distributional serving:** retain K=8 and serve the existing arithmetic
+   mean projection plus exact afterstate score. The heads receive scalar
+   search-Q labels and are not calibrated final-return quantiles; their spread
+   is neither a validated risk statistic nor a model-error estimate. Close the
+   tested q25/q50/q75 modes and do not queue untested CVaR under a mean-score
+   objective.
+
+### 8.5 Ordering and blocker
+
+The queue is: (0) reconcile the July-16 per-wipe return semantics and assign a
+new rules identity; (1) with John's restart permission, successfully regenerate
+Stage A; (2) with his separate tranche approval, execute D1 under its then-
+frozen relabel/retrain/screen/gate prescription; (3) exact-rules human calibration in parallel where
+practical; (4) bounded adversarial diagnostics; then allocator, table-native,
+reliability-sigma, and stratified-world work behind direct offline evidence.
+
+No source in the review authorizes a promotion, rules-design change, or live
+experiment by itself.

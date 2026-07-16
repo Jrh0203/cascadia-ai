@@ -1,11 +1,66 @@
-# Campaign Working State (updated 2026-07-09)
+# Campaign Working State (updated 2026-07-16)
 
 Live working notes for the Gumbel self-play campaign. Companion to
 [GUMBEL_SELFPLAY_CAMPAIGN.md](GUMBEL_SELFPLAY_CAMPAIGN.md) (strategy) and
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-13 23:50 — ghost+d32 ADOPTED; R3.2 closed by screen; R1.4 Stage 0 done (V1 closed, V1b/T0/P1 live); canonical battery on GPU; Stage 1 trainer flags building; see ADDENDA 07-13 at END)
+## RESUME HERE (07-16 02:36 — john0 idle; Stage A attempt 3 lost to WSL reboot; rules identity blocks rerun)
+
+**Live state, reverified with `campaign_status.sh` at 02:36 EDT:** john0 GPU
+utilization is `0%` at `5.26 W`; `stage_a_generation_v3_20260716` PID
+`204702` is dead. No Stage A job or waiter is live. The persistent
+`HOLD_worlds_confirm` is unrelated and remains untouched. No process was
+killed or restarted during this diagnosis.
+
+**Stage A attempt 3 FAILED operationally with no usable scientific artifact.**
+The wrapper launched at 00:56 on source rev
+`45fb5072ec330103a45e80fc3f9e22d571f3f908`, completed the exporter build,
+and emitted only the “generating Stage A corpus” heartbeat. john0 booted at
+01:32:13 (`who -b`: 01:33), which terminated the process before the exporter
+emitted output. At 02:08:
+
+- `stage_a_gen_v3_20260716_run.log`: 0 bytes;
+- `stage_a_20260715_decisions.jsonl`: 0 bytes;
+- `stage_a_20260715_hard_roots.jsonl`: 0 bytes;
+- `stage_a_20260715_tensor.npz`: missing;
+- `stage_a_20260715_manifest.json`: missing.
+
+The exact wrapper remains durable at
+`john0:~/cascadia/cascadiav3/logs/stage_a_generation_v3_20260716.sh`
+(SHA-256 `927bd0379452030be5aba53f38b8068b5f619ef4dd73ee672d2f1ba1674b712e`).
+The wrapper log hash is
+`6f17b879bf3af6e90842514f783d0dde7d6ddcf0e2fdca94c4c0da2671a92311`;
+the successful-build log hash is
+`7e0f304d2be2b556c555bb1d403ce24cb859cacfd96d925c9443717add0ef779`;
+each empty run/sidecar file has the standard empty-file SHA-256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+
+**Blocking provenance repair:** commit `45fb5072` correctly returns each
+automatic four-of-a-kind wipe before evaluating the next, but
+`RULES_CONTRACT.md` still says all automatic-wipe tokens remain set aside until
+the market is stable and the exporter still emits the July-9 rules ID. A new
+rules/config identity and fail-closed mixed-artifact tests are required before
+another Stage A corpus can become scientific evidence.
+
+**Research decision packet complete:** the frozen
+[July 16 question brief](../../research_questions_7_16.md) and
+[answer report](../../research_answers_7_16.md) keep D1 as the funded line and
+specify the proposed 15k sampling, repeat aggregation, per-head target masks,
+12.5% draw share, screen, and gate. They do not authorize a run or promotion.
+
+**Resume checklist:**
+
+1. Obtain John's explicit permission before restarting Stage A.
+2. Reconcile `RULES_CONTRACT.md`, assign the July-16 rules ID, plumb it through
+   the exporter/manifests, and run the full rules/exporter regression suite.
+3. Deploy the repaired, committed revision and rerun the exact attempt-3
+   generation recipe on the registered `2026794000..5249` block, preserving
+   durable sidecars and the one-job-at-a-time rule.
+4. Only after a complete manifest exists, harvest the preregistered hard-root
+   tranche. The 15k n2048/d16x2 relabel remains a separate John decision.
+
+Historical resume state follows; it is superseded by the block above.
 
 **R3.6 ceiling probe RESOLVED (18:41):** n4096/d16 paired `+0.2100` vs the
 stored champion arm, CI `[-0.5925, +1.0125]` — preregistered band
