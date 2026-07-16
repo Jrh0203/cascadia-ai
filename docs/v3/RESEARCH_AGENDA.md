@@ -9,20 +9,27 @@ original tiered portfolio (rationale, mechanisms, literature) in
 [`claude_max_research_ideas.md`](../../claude_max_research_ideas.md).
 The complete July 16 external-research scope and verdicts are in
 [`research_questions_7_16.md`](../../research_questions_7_16.md) and
-[`research_answers_7_16.md`](../../research_answers_7_16.md).
+[`research_answers_7_16.md`](../../research_answers_7_16.md). The follow-on
+[clean-sheet stochastic-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
+ranks a structured incremental evaluator plus GPU-native exact-chance search;
+it is a post-D1 challenger hypothesis, not current strength evidence.
 
 **Goal:** mean seat score ≥ 100 over 1,000 games under the pinned four-player
 all-A/no-habitat-bonus rules identity current at the time of the gate.
 **Historical scoreboard identity:**
 `cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_09`.
 Commit `45fb5072` corrected an additional rules bug, so this identity is now a
-historical evidence boundary; a successor identity is required before new
-scientific runs.
+historical evidence boundary. The repaired current engine/scientific identities
+are `cascadia-base-official-2026-07-16` and
+`cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16`;
+no admissible canonical score exists under them yet.
 **Historical champion under the July-9 identity:** cycle4 scalar M at
 n1024/d16, **98.30** (98.2975 canonical; reproduced as 98.2975 on a fresh block
 07-13). The historical observed gap is approximately 1.7 points and diffuse.
 **Priority order ruled by John 2026-07-13** ("align the research queue as
-you see fit to maximize our chance of breaking past 100").
+you see fit to maximize our chance of breaking past 100"). On 2026-07-16 at
+09:00 John fully authorized the complete frozen D1 pipeline through verdict;
+champion promotion remains separately reserved.
 
 ## Standing methodology (all adopted)
 
@@ -53,16 +60,18 @@ you see fit to maximize our chance of breaking past 100").
 | 1 | Canonical battery of adopted default (rebaseline block) | **DONE 07-14**: 98.3925 (descriptive; pre-ghost config read 98.2975 on the same block) | descriptive reference + fresh serving-default ledgers; never evidence |
 | 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier) | **CLOSED 07-14**: final look ns, delta −0.03, RCI [−0.27, +0.21] | menu widening is a measured null; R3.3 exact top-k is the surviving route to coverage |
 | 3 | R1.4 Stage 1 retrains: **V1b**, **V2**, **C1**, **T0** (+ctrl) | **FULLY CLOSED 07-15**: all flag effects = continued training (ctrl −6.2% beat every arm); ctrl-SWA lead died on the bank screen (+0.2470 vs 0.2351) | lesson: locked-val loss deltas of 5-15% carry zero decision signal — only bank regret + gates screen training candidates |
-| 4 | R1.4 D1 pilot / Stage A | **PILOT PASSED 07-15; Stage A attempt 3 FAILED 07-16 (john0/WSL reboot 01:32). Rules-identity repair DONE 03:50 (`..._rules_2026_07_16`, commit 31fc2c30); john0 idle, AWAITING JOHN's restart go.** | D1 remains funded; rerun stamps the 07-16 identity; the 15k n2048/d16x2 relabel remains a separate John decision |
-| 5 | D1 relabel/retrain/screen/gate | conditional on a complete Stage A corpus | freeze the proposed sampling, repeat aggregation, per-head masks, 12.5% draw share, matched K=8 no-D1 control, and gate-launch rule before their data boundaries; bank screen requires ≥0.010 improvement over that matched control plus the historical ≤0.237 continuity bar, and the fresh n256 gate compares D1 with the pinned champion |
+| 4 | R1.4 D1 pilot / Stage A | **PILOT PASSED 07-15; attempt 3 lost to reboot; rules identity repaired; attempt 4 LIVE on john0 as of 09:27 (PID 15396, rev 6f40f010, 100% GPU).** Never read partial output. | Fully authorized. Attempt 4 stamps the July-16 identity on registered seeds `2026794000..5249`; complete manifest/provenance verification gates harvest. |
+| 5 | D1 harvest/relabel/retrain/screen/gate | **FULLY AUTHORIZED; frozen 09:00 before Stage A output was read.** Conditional stages follow only after each predecessor verifies complete. | 15k hard `6k/6k/3k` + 1.5k descriptive sentinel; n2048/d16x2 repeat seeds `9000001/9000002`; exact aggregation/masks; raw mix 4:2:1:1; matched no-D1 control + 5k/10k descriptives; bank requires control −0.010 and ≤0.237; fresh `2027079000..99` sequential-CUPED n256 gate; positive gate proceeds to confirmation, promotion still reserved. |
 | 6 | Ghost-label safety fold | **CLEARED 07-15**: both preregistered legs passed (regret Δ0.0046 vs ±0.015; q-regret better than ctrl) | ghost labels are teacher-safe at 0.25-fold; ghost pricing is serving-only (generation measured ~2× slower) |
 
 Current ordering supersedes the earlier “adaptive/table/exactness next” text:
-repair rules identity → authorized Stage A rerun → separately authorized D1
-relabel/retrain/screen/gate; exact-rules human calibration may proceed in
-parallel. A bounded adversarial diagnostic follows D1. Adaptive allocation,
-table-native values, reliability-sigma, stratified worlds, and exactness
-expansion remain behind direct offline evidence and the funded line.
+let the live Stage A attempt finish untouched → verify and execute the already
+authorized harvest/relabel/retrain/screen/gate chain → stop for John's reserved
+promotion ruling if the gate is positive. Exact-rules human calibration may
+proceed in parallel. A bounded adversarial diagnostic and the bounded
+Cascadia-NX offline preflight follow D1. Adaptive allocation, table-native
+values, reliability-sigma, stratified worlds, and exactness expansion remain
+behind direct offline evidence and the funded line.
 
 ## Literature-inspired candidates (07-16 full Q1–Q10 synthesis)
 
@@ -81,6 +90,7 @@ transferable constants. None jump the repaired Stage A/D1 line.
 | L6 | Adversarial diagnostic probe bank | blind spots / rules | **BOUNDED AFTER D1 and the rules-ID repair.** Require high-budget confirmation, cross-checkpoint transfer, diversity caps, and natural-frequency estimates before any adversarial training. |
 | L7 | Cooperative table values | multi-seat | Existing `value_vector` already predicts four final scores. The real R1.1c intervention is table-native **per-action Q plus table-derived improved-policy labels**, requiring John's explicit selfish-versus-cooperative objective ruling. |
 | L8 | League/exploiter populations / Suphx oracle detours | fixed point | **DEPRIORITIZED/CLOSED for the current objective.** Do not queue GRP, raw oracle dropout, pMCPA, or luck-corrected rewards. Revisit a privileged posterior critic only after D1 and only through exact public-state marginalization. |
+| L9 | Cascadia-NX + Counterfactual Bundle Search | representation cost + comparison noise | **OPEN POST-D1 HYPOTHESIS.** D6-tied motif factors, an optional semantic component graph, explicit legal-action own-Q, and GPU-resident exact max-n/chance search over complete paired physical world tapes. This is not legacy NNUE, ordinary small-model/larger-search, geometry-only GNN, structured-Q, or generic CRN. Require current-rules feature parity, several-fold end-to-end throughput with retained teacher regret, unbiased marginals, positive covariance, and a material paired-difference variance reduction before gameplay. Never displace the authorized D1 chain. |
 
 Reassuring negative result from the same pass: Gumbel-with-few-sims,
 sequential halving, and stochastic-game determinization — our existing

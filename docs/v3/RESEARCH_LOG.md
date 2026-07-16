@@ -771,16 +771,17 @@ the permanent record of what closed and what it taught.
   replication).
   The only training-side idea with a measured mechanism. Stage A attempt 3
   was terminated by the 07-16 john0/WSL reboot before any usable corpus row;
-  a rules-ID repair and explicit restart permission now precede its rerun.
+  the rules-ID repair completed, John fully authorized the pipeline, and
+  attempt 4 was alive at the 09:27 status check. No partial output was read.
   MuZero Reanalyze supports the general current-teacher refresh mechanism but
   does not validate Cascadia's targeted fraction, budget, or fold weight.
 - The July 16 research ordering supersedes the earlier “adaptive/table/
-  exactness next” queue: rules-ID repair → authorized Stage A → separately
-  authorized D1 relabel/retrain/screen/gate, with human calibration in
-  parallel, then bounded adversarial diagnostics. Adaptive allocation,
-  table-native values, reliability-sigma, stratified worlds, and exactness
-  expansion are deferred behind direct offline evidence. See the reprioritized
-  **L1-L8** in [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md).
+  exactness next” queue: live Stage A → already authorized D1
+  harvest/relabel/retrain/screen/gate, with human calibration in parallel,
+  then bounded adversarial diagnostics and the Cascadia-NX preflight. Adaptive
+  allocation, table-native values, reliability-sigma, stratified worlds, and
+  exactness expansion are deferred behind direct offline evidence. See the
+  reprioritized **L1-L9** in [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md).
 
 Full chronological detail: `cascadiav3/EXPERIMENT_LOG.md`.
 Resume state / decision history: `docs/v3/CAMPAIGN_STATE.md`.
@@ -900,12 +901,98 @@ literature/repository decisions, not new promotion evidence.
 
 ### 8.5 Ordering and blocker
 
-The queue is: (0) reconcile the July-16 per-wipe return semantics and assign a
-new rules identity; (1) with John's restart permission, successfully regenerate
-Stage A; (2) with his separate tranche approval, execute D1 under its then-
-frozen relabel/retrain/screen/gate prescription; (3) exact-rules human calibration in parallel where
-practical; (4) bounded adversarial diagnostics; then allocator, table-native,
-reliability-sigma, and stratified-world work behind direct offline evidence.
+**Superseding operational update (09:00):** the July-16 rules identity repair
+completed at 03:50, and John fully authorized the Stage A restart plus the 15k
+D1 relabel/retrain/screen/gate chain. The full harvest, sentinel, teacher,
+repeat aggregation, masking, training mix/control/dose arms, bank screen, and
+fresh sequential-CUPED gate were frozen in `cascadiav3/EXPERIMENT_LOG.md`
+before Stage A output was read. Attempt 4 launched at 08:54 and was alive at
+the 09:27 read-only status check. Champion promotion remains separately
+reserved. The queue is now: let the authorized D1 chain reach its registered
+boundary untouched; exact-rules human calibration may proceed in parallel;
+then bounded adversarial diagnostics and the bounded Cascadia-NX offline
+preflight before lower-ranked allocator/table/reliability/world work.
 
 No source in the review authorizes a promotion, rules-design change, or live
 experiment by itself.
+
+## 9. Clean-sheet stochastic-game architecture review — 2026-07-16
+
+Complete literature synthesis, archived NNUE audit, architecture specification,
+falsifiers, and primary-source ledger:
+[`stochastic_board_game_ai_architecture_research_7_16.md`](../../stochastic_board_game_ai_architecture_research_7_16.md).
+This section records the consolidated verdict; it is not Cascadia strength
+evidence.
+
+### 9.1 Strongest cross-game signal
+
+- The closest located game-shape result is a 2025 Azul MSc thesis: a shallow
+  NNUE/search agent beat the strongest handcrafted heuristic in `94.07%` of
+  `10,218` automated games, and longer search consistently strengthened the
+  same evaluator. It is two-player and not peer reviewed.
+- In stochastic 2048, a symmetry-shared n-tuple afterstate learner plus
+  six-ply expectimax reported `625,377` average and `72%` reaching 32768 over
+  100 deep-search games. A Stochastic MuZero result in the same research line
+  is about `510,000`; the comparison is cross-study, not controlled.
+- TD-Gammon, Stockfish NNUE, DouZero, KataGo, and Pgx independently support
+  the same mechanism: explicit afterstates/legal actions, cheap structured
+  evaluation, search or Monte Carlo as teacher, global auxiliary context, and
+  accelerator-native simulation can matter more than a generic large model.
+- Exact rules make learned MuZero/Dreamer dynamics a poor first Cascadia bet.
+  Retain the decision-afterstate-chance factorization and execute the real
+  simulator.
+
+### 9.2 Ranked architecture hypothesis
+
+The leading clean-sheet challenger is **Cascadia-NX**:
+
+1. a versioned exact compiler for scoring-card-conditioned local motifs,
+   habitat components, market/bag/phase summaries, and legal compound-action
+   deltas;
+2. D6-symmetry-tied sparse factor embeddings with NNUE-style accumulators;
+3. a small global component/action graph used as a residual, optionally only
+   for search survivors;
+4. a scalar own-score-to-go action head served strictly as exact afterstate
+   score plus predicted remaining score;
+5. category, four-seat, distribution, and motif heads as auxiliary
+   regularizers only; and
+6. GPU-resident exact max-n/chance search over complete paired physical future
+   world bundles.
+
+The paired search synthesis is named **Counterfactual Bundle Search** in the
+report. Every root action sees the same sampled physical tile/wildlife priority
+orders and opponent-policy random variables. It advances only if marginal
+probabilities remain exact, paired and independent means agree, covariance is
+positive, and action-difference variance falls on untouched roots. This is
+materially different from R0.2's failed pairing of only the remaining rollout
+RNG; without those proofs it is the closed CRN direction under a new name.
+
+### 9.3 Why this does not reopen closed work
+
+- The archived 11,231-feature, `512 -> 64 -> 1`, 5.78M-parameter NNUE plateaued
+  around `90.7` direct and `95.8–95.9` with K32/R600-class search under old
+  rules. Doubling rollouts was flat; deeper wildlife lookahead double-counted
+  future value and hurt. Its attempted accumulator was 2.5x faster but
+  regressed about three points because feature dependencies were incomplete.
+- Cascadia-NX is eligible only as a coupled system: correct full dependency
+  tracking, current v3 reanalysis/TD targets, explicit global semantics and
+  compound-action Q, and a GPU-native engine/search boundary. “Bring back
+  NNUE,” a pure local n-tuple model, or an ordinary smaller transformer remains
+  closed.
+- Archived geometry-only GNN ADR 0073 worsened value correlation and MAE. The
+  proposed graph is a small residual over exact semantic components, not a
+  geometry-only trunk.
+- The failed structured-Q sum remains closed. Category heads are auxiliary.
+  Pairwise-Borda, table-total serving, risk serving, symmetry TTA, blind CRN,
+  generic menu widening, and chance-node leaf expectimax remain closed.
+
+### 9.4 Decision and ordering
+
+**Status: OPEN HYPOTHESIS; ZERO CASCADIA STRENGTH EVIDENCE.** Do not interrupt
+or reorder the fully authorized D1 chain. After D1 reaches its frozen boundary,
+a bounded current-rules offline bakeoff may compare the transformer with local
+factor, global-summary, component-graph, and two-fidelity arms on identical
+states and targets. Only several-fold end-to-end throughput with retained or
+better high-budget teacher regret justifies the GPU planner. Only a fresh
+paired gameplay gate can establish strength, and the final objective remains
+mean seat score at least 100 over 1,000 games under one pinned identity.

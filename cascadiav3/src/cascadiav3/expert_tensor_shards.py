@@ -217,6 +217,15 @@ class ExpertTensorShard:
         self.exact_endgame = (
             self._npz["exact_endgame"] if "exact_endgame" in self._npz.files else None
         )
+        # Optional per-record loss-validity masks (D1 training views,
+        # 07-16). Absent arrays mean every record is fully valid, which
+        # keeps legacy shards and recipes bit-identical.
+        self.policy_valid = (
+            self._npz["policy_valid"] if "policy_valid" in self._npz.files else None
+        )
+        self.outcome_valid = (
+            self._npz["outcome_valid"] if "outcome_valid" in self._npz.files else None
+        )
         if self.version in {SHARD_VERSION_V2, SHARD_VERSION_V3, SHARD_VERSION_V4} and (
             self.improved_policy is None or self.search_root_value is None
         ):
@@ -249,8 +258,15 @@ class ExpertTensorShard:
             raise ValueError("v3+ metadata schema_id mismatch")
         require_text(self.metadata, "ruleset_id")
         require_text(self.metadata, "source_revision")
-        if self.metadata.get("mode") != "gumbel_selfplay_tensor_corpus":
-            raise ValueError("v3 metadata mode must be gumbel_selfplay_tensor_corpus")
+        if self.metadata.get("mode") not in {
+            "gumbel_selfplay_tensor_corpus",
+            # D1 relabel shards: repeat-aggregated high-budget teacher
+            # targets emitted at harvested puzzle-bank roots (07-16).
+            "puzzle_bank_d1_relabel",
+        }:
+            raise ValueError(
+                "v3 metadata mode must be gumbel_selfplay_tensor_corpus or puzzle_bank_d1_relabel"
+            )
         search = self.metadata.get("search")
         if not isinstance(search, dict):
             raise ValueError("v3 metadata requires search contract")
@@ -362,6 +378,10 @@ class ExpertTensorShard:
                 raise ValueError(f"{name} length mismatch")
         if self.final_score_vector.shape != (record_count, 4):
             raise ValueError("final_score_vector shape mismatch")
+        for name in ("policy_valid", "outcome_valid"):
+            array = getattr(self, name)
+            if array is not None and array.shape != (record_count,):
+                raise ValueError(f"{name} length mismatch")
         if self.rank_vector.shape != (record_count, 4):
             raise ValueError("rank_vector shape mismatch")
         if self.score_decomposition.shape != (record_count, 3, 4):
@@ -450,6 +470,10 @@ class ExpertTensorShard:
             )
         if self.active_seat is not None:
             example["active_seat"] = int(self.active_seat[index])
+        if self.policy_valid is not None:
+            example["policy_valid"] = bool(self.policy_valid[index])
+        if self.outcome_valid is not None:
+            example["outcome_valid"] = bool(self.outcome_valid[index])
         return example
 
     def close(self) -> None:
@@ -633,6 +657,8 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
     improved_policy=None,
     search_root_value=None,
     exact_endgame=None,
+    policy_valid=None,
+    outcome_valid=None,
 ) -> None:
     import numpy as np
 
@@ -678,6 +704,10 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
     }
     if relation_tail is not None:
         arrays["relation_tail"] = relation_tail
+    if policy_valid is not None:
+        arrays["policy_valid"] = np.asarray(policy_valid, dtype=np.uint8)
+    if outcome_valid is not None:
+        arrays["outcome_valid"] = np.asarray(outcome_valid, dtype=np.uint8)
     if improved_policy is not None:
         arrays["improved_policy"] = improved_policy
         if search_root_value is None:
@@ -1232,6 +1262,16 @@ def collate_expert_tensor_examples(examples: list[dict[str, Any]]) -> dict[str, 
         batch["relation_tail"] = relation_tail
     else:
         batch["relation_ids"] = relation_ids
+    if any("policy_valid" in example for example in examples):
+        batch["policy_valid"] = torch.tensor(
+            [bool(example.get("policy_valid", True)) for example in examples],
+            dtype=torch.bool,
+        )
+    if any("outcome_valid" in example for example in examples):
+        batch["outcome_valid"] = torch.tensor(
+            [bool(example.get("outcome_valid", True)) for example in examples],
+            dtype=torch.bool,
+        )
     return batch
 
 

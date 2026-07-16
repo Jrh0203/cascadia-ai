@@ -5296,7 +5296,42 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
             object.insert("repeats".to_owned(), json!(repeats));
             object.insert(
                 "search".to_owned(),
-                gumbel_search_probe_settings(args),
+                json!({
+                    "n_simulations": args.gumbel_n_simulations,
+                    "top_m": args.gumbel_top_m,
+                    "depth_rounds": args.gumbel_depth_rounds,
+                    "determinization_samples": args.gumbel_determinizations,
+                    "market_decision_samples": args.gumbel_market_decision_samples,
+                    "exact_endgame_turns": args.gumbel_exact_endgame_turns,
+                    "rollout_blend_weight": args.gumbel_blend_weight,
+                    "parallel_leaf_rollouts": args.gumbel_parallel_leaf_rollouts,
+                    "exploration": args.gumbel_exploration,
+                    "peek": args.gumbel_peek,
+                    "table_total": args.gumbel_table_total,
+                    "table_native_q": args.gumbel_table_native_q,
+                    "leaf_softmix": args.gumbel_leaf_softmix,
+                    "tta": args.gumbel_tta,
+                    "k_interior": args.k_interior,
+                    "max_root_actions": args.gumbel_max_root_actions,
+                    "root_menu": args.gumbel_root_menu,
+                    "repeats": repeats,
+                    "repeat_seed_salt": "stability_probe_seed",
+                }),
+            );
+            object.insert(
+                "execution".to_owned(),
+                json!({
+                    "rayon_threads_requested": args.rayon_threads,
+                    "rayon_current_num_threads": rayon::current_num_threads(),
+                    "model_sessions_requested": args.model_sessions,
+                    "shared_model_session": args.shared_model_session,
+                    "seed_scheduler": "dynamic_atomic_queue",
+                    "model_session_topology": if args.shared_model_session {
+                        "one_shared_bridge_with_worker_clients"
+                    } else {
+                        "one_persistent_bridge_per_seed_worker"
+                    },
+                }),
             );
             object.insert("teacher_model".to_owned(), teacher_model);
             object.insert("generator".to_owned(), generator);
@@ -6928,6 +6963,11 @@ fn expert_tensor_mode_contract(args: &Args) -> (&'static str, &'static str, &'st
             "expert_iteration_model_state_bootstrap",
             "Rust-native packed expert tensor shard from model-state roots; retained greedy-ranked actions are labeled by sampled greedy rollout means while real trajectories advance by model derived-Q or model prior.",
         ),
+        Mode::PuzzleBank => (
+            "puzzle_bank_d1_relabel",
+            "gumbel_selfplay_expert_iteration",
+            "Rust-native packed v4 expert tensor shard from repeat-aggregated high-budget relabeling at harvested puzzle-bank roots; outcome fields carry realized behavior-trajectory results and must be masked by the D1 training view.",
+        ),
         Mode::GumbelSelfplayTensorCorpus => (
             "gumbel_selfplay_tensor_corpus",
             "gumbel_selfplay_expert_iteration",
@@ -7062,7 +7102,10 @@ fn expert_tensor_shard_metadata(args: &Args, shard: &ExpertTensorShardData) -> V
         "rank_vector",
         "score_decomposition",
     ];
-    if args.mode == Mode::GumbelSelfplayTensorCorpus {
+    if matches!(
+        args.mode,
+        Mode::GumbelSelfplayTensorCorpus | Mode::PuzzleBank
+    ) {
         targets.extend([
             "improved_policy",
             "search_root_value",

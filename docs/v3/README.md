@@ -10,26 +10,27 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-16 02:36 EDT)
+## Status at a glance (updated 2026-07-16 09:27 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
-- **Live operational state:** john0 is idle. D1 Stage A generation attempt 3
-  (PID `204702`, rev `45fb5072`) was terminated by the john0/WSL reboot at
-  01:32 EDT. Its run log and both sidecars are empty and no tensor or manifest
-  exists, so it produced **no usable corpus**. The failure is recorded in the
-  experiment log; no restart was attempted without John's permission.
-- **Rules/provenance blocker:** the 2026-07-08/09 corrections established rules
-  ID `..._rules_2026_07_09`, but commit `45fb5072` then fixed a distinct
-  consecutive-four-of-a-kind bug by returning each wiped set before resolving
-  the next wipe. The implementation is corrected while
-  [RULES_CONTRACT.md](RULES_CONTRACT.md) and the exporter identity still encode
-  the pre-fix semantics. Assign a new rules ID and fail closed on mixed
-  July-9/July-16 artifacts before any Stage A rerun. Existing July-9 evidence
-  remains historical evidence for its pinned identity.
-- **R1.4-D1 remains the funded strength line:** the pilot moved the label on
-  `43.2–43.6%` of repeat-stable roots, but Stage A has not completed. Its next
-  steps are the rules-identity repair, an explicitly authorized Stage A
-  restart, then John's separately reserved 15k relabel-tranche decision.
+- **Live operational state:** D1 Stage A generation attempt 4 is alive on
+  john0 (PID `15396`, launched 08:54 EDT, monitor `bekcae52q`) at 100% GPU
+  utilization as of the 09:27 read-only status check. It runs the cycle4 owned-
+  session topology on rev `6f40f010`, ghost off, registered seeds
+  `2026794000..5249`, under the repaired July-16 identity. No partial output or
+  score was read and the unrelated `HOLD_worlds_confirm` remains untouched.
+- **Rules/provenance blocker RESOLVED (03:50):** the engine, contract,
+  exporter, manifests, and fresh-run comparators now use
+  `cascadia-base-official-2026-07-16` /
+  `..._rules_2026_07_16`, with fail-closed July-9/July-16 boundaries and full
+  rules/exporter tests. Existing July-9 evidence remains historical evidence
+  only; no admissible July-16 canonical score exists yet.
+- **R1.4-D1 is fully authorized through verdict:** at 09:00 John authorized
+  the Stage A restart and 15k relabel/retrain/screen/gate chain; champion
+  promotion remains separately reserved to John. The exact harvest, sentinel,
+  n2048/d16x2 repeat aggregation, masks, training mix/control, dose arms, bank
+  screen, and sequential-CUPED gate were frozen in
+  `cascadiav3/EXPERIMENT_LOG.md` before Stage A output was read.
 - **External research packet (07-16):** the frozen
   [question/context brief](../../research_questions_7_16.md) and complete
   [ten-question answer](../../research_answers_7_16.md) retain `100` as an
@@ -37,6 +38,11 @@ over packed expert tensors with Gumbel search-supervised action values.
   keep sequential halving and current Gumbel constants, and specify the D1
   tranche/targets/exposure/gates. No production BGA Cascadia corpus existed at
   the cutoff; a human-superhuman claim needs direct exact-rules calibration.
+  The follow-on [clean-sheet stochastic-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
+  ranks a symmetry-tied incremental factor network plus a small global
+  component graph and GPU-resident paired exact-chance search above another
+  larger transformer. It is an open, post-D1 challenger hypothesis—not
+  promotion evidence and not a reason to disturb the live D1 chain.
 - **Historical July-9 corrected-rules scoreboard (100 games, seeds
   2027070900..99), COMPLETE for that pinned identity:**
   greedy `87.5450` → no-search policy `91.8425` → cycle4 n256/d4 `97.0675`
@@ -199,6 +205,10 @@ timestamped snapshot, weaker than current `main`).
   [answers](../../research_answers_7_16.md): frozen external-research scope,
   primary-source synthesis, gated Q1–Q10 decisions, and the complete D1
   prescription.
+- [Clean-sheet stochastic board-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md):
+  best-performing cross-game evidence, archived Cascadia NNUE audit,
+  Cascadia-NX/Counterfactual Bundle Search proposal, falsifiers, and primary
+  source ledger.
 - [Rules Contract](RULES_CONTRACT.md): official rules identity and the
   resulting baseline compatibility boundary.
 - [Radical Directions](RADICAL_DIRECTIONS.md): speculative architecture-level

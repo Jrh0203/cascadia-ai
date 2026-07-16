@@ -217,7 +217,7 @@ train action-conditioned category score-to-go heads whose sum stays grounded,
 and retain scalar/distq supervision for all searched actions. Probe JSON SHA:
 `5c06de5da762352765a26c233b8718af7e69bc9040d698ad0758c2b72e908c2a`.
 
-**Exact-grounded implementation: COMPLETE; TRAINING VERDICT PENDING.** New
+**Historical pre-verdict state — exact-grounded implementation COMPLETE.** New
 Gumbel exports are schema v4 with active seat and exact per-action
 wildlife/habitat/Nature afterstate components. The optional component head
 defines ordinary score-to-go as its exact sum, supports scalar or quantile
@@ -226,6 +226,14 @@ objective supervises categories on the selected action and completed Q on all
 q-valid sums. `q-decomposition-head-only` freezes every incumbent parameter
 for the preregistered cheap gate. This closes the architecture/plumbing task;
 it does not yet establish that the trained head improves validation or play.
+
+**Training verdict: CLOSED (2026-07-10).** The preregistered head-only gate
+failed: selected-final RMSE was `4.1573` versus teacher `3.5520`, a `-17.04%`
+change against the required `+10%`. Retention diagnostics passed, but the
+ridge preflight did not survive the actual training contract. No full-model
+run or gameplay followed. Category heads may remain auxiliary regularizers in
+a materially different trunk; the load-bearing additive serving design is
+closed.
 
 ## 6. League self-play (break the self-play attractor)
 
@@ -252,16 +260,57 @@ and q75 negative in their one-seed screens. That kills risk shifting as a
 standalone strength gate, not as a league-diversity mechanism. League work
 remains gated on the corrected-rules distq/EI verdict.
 
+## 7. Cascadia-NX: structured afterstate factors + paired GPU exact search
+
+Full clean-sheet review and source ledger:
+[`stochastic_board_game_ai_architecture_research_7_16.md`](../../stochastic_board_game_ai_architecture_research_7_16.md).
+
+**Idea.** Replace repeated full-state transformer inference with a correctly
+incremental, D6-symmetry-tied factor evaluator over scoring-card motifs,
+habitat components, market/bag state, and explicit legal compound-action
+deltas. Add a small semantic component/action graph only as a global residual.
+Run the cheap evaluator inside a GPU-resident exact decision/afterstate/chance
+planner. At the root, compare candidates over the same complete physical
+tile/wildlife future tapes and keep pairing only where measured covariance is
+positive.
+
+**Why it fits.** The best located stochastic score-game results—2048 n-tuple
+afterstate TD + expectimax, Azul NNUE + search, TD-Gammon, and DouZero—favor
+cheap structured afterstate/action evaluation. Pgx and variance-reduced MCTS
+show that accelerator-native exact simulation and correctly coupled worlds can
+change the search frontier. This attacks both measured campaign constraints:
+current per-call economics and variance of action differences.
+
+**Why it is materially new.** The archived 5.78M sparse Cascadia NNUE was not
+correctly incremental, lacked the proposed global/action semantics and current
+v3 reanalysis targets, and plateaued around 90.7 direct / 95.8–95.9 searched
+under old rules. Ordinary small-model/larger-search, geometry-only GNN,
+load-bearing structured-Q, generic CRN, pairwise Borda, and chance-node leaf
+expectimax remain closed. Category/four-seat heads are auxiliary only; serving
+stays exact afterstate score plus scalar expected own score-to-go.
+
+**Falsifier.** After the authorized D1 chain reaches its frozen boundary, run
+only a bounded current-rules offline bakeoff. Require exact feature/delta/D6
+parity, several-fold end-to-end throughput with retained or improved
+high-budget teacher regret, exact paired-world marginals, positive covariance,
+and material action-difference variance reduction. Only then build the full
+GPU planner. Only a fresh paired gameplay gate establishes strength.
+
+**Status:** open post-D1 hypothesis; zero Cascadia strength evidence. It does
+not displace or reorder D1.
+
 ## Explicitly not on this list
 
 Belief modeling / bag inference (oracle LOST — information is not the
 constraint), checkpoint output-ensembles (shared-bias, measured 4-ways),
 input-symmetry tricks (representation is already invariant), serving-side
 cooperative objectives (noise multiplier, measured twice), bigger
-monolithic models on the same labels (measured three ways).
+monolithic models on the same labels (measured three ways), learned dynamics
+for rules the exact engine already owns, ordinary legacy-NNUE revival, and
+blind common-random-number pairing without a positive covariance audit.
 
-*Sequencing suggestion: finish #1's CUDA gate and #2's CUDA throughput
-preflight before committing training compute. #3 is serving-side and cheap.
-#5 gates on the corrected distq verdict; #4 unlocks scale for everything and
-can start as engineering whenever GPU-planning allows. #6 last — it needs the
-flywheel confirmed.*
+*Current sequencing: do not disturb the fully authorized D1 chain. After D1
+reaches its frozen boundary, #7 may begin with the bounded offline
+representation/covariance bakeoff. The full GPU port is conditional on that
+preflight. #4 remains a structural systems enabler; #5 is closed; #6 remains a
+later diversity mechanism rather than a serving ensemble.*

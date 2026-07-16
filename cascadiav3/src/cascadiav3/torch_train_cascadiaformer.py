@@ -682,12 +682,31 @@ def _loss_components(
 
     mask = batch["action_mask"]
     q_mask = batch["q_valid"] & mask
+    # D1 training views (07-16): optional per-record validity masks. An
+    # absent or all-true mask keeps every reduction below bit-identical to
+    # the pre-D1 trainer; masked records contribute zero loss and zero
+    # denominator to the gated components.
+    policy_valid = batch.get("policy_valid")
+    if policy_valid is not None and bool(policy_valid.all()):
+        policy_valid = None
+    outcome_valid = batch.get("outcome_valid")
+    if outcome_valid is not None and bool(outcome_valid.all()):
+        outcome_valid = None
+
+    def _record_masked_mean(per_record, valid):  # type: ignore[no-untyped-def]
+        weights_mask = valid.to(per_record.dtype)
+        return (per_record * weights_mask).sum() / weights_mask.sum().clamp_min(1.0)
     logits = outputs["logits"].masked_fill(~mask, -1.0e9)
     teacher_target = batch["selected_action_index"]
     greedy_target = batch.get("greedy_action_index")
     if greedy_target is None:
         greedy_target = torch.zeros_like(teacher_target)
-    selected_policy = F.cross_entropy(logits, teacher_target)
+    if policy_valid is None:
+        selected_policy = F.cross_entropy(logits, teacher_target)
+    else:
+        selected_policy = _record_masked_mean(
+            F.cross_entropy(logits, teacher_target, reduction="none"), policy_valid
+        )
     improved_policy_target = batch.get("improved_policy") if batch.get("has_improved_policy") else None
     target_score_to_go = batch.get("target_score_to_go", batch["target_q"])
     exact_afterstate = batch.get("exact_afterstate_score_active")
@@ -703,7 +722,11 @@ def _loss_components(
     normalizer = target_distribution.sum(dim=1, keepdim=True).clamp_min(1.0e-8)
     target_distribution = target_distribution / normalizer
     log_policy = torch.log_softmax(logits, dim=1)
-    weighted_policy = -(target_distribution * log_policy).sum(dim=1).mean()
+    weighted_policy_per_record = -(target_distribution * log_policy).sum(dim=1)
+    if policy_valid is None:
+        weighted_policy = weighted_policy_per_record.mean()
+    else:
+        weighted_policy = _record_masked_mean(weighted_policy_per_record, policy_valid)
     if improved_policy_target is not None:
         # Gumbel self-play: soft-target cross-entropy against the search's
         # improved policy (equivalent to KL up to the target entropy constant)
@@ -711,7 +734,11 @@ def _loss_components(
         masked_target = improved_policy_target.masked_fill(~mask, 0.0)
         target_normalizer = masked_target.sum(dim=1, keepdim=True).clamp_min(1.0e-8)
         masked_target = masked_target / target_normalizer
-        policy = -(masked_target * log_policy).sum(dim=1).mean()
+        policy_per_record = -(masked_target * log_policy).sum(dim=1)
+        if policy_valid is None:
+            policy = policy_per_record.mean()
+        else:
+            policy = _record_masked_mean(policy_per_record, policy_valid)
         weighted_policy = policy
     else:
         policy = 0.5 * selected_policy + 0.5 * weighted_policy
@@ -805,14 +832,43 @@ def _loss_components(
             + 0.5
         ) / value_levels_count
         value_residual = target_value.unsqueeze(-1) - value_quantile_values
-        value = torch.maximum(
+        value_pinball = torch.maximum(
             value_levels * value_residual,
             (value_levels - 1.0) * value_residual,
-        ).mean()
-    else:
+        )
+        if outcome_valid is None:
+            value = value_pinball.mean()
+        else:
+            value = _record_masked_mean(
+                value_pinball.reshape(value_pinball.shape[0], -1).mean(dim=1),
+                outcome_valid,
+            )
+    elif outcome_valid is None:
         value = F.mse_loss(outputs["value_vector"], target_value)
-    score = F.mse_loss(outputs["score_decomposition"], batch["target_score"])
-    rank = F.cross_entropy(outputs["rank_logits"].reshape(-1, 4), batch["target_rank"].reshape(-1))
+    else:
+        value = _record_masked_mean(
+            F.mse_loss(outputs["value_vector"], target_value, reduction="none").mean(dim=1),
+            outcome_valid,
+        )
+    if outcome_valid is None:
+        score = F.mse_loss(outputs["score_decomposition"], batch["target_score"])
+        rank = F.cross_entropy(
+            outputs["rank_logits"].reshape(-1, 4), batch["target_rank"].reshape(-1)
+        )
+    else:
+        score_per_record = F.mse_loss(
+            outputs["score_decomposition"], batch["target_score"], reduction="none"
+        )
+        score = _record_masked_mean(
+            score_per_record.reshape(score_per_record.shape[0], -1).mean(dim=1),
+            outcome_valid,
+        )
+        rank_per_seat = F.cross_entropy(
+            outputs["rank_logits"].reshape(-1, 4),
+            batch["target_rank"].reshape(-1),
+            reduction="none",
+        ).reshape(outcome_valid.shape[0], -1)
+        rank = _record_masked_mean(rank_per_seat.mean(dim=1), outcome_valid)
     uncertainty_target = torch.sqrt(teacher_se_sq.clamp_min(0.0)).masked_select(q_mask)
     uncertainty_pred = outputs["uncertainty"].masked_select(q_mask)
     uncertainty = (

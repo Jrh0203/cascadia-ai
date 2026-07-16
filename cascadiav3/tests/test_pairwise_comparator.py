@@ -266,6 +266,10 @@ class PairwiseComparatorTest(unittest.TestCase):
         from cascadiav3.torch_cascadiaformer import build_cascadiaformer, config_for_size
         from cascadiav3.torch_pairwise_policy_probe import run_probe
 
+        # The random-init model's Borda mask feeds the confidence gate;
+        # unseeded init makes "no confidence-qualified pairs" a coin flip
+        # (observed flaky 2026-07-16). Pin the init.
+        torch.manual_seed(20260716)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             tensor = root / "val.npz"

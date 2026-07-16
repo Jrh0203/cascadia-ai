@@ -165,8 +165,11 @@ When disabled, `q_component_head` is absent and the legacy state-dict/output
 contract is unchanged. Schema loading, filtering, relation-tail materialization,
 collation, terminal/afterstate sum invariants, head-only freezing, checkpoint
 reload, and derived-Q serving are tested. This makes the implementation safe
-to run; promotion still requires the preregistered head-first validation gate
-and paired gameplay.
+to load and reproduce, but the preregistered head-first validation gate has now
+failed: selected-final RMSE `4.1573` versus teacher `3.5520` (`-17.04%`
+against a required `+10%`). The load-bearing structured-Q direction is closed;
+no full-model run or gameplay occurred. Category heads remain eligible only as
+auxiliary regularizers in a materially different architecture.
 
 When a structured run warm-starts from a legacy checkpoint, each category
 projection is initialized to one third of the loaded Q projection (per
@@ -205,6 +208,13 @@ keeps unseen long-tail actions out of the comparator's support. It changes
 policy priors only; derived final Q/value semantics stay untouched. The bridge
 and benchmark record `policy_mode` plus `pairwise_policy_top_k`, and non-default
 modes fail before launch unless the checkpoint manifest declares the comparator.
+
+The completed held-out pilot learned reliable pair labels but failed the
+serving-aligned decision gate: pairwise Borda improved top-one by only two net
+roots, worsened completed-Q regret, and its bootstrap interval spanned zero;
+logits plus Borda was top-one flat. The serving direction is closed and these
+interfaces are retained only as research plumbing. A new architecture may use
+reliable pair margins as an auxiliary loss, not silently reopen Borda serving.
 
 ## Search Semantics
 

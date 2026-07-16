@@ -5,60 +5,61 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-16 02:36 — john0 idle; Stage A attempt 3 lost to WSL reboot; rules identity blocks rerun)
+## RESUME HERE (07-16 09:27 — D1 fully authorized; Stage A attempt 4 live on john0)
 
-**Live state, reverified with `campaign_status.sh` at 02:36 EDT:** john0 GPU
-utilization is `0%` at `5.26 W`; `stage_a_generation_v3_20260716` PID
-`204702` is dead. No Stage A job or waiter is live. The persistent
-`HOLD_worlds_confirm` is unrelated and remains untouched. No process was
-killed or restarted during this diagnosis.
+**Live state, reverified read-only with `campaign_status.sh` at 09:27 EDT:**
+`stage_a_generation_v4_20260716` PID `15396` is alive; john0 is at `100%` GPU,
+`148.16 W`, and `31,092 MiB` VRAM. The persistent `HOLD_worlds_confirm` is
+unrelated and remains untouched. No partial Stage A output or score was read,
+and no process was killed or restarted during this status reconciliation.
 
-**Stage A attempt 3 FAILED operationally with no usable scientific artifact.**
-The wrapper launched at 00:56 on source rev
-`45fb5072ec330103a45e80fc3f9e22d571f3f908`, completed the exporter build,
-and emitted only the “generating Stage A corpus” heartbeat. john0 booted at
-01:32:13 (`who -b`: 01:33), which terminated the process before the exporter
-emitted output. At 02:08:
+**Stage A attempt 4 launched 08:54 under John's 09:00 full authorization.**
+It runs source rev `6f40f010`, the corrected engine and repaired
+`cascadia-base-official-2026-07-16` /
+`cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16`
+identity, cycle4's owned-session topology, workers=rayon with
+`--rayon-threads 32`, ghost off, and registered seeds
+`2026794000..5249`. Durable sidecars are
+`stage_a_20260716_{decisions,hard_roots}.jsonl`; monitor `bekcae52q` owns the
+chain/run logs. Launch ETA was approximately 17:00, but liveness—not an ETA or
+partial row count—is the current fact.
 
-- `stage_a_gen_v3_20260716_run.log`: 0 bytes;
-- `stage_a_20260715_decisions.jsonl`: 0 bytes;
-- `stage_a_20260715_hard_roots.jsonl`: 0 bytes;
-- `stage_a_20260715_tensor.npz`: missing;
-- `stage_a_20260715_manifest.json`: missing.
+**Rules/provenance repair COMPLETE (03:50).** Commit `31fc2c30` reconciled the
+per-resolution wildlife return semantics, assigned the July-16 engine and
+scientific IDs, propagated them through exporter/manifests/fresh-run
+comparators, and added fail-closed mixed-identity tests. Workspace rules and
+exporter suites passed. Every 98.x scoreboard result remains historical
+July-9 evidence; no admissible July-16 canonical score exists yet.
 
-The exact wrapper remains durable at
-`john0:~/cascadia/cascadiav3/logs/stage_a_generation_v3_20260716.sh`
-(SHA-256 `927bd0379452030be5aba53f38b8068b5f619ef4dd73ee672d2f1ba1674b712e`).
-The wrapper log hash is
-`6f17b879bf3af6e90842514f783d0dde7d6ddcf0e2fdca94c4c0da2671a92311`;
-the successful-build log hash is
-`7e0f304d2be2b556c555bb1d403ce24cb859cacfd96d925c9443717add0ef779`;
-each empty run/sidecar file has the standard empty-file SHA-256
-`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+**D1 preregistration frozen before Stage A output was read.** The 09:00
+`cascadiav3/EXPERIMENT_LOG.md` entry is authoritative: 15k hard roots split
+`6k/6k/3k` by phase plus a 1,500-root descriptive sentinel; n2048/d16,
+ghost-off teacher with repeat seeds `9000001/9000002`; exact repeat
+aggregation; masked training views; raw mix `4:2:1:1`; matched no-D1 control;
+5k/10k dose descriptives; locked bank bars; and a fresh
+`2027079000..2027079099` sequential-CUPED gate. John authorized the complete
+relabel/retrain/screen/gate chain. Champion promotion remains separately
+reserved to John.
 
-**Blocking provenance repair:** commit `45fb5072` correctly returns each
-automatic four-of-a-kind wipe before evaluating the next, but
-`RULES_CONTRACT.md` still says all automatic-wipe tokens remain set aside until
-the market is stable and the exporter still emits the July-9 rules ID. A new
-rules/config identity and fail-closed mixed-artifact tests are required before
-another Stage A corpus can become scientific evidence.
-
-**Research decision packet complete:** the frozen
-[July 16 question brief](../../research_questions_7_16.md) and
-[answer report](../../research_answers_7_16.md) keep D1 as the funded line and
-specify the proposed 15k sampling, repeat aggregation, per-head target masks,
-12.5% draw share, screen, and gate. They do not authorize a run or promotion.
+The follow-on
+[clean-sheet architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
+does not change this queue. Its Cascadia-NX proposal is a post-D1 hypothesis
+and must not displace john0 or read live-arm output.
 
 **Resume checklist:**
 
-1. Obtain John's explicit permission before restarting Stage A.
-2. Reconcile `RULES_CONTRACT.md`, assign the July-16 rules ID, plumb it through
-   the exporter/manifests, and run the full rules/exporter regression suite.
-3. Deploy the repaired, committed revision and rerun the exact attempt-3
-   generation recipe on the registered `2026794000..5249` block, preserving
-   durable sidecars and the one-job-at-a-time rule.
-4. Only after a complete manifest exists, harvest the preregistered hard-root
-   tranche. The 15k n2048/d16x2 relabel remains a separate John decision.
+1. Do not inspect partial Stage A scientific output. Verify only process and
+   heartbeat freshness through the durable monitor/status path.
+2. Do not kill, restart, deploy over, or compete with PID `15396` without
+   explicit user permission. Honor `HOLD_*` checks in the chain.
+3. After the wrapper declares completion, verify the complete manifest,
+   July-16 rules/source/config identity, registered seeds, sidecar/tensor
+   counts, and SHA-256 evidence before harvesting anything.
+4. Continue the already authorized harvest/sentinel, two-repeat relabel,
+   aggregation/masked-view, retrain/control/dose, locked-bank, and conditional
+   gate stages exactly as frozen in the 09:00 experiment-log entry.
+5. If a gate is positive, stop at the reserved champion-promotion decision and
+   present John the complete provenance/verdict; do not auto-promote.
 
 Historical resume state follows; it is superseded by the block above.
 
@@ -964,6 +965,7 @@ EXPERIMENT_LOG 01:15 → 05:50):
   exporter, applies the fold safety bar mechanically (ghost ON only on
   a clean numeric pass; fallback OFF), generates 1,250 seeds
   (2026794000..5249) with both sidecars (~7-10h).
-- **Awaiting John:** the Stage A relabel tranche (~26h GPU at 15k
-  roots) + the remaining bank-mode training-record emission feature.
+- **Superseded 07-16 09:00:** this snapshot was awaiting John for the Stage A
+  relabel tranche; John has since fully authorized it and the remaining
+  bank-mode/training-view engineering is in progress.
   Monitors: bsfmncz84 (fold), b6f1ousg5 (Stage A gen).
