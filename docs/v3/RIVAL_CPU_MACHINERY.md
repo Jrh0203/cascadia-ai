@@ -1014,6 +1014,7 @@ CPU-only guard enabled wherever Python could reach Torch.
 | standalone `real-root-exporter` suite | PASS: 68 tests |
 | full Python 3.12/Torch suite | PASS: 550 tests, 48 intentional skips, 116.175 seconds |
 | formatting and static checks | PASS: scoped Rustfmt, Ruff check/format, shell syntax, `git diff --check`, and temporary-marker scan |
+| isolated publication | PASS: `feat/rival-cpu-machinery` pushed to its same-named origin branch; not merged into `main` |
 
 The full-suite run also exposed and closed two order/hermeticity defects: the
 preflight CLI now distinguishes a Torch module that was already loaded by a

@@ -1658,6 +1658,7 @@ Python 3.12/Torch environment via
 | `cargo test --manifest-path cascadiav3/real-root-exporter/Cargo.toml` | PASS: 68 tests |
 | full guarded Python discovery | PASS: 550 tests, 48 intentional skips, 116.175 seconds |
 | static/format gates | PASS: scoped Rustfmt, Ruff check/format, shell syntax, `git diff --check`, and temporary-marker scan |
+| isolated publication | PASS: `feat/rival-cpu-machinery` pushed to its same-named origin branch; not merged into `main` |
 
 The 125-game PR battery exercised exactly 10,000 deterministic randomized
 reachable transitions with zero mismatches. The full Python suite uncovered
@@ -1830,7 +1831,7 @@ GPU-dependent lanes remain held at their explicit walls.
 - [x] Every implemented change inside the D1 source closure remains unmerged
   until the durable D1 boundary. Exporter/shared-policy extraction did not
   occur.
-- [ ] README and implementation status are current and committed; if D1 is
+- [x] README and implementation status are current and committed; if D1 is
   still live, implementation commits are pushed only to the isolated feature
   branch and are not merged into `main`.
 - [x] Work stops at the D1/authorization wall.
