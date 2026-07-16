@@ -7297,3 +7297,26 @@ emission. Fixed before generation finished (waiter relaunched, PID
 
 ETA: relabel ends ~07-17 late evening; retrains+screens ~2h; gate
 overnight; **verdict expected ~07-18.**
+
+## 2026-07-16 10:10 — Attempt 4 NEVER COMPLETED A SEED (24-owned CUDA contexts thrash); attempt 5 on the v2-proven 12-shared topology
+
+- **Symptom:** 70 minutes at GPU "100% util" with zero completed seeds,
+  zero-byte run log and sidecars. The tell: 149W power draw at 100%
+  utilization (v2's healthy 12-shared config drew 253W at 35% util) —
+  24 per-worker CUDA contexts time-slice on one 5090 and burn the GPU
+  on context switching, not work. Retrospective: attempt 3 (same
+  24-owned topology) also produced zero bytes in its 36 minutes — the
+  "cycle4 topology" 21.4 s/seed precedent does NOT reproduce on this
+  box today, and I promoted it after seeing only startup health, never
+  a completed seed. Lesson recorded: **a generation attempt is not
+  healthy until seeds complete; startup GPU% is not evidence.**
+- **Engine exonerated:** 500 full random 4p games in 0.95s at HEAD (new
+  permanent regression test `random_full_games_terminate_quickly`), and
+  one full selfplay seed (80 plies, n256/d4, uniform fallback) in 248s
+  locally — the wildlife-bag fix and search machinery are healthy.
+- **Attempt 5 LAUNCHED 10:02 (PID 26197, monitor bn34wrswc):** rev
+  689f9d69, 12 shared sessions / rayon 16 (v2's measured 63 s/seed),
+  TF32=1, ghost OFF, same seeds/sidecars. ETA ~08:00 07-17. Pipeline
+  waiter repointed at v5 and relaunched. Revised pipeline ETAs: relabel
+  ends ~07-18 morning; screens midday; gate overnight; **verdict
+  ~07-18/19.**
