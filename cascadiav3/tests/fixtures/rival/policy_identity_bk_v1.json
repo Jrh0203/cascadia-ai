@@ -1,0 +1,56 @@
+{
+  "fields": {
+    "action_content_id_version": "cascadiav3.rival_action_content.v1",
+    "bridge_protocol": "bridge.v1",
+    "candidate_action_occurrence_id_version": "cascadiav3.rival_candidate_action_occurrence.v1",
+    "candidate_generator_identity": "candidate.v1",
+    "checkpoint_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "compiler_identity": "compiler.v1",
+    "exact_endgame_config_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "executable_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "failure_behavior": {
+      "fallback": "forbidden",
+      "incomplete_unit": "record_incomplete_no_label",
+      "oom": "record_incomplete_no_label",
+      "timeout": "record_incomplete_no_label"
+    },
+    "forbidden_capabilities": {
+      "model_fallback": false,
+      "table_native_q": false,
+      "table_total_utility": false,
+      "true_hidden_peeking": false
+    },
+    "gumbel_config_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "incumbent_menu_hash_version": "cascadiav3.rival_incumbent_menu.v1",
+    "model_manifest_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "numerical_mode": "deterministic",
+    "policy_memory_schema": "cascadiav3.rival_seat_local_memory.v1",
+    "precision": "fp32",
+    "public_observation_schema": "cascadiav3.rival_public_policy_observation.v1",
+    "refresh_config_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "rng_contracts": {
+      "physical": "cascadiav3.rival_rng_domains.v1",
+      "policy": "cascadiav3.rival_rng_domains.v1",
+      "redetermination": "cascadiav3.rival_rng_domains.v1",
+      "search": "cascadiav3.rival_rng_domains.v1",
+      "tie_break": "cascadiav3.rival_rng_domains.v1"
+    },
+    "rules_action_occurrence_id_version": "cascadiav3.rival_root_action_occurrence.v1",
+    "rules_menu_hash_version": "cascadiav3.rival_rules_menu.v1",
+    "ruleset": {
+      "game_config_sha256": "sha256:f5b2c782a483db870c50366b33cccde6d9a82a92a571cf9f29c752b750a5c07c",
+      "legacy_ruleset_id": "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16",
+      "rules_semantics_id": "cascadia-base-official-2026-07-16",
+      "schema_id": "cascadiav3.research_ruleset_identity.v1"
+    },
+    "sampler_identity": "sampler.v1",
+    "search_config_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "simulator_identity": "simulator.v1",
+    "source_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_revision": "0123456789abcdef",
+    "tensor_schema": "tensor.v4",
+    "weights_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "policy_kind": "B_k",
+  "schema_id": "cascadiav3.rival_policy_identity.v1"
+}

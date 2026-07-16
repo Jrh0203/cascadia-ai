@@ -1,0 +1,25 @@
+{
+  "schema_id": "cascadiav3.rival_bound_certificate.v1",
+  "authority_id": "cascadia-rival/rust-global-aaaaa-score-relaxation-v1",
+  "ruleset": {
+    "schema_id": "cascadiav3.research_ruleset_identity.v1",
+    "legacy_ruleset_id": "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16",
+    "rules_semantics_id": "cascadia-base-official-2026-07-16",
+    "game_config_sha256": "sha256:f5b2c782a483db870c50366b33cccde6d9a82a92a571cf9f29c752b750a5c07c"
+  },
+  "scope": "global_terminal_own_score_difference",
+  "terminal_score_min": 0,
+  "terminal_score_max": 166,
+  "score_difference_min": -166,
+  "score_difference_max": 166,
+  "score_difference_width": 332,
+  "derivation": {
+    "maximum_board_tiles": 23,
+    "terrain_memberships_per_tile": 2,
+    "maximum_personal_wildlife_placements": 20,
+    "maximum_points_per_wildlife_token": 5,
+    "maximum_nature_tokens_earned": 20,
+    "habitat_bonus_points": 0
+  },
+  "certificate_sha256": "sha256:67fa21e1f4e887f73a1f0f4e22397ca23f79ca67972b44e34f94f385734eec64"
+}

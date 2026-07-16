@@ -1,0 +1,70 @@
+{
+  "a_panel_enabled": false,
+  "allocation_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "beta_cv": 0.5,
+  "bound_certificate_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "candidate_selection_entries": [
+    {
+      "action_content_id": "cascadiav3.rival_action_content.v1:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "candidate_action_occurrence_id": "cascadiav3.rival_candidate_action_occurrence.v1:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expected_s": 0
+    },
+    {
+      "action_content_id": "cascadiav3.rival_action_content.v1:sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "candidate_action_occurrence_id": "cascadiav3.rival_candidate_action_occurrence.v1:sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "expected_s": 2
+    }
+  ],
+  "candidate_set_identity": "sha256:9aef2c1ed240d0aa9d172539387b355c0cd034783458fdb323632921bae9dc1b",
+  "coefficient_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "complete_game_seed_role": null,
+  "content_sha256": "c6cd125bba7f7dc21d9e74de1d6eda129cc2cf4738559edde07fdcbbb1141b70",
+  "deployment_design_sha256": "sha256:49d522ad4d0b576b26d603514c2433623d8375044dcdbf3a6f2f8ca5bd8d8206",
+  "error_ledger_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "expected_h": 2,
+  "expected_l": 4,
+  "expected_s": 2,
+  "forbidden_panels": [
+    "A"
+  ],
+  "panel_identities": {
+    "A": null,
+    "H": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "L": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "S": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "incumbent_action_id": "cascadiav3.rival_action_content.v1:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "incumbent_candidate_occurrence_id": "cascadiav3.rival_candidate_action_occurrence.v1:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "incumbent_menu_hash": "cascadiav3.rival_incumbent_menu.v1:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "incumbent_policy_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "inference_mode": "multifidelity",
+  "low_expectation_id": "expectation:fixture",
+  "low_law_h_id": "law:fixture",
+  "low_law_l_id": "law:fixture",
+  "low_policy_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "manifest_id": "fixture:root-manifest-mf-v1",
+  "max_abs_beta": 2.0,
+  "multifidelity_claim": true,
+  "practical_margin": 0.25,
+  "preference_weight": 2.0,
+  "quantitative_target_enabled": false,
+  "required_panels": [
+    "S",
+    "H",
+    "L"
+  ],
+  "root_cohort_role": "untouched_coverage",
+  "root_id": "cascadiav3.rival_public_root.v1:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "root_kind": "draft_policy_root",
+  "rules_menu_hash": "cascadiav3.rival_rules_menu.v1:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "ruleset_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sampler_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "schema_id": "cascadiav3.rival_root_manifest.v1",
+  "selection_rule": "highest_mean_then_lexicographic_action_id",
+  "source_game_id": "fixture:game-1",
+  "source_game_identity_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_revision": "fixture:cpu-only",
+  "terminal_verifier_contract_id": "cascadia-rival.verify-terminal-pair.v1",
+  "terminal_verifier_executable_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "policy_rng_factory_identity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

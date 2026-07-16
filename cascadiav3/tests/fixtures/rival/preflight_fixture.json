@@ -1,0 +1,11 @@
+{
+  "schema_id": "cascadiav3.rival_preflight_expectation.v1",
+  "command_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "phase": "p2a_cost_probe",
+  "preregistration_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "requested_accelerator": "cuda",
+  "requested_gpu_hours": 1.0,
+  "source_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_revision": "fixture:cpu-only",
+  "content_sha256": "a83aac4bb62fe62187df259f0f6e34d277358495ecb51b4bbc136925c9defb79"
+}

@@ -14,6 +14,7 @@ import json
 from typing import Any
 
 from .hex import RADIUS6_CELL_COUNT
+from .rival.schema import RIVAL_SCHEMA_DEFINITIONS
 
 PRE_GPU_SCHEMA_ID = "cascadiav3.pre_gpu.v0"
 EXPERT_ROOT_SCHEMA_ID = "cascadiav3.expert_root.v1"
@@ -123,6 +124,22 @@ SCHEMA_REGISTRY: dict[str, SchemaDefinition] = {
         ),
     ),
 }
+
+# Rival contracts are additive and intentionally remain separate from the
+# legacy replay/tensor validator families below.  Registering them here makes
+# the repository-wide schema gate fail closed on an unknown Rival artifact
+# without pretending a preference sidecar is an ExpertTensorShard.
+for _rival_definition in RIVAL_SCHEMA_DEFINITIONS.values():
+    SCHEMA_REGISTRY[_rival_definition.schema_id] = SchemaDefinition(
+        schema_id=_rival_definition.schema_id,
+        artifact_kind=_rival_definition.artifact_kind,
+        version=_rival_definition.version,
+        status="pre-gpu-cpu-reference",
+        description=_rival_definition.description,
+        compatible_readers=("cascadiav3.rival",),
+    )
+
+RIVAL_SCHEMA_IDS = frozenset(RIVAL_SCHEMA_DEFINITIONS)
 
 REPLAY_JSONL_SCHEMA_IDS = {PRE_GPU_SCHEMA_ID, EXPERT_ROOT_SCHEMA_ID}
 TENSOR_SCHEMA_IDS = {

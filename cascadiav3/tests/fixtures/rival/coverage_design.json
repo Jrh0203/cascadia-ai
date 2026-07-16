@@ -1,0 +1,41 @@
+{
+  "design_version": 1,
+  "exact_cases": [
+    {
+      "allocation": {
+        "delta_h": 0.01,
+        "delta_l": 0.01,
+        "delta_root": 0.02
+      },
+      "beta_cv": 0.5,
+      "case_id": "zero-mean-perfect-correlation",
+      "h_distribution": [
+        {
+          "high": -1.0,
+          "low": -1.0,
+          "probability": 0.5
+        },
+        {
+          "high": 1.0,
+          "low": 1.0,
+          "probability": 0.5
+        }
+      ],
+      "high_difference_width": 2.0,
+      "l_distribution": [
+        {
+          "low": -1.0,
+          "probability": 0.5
+        },
+        {
+          "low": 1.0,
+          "probability": 0.5
+        }
+      ],
+      "low_difference_width": 2.0,
+      "n_h": 2,
+      "n_l": 2
+    }
+  ],
+  "content_sha256": "c108ef934e9fda5611ffb00a743968ab34d4ca14c6295e2d846b21dc2ab64844"
+}
