@@ -7245,3 +7245,55 @@ Engineering scope now under construction (in dependency order): exporter
 bank-mode training-record emission with per-repeat fields; harvest tool;
 repeat-aggregation + masked-view builder; trainer masked-loss support;
 matched-control invocation; relabel/retrain/screen/gate chain scripts.
+
+## 2026-07-16 09:55 — D1 engineering COMPLETE; full pipeline chain armed (PID 25570)
+
+All preregistered engineering built, tested, committed (c5455642 →
+689f9d69) in ~1h of wall time while generation v4 runs:
+
+1. **Exporter bank-mode training-record emission** (`--training-records-
+   out`): repeat-aggregated v4 shards at relabeled roots (visit-weighted
+   Q, pooled variance, mean renormalized policy, lowest-action-id
+   tie-break), realized behavior outcomes, per-repeat audit sidecar,
+   full v4 metadata contract (new `puzzle_bank_d1_relabel` mode).
+   68/68 exporter tests.
+2. **Harvest tool** (`harvest_d1_tranche.py`): 15k hard roots at
+   6k/6k/3k phases, decile-stratified, interleaved phase filling under
+   the shared per-game cap (sequential filling provably starves later
+   phases), deterministic salted-hash order; 1.5k phase-matched
+   sentinel. 7 tests.
+3. **Masked training views**: optional `policy_valid`/`outcome_valid`
+   per-record arrays through loader/collate/writer/filter/tail;
+   `_loss_components` gates policy and outcome losses via masked means
+   (absent/all-true masks are bit-identical to the pre-D1 trainer);
+   `build_d1_training_views.py` (base view masks stale search at
+   tranche roots; D1 view masks behavior outcomes; fail-closed
+   ledger/audit/mask reconciliation; nested hash-ordered dose subsets).
+   13 tests.
+4. **Fail-closed exposure audit** (`audit_source_exposure`): replays the
+   exact production sampler preflight. 4 tests.
+5. **Model-vs-model gates**: `manifest` varied key in
+   compare_search_shape (search must be identical, manifests must
+   differ). +3 tests. `EXTRA_BANK_FLAGS` passthrough in
+   run_puzzle_bank.sh.
+6. Also fixed: flaky pairwise probe test (unseeded random-init Borda
+   gate).
+
+**Pipeline chain launched** (d1_pipeline_20260716.sh, PID 25570, rev
+689f9d69, monitor bmvhuwykk): waits for generation v4 → deploy →
+harvest → relabel tranche (pilot-exact teacher: jobs12 shared, TF32=0,
+n2048/d16 x2, ~26h) → sentinel (~2.6h) → top64+tail prep + invariants →
+masked views + dose subsets → exposure preflight (fail closed) →
+retrains d1_15k / ctrl / d1_5k / d1_10k (full champion invocation,
+K=8 distq, warm start, frozen seed) → bank screens → MECHANICAL
+preregistered screen verdict (d1 <= ctrl−0.010 AND <= 0.2370; fail =>
+stop) → on pass auto-launches the sequential CUPED n256 gate vs the
+pinned champion on registered block 2027079000..99 (looks 40/60/80/100).
+One caught-in-time bug: the first chain launch pinned rev be754db8,
+which predates the EXTRA_BANK_FLAGS passthrough — the relabel would
+have silently run the full ledger without the tranche mask or record
+emission. Fixed before generation finished (waiter relaunched, PID
+25570).
+
+ETA: relabel ends ~07-17 late evening; retrains+screens ~2h; gate
+overnight; **verdict expected ~07-18.**
