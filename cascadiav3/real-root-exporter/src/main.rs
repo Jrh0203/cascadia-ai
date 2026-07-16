@@ -3624,6 +3624,10 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     };
     let decisions_writer = open_sidecar(&args.decisions_out, "--decisions-out")?;
     let hard_roots_writer = open_sidecar(&args.hard_roots_out, "--hard-roots-out")?;
+    // Rare pathological seeds (e.g. a game line that empties the wildlife
+    // bag) are skipped and recorded rather than aborting hours of packed
+    // work; a >2% skip rate still fails the run (systemic, not rare).
+    let generation_skipped_seeds = Mutex::new(Vec::<(u64, String)>::new());
     let target_workers = args
         .model_sessions
         .unwrap_or_else(|| rayon::current_num_threads().max(1))
@@ -3658,13 +3662,25 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
             })
         },
         |worker, seed_u64| {
-            let output = play_gumbel_selfplay_seed(
+            let output = match play_gumbel_selfplay_seed(
                 args,
                 seed_u64,
                 &mut worker.bridge,
                 &mut worker.eval_cache,
             )
-            .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))?;
+            .with_context(|| format!("exporting gumbel selfplay seed {seed_u64}"))
+            {
+                Ok(output) => output,
+                Err(error) => {
+                    eprintln!("[real-root-exporter] SKIPPING seed {seed_u64}: {error:#}");
+                    generation_skipped_seeds
+                        .lock()
+                        .expect("generation skip list lock")
+                        .push((seed_u64, format!("{error:#}")));
+                    completed_seeds.fetch_add(1, Ordering::Relaxed);
+                    return Ok(ExpertTensorShardData::new());
+                }
+            };
             let shard = ExpertTensorShardData::from_records(&output.records).with_context(
                 || format!("extracting gumbel selfplay tensor features for seed {seed_u64}"),
             )?;
@@ -3721,6 +3737,18 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                 .with_context(|| format!("flushing {label}"))?;
         }
     }
+    let generation_skipped_seeds = generation_skipped_seeds
+        .into_inner()
+        .expect("generation skip list lock");
+    if generation_skipped_seeds.len() * 50 > total_seeds as usize {
+        bail!(
+            "{} of {} seeds skipped (> 2%) — failures are systemic, not rare: first: seed {} ({})",
+            generation_skipped_seeds.len(),
+            total_seeds,
+            generation_skipped_seeds[0].0,
+            generation_skipped_seeds[0].1
+        );
+    }
     per_seed.sort_by_key(|(seed, _)| *seed);
 
     let mut shard = ExpertTensorShardData::new();
@@ -3758,6 +3786,15 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
         object.insert("version".to_owned(), json!(EXPERT_SHARD_VERSION_V4));
         object.insert("schema_id".to_owned(), json!(EXPERT_TENSOR_SCHEMA_ID_V4));
         object.insert("source".to_owned(), json!("gumbel_selfplay_tensor_corpus"));
+        object.insert(
+            "generation_skipped_seeds".to_owned(),
+            json!(
+                generation_skipped_seeds
+                    .iter()
+                    .map(|(seed, reason)| json!({"seed": seed, "reason": reason}))
+                    .collect::<Vec<_>>()
+            ),
+        );
         object.insert(
             "source_paths".to_owned(),
             json!(["rust-native:gumbel_selfplay_tensor_corpus"]),
