@@ -305,6 +305,46 @@ confirmation, multiplicity-valid inference, forced-anchor bit identity, and a
 fresh symmetric four-seat gameplay gate. No current-rules strength claim
 exists.
 
+### Open clean-sheet challenger: Cascadia Foundry
+
+Full specification:
+[`cascadia_foundry_original_architecture_proposal_7_16.md`](../../cascadia_foundry_original_architecture_proposal_7_16.md).
+
+Foundry is a research proposal, not a serving default. It replaces learned
+scalar value and ordinary move-tree search with exact terminal score contracts,
+reverse completion lattices, persistent four-board plans, tiny public-state
+controller programs, and atomic shared-resource scarcity prices. Independent
+quality-diversity archives are canonicalized by semantic cell and lineage; the
+result is frozen into a complete reactive policy capsule.
+
+The deployment identity is the capsule meta-policy, not an individual
+high-scoring genome. After commitment, the capsule may deterministically
+condition/repair its plans from public facts, but it does not mutate, resample,
+or run new hidden scenarios. The complete capsule is evaluated on fresh
+dynamic-urn scenario streams and followed through terminal. Receding-horizon
+resynthesis is a different proxy unless its full population-update policy is
+simulated inside every continuation.
+
+Foundry-Sovereign instantiates the same seat-local capsule four times with
+isolated memory and cyclic seat equivariance. Foundry-Commons is explicitly a
+single centralized policy with shared public memory/prices and possible
+resource donation. Learned table-total serving remains closed. Commons needs
+materially new exact tomography evidence plus John's methodology ruling on
+central control, objective, shared state, donation, asymmetry, and fairness
+before gameplay.
+
+Every hidden-world cohort pins controller, blueprint, memory, and mutation
+hashes across lanes. Scenario RNG drives exact state-dependent urn returns and
+wipes; it is independent of the physical seed. Identical public histories must
+produce identical memory/actions. Static terminal contracts prove spatial
+score witnesses, not acquisition history; chronology claims require complete
+`GameState` replay.
+
+The proposal is an open post-D1 hypothesis with zero current-rules strength
+evidence. Its 76% forecast is conditional on a valid baseline, Commons ruling,
+an untouched paired honest-controller headroom lower bound of at least 2.5
+mean-seat points, and a precision-feasible local-5090 implementation.
+
 ## Promotion Philosophy
 
 Validation loss, imitation accuracy, and greedy top-1 retention are diagnostics.

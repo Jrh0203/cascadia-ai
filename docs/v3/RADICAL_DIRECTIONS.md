@@ -142,15 +142,18 @@ reopen this direction.
 
 ## 4. Whole-rollout generation on GPU (kill the lockstep wall)
 
-**Successor proposals.** This section is the systems precursor to both
-[Cascadia-NX](../../stochastic_board_game_ai_architecture_research_7_16.md)
+**Successor proposals.** This section is the systems precursor to
+[Cascadia-NX](../../stochastic_board_game_ai_architecture_research_7_16.md),
+[Cascadia-Anchor](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md),
 and
-[Cascadia-Anchor](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md).
+[Cascadia Foundry](../../cascadia_foundry_original_architecture_proposal_7_16.md).
 Anchor sharpens the requirement: a cheap learned/direct policy may screen
 rollouts, but only a full serving-incumbent continuation supports an
 improvement claim over the current policy. That creates nested outer physical
 worlds and inner no-peek incumbent search worlds. GPU residence is therefore
-a measured feasibility question, not an assumed 10x gain.
+a measured feasibility question, not an assumed 10x gain. Foundry instead
+commits a frozen reactive population capsule; the exact capsule, not an
+individual discovery genome, must execute inside every terminal scenario.
 
 **Idea.** The serving/generation bottleneck is per-ply lockstep: every
 simulated ply is a bridge round-trip. Replace CPU greedy rollouts with a
@@ -376,21 +379,90 @@ current-rules strength evidence is zero. It does not displace D1. Cascadia-NX
 remains the higher-risk representation challenger with potentially larger
 upside.
 
+## 9. Cascadia Foundry: terminal score-contract program synthesis
+
+Full original proposal, red-team corrections, conditional forecast, and
+nearest-prior-art ledger:
+[`cascadia_foundry_original_architecture_proposal_7_16.md`](../../cascadia_foundry_original_architecture_proposal_7_16.md).
+
+**Idea.** Stop using scalar value as the planning object. Generate exact-
+scored terminal boards, reverse them into alternative-rich score contracts,
+bind those contracts to the four public boards, and synthesize tiny reactive
+programs that preserve high-scoring completions as shared resources appear and
+disappear. Counterfactual collapse of catalog-level plans creates point-
+denominated scarcity bids in a Score Futures Exchange. Independent
+quality-diversity archives are canonicalized by semantic cell and lineage;
+their generator-relative action support selects a complete deterministic
+policy capsule.
+
+**Deployment correction.** A high-scoring genome is only a discovery object.
+The exact deployed object is the frozen population-vote capsule. It conditions
+and deterministically repairs plans from public facts but does not mutate,
+resample, or run new future scenarios after commitment. The complete capsule
+is evaluated on fresh dynamic-urn scenario RNG streams and committed through
+terminal. Any receding-horizon resynthesis is a separate proxy unless the
+complete meta-policy is nested inside every scenario.
+
+**Information contract.** A scenario stream drives state-dependent wildlife
+returns, wipes, exclusions, and draws; it is not a fixed hidden suffix. An
+immutable cohort manifest pins each genome's program, blueprints, initial
+memory, and mutation state across lanes. Identical public histories must
+produce identical derived memory and actions regardless of hidden stack, bag,
+physical seed, or future return schedule.
+
+**Objective boundary.** Foundry-Sovereign uses four isolated, cyclically
+equivariant seat-local capsules. Foundry-Commons is openly centralized: it
+shares public plans, prices, and memory, optimizes exact table mean, and may
+donate a resource to a later controlled seat. The two CI-negative learned
+table-total serving variants remain closed. Commons requires materially new
+exact tomography evidence and John's ruling on central control, shared state,
+donation, seat asymmetry, and fairness before gameplay.
+
+**Prior-art boundary.** Proof-carrying plans, MAP-Elites, GFlowNets, goal
+regression, scenario policy selection, ISMCTS strategy fusion, programmatic
+RL, progressive hedging, and counterexample refinement are published adjacent
+ingredients. The claimed invention is the integrated Cascadia system: exact
+terminal score contracts and reverse completion lattices, atomic plan-collapse
+prices, one dynamic-scenario-braided public controller, canonical archive
+support, committed capsule execution, and commitment-collapse language growth.
+The targeted search found no exact combination; it does not claim proof of
+universal nonpublication.
+
+**Falsifier.** Report static design, chronological replay, known-world, honest
+public-controller, representation, and production stages as certified
+`[feasible lower, valid relaxation upper]` intervals—not an assumed ordered
+heuristic ladder. A valid coordination upper bound below 10 table points kills
+Commons. Advancing the high-confidence form requires an untouched paired 95%
+lower bound of at least 2.5 mean-seat points for the honest controller, then
+production retention of `max(70%, (100.10-b)/h)`. Fixed-root power must derive
+the scenario count; exact terminal score removes learned bootstrap error, not
+the roughly four-seat table-return variance. Full dynamic-urn/cohort/trace
+parity and the precision-required budget must fit under 10 seconds on the
+local 5090. A fresh paired gameplay gate remains mandatory.
+
+**Status:** open post-D1, highest-upside clean-sheet hypothesis; zero
+current-rules strength evidence. Its 76% forecast is conditional on baseline,
+methodology, honest-headroom, and throughput premise gates—not an unconditional
+probability today. It does not displace D1.
+
 ## Explicitly not on this list
 
 Belief modeling / bag inference (oracle LOST — information is not the
 constraint), checkpoint output-ensembles (shared-bias, measured 4-ways),
-input-symmetry tricks (representation is already invariant), serving-side
-cooperative objectives (noise multiplier, measured twice), bigger
+input-symmetry tricks (representation is already invariant), learned/leaf
+serving-side cooperative objectives (noise multiplier, measured twice;
+Foundry-Commons remains blocked pending materially new exact evidence), bigger
 monolithic models on the same labels (measured three ways), learned dynamics
 for rules the exact engine already owns, ordinary legacy-NNUE revival, and
 blind common-random-number pairing without a positive covariance audit.
 
 *Current sequencing: do not disturb the fully authorized D1 chain. After D1
 reaches its frozen boundary, #8 begins only with semantic parity,
-full-incumbent feasibility, and a shadow audit; #7 begins with the bounded
-offline representation/covariance bakeoff. Validated GPU-engine work may be
-shared, but neither proposal authorizes the other’s strength claim. A full
-port is conditional on its preflight. #4 remains the common structural systems
-enabler; #5 is closed; #6 remains a later diversity mechanism rather than a
-serving ensemble.*
+full-incumbent feasibility, and a shadow audit; #9 begins only with the
+central-objective ruling boundary, score-contract semantics, certified
+tomography, and a CPU capsule; #7 begins with the bounded offline
+representation/covariance bakeoff. Validated GPU-engine work may be shared,
+but no proposal inherits another’s strength claim. A full port is conditional
+on its own preflight. #4 remains the common structural systems enabler; #5 is
+closed; #6 remains a later diversity mechanism rather than a serving
+ensemble.*

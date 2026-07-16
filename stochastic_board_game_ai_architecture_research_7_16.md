@@ -88,6 +88,15 @@ Cascadia-NX remains the higher-risk clean-slate architecture with potentially
 greater upside. Neither has current-rules strength evidence, and neither
 reorders D1.
 
+**Third clean-sheet proposal.** The companion
+[`cascadia_foundry_original_architecture_proposal_7_16.md`](cascadia_foundry_original_architecture_proposal_7_16.md)
+goes further: replace learned scalar evaluation and ordinary move-tree search
+with exact terminal score contracts, public-state controller-program
+synthesis, atomic cross-board scarcity prices, and a committed full-policy
+capsule. Foundry is the highest-upside hypothesis, but its 76% forecast is
+conditional on unmeasured baseline, methodology, headroom, and local-GPU
+premises. It is post-D1 and has zero strength evidence.
+
 ## 1. Claim boundary and evidence labels
 
 This report uses four evidence labels:
@@ -1217,6 +1226,7 @@ The core strategic change is simple:
 - [existing radical directions](docs/v3/RADICAL_DIRECTIONS.md)
 - [July 16 research questions](research_questions_7_16.md)
 - [July 16 ten-question answer report](research_answers_7_16.md)
+- [Cascadia Foundry original architecture proposal](cascadia_foundry_original_architecture_proposal_7_16.md)
 - archived pre-v3 recovery point:
   `archive/pre-v3-repo-cleanup-2026-07-01` (tag target
   `f9fe6c97297bcc273de82c633dce9c8fda092979`)

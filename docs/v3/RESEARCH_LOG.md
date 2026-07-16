@@ -774,7 +774,7 @@ the permanent record of what closed and what it taught.
   the rules-ID repair completed, John fully authorized the pipeline, and
   attempt 4 completed no seed because 24 owned CUDA contexts thrashed. Attempt
   5 launched at 10:02 on the v2-proven 12-shared/Rayon-16 topology; john0 was
-  unreachable at the 11:10 read-only status check, so current liveness is
+  unreachable at the 11:57 read-only status check, so current liveness is
   unknown. No partial scientific output was read.
   MuZero Reanalyze supports the general current-teacher refresh mechanism but
   does not validate Cascadia's targeted fraction, budget, or fold weight.
@@ -782,10 +782,11 @@ the permanent record of what closed and what it taught.
   exactness next” queue: live Stage A → already authorized D1
   harvest/relabel/retrain/screen/gate, with human calibration in parallel,
   then bounded adversarial diagnostics, the Cascadia-Anchor semantic/A-EXACT
-  feasibility shadow preflight, and the Cascadia-NX representation preflight.
-  Adaptive allocation, table-native values, reliability-sigma, stratified
-  worlds, and exactness expansion are deferred behind direct offline evidence.
-  See the reprioritized **L1-L10** in
+  feasibility shadow preflight, Cascadia Foundry's zero-gameplay
+  objective/tomography preflight, and the Cascadia-NX representation
+  preflight. Adaptive allocation, learned table-native values,
+  reliability-sigma, stratified worlds, and exactness expansion are deferred
+  behind direct offline evidence. See the reprioritized **L1-L11** in
   [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md).
 
 Full chronological detail: `cascadiav3/EXPERIMENT_LOG.md`.
@@ -906,20 +907,21 @@ literature/repository decisions, not new promotion evidence.
 
 ### 8.5 Ordering and blocker
 
-**Superseding operational update (11:10):** the July-16 rules identity repair
+**Superseding operational update (11:57):** the July-16 rules identity repair
 completed at 03:50, and John fully authorized the Stage A restart plus the 15k
 D1 relabel/retrain/screen/gate chain. The full harvest, sentinel, teacher,
 repeat aggregation, masking, training mix/control/dose arms, bank screen, and
 fresh sequential-CUPED gate were frozen in `cascadiav3/EXPERIMENT_LOG.md`
 before Stage A output was read. Attempt 4 completed no seed because 24 owned
 CUDA contexts thrashed. Attempt 5 launched at 10:02 on the v2-proven
-12-shared/Rayon-16 topology; the 11:10 read-only status check could not reach
+12-shared/Rayon-16 topology; the 11:57 read-only status check could not reach
 john0, so current liveness is unknown. Champion promotion remains separately
 reserved. The queue is now: let the authorized D1 chain reach its registered
 boundary untouched; exact-rules human calibration may proceed in parallel;
 then bounded adversarial diagnostics, the Cascadia-Anchor
-semantic/A-EXACT-feasibility shadow preflight, and the bounded Cascadia-NX offline
-preflight before lower-ranked allocator/table/reliability/world work.
+semantic/A-EXACT-feasibility shadow preflight, Cascadia Foundry's
+zero-gameplay objective/tomography preflight, and the bounded Cascadia-NX
+offline preflight before lower-ranked allocator/table/reliability/world work.
 
 No source in the review authorizes a promotion, rules-design change, or live
 experiment by itself.
@@ -1170,3 +1172,131 @@ The full policy promotion rule and 1,000-game ≥100 target remain unchanged.
 R0.2 generic CRN, R0.4 completed-Q LCB, R3.2 ordinary deeper Gumbel, exact
 K2, cooperative/risk serving, generic menu widening, and legacy NNUE revival
 remain closed.
+
+## 11. Cascadia Foundry original architecture proposal — 2026-07-16
+
+Complete first-principles architecture, novelty audit, red-team corrections,
+conditional forecast, and source ledger:
+[`cascadia_foundry_original_architecture_proposal_7_16.md`](../../cascadia_foundry_original_architecture_proposal_7_16.md).
+This section records a research direction opening, not current-rules strength
+evidence.
+
+### 11.1 Reframe and architecture
+
+Foundry discards learned scalar value as the planning representation. It asks
+which exact terminal constructions scoring at least 100 remain spatially and
+resource-feasible, which public obligations they impose, and which reactive
+programs preserve them under stochastic supply.
+
+The proposed stack is:
+
+1. generate legal, exact-scored AAAAA terminal boards and score witnesses;
+2. reverse them into alternative-rich completion lattices with explicit
+   resource obligations and deterministic repair grammars;
+3. bind four persistent plans to the live public boards;
+4. synthesize tiny public-state controller programs over exact dynamic-urn
+   scenario streams;
+5. price atomic shared resources through counterfactual plan collapse in the
+   Score Futures Exchange;
+6. canonicalize independent quality-diversity archives by semantic cell and
+   lineage; and
+7. freeze the archive into a complete policy capsule, confirm that exact
+   capsule on fresh streams, and commit it through terminal.
+
+The root statistic is generator-relative canonical archive support. It is not
+claimed to be an intrinsic policy-space volume, Bayesian posterior, or an SMC
+sample from one. The generator, semantic partition, lineage rule, temperature,
+and design block are all policy identity.
+
+### 11.2 Deployment and information corrections
+
+The deployed object is the complete capsule meta-policy, not the best genome.
+Individual exact terminal scores are discovery signals; only exact terminal
+execution of the population-vote capsule supports a direct-policy claim. No
+mutation, resampling, or new scenario optimization occurs after commitment.
+A receding-horizon variant is a separate proxy unless its complete
+population-update/election policy is nested inside every scenario.
+
+“Tape” means an independent counter-based scenario RNG stream driving the
+exact dynamic urn, not a fixed hidden suffix. Wildlife returns, wipes,
+exclusions, and Nature transactions remain state-dependent. An immutable
+cohort manifest pins every genome's program, blueprints, initial memory, and
+mutation state across all lanes. Identical public histories must produce
+identical derived memory and actions regardless of hidden stack, bag, physical
+seed, or future return schedule.
+
+Terminal score contracts prove spatial growth and exact score given resources.
+They do not prove acquisition chronology. Static same-multiset repacking is an
+optimistic design diagnostic; any “achievable” history claim requires the
+original ordered pair acquisitions and Nature/refresh transactions to replay
+legally through `GameState`.
+
+### 11.3 Commons, Sovereign, and the closed-direction boundary
+
+Foundry-Sovereign uses four isolated instances of one cyclically equivariant
+seat-local capsule, with no shared memory, lineages, or prices. Unilateral
+development runs one target seat against frozen opponents so later seats
+cannot collude with it.
+
+Foundry-Commons is explicitly a single central controller. It optimizes exact
+terminal table mean, shares public plans/prices/memory, and may deliberately
+leave a resource for another controlled seat. The prior learned table-total
+serving variants remain closed: v1 lost `−1.65` and v2 lost `−1.05`, with the
+constant-shift version still suffering roughly four-seat terminal-return
+variance. Foundry's material difference—exact whole-policy capsule fitness—is
+a mechanism hypothesis, not new evidence.
+
+Commons cannot enter gameplay unless:
+
+- certified zero-gameplay tomography supplies materially new exact headroom;
+- John rules on central control, table utility, cross-seat memory/prices,
+  donation, seat-aware asymmetry, and fairness; and
+- cyclic seat-permutation plus per-seat/category controls pass.
+
+### 11.4 Certified tomography and statistical power
+
+Tomography reports per-stage certified intervals
+`[feasible witness lower bound, valid relaxation upper bound]`. Best-found
+heuristic values are not assumed ordered. Known-world/public comparisons are
+only information diagnostics unless policy class and optimization budget
+match.
+
+The high-confidence premise requires an untouched confirmation block whose
+paired 95% lower bound for the honest public controller exceeds baseline by at
+least 2.5 mean-seat points. A valid four-board relaxation upper bound below 10
+table points kills Commons earlier. With baseline `b` and honest headroom `h`,
+the production capsule must retain at least
+`max(70%, (100.10-b)/h)`—84% at `b=98.0,h=2.5`, about 72% at
+`b=98.3,h=2.5`.
+
+Exact terminal scoring removes learned bootstrap error, not aleatoric return
+noise. Before GPU work, a disjoint opening/middle/late fixed-root study must
+freeze the practical margin, candidate family, paired-stream rule, and
+precision-required design/confirmation counts. Online Commons closes if that
+count cannot fit the fixed-work local-5090 budget.
+
+### 11.5 Forecast and evidence label
+
+The proposal freezes a **76% conditional engineering forecast** after four
+premises pass: current baseline at least about 98.0, central Commons accepted,
+an honest 2.5-point mean-seat headroom lower bound, and the precision-required
+GPU throughput bar. Its 24-point residual failure budget is 8 points for
+production retention, 5 for symmetric/fair composition, 5 for fresh transfer,
+3 for device/trace/provenance defects, and 3 for remaining drift.
+
+This is not a present unconditional success probability; the premise-pass
+probabilities are unknown and were not fabricated. Foundry earns the separate
+`75%-qualified` label only after disjoint evidence satisfies the headroom,
+retention, positive paired-game, projected `>100.10`, and future-1,000-game
+probability rules. The normal promotion CI remains independently mandatory.
+
+### 11.6 Decision and ordering
+
+**Status: OPEN POST-D1 HYPOTHESIS; HIGHEST CLEAN-SLATE UPSIDE; ZERO
+CURRENT-RULES STRENGTH EVIDENCE.** Foundry does not reorder or inspect the
+authorized D1 chain. After D1 reaches its frozen boundary, its first work is
+only objective/identity specification, score-contract semantics,
+chronology-correct certified tomography, and a tiny CPU committed-capsule
+prototype. Anchor remains the lowest-downside first serving-wrapper preflight;
+Foundry is the highest-upside architecture preflight. A full GPU port or
+gameplay arm exists only after the preceding falsifiers pass.

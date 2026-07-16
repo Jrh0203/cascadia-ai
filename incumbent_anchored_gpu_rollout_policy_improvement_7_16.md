@@ -89,6 +89,14 @@ The previous clean-slate architecture proposal remains the higher-upside,
 higher-risk companion:
 [`stochastic_board_game_ai_architecture_research_7_16.md`](stochastic_board_game_ai_architecture_research_7_16.md).
 
+The third proposal is the most radical:
+[`cascadia_foundry_original_architecture_proposal_7_16.md`](cascadia_foundry_original_architecture_proposal_7_16.md)
+replaces scalar evaluation and ordinary search with exact terminal score
+contracts and a committed reactive program capsule. Foundry has the highest
+clean-sheet upside; its 76% forecast is conditional on unmeasured premise
+gates, and it has zero current-rules strength evidence. Anchor remains the
+lowest-downside first serving-wrapper preflight.
+
 ## 1. Evidence labels and claim boundary
 
 This report uses four labels.
@@ -1324,6 +1332,7 @@ elegant per-root certificate.
 - [current Gumbel implementation](cascadiav3/real-root-exporter/src/gumbel.rs)
 - [historical conservative policy-improvement implementation](crates/cascadia-search/src/policy_improvement.rs)
 - [previous stochastic-game architecture proposal](stochastic_board_game_ai_architecture_research_7_16.md)
+- [Cascadia Foundry original architecture proposal](cascadia_foundry_original_architecture_proposal_7_16.md)
 - [July 16 research question brief](research_questions_7_16.md)
 - [July 16 detailed answers](research_answers_7_16.md)
 - archived v2 decisions:

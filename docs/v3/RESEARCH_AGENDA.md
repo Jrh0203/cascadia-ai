@@ -20,6 +20,13 @@ ranks a conservative terminal-rollout wrapper around the exact incumbent as
 the lowest-downside bounded serving test and preferred first preflight. Its
 probability of a positive gain is unknown; it is post-D1 and has zero
 current-rules strength evidence.
+The third
+[Cascadia Foundry proposal](../../cascadia_foundry_original_architecture_proposal_7_16.md)
+is the highest-upside clean-sheet hypothesis: exact terminal score contracts,
+reactive public-state controller programs, atomic cross-board scarcity prices,
+dynamic scenario streams, and a committed full-policy capsule. Its 76%
+forecast is conditional on four unmeasured premise gates and is not a present
+success probability or strength evidence.
 
 **Goal:** mean seat score ≥ 100 over 1,000 games under the pinned four-player
 all-A/no-habitat-bonus rules identity current at the time of the gate.
@@ -67,7 +74,7 @@ champion promotion remains separately reserved.
 | 1 | Canonical battery of adopted default (rebaseline block) | **DONE 07-14**: 98.3925 (descriptive; pre-ghost config read 98.2975 on the same block) | descriptive reference + fresh serving-default ledgers; never evidence |
 | 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier) | **CLOSED 07-14**: final look ns, delta −0.03, RCI [−0.27, +0.21] | menu widening is a measured null; R3.3 exact top-k is the surviving route to coverage |
 | 3 | R1.4 Stage 1 retrains: **V1b**, **V2**, **C1**, **T0** (+ctrl) | **FULLY CLOSED 07-15**: all flag effects = continued training (ctrl −6.2% beat every arm); ctrl-SWA lead died on the bank screen (+0.2470 vs 0.2351) | lesson: locked-val loss deltas of 5-15% carry zero decision signal — only bank regret + gates screen training candidates |
-| 4 | R1.4 D1 pilot / Stage A | **PILOT PASSED 07-15; attempts 3/4 produced no usable seed (reboot, then 24-context thrash); attempt 5 launched 10:02 on the v2-proven 12-shared/Rayon-16 topology (last durable PID 26197, rev 689f9d69). john0 was unreachable at the 11:10 read-only check, so current liveness is unknown.** Never read partial output. | Fully authorized. Attempt 5 is configured to stamp the July-16 identity on registered seeds `2026794000..5249`; completed-seed and complete manifest/provenance verification gate harvest. |
+| 4 | R1.4 D1 pilot / Stage A | **PILOT PASSED 07-15; attempts 3/4 produced no usable seed (reboot, then 24-context thrash); attempt 5 launched 10:02 on the v2-proven 12-shared/Rayon-16 topology (last durable PID 26197, rev 689f9d69). john0 was unreachable at the 11:57 read-only check, so current liveness is unknown.** Never read partial output. | Fully authorized. Attempt 5 is configured to stamp the July-16 identity on registered seeds `2026794000..5249`; completed-seed and complete manifest/provenance verification gate harvest. |
 | 5 | D1 harvest/relabel/retrain/screen/gate | **FULLY AUTHORIZED; frozen 09:00 before Stage A output was read.** Conditional stages follow only after each predecessor verifies complete. | 15k hard `6k/6k/3k` + 1.5k descriptive sentinel; n2048/d16x2 repeat seeds `9000001/9000002`; exact aggregation/masks; raw mix 4:2:1:1; matched no-D1 control + 5k/10k descriptives; bank requires control −0.010 and ≤0.237; fresh `2027079000..99` sequential-CUPED n256 gate; positive gate proceeds to confirmation, promotion still reserved. |
 | 6 | Ghost-label safety fold | **CLEARED 07-15**: both preregistered legs passed (regret Δ0.0046 vs ±0.015; q-regret better than ctrl) | ghost labels are teacher-safe at 0.25-fold; ghost pricing is serving-only (generation measured ~2× slower) |
 
@@ -76,13 +83,15 @@ let the live Stage A attempt finish untouched → verify and execute the already
 authorized harvest/relabel/retrain/screen/gate chain → stop for John's reserved
 promotion ruling if the gate is positive. Exact-rules human calibration may
 proceed in parallel. A bounded adversarial diagnostic and the bounded
-Cascadia-Anchor semantic/A-EXACT-feasibility shadow preflight follow D1; it is
-the lowest-downside serving-wrapper test because the incumbent action is
-preserved. The
-bounded Cascadia-NX offline representation preflight follows or shares only
-validated GPU-engine work. Adaptive allocation, table-native values,
-reliability-sigma, stratified worlds, and exactness expansion remain behind
-direct offline evidence and the funded line.
+Cascadia-Anchor semantic/A-EXACT-feasibility shadow preflight follow D1; Anchor
+is the lowest-downside serving-wrapper test because the incumbent action is
+preserved. Foundry's zero-gameplay objective/semantics and certified ceiling-
+tomography preflight may proceed in the same post-D1 research tranche without
+authorizing Commons gameplay. The bounded Cascadia-NX offline representation
+preflight follows or shares only validated GPU-engine work. Adaptive
+allocation, learned table-native values, reliability-sigma, stratified worlds,
+and exactness expansion remain behind direct offline evidence and the funded
+line.
 
 ## Literature-inspired candidates (07-16 full Q1–Q10 synthesis)
 
@@ -103,6 +112,7 @@ transferable constants. None jump the repaired Stage A/D1 line.
 | L8 | League/exploiter populations / Suphx oracle detours | fixed point | **DEPRIORITIZED/CLOSED for the current objective.** Do not queue GRP, raw oracle dropout, pMCPA, or luck-corrected rewards. Revisit a privileged posterior critic only after D1 and only through exact public-state marginalization. |
 | L9 | Cascadia-NX + Covariance-Audited GPU World Search | representation cost + simulation economics | **OPEN POST-D1 HYPOTHESIS.** Retain v3 legal-action Q, exact grounding, `max^n`, Gumbel sequential halving, K1, and root-world CRN; replace the dense evaluator/bridge with dependency-complete D6-tied motif factors, a calibrated semantic residual, and GPU-resident exact-rules search with sampled chance. A same-target legacy `11,231 -> 512 -> 64 -> 1` control tests whether this is merely a revival. Before training, kill board-wide delta invalidation and survivor-routing misses. Any covariance artifact is disjointly calibrated and keyed to the complete rules/model/opponent/search identity, with independent-world fallback. Require current-rules parity and several-fold end-to-end throughput with retained teacher regret before gameplay. Never displace D1. |
 | L10 | Cascadia-Anchor incumbent-anchored GPU rollout improvement | noisy action differences + exact terminal adjudication | **OPEN POST-D1 HYPOTHESIS; FIRST BOUNDED SERVING-WRAPPER PREFLIGHT.** The incumbent owns the current turn’s refresh/prelude; after any replacement is public, preserve its draft action as anchor. A cheap direct/distilled continuation may screen, but only fresh full-incumbent terminal continuations may confirm one challenger. Use selection/confirmation sample splitting, a multiplicity-valid lower bound above a practical margin, literal fail-closed fallback, separate outer physical and inner no-peek search RNG, and complete production-policy trace parity—not only rules parity. The direct v2 predecessor posted historical +0.420 and +0.520 CI-positive deltas under another policy/rules identity. Statistical power, nested incumbent-search cost, and symmetric four-seat composition are decisive falsifiers. Start final-two through final-five; exclude final-personal-turn roots from Anchor and leave exact K1 unchanged. Compare against extra Gumbel compute at equal wall and require a fresh paired game gate. Never displace D1. |
+| L11 | Cascadia Foundry score-contract program synthesis | commitment representation + exact whole-policy construction | **OPEN POST-D1 HYPOTHESIS; HIGHEST-UPSIDE, ZERO STRENGTH EVIDENCE.** Compile exact A-card terminal score witnesses and reverse completion lattices; bind four persistent plans; synthesize tiny public-state programs over dynamic-urn scenario streams; price atomic shared resources through counterfactual plan collapse; canonicalize independent quality-diversity archives; and freeze the result into a deterministic policy capsule that is itself evaluated and committed through terminal. Foundry-Sovereign uses four isolated seat-local controllers. Foundry-Commons is central and requires materially new exact headroom evidence plus John's ruling on table objective, shared memory/prices, donation, seat equivariance, and fairness. Static repacking is not achievable evidence; chronology claims require exact `GameState` replay. Require certified tomography intervals, an untouched paired honest-controller lower bound of at least 2.5 mean-seat points, production retention `max(70%, (100.10-b)/h)`, fixed-root variance/power, cohort-manifest nonanticipativity, full rules/trace parity, and precision-required <10s local-5090 synthesis before gameplay. The 76% forecast is conditional on those premise gates, not a present probability. Never displace D1. |
 
 Reassuring negative result from the same pass: Gumbel-with-few-sims,
 sequential halving, and stochastic-game determinization — our existing
@@ -143,6 +153,12 @@ scaffold itself is the bottleneck.
   proxy-fidelity/shadow audit → equal-wall Gumbel control → unilateral
   diagnostic → symmetric paired gate. Full proposal:
   [`incumbent_anchored_gpu_rollout_policy_improvement_7_16.md`](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md).
+- **Cascadia Foundry** — post-D1 clean-sheet architecture preflight: central
+  objective ruling → exact spatial/chronological score-contract semantics →
+  certified development/confirmation tomography → CPU committed-capsule
+  prototype → fixed-root power and exact GPU parity/throughput → phase-local
+  terminal capsules → fresh paired gate. Full proposal:
+  [`cascadia_foundry_original_architecture_proposal_7_16.md`](../../cascadia_foundry_original_architecture_proposal_7_16.md).
 
 ### Adopted (velocity/economics, score-neutral)
 

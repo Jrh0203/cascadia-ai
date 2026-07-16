@@ -5,9 +5,9 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-16 11:10 — attempt 5 last durable state; john0 unreachable)
+## RESUME HERE (07-16 11:57 — attempt 5 last durable state; john0 unreachable)
 
-**Current reachability:** the read-only `campaign_status.sh` check at 11:10
+**Current reachability:** the read-only `campaign_status.sh` check at 11:57
 EDT could not reach john0. Therefore current process/GPU/heartbeat liveness is
 unknown. Do not infer failure, relaunch, or inspect scientific sidecars from
 that network fact. No partial Stage A scientific output or score was read, and
@@ -45,14 +45,20 @@ The follow-on
 [structured architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
 and companion
 [Cascadia-Anchor proposal](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md)
-do not change this queue. Cascadia-NX and the incumbent-anchored GPU rollout
-wrapper are post-D1 hypotheses and must not displace john0 or read live-arm
-output.
+and third
+[Cascadia Foundry proposal](../../cascadia_foundry_original_architecture_proposal_7_16.md)
+do not change this queue. Cascadia-NX, the incumbent-anchored GPU rollout
+wrapper, and Foundry are post-D1 hypotheses and must not displace john0 or read
+live-arm output. Foundry begins only with objective/identity specification,
+chronology-correct ceiling tomography, and a CPU capsule prototype; its
+conditional `76%` forecast is not current strength evidence, and
+Foundry-Commons remains blocked from gameplay until materially new exact
+headroom evidence plus John's central-control methodology ruling exist.
 
 **Resume checklist:**
 
 1. Restore/recheck john0 reachability through the ordinary read-only status
-   path. Do not infer PID state from the 11:10 network failure.
+   path. Do not infer PID state from the 11:57 network failure.
 2. Do not inspect partial Stage A scientific output. Verify only complete-seed
    progress plus process/heartbeat freshness through the durable
    monitor/status path.
