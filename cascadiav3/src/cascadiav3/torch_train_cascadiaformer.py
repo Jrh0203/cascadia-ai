@@ -2272,7 +2272,21 @@ def run_training(
     compile_model: bool = False,
     grad_checkpoint: str = "auto",
     cgab_fused: bool = False,
+    rival_preference_training: bool = False,
 ) -> dict[str, Any]:
+    # Rival labels may be validated on CPU, but the implementation plan holds
+    # trainer integration until P8. Enforce that boundary before importing
+    # Torch or touching any training input/output path.
+    if rival_preference_training:
+        from .rival.training_view import enforce_rival_trainer_hold
+
+        enforce_rival_trainer_hold(requested=True)
+
+    # Check before importing Torch: CUDA visibility does not disable MPS, and
+    # resolving an "auto" device would itself query accelerator state.
+    from .cpu_test_guard import require_cpu_test_device
+
+    device_name = require_cpu_test_device(device_name)
     try:
         import torch
     except ModuleNotFoundError:
@@ -3241,6 +3255,14 @@ def main() -> int:
         help="Fused CGAB relation tail (also CASCADIA_CGAB_FUSED=1): count-matmul instead of the "
         "materialized [B, A, seq, d_model] intermediate; mathematically equivalent, not bit-identical",
     )
+    parser.add_argument(
+        "--rival-preference-training",
+        action="store_true",
+        help=(
+            "Reserved for the held P8 trainer integration. This flag currently "
+            "fails closed before Torch import or filesystem mutation."
+        ),
+    )
     args = parser.parse_args()
     if args.val_max_batches < 0:
         parser.error("--val-max-batches must be >= 0")
@@ -3327,6 +3349,7 @@ def main() -> int:
         compile_model=args.compile,
         grad_checkpoint=args.grad_checkpoint,
         cgab_fused=args.cgab_fused,
+        rival_preference_training=args.rival_preference_training,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["status"] == "pass" else 1

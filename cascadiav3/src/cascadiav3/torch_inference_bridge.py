@@ -524,6 +524,9 @@ def _load_model(
     manifest_payload: dict[str, Any] | None,
     device_name: str = "cpu",
 ):  # type: ignore[no-untyped-def]
+    from .cpu_test_guard import require_cpu_test_device
+
+    device_name = require_cpu_test_device(device_name)
     import torch
     from .torch_cascadiaformer import build_cascadiaformer
 
@@ -857,6 +860,9 @@ def _model_eval_batch(
     the per-action relation structure only in the CGAB tail. There is no
     per-action recomputation of the public-token trunk to factor out.
     """
+    from .cpu_test_guard import require_cpu_test_device
+
+    device_name = require_cpu_test_device(device_name)
     import contextlib
 
     import torch
@@ -1441,6 +1447,9 @@ def serve(
     policy_mode: str = "logits",
     pairwise_policy_top_k: int = 16,
 ) -> int:
+    from .cpu_test_guard import require_cpu_test_device
+
+    device_name = require_cpu_test_device(device_name)
     if q_risk_mode not in Q_RISK_MODES:
         raise ValueError(f"unsupported q risk mode: {q_risk_mode}")
     if policy_mode not in POLICY_MODES:

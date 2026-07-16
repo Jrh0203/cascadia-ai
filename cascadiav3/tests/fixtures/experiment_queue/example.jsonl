@@ -1,0 +1,4 @@
+# Parser contract fixture: resume a worlds-allocation confirmation, then run
+# the ghost-opponents bank screen. This is test data, not an operational queue.
+{"name": "worlds_confirm_resume", "script": "cascadiav3/scripts/run_worlds_confirm.sh", "env": {}}
+{"name": "ghost_screen", "script": "cascadiav3/scripts/run_bank_screen.sh", "env": {"SCREEN_NAME": "ghost_opponents", "EXTRA_FLAGS": "--gumbel-ghost-opponents"}}

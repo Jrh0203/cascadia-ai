@@ -95,6 +95,9 @@ def _root_action_count(root: dict[str, Any]) -> int:
 
 
 def _sync_device(device_name: str) -> None:
+    from .cpu_test_guard import require_cpu_test_device
+
+    device_name = require_cpu_test_device(device_name)
     import torch
 
     if device_name == "cuda" and torch.cuda.is_available():
@@ -104,6 +107,9 @@ def _sync_device(device_name: str) -> None:
 
 
 def _clear_device(device_name: str) -> None:
+    from .cpu_test_guard import require_cpu_test_device
+
+    device_name = require_cpu_test_device(device_name)
     import torch
 
     gc.collect()
@@ -322,6 +328,9 @@ def run_benchmark(
     seed: int = 0,
     root_format: str = "production-packed",
 ) -> dict[str, Any]:
+    from .cpu_test_guard import require_cpu_test_device
+
+    device_name = require_cpu_test_device(device_name)
     import torch
 
     from .torch_cascadiaformer import (

@@ -262,6 +262,9 @@ class DefaultPathBitIdentityTest(unittest.TestCase):
             self.assertEqual(values[key], float(losses[key].detach().cpu()))
 
     def test_loss_scalars_support_mps_without_device_float64(self) -> None:
+        from cascadiav3.cpu_test_guard import skip_accelerator_test
+
+        skip_accelerator_test(self, "mps")
         try:
             import torch
         except ModuleNotFoundError:

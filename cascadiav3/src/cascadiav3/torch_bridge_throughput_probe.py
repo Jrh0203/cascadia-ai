@@ -181,6 +181,9 @@ def run_probe(
     arms: list[str],
     source_revision: str | None,
 ) -> dict[str, Any]:
+    from .cpu_test_guard import require_cpu_test_device
+
+    device_name = require_cpu_test_device(device_name)
     import torch
 
     from .torch_inference_bridge import _model_eval_batch, bridge_env_provenance

@@ -159,6 +159,9 @@ class CompileKnobTest(unittest.TestCase):
         self.assertIn("boom", message)
 
     def test_cuda_warmup_failure_falls_back_to_eager(self) -> None:
+        from cascadiav3.cpu_test_guard import skip_accelerator_test
+
+        skip_accelerator_test(self, "cuda")
         torch = _require_torch(self)
 
         from cascadiav3 import torch_inference_bridge as bridge

@@ -27,14 +27,12 @@ from cascadiav3.experiment_queue import (
 
 CASCADIAV3 = Path(__file__).resolve().parents[1]
 RUNNER = CASCADIAV3 / "scripts" / "run_experiment_queue.sh"
-EXAMPLE_QUEUE = CASCADIAV3 / "queues" / "queue_20260712_example.jsonl"
+EXAMPLE_QUEUE = Path(__file__).parent / "fixtures" / "experiment_queue" / "example.jsonl"
 SOURCE_REVISION = "testrev0123"
 
 
 def write_queue(path, stages):
-    path.write_text(
-        "\n".join(json.dumps(stage) for stage in stages) + "\n", encoding="utf-8"
-    )
+    path.write_text("\n".join(json.dumps(stage) for stage in stages) + "\n", encoding="utf-8")
 
 
 class ParseQueueTest(unittest.TestCase):
@@ -85,9 +83,8 @@ class ParseQueueTest(unittest.TestCase):
         )
 
     def assert_rejects(self, lines, fragment):
-        with TemporaryDirectory() as tmp:
-            with self.assertRaises(ValueError) as ctx:
-                self.parse_lines(tmp, lines)
+        with TemporaryDirectory() as tmp, self.assertRaises(ValueError) as ctx:
+            self.parse_lines(tmp, lines)
         self.assertIn(fragment, str(ctx.exception))
 
     def test_duplicate_names_rejected(self) -> None:
@@ -110,9 +107,7 @@ class ParseQueueTest(unittest.TestCase):
     def test_unsafe_stage_name_rejected(self) -> None:
         # Names become queue_<name>.log / queue_done_<name>; path separators
         # must never reach the filesystem.
-        self.assert_rejects(
-            [json.dumps({"name": "../escape", "script": "a.sh"})], "name"
-        )
+        self.assert_rejects([json.dumps({"name": "../escape", "script": "a.sh"})], "name")
 
     def test_unknown_keys_rejected(self) -> None:
         self.assert_rejects(
@@ -133,11 +128,7 @@ class ParseQueueTest(unittest.TestCase):
 
     def test_reserved_source_revision_env_key_rejected(self) -> None:
         self.assert_rejects(
-            [
-                json.dumps(
-                    {"name": "x", "script": "a.sh", "env": {"SOURCE_REVISION": "abc"}}
-                )
-            ],
+            [json.dumps({"name": "x", "script": "a.sh", "env": {"SOURCE_REVISION": "abc"}})],
             "reserved",
         )
 
@@ -166,9 +157,7 @@ class ParseQueueTest(unittest.TestCase):
                 {"name": "c", "script": "absent_one.sh", "env": {}},
                 {"name": "d", "script": "absent_two.sh", "env": {}},
             ]
-            self.assertEqual(
-                missing_scripts(stages, tmp), ["absent_one.sh", "absent_two.sh"]
-            )
+            self.assertEqual(missing_scripts(stages, tmp), ["absent_one.sh", "absent_two.sh"])
 
 
 class ShellEnvTest(unittest.TestCase):
@@ -257,7 +246,7 @@ class RunnerIntegrationTest(unittest.TestCase):
             {
                 "name": "ok_stage",
                 "script": "stage_ok.sh",
-                "env": {"GREETING": "hello world", "QUOTED": "it's \"quoted\""},
+                "env": {"GREETING": "hello world", "QUOTED": 'it\'s "quoted"'},
             },
             {"name": "fail_stage", "script": "stage_fail.sh", "env": {}},
         ]
@@ -280,7 +269,7 @@ class RunnerIntegrationTest(unittest.TestCase):
             # Env hand-off preserved spaces/quotes and pinned SOURCE_REVISION.
             self.assertEqual(
                 (root / "stage_ok_output.txt").read_text(encoding="utf-8"),
-                f"hello world|it's \"quoted\"|{SOURCE_REVISION}\n",
+                f'hello world|it\'s "quoted"|{SOURCE_REVISION}\n',
             )
             # Done marker, per-stage log, and pid file next to the log.
             self.assertTrue((logs / "queue_done_ok_stage").exists())
@@ -312,9 +301,7 @@ class RunnerIntegrationTest(unittest.TestCase):
             # Fail closed: stage 1 must not have run even though its own
             # script and config were fine.
             self.assertFalse((root / "stage_ok_output.txt").exists())
-            self.assertFalse(
-                (root / "cascadiav3" / "logs" / "queue_done_ok_stage").exists()
-            )
+            self.assertFalse((root / "cascadiav3" / "logs" / "queue_done_ok_stage").exists())
 
     def test_hold_file_pauses_queue_until_removed(self) -> None:
         with TemporaryDirectory() as tmp:
