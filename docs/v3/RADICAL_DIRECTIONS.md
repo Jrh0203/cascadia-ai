@@ -260,41 +260,60 @@ and q75 negative in their one-seed screens. That kills risk shifting as a
 standalone strength gate, not as a league-diversity mechanism. League work
 remains gated on the corrected-rules distq/EI verdict.
 
-## 7. Cascadia-NX: structured afterstate factors + paired GPU exact search
+## 7. Cascadia-NX: structured afterstate factors + covariance-audited GPU search
 
-Full clean-sheet review and source ledger:
+Full architecture review and source ledger:
 [`stochastic_board_game_ai_architecture_research_7_16.md`](../../stochastic_board_game_ai_architecture_research_7_16.md).
 
-**Idea.** Replace repeated full-state transformer inference with a correctly
-incremental, D6-symmetry-tied factor evaluator over scoring-card motifs,
-habitat components, market/bag state, and explicit legal compound-action
-deltas. Add a small semantic component/action graph only as a global residual.
-Run the cheap evaluator inside a GPU-resident exact decision/afterstate/chance
-planner. At the root, compare candidates over the same complete physical
-tile/wildlife future tapes and keep pairing only where measured covariance is
-positive.
+**Idea.** Replace dense transformer evaluation at each new search state with a
+correctly incremental, D6-symmetry-tied factor evaluator over scoring-card
+motifs, habitat components, market/bag state, and explicit legal
+compound-action deltas. Add a small semantic component/action graph only as a
+global residual.
+Run the cheap evaluator inside GPU-resident exact-rules `max^n` search with
+sampled conditional chance. Preserve the incumbent root-world CRN as the
+control, and retain any coupling or control variate only under a sampler
+contract frozen from disjoint covariance calibration; otherwise use
+independent exact worlds.
+
+**Inherited rather than reinvented.** Exact legal actions/action queries,
+afterstate-score grounding, component/D6 relations, shared state encoding,
+scalar own-Q, `max^n`, Gumbel sequential halving, exact K1, and root-world CRN
+remain v3 contracts. NX changes the evaluator economics and engine boundary:
+dependency-complete sparse deltas, hard D6 sharing, a semantic component/action
+residual, calibrated fast/full paths, and accelerator-resident rules/search.
 
 **Why it fits.** The best located stochastic score-game results—2048 n-tuple
-afterstate TD + expectimax, Azul NNUE + search, TD-Gammon, and DouZero—favor
+afterstate TD + expectimax, Azul NNUE + search, TD-Gammon, and DouZero—support
 cheap structured afterstate/action evaluation. Pgx and variance-reduced MCTS
-show that accelerator-native exact simulation and correctly coupled worlds can
-change the search frontier. This attacks both measured campaign constraints:
-current per-call economics and variance of action differences.
+show that accelerator-native exact simulation and statistically valid variance
+reduction can change the search frontier. This attacks current per-call
+economics without pretending that generic CRN is new evidence.
 
-**Why it is materially new.** The archived 5.78M sparse Cascadia NNUE was not
-correctly incremental, lacked the proposed global/action semantics and current
-v3 reanalysis targets, and plateaued around 90.7 direct / 95.8–95.9 searched
-under old rules. Ordinary small-model/larger-search, geometry-only GNN,
+**Why it is not a straight revival.** The archived 5.78M sparse Cascadia NNUE
+was not correctly incremental and lacked the proposed global/action semantics
+and current v3 reanalysis targets. It had unqualified direct observations near
+90.7 and qualified searched results around 95.8–96.35 under old rules—an
+observed strength class, not a universal ceiling. Ordinary
+small-model/larger-search, geometry-only GNN,
 load-bearing structured-Q, generic CRN, pairwise Borda, and chance-node leaf
 expectimax remain closed. Category/four-seat heads are auxiliary only; serving
 stays exact afterstate score plus scalar expected own score-to-go.
 
 **Falsifier.** After the authorized D1 chain reaches its frozen boundary, run
 only a bounded current-rules offline bakeoff. Require exact feature/delta/D6
-parity, several-fold end-to-end throughput with retained or improved
-high-budget teacher regret, exact paired-world marginals, positive covariance,
-and material action-difference variance reduction. Only then build the full
-GPU planner. Only a fresh paired gameplay gate establishes strength.
+parity and include a same-target reproduction of the archived
+`11,231 -> 512 -> 64 -> 1` architecture as a control. Require several-fold
+end-to-end throughput with retained or improved high-budget teacher regret.
+Marginals must be exact by construction; coupling is allowed only where a
+disjoint calibration block shows positive covariance and material variance
+reduction, and that calibration is hash-keyed to the complete
+rules/model/opponent/search identity. Before training, kill the sparse path if
+dependency invalidation becomes board-wide or full-menu deltas do not beat
+full recomputation. Compare full-menu graph correction against calibrated
+survivor-only routing and report actions the fast path would wrongly discard.
+Only then build the full GPU planner. Only a fresh paired gameplay gate
+establishes strength.
 
 **Status:** open post-D1 hypothesis; zero Cascadia strength evidence. It does
 not displace or reorder D1.

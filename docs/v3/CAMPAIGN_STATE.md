@@ -42,7 +42,7 @@ relabel/retrain/screen/gate chain. Champion promotion remains separately
 reserved to John.
 
 The follow-on
-[clean-sheet architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
+[structured architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
 does not change this queue. Its Cascadia-NX proposal is a post-D1 hypothesis
 and must not displace john0 or read live-arm output.
 

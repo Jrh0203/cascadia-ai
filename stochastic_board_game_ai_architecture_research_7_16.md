@@ -1,4 +1,4 @@
-# Beyond CascadiaFormer: a structured exact-search architecture for stochastic board-game AI
+# Beyond CascadiaFormer: a structured exact-rules architecture for stochastic board-game AI
 
 **Date:** 2026-07-16
 
@@ -18,25 +18,30 @@ system built around a much cheaper structured afterstate evaluator:
 
 > **Cascadia-NX:** a D6-symmetry-tied local motif/factor network with NNUE-style
 > incremental updates, a small global topology correction, and an explicit
-> legal-action value head, embedded in a GPU-resident exact Cascadia planner
-> with a frozen, covariance-audited world-sampling contract.
+> legal-action value head, embedded in a GPU-resident exact-rules Cascadia
+> planner with a frozen, covariance-audited world-sampling contract.
 
-The architectural bet is that CascadiaFormer is spending most of its 88.2M
-parameters and serving time repeatedly reconstructing facts that the rules
-engine can maintain exactly: local pattern deltas, habitat components, legal
-compound actions, market/bag counts, and the current score. Cascadia-NX would
-make those facts explicit and cheap, then spend the saved budget on the
-operation the campaign's own measurements say matters: averaging stochastic
-action differences until the best action is identifiable.
+The current stack already enumerates legal compound actions exactly, grounds
+values in exact afterstate score, carries component relations and D6 identity,
+and shares each public-state encoding across action chunks. The narrower
+architectural bet is that its 88.2M-parameter dense trunk still repeats too
+much work at every new search state and must approximate dependencies that the
+rules engine could update from the parent state. Cascadia-NX would make those
+dependencies explicit and cheap, then spend the saved budget on the operation
+the campaign's own measurements say matters: averaging stochastic action
+differences until the best action is identifiable.
 
 The literature provides unusually coherent support for this direction:
 
-1. In stochastic 2048, the strongest published result located is not a general
-   sequence model or learned world model. It is a symmetry-shared sparse
-   n-tuple **afterstate** evaluator plus exact expectimax: **625,377 average
-   score and 72% reaching 32768**, albeit over only 100 games at the six-ply
-   setting. A Stochastic MuZero result reported in the same research line is
-   about 510,000; the comparison is cross-study and not controlled.
+1. In stochastic 2048, the strongest peer-reviewed **learning-based** result
+   located in this review is not a general sequence model or learned world
+   model. It is a symmetry-shared sparse n-tuple **afterstate** evaluator plus
+   depth-limited expectimax with exact transition probabilities: **625,377
+   average score and 72% reaching 32768**, albeit over only 100 games at the
+   six-ply setting. This is not a claim over hand-engineered or tablebase
+   systems under other protocols. A Stochastic MuZero result reported in the
+   same research line is about 510,000; the comparison is cross-study and not
+   controlled.
 2. A 2025 Azul thesis—the closest game-shape result located—reports that a
    shallow NNUE evaluator inside search beat the strongest handcrafted
    heuristic in **94.07% of 10,218 games**, and that giving the same system more
@@ -47,7 +52,7 @@ The literature provides unusually coherent support for this direction:
 3. Stockfish's official NNUE introduction measured **+92.77 +/- 2.1 Elo** in a
    60,000-game single-thread test. The transfer is not chess's minimax; it is
    the economic principle that an incrementally updated evaluator can buy far
-   more exact search.
+   more tree search under exact rules.
 4. TD-Gammon reached near-parity with a world-class player using a small
    afterstate value network, structural features, self-play TD learning, and
    shallow chance-aware lookahead. DouZero reached first place among 344 bots
@@ -91,7 +96,8 @@ Important limits:
 - Scores, Elo, win rates, stable ranks, and leaderboard positions across games
   are not comparable measures of absolute strength.
 - The strongest 2048 number uses only 100 evaluation games at its deepest
-  search setting. The Azul result is an MSc thesis, uses two-player minimax, and
+  search setting and is scoped to learning-based published systems located in
+  this review. The Azul result is an MSc thesis, uses two-player minimax, and
   has only three games against one top-five human; its large automated matches
   are the useful evidence.
 - The historical Cascadia scalar champion is **98.2975** at n1024/d16 and was
@@ -161,7 +167,7 @@ table and the numbers must never be compared across rows.
 | DouZero | shared state-action Q + direct Monte Carlo + parallel actors | first among 344 Botzone agents; surpassed prior programs in days on four GPUs | massive-data, imperfect-information card game |
 | Suphx | supervised pretrain + policy-gradient self-play + reward prediction + privileged training | stable rank 8.74 over 5,760 Tenhou games, reported above 99.99% of active players | hidden information and rank utility, not raw own score |
 | Pluribus | CFR blueprint + real-time search | 48 +/- 25 mbb/game with five humans and one AI; 32 +/- 15 with five AI copies and one human | poker equilibrium/exploitation objective |
-| AlphaZero | residual CNN + exact MCTS self-play | 155 wins, 6 losses, 839 draws in 1,000 games vs the tested Stockfish version | deterministic games and large compute |
+| AlphaZero | residual CNN + exact simulator + MCTS self-play | 155 wins, 6 losses, 839 draws in 1,000 games vs the tested Stockfish version | deterministic games and large compute |
 | KataGo | residual/global-pooling net + MCTS + auxiliary targets | surpassed a comparable prior Go result with about 50x less self-play compute | Go-specific combined intervention |
 
 The first five rows are the architectural center of gravity for Cascadia. The
@@ -271,7 +277,7 @@ latent rules from observations.
   over 40,000 at eight threads. [Stockfish 12](https://stockfishchess.org/blog/2020/stockfish-12/)
   then won at least ten times as many game pairs as it lost against Stockfish
   11. Chess is deterministic and zero-sum; the transferable mechanism is
-  incremental evaluation inside much larger exact search.
+  incremental evaluation inside much larger exact-rules tree search.
 - [DouZero](https://proceedings.mlr.press/v139/zha21a.html) uses a shared
   state-action Q network and direct Monte Carlo returns for a three-player,
   imperfect-information card game with up to 391 legal actions. It surpassed
@@ -354,8 +360,26 @@ independent worlds where positive covariance has not been established.
 
 Maintain exact, incrementally updatable structural features for each legal
 afterstate; evaluate them with a tiny symmetry-tied factor network plus a small
-global residual; use that cheap value inside a GPU-resident exact max-n/chance
-planner whose root-world sampling is frozen by a separate covariance audit.
+global residual; use that cheap value inside GPU-resident exact-rules `max^n`
+search with sampled conditional chance and a world sampler frozen by a separate
+covariance audit.
+
+This is a replacement for the expensive evaluator/engine boundary, not a
+rejection of every v3 contract:
+
+| Inherited from the current v3 stack | Genuinely new in Cascadia-NX |
+| --- | --- |
+| exact legal-menu enumeration and action queries | dependency-complete sparse factor deltas compiled from the rules |
+| exact afterstate-score grounding plus learned remaining own score | hard D6 parameter tying in a generated motif bank |
+| component relations, D6 identities, and shared state encoding across action chunks | a small semantic component/action-graph residual over exact summaries |
+| scalar own-Q, `max^n`, Gumbel sequential halving, and exact K1 | jointly calibrated fast/full factor paths with an explicit routing falsifier |
+| incumbent root-world CRN and exact conditional chance marginals | accelerator-resident rules transitions, scoring, feature deltas, and search |
+| full-menu policy/value serving contract | current-target legacy NNUE control and end-to-end quality/throughput bakeoff |
+
+The novelty claim therefore lives in sparse dependency tracking, hard symmetry
+sharing, semantic residual structure, and accelerator residence. Explicit
+action Q, `max^n`, Gumbel allocation, and shared root worlds are retained
+machinery, not discoveries of this report.
 
 ### 4.2 Dataflow
 
@@ -374,15 +398,15 @@ exact public state
         |                  |
         v                  v
   local motif bank     small global topology encoder
-  (all nodes/actions)  (root + search survivors)
+  (all nodes/actions)  (full control or calibrated survivors)
         |                  |
         +--------+---------+
                  v
       own score-to-go + policy + auxiliary heads
                  |
                  v
- exact GPU decision/afterstate/chance search
- with paired counterfactual world bundles
+ GPU exact-rules decision/afterstate search
+ with sampled, covariance-audited chance worlds
                  |
                  v
   exact afterstate score + predicted score-to-go
@@ -437,6 +461,24 @@ footprint, and incremental updates must be property-tested against a slow full
 recompute over random legal games, every action type, every D6 transform, and
 adversarial component merges. A single mismatch fails closed.
 
+Correctness is necessary but not sufficient: the sparse-delta premise gets a
+pre-training economics kill test. On a frozen current-rules root bank, measure:
+
+- compiled feature-table cardinality and byte footprint by factor family;
+- median/p95/max invalidated factors per legal action, split by turn, action
+  type, and wildlife rule;
+- invalidated-factor fraction versus occupied-board size, including long
+  Salmon chains, Elk pattern changes, Bear regrouping, and habitat merges; and
+- complete-menu latency for dependency closure + delta evaluation versus a
+  vectorized full recompute.
+
+If p95 dependency closure grows with the whole occupied board rather than the
+touched component/boundary, the compiled tables exceed their frozen memory
+budget or approach the 2048 paper's 268.4M-weight regime without its
+lookup-only economics, or the full-menu delta path fails its frozen throughput
+bar against full recomputation, close the incremental thesis before training.
+Do not rescue it by omitting remote dependencies.
+
 ### 4.4 Layer B: symmetry-tied local motif bank
 
 Use a bank of learned n-tuple/factor embeddings rather than a dense attention
@@ -489,14 +531,24 @@ Use the global correction at two fidelities:
 1. **Fast value:** local accumulators + exact summaries, evaluated for every
    legal action and ordinary search node.
 2. **Full value:** fast value + component-graph residual, evaluated at the root,
-   at leaf batches, or only for sequential-halving survivors.
+   at leaf batches, or—only after a separate routing gate—for
+   sequential-halving survivors.
 
 Stockfish 16.1's official [dual-NNUE release](https://stockfishchess.org/blog/2024/stockfish-16-1/)
 provides a modern precedent for using a secondary cheap network on easy
-positions. Cascadia's two-fidelity routing must be trained and measured from
-scratch; it is not assumed to transfer automatically.
+positions. It does not establish that survivor-only correction is safe here.
 
-### 4.6 Layer D: explicit legal-action Q
+Fast and full heads must be jointly calibrated to the same score-to-go
+estimand. When a search round changes fidelity, re-score **every surviving
+action** at the new fidelity before comparing them; never compare stale fast
+values against full values. The bakeoff must include full-graph evaluation on
+the complete menu as a control and measure the **rescue rate**: how often the
+full model would move an action discarded by the fast route into its top-k or
+the teacher's top-k. If the registered retention rule cannot make that miss
+rate negligible at useful speed, use the full path everywhere or abandon
+two-fidelity routing.
+
+### 4.6 Layer D: retain and specialize explicit legal-action Q
 
 Rust already enumerates the exact legal compound menu. Treat each legal action
 as a first-class hyperedge and predict:
@@ -518,7 +570,9 @@ The action head consumes:
 - exact afterstate score/component deltas as inputs, never targets to relearn.
 
 This borrows DouZero's state-action formulation and the three-head MCTS idea
-without reviving the closed pairwise Borda head. Pairwise margins can be an
+without reviving the closed pairwise Borda head. The legal-action-Q contract is
+already present in v3; NX changes its sparse inputs, evaluator cost, and global
+residual rather than claiming Q itself as novel. Pairwise margins can be an
 auxiliary loss on reliable teacher pairs, but serving remains a scalar expected
 own score because that is the campaign objective and composes cleanly in
 search.
@@ -571,6 +625,14 @@ worlds. R0.2 already showed that additionally sharing rollout-policy RNG can
 be harmful, so that component begins disabled rather than being smuggled back
 under a new name.
 
+Covariance eligibility is versioned to the complete estimator identity:
+rules and sampler hashes, evaluator/checkpoint, opponent and rollout policies,
+search depth/budget, candidate-set rule, and allocation rule. Any change
+invalidates the table and requires fresh calibration. Positive covariance is
+necessary but not sufficient; the registered gate is lower pairwise
+difference variance **and** lower fixed-wall action-selection error on an
+untouched block.
+
 Where coupling is eligible, the paired advantage remains:
 
 ```text
@@ -579,10 +641,12 @@ Delta(a, b) = mean_k [return(a, world_k) - return(b, world_k)]
 
 When outcomes are positively correlated, chance luck cancels in the
 difference. Control variates are eligible only when their expectation is known
-or estimated on independent data and their coefficient is frozen before the
-verdict block. No covariance, fallback, or coefficient decision may be learned
-from the same samples used to score candidate actions unless a separately
-proved and preregistered online rule preserves the estimator.
+exactly under the sampler or a formally unbiased cross-fitted construction has
+been proved and preregistered; a frozen plug-in mean from separate data is not
+automatically exact. Coefficients are frozen before the verdict block. No
+covariance, fallback, or coefficient decision may be learned from the same
+samples used to score candidate actions unless a separately proved and
+preregistered online rule preserves the estimator.
 
 ### 5.2 Root allocation
 
@@ -594,7 +658,8 @@ Keep the campaign's proven Gumbel/sequential-halving scaffold initially:
 4. give each survivor the same initial world budget under the frozen sampler;
 5. eliminate by completed-Q at fixed registered looks;
 6. spend additional worlds only on survivors; and
-7. use the full global correction for the last survivors or final leaf batch.
+7. under the frozen N3 routing contract, switch all remaining survivors to the
+   full global correction before comparing them again.
 
 Do not introduce OCBA, LCB, or another plug-in allocator in the first test.
 The evaluator and GPU execution are already coupled interventions; sequential
@@ -617,8 +682,8 @@ and chance nodes honestly; repeated one-ply own-score ranking is not an exact
 solver.
 
 Exact enumeration is appropriate only when a chance layer is genuinely small.
-Otherwise sample exact conditional worlds. This is different from the closed generic
-chance-node expectimax leaf correction and avoids the old NNUE failure of
+Otherwise sample exact conditional worlds. This is different from the closed
+generic chance-node expectimax leaf correction and avoids the old NNUE failure of
 adding an explicit future wildlife bonus on top of a network that already
 predicted the same future score.
 
@@ -646,13 +711,21 @@ about 5% left to tune.
 ### 6.1 Three target sources, each with a different job
 
 1. **Terminal trajectory returns:** broad, unbiased anchors for expected own
-   final score under the behavior policy.
+   final score only under the recorded behavior/opponent-policy identity.
 2. **Afterstate TD(lambda):** dense credit assignment between a player's
    successive decisions. Rewards are exact score increments; bootstraps predict
    only remaining score. This is the TD-Gammon/2048 lesson.
-3. **Exact-search reanalysis:** high-quality per-action policies,
+3. **Exact-rules sampled-search reanalysis:** high-quality per-action policies,
    world-matched advantages where the frozen sampler permits them, and
    completed-Q values on hard states. This is the Expert Iteration/D1 lesson.
+
+These targets do not automatically share one estimand. Every row/shard must
+carry rules, behavior-checkpoint, opponent-pool, teacher-checkpoint, sampler,
+and search-policy hashes. The first bakeoff freezes one target policy per
+corpus and keeps behavior-return anchoring as a separately weighted target or
+diagnostic head rather than silently averaging it with search-improved Q. A
+later policy-conditioned value model is eligible only as an explicit ablation.
+TD bootstraps are regenerated or versioned whenever that target policy moves.
 
 The current D1 work is therefore complementary: if its current-rules artifacts
 pass their own gates, they become the best available teacher corpus for a
@@ -669,7 +742,8 @@ For stochastic targets:
 - keep per-world returns and covariance diagnostics;
 - weight absolute-Q regression by effective sample size/uncertainty without
   changing the mean target; and
-- retain terminal returns as an anchor against teacher bias.
+- retain policy-identified terminal returns as a separately reported anchor
+  against teacher bias.
 
 ### 6.3 Phase and card specialization
 
@@ -692,7 +766,7 @@ shows how batched whole-buffer reanalysis can reduce wall time in its tested
 domains. The appropriate Cascadia loop is:
 
 1. generate broad exact-rules states;
-2. label a registered mixture with CAWS/high-budget exact search;
+2. label a registered mixture with CAWS/high-budget exact-rules search;
 3. train the cheap evaluator/action policy;
 4. measure search strength and hard-state regret;
 5. refresh labels only after the student changes the visited distribution; and
@@ -711,9 +785,9 @@ option value, habitat corridor style, or market-denial tendency. Card-family
 specialization is relevant only beyond the fixed all-A campaign target.
 
 Use specialists only to propose diverse candidate actions. Evaluate the union
-under the same paired chance bundles and distill the result into one serving
-student. This is a later diversity tool, not a checkpoint output ensemble and
-not a league whose objective becomes opponent exploitation.
+under the same frozen world-sampling contract and distill the result into one
+serving student. This is a later diversity tool, not a checkpoint output
+ensemble and not a league whose objective becomes opponent exploitation.
 
 ## 7. Why this is not the old Cascadia NNUE line
 
@@ -751,7 +825,7 @@ qualified current comparators**:
 
 - direct NNUE play was around **90.7** in documented v3/v4 training notes;
   auxiliary heads accelerated convergence but did not lift that observed
-  ceiling;
+  direct-strength class;
 - one-ply exact wildlife-market enumeration scored 91.3 versus 90.5 NNUE-only
   over 50 games, and a simplified two-ply version scored 92.4; and
 - deeper wildlife-only variants were observed at 90.1, 87.6, and 89.0 because
@@ -767,8 +841,8 @@ They do **not** close Cascadia-NX, whose material differences are:
 | one board/value path | local incremental path + explicit global component-graph correction |
 | implicit action comparison through afterstate scalar | first-class full legal compound-action hyperedges and Q head |
 | CPU MCE with model IPC | GPU-resident exact transitions, scoring, and batched search |
-| ad hoc/failed CRN variants without a frozen eligibility contract | incumbent root-world CRN retained only where disjoint calibration clears it; independent fallback and only mathematically valid control variates |
-| older self-play/terminal labels | current v3 exact-search reanalysis, paired advantages, and afterstate TD |
+| ad hoc/failed CRN variants without a frozen eligibility contract | incumbent root-world CRN retained only where disjoint calibration clears it; independent fallback and exact-mean or formally unbiased cross-fitted control variates only |
+| older self-play/terminal labels | current v3 exact-rules sampled-search reanalysis, world-matched advantages where eligible, and afterstate TD |
 | ad hoc explicit future bonus plus full remaining-value NNUE | strict reward accounting: exact increment **or** remaining residual, never both |
 | old rules identities and low-90s direct policy | head-to-head challenger against the current-rules v3 incumbent |
 
@@ -789,8 +863,8 @@ search economics in that order.
 | L0 | closest reproducible legacy `11,231 -> 512 -> 64 -> 1` sparse NNUE, retrained on current targets | test whether gains are merely a legacy-family retrain |
 | N0 | local motif/NNUE accumulator only | test the cheap local core |
 | N1 | N0 + exact global summaries/MLP | price nonspatial global context |
-| N2 | N1 + component-graph residual | test long-range topology |
-| N3 | N2 + two-fidelity survivor routing | measure wall-matched planner value |
+| N2 | N1 + component-graph residual on the full menu | test long-range topology and supply the routing control |
+| N3 | jointly calibrated N2 fast/full heads with registered survivor routing | test whether selective full evaluation preserves rescued actions |
 
 All trainable arms use the same current-rules states, legal actions, teacher
 targets, train/validation/test split, optimizer exposure accounting, and exact
@@ -809,7 +883,11 @@ Report by phase, action width, scoring-card family, and teacher uncertainty:
   grounding;
 - error correlation across sibling actions, because shared bias can preserve
   ranking;
+- N3 rescue/miss rate versus N2-full-everywhere, plus top-k recall at the exact
+  fidelity-switch boundary;
 - incremental feature parity and D6-equivariance;
+- compiled factor cardinality, memory, and median/p95/max invalidation fanout;
+- full-menu delta-update latency versus vectorized full recomputation;
 - inference rows/second and end-to-end root decisions/second;
 - fraction of nodes requiring the full global path; and
 - memory footprint and accelerator occupancy.
@@ -842,7 +920,10 @@ Before gameplay, establish:
 6. deterministic replay reproduces every state/action/score digest; and
 7. a frozen stratum eligibility table learned only from calibration disables
    coupling everywhere else; any adaptive online rule requires its own proof
-   and preregistration.
+   and preregistration; and
+8. the eligibility artifact is hash-keyed to rules, sampler, evaluator,
+   opponents, rollout policy, depth/budget, candidate set, and allocator, and
+   invalidates on any identity change.
 
 If the incumbent coupling does not clear the variance bar on disjoint data,
 disable it. Do not keep it because common random numbers worked in other games.
@@ -854,7 +935,7 @@ Use two orthogonal comparisons:
 1. **Equal-search comparison:** same simulations/worlds to test evaluator
    quality.
 2. **Equal-wall comparison:** spend Cascadia-NX's measured savings on more
-   exact search to test the actual system thesis.
+   exact-rules sampled-world search to test the actual system thesis.
 
 Only a candidate that survives both the locked puzzle-bank screen and a fresh
 current-rules paired gate advances. Promotion still requires at least 100
@@ -872,7 +953,7 @@ value bias, and simulation throughput while preserving exact rules. It is the
 leading system challenger in this review for creating a plausible new
 wall-clock frontier rather than moving a knob on the existing one.
 
-**Largest risk:** local factors may repeat the old NNUE ceiling and the global
+**Largest risk:** local factors may repeat the old NNUE strength class and the global
 correction may erase the speed gain. The N0/N1/N2 ablation is designed to expose
 that immediately.
 
@@ -908,8 +989,9 @@ the whole evaluator.
 [Regret-Guided Self-play Curriculum](https://rlg.iis.sinica.edu.tw/papers/rgsc/)
 reports average gains of 77 Elo over AlphaZero and 89 over Go-Exploit across Go,
 Othello, and Hex; in mature 9x9 Go its KataGo win rate increased from 69.3% to
-78.2%. For Cascadia, define state priority by high-budget **paired-world**
-teacher regret rather than realized outcome regret:
+78.2%. For Cascadia, define state priority by high-budget teacher regret under
+the frozen, covariance-audited world sampler rather than realized outcome
+regret:
 
 ```text
 R(s) = Q_teacher(s, best action) - Q_teacher(s, played action)
@@ -922,7 +1004,8 @@ new evaluator/search architecture.
 ### Rank 5 — specialist proposal population, single distilled student
 
 Train latent or explicitly conditioned strategic specialists, let them propose
-actions, adjudicate the union with paired exact search, and distill one student.
+actions, adjudicate the union under the frozen exact-world sampler, and distill
+one student.
 This can break a self-play attractor without paying ensemble serving cost.
 
 ### Conditional — Monte Carlo Graph Search
@@ -946,7 +1029,8 @@ if the measured rate justifies the complexity.
   motifs, never random outcomes; remove it at final root choice. Evidence is
   promising but indirect.
 - **GFlowNet/POMO proposal generation:** generate diverse high-scoring
-  completions as teacher proposals, then adjudicate under exact chance worlds.
+  completions as teacher proposals, then adjudicate under valid conditional
+  chance worlds.
   Directly optimizing lucky terminal boards would be invalid.
 
 ## 10. Approaches not recommended
@@ -955,8 +1039,8 @@ if the measured rate justifies the complexity.
 
 The repo already measured 88.2M versus 207M, more data, fresh initialization,
 and multiple output ensembles without a strength breakthrough. A different
-transformer tokenizer could still win, but it is not the clean-sheet bet with
-the best combined literature and repo evidence.
+transformer tokenizer could still win, but it is not the leading challenger
+identified by the combined literature and repo evidence here.
 
 ### A smaller ordinary transformer plus more search
 
@@ -974,9 +1058,10 @@ the real simulator.
 
 ### Pure local n-tuples or the legacy NNUE
 
-The archive already establishes a low-90s direct ceiling and mid-90s searched
-ceiling for that line. A global topology correction and current search
-supervision are mandatory parts of the challenger.
+The archive records a low-90s direct **observed strength class** and qualified
+mid-90s searched results for that line under old rules; it does not establish a
+universal architecture ceiling. A global topology correction and current
+search supervision are mandatory parts of the challenger.
 
 ### Load-bearing additive category heads
 
@@ -1004,8 +1089,8 @@ The historical July-9 gap from the scalar champion to 100 is 1.7025 points,
 but no July-16 canonical score exists yet. A plausible system-level path is not
 to demand all 1.7 points from one neural checkpoint:
 
-1. **Better targets:** let D1/current exact-search reanalysis reduce policy and
-   value bias.
+1. **Better targets:** let D1/current exact-rules sampled-search reanalysis
+   reduce policy and value bias.
 2. **Cheaper representation:** recover a multi-fold end-to-end leaf/root
    throughput gain without the old small-transformer accuracy loss.
 3. **Covariance-audited world planning:** retain the incumbent root-world CRN
@@ -1017,7 +1102,7 @@ to demand all 1.7 points from one neural checkpoint:
 5. **Curriculum:** feed confirmed high-regret states back into the student only
    after aleatoric luck is removed.
 6. **Exact frontiers:** retain K1 and expand exactness only through honest
-   max-n/chance semantics.
+   `max^n`/chance semantics.
 
 This decomposition is a strategy, not an additive point forecast. The
 interventions can overlap and their gains may not add. The bakeoff is designed
@@ -1030,28 +1115,33 @@ chain reaches its registered boundary**, using the completed current-rules
 corpus if admissible. Do not begin with a full GPU rules port. First prove on
 frozen current-rules roots that:
 
-1. sparse incremental features reproduce exact CPU afterstates and D6
-   transforms;
-2. local factors plus a small component graph retain or improve high-budget
-   teacher regret;
-3. the evaluator changes end-to-end throughput by several-fold rather than
-   the 1.9x small-transformer regime; and
-4. the frozen world-sampling contract reduces action-difference variance, or
-   independent worlds win and become the production contract.
+1. sparse features reproduce full recomputation across exact CPU afterstates
+   and D6 transforms;
+2. dependency fanout, table memory, and full-menu delta latency beat the frozen
+   full-recompute economics bars;
+3. local factors plus a full-menu component graph beat the same-target legacy
+   NNUE control and retain or improve high-budget teacher regret;
+4. calibrated survivor routing preserves actions the full graph would rescue,
+   or the full graph is used everywhere;
+5. the evaluator changes end-to-end throughput by several-fold rather than the
+   1.9x small-transformer regime; and
+6. the versioned world-sampling contract reduces action-difference variance
+   and fixed-wall selection error, or independent worlds become the production
+   contract.
 
 If all four pass, the GPU-resident planner is the highest-upside engineering
 investment in the portfolio. If representation fails, stop before the port. If
-pairing fails, keep the evaluator and use independent exact worlds. If the
-equal-wall gameplay gate fails, close the architecture regardless of how
-elegant or fast it is.
+coupling eligibility fails, keep the evaluator and use independent exact
+worlds. If the equal-wall gameplay gate fails, close the architecture
+regardless of how elegant or fast it is.
 
 The core strategic change is simple:
 
 > Stop asking one large network to rediscover the board, the scoring rules,
-> and the stochastic comparison on every call. Make structure and chance exact;
-> make evaluation incremental; make search the teacher and the variance
-> reducer; use learning only for the residual that exact computation cannot
-> cheaply settle.
+> and the stochastic comparison on every call. Make transition laws and chance
+> marginals exact; estimate expectations honestly; make evaluation
+> incremental; make search the teacher and variance reducer; use learning only
+> for the residual that exact computation cannot cheaply settle.
 
 ## 13. Primary-source ledger
 
@@ -1060,7 +1150,7 @@ The core strategic change is simple:
 | Source | Evidence used |
 | --- | --- |
 | [Rzepecki, *Implementing superhuman AI for Azul board game with a variation of NNUE*](https://jakubkowalski.tech/Supervising/Rzepecki2025ImplementingSuperhuman.pdf) | Shallow integer/AVX2 NNUE shapes, automated win rates, and search-time response; no documented accumulator; MSc/two-player caveat. |
-| [Guei, Chen, Wu, *Optimistic Temporal Difference Learning for 2048*](https://arxiv.org/abs/2111.11090) | Symmetry-shared n-tuples, afterstate TD/TC, multistage learning, expectimax ablation, 625,377 result. |
+| [Guei, Chen, Wu, *Optimistic Temporal Difference Learning for 2048*, IEEE Transactions on Games](https://arxiv.org/abs/2111.11090) | Symmetry-shared n-tuples, afterstate TD/TC, multistage learning, expectimax ablation, 625,377 result. |
 | [Hung Guei, 2048 RL dissertation](https://arxiv.org/abs/2212.11087) | Cross-study table comparing afterstate DNN, Stochastic MuZero, and n-tuple systems; comparison caveat. |
 | [Schrittwieser et al., *Planning in Stochastic Environments with a Learned Model*](https://openreview.net/forum?id=X6D9bAHhBQ1) | Explicit afterstate/chance factorization and stochastic MuZero 2048/backgammon evidence. |
 | [Tesauro, *Temporal Difference Learning and TD-Gammon*](https://doi.org/10.1145/203330.203343) | Compact value learner, self-play TD, structural features, shallow stochastic lookahead, human comparison. |
@@ -1072,7 +1162,7 @@ The core strategic change is simple:
 
 | Source | Evidence used |
 | --- | --- |
-| [Stockfish, *Introducing NNUE Evaluation*](https://stockfishchess.org/blog/2020/introducing-nnue-evaluation/) | Incremental evaluator inside exact search; official 60k/40k-game Elo tests. |
+| [Stockfish, *Introducing NNUE Evaluation*](https://stockfishchess.org/blog/2020/introducing-nnue-evaluation/) | Incremental evaluator inside exact-rules tree search; official 60k/40k-game Elo tests. |
 | [Stockfish 12](https://stockfishchess.org/blog/2020/stockfish-12/) | Release-level strength result and CPU-efficient NNUE/search architecture. |
 | [Stockfish 16.1](https://stockfishchess.org/blog/2024/stockfish-16-1/) | Dual-network precedent for cheap evaluation on easy positions. |
 | [Wu, *Accelerating Self-Play Learning in Go*](https://arxiv.org/abs/1902.10565) | Global pooling and auxiliary target ablations; 50x combined compute reduction. |

@@ -916,7 +916,7 @@ preflight before lower-ranked allocator/table/reliability/world work.
 No source in the review authorizes a promotion, rules-design change, or live
 experiment by itself.
 
-## 9. Clean-sheet stochastic-game architecture review — 2026-07-16
+## 9. Structured stochastic-game architecture review — 2026-07-16
 
 Complete literature synthesis, archived NNUE audit, architecture specification,
 falsifiers, and primary-source ledger:
@@ -930,21 +930,24 @@ evidence.
   NNUE/search agent beat the strongest handcrafted heuristic in `94.07%` of
   `10,218` automated games, and longer search consistently strengthened the
   same evaluator. It is two-player and not peer reviewed.
-- In stochastic 2048, a symmetry-shared n-tuple afterstate learner plus
-  six-ply expectimax reported `625,377` average and `72%` reaching 32768 over
-  100 deep-search games. A Stochastic MuZero result in the same research line
+- In stochastic 2048, the strongest peer-reviewed learning-based result located
+  in the review—a symmetry-shared n-tuple afterstate learner plus six-ply
+  expectimax—reported `625,377` average and `72%` reaching 32768 over 100
+  deep-search games. This does not claim superiority over hand/tablebase systems
+  under other protocols. A Stochastic MuZero result in the same research line
   is about `510,000`; the comparison is cross-study, not controlled.
-- TD-Gammon, Stockfish NNUE, DouZero, KataGo, and Pgx independently support
-  the same mechanism: explicit afterstates/legal actions, cheap structured
-  evaluation, search or Monte Carlo as teacher, global auxiliary context, and
-  accelerator-native simulation can matter more than a generic large model.
+- TD-Gammon, Stockfish NNUE, DouZero, KataGo, and Pgx collectively support
+  different components of the synthesis: afterstates/legal actions, cheap
+  structured evaluation, search or Monte Carlo as teacher, global auxiliary
+  context, and accelerator-native simulation.
 - Exact rules make learned MuZero/Dreamer dynamics a poor first Cascadia bet.
   Retain the decision-afterstate-chance factorization and execute the real
   simulator.
 
 ### 9.2 Ranked architecture hypothesis
 
-The leading clean-sheet challenger is **Cascadia-NX**:
+The leading system challenger identified by the July 16 review is
+**Cascadia-NX**:
 
 1. a versioned exact compiler for scoring-card-conditioned local motifs,
    habitat components, market/bag/phase summaries, and legal compound-action
@@ -956,29 +959,56 @@ The leading clean-sheet challenger is **Cascadia-NX**:
    score plus predicted remaining score;
 5. category, four-seat, distribution, and motif heads as auxiliary
    regularizers only; and
-6. GPU-resident exact max-n/chance search over complete paired physical future
-   world bundles.
+6. GPU-resident exact-rules `max^n` search with sampled conditional chance and
+   a frozen world-sampling contract.
 
-The paired search synthesis is named **Counterfactual Bundle Search** in the
-report. Every root action sees the same sampled physical tile/wildlife priority
-orders and opponent-policy random variables. It advances only if marginal
-probabilities remain exact, paired and independent means agree, covariance is
-positive, and action-difference variance falls on untouched roots. This is
-materially different from R0.2's failed pairing of only the remaining rollout
-RNG; without those proofs it is the closed CRN direction under a new name.
+NX explicitly inherits v3's exact legal menu/action queries, afterstate-score
+grounding, component relations/D6 identities, shared state encoding across
+action chunks, scalar own-Q, `max^n`, Gumbel sequential halving, exact K1, and
+root-world CRN. The claimed changes are dependency-complete sparse deltas,
+hard symmetry sharing, a semantic component/action residual, jointly
+calibrated fast/full paths, and accelerator-resident rules/search.
+
+The report names the systems extension **Covariance-Audited GPU World Search**.
+The incumbent already redeterminizes full hidden tile-stack/wildlife-bag
+orders and cycles the same `d` root worlds across actions; that root-world CRN
+is the control, not a new method. R0.2's additional rollout-policy RNG sharing
+worsened gap variance by 4.4%. Marginal correctness must follow from sampler
+construction and CPU/GPU parity, with mean agreement only an audit. Any
+coupling/control-variate eligibility must be frozen from a disjoint covariance
+block, with independent worlds used everywhere else. The calibration artifact
+is keyed to rules, sampler, checkpoint, opponent/rollout policies,
+depth/budget, candidate set, and allocator; any identity change invalidates it.
+Positive covariance alone is insufficient: fixed-wall action-selection error
+and pairwise-difference variance must both improve on untouched roots.
 
 ### 9.3 Why this does not reopen closed work
 
-- The archived 11,231-feature, `512 -> 64 -> 1`, 5.78M-parameter NNUE plateaued
-  around `90.7` direct and `95.8–95.9` with K32/R600-class search under old
-  rules. Doubling rollouts was flat; deeper wildlife lookahead double-counted
-  future value and hurt. Its attempted accumulator was 2.5x faster but
+- The archived 11,231-feature, `512 -> 64 -> 1`, 5.78M-parameter NNUE had
+  unqualified direct observations around `90.7` and qualified K32/R600-class
+  results around `95.8–96.35` under old rules. Those are an observed strength
+  class, not a universal architecture ceiling. A three-game rollout-scaling
+  pilot was flat; deeper wildlife lookahead double-counted future value and
+  hurt in archived observations. Its attempted accumulator was 2.5x faster but
   regressed about three points because feature dependencies were incomplete.
 - Cascadia-NX is eligible only as a coupled system: correct full dependency
   tracking, current v3 reanalysis/TD targets, explicit global semantics and
   compound-action Q, and a GPU-native engine/search boundary. “Bring back
   NNUE,” a pure local n-tuple model, or an ordinary smaller transformer remains
   closed.
+- The bakeoff includes the closest reproducible archived
+  `11,231 -> 512 -> 64 -> 1` NNUE retrained on the same current targets. NX must
+  beat that control on the registered quality/throughput frontier; novelty is
+  a testable claim, not a diagram-level assertion.
+- Before training, measure factor-table cardinality/memory, median/p95/max
+  dependency invalidation, and full-menu delta latency versus full recompute;
+  board-wide dependency closure kills the incremental thesis. Compare a
+  full-menu graph residual against survivor-only routing with jointly
+  calibrated heads and an explicit rescued-action miss rate.
+- Terminal behavior returns, moving TD bootstraps, and search-improved Q are not
+  one estimand. Shards carry behavior/opponent/teacher/sampler/search hashes;
+  the first bakeoff freezes a target policy and keeps behavior returns as a
+  separately weighted anchor or diagnostic rather than silently blending them.
 - Archived geometry-only GNN ADR 0073 worsened value correlation and MAE. The
   proposed graph is a small residual over exact semantic components, not a
   geometry-only trunk.

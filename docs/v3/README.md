@@ -38,9 +38,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   keep sequential halving and current Gumbel constants, and specify the D1
   tranche/targets/exposure/gates. No production BGA Cascadia corpus existed at
   the cutoff; a human-superhuman claim needs direct exact-rules calibration.
-  The follow-on [clean-sheet stochastic-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
+  The follow-on [structured stochastic-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
   ranks a symmetry-tied incremental factor network plus a small global
-  component graph and GPU-resident paired exact-chance search above another
+  component graph and covariance-audited GPU exact-rules sampled-world search above another
   larger transformer. It is an open, post-D1 challenger hypothesis—not
   promotion evidence and not a reason to disturb the live D1 chain.
 - **Historical July-9 corrected-rules scoreboard (100 games, seeds
@@ -205,9 +205,9 @@ timestamped snapshot, weaker than current `main`).
   [answers](../../research_answers_7_16.md): frozen external-research scope,
   primary-source synthesis, gated Q1–Q10 decisions, and the complete D1
   prescription.
-- [Clean-sheet stochastic board-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md):
+- [Structured stochastic board-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md):
   best-performing cross-game evidence, archived Cascadia NNUE audit,
-  Cascadia-NX/Counterfactual Bundle Search proposal, falsifiers, and primary
+  Cascadia-NX/Covariance-Audited GPU World Search proposal, falsifiers, and primary
   source ledger.
 - [Rules Contract](RULES_CONTRACT.md): official rules identity and the
   resulting baseline compatibility boundary.

@@ -10,8 +10,9 @@ original tiered portfolio (rationale, mechanisms, literature) in
 The complete July 16 external-research scope and verdicts are in
 [`research_questions_7_16.md`](../../research_questions_7_16.md) and
 [`research_answers_7_16.md`](../../research_answers_7_16.md). The follow-on
-[clean-sheet stochastic-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
-ranks a structured incremental evaluator plus GPU-native exact-chance search;
+[structured stochastic-game architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
+ranks a structured incremental evaluator plus GPU-native exact-rules search
+with sampled conditional chance;
 it is a post-D1 challenger hypothesis, not current strength evidence.
 
 **Goal:** mean seat score ≥ 100 over 1,000 games under the pinned four-player
@@ -90,7 +91,7 @@ transferable constants. None jump the repaired Stage A/D1 line.
 | L6 | Adversarial diagnostic probe bank | blind spots / rules | **BOUNDED AFTER D1 and the rules-ID repair.** Require high-budget confirmation, cross-checkpoint transfer, diversity caps, and natural-frequency estimates before any adversarial training. |
 | L7 | Cooperative table values | multi-seat | Existing `value_vector` already predicts four final scores. The real R1.1c intervention is table-native **per-action Q plus table-derived improved-policy labels**, requiring John's explicit selfish-versus-cooperative objective ruling. |
 | L8 | League/exploiter populations / Suphx oracle detours | fixed point | **DEPRIORITIZED/CLOSED for the current objective.** Do not queue GRP, raw oracle dropout, pMCPA, or luck-corrected rewards. Revisit a privileged posterior critic only after D1 and only through exact public-state marginalization. |
-| L9 | Cascadia-NX + Counterfactual Bundle Search | representation cost + comparison noise | **OPEN POST-D1 HYPOTHESIS.** D6-tied motif factors, an optional semantic component graph, explicit legal-action own-Q, and GPU-resident exact max-n/chance search over complete paired physical world tapes. This is not legacy NNUE, ordinary small-model/larger-search, geometry-only GNN, structured-Q, or generic CRN. Require current-rules feature parity, several-fold end-to-end throughput with retained teacher regret, unbiased marginals, positive covariance, and a material paired-difference variance reduction before gameplay. Never displace the authorized D1 chain. |
+| L9 | Cascadia-NX + Covariance-Audited GPU World Search | representation cost + simulation economics | **OPEN POST-D1 HYPOTHESIS.** Retain v3 legal-action Q, exact grounding, `max^n`, Gumbel sequential halving, K1, and root-world CRN; replace the dense evaluator/bridge with dependency-complete D6-tied motif factors, a calibrated semantic residual, and GPU-resident exact-rules search with sampled chance. A same-target legacy `11,231 -> 512 -> 64 -> 1` control tests whether this is merely a revival. Before training, kill board-wide delta invalidation and survivor-routing misses. Any covariance artifact is disjointly calibrated and keyed to the complete rules/model/opponent/search identity, with independent-world fallback. Require current-rules parity and several-fold end-to-end throughput with retained teacher regret before gameplay. Never displace D1. |
 
 Reassuring negative result from the same pass: Gumbel-with-few-sims,
 sequential halving, and stochastic-game determinization — our existing
