@@ -937,6 +937,8 @@ def filter_expert_tensor_shard(
             ),
             search_root_value=shard.search_root_value,
             exact_endgame=shard.exact_endgame,
+            policy_valid=shard.policy_valid,
+            outcome_valid=shard.outcome_valid,
         )
     finally:
         shard.close()
@@ -1021,6 +1023,8 @@ def materialize_relation_tail_shard(
             improved_policy=shard.improved_policy,
             search_root_value=shard.search_root_value,
             exact_endgame=shard.exact_endgame,
+            policy_valid=shard.policy_valid,
+            outcome_valid=shard.outcome_valid,
         )
     finally:
         shard.close()

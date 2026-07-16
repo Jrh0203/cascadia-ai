@@ -1,9 +1,12 @@
 # Beyond CascadiaFormer: a clean-sheet architecture for stochastic board-game AI
 
-**Date:** 2026-07-16  
-**Literature cutoff:** 2026-07-16  
+**Date:** 2026-07-16
+
+**Literature cutoff:** 2026-07-16
+
 **Status:** research synthesis and falsifiable architecture proposal; no Cascadia
-strength claim, experiment authorization, rules change, or promotion  
+strength claim, experiment authorization, rules change, or promotion
+
 **Objective:** mean seat score **at least 100 over 1,000 four-player games** under
 the pinned all-A, no-habitat-bonus Cascadia rules identity in force at the gate
 
@@ -242,7 +245,8 @@ single transition model is misspecified. But Cascadia already owns an exact
 simulator and exact bag distribution. Learning those dynamics would add model
 bias and a second rules implementation without removing any uncertainty.
 
-**Transfer:** copy the afterstate/chance-node ontology.  
+**Transfer:** copy the afterstate/chance-node ontology.
+
 **Do not copy:** a learned dynamics model for rules we can execute exactly.
 
 This also argues against prioritizing [DreamerV3](https://www.nature.com/articles/s41586-025-08744-2).
@@ -853,7 +857,8 @@ Train a DouZero-style shared state-action Q model directly on terminal own
 score, with full legal compound-action encodings and massive parallel actors.
 Serve without a tree, or use it only as a cheap rollout policy.
 
-**Why bold:** it deletes search and avoids bootstrapped tree bias.  
+**Why bold:** it deletes search and avoids bootstrapped tree bias.
+
 **Why second:** Cascadia returns are noisy, the repo already has a strong search
 teacher, and DouZero's success depended on enormous data. This is a valuable
 radical baseline and potential rollout policy, not the best primary route to
@@ -866,7 +871,8 @@ legal actions as a heterogeneous graph; run a small edge-featured GNN and
 Gumbel search.
 
 **Evidence:** Catan XdimRes, AlphaGateau, scalable GNN AlphaZero, and the
-three-head action-value result.  
+three-head action-value result.
+
 **Risk:** message passing can be slower than attention at small graph sizes and
 can oversmooth; AlphaGateau's strongest claims are preprint/internal-rating
 evidence. Prefer the graph as Cascadia-NX's global correction before making it

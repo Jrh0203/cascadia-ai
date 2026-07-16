@@ -156,6 +156,40 @@ class ValidityMaskPlumbingTest(unittest.TestCase):
 
 
 @unittest.skipUnless(_DEPS, "requires numpy and torch")
+class MaskCarryThroughTest(unittest.TestCase):
+    def test_filter_and_relation_tail_preserve_validity_masks(self):
+        import numpy as np
+
+        from cascadiav3.expert_tensor_shards import (
+            ExpertTensorShard,
+            filter_expert_tensor_shard,
+            materialize_relation_tail_shard,
+        )
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            raw = Path(tempdir) / "raw.npz"
+            write_fixture(
+                raw,
+                policy_valid=np.asarray([1, 0, 1, 1], dtype=np.uint8),
+                outcome_valid=np.asarray([0, 1, 1, 0], dtype=np.uint8),
+            )
+            filtered = Path(tempdir) / "filtered.npz"
+            filter_expert_tensor_shard(raw, filtered, top_k=2)
+            tail = Path(tempdir) / "tail.npz"
+            materialize_relation_tail_shard(filtered, tail)
+            shard = ExpertTensorShard(tail)
+            self.assertEqual(
+                [shard.example(index)["policy_valid"] for index in range(4)],
+                [True, False, True, True],
+            )
+            self.assertEqual(
+                [shard.example(index)["outcome_valid"] for index in range(4)],
+                [False, True, True, False],
+            )
+            shard.close()
+
+
+@unittest.skipUnless(_DEPS, "requires numpy and torch")
 class MaskedLossTest(unittest.TestCase):
     def _batch(self, **mask_arrays):
         import numpy as np
