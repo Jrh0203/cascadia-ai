@@ -15,6 +15,7 @@ SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION to the deployed revision
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 BRIDGE_PYTHON="${BRIDGE_PYTHON:-/home/john0/venvs/torch/bin/python3}"
+EXTRA_BANK_FLAGS="${EXTRA_BANK_FLAGS:-}"
 LEDGER="${LEDGER:-cascadiav3/reports/rules_20260709_cycle4_n1024_d16_decisions.jsonl}"
 MANIFEST="${MANIFEST:-cascadiav3/checkpoints/full_v3_gumbel_selfplay_cycle4/best_locked_val.manifest.json}"
 BANK_DIR="${BANK_DIR:-cascadiav3/reports/puzzle_bank_20260711_n4096}"
@@ -92,6 +93,7 @@ echo "[puzzle-bank] $(date '+%F %T') generating (stride=$STRIDE repeats=$REPEATS
   --probe-stride "$STRIDE" \
   --probe-repeats "$REPEATS" \
   --model-sessions "$JOBS" \
-  --shared-model-session
+  --shared-model-session \
+  $EXTRA_BANK_FLAGS
 
 echo "[puzzle-bank] complete: $BANK_DIR"
