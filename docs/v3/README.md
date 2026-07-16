@@ -70,7 +70,12 @@ over packed expert tensors with Gumbel search-supervised action values.
   post-D1 john0 GPU-hours, rising only after a fresh baseline, selfish-headroom,
   parity, throughput, multifidelity-coverage, and gameplay gates. It is
   post-D1, has zero current-rules strength evidence, and does not change the
-  live queue.
+  live queue. Its companion
+  [implementation execution plan](../../cascadia_rival_implementation_plan_7_16.md)
+  starts with identity, finite-sample power, and a canonical CPU reference;
+  leaves the baseline, target gap, scientific cohorts, and seeds hard-blocked
+  on D1; and makes every GPU phase separately default-denied. No Rival code,
+  experiment, queue entry, or GPU process was created by that planning task.
 - **Historical July-9 corrected-rules scoreboard (100 games, seeds
   2027070900..99), COMPLETE for that pinned identity:**
   greedy `87.5450` → no-search policy `91.8425` → cycle4 n256/d4 `97.0675`

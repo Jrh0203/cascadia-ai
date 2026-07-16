@@ -7,6 +7,10 @@
 **Status:** FINAL RESEARCH PROPOSAL; post-D1; zero current-rules strength
 evidence; no experiment launch, rules change, or promotion authorization
 
+**Implementation companion:**
+[explicit CPU-first execution plan](cascadia_rival_implementation_plan_7_16.md)
+-- plan only, with GPU execution default-denied
+
 **Objective:** mean seat score at least 100 over 1,000 complete four-player
 games, before habitat bonus, under one pinned rules and serving identity
 
