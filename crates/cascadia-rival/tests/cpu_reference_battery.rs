@@ -19,6 +19,17 @@ const TRANSITIONS_PER_GAME: u16 = 80;
 const EXPECTED_TRANSITION_CHECKS: u64 = 10_000;
 const GAME_SEED_BASE: u64 = 0x5249_5641_4c00_0000;
 const ACTION_SEED_BASE: u64 = 0x5249_5641_4c80_0000;
+/// CPU-1 release scale: 12,500 four-player games x 80 transitions each =
+/// exactly 1,000,000 transition/compiler parity checks. The plan's original
+/// "10,000 games and 1,000,000 transitions" was internally inconsistent at
+/// 80 transitions per game; the stronger number wins (build scope WI-1).
+const RELEASE_GAMES_DEFAULT: u64 = 12_500;
+const RELEASE_GAMES_ENV: &str = "RIVAL_BATTERY_GAMES";
+const RELEASE_REPORT_ENV: &str = "RIVAL_BATTERY_REPORT";
+/// Full JSON-boundary verification (serialize + decode + replay) is run on
+/// every JSON_BOUNDARY_STRIDE-th game; every game still gets the sealed
+/// replay + hash verification inside `seal_terminal`.
+const JSON_BOUNDARY_STRIDE: u64 = 500;
 
 fn assert_score_decomposition(score: ScoreBreakdown) {
     let base_total = score.habitat.into_iter().sum::<u16>()
@@ -64,15 +75,16 @@ fn assert_terminal_ledger_roundtrip(
     }
 }
 
-#[test]
-fn pr_sized_dense_cpu_reference_battery_has_zero_mismatches() {
+/// Runs `games` complete random-legal-play games with full canonical/dense
+/// parity checks, returning (completed_games, transition_checks, elapsed_s).
+fn run_dense_battery(games: u64, json_boundary_stride: u64) -> (u64, u64, f64) {
     let started = Instant::now();
     let config = GameConfig::research_aaaaa(4).expect("four-player AAAAA is canonical");
     let compiler = DenseSemanticCompiler;
     let mut completed_games = 0_u64;
     let mut transition_checks = 0_u64;
 
-    for game_index in 0..COMPLETE_GAMES {
+    for game_index in 0..games {
         let seed = GameSeed::from_u64(GAME_SEED_BASE + game_index);
         let mut game = GameState::new(config, seed).expect("fixed seed must initialize");
         let mut ledger = TrajectoryLedgerBuilder::new(
@@ -177,15 +189,74 @@ fn pr_sized_dense_cpu_reference_battery_has_zero_mismatches() {
         let sealed = ledger
             .seal_terminal()
             .expect("complete canonical trajectory must seal as terminal");
-        assert_terminal_ledger_roundtrip(&sealed, &game, &terminal_scores, game_index == 0);
+        assert_terminal_ledger_roundtrip(
+            &sealed,
+            &game,
+            &terminal_scores,
+            game_index % json_boundary_stride == 0,
+        );
         completed_games += 1;
     }
 
+    (completed_games, transition_checks, started.elapsed().as_secs_f64())
+}
+
+#[test]
+fn pr_sized_dense_cpu_reference_battery_has_zero_mismatches() {
+    let (completed_games, transition_checks, elapsed) =
+        run_dense_battery(COMPLETE_GAMES, COMPLETE_GAMES);
     assert_eq!(completed_games, COMPLETE_GAMES);
     assert_eq!(transition_checks, EXPECTED_TRANSITION_CHECKS);
     eprintln!(
         "Rival PR CPU reference battery: {completed_games} complete games, \
-         {transition_checks} transition/compiler parity checks, zero mismatches in {:.3}s",
-        started.elapsed().as_secs_f64()
+         {transition_checks} transition/compiler parity checks, zero mismatches in {elapsed:.3}s",
+    );
+}
+
+/// CPU-1 release battery (build scope WI-1). Deliberately `#[ignore]`d: run
+/// explicitly with
+/// `cargo test -p cascadia-rival --release --test cpu_reference_battery -- --ignored`.
+/// Every assertion is identical to the PR battery; only the scale and the
+/// durable JSON receipt differ. A panic anywhere means CPU-1 is NOT claimed.
+#[test]
+#[ignore = "release-scale CPU-1 battery: hours of CPU; invoke explicitly"]
+fn release_scale_dense_cpu_reference_battery_has_zero_mismatches() {
+    let games = std::env::var(RELEASE_GAMES_ENV)
+        .ok()
+        .map(|value| {
+            value
+                .parse::<u64>()
+                .expect("RIVAL_BATTERY_GAMES must be a positive integer")
+        })
+        .unwrap_or(RELEASE_GAMES_DEFAULT);
+    assert!(games > 0, "release battery requires at least one game");
+    let (completed_games, transition_checks, elapsed) =
+        run_dense_battery(games, JSON_BOUNDARY_STRIDE);
+    assert_eq!(completed_games, games);
+    assert_eq!(transition_checks, games * u64::from(TRANSITIONS_PER_GAME));
+
+    let report = serde_json::json!({
+        "schema_id": "cascadiav3.rival_cpu1_battery_receipt.v1",
+        "battery": "release_scale_dense_cpu_reference_battery",
+        "games": completed_games,
+        "transitions_per_game": TRANSITIONS_PER_GAME,
+        "transition_checks": transition_checks,
+        "json_boundary_stride": JSON_BOUNDARY_STRIDE,
+        "game_seed_base": GAME_SEED_BASE,
+        "action_seed_base": ACTION_SEED_BASE,
+        "elapsed_seconds": elapsed,
+        "zero_mismatches": true,
+        "notes": "Every transition compared canonical engine vs dense semantic compiler; every game sealed, replayed, and hash-verified; JSON boundary round-trip on every stride-th game.",
+    });
+    let report_path = std::env::var(RELEASE_REPORT_ENV)
+        .unwrap_or_else(|_| "rival_cpu1_battery_receipt.json".to_owned());
+    std::fs::write(
+        &report_path,
+        format!("{}\n", serde_json::to_string_pretty(&report).expect("report serializes")),
+    )
+    .expect("release battery receipt must be written");
+    eprintln!(
+        "Rival CPU-1 release battery: {completed_games} games, {transition_checks} checks, \
+         zero mismatches in {elapsed:.1}s -> {report_path}",
     );
 }
