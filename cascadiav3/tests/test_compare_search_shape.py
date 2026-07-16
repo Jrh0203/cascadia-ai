@@ -46,6 +46,35 @@ def write(tmp: str, name: str, payload: dict) -> Path:
 
 
 class CompareSearchShapeTest(unittest.TestCase):
+    def test_manifest_varied_key_compares_two_models(self) -> None:
+        with TemporaryDirectory() as tmp:
+            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
+            cand_payload = make_report(4, {31: 97.5, 32: 97.25, 33: 97.75})
+            cand_payload["manifest"] = "checkpoints/d1/best_locked_val.manifest.json"
+            baseline = write(tmp, "b.json", base_payload)
+            candidate = write(tmp, "c.json", cand_payload)
+            report = build_comparison(baseline, candidate, varied_keys=("manifest",))
+            self.assertEqual(report["paired_delta_stats"]["mean"], 0.5)
+
+    def test_manifest_varied_key_refuses_identical_models(self) -> None:
+        with TemporaryDirectory() as tmp:
+            baseline = write(tmp, "b.json", make_report(4, {s: 97.0 for s in SEEDS}))
+            candidate = write(
+                tmp, "c.json", make_report(4, {31: 97.5, 32: 97.25, 33: 97.75})
+            )
+            with self.assertRaisesRegex(ValueError, "same model"):
+                build_comparison(baseline, candidate, varied_keys=("manifest",))
+
+    def test_manifest_varied_key_still_refuses_search_deltas(self) -> None:
+        with TemporaryDirectory() as tmp:
+            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
+            cand_payload = make_report(8, {31: 97.5, 32: 97.25, 33: 97.75})
+            cand_payload["manifest"] = "checkpoints/d1/best_locked_val.manifest.json"
+            baseline = write(tmp, "b.json", base_payload)
+            candidate = write(tmp, "c.json", cand_payload)
+            with self.assertRaisesRegex(ValueError, "search settings differ"):
+                build_comparison(baseline, candidate, varied_keys=("manifest",))
+
     def test_happy_path_reports_paired_verdict(self) -> None:
         with TemporaryDirectory() as tmp:
             baseline = write(tmp, "b.json", make_report(4, {s: 97.0 for s in SEEDS}))

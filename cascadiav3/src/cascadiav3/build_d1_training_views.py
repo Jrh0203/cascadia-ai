@@ -226,6 +226,114 @@ def build_d1_view(
     }
 
 
+def subset_view_by_hash_order(
+    view_path: Path, audit_path: Path, count: int, out_path: Path
+) -> dict[str, Any]:
+    """Nested deterministic dose-arm subsets (preregistration §15.5).
+
+    Orders the shard's records by the harvest tool's salted selection hash
+    of their (seed, ply) — the same frozen ordering the tranche was drawn
+    with — and keeps the first ``count``. Nesting is guaranteed: the 5k
+    subset is a prefix of the 10k subset is a prefix of the full shard.
+    """
+    import numpy as np
+
+    from cascadiav3.harvest_d1_tranche import _selection_key
+
+    audit_roots: list[tuple[int, int]] = []
+    with audit_path.open() as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            if row.get("type") == "d1_repeat_audit":
+                audit_roots.append((int(row["seed"]), int(row["ply"])))
+    arrays = _load_arrays(view_path)
+    record_count = int(arrays["selected_action_index"].shape[0])
+    if len(audit_roots) != record_count:
+        raise ValueError(
+            f"audit rows ({len(audit_roots)}) != view records ({record_count})"
+        )
+    if count >= record_count:
+        raise ValueError(f"subset count {count} must be < record count {record_count}")
+    order = sorted(
+        range(record_count),
+        key=lambda index: _selection_key(*audit_roots[index]),
+    )
+    keep = sorted(order[:count])
+
+    token_offsets = arrays["token_offsets"]
+    action_offsets = arrays["action_offsets"]
+    relation_offsets = arrays["relation_offsets"]
+
+    def slice_ragged(flat, offsets):  # type: ignore[no-untyped-def]
+        chunks = [flat[int(offsets[index]) : int(offsets[index + 1])] for index in keep]
+        new_offsets = np.zeros((len(keep) + 1,), dtype=np.int64)
+        position = 0
+        for chunk_index, chunk in enumerate(chunks):
+            position += len(chunk)
+            new_offsets[chunk_index + 1] = position
+        return (
+            np.concatenate(chunks, axis=0)
+            if chunks
+            else flat[:0],
+            new_offsets,
+        )
+
+    out: dict[str, Any] = {}
+    out["tokens"], new_token_offsets = slice_ragged(arrays["tokens"], token_offsets)
+    out["actions"], new_action_offsets = slice_ragged(arrays["actions"], action_offsets)
+    out["relation_edges"], new_relation_offsets = slice_ragged(
+        arrays["relation_edges"], relation_offsets
+    )
+    out["token_offsets"] = new_token_offsets
+    out["action_offsets"] = new_action_offsets
+    out["relation_offsets"] = new_relation_offsets
+    per_action = {
+        "target_q",
+        "target_score_to_go",
+        "q_valid",
+        "priors",
+        "visits",
+        "q_variance",
+        "q_count",
+        "truncated_count",
+        "exact_afterstate_score_active",
+        "exact_afterstate_score_decomposition_active",
+        "improved_policy",
+    }
+    handled = set(out) | {"version", "metadata_json"} | per_action
+    for name in per_action:
+        if name in arrays:
+            out[name], _ = slice_ragged(arrays[name], action_offsets)
+    for name, array in arrays.items():
+        if name in handled:
+            continue
+        if array.ndim >= 1 and array.shape[0] == record_count:
+            out[name] = array[keep]
+        else:
+            out[name] = array
+    out["version"] = arrays["version"]
+
+    metadata = json.loads(_scalar_string(arrays["metadata_json"]))
+    metadata.setdefault("view", {})
+    metadata["view"] = dict(metadata["view"])
+    metadata["view"]["dose_subset"] = {
+        "count": count,
+        "of": record_count,
+        "ordering": "harvest_selection_hash",
+        "source_view_sha256": _sha256(view_path),
+    }
+    _write_view(out, metadata, out_path)
+    return {
+        "view": f"d1_subset_{count}",
+        "records": count,
+        "out": str(out_path),
+        "out_sha256": _sha256(out_path),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", type=Path, help="Stage A generation shard")

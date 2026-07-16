@@ -435,6 +435,49 @@ class ViewBuilderTest(unittest.TestCase):
             )
             shard.close()
 
+    def test_dose_subsets_are_nested_and_deterministic(self):
+        from cascadiav3 import build_d1_training_views as views
+        from cascadiav3.expert_tensor_shards import ExpertTensorShard
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            d1 = Path(tempdir) / "d1.npz"
+            metadata = _v4_metadata()
+            metadata["mode"] = "puzzle_bank_d1_relabel"
+            write_fixture(d1, metadata=metadata)
+            audit = Path(tempdir) / "audit.jsonl"
+            roots = [(5, 1), (5, 3), (9, 0), (9, 2)]
+            with audit.open("w") as handle:
+                for seed, ply in roots:
+                    handle.write(
+                        json.dumps(
+                            {"type": "d1_repeat_audit", "seed": seed, "ply": ply}
+                        )
+                        + "\n"
+                    )
+            two = Path(tempdir) / "d1_2.npz"
+            three = Path(tempdir) / "d1_3.npz"
+            views.subset_view_by_hash_order(d1, audit, 2, two)
+            views.subset_view_by_hash_order(d1, audit, 3, three)
+            shard_two = ExpertTensorShard(two)
+            shard_three = ExpertTensorShard(three)
+            self.assertEqual(len(shard_two), 2)
+            self.assertEqual(len(shard_three), 3)
+            # Nesting: the 2-subset's records appear in the 3-subset. Compare
+            # per-record fingerprints (final_score_vector rows + active seat).
+            def fingerprints(shard):
+                return {
+                    (
+                        int(shard.example(index)["active_seat"]),
+                        tuple(float(x) for x in shard.example(index)["final_score_vector"]),
+                        tuple(float(x) for x in shard.example(index)["target_q"]),
+                    )
+                    for index in range(len(shard))
+                }
+
+            self.assertTrue(fingerprints(shard_two) <= fingerprints(shard_three))
+            shard_two.close()
+            shard_three.close()
+
     def test_d1_view_rejects_roots_outside_the_mask(self):
         from cascadiav3 import build_d1_training_views as views
 

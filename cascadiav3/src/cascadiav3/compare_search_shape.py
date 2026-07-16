@@ -70,6 +70,12 @@ def build_comparison(
 ) -> dict[str, Any]:
     if not varied_keys:
         raise ValueError("at least one varied search key is required")
+    # "manifest" is a special varied key: the arms serve two different MODELS
+    # under otherwise identical search settings (D1-style model-vs-model
+    # gates, preregistered 2026-07-16). Every remaining key varies inside the
+    # search-provenance dict as before.
+    manifest_varied = "manifest" in varied_keys
+    search_varied_keys = tuple(key for key in varied_keys if key != "manifest")
     baseline = _load_report(baseline_path)
     candidate = _load_report(candidate_path)
     baseline_revision = baseline.get("source_revision")
@@ -80,12 +86,12 @@ def build_comparison(
         raise ValueError("reports do not match the required source revision")
     if baseline.get("seeds") != candidate.get("seeds"):
         raise ValueError("seed mismatch between reports")
-    if _search_without_varied(baseline, varied_keys) != _search_without_varied(
-        candidate, varied_keys
+    if _search_without_varied(baseline, search_varied_keys) != _search_without_varied(
+        candidate, search_varied_keys
     ):
         raise ValueError(f"search settings differ beyond {'/'.join(varied_keys)}")
     varied: dict[str, dict[str, Any]] = {}
-    for key in varied_keys:
+    for key in search_varied_keys:
         varied[key] = {
             "baseline": baseline.get("search", {}).get(key),
             "candidate": candidate.get("search", {}).get(key),
@@ -98,10 +104,24 @@ def build_comparison(
             or worlds["baseline"] == worlds["candidate"]
         ):
             raise ValueError("arms must use two distinct positive world counts")
-    elif all(entry["baseline"] == entry["candidate"] for entry in varied.values()):
+    elif varied and all(
+        entry["baseline"] == entry["candidate"] for entry in varied.values()
+    ):
         raise ValueError(f"arms are identical across the varied keys {'/'.join(varied_keys)}")
     baseline_manifest = str(baseline.get("manifest", ""))
-    if not baseline_manifest or baseline_manifest != str(candidate.get("manifest", "")):
+    candidate_manifest = str(candidate.get("manifest", ""))
+    if manifest_varied:
+        if not baseline_manifest or not candidate_manifest:
+            raise ValueError("model-varied arms require both manifests recorded")
+        if baseline_manifest == candidate_manifest:
+            raise ValueError(
+                "manifest is a varied key but both arms served the same model"
+            )
+        varied["manifest"] = {
+            "baseline": baseline_manifest,
+            "candidate": candidate_manifest,
+        }
+    elif not baseline_manifest or baseline_manifest != candidate_manifest:
         raise ValueError("model manifest identity mismatch")
 
     seeds = [int(seed) for seed in baseline["seeds"]]

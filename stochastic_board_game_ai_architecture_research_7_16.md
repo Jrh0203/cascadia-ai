@@ -1,4 +1,4 @@
-# Beyond CascadiaFormer: a clean-sheet architecture for stochastic board-game AI
+# Beyond CascadiaFormer: a structured exact-search architecture for stochastic board-game AI
 
 **Date:** 2026-07-16
 
@@ -12,14 +12,14 @@ the pinned all-A, no-habitat-bonus Cascadia rules identity in force at the gate
 
 ## Executive verdict
 
-The highest-probability clean-sheet challenger is **not another larger
-transformer and not a learned world model**. It is a search-first system built
-around a much cheaper structured afterstate evaluator:
+The leading system challenger identified in this review is **not another
+larger transformer and not a learned world model**. It is a search-first
+system built around a much cheaper structured afterstate evaluator:
 
 > **Cascadia-NX:** a D6-symmetry-tied local motif/factor network with NNUE-style
 > incremental updates, a small global topology correction, and an explicit
 > legal-action value head, embedded in a GPU-resident exact Cascadia planner
-> that compares actions on the same counterfactual chance bundles.
+> with a frozen, covariance-audited world-sampling contract.
 
 The architectural bet is that CascadiaFormer is spending most of its 88.2M
 parameters and serving time repeatedly reconstructing facts that the rules
@@ -60,10 +60,10 @@ The literature provides unusually coherent support for this direction:
    the coupling creates positive covariance.
 
 None of those numbers predicts a Cascadia score. Together they support a much
-more specific claim: **when rules are exact, the strongest stochastic-game
-systems often win by making evaluation cheap, representing afterstates
-directly, and spending compute on exact or carefully coupled planning—not by
-learning a large generic dynamics or sequence model.**
+more specific claim: **several reviewed high-performing stochastic-game
+systems make evaluation cheap, represent afterstates directly, and spend
+compute on exact or carefully sampled planning rather than learning a large
+generic dynamics or sequence model.**
 
 This is not a recommendation to stop the authorized R1.4-D1 pipeline. D1 is the
 current funded line and was live under the repaired July-16 rules identity at
@@ -115,7 +115,7 @@ The proposal must explain all of these repo-direct facts, not just fit the
 general literature:
 
 | Fact | Consequence for a challenger |
-|---|---|
+| --- | --- |
 | Median decision SNR is about 1.06 and roughly 46% of decisions are noise-flippable. | Lower variance in **action differences** matters more than prettier absolute values. |
 | Selfish n4096/d16 scaling gained only +0.21, statistically nonsignificant, at about 4x simulations. | More of the same estimator/search axis is not enough. |
 | Exact final-personal-turn K1 is score-neutral but about 29x faster at that frontier. | Preserve exact rules and exact score identities wherever possible. |
@@ -152,11 +152,11 @@ has performed best?” within each game's own evaluation; it is **not** a league
 table and the numbers must never be compared across rows.
 
 | System/domain | Core architecture | Strongest relevant reported result | Transfer limit |
-|---|---|---|---|
-| Azul NNUE/search | shallow incrementally reused NNUE + minimax | 94.07% wins vs strongest handcrafted heuristic over 10,218 games | MSc thesis; two-player |
+| --- | --- | --- | --- |
+| Azul NNUE/search | small integer NNUE + minimax | 94.07% wins vs strongest handcrafted heuristic over 10,218 games | MSc thesis; two-player; no documented incremental accumulator |
 | 2048 optimistic TD | symmetry-shared sparse n-tuples + afterstate TD + six-ply expectimax | 625,377 average; 72% +/- 12% reaching 32768 | only 100 games at deepest setting |
 | Stochastic MuZero, 2048/backgammon | learned decision-afterstate-chance model + MCTS | about 510k in reported 2048 comparison; matched exact-simulator AlphaZero/GNUbg Grandmaster in its backgammon setup | learned-model cost/error unnecessary with exact Cascadia rules |
-| TD-Gammon 2.1 | 80-hidden-unit value net + TD(lambda) + two-ply search | 39–40 over 40 games against Bill Robertie after 1.5M self-play games | tiny human match; two-player |
+| TD-Gammon 2.1 | 80-hidden-unit value net + TD(lambda) + two-ply search | net -1 point over a 40-game session against Bill Robertie after 1.5M self-play games | tiny human match; two-player |
 | Stockfish NNUE | sparse incrementally updated net + alpha-beta/PVS | +92.77 +/- 2.1 Elo in official 60k-game test; Stockfish 12 won at least 10x as many pairs as it lost to Stockfish 11 | deterministic zero-sum chess |
 | DouZero | shared state-action Q + direct Monte Carlo + parallel actors | first among 344 Botzone agents; surpassed prior programs in days on four GPUs | massive-data, imperfect-information card game |
 | Suphx | supervised pretrain + policy-gradient self-play + reward prediction + privileged training | stable rank 8.74 over 5,760 Tenhou games, reported above 99.99% of active players | hidden information and rank utility, not raw own score |
@@ -179,11 +179,13 @@ factories, stochastic setup/refill, spatial point construction, and a score
 maximization objective.
 
 Its final shallow networks use fully connected shapes such as
-`128x16x16x1`, `256x64x64x1`, and `512x16x16x1`; the first layer is engineered
-for incremental reuse. The reported final NNUE/search heuristic 350 achieved:
+`128x16x16x1`, `256x64x64x1`, and `512x16x16x1`, with integer/AVX2-oriented
+execution. The thesis does not document an accumulator or delta-update path;
+Stockfish, not Azul, supplies that separate precedent. The reported final
+NNUE/search heuristic 350 achieved:
 
 | Match | Result | Games |
-|---|---:|---:|
+| --- | ---: | ---: |
 | final NNUE/search vs first heuristic | 98.42% win rate | 10,998 |
 | final NNUE/search vs strongest handcrafted heuristic 11 | 94.07% | 10,218 |
 | 0.1 s search vs 1 s search | shorter-search arm won 25.06% | 16,356 |
@@ -208,7 +210,7 @@ attention.
 The published ablation is unusually informative:
 
 | 2048 system | Average score |
-|---|---:|
+| --- | ---: |
 | base n-tuple learner | 309,208 |
 | + optimistic initialization | 361,471 |
 | + temporal coherence | 370,194 |
@@ -337,11 +339,14 @@ even when UCT received twice the simulations. The crucial condition is positive
 covariance: pairing can make variance worse when the coupled outcomes move in
 opposite directions.
 
-That condition explains why the repo's generic R0.2 rollout-RNG pairing is not
-contradictory evidence. R0.2 changed only the remaining rollout stream and made
-gap variance 4.4% worse. The new proposal must couple the **complete physical
-future chance object across root actions**, measure covariance, and fall back to
-independent worlds whenever pairing is harmful.
+That condition is directly relevant to the existing Cascadia sampler. The
+incumbent already redeterminizes complete hidden tile-stack and wildlife-bag
+orders and cycles the same `d` root worlds across each action's simulations:
+root-world common random numbers are current machinery, not a new proposal.
+R0.2 then shared the remaining rollout-policy RNG and made gap variance 4.4%
+worse. A challenger must therefore preserve exact marginals, decide any
+additional coupling on a disjoint calibration block, and fall back to
+independent worlds where positive covariance has not been established.
 
 ## 4. Proposed system: Cascadia-NX
 
@@ -350,7 +355,7 @@ independent worlds whenever pairing is harmful.
 Maintain exact, incrementally updatable structural features for each legal
 afterstate; evaluate them with a tiny symmetry-tied factor network plus a small
 global residual; use that cheap value inside a GPU-resident exact max-n/chance
-planner whose root candidates share complete future chance bundles.
+planner whose root-world sampling is frozen by a separate covariance audit.
 
 ### 4.2 Dataflow
 
@@ -540,39 +545,44 @@ do **not** replace the scalar mean with a forced additive category head, which
 would repeat the closed structured-Q experiment. The four-seat head does not
 silently change the selfish own-score objective into table utility.
 
-## 5. Proposed planner: Counterfactual Bundle Search
+## 5. Proposed planner: Covariance-Audited GPU World Search
 
-**Counterfactual Bundle Search (CBS)** is a synthesis proposed here, not the
-name of a published algorithm. It combines exact afterstates, common random
-numbers, fixed-budget best-arm identification, and accelerator batching.
+**Covariance-Audited GPU World Search (CAWS)** is a working name for a systems
+extension proposed here, not a published algorithm and not a claim to have
+invented Cascadia's root-world common random numbers. The current planner
+already samples complete hidden tile-stack/wildlife-bag permutations and
+cycles the same `d` worlds across root actions. CAWS keeps that implementation
+as the control and combines exact afterstates, fixed-budget best-arm
+identification, explicit covariance eligibility, and accelerator batching.
 
-### 5.1 Complete physical world tapes
+### 5.1 Exact marginal worlds and frozen coupling eligibility
 
-At a root, sample `K` complete future worlds. Each world contains:
+Every root-world sampler must preserve the exact without-replacement tile and
+wildlife marginals, public cleanup rules, and the registered opponent-policy
+distribution. Marginal correctness follows from construction plus CPU/GPU
+parity tests; a sample-mean comparison is only an audit, not a proof of
+unbiasedness.
 
-- a random priority/permutation for every remaining physical tile and wildlife
-  token, preserving without-replacement marginals;
-- public-state-derived random variables for future market events;
-- common Gumbel variables or other explicit random seeds for stochastic
-  opponent policy choices; and
-- an independent domain-separated stream for any residual stochastic policy
-  component.
+Whether actions share a stochastic component is fixed **before** the verdict
+block. A disjoint covariance-calibration block estimates, by preregistered
+stratum, whether the incumbent root-world coupling creates positive
+action-return covariance. Strata not cleared on calibration use independent
+worlds. R0.2 already showed that additionally sharing rollout-policy RNG can
+be harmful, so that component begins disabled rather than being smuggled back
+under a new name.
 
-Evaluate every surviving root action in the **same K worlds**. Different
-branches may consume different numbers of objects, but a full physical
-priority order remains a valid marginal future for each branch. The estimator
-still needs exhaustive empirical validation because cleanup rules and policy
-choices can couple consumption to branch state in subtle ways.
-
-For actions `a` and `b`, estimate the paired advantage:
+Where coupling is eligible, the paired advantage remains:
 
 ```text
 Delta(a, b) = mean_k [return(a, world_k) - return(b, world_k)]
 ```
 
 When outcomes are positively correlated, chance luck cancels in the
-difference. When covariance is zero or negative, CBS must disable pairing for
-that stratum rather than force it.
+difference. Control variates are eligible only when their expectation is known
+or estimated on independent data and their coefficient is frozen before the
+verdict block. No covariance, fallback, or coefficient decision may be learned
+from the same samples used to score candidate actions unless a separately
+proved and preregistered online rule preserves the estimator.
 
 ### 5.2 Root allocation
 
@@ -581,14 +591,14 @@ Keep the campaign's proven Gumbel/sequential-halving scaffold initially:
 1. enumerate the full legal root menu;
 2. score all actions with the fast Cascadia-NX path;
 3. retain candidates using the frozen policy/Q rule;
-4. give each survivor the same initial paired world bundle;
-5. eliminate by paired completed-Q at fixed registered looks;
+4. give each survivor the same initial world budget under the frozen sampler;
+5. eliminate by completed-Q at fixed registered looks;
 6. spend additional worlds only on survivors; and
 7. use the full global correction for the last survivors or final leaf batch.
 
-Do not introduce OCBA, LCB, or another plug-in allocator in the first test. A
-new evaluator and new coupling are already two interventions; sequential
-halving supplies a clean control and is the literature-supported incumbent.
+Do not introduce OCBA, LCB, or another plug-in allocator in the first test.
+The evaluator and GPU execution are already coupled interventions; sequential
+halving and the frozen incumbent sampler supply clean controls.
 
 ### 5.3 Tree semantics
 
@@ -607,7 +617,7 @@ and chance nodes honestly; repeated one-ply own-score ranking is not an exact
 solver.
 
 Exact enumeration is appropriate only when a chance layer is genuinely small.
-Otherwise sample full bundles. This is different from the closed generic
+Otherwise sample exact conditional worlds. This is different from the closed generic
 chance-node expectimax leaf correction and avoids the old NNUE failure of
 adding an explicit future wildlife bonus on top of a network that already
 predicted the same future score.
@@ -617,7 +627,7 @@ predicted the same future score.
 The high-upside systems change is to represent a batch as:
 
 ```text
-roots x candidate actions x paired worlds x search frontier
+roots x candidate actions x worlds x search frontier
 ```
 
 and keep state transition, legal masks, exact incremental scoring, feature
@@ -640,9 +650,9 @@ about 5% left to tune.
 2. **Afterstate TD(lambda):** dense credit assignment between a player's
    successive decisions. Rewards are exact score increments; bootstraps predict
    only remaining score. This is the TD-Gammon/2048 lesson.
-3. **Exact-search reanalysis:** high-quality per-action policies, paired
-   advantages, and completed-Q values on hard states. This is the Expert
-   Iteration/D1 lesson.
+3. **Exact-search reanalysis:** high-quality per-action policies,
+   world-matched advantages where the frozen sampler permits them, and
+   completed-Q values on hard states. This is the Expert Iteration/D1 lesson.
 
 The current D1 work is therefore complementary: if its current-rules artifacts
 pass their own gates, they become the best available teacher corpus for a
@@ -682,7 +692,7 @@ shows how batched whole-buffer reanalysis can reduce wall time in its tested
 domains. The appropriate Cascadia loop is:
 
 1. generate broad exact-rules states;
-2. label a registered mixture with CBS/high-budget exact search;
+2. label a registered mixture with CAWS/high-budget exact search;
 3. train the cheap evaluator/action policy;
 4. measure search strength and hard-state regret;
 5. refresh labels only after the student changes the visited distribution; and
@@ -696,8 +706,9 @@ D1 rule: one positive game gate and an independent fresh-cycle replication.
 [AZ_db](https://arxiv.org/abs/2308.09175) reports that a latent-conditioned
 population solved about twice as many hard chess puzzles as standard AlphaZero
 and gained roughly 50 Elo when selecting specialists by opening. A Cascadia
-teacher could condition specialists on wildlife-card portfolio, density versus
-option value, habitat corridor style, or market-denial tendency.
+teacher could condition specialists on wildlife-strategy mix, density versus
+option value, habitat corridor style, or market-denial tendency. Card-family
+specialization is relevant only beyond the fixed all-A campaign target.
 
 Use specialists only to propose diverse candidate actions. Evaluate the union
 under the same paired chance bundles and distill the result into one serving
@@ -716,39 +727,47 @@ scoring-card conditioning, and global component structure; the archive labels
 it superseded and preserves no qualified strength result. The later NNUE was
 much richer but still did not achieve correct incremental production updates.
 
-The qualified pre-v3 evaluator was a sparse binary network:
+The strongest archived evaluator family was a sparse binary network:
 
 ```text
 11,231 inputs -> 512 ReLU -> 64 ReLU -> scalar
 5,783,681 parameters
 ```
 
-Relevant historical evidence, all under older code/rules identities:
+The archived ADR-backed results below are the strongest qualified evidence,
+but all remain historical because they use older rules identities:
 
-- direct NNUE play plateaued around **90.7** in the documented v3/v4 training
-  lines; auxiliary heads accelerated convergence but did not lift the ceiling;
 - a reproduced v1 K32/R600 policy scored **95.895 over 50 games**;
 - the exact MLX port scored **95.800 over 10 fresh games**, versus 92.275 for
-  the paired strong control;
-- the qualified canonical V2 teacher scored **96.350 over 10 games**;
-- doubling K32 search from R600 to R1200 produced only +0.167 over three pilot
-  games while more than doubling latency;
+  the paired strong control; and
+- the qualified canonical V2 teacher scored **96.350 over 10 games**.
+
+A separate three-game ADR pilot found only +0.167 from doubling K32 search
+from R600 to R1200 while more than doubling latency. Its sample is too small
+for a strength claim; it is search-economics evidence only.
+
+Other archived observations are useful for failure analysis but are **not
+qualified current comparators**:
+
+- direct NNUE play was around **90.7** in documented v3/v4 training notes;
+  auxiliary heads accelerated convergence but did not lift that observed
+  ceiling;
 - one-ply exact wildlife-market enumeration scored 91.3 versus 90.5 NNUE-only
-  over 50 games; a simplified two-ply version scored 92.4; and
-- deeper wildlife-only variants fell to 90.1, 87.6, and 89.0 because explicit
-  future wildlife gain was added on top of an NNUE residual that already
-  contained expected future wildlife value.
+  over 50 games, and a simplified two-ply version scored 92.4; and
+- deeper wildlife-only variants were observed at 90.1, 87.6, and 89.0 because
+  explicit future wildlife gain was added on top of an NNUE residual that
+  already contained expected future wildlife value.
 
 Those results close “revive the 11,231-feature NNUE and add more rollouts.”
 They do **not** close Cascadia-NX, whose material differences are:
 
 | Legacy line | Cascadia-NX challenger |
-|---|---|
+| --- | --- |
 | hand-shaped sparse binary features and one scalar residual | generated, scoring-card-conditioned motif factors plus exact topology summaries |
 | one board/value path | local incremental path + explicit global component-graph correction |
 | implicit action comparison through afterstate scalar | first-class full legal compound-action hyperedges and Q head |
 | CPU MCE with model IPC | GPU-resident exact transitions, scoring, and batched search |
-| largely independent/random rollout estimates | complete paired physical chance bundles, covariance-gated |
+| ad hoc/failed CRN variants without a frozen eligibility contract | incumbent root-world CRN retained only where disjoint calibration clears it; independent fallback and only mathematically valid control variates |
 | older self-play/terminal labels | current v3 exact-search reanalysis, paired advantages, and afterstate TD |
 | ad hoc explicit future bonus plus full remaining-value NNUE | strict reward accounting: exact increment **or** remaining residual, never both |
 | old rules identities and low-90s direct policy | head-to-head challenger against the current-rules v3 incumbent |
@@ -765,17 +784,19 @@ search economics in that order.
 ### 8.1 Frozen arms
 
 | Arm | Evaluator | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | T | frozen CascadiaFormer-M incumbent | current representation and serving control |
+| L0 | closest reproducible legacy `11,231 -> 512 -> 64 -> 1` sparse NNUE, retrained on current targets | test whether gains are merely a legacy-family retrain |
 | N0 | local motif/NNUE accumulator only | test the cheap local core |
 | N1 | N0 + exact global summaries/MLP | price nonspatial global context |
 | N2 | N1 + component-graph residual | test long-range topology |
 | N3 | N2 + two-fidelity survivor routing | measure wall-matched planner value |
 
-All arms use the same current-rules states, legal actions, teacher targets,
-train/validation/test split, optimizer exposure accounting, and exact
-afterstate serving identity. Hyperparameter selection and final verdict blocks
-remain disjoint.
+All trainable arms use the same current-rules states, legal actions, teacher
+targets, train/validation/test split, optimizer exposure accounting, and exact
+afterstate serving identity. L0 uses the closest exactly reproducible archived
+feature schema, with any unavailable feature documented rather than silently
+substituted. Hyperparameter selection and final verdict blocks remain disjoint.
 
 ### 8.2 Offline metrics
 
@@ -804,23 +825,27 @@ Those example bars are **engineering judgments to preregister**, not published
 constants. The exact bar should be frozen before the held-out architecture
 outputs are inspected.
 
-### 8.3 Counterfactual Bundle Search preflight
+### 8.3 Covariance-Audited World Search preflight
 
-Before gameplay, prove:
+Before gameplay, establish:
 
-1. one million or more sampled market/bag transitions match the CPU engine's
-   exact marginal probabilities within preregistered tolerances;
-2. paired and independent estimators agree in mean on untouched roots;
-3. paired covariance is positive in the strata where CBS is enabled;
+1. CPU/GPU parity over one million or more randomized transitions, with the
+   sampler's exact marginals established by construction and property tests;
+2. paired and independent estimators agree in mean on untouched roots as an
+   audit, not as the proof of unbiasedness;
+3. a disjoint covariance-calibration block shows positive covariance in every
+   stratum where coupling will be enabled;
 4. variance of top-action differences falls materially—suggested bar at least
    20%, matching the earlier R0.2 ambition;
 5. action-selection error against a very-high-world reference falls at fixed
    wall time;
 6. deterministic replay reproduces every state/action/score digest; and
-7. an automatic stratum-level fallback disables harmful coupling.
+7. a frozen stratum eligibility table learned only from calibration disables
+   coupling everywhere else; any adaptive online rule requires its own proof
+   and preregistration.
 
-If the complete bundle does not clear the variance bar, close it. Do not keep
-it because common random numbers worked in other games.
+If the incumbent coupling does not clear the variance bar on disjoint data,
+disable it. Do not keep it because common random numbers worked in other games.
 
 ### 8.4 Search and gameplay gates
 
@@ -840,12 +865,12 @@ gain, or cross-game literature result substitutes for that gate.
 
 ## 9. Ranked portfolio of bold alternatives
 
-### Rank 1 — Cascadia-NX + Counterfactual Bundle Search
+### Rank 1 — Cascadia-NX + Covariance-Audited GPU World Search
 
 **Why first:** it simultaneously attacks representation overhead, stale/local
-value bias, and stochastic comparison variance while preserving exact rules.
-It is the only proposal here that creates a plausible new wall-clock frontier
-rather than moving a knob on the existing one.
+value bias, and simulation throughput while preserving exact rules. It is the
+leading system challenger in this review for creating a plausible new
+wall-clock frontier rather than moving a knob on the existing one.
 
 **Largest risk:** local factors may repeat the old NNUE ceiling and the global
 correction may erase the speed gain. The N0/N1/N2 ablation is designed to expose
@@ -968,8 +993,10 @@ diagnostics.
 
 ### Blind common-random-number pairing
 
-The repo's rollout pairing worsened variance. CBS advances only if complete
-world coupling is unbiased and produces positive covariance on current roots.
+The repo already uses root-world CRN, and its additional rollout pairing
+worsened variance. CAWS advances without coupling unless exact marginals follow
+from construction and a disjoint calibration block shows positive covariance
+on current roots.
 
 ## 11. Route to 100
 
@@ -981,8 +1008,10 @@ to demand all 1.7 points from one neural checkpoint:
    value bias.
 2. **Cheaper representation:** recover a multi-fold end-to-end leaf/root
    throughput gain without the old small-transformer accuracy loss.
-3. **Paired chance planning:** spend the gain on lower-variance action
-   differences rather than independent absolute estimates.
+3. **Covariance-audited world planning:** retain the incumbent root-world CRN
+   only in preregistered strata where disjoint calibration shows that it lowers
+   action-difference variance; otherwise spend the gain on more independent
+   exact worlds.
 4. **Global correction:** restore the long-range structure a pure local
    evaluator would miss.
 5. **Curriculum:** feed confirmed high-regret states back into the student only
@@ -1007,7 +1036,8 @@ frozen current-rules roots that:
    teacher regret;
 3. the evaluator changes end-to-end throughput by several-fold rather than
    the 1.9x small-transformer regime; and
-4. complete paired chance bundles actually reduce action-difference variance.
+4. the frozen world-sampling contract reduces action-difference variance, or
+   independent worlds win and become the production contract.
 
 If all four pass, the GPU-resident planner is the highest-upside engineering
 investment in the portfolio. If representation fails, stop before the port. If
@@ -1028,8 +1058,8 @@ The core strategic change is simple:
 ### Direct stochastic and score-game evidence
 
 | Source | Evidence used |
-|---|---|
-| [Rzepecki, *Implementing superhuman AI for Azul board game with a variation of NNUE*](https://jakubkowalski.tech/Supervising/Rzepecki2025ImplementingSuperhuman.pdf) | Shallow NNUE shapes, incremental implementation, automated win rates, search-time response; MSc/two-player caveat. |
+| --- | --- |
+| [Rzepecki, *Implementing superhuman AI for Azul board game with a variation of NNUE*](https://jakubkowalski.tech/Supervising/Rzepecki2025ImplementingSuperhuman.pdf) | Shallow integer/AVX2 NNUE shapes, automated win rates, and search-time response; no documented accumulator; MSc/two-player caveat. |
 | [Guei, Chen, Wu, *Optimistic Temporal Difference Learning for 2048*](https://arxiv.org/abs/2111.11090) | Symmetry-shared n-tuples, afterstate TD/TC, multistage learning, expectimax ablation, 625,377 result. |
 | [Hung Guei, 2048 RL dissertation](https://arxiv.org/abs/2212.11087) | Cross-study table comparing afterstate DNN, Stochastic MuZero, and n-tuple systems; comparison caveat. |
 | [Schrittwieser et al., *Planning in Stochastic Environments with a Learned Model*](https://openreview.net/forum?id=X6D9bAHhBQ1) | Explicit afterstate/chance factorization and stochastic MuZero 2048/backgammon evidence. |
@@ -1041,7 +1071,7 @@ The core strategic change is simple:
 ### Efficient evaluator and structured representation
 
 | Source | Evidence used |
-|---|---|
+| --- | --- |
 | [Stockfish, *Introducing NNUE Evaluation*](https://stockfishchess.org/blog/2020/introducing-nnue-evaluation/) | Incremental evaluator inside exact search; official 60k/40k-game Elo tests. |
 | [Stockfish 12](https://stockfishchess.org/blog/2020/stockfish-12/) | Release-level strength result and CPU-efficient NNUE/search architecture. |
 | [Stockfish 16.1](https://stockfishchess.org/blog/2024/stockfish-16-1/) | Dual-network precedent for cheap evaluation on easy positions. |
@@ -1055,7 +1085,7 @@ The core strategic change is simple:
 ### Search, simulation, and training
 
 | Source | Evidence used |
-|---|---|
+| --- | --- |
 | [Koyamada et al., *Pgx*](https://arxiv.org/abs/2303.17503) | Accelerator-native exact board-game simulation, 10–100x throughput, Gumbel AlphaZero demonstration. |
 | [DeepMind Mctx](https://github.com/google-deepmind/mctx) | Reference accelerator-native batched MCTS implementation. |
 | [Veness, Lanctot, Bowling, *Variance Reduction in MCTS*](https://papers.neurips.cc/paper/4288-variance-reduction-in-monte-carlo-tree-search) | Common random numbers, antithetic/control variates, stochastic-game simulation-equivalent gains. |
