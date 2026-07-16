@@ -7177,3 +7177,71 @@ anywhere cannot idle the GPU.
   environment, not the bump.
 - **Awaiting John:** explicit restart permission for Stage A generation
   (per the 07-16 agenda), now to be stamped under the 07-16 identity.
+
+## 2026-07-16 09:00 — FULL AUTHORIZATION (John): execute the complete D1 pipeline to verdict. Stage A attempt 4 launched. Frozen preregistration.
+
+John: "Full authorization to proceed with the full research agenda. Please
+do all necessary engineering work, run and cue the experiments, and reach
+a verdict on this. This is the most important task." Both prior decision
+gates (Stage A restart, 15k relabel tranche) are hereby authorized;
+champion PROMOTION, if the gate is positive, remains a separate John
+ruling per standing methodology.
+
+**Stage A attempt 4 LAUNCHED 08:54 (PID 15396, monitor bekcae52q):** rev
+`6f40f010` (bag-fix engine + repaired `..._rules_2026_07_16` identity),
+cycle4 topology (owned sessions, workers=rayon, `--rayon-threads 32`),
+ghost OFF, seeds `2026794000..5249`, sidecars
+`stage_a_20260716_{decisions,hard_roots}.jsonl`. ETA ~17:00.
+
+**FROZEN PREREGISTRATION (research_answers_7_16.md §15 as amended below;
+frozen before any Stage A data is read):**
+
+1. **Harvest (before teacher output):** 15,000 hard roots (`hard==true`,
+   exact-K1 rows excluded) split 6,000 opening / 6,000 mid / 3,000 late
+   (phase = tile-count proxy: late >=13, mid >=8, else opening);
+   within-phase stratification over fixed gap/SE deciles computed once
+   from the full hard census, uniform within cells via deterministic
+   salted hash order; <=12 roots/game first pass, deterministic
+   phase-stratified top-up to <=16 on shortage.
+2. **Sentinel: INCLUDED.** 1,500 phase-matched non-hard roots, same
+   teacher methodology, descriptive only, never in any training arm.
+3. **Teacher:** pinned champion (cycle4 best_locked_val) at n2048/d16,
+   ghost OFF, TWO independent repeats; repeat search seeds REGISTERED as
+   9000001 / 9000002; never uses the real hidden order.
+4. **Aggregation:** visit-weighted Q over valid repeats
+   (`Q_D1 = sum(n_i Q_i)/N`, `valid_Q = N>0`); policy = mean of repeat
+   improved policies, renormalized, argmax tie-break by lowest action id;
+   pooled population variance `sum n_i (v_i + (Q_i - Q_D1)^2) / N`;
+   root value = mean; per-repeat arrays retained.
+5. **Masked training view (versioned; raw corpus immutable):** base view
+   masks cheap per-action Q / improved policy / search-root value at
+   selected roots; D1 view carries the aggregated teacher fields and
+   masks value/score/rank outcome losses; legacy rows default all-valid.
+6. **Training mix:** Stage A base : cycle4 : cycle3 : D1 at raw weights
+   4:2:1:1 (12.5% D1 draws, 4 expected passes/root at 2,500 steps x
+   b192). K=8 distq head, warm start incumbent, full optimized invocation
+   (CGAB_FUSED etc.), `--init-skip-mismatched`, frozen training seed
+   20260630. Fail-closed per-source exposure audit required.
+7. **Matched control (frozen rationale):** identical init/seed/steps/
+   flags/corpora WITHOUT the D1 shard and WITHOUT masks — i.e. the
+   status-quo deployable recipe. The comparison therefore measures the
+   deployable D1 intervention as a package (mask stale + add fresh).
+8. **Dose arms: RUN as secondary descriptives** (never gate): nested
+   deterministic 5k (D1 weight 7/23) and 10k (7/11) retrains holding 4
+   passes/root.
+9. **Screen (locked bank):** D1 mean regret must be (a) <= control
+   - 0.010 AND (b) <= 0.2370 absolute. Fail either => STOP before gate.
+10. **Gate:** fresh registered block `2027079000..2027079099` (100
+    seeds, touch-once), paired vs pinned champion, BOTH arms at n256/d4
+    identical serving config, Lan-DeMets OBF looks 40/60/80/100, CUPED
+    with the frozen baseline-score covariate. Positive stop or final
+    CI+ => champion-tier confirmation run; **final-look ns => D1 and the
+    R1.4 label-margin hypothesis CLOSE** (existing kill rule).
+11. **Standing-stage rule:** reanalysis becomes pipeline infrastructure
+    only after a positive gate AND one independent fresh-cycle
+    replication.
+
+Engineering scope now under construction (in dependency order): exporter
+bank-mode training-record emission with per-repeat fields; harvest tool;
+repeat-aggregation + masked-view builder; trainer masked-loss support;
+matched-control invocation; relabel/retrain/screen/gate chain scripts.
