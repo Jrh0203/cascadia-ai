@@ -7026,3 +7026,24 @@ anywhere cannot idle the GPU.
   descriptive data (this corpus vs cycle4's timing at matched grade).
 - Stage A relabel/retrain plans unchanged; the relabel tranche still
   awaits John's go.
+
+## 2026-07-15 23:40 — Stage A generation attempt 1 DIED on a wildlife-bag edge (5h lost); exporter hardened; attempt 2 running ghost-OFF
+
+- **Failure:** seed `2026794359` (ghost trajectory) reached "the
+  wildlife bag is unexpectedly empty" at ~375/1250 seeds; the hard
+  error aborted the run and the packed tensor work was lost (per-seed
+  shards live in memory until the final pack; the sidecars survived —
+  they stream). **Open rules-contract question for John (not mine to
+  rule):** should an empty wildlife bag be reachable under
+  `research_aaaaa`, and what is the correct rule when it happens? The
+  sim currently treats it as an invariant violation.
+- **Hardening (78d5e10b, 65/65 tests):** per-seed generation failures
+  now SKIP with a recorded (seed, reason) list in the corpus manifest
+  (`generation_skipped_seeds`); a >2% skip rate still fails the run
+  (systemic-failure guard).
+- **Attempt 2 launched (23:26, PID 196649):** rev 78d5e10b deployed +
+  rebuilt; **ghost OFF by ruling** — pricing is serving-only (ghost
+  generation measured ~2x slower) and a teacher-clean corpus removes a
+  variable from Stage A; the 18:35 safety clearance stands for future
+  use. Same registered seeds `2026794000..5249`, both sidecars. ETA
+  ~7.5h (~07:00) at cycle4's non-ghost rate.
