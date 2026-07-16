@@ -7087,3 +7087,33 @@ anywhere cannot idle the GPU.
   so far), so the corpus is safe. The fix rides the next deploy.
   Note for the record: corpora generated pre/post fix differ only on
   consecutive-wipe games — negligible label impact, now logged.
+
+## 2026-07-16 00:56 — Stage A generation attempt 3: v2 was 3x slow (wrong bridge topology); John-approved restart on the bag-fix engine
+
+- **Diagnosis of v2's pace** (63 s/seed vs cycle4's 21.4): v2 ran the
+  SERVING bridge topology — `--model-sessions 12 --shared-model-session`
+  (12 concurrent games through ONE shared python/CUDA process) — where
+  cycle4's generation ran no `--model-sessions` at all, so workers =
+  rayon threads = **24 concurrent games, each with an OWNED bridge
+  session** (`main.rs`: `target_workers = model_sessions.unwrap_or(rayon
+  threads)`). Observed under v2: GPU 35% utilized, the single shared
+  bridge pegged ~486% CPU — half the parallelism plus a serialization
+  choke. Recipe-fidelity failure, same class as the trainer-knobs gap
+  (07-14): I copied the battery/fold invocation instead of cycle4's
+  generation invocation. Rule now explicit: **shared-session topology is
+  for serving jobs; generation replicates cycle4 (owned sessions,
+  workers = rayon).**
+- **John approved kill+restart** (~00:50): v2 killed at 50/1250 seeds
+  (~1.6h work discarded vs ~11h saved; v2 would have finished ~21:30,
+  v3 ETA ~08:30). Attempt 3 (PID 204702, launched 00:56) deploys rev
+  `45fb5072` so the corpus generates on the **corrected rules engine**
+  (wildlife-bag per-resolution return; skip-and-record retained as a
+  backstop), ghost OFF per the 07-15 ruling, same registered seeds
+  `2026794000..5249`, both sidecars, `--rayon-threads 32` exactly as
+  cycle4's pipeline passed it (box caps at 24).
+- Startup verified: build ok, 24 owned bridge sessions live, GPU 64%
+  and warming (v2: 35%), VRAM 31.1/32.7 GB (cycle4-proven footprint).
+  Monitor bzbzx6t57 on both chain and run logs. One operational scar
+  for the notebook: a `pkill -f` pattern in the kill sequence matched
+  the ssh session's own command string and killed it mid-sequence —
+  kill by PID, never by `-f` pattern that appears in your own argv.
