@@ -22,11 +22,16 @@ probability of a positive gain is unknown; it is post-D1 and has zero
 current-rules strength evidence.
 The third
 [Cascadia Foundry proposal](../../cascadia_foundry_original_architecture_proposal_7_16.md)
-is the highest-upside clean-sheet hypothesis: exact terminal score contracts,
-reactive public-state controller programs, atomic cross-board scarcity prices,
-dynamic scenario streams, and a committed full-policy capsule. Its 76%
-forecast is conditional on four unmeasured premise gates and is not a present
-success probability or strength evidence.
+is retained as a historical clean-sheet exploration. John ruled on 07-16 that
+the allowed policy class is explicitly non-cooperative, so Foundry-Commons,
+cross-seat allocation/memory, table utility, and its conditional 76% forecast
+are withdrawn. The
+[Cascadia Rival final proposal](../../cascadia_rival_final_architecture_proposal_7_16.md)
+is the sole combined recommendation: Anchor supplies the incumbent and
+terminal-own-score spine; NX must earn a cheap multifidelity continuation role;
+Foundry contributes only seat-local contracts, chronology audits, and
+unilateral tomography. Rival is post-D1, has zero current-rules strength
+evidence, and carries an honest present target-reaching forecast of 25--35%.
 
 **Goal:** mean seat score ≥ 100 over 1,000 games under the pinned four-player
 all-A/no-habitat-bonus rules identity current at the time of the gate.
@@ -74,7 +79,7 @@ champion promotion remains separately reserved.
 | 1 | Canonical battery of adopted default (rebaseline block) | **DONE 07-14**: 98.3925 (descriptive; pre-ghost config read 98.2975 on the same block) | descriptive reference + fresh serving-default ledgers; never evidence |
 | 2 | R1.3b menu-widening gate (`--gumbel-root-menu 512`, champion tier) | **CLOSED 07-14**: final look ns, delta −0.03, RCI [−0.27, +0.21] | menu widening is a measured null; R3.3 exact top-k is the surviving route to coverage |
 | 3 | R1.4 Stage 1 retrains: **V1b**, **V2**, **C1**, **T0** (+ctrl) | **FULLY CLOSED 07-15**: all flag effects = continued training (ctrl −6.2% beat every arm); ctrl-SWA lead died on the bank screen (+0.2470 vs 0.2351) | lesson: locked-val loss deltas of 5-15% carry zero decision signal — only bank regret + gates screen training candidates |
-| 4 | R1.4 D1 pilot / Stage A | **PILOT PASSED 07-15; attempts 3/4 produced no usable seed (reboot, then 24-context thrash); attempt 5 launched 10:02 on the v2-proven 12-shared/Rayon-16 topology (last durable PID 26197, rev 689f9d69). john0 was unreachable at the 11:57 read-only check, so current liveness is unknown.** Never read partial output. | Fully authorized. Attempt 5 is configured to stamp the July-16 identity on registered seeds `2026794000..5249`; completed-seed and complete manifest/provenance verification gate harvest. |
+| 4 | R1.4 D1 pilot / Stage A | **PILOT PASSED 07-15; attempts 3/4 produced no usable seed (reboot, then 24-context thrash); attempt 5 launched 10:02 on the v2-proven 12-shared/Rayon-16 topology (last durable PID 26197, rev 689f9d69). john0 was unreachable at the 13:17 read-only check, so current liveness is unknown.** Never read partial output. | Fully authorized. Attempt 5 is configured to stamp the July-16 identity on registered seeds `2026794000..5249`; completed-seed and complete manifest/provenance verification gate harvest. |
 | 5 | D1 harvest/relabel/retrain/screen/gate | **FULLY AUTHORIZED; frozen 09:00 before Stage A output was read.** Conditional stages follow only after each predecessor verifies complete. | 15k hard `6k/6k/3k` + 1.5k descriptive sentinel; n2048/d16x2 repeat seeds `9000001/9000002`; exact aggregation/masks; raw mix 4:2:1:1; matched no-D1 control + 5k/10k descriptives; bank requires control −0.010 and ≤0.237; fresh `2027079000..99` sequential-CUPED n256 gate; positive gate proceeds to confirmation, promotion still reserved. |
 | 6 | Ghost-label safety fold | **CLEARED 07-15**: both preregistered legs passed (regret Δ0.0046 vs ±0.015; q-regret better than ctrl) | ghost labels are teacher-safe at 0.25-fold; ghost pricing is serving-only (generation measured ~2× slower) |
 
@@ -83,12 +88,12 @@ let the live Stage A attempt finish untouched → verify and execute the already
 authorized harvest/relabel/retrain/screen/gate chain → stop for John's reserved
 promotion ruling if the gate is positive. Exact-rules human calibration may
 proceed in parallel. A bounded adversarial diagnostic and the bounded
-Cascadia-Anchor semantic/A-EXACT-feasibility shadow preflight follow D1; Anchor
-is the lowest-downside serving-wrapper test because the incumbent action is
-preserved. Foundry's zero-gameplay objective/semantics and certified ceiling-
-tomography preflight may proceed in the same post-D1 research tranche without
-authorizing Commons gameplay. The bounded Cascadia-NX offline representation
-preflight follows or shares only validated GPU-engine work. Adaptive
+Cascadia Rival premise ladder follows D1: fresh baseline and unilateral
+tomography → Anchor high-fidelity control → NX compiler/trajectory-economics
+preflight → RivalNet/Rival-MF only if each gate passes → one frozen relabel
+iteration → paired gameplay. The incumbent action is always preserved as the
+fallback. Foundry-Commons and cooperative table values are outside the allowed
+policy class; only single-seat diagnostics remain. Adaptive
 allocation, learned table-native values, reliability-sigma, stratified worlds,
 and exactness expansion remain behind direct offline evidence and the funded
 line.
@@ -108,11 +113,12 @@ transferable constants. None jump the repaired Stage A/D1 line.
 | L4 | Mixed-grade generation | label ceiling / data volume | KataGo supports the mechanism, not a Cascadia ratio. Consider only in a later corpus recipe after D1 establishes whether high-budget label correction transfers to play. |
 | L5 | Targeted relabel weighting | label ceiling | Fold into D1 rather than open a second arm: preserve a uniform base-data floor, use a 15k phase/hardness-stratified shard, and audit actual weighted draws. Repeat disagreement is estimator noise to average/audit, not a return target. |
 | L6 | Adversarial diagnostic probe bank | blind spots / rules | **BOUNDED AFTER D1 and the rules-ID repair.** Require high-budget confirmation, cross-checkpoint transfer, diversity caps, and natural-frequency estimates before any adversarial training. |
-| L7 | Cooperative table values | multi-seat | Existing `value_vector` already predicts four final scores. The real R1.1c intervention is table-native **per-action Q plus table-derived improved-policy labels**, requiring John's explicit selfish-versus-cooperative objective ruling. |
+| L7 | Cooperative table values | multi-seat | **CLOSED BY JOHN'S 07-16 OBJECTIVE RULING, not by a new scientific test.** The deployed policy class is four isolated selfish agents. Table-total utility, donation, shared cross-seat plans/prices/memory, and table-derived improved-policy labels are out of scope. Four-seat predictions remain auxiliary diagnostics only. |
 | L8 | League/exploiter populations / Suphx oracle detours | fixed point | **DEPRIORITIZED/CLOSED for the current objective.** Do not queue GRP, raw oracle dropout, pMCPA, or luck-corrected rewards. Revisit a privileged posterior critic only after D1 and only through exact public-state marginalization. |
-| L9 | Cascadia-NX + Covariance-Audited GPU World Search | representation cost + simulation economics | **OPEN POST-D1 HYPOTHESIS.** Retain v3 legal-action Q, exact grounding, `max^n`, Gumbel sequential halving, K1, and root-world CRN; replace the dense evaluator/bridge with dependency-complete D6-tied motif factors, a calibrated semantic residual, and GPU-resident exact-rules search with sampled chance. A same-target legacy `11,231 -> 512 -> 64 -> 1` control tests whether this is merely a revival. Before training, kill board-wide delta invalidation and survivor-routing misses. Any covariance artifact is disjointly calibrated and keyed to the complete rules/model/opponent/search identity, with independent-world fallback. Require current-rules parity and several-fold end-to-end throughput with retained teacher regret before gameplay. Never displace D1. |
-| L10 | Cascadia-Anchor incumbent-anchored GPU rollout improvement | noisy action differences + exact terminal adjudication | **OPEN POST-D1 HYPOTHESIS; FIRST BOUNDED SERVING-WRAPPER PREFLIGHT.** The incumbent owns the current turn’s refresh/prelude; after any replacement is public, preserve its draft action as anchor. A cheap direct/distilled continuation may screen, but only fresh full-incumbent terminal continuations may confirm one challenger. Use selection/confirmation sample splitting, a multiplicity-valid lower bound above a practical margin, literal fail-closed fallback, separate outer physical and inner no-peek search RNG, and complete production-policy trace parity—not only rules parity. The direct v2 predecessor posted historical +0.420 and +0.520 CI-positive deltas under another policy/rules identity. Statistical power, nested incumbent-search cost, and symmetric four-seat composition are decisive falsifiers. Start final-two through final-five; exclude final-personal-turn roots from Anchor and leave exact K1 unchanged. Compare against extra Gumbel compute at equal wall and require a fresh paired game gate. Never displace D1. |
-| L11 | Cascadia Foundry score-contract program synthesis | commitment representation + exact whole-policy construction | **OPEN POST-D1 HYPOTHESIS; HIGHEST-UPSIDE, ZERO STRENGTH EVIDENCE.** Compile exact A-card terminal score witnesses and reverse completion lattices; bind four persistent plans; synthesize tiny public-state programs over dynamic-urn scenario streams; price atomic shared resources through counterfactual plan collapse; canonicalize independent quality-diversity archives; and freeze the result into a deterministic policy capsule that is itself evaluated and committed through terminal. Foundry-Sovereign uses four isolated seat-local controllers. Foundry-Commons is central and requires materially new exact headroom evidence plus John's ruling on table objective, shared memory/prices, donation, seat equivariance, and fairness. Static repacking is not achievable evidence; chronology claims require exact `GameState` replay. Require certified tomography intervals, an untouched paired honest-controller lower bound of at least 2.5 mean-seat points, production retention `max(70%, (100.10-b)/h)`, fixed-root variance/power, cohort-manifest nonanticipativity, full rules/trace parity, and precision-required <10s local-5090 synthesis before gameplay. The 76% forecast is conditional on those premise gates, not a present probability. Never displace D1. |
+| L9 | Cascadia-NX + Covariance-Audited GPU World Search | representation cost + simulation economics | **PREDECESSOR COMPONENT OF L12.** Its dependency-complete D6 factors, compiler, and exact GPU engine survive only as Rival's bounded parity/economics preflight. The small model is not presumed to replace the transformer; it must prove several-fold complete-trajectory speed, useful-challenger retention, and low/high terminal-difference correlation. |
+| L10 | Cascadia-Anchor incumbent-anchored GPU rollout improvement | noisy action differences + exact terminal adjudication | **POLICY-IMPROVEMENT SPINE AND HIGH-FIDELITY CONTROL FOR L12.** Preserve the exact incumbent action; use fresh full-incumbent terminal own-score continuations where feasible; split selection/confirmation; fall back literally; and require game-level evidence. The historical +0.420/+0.520 old-identity results motivate the mechanism but are not current strength. |
+| L11 | Cascadia Foundry score-contract program synthesis | commitment representation + exact whole-policy construction | **HISTORICAL PREDECESSOR; COMMONS WITHDRAWN.** John rejected the cooperative policy class on 07-16. Table utility, donation, shared cross-seat plans/prices/memory, joint four-board genomes, and the 76% forecast are removed. Only single-seat score obligations, chronology/nonanticipativity audits, commitment-collapse diagnostics, and unilateral tomography may enter L12 as optional modules. |
+| L12 | Cascadia Rival incumbent-anchored adversarial multifidelity terminal rollout iteration | terminal policy improvement + representation economics + selfish headroom | **FINAL POST-D1 ARCHITECTURE RECOMMENDATION; ZERO CURRENT-RULES STRENGTH EVIDENCE.** Four isolated agents maximize their own raw terminal score. A structured RivalNet proposes and runs cheap exact-rule continuations; a smaller paired panel of true full-incumbent continuations corrects the challenger-minus-anchor terminal difference through a frozen multifidelity control variate. The wrapper is an offline/shadow/one-seat labeler; one ordinary distilled model is the promotion candidate. Present target-reaching forecast 25--35% within at most two iterations and 3,000 post-D1 john0 GPU-hours. Gates include fresh baseline, unilateral tomography, a cheap covariance/power falsifier, complete base-policy parity, low-fidelity speed above the absolute power-derived rate, stable correlation of either sign, roughly 3x equal-wall variance or squared valid-confidence-width reduction, analytic bounded inference, one-seat composition, paired promotion, and the unchanged 1,000-game target. Never displace D1. |
 
 Reassuring negative result from the same pass: Gumbel-with-few-sims,
 sequential halving, and stochastic-game determinization — our existing
@@ -141,24 +147,15 @@ scaffold itself is the bottleneck.
 - **R0.5/R3.4 adaptive compute allocation** — 46-55% of decisions are
   noise-flippable; puzzle bank + stability probes supervise for free.
   Queued behind the R1.4 slate.
-- **R1.1c/R3.1 cooperative table values** — highest ceiling (0 to +2.0),
-  only idea whose ceiling covers the whole gap; sequenced after R1.4's
-  training infra. R1.1a (root-level re-ranking with selfish values) found
-  nothing — the surviving version requires table-outcome-trained values.
 - **R3.3 exactness expansion** — exact-K1 precedent was pure profit;
   frontier: factored bounds for exact top-k retrieval, last-2-own-turns.
-- **Cascadia-Anchor** — post-D1 bounded serving-wrapper preflight:
-  post-prelude boundary + exact rules/production-policy trace parity →
-  bounded-inference power + full-incumbent A-EXACT feasibility →
-  proxy-fidelity/shadow audit → equal-wall Gumbel control → unilateral
-  diagnostic → symmetric paired gate. Full proposal:
-  [`incumbent_anchored_gpu_rollout_policy_improvement_7_16.md`](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md).
-- **Cascadia Foundry** — post-D1 clean-sheet architecture preflight: central
-  objective ruling → exact spatial/chronological score-contract semantics →
-  certified development/confirmation tomography → CPU committed-capsule
-  prototype → fixed-root power and exact GPU parity/throughput → phase-local
-  terminal capsules → fresh paired gate. Full proposal:
-  [`cascadia_foundry_original_architecture_proposal_7_16.md`](../../cascadia_foundry_original_architecture_proposal_7_16.md).
+- **Cascadia Rival** — sole finalized post-D1 architecture program: fresh
+  baseline → unilateral selfish tomography → exact Anchor control → NX
+  compiler/engine economics → RivalNet terminal-difference correlation →
+  fixed Rival-MF coverage/equal-wall gate → shadow and one-seat trial → one
+  frozen relabel iteration → paired symmetric gameplay → unchanged target
+  battery. Full proposal:
+  [`cascadia_rival_final_architecture_proposal_7_16.md`](../../cascadia_rival_final_architecture_proposal_7_16.md).
 
 ### Adopted (velocity/economics, score-neutral)
 
@@ -167,6 +164,14 @@ scaffold itself is the bottleneck.
   · CUPED (07-13).
 
 ### Closed — strength programs (verdicts, not opinions)
+
+- **R1.1c/R3.1 cooperative table values / Foundry-Commons** (07-16):
+  **CLOSED BY JOHN'S OBJECTIVE-SCOPE RULING, not by new gameplay evidence.**
+  The allowed system is four isolated selfish agents. Table-total action
+  utility, donation, shared cross-seat plans/prices/memory, coordinated
+  four-board genomes, and the associated conditional 76% forecast are
+  withdrawn. Four-seat prediction remains auxiliary; selfish opponent demand
+  modeling remains allowed.
 
 - **R1.2 ghost opponents as a STRENGTH lever** (07-13): CI+ +0.545 at
   n256-tier; ns at champion tier reinvested as sims (−0.08) and as worlds

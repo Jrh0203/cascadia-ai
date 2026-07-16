@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-16 11:57 EDT)
+## Status at a glance (updated 2026-07-16 13:17 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
@@ -18,7 +18,7 @@ over packed expert tensors with Gumbel search-supervised action values.
   EDT on the v2-proven 12-shared/Rayon-16 topology (PID `26197`, monitor
   `bn34wrswc`, rev `689f9d69`), ghost off, registered seeds
   `2026794000..5249`, and the repaired July-16 identity; the authorized
-  pipeline waiter was repointed at v5. The 11:57 read-only
+  pipeline waiter was repointed at v5. The 13:17 read-only
   `campaign_status.sh` check could not reach john0, so current liveness is
   unknown—not failed and not asserted healthy. No partial scientific output or
   score was read, and no process was killed or restarted.
@@ -55,17 +55,22 @@ over packed expert tensors with Gumbel search-supervised action values.
   nested current-policy compute and four-seat composition remain explicit
   falsifiers. It is also post-D1 and has zero current-rules strength evidence.
   The third [Cascadia Foundry proposal](../../cascadia_foundry_original_architecture_proposal_7_16.md)
-  is the clean-sheet, highest-upside hypothesis: compile exact terminal score
-  contracts, synthesize public-state controller programs over dynamic scenario
-  streams, coordinate atomic resources through a Score Futures Exchange, and
-  commit a lineage-deduplicated policy capsule that is itself evaluated to
-  terminal. Its `76%` design forecast is explicitly conditional on an
-  admissible baseline, John's central-control methodology ruling, a paired
-  honest-controller headroom lower bound of at least 2.5 mean-seat points, and
-  a precision-feasible local-5090 implementation. It is not a present success
-  probability or strength evidence. Learned table-total serving remains
-  closed; Foundry-Commons cannot reach gameplay until exact tomography supplies
-  materially new evidence.
+  remains a clean-sheet exploration, but John ruled on 07-16 that the policy
+  class is explicitly non-cooperative. Foundry-Commons, table utility,
+  donation, cross-seat prices/memory, the joint four-board genome, and its
+  conditional `76%` forecast are withdrawn. Only single-seat score contracts,
+  chronology/nonanticipativity audits, and unilateral tomography survive.
+  The finalized [Cascadia Rival proposal](../../cascadia_rival_final_architecture_proposal_7_16.md)
+  is now the sole combined architecture recommendation: use Anchor's frozen
+  incumbent and terminal own-score estimand, make an NX-style structured
+  RivalNet earn a low-fidelity control-variate role, retain only Foundry's
+  seat-local diagnostics, and distill confirmed corrections through one
+  frozen terminal relabel iteration at a time. Its honest present target-reaching
+  forecast is `25--35%` within at most two relabel iterations and 3,000
+  post-D1 john0 GPU-hours, rising only after a fresh baseline, selfish-headroom,
+  parity, throughput, multifidelity-coverage, and gameplay gates. It is
+  post-D1, has zero current-rules strength evidence, and does not change the
+  live queue.
 - **Historical July-9 corrected-rules scoreboard (100 games, seeds
   2027070900..99), COMPLETE for that pinned identity:**
   greedy `87.5450` → no-search policy `91.8425` → cycle4 n256/d4 `97.0675`
@@ -237,10 +242,16 @@ timestamped snapshot, weaker than current `main`).
   statistical override contract, direct v2 predecessor, multiplayer caveats,
   and staged falsifiers.
 - [Cascadia Foundry proposal](../../cascadia_foundry_original_architecture_proposal_7_16.md):
-  original terminal score-contract architecture, reactive program capsules,
-  central-versus-seat-local objective boundary, dynamic scenario braid,
-  certified ceiling tomography, conditional 76% forecast, and staged
-  falsifiers.
+  historical original terminal score-contract architecture. Its cooperative
+  Commons controller and conditional forecast are withdrawn; only seat-local
+  contracts and diagnostics remain candidate components.
+- [Critical architecture review](../../architecture_proposal_critiques_7_16.md):
+  independent Anchor > NX > Foundry ranking and the tomography carve-out that
+  motivated the final synthesis.
+- [Cascadia Rival final proposal](../../cascadia_rival_final_architecture_proposal_7_16.md):
+  explicitly adversarial incumbent-anchored multifidelity terminal rollout
+  iteration, unilateral tomography, red-team kill ladder, calibrated
+  confidence, implementation plan, and primary-source ledger.
 - [Rules Contract](RULES_CONTRACT.md): official rules identity and the
   resulting baseline compatibility boundary.
 - [Radical Directions](RADICAL_DIRECTIONS.md): speculative architecture-level

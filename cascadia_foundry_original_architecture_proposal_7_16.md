@@ -2,14 +2,24 @@
 
 **Date:** 2026-07-16
 
-**Status:** OPEN POST-D1 HYPOTHESIS; D1 remains first; zero gameplay evidence
+**Status:** HISTORICAL ORIGINAL PROPOSAL; zero gameplay evidence; cooperative
+Commons policy class withdrawn by John's 2026-07-16 objective ruling
 
 **Objective:** mean seat score at least 100 over 1,000 complete four-player games,
 before habitat bonus, under one pinned rules and serving identity
 
-**Design-confidence forecast:** 76%, conditional on the baseline,
-methodology, headroom, and systems gates in this report; this is an explicit
-subjective forecast, not a measured probability
+**Historical design-confidence forecast:** 76%, conditional on the baseline,
+methodology, headroom, and systems gates in this report; withdrawn with the
+cooperative Commons design and not a current forecast or measured probability
+
+**Final disposition:** Foundry-Commons, table utility, donation, joint
+four-board planning, shared cross-seat prices/memory, and seat sacrifice are
+removed. Only single-seat score contracts, chronology/nonanticipativity tests,
+commitment-collapse diagnostics, and unilateral tomography survive as optional
+components of
+[Cascadia Rival](cascadia_rival_final_architecture_proposal_7_16.md). The body
+below is retained as the historical original proposal and prior-art audit; it
+is not the current recommendation.
 
 ## Executive verdict
 

@@ -1275,28 +1275,200 @@ freeze the practical margin, candidate family, paired-stream rule, and
 precision-required design/confirmation counts. Online Commons closes if that
 count cannot fit the fixed-work local-5090 budget.
 
-### 11.5 Forecast and evidence label
+### 11.5 Historical forecast and evidence label
 
-The proposal freezes a **76% conditional engineering forecast** after four
+The original proposal froze a **76% conditional engineering forecast** after four
 premises pass: current baseline at least about 98.0, central Commons accepted,
 an honest 2.5-point mean-seat headroom lower bound, and the precision-required
 GPU throughput bar. Its 24-point residual failure budget is 8 points for
 production retention, 5 for symmetric/fair composition, 5 for fresh transfer,
 3 for device/trace/provenance defects, and 3 for remaining drift.
 
-This is not a present unconditional success probability; the premise-pass
-probabilities are unknown and were not fabricated. Foundry earns the separate
-`75%-qualified` label only after disjoint evidence satisfies the headroom,
-retention, positive paired-game, projected `>100.10`, and future-1,000-game
-probability rules. The normal promotion CI remains independently mandatory.
+John's 07-16 non-cooperative objective ruling withdrew Commons and this
+forecast before any premise passed. It remains here only as the historical
+proposal record and is not a current probability.
 
 ### 11.6 Decision and ordering
 
-**Status: OPEN POST-D1 HYPOTHESIS; HIGHEST CLEAN-SLATE UPSIDE; ZERO
-CURRENT-RULES STRENGTH EVIDENCE.** Foundry does not reorder or inspect the
-authorized D1 chain. After D1 reaches its frozen boundary, its first work is
-only objective/identity specification, score-contract semantics,
-chronology-correct certified tomography, and a tiny CPU committed-capsule
-prototype. Anchor remains the lowest-downside first serving-wrapper preflight;
-Foundry is the highest-upside architecture preflight. A full GPU port or
-gameplay arm exists only after the preceding falsifiers pass.
+**Status: HISTORICAL ORIGINAL PROPOSAL; ZERO CURRENT-RULES STRENGTH
+EVIDENCE.** John's 07-16 objective ruling withdrew Foundry-Commons, table
+utility, donation, joint four-board planning, shared cross-seat prices/memory,
+and the conditional forecast. Only Sovereign's seat-local contracts,
+chronology/nonanticipativity audits, and unilateral diagnostics may seek
+admission through Cascadia Rival. No Foundry gameplay arm is queued.
+
+## 12. Cascadia Rival finalized adversarial synthesis — 2026-07-16
+
+Complete final proposal, red-team report, implementation blueprint,
+calibrated forecast, and source ledger:
+[`cascadia_rival_final_architecture_proposal_7_16.md`](../../cascadia_rival_final_architecture_proposal_7_16.md).
+This section records a research-direction consolidation and John's objective-
+scope ruling. No experiment was launched, no live output was read, and no
+current-rules strength evidence was created.
+
+### 12.1 Objective ruling and withdrawn mechanisms
+
+John ruled that the desired policy class is explicitly non-cooperative. Four
+isolated, seat-relative agents each maximize their own expected raw terminal
+score. Cascadia remains general-sum rather than constant-sum; own-coordinate
+`max^n` is the incumbent search heuristic consistent with the selfish contract,
+while explicit selfish opponent-policy simulation defines continuation. Table
+utility and paranoid minimax against a three-seat coalition are both excluded.
+
+The following Foundry-Commons mechanisms are withdrawn:
+
+- table-total or table-mean action utility;
+- donation or seat sacrifice;
+- joint four-board completion genomes;
+- cross-seat scarcity prices and resource allocation;
+- shared plans, lineages, archives, or persistent memory; and
+- the conditional 76% Commons forecast.
+
+This is a methodology/objective-scope closure, not a new scientific refutation
+of whether central coordination could increase arithmetic table mean. Public
+opponent boards remain valid inputs for forecasting resource pressure and
+market survival, but another seat's loss has no utility except through its
+causal effect on the acting seat's own expected score.
+
+### 12.2 Final architecture identity
+
+The sole combined recommendation is **Cascadia Rival: incumbent-anchored
+adversarial multifidelity terminal rollout iteration**.
+
+1. Freeze the resolved post-D1 transformer-plus-Gumbel policy as the incumbent
+   and compute its exact root action.
+2. Use an exact semantic compiler and small structured RivalNet to propose
+   challengers and run many cheap public-information continuations.
+3. Select one challenger on a disjoint cheap panel.
+4. Compare it with the anchor using a smaller paired panel that runs both
+   RivalNet and true full-incumbent continuations, plus an independent
+   extra-low-fidelity panel.
+5. Apply a fixed multifidelity control variate to the active-seat terminal
+   own-score difference; override only when its lower bound clears a frozen
+   practical margin and every identity/coverage/parity check passes.
+6. Fall back literally to the stored incumbent action otherwise.
+7. Turn independently confirmed corrections into one hash-pinned relabel
+   tranche, train one candidate, and require a fresh paired complete-game gate
+   before another iteration.
+
+The identities are separate: `B_k` is the ordinary base and high-fidelity
+continuation, `W_k` is the shadow/one-seat appeals and labeling instrument, and
+`M_(k+1)` is the ordinary distilled candidate. Rival v1 gates only
+`M_(k+1)` for promotion and target. It never recursively simulates `W_k` or
+lets a promoted wrapper silently become the next base.
+
+Anchor is the rollout-estimand spine and high-fidelity control. NX supplies
+only the compiler, cheap-policy, and resident-simulator hypotheses. Foundry
+supplies only single-seat score obligations, chronology/nonanticipativity
+tests, commitment-collapse diagnostics, and unilateral tomography. Contracts
+and adversarial populations are optional plug-ins, not load-bearing
+conjuncts.
+
+### 12.3 Rival-MF evidence boundary
+
+Published multifidelity Monte Carlo supports unbiased estimation of a costly
+high-fidelity statistic from many correlated cheap evaluations plus occasional
+expensive evaluations under its conditions. Published multifidelity RL uses a
+control variate based on correlated low/high returns for state-action value
+estimation. Neither publishes the Cascadia construction.
+
+Rival's specific selected-action use is a document-specific synthesis:
+
+\[
+\widehat\Delta_{MF}=
+\overline D_H^{H}
++\beta_{cv}\left(\overline D_L^{L}-\overline D_L^{H}\right),
+\]
+
+where `D_H` is the challenger-minus-anchor terminal own-score difference under
+the full incumbent, `D_L` is the same difference under RivalNet, `H` is the
+paired high/low panel, `L` is an independent extra-low panel, and `beta_cv` is
+frozen on disjoint calibration data. Candidate selection, coefficient
+calibration, confirmation, and extra-low samples remain disjoint.
+
+For `n_H` paired samples and `n_L` independent extra-low samples, the
+population-optimal coefficient under equal low-panel variances is:
+
+\[
+\beta_{cv}^*=\frac{n_L}{n_H+n_L}
+\frac{\operatorname{Cov}(D_H,D_L)}{\operatorname{Var}(D_L)}.
+\]
+
+The first inference rule is a fixed two-independent-sample bounded Hoeffding
+lower bound on `D_H - beta_cv*D_L` and `beta_cv*D_L`, with score ranges
+certified from the pinned rules identity and deterministic per-game error
+allocation. A practical margin does not control false activation. Quantitative
+training magnitudes require an additional independent audit/value panel `A`; the
+confirmation estimate supplies only a fixed-weight categorical preference.
+
+The central gates are correct coverage and effective precision per wall in
+untouched selected-challenger phase strata. Stable negative correlation is
+usable with a negative coefficient; weak or calibration-to-test unstable
+correlation, a high-fidelity fraction that erases savings, action-dependent
+random marginals, or a coverage failure closes Rival-MF. A cheap continuation
+is never relabeled as the incumbent.
+
+### 12.4 Red-team constraints
+
+The combined design explicitly accepts these limits:
+
+- no admissible July-16 canonical baseline existed at the proposal cutoff;
+- D1 and Rival likely overlap and their gains cannot be added;
+- historical Anchor effects were approximately half a point under old
+  identities, not enough by themselves to bridge the historical gap;
+- exact terminal score removes learned bootstrap bias, not aleatoric variance;
+- full-incumbent terminal continuation has a severe nested-cost multiplier;
+- a small model may be fast while reversing the rare action differences that
+  matter;
+- NNUE-style sparse updates may lose to dense GPU recomputation because
+  Cascadia dependency closure can be wide;
+- a valid local one-deviation bound does not prove repeated or symmetric
+  whole-policy improvement;
+- one-seat headroom does not add across four seats; and
+- GPU utilization is not evidence unless complete valid trajectories finish.
+
+The required metrics are therefore terminal-difference correlation and
+effective precision per complete-trajectory wall-second, not evaluator RMSE,
+kernel rows, or utilization.
+
+### 12.5 Evidence ladder and forecast
+
+Rival begins only after D1 reaches its frozen boundary. The post-D1 order is:
+
+1. fresh current-rules incumbent baseline and target gap;
+2. unilateral selfish ceiling tomography;
+3. cheap CPU/current-bridge covariance and absolute power falsifier;
+4. exact high-fidelity Anchor control on tractable roots;
+5. compiler/simulator parity plus complete base-policy trace adapter;
+6. RivalNet trajectory-speed, useful-challenger-recall, and correlation gate;
+7. Rival-MF analytic bounded inference, untouched coverage, and equal-wall
+   effective-precision gate;
+8. shadow policy and actual one-seat composition test;
+9. one ordinary frozen relabel/retrain candidate;
+10. paired complete-game promotion evidence; and
+11. the unchanged 1,000-game symmetric target battery.
+
+Proposed engineering bars include low-fidelity complete-trajectory speed of at
+least the greater of roughly 5x and the absolute power-derived rate, plus
+roughly 3x equal-wall variance or squared valid-confidence-width reduction.
+They are design gates, not literature constants or strength evidence.
+
+The honest present subjective forecast is:
+
+- 45--55% that an ordinary distilled candidate produces some CI-positive gain
+  over the valid ordinary base;
+- 25--35% that an ordinary frozen candidate has true mean at least 100 within
+  at most two iterations and 3,000 post-D1 john0 GPU-hours; and
+- 55--65% only after a baseline around at least 98.2, legal selfish headroom,
+  parity, throughput, correlation, coverage, and independent shadow/one-seat
+  premises all pass with enough projected margin.
+
+No present 75% claim is defensible. A probability above 75% requires direct
+fresh gameplay evidence that places the frozen policy safely above target; at
+that point the evidence, not the architecture, supplies the confidence.
+
+**Status: FINAL POST-D1 ARCHITECTURE RECOMMENDATION; ZERO CURRENT-RULES
+STRENGTH EVIDENCE.** Rival supersedes the combined ordering of NX, Anchor, and
+Foundry. It does not erase their source audits or component designs, does not
+reorder the fully authorized D1 chain, and does not authorize a launch or
+promotion.

@@ -10,6 +10,13 @@ strength claim, experiment authorization, rules change, or promotion
 **Objective:** mean seat score **at least 100 over 1,000 four-player games** under
 the pinned all-A, no-habitat-bonus Cascadia rules identity in force at the gate
 
+**Final disposition:** Cascadia-NX remains the structured representation and
+GPU-engine predecessor, not the combined recommendation. Its compiler,
+RivalNet-like cheap policy, and accelerator-resident exact simulation are
+subsumed as gated components of
+[Cascadia Rival](cascadia_rival_final_architecture_proposal_7_16.md). The
+transformer is not replaced unless direct gameplay later proves that result.
+
 ## Executive verdict
 
 The leading system challenger identified in this review is **not another
@@ -88,14 +95,15 @@ Cascadia-NX remains the higher-risk clean-slate architecture with potentially
 greater upside. Neither has current-rules strength evidence, and neither
 reorders D1.
 
-**Third clean-sheet proposal.** The companion
+**Historical third clean-sheet proposal.** The companion
 [`cascadia_foundry_original_architecture_proposal_7_16.md`](cascadia_foundry_original_architecture_proposal_7_16.md)
-goes further: replace learned scalar evaluation and ordinary move-tree search
+went further: replace learned scalar evaluation and ordinary move-tree search
 with exact terminal score contracts, public-state controller-program
 synthesis, atomic cross-board scarcity prices, and a committed full-policy
-capsule. Foundry is the highest-upside hypothesis, but its 76% forecast is
-conditional on unmeasured baseline, methodology, headroom, and local-GPU
-premises. It is post-D1 and has zero strength evidence.
+capsule. John rejected its cooperative Commons policy class; the 76% forecast
+is withdrawn. Only seat-local components survive in
+[Cascadia Rival](cascadia_rival_final_architecture_proposal_7_16.md), and no
+component has current-rules strength evidence.
 
 ## 1. Claim boundary and evidence labels
 

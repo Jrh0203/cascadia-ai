@@ -7,6 +7,15 @@ proposals, judged against the campaign's measured constraints. This document
 ranks research bets; it is not strength evidence and it does not reorder the
 authorized D1 chain.
 
+**Resolution (John, 2026-07-16):** the cooperative carve-out is rejected. The
+allowed policy class is four isolated agents maximizing their own raw terminal
+score. Foundry-Commons, table utility, donation, shared cross-seat
+plans/prices/memory, joint four-board genomes, and the associated conditional
+76% forecast are withdrawn. The finalized synthesis is
+[Cascadia Rival](cascadia_rival_final_architecture_proposal_7_16.md), which
+accepts this document's Anchor > NX > Foundry ranking but retains only
+unilateral, seat-local Foundry tomography and contracts.
+
 Proposals under review:
 
 1. [Cascadia-NX](stochastic_board_game_ai_architecture_research_7_16.md) —
@@ -24,6 +33,11 @@ Proposals under review:
 **Anchor > NX > Foundry** — with one carve-out: Foundry's §12 ceiling
 tomography is severable from its architecture and should be extracted and run
 FIRST, ahead of any of the three builds.
+
+After the objective ruling, “tomography” here means unilateral own-seat
+repacking, chronology-correct public replay, late-game best response, and
+explicit information/resource relaxations. Four-board cooperative resource
+reallocation is not part of the funded measurement.
 
 All three documents share unusually good evidence discipline (labeled claims,
 explicit kill tests, D1 primacy respected). The ranking is therefore about the
@@ -143,10 +157,11 @@ throughput-to-strength conversion beats our measured saturation curve.
 
 - **The best first-principles content in any of the three documents.**
   Cascadia as monotone construction under shared supply; exact terminal
-  witnesses; and the mathematically correct observation that the scoreboard IS
-  a cooperative team MDP (mean seat = table/4), making the cooperative lever
-  the only one whose ceiling covers the entire remaining gap — consistent with
-  the campaign's own R1.1c assessment.
+  witnesses; and the arithmetic identity that mean seat equals table total
+  divided by four. **Resolution:** that evaluation identity does not authorize
+  the larger policy class of a centralized cooperative controller. John
+  rejected that controller class, so the original “cooperative team MDP”
+  interpretation and ceiling argument are not current recommendations.
 - **Exemplary methodological hygiene:** witness-vs-bound discipline, explicit
   premise gates, a confidence number designed to be falsified rather than to
   decorate.
@@ -169,10 +184,10 @@ throughput-to-strength conversion beats our measured saturation curve.
   recoverable headroom; the GPU throughput bar) are themselves the hard open
   questions. The unconditional confidence is far lower; to the authors'
   credit, the document nearly says so.
-- **Its load-bearing cooperative objective requires John's explicit ruling** —
-  and once that ruling is granted, R1.1c table-native values reach the same
-  lever with a fraction of the machinery. Foundry is not the cheapest claim on
-  its own best idea.
+- **Its load-bearing cooperative objective was rejected by John's ruling.**
+  The original critique observed that, even if accepted, R1.1c table-native
+  values would reach the same lever with a fraction of the machinery. That
+  route is now outside the allowed policy class rather than an open fallback.
 
 ### Verdict
 
@@ -192,9 +207,9 @@ believing in Foundry:
   this exact rules identity** — i.e., whether 100 sits comfortably below the
   achievable ceiling.
 - It is CPU-friendly and severable.
-- It doubles as Foundry's own premise gate, as objective evidence for the
-  R1.1c cooperative-values program, and as a sanity check on the campaign
-  target itself.
+- Its unilateral and explicitly relaxed variants remain premise evidence for
+  seat-local Rival, and a sanity check on the campaign target itself. They are
+  not evidence for or authorization of the closed cooperative-values program.
 
 ## Recommended sequencing
 
@@ -205,9 +220,10 @@ believing in Foundry:
    either D1 outcome.
 4. **NX economics kill test** in parallel — offline, falsifies or funds the
    incremental-evaluator thesis before real spend.
-5. **Foundry as a system** only if tomography exposes large recoverable
-   headroom AND John rules for the cooperative objective — and even then,
-   R1.1c is the cheaper first claim on that lever.
+5. **Cascadia Rival synthesis** only if the preceding selfish-headroom and
+   economics gates pass. Foundry-Commons is withdrawn; its seat-local
+   contracts and chronology audits may enter only as measured optional
+   proposal/diagnostic modules.
 
 ## Meta-observation
 

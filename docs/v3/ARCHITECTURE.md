@@ -12,6 +12,15 @@ stochastic refill handling, and opponent-conditioned access. CascadiaFormer
 should model those public entities jointly, then use search to improve and
 verify action choice.
 
+The sole finalized post-D1 challenger is
+[Cascadia Rival](../../cascadia_rival_final_architecture_proposal_7_16.md):
+preserve this transformer-plus-Gumbel system as the frozen incumbent and
+literal fallback, use a much cheaper structured policy only after it proves
+terminal-difference correlation and trajectory economics, correct it with
+paired full-incumbent terminal continuations, and distill confirmed selfish
+improvements through one gated policy iteration at a time. Rival is research,
+not the current serving default, and has zero current-rules strength evidence.
+
 ## Literature Basis
 
 The architecture is intentionally no-frills:
@@ -305,13 +314,57 @@ confirmation, multiplicity-valid inference, forced-anchor bit identity, and a
 fresh symmetric four-seat gameplay gate. No current-rules strength claim
 exists.
 
-### Open clean-sheet challenger: Cascadia Foundry
+### Final post-D1 challenger: Cascadia Rival
+
+Full specification:
+[`cascadia_rival_final_architecture_proposal_7_16.md`](../../cascadia_rival_final_architecture_proposal_7_16.md).
+
+Rival makes Anchor the rollout-estimand spine and high-fidelity control.
+The incumbent owns the exact root action and every unresolved or invalid case.
+An NX-style exact semantic compiler and small D6-tied RivalNet may propose a
+challenger and run many cheap, exact-rule continuations, but they do not
+inherit incumbent fidelity.
+
+For one frozen challenger, Rival measures terminal active-seat differences at
+two fidelities. A paired panel runs both RivalNet and full-incumbent
+continuations; an independent extra panel runs RivalNet only. A fixed
+multifidelity control variate uses measured low/high correlation to estimate
+the full-incumbent difference more efficiently. Candidate selection,
+coefficient calibration, paired confirmation, and extra-low samples are
+disjoint. Any random coupling must preserve the exact dynamic-urn marginal or
+fall back to independent worlds.
+
+The fixed finite-panel coefficient includes its `n_L/(n_H+n_L)` allocation
+factor. The first lower bound is an analytic two-independent-sample bounded
+Hoeffding construction with a deterministic per-game error ledger. Stable
+correlation of either sign may help; empirical coverage tests alone cannot
+define the interval.
+
+Four isolated seat-relative instances each maximize their own expected raw
+terminal score. Opponent state predicts resource pressure, not utility. Table
+mean, donation, shared cross-seat memory/prices/plans, coordinated four-board
+genomes, and seat sacrifice are forbidden. Own-coordinate `max^n` remains the
+incumbent search heuristic consistent with that contract; paranoid minimax
+against a fictitious three-seat coalition is also excluded.
+
+`B_k` is the ordinary base/high-fidelity continuation, `W_k` is an offline
+shadow/one-seat labeling instrument, and `M_(k+1)` is the sole ordinary v1
+promotion/target candidate. Confirmed categorical preferences may form one new
+relabel tranche. A retrained candidate is a new identity and requires a fresh
+paired complete-game gate;
+local confidence does not prove whole-policy safety. Rival does not begin
+until D1 reaches its frozen boundary, a fresh baseline exists, unilateral
+selfish tomography shows headroom, and exact compiler/simulator economics
+pass. Its present target-reaching forecast is 25--35% within at most two
+iterations and 3,000 post-D1 john0 GPU-hours, not strength evidence.
+
+### Historical clean-sheet exploration: Cascadia Foundry
 
 Full specification:
 [`cascadia_foundry_original_architecture_proposal_7_16.md`](../../cascadia_foundry_original_architecture_proposal_7_16.md).
 
-Foundry is a research proposal, not a serving default. It replaces learned
-scalar value and ordinary move-tree search with exact terminal score contracts,
+Foundry is a historical research proposal, not a serving default. It replaces
+learned scalar value and ordinary move-tree search with exact terminal score contracts,
 reverse completion lattices, persistent four-board plans, tiny public-state
 controller programs, and atomic shared-resource scarcity prices. Independent
 quality-diversity archives are canonicalized by semantic cell and lineage; the
@@ -328,10 +381,11 @@ simulated inside every continuation.
 Foundry-Sovereign instantiates the same seat-local capsule four times with
 isolated memory and cyclic seat equivariance. Foundry-Commons is explicitly a
 single centralized policy with shared public memory/prices and possible
-resource donation. Learned table-total serving remains closed. Commons needs
-materially new exact tomography evidence plus John's methodology ruling on
-central control, objective, shared state, donation, asymmetry, and fairness
-before gameplay.
+resource donation. John ruled on 07-16 that the allowed policy class is
+explicitly non-cooperative. Commons, table utility, donation, joint four-board
+planning, shared cross-seat state/prices, and the associated conditional 76%
+forecast are therefore withdrawn rather than queued. Learned table-total
+serving also remains scientifically closed.
 
 Every hidden-world cohort pins controller, blueprint, memory, and mutation
 hashes across lanes. Scenario RNG drives exact state-dependent urn returns and
@@ -340,10 +394,11 @@ produce identical memory/actions. Static terminal contracts prove spatial
 score witnesses, not acquisition history; chronology claims require complete
 `GameState` replay.
 
-The proposal is an open post-D1 hypothesis with zero current-rules strength
-evidence. Its 76% forecast is conditional on a valid baseline, Commons ruling,
-an untouched paired honest-controller headroom lower bound of at least 2.5
-mean-seat points, and a precision-feasible local-5090 implementation.
+The proposal has zero current-rules strength evidence. Only Sovereign's
+single-seat score contracts, chronology/nonanticipativity audits, and
+commitment-collapse diagnostics survive as optional Rival modules, where they
+must earn admission through natural-frequency confirmed-challenger and
+gameplay gates.
 
 ## Promotion Philosophy
 

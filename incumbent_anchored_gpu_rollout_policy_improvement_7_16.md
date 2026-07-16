@@ -7,6 +7,13 @@ evidence
 **Objective:** exceed a mean seat score of 100 over 1,000 four-player games,
 before habitat bonus, under one pinned rules and serving identity
 
+**Final disposition:** Cascadia-Anchor is the policy-improvement spine and
+high-fidelity control of
+[Cascadia Rival](cascadia_rival_final_architecture_proposal_7_16.md). Rival
+adds a statistically controlled low/high-fidelity continuation bridge,
+unilateral headroom gates, and frozen rollout-policy iteration; Anchor remains
+the clean full-incumbent estimand wherever its nested cost is affordable.
+
 ## Executive verdict
 
 The architecture I have the most confidence can produce a **positive
@@ -85,17 +92,18 @@ This proposal is therefore:
   sampled-greedy continuation and a value blend, not the complete serving
   incumbent.
 
-The previous clean-slate architecture proposal remains the higher-upside,
-higher-risk companion:
+The previous clean-slate architecture proposal remains the higher-risk
+structured representation and systems predecessor:
 [`stochastic_board_game_ai_architecture_research_7_16.md`](stochastic_board_game_ai_architecture_research_7_16.md).
 
-The third proposal is the most radical:
+The historical third proposal was the most radical:
 [`cascadia_foundry_original_architecture_proposal_7_16.md`](cascadia_foundry_original_architecture_proposal_7_16.md)
 replaces scalar evaluation and ordinary search with exact terminal score
-contracts and a committed reactive program capsule. Foundry has the highest
-clean-sheet upside; its 76% forecast is conditional on unmeasured premise
-gates, and it has zero current-rules strength evidence. Anchor remains the
-lowest-downside first serving-wrapper preflight.
+contracts and a committed reactive program capsule. John rejected its
+cooperative Commons class and withdrew the associated 76% forecast. Anchor is
+now the high-fidelity spine of
+[Cascadia Rival](cascadia_rival_final_architecture_proposal_7_16.md); no branch
+has current-rules strength evidence.
 
 ## 1. Evidence labels and claim boundary
 

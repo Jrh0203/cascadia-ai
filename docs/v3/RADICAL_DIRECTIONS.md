@@ -147,13 +147,15 @@ reopen this direction.
 [Cascadia-Anchor](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md),
 and
 [Cascadia Foundry](../../cascadia_foundry_original_architecture_proposal_7_16.md).
+Their finalized adversarial synthesis is
+[Cascadia Rival](../../cascadia_rival_final_architecture_proposal_7_16.md).
 Anchor sharpens the requirement: a cheap learned/direct policy may screen
 rollouts, but only a full serving-incumbent continuation supports an
 improvement claim over the current policy. That creates nested outer physical
 worlds and inner no-peek incumbent search worlds. GPU residence is therefore
-a measured feasibility question, not an assumed 10x gain. Foundry instead
-commits a frozen reactive population capsule; the exact capsule, not an
-individual discovery genome, must execute inside every terminal scenario.
+a measured feasibility question, not an assumed 10x gain. Foundry's
+cooperative capsule route was withdrawn by John's 07-16 objective ruling;
+Rival retains only its seat-local contracts and chronology diagnostics.
 
 **Idea.** The serving/generation bottleneck is per-ply lockstep: every
 simulated ply is a bridge round-trip. Replace CPU greedy rollouts with a
@@ -381,6 +383,14 @@ upside.
 
 ## 9. Cascadia Foundry: terminal score-contract program synthesis
 
+**Resolution (2026-07-16): historical predecessor, not an open combined
+recommendation.** John ruled that the allowed policy class is explicitly
+non-cooperative. Foundry-Commons, table utility, donation, joint four-board
+planning, shared cross-seat prices/memory, and the conditional 76% forecast
+are withdrawn. Foundry-Sovereign's single-seat contracts, chronology and
+nonanticipativity tests, and commitment-collapse diagnostics survive only as
+optional components of [Cascadia Rival](../../cascadia_rival_final_architecture_proposal_7_16.md).
+
 Full original proposal, red-team corrections, conditional forecast, and
 nearest-prior-art ledger:
 [`cascadia_foundry_original_architecture_proposal_7_16.md`](../../cascadia_foundry_original_architecture_proposal_7_16.md).
@@ -414,9 +424,9 @@ physical seed, or future return schedule.
 equivariant seat-local capsules. Foundry-Commons is openly centralized: it
 shares public plans, prices, and memory, optimizes exact table mean, and may
 donate a resource to a later controlled seat. The two CI-negative learned
-table-total serving variants remain closed. Commons requires materially new
-exact tomography evidence and John's ruling on central control, shared state,
-donation, seat asymmetry, and fairness before gameplay.
+table-total serving variants remain closed. John's 07-16 objective ruling
+withdrew Commons before gameplay; the former premise gates below remain only
+as the historical design record.
 
 **Prior-art boundary.** Proof-carrying plans, MAP-Elites, GFlowNets, goal
 regression, scenario policy selection, ISMCTS strategy fusion, programmatic
@@ -428,7 +438,8 @@ support, committed capsule execution, and commitment-collapse language growth.
 The targeted search found no exact combination; it does not claim proof of
 universal nonpublication.
 
-**Falsifier.** Report static design, chronological replay, known-world, honest
+**Historical falsifier.** The original proposal would have reported static
+design, chronological replay, known-world, honest
 public-controller, representation, and production stages as certified
 `[feasible lower, valid relaxation upper]` intervals—not an assumed ordered
 heuristic ladder. A valid coordination upper bound below 10 table points kills
@@ -440,29 +451,75 @@ the roughly four-seat table-return variance. Full dynamic-urn/cohort/trace
 parity and the precision-required budget must fit under 10 seconds on the
 local 5090. A fresh paired gameplay gate remains mandatory.
 
-**Status:** open post-D1, highest-upside clean-sheet hypothesis; zero
-current-rules strength evidence. Its 76% forecast is conditional on baseline,
-methodology, honest-headroom, and throughput premise gates—not an unconditional
-probability today. It does not displace D1.
+**Status:** historical clean-sheet exploration; zero current-rules strength
+evidence. Commons and its forecast are withdrawn. Seat-local modules must earn
+admission through Rival's natural-frequency confirmed-challenger and gameplay
+gates. It does not displace D1.
+
+## 10. Cascadia Rival: adversarial multifidelity terminal policy iteration
+
+Full final proposal, red-team report, implementation blueprint, calibrated
+forecast, and source ledger:
+[`cascadia_rival_final_architecture_proposal_7_16.md`](../../cascadia_rival_final_architecture_proposal_7_16.md).
+
+**Idea.** Preserve the exact transformer-plus-Gumbel incumbent action as the
+mandatory anchor. Let a small NX-style structured policy search broadly and
+propose one challenger. Compare challenger and anchor in active-seat exact
+terminal own score. Use many cheap RivalNet continuations plus a smaller paired
+panel of true full-incumbent continuations in a frozen multifidelity control-
+variate estimator. Override only above a practical lower-bound margin;
+otherwise execute the anchor literally. Feed confirmed corrections into one
+frozen relabel/retrain/game-gate iteration at a time.
+
+**Adversarial contract.** Four isolated seat-relative policy instances each
+maximize their own expected raw terminal score. Future seats choose their own
+value coordinate (`max^n` / explicit selfish policy simulation). Opponent
+boards inform public resource-pressure prediction only. No table utility,
+donation, cross-seat memory or prices, coordinated genome, seat sacrifice, or
+paranoid three-seat coalition is permitted.
+
+**Novel bridge.** Rival-MF applies multifidelity Monte Carlo to the
+challenger-minus-incumbent terminal action difference. A cheap continuation is
+not renamed “the incumbent”; its measured low/high correlation reduces
+variance while occasional true incumbent continuations retain the
+high-fidelity estimand. Selection, coefficient calibration, paired high/low
+confirmation, and extra-low panels are disjoint. Dynamic-urn coupling must
+prove action-independent marginals or fall back to independent worlds.
+
+**Falsifier.** After D1, establish a fresh canonical baseline and run
+unilateral selfish tomography. Then require exact compiler/simulator parity,
+low-fidelity trajectory speed above the greater of roughly 5x and the absolute
+power-derived rate, useful-challenger retention, stable selected-distribution
+low/high correlation of either sign, roughly 3x equal-wall variance or squared
+valid-confidence-width reduction, valid coverage, actual one-seat evidence,
+and a fresh paired symmetric game gate for the ordinary distilled candidate.
+Exact terminal score removes bootstrap bias, not aleatoric variance. Local
+one-deviation bounds do not prove composed policy safety.
+
+**Status:** sole finalized post-D1 architecture recommendation; zero
+current-rules strength evidence; present subjective probability of reaching
+the unchanged 100-point target is 25--35%. It does not displace D1. Confidence
+above 75% is not defensible before direct fresh gameplay places the frozen
+policy safely above target.
 
 ## Explicitly not on this list
 
 Belief modeling / bag inference (oracle LOST — information is not the
 constraint), checkpoint output-ensembles (shared-bias, measured 4-ways),
 input-symmetry tricks (representation is already invariant), learned/leaf
-serving-side cooperative objectives (noise multiplier, measured twice;
-Foundry-Commons remains blocked pending materially new exact evidence), bigger
+serving-side cooperative objectives or Foundry-Commons (measured twice and now
+outside the allowed policy class), bigger
 monolithic models on the same labels (measured three ways), learned dynamics
 for rules the exact engine already owns, ordinary legacy-NNUE revival, and
 blind common-random-number pairing without a positive covariance audit.
 
 *Current sequencing: do not disturb the fully authorized D1 chain. After D1
-reaches its frozen boundary, #8 begins only with semantic parity,
-full-incumbent feasibility, and a shadow audit; #9 begins only with the
-central-objective ruling boundary, score-contract semantics, certified
-tomography, and a CPU capsule; #7 begins with the bounded offline
-representation/covariance bakeoff. Validated GPU-engine work may be shared,
-but no proposal inherits another’s strength claim. A full port is conditional
-on its own preflight. #4 remains the common structural systems enabler; #5 is
-closed; #6 remains a later diversity mechanism rather than a serving
-ensemble.*
+reaches its frozen boundary, direction 10 is the combined program: fresh
+baseline and unilateral tomography, direction 8 as the high-fidelity control,
+and direction 7's bounded compiler/engine economics, then RivalNet/Rival-MF
+only if each premise passes. Direction 9 is historical; only its seat-local
+diagnostics may earn admission to direction 10. Validated GPU-engine work may
+be shared, but no component inherits another's strength claim. A full port is
+conditional on its own preflight. Direction 4 remains the common structural
+systems enabler; direction 5 is closed; direction 6 remains a later
+diagnostic/diversity mechanism rather than a serving ensemble.*
