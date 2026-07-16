@@ -9,13 +9,14 @@
 [V3 README](docs/v3/README.md) and
 [CAMPAIGN_STATE](docs/v3/CAMPAIGN_STATE.md)
 
-**Implementation state:** 0% -- plan only; no Rival implementation source,
-test, scientific artifact, seed allocation, job, or GPU process has been
-created by this planning task
+**Implementation state:** the authorized CPU-only P0/P0.5/P1 engineering
+machinery is implemented on isolated branch `feat/rival-cpu-machinery`; the
+release-scale CPU-1 battery, production-policy integration, scientific
+artifacts, seeds, jobs, and every accelerator phase remain unrun
 
 **Current permit state:** `DENIED`
 
-> **STATUS: PLAN ONLY -- RIVAL GPU EXECUTION IS NOT AUTHORIZED.**
+> **STATUS: CPU MACHINERY IMPLEMENTED -- RIVAL GPU EXECUTION IS NOT AUTHORIZED.**
 >
 > This document is not an experiment preregistration, launch authorization,
 > queue instruction, or permission to inspect partial D1 output. It authorizes
@@ -24,11 +25,13 @@ created by this planning task
 > or modification of the existing D1 chain. Implementation commits never
 > imply launch permission.
 
-This document makes the path from the research proposal to executable,
-reviewable software explicit. It deliberately ends the first implementation
-batch at a CPU-only and D1-dependent wall. Every future GPU phase requires a
-new, explicit user instruction, a phase-specific machine-readable permit, and
-the ordinary campaign preregistration and safety checks.
+This document now records both the path and the completed first CPU engineering
+batch. The implementation deliberately stops at the CPU-only and D1-dependent
+wall. Every future GPU phase still requires a new, explicit user instruction,
+a phase-specific machine-readable permit, and the ordinary campaign
+preregistration and safety checks. The exact implemented contracts and honest
+holds are documented in
+[`RIVAL_CPU_MACHINERY.md`](docs/v3/RIVAL_CPU_MACHINERY.md).
 
 ## 1. Executive implementation decision
 
@@ -42,7 +45,7 @@ future transformer-plus-Gumbel action.
 Proceed in this order:
 
 ```text
-P0 identity and adversarial contract
+P0 identity and fail-closed contract
   -> P0.5 bounded-inference and power proof
   -> P1 canonical CPU reference harness
   -> HARD WAIT for the durable D1 boundary
@@ -59,8 +62,8 @@ P0 identity and adversarial contract
   -> P9 paired promotion evidence and absolute target battery
 ```
 
-The first authorized implementation batch should contain only P0, P0.5, and
-the parts of P1 that do not modify a live D1 dependency. It ends with tested
+The first authorized implementation batch contained only P0, P0.5, and the
+parts of P1 that do not modify a live D1 dependency. It ends with tested
 CPU libraries, schemas, fixtures, a dry-run validator, and a parametric
 theorem/power envelope. It adds no Rival accelerator dependency, launch path,
 scientific seed, or strength claim.
@@ -129,6 +132,14 @@ P0--P1 do not:
 - deploy a wrapper or change serving behavior;
 - modify the D1 chain, queue, waiters, or inputs; or
 - read a live arm's partial score.
+
+The execution trust model assumes trusted operators and trusted local runners;
+there is no direct attacker trying to corrupt an experiment. Fail-closed
+checks target realistic campaign failures: implementation mistakes, stale or
+mismatched artifacts, accidental seed reuse, crashes and partial writes,
+resource runaway, and analyses that drift from preregistration. The machinery
+does not claim to sandbox an administrator or arbitrary code already executing
+inside the verifier process.
 
 ### 2.4 Values that remain hard-blocked
 
@@ -205,7 +216,7 @@ The historical terminal policy-improvement code in
 determinism test ideas. Its pattern policy and legacy one-sided interval are
 not production `B_k`, not Rival-MF, and not funding evidence.
 
-### 3.2 Planned source tree
+### 3.2 Implemented CPU tree and held future tree
 
 ```text
 crates/cascadia-rival/
@@ -220,12 +231,15 @@ crates/cascadia-rival/
         rng.rs               # explicit physical/policy/search/tie domains
         policy.rs            # FrozenPolicy accepts public input only
         scenario.rs          # independent-world reference sampling
-        compiler.rs          # dense/component/incremental semantic contract
+        compiler.rs          # implemented dense oracle; optimized variants held
         bounds.rs            # certified score-difference bounds
         dynamic_urn.rs       # coupling proof/orchestration, not bag ownership
         terminal.rs          # forced action and terminal-pair protocol
         tomography.rs        # T0--T4 witnesses and certificates
         ledger.rs            # durable canonical records and replay hashes
+    tests/
+        cpu_reference_battery.rs  # 125 games / exactly 10,000 transitions
+        rival_contract_cli.rs     # bounded verifier input contract
 
 crates/cascadia-game/src/
     game.rs                  # POST-D1 P2b chance injection in draw/return paths
@@ -245,41 +259,50 @@ crates/cascadia-v3-policy/   # created/extracted only after the D1 boundary
 
 cascadiav3/real-root-exporter/src/
     model_bridge.rs          # existing bridge implementation
-    rival_adapter.rs         # thin I/O wrapper over shared B_k core
+    rival_adapter.rs         # future thin I/O wrapper over shared B_k core
 
 cascadiav3/src/cascadiav3/rival/
     __init__.py
-    schema.py
-    manifest.py
-    cohorts.py
-    multifidelity.py
-    bounds.py              # verifies/consumes Rust range certificates only
-    coverage.py
-    power.py
-    analysis.py
-    appeals.py
-    policy.py
-    training_view.py
-    train.py
-    preflight.py
+    schema.py               # additive schemas and canonical artifact I/O
+    manifest.py             # externally byte/content-pinned root manifests
+    cohorts.py              # allocation registry, cohorts, seed openings
+    panel_plan.py           # exact preregistered S/H/L unit schedules
+    multifidelity.py        # fixed estimator and coefficient artifact
+    bounds.py               # consumes Rust range certificates only
+    coverage.py             # registry-derived census and error ledger
+    power.py                # symbolic work/memory envelope
+    analysis.py             # complete-source-game clustered summaries
+    appeals.py              # typed one-look appeal state machines
+    appeal_journal.py       # immutable crash-reconstructible journal
+    terminal_evidence.py    # pinned Rust verifier and receipt join
+    training_view.py        # held-P8 sidecar and expert-data join
+    preflight.py            # source-locked accelerator denial
 
 cascadiav3/tests/
     fixtures/rival/
+    test_cpu_test_guard.py
+    test_rival_appeal_journal.py
+    test_rival_bounds.py
     test_rival_schema.py
-    test_rival_manifest.py
     test_rival_cohorts.py
     test_rival_multifidelity.py
     test_rival_coverage.py
-    test_rival_nonanticipativity.py
+    test_rival_panel_plan.py
+    test_rival_power.py
+    test_rival_preflight.py
+    test_rival_terminal_evidence.py
     test_rival_training_view.py
-    test_rival_policy.py
-    test_rival_cpu_only.py
 
 cascadiav3/rival-engine/     # after relevant P2/(optional P3) gates + BUILD permit
     Cargo.toml
     src/                     # resident runtime against shared policy/backend traits
     cuda/                    # accelerator feature, disabled by default
 ```
+
+The tree above records the implemented pre-GPU files. `cascadia-v3-policy`,
+`rival-engine`, exporter extraction, optimized compiler implementations, and
+trainer integration remain future/held paths; no placeholder `rival/policy.py`
+or `rival/train.py` is claimed to exist.
 
 Fixtures belong under `cascadiav3/tests/fixtures/rival/`; the superficially
 similar `cascadiav3/fixtures/rival/` path is ignored by the repository.
@@ -539,6 +562,11 @@ cascadiav3.rival_power_envelope.v1
 cascadiav3.rival_gpu_permit.v1
 cascadiav3.rival_preference_shard.v1
 cascadiav3.rival_training_view.v1
+cascadiav3.rival_terminal_panel_plan.v1
+cascadiav3.rival_coefficient_calibration.v1
+cascadiav3.rival_potential_root_census.v1
+cascadiav3.rival_error_family_ledger.v1
+cascadiav3.rival_allocation_registry.v1
 ```
 
 Register these additively in `cascadiav3/src/cascadiav3/schema.py`.
@@ -547,7 +575,8 @@ Register these additively in `cascadiav3/src/cascadiav3/schema.py`.
 
 - root hash and complete ordered action/menu hashes;
 - incumbent and exactly one selected challenger index;
-- categorical preference and `preference_valid`;
+- categorical preference (`challenger_over_incumbent` or `unlabeled`) and
+  `preference_valid`;
 - one preregistered `preference_weight`;
 - activation stratum and natural-frequency weight;
 - root-cohort role and `S/H/L/A` panel identities;
@@ -560,8 +589,11 @@ may be inferred from the other.
 
 ## 5. Cohorts, panels, and statistical units
 
-Rival has two independent allocation axes. Their names and hashes must appear
-in every manifest.
+Rival has two independent allocation axes, governed together by one externally
+byte/content-pinned allocation registry. A root manifest binds exactly one
+root-cohort assignment and requires `complete_game_seed_role = null`;
+promotion/target complete-game assignments do not masquerade as root fields.
+The registry owns both axes, their commitments, and their disjointness.
 
 ### 5.1 Root cohorts
 
@@ -578,6 +610,18 @@ independent.
 Promotion and target are separate complete-game seed roles, with one complete
 game as the scientific unit. They are not root cohorts and cannot share seeds
 with each other or with any earlier complete-game role.
+
+The registry's `root_source_set_sha256` binds the sorted exact
+`(root_id, source_game_id, cohort_role)` projection without creating a
+manifest/census/error-ledger cycle. A potential-root census carries the same
+projection as `source_root_set_sha256` plus the exact
+`allocation_registry_identity`, and its eligible root IDs must equal the
+registry-derived family universe. Before any run, typed `u64` root and
+complete-game seed openings must rehash to every commitment; realized values,
+not just commitment strings, must be globally disjoint across both axes.
+Any decision-grade source-game-clustered summary must consume that externally
+pinned registry and exactly cover the selected family's registered roots and
+root-to-source-game mapping; truncated or reassigned rows fail closed.
 
 ### 5.2 Within-root panels
 
@@ -610,10 +654,11 @@ root's fixed panel incomplete and prevents a label. It is never inserted into
 an inferential mean unless a preregistered bounded fallback supplies a valid
 score.
 
-## 6. P0 -- identity, schema, and adversarial contract
+## 6. P0 -- identity, schema, and fail-closed contract
 
-**Authorization:** CPU implementation only, after a separate implementation
-instruction. Not executed by this planning task.
+**Authorization:** the separate CPU-only implementation instruction was
+received and executed on the isolated feature branch. Accelerator execution
+remains unauthorized.
 
 **Estimated engineering effort:** 3--5 focused engineer-days.
 
@@ -653,6 +698,9 @@ instruction. Not executed by this planning task.
   event priority.
 - No Rival label schema contains table-total or table-mean utility.
 - Every missing or substituted identity field fails closed.
+- Generic JSON admission uses a stable no-follow descriptor and an inclusive
+  64 MiB ceiling; pinned scientific JSON additionally requires canonical,
+  single-link bytes and an explicit external file hash.
 - The phase checker rejects absent, expired, wrong-revision, wrong-command,
   wrong-preregistration, and over-budget permits.
 - The P0 preflight uses only the Python standard library and leaves `torch`
@@ -664,7 +712,7 @@ instruction. Not executed by this planning task.
 
 - JSON schemas and locked golden fixtures;
 - CPU-only source-provenance test;
-- adversarial-contract and nonanticipativity report from fixtures;
+- identity/fail-closed-contract and nonanticipativity report from fixtures;
 - `rival_preflight --validate-only` returning `DENIED` without a permit; and
 - an identity field matrix documenting every hash and owner.
 
@@ -1209,7 +1257,7 @@ later explicit TRAIN instruction plus phase-specific permit is issued.
 **Estimated engineering effort:** 10--20 engineer-days plus authorized
 training.
 
-- Freeze broad, hard, and bounded adversarial root exposures.
+- Freeze broad, hard, and bounded stress-case root exposures.
 - Select one challenger in S and discard S from confirmation inference.
 - Confirm on fresh H/L panels for the admitted multifidelity branch, or fresh
   H-only panels under the separately identified high-fidelity branch; the two
@@ -1265,8 +1313,10 @@ the absolute target.
 
 ## 18. First implementation batch as reviewable changes
 
-These are planned PR/commit slices, not actions taken by this document. Keep
-each slice independently reviewable and green.
+These were the reviewable implementation slices. Slices 1--8 are implemented
+and CPU-tested on the isolated feature branch. Slice 10's reusable validator is
+implemented, but its release-scale battery remains explicitly unrun. Slices 9
+and 11 remain held at their later evidence boundaries.
 
 ### Slice 1 -- contract skeleton
 
@@ -1348,8 +1398,9 @@ dense-only `compiler.rs` oracle.
 and PR-scale rules/chronology suites pass. Proxy policies remain visibly typed
 as proxies.
 
-The first authorized batch is Slices 1--8. The remaining slices are planned
-but held at later evidence boundaries.
+The first authorized batch is Slices 1--8, and those slices are implemented.
+The optimized-compiler, release-scale, and exporter work below retain their
+separate status rather than being inferred from the PR-sized tests.
 
 ### Slice 9 -- semantic compiler parity implementations, held for P3
 
@@ -1362,15 +1413,22 @@ rotation handling.
 parity, invalidation completeness, all 12 symmetries, and overflow cases pass
 at PR scale.
 
-### Slice 10 -- pre-BUILD release audit, held for P3
+### Slice 10 -- release-scale CPU audit, runner implemented; battery unrun
 
-**Files:** validator script, artifact manifest, test documentation, and this
-plan's completion ledger.
+**Files:** the implemented `validate_rival_pre_gpu.sh`, future release-battery
+driver/receipt, artifact manifest, test documentation, and this completion
+ledger.
 
 **Done when:** the million-transition/10,000-game CPU release suite is clean,
 all expected artifacts hash-verify, no Rival accelerator feature exists or can
 be selected by the pre-GPU runner, and the project stops at the BUILD
 authorization wall.
+
+The ordinary pre-GPU validator is green, but Slice 10 is not done because the
+10,000-game/1,000,000-transition battery and its durable engineering receipt
+have not run. That battery is independently runnable on CPU; it is not blocked
+on P3's optimized compiler implementations and cannot answer the production
+policy premise.
 
 ### Slice 11 -- exporter extraction, deliberately held for the D1 boundary
 
@@ -1447,7 +1505,7 @@ Permits are deliberately separate:
 - **Promotion authority:** John's existing reserved authority and a fresh
   preregistration; never implied by A--E.
 
-This plan-only turn did not run `campaign_status.sh`, `ssh john0`,
+The planning and CPU implementation turns did not run `campaign_status.sh`, `ssh john0`,
 `run_paired_gate.sh`, a queue/waiter script, or any command containing
 `--device cuda`, `--device mps`, or an auto-selecting device mode. CPU-only
 implementation does not need them. Immediately before a later remote/GPU
@@ -1455,11 +1513,11 @@ phase, project rules require a fresh read-only `campaign_status.sh` safety
 check; that check occurs only under the new phase instruction and must confirm
 that no live job will be displaced.
 
-## 21. Planned CPU-only verification commands
+## 21. CPU-only verification commands
 
-These commands document the later engineering gate. **They were not executed
-by this planning task.** Run them only after CPU implementation is authorized,
-and keep the explicit CPU device contract.
+These commands define the engineering gate used by the authorized CPU
+implementation. The implementation receipt below records the commands that
+were actually run. Every invocation keeps the explicit CPU device contract.
 
 ```bash
 git diff --check
@@ -1513,22 +1571,26 @@ env -u PYTORCH_CUDA_ALLOC_CONF \
   CASCADIA_CPU_ONLY_TESTS=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PYTHONPATH=cascadiav3/src \
-  ./venv/bin/python -m unittest discover \
+  .venv/bin/python -m unittest discover \
   -s cascadiav3/tests -p 'test_rival_*.py' -v
 ```
 
 The full Python discovery command is admitted to this CPU-only block only after
 `CASCADIA_CPU_ONLY_TESTS=1` is implemented as a checked guard that skips or
-rejects all CUDA/MPS-specific tests, including real MPS tensor creation.
+rejects all CUDA/MPS-specific tests, including real MPS tensor creation. It
+also requires a Python 3.12 environment with Torch installed; the lightweight
+development `.venv` intentionally does not satisfy that optional test
+dependency.
 
 ```bash
+test -x "${CPU_TORCH_PYTHON:?set CPU_TORCH_PYTHON to Python 3.12 with Torch}"
 env -u PYTORCH_CUDA_ALLOC_CONF \
   CUDA_VISIBLE_DEVICES="" \
   CASCADIA_DEVICE=cpu \
   CASCADIA_CPU_ONLY_TESTS=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PYTHONPATH=cascadiav3/src \
-  ./venv/bin/python -m unittest discover -s cascadiav3/tests -v
+  "$CPU_TORCH_PYTHON" -m unittest discover -s cascadiav3/tests -v
 ```
 
 ```bash
@@ -1537,7 +1599,7 @@ env CUDA_VISIBLE_DEVICES="" \
   CASCADIA_CPU_ONLY_TESTS=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PYTHONPATH=cascadiav3/src \
-  ./venv/bin/python -m cascadiav3.rival.coverage \
+  .venv/bin/python -m cascadiav3.rival.coverage \
   --fixtures cascadiav3/tests/fixtures/rival \
   --coverage-design cascadiav3/tests/fixtures/rival/coverage_design.json \
   --device cpu \
@@ -1550,7 +1612,7 @@ env CUDA_VISIBLE_DEVICES="" \
   CASCADIA_CPU_ONLY_TESTS=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PYTHONPATH=cascadiav3/src \
-  ./venv/bin/python -m cascadiav3.rival.preflight \
+  .venv/bin/python -m cascadiav3.rival.preflight \
   --fixture cascadiav3/tests/fixtures/rival/preflight_fixture.json \
   --device cpu \
   --validate-only
@@ -1562,7 +1624,7 @@ env CUDA_VISIBLE_DEVICES="" \
   CASCADIA_CPU_ONLY_TESTS=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PYTHONPATH=cascadiav3/src \
-  ./venv/bin/python -m cascadiav3.rival.cohorts validate \
+  .venv/bin/python -m cascadiav3.rival.cohorts validate \
   --manifest cascadiav3/tests/fixtures/rival/panel_manifest.json \
   --require-panels S,H,L \
   --require-disjoint calibration,coverage \
@@ -1578,6 +1640,36 @@ The validator script itself receives a syntax check:
 ```bash
 bash -n cascadiav3/scripts/validate_rival_pre_gpu.sh
 ```
+
+### 21.1 Executed implementation receipt (2026-07-16)
+
+The authorized batch was verified in the isolated
+`feat/rival-cpu-machinery` worktree. All Python commands that could reach
+Torch set `CUDA_VISIBLE_DEVICES=""`, `CASCADIA_DEVICE=cpu`, and
+`CASCADIA_CPU_ONLY_TESTS=1`; the full suite used the repository's existing
+Python 3.12/Torch environment via
+`/Users/johnherrick/cascadia/venv/bin/python`.
+
+| Executed gate | Result |
+| --- | --- |
+| `bash cascadiav3/scripts/validate_rival_pre_gpu.sh` | PASS: expected default denial plus 80 Rust library, 2 binary, 1 PR battery, 3 CLI, 2 doc, 4 provenance, 10 CPU-guard, 13 bridge, 15 trainer, and 153 Rival Python tests; Clippy and Ruff passed |
+| `cargo check --workspace` | PASS; one pre-existing `cascadia-api` dead-code warning |
+| `cargo test --workspace` | PASS: 310 active tests; one pre-existing ignored timing harness |
+| `cargo test --manifest-path cascadiav3/real-root-exporter/Cargo.toml` | PASS: 68 tests |
+| full guarded Python discovery | PASS: 550 tests, 48 intentional skips, 116.175 seconds |
+| static/format gates | PASS: scoped Rustfmt, Ruff check/format, shell syntax, `git diff --check`, and temporary-marker scan |
+
+The 125-game PR battery exercised exactly 10,000 deterministic randomized
+reachable transitions with zero mismatches. The full Python suite uncovered
+and fixed an order-dependent preflight assertion and a non-hermetic dependency
+on an ignored queue example; that parser case now uses tracked test data, not
+an operational queue.
+
+No GPU/MPS/CUDA discovery or initialization, remote command, campaign-status
+query, scientific seed allocation, run launch, training, generation, gameplay
+gate, or partial-result read occurred. D1 was not queried. CPU-1 release scale,
+production `B_k`, P2/P3, trainer activation, GPU work, and all scientific
+claims remain held exactly as specified above.
 
 ## 22. Durable artifact and evidence layout
 
@@ -1640,7 +1732,7 @@ role self-approves its prohibited decision.
 | Statistics owner | Estimator, bounds, power, coverage, error ledger | Model selection. |
 | Model owner | Compiler, RivalNet, trainer | Coverage exceptions. |
 | Experiment operator | Preregistration, seed registry, durable artifacts | Champion promotion. |
-| Red-team reviewer | Contract audit, mismatch/kill decision | Implementation shortcuts. |
+| Independent correctness reviewer | Contract audit, mismatch/kill decision | Implementation shortcuts. |
 | John | Rules-design rulings, promotion, explicit execution authority | None delegated by this plan. |
 
 Required reviews before GPU-0:
@@ -1650,9 +1742,9 @@ Required reviews before GPU-0:
 3. statistical theorem and coverage review;
 4. provenance/artifact replay review;
 5. systems memory/timeout/fail-closed review; and
-6. independent red-team sign-off on every active kill criterion.
+6. independent failure-mode review of every active kill criterion.
 
-## 24. Red-team risk register
+## 24. Failure-mode risk register
 
 | Risk | Earliest decisive test | Required response |
 | --- | --- | --- |
@@ -1712,31 +1804,36 @@ GPU-dependent lanes remain held at their explicit walls.
 
 ### 26.1 Ready to begin CPU implementation
 
-- [ ] Explicit user instruction to implement, distinct from this plan-only
+- [x] Explicit user instruction to implement, distinct from this plan-only
   request.
-- [ ] Clean, synchronized worktree or isolated named worktree confirmed.
-- [ ] No edit overlaps another session's files.
-- [ ] P0 slice and CPU-only constraint recorded in the working plan.
-- [ ] No remote/GPU command included in the active task.
+- [x] Clean, synchronized isolated named worktree confirmed.
+- [x] No edit overlaps another session's files.
+- [x] P0 slice and CPU-only constraint recorded in the working plan.
+- [x] No remote/GPU command included in the active task.
 
 ### 26.2 First batch done
 
-- [ ] P0 identities, schemas, observation boundary, RNG, and default-deny
+- [x] P0 identities, schemas, observation boundary, RNG, and default-deny
   preflight pass.
-- [ ] P0.5 estimator, certified bounds, error ledger, synthetic coverage, and
+- [x] P0.5 estimator, certified bounds, error ledger, synthetic coverage, and
   symbolic/grid power tooling pass as engineering artifacts; the real power
   verdict remains `UNRESOLVED` until post-D1 P2 measurements.
-- [ ] P1 CPU chronology, replay, cohort, nonanticipativity, overflow, and dense
-  semantic-oracle fixtures pass at release scale.
-- [ ] Every artifact hash and source digest verifies.
-- [ ] No accelerator feature or dependency is enabled in newly added Rival
+- [x] P1 CPU chronology, replay, cohort, nonanticipativity, and dense
+  semantic-oracle fixtures pass, including a deterministic 125-complete-game /
+  exactly 10,000-randomized-reachable-transition PR battery (exceeding the
+  100-game minimum).
+- [ ] The separate 10,000-game/1,000,000-transition release-scale CPU-1
+  battery passes. It was intentionally not run and no CPU-1 claim is made.
+- [x] Every exercised fixture/artifact hash and source digest verifies.
+- [x] No accelerator feature or dependency is enabled in newly added Rival
   code, and no GPU/remote action occurred.
-- [ ] Every change inside the D1 source closure, including exporter/shared-
-  policy extraction, remains unmerged until the durable D1 boundary.
+- [x] Every implemented change inside the D1 source closure remains unmerged
+  until the durable D1 boundary. Exporter/shared-policy extraction did not
+  occur.
 - [ ] README and implementation status are current and committed; if D1 is
   still live, implementation commits are pushed only to the isolated feature
   branch and are not merged into `main`.
-- [ ] Work stops at the D1/authorization wall.
+- [x] Work stops at the D1/authorization wall.
 
 ### 26.3 Whole program done
 
@@ -1748,19 +1845,21 @@ GPU-dependent lanes remain held at their explicit walls.
   four-player, pre-habitat-bonus identity.
 - [ ] Complete provenance, raw ledgers, hashes, and verdict are durable.
 
-## 27. Immediate handoff
+## 27. Implementation handoff
 
-Nothing in this plan should be executed from the current request. The next
-action, if John later authorizes implementation, is **Slice 1 only**: create an
-isolated CPU-only feature worktree, add the contract skeleton and provenance
-coverage, run its local CPU tests, review, and commit. If D1 is still live,
-push only the isolated feature branch; do not merge or deploy it. Then proceed
-slice by slice through P0/P0.5/P1 and stop at the D1 wall.
+The authorized CPU batch is complete on the isolated feature branch and stops
+at the intended wall. It is not merged or deployed. The next scientifically
+meaningful action is not more proxy engineering: it is the durable D1
+boundary, followed only by a new explicit P2 instruction, a phase-specific
+permit, a fresh read-only campaign safety check, preregistration, and actual
+production-policy premise measurements. CPU-1 release scale may be run as a
+separate engineering battery, but it cannot answer the production premise.
 
-Until that separate instruction arrives, the correct operational state is:
+The correct operational state is:
 
 ```text
-Rival implementation: NOT STARTED
+Rival CPU machinery: IMPLEMENTED ON ISOLATED FEATURE BRANCH
+Rival release-scale CPU-1 claim: UNCLAIMED
 Rival GPU permit: DENIED
 Scientific seeds: UNALLOCATED
 D1 chain: UNTOUCHED

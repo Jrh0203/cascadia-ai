@@ -74,8 +74,15 @@ over packed expert tensors with Gumbel search-supervised action values.
   [implementation execution plan](../../cascadia_rival_implementation_plan_7_16.md)
   starts with identity, finite-sample power, and a canonical CPU reference;
   leaves the baseline, target gap, scientific cohorts, and seeds hard-blocked
-  on D1; and makes every GPU phase separately default-denied. No Rival code,
-  experiment, queue entry, or GPU process was created by that planning task.
+  on D1; and makes every GPU phase separately default-denied. That planning
+  task created no code. A subsequent explicitly authorized, isolated feature
+  branch now contains the documented
+  [Rival CPU machinery](RIVAL_CPU_MACHINERY.md): canonical Rust reference
+  contracts, byte-pinned Python artifacts, fixed-panel statistics,
+  perturbation and failure-injection CPU tests, and a default-deny pre-GPU
+  gate. It remains unmerged engineering
+  evidence only. It created no experiment, scientific seed, queue entry,
+  remote action, accelerator process, strength result, or D1 state change.
 - **Historical July-9 corrected-rules scoreboard (100 games, seeds
   2027070900..99), COMPLETE for that pinned identity:**
   greedy `87.5450` → no-search policy `91.8425` → cycle4 n256/d4 `97.0675`

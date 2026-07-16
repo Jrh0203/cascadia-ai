@@ -8,14 +8,18 @@ files and keeps the training method in one place.
 Every corpus, checkpoint, report, and promotion comparison must identify the
 rules semantics used to generate it. The active contract is
 [`RULES_CONTRACT.md`](RULES_CONTRACT.md), semantics ID
-`cascadia-base-official-2026-07-09`.
+`cascadia-base-official-2026-07-16`.
 
 The optional free three-of-a-kind refresh became a real policy decision on
 2026-07-08; the 2026-07-09 correction additionally enforces decision → hidden
 chance draw → draft, so a policy cannot condition accept/decline on the actual
-replacement. Earlier forced-refresh artifacts are legacy evidence and cannot
-be mixed with corrected games in promotion statistics. Rebaseline every
-opponent and incumbent after a rules-semantics change.
+replacement. The 2026-07-16 correction returns set-aside wildlife after each
+individual overpopulation resolution, before testing the newly revealed
+market for another automatic wipe. This prevents a consecutive-wipe sequence
+from transiently draining the physical bag. Earlier forced-refresh artifacts
+and all artifacts stamped with the 2026-07-09 identity are historical evidence
+only; neither may be mixed with 2026-07-16 games in promotion statistics.
+Rebaseline every opponent and incumbent after a rules-semantics change.
 
 ## Data Formats
 
@@ -127,6 +131,72 @@ Core invariants:
 - category targets sum to final score;
 - JSONL audit fixtures reconstruct from seed plus replay prefix;
 - packed tensor shards pass invariant validators before training.
+
+### Rival pre-GPU validation boundary
+
+Cascadia Rival's current implementation is validation machinery, not an
+authorized training recipe. The CPU gate is:
+
+```bash
+bash cascadiav3/scripts/validate_rival_pre_gpu.sh
+```
+
+The script establishes the full CPU-only subprocess contract
+(`CASCADIA_CPU_ONLY_TESTS=1`, `CASCADIA_DEVICE=cpu`, and an explicitly empty
+`CUDA_VISIBLE_DEVICES`) and performs no accelerator discovery. It validates
+the default-deny preflight, the Rust CPU reference contracts, every Rival
+Python test, the generic device guards, and Ruff. Do not add availability
+queries to this script; a future accelerator phase must use its reviewed,
+hash-bound permit path instead.
+
+Rival preference attachment is a two-step immutable join:
+
+1. A canonical, read-only root-identity index binds every expert record to the
+   expert shard digest, raw-root-ledger digest, source revision, exact Rust
+   identity namespaces, ordered candidate occurrences, selected action, and
+   SHA-256 of each exact action tensor row. The index itself is create-once and
+   must be loaded from canonical single-link bytes with its expected file
+   digest.
+2. A canonical, read-only preference sidecar binds the pinned index, expert
+   shard, raw-root and raw-world ledgers, policies, allocation, bound, error
+   ledger, panels, inference mode, and parent manifest. It is also create-once
+   and must be loaded from canonical single-link bytes with its expected file
+   digest. Training views reject ephemeral index or sidecar objects.
+
+Every source digest is rechecked at the join boundary. High-fidelity-only
+sidecars must have no multifidelity coefficient and no low-fidelity panel.
+Multifidelity sidecars require both. Confirmed labels encode only the tested
+challenger-versus-incumbent pair; untested menu actions are never labeled as
+losers, and unlabeled records have zero preference loss weight.
+
+Trainer integration remains explicitly held at plan phase P8. Passing
+`--rival-preference-training` currently raises before Torch import and before
+any input or output path is touched. Removing that hold requires all of:
+
+- positive evidence through the preceding Rival phase gates, including P7;
+- John's explicit `TRAIN` instruction and the phase-specific permit;
+- a preregistered recipe with frozen corpus and preference weights; and
+- flag-off batch, loss, optimizer, checkpoint, and resume bit-identity tests.
+
+No preference loss or sampler is silently active in the legacy trainer.
+
+The present CPU readers establish structural and byte-level integrity only;
+they are deliberately **not yet a semantic training attestation**. Before the
+P8 hold may be removed, the training join must also consume the validated Rust
+root/terminal-ledger adapter and a manifest admitted by `load_root_manifest`
+plus `require_externally_pinned_root_manifest` under caller-supplied byte and
+content hashes, dereference every rules, policy, allocation, bound,
+error-ledger, coefficient, and panel artifact, and compare every duplicated
+field. Panel identities must be globally non-reused across roots. Arbitrary
+digest strings or a whole-file ledger hash are not proof that a claimed
+root/action came from that ledger.
+
+The eventual trainer must use content-addressed read-only snapshots (or an
+equivalent pinned-FD/locking contract), record all expected hashes in its run
+manifest, and reverify them before publishing outputs. The current writers use
+create-once publication, precompute the expected byte digest, mark their files
+read-only, and reject later mutation; these controls prevent accidental drift
+but do not make mutable expert/ledger paths safe for a long training run.
 
 ## Stage 1: Greedy Copy Baseline
 
