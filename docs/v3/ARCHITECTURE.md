@@ -261,6 +261,50 @@ own-score-only and rejects table-total objectives. K>1 is not implemented:
 it requires genuine multi-seat/chance-tree solving rather than this terminal
 identity.
 
+### Open serving-wrapper challenger: Cascadia-Anchor
+
+Full specification:
+[`incumbent_anchored_gpu_rollout_policy_improvement_7_16.md`](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md).
+
+Cascadia-Anchor is a research proposal, not a serving default. It leaves
+CascadiaFormer and current Gumbel search intact as the frozen incumbent
+`pi_I`. Anchor v1 leaves the free-three refresh accept/decline decision to the
+incumbent, commits it, reveals any accepted replacement, and starts only at
+the resulting post-prelude public draft node. There it stores the exact
+incumbent draft `a0`, screens alternatives for that fixed visible market, and
+may replace `a0` only after fresh terminal continuations show a challenger’s
+paired expected own-score advantage clears a preregistered practical margin.
+Unresolved or invalid evidence executes `a0` literally. It never freezes a
+post-accept draft before chance reveals the replacement.
+
+The confirmation continuation `pi_R` must equal the complete serving
+incumbent `pi_I` to support a local improvement claim over the current system.
+The existing sampled-greedy leaf rollout, a direct transformer action, or a
+distilled policy may screen but changes the estimand and cannot authorize an
+incumbent-relative override in the first design.
+
+A-EXACT confirmation has two independent simulation layers: the outer physical
+hidden world being completed and the incumbent’s internal public-information
+determinizations/search RNG at every future decision. The incumbent may not
+observe the outer hidden order. A proposed GPU implementation batches
+`roots x candidates x outer worlds` and uses compacted wavefront queues for
+the nested incumbent searches, with exact Rust rules/scoring as the oracle.
+Full-incumbent cost is a central feasibility kill test. Rules parity is not
+enough: packed rows, numerical mode, Gumbel/rollout traces, RNG consumption,
+market decisions, and every nested action must match the production bridge.
+Any action divergence is an approximate continuation, not A-EXACT. A
+pre-port bounded-inference power calculation must also show that the required
+terminal-pair count is affordable.
+
+The direct historical predecessor remains in
+`crates/cascadia-search/src/policy_improvement.rs`. Its old-rules pattern-policy
+confirmations were CI-positive on total score, but it used the same eight
+samples to compare multiple candidates with unadjusted per-challenger c90
+bounds. The successor requires a frozen selection stream plus fresh
+confirmation, multiplicity-valid inference, forced-anchor bit identity, and a
+fresh symmetric four-seat gameplay gate. No current-rules strength claim
+exists.
+
 ## Promotion Philosophy
 
 Validation loss, imitation accuracy, and greedy top-1 retention are diagnostics.

@@ -9,7 +9,9 @@ input-frame perturbation doesn't help; problem-perturbation ensembling does)
 and **(2) exactness beats estimation wherever it can reach** (exact
 afterstate grounding is why the q head works at all).
 
-Ranked by my judgment of payoff × plausibility.
+The original July-8 entries were ranked by payoff × plausibility. Later
+numbered additions preserve the historical numbering; the superseding current
+sequence is stated at the end of this document.
 
 ## 1. Exact endgame solving (hybrid neural/exact search) — K1 implemented
 
@@ -139,6 +141,16 @@ small corpus for the materially different data/decision model required to
 reopen this direction.
 
 ## 4. Whole-rollout generation on GPU (kill the lockstep wall)
+
+**Successor proposals.** This section is the systems precursor to both
+[Cascadia-NX](../../stochastic_board_game_ai_architecture_research_7_16.md)
+and
+[Cascadia-Anchor](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md).
+Anchor sharpens the requirement: a cheap learned/direct policy may screen
+rollouts, but only a full serving-incumbent continuation supports an
+improvement claim over the current policy. That creates nested outer physical
+worlds and inner no-peek incumbent search worlds. GPU residence is therefore
+a measured feasibility question, not an assumed 10x gain.
 
 **Idea.** The serving/generation bottleneck is per-ply lockstep: every
 simulated ply is a bridge round-trip. Replace CPU greedy rollouts with a
@@ -318,6 +330,52 @@ establishes strength.
 **Status:** open post-D1 hypothesis; zero Cascadia strength evidence. It does
 not displace or reorder D1.
 
+## 8. Cascadia-Anchor: incumbent-anchored GPU terminal appeals court
+
+Full proposal, predecessor audit, inference contract, and source ledger:
+[`incumbent_anchored_gpu_rollout_policy_improvement_7_16.md`](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md).
+
+**Idea.** Leave the incumbent’s free-three accept/decline branch unchanged,
+commit it, reveal any replacement, and begin only at the post-prelude public
+draft node. Preserve the exact frozen CascadiaFormer-plus-Gumbel draft as
+anchor. Let the incumbent’s own candidate set nominate alternatives, screen
+cheaply, then compare one challenger with the anchor on fresh exact terminal
+worlds. Override only if a multiplicity-valid lower bound on active-seat raw
+score advantage exceeds a frozen practical margin; otherwise play the stored
+incumbent draft exactly.
+
+**Direct predecessor.** The v2
+`LateConservativeBasePolicyImprovementStrategy` already implemented the
+anchor, paired terminal continuations, one-sided lower bound, and literal
+fallback under the pattern policy. It posted +0.420
+([+0.179,+0.661]) and, after canonical redetermination, +0.520
+([+0.260,+0.780]) over two historical 50-game blocks. The latter was demoted
+for a non-Bear wildlife guardrail, not lost total-score signal. Those old
+policy/rules results motivate the mechanism but do not qualify v3.
+
+**What is new.** The successor uses the complete current incumbent as the
+confirmation continuation; separates outer physical chance from the
+incumbent’s internal no-peek determinizations; executes exact rules in GPU
+wavefront batches; separates challenger selection from fresh confirmation;
+controls multiplicity/optional stopping; and requires forced-anchor identity,
+complete production-policy trace parity, an equal-wall extra-Gumbel control,
+unilateral diagnostics, and a symmetric four-seat gate.
+
+**Falsifier.** Full-incumbent continuation nests the expensive serving search
+at every simulated future decision. Before the port, prove the bounded-
+inference pair count is affordable. Start final-two through final-five;
+exclude final-personal-turn roots from Anchor and leave exact K1 unchanged. If
+current-policy terminal pairs are not affordable, a direct/distilled
+continuation remains only a proxy teacher or shadow arm. If held-out overrides
+do not retain independent terminal advantage, or the symmetric paired gate is
+null, close the wrapper regardless of local confidence accounting.
+
+**Status:** lowest-downside bounded post-D1 serving-wrapper preflight and the
+preferred first test; probability of a positive gain is unknown and
+current-rules strength evidence is zero. It does not displace D1. Cascadia-NX
+remains the higher-risk representation challenger with potentially larger
+upside.
+
 ## Explicitly not on this list
 
 Belief modeling / bag inference (oracle LOST — information is not the
@@ -329,7 +387,10 @@ for rules the exact engine already owns, ordinary legacy-NNUE revival, and
 blind common-random-number pairing without a positive covariance audit.
 
 *Current sequencing: do not disturb the fully authorized D1 chain. After D1
-reaches its frozen boundary, #7 may begin with the bounded offline
-representation/covariance bakeoff. The full GPU port is conditional on that
-preflight. #4 remains a structural systems enabler; #5 is closed; #6 remains a
-later diversity mechanism rather than a serving ensemble.*
+reaches its frozen boundary, #8 begins only with semantic parity,
+full-incumbent feasibility, and a shadow audit; #7 begins with the bounded
+offline representation/covariance bakeoff. Validated GPU-engine work may be
+shared, but neither proposal authorizes the other’s strength claim. A full
+port is conditional on its preflight. #4 remains the common structural systems
+enabler; #5 is closed; #6 remains a later diversity mechanism rather than a
+serving ensemble.*

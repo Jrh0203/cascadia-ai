@@ -772,16 +772,21 @@ the permanent record of what closed and what it taught.
   The only training-side idea with a measured mechanism. Stage A attempt 3
   was terminated by the 07-16 john0/WSL reboot before any usable corpus row;
   the rules-ID repair completed, John fully authorized the pipeline, and
-  attempt 4 was alive at the 09:27 status check. No partial output was read.
+  attempt 4 completed no seed because 24 owned CUDA contexts thrashed. Attempt
+  5 launched at 10:02 on the v2-proven 12-shared/Rayon-16 topology; john0 was
+  unreachable at the 11:10 read-only status check, so current liveness is
+  unknown. No partial scientific output was read.
   MuZero Reanalyze supports the general current-teacher refresh mechanism but
   does not validate Cascadia's targeted fraction, budget, or fold weight.
 - The July 16 research ordering supersedes the earlier “adaptive/table/
   exactness next” queue: live Stage A → already authorized D1
   harvest/relabel/retrain/screen/gate, with human calibration in parallel,
-  then bounded adversarial diagnostics and the Cascadia-NX preflight. Adaptive
-  allocation, table-native values, reliability-sigma, stratified worlds, and
-  exactness expansion are deferred behind direct offline evidence. See the
-  reprioritized **L1-L9** in [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md).
+  then bounded adversarial diagnostics, the Cascadia-Anchor semantic/A-EXACT
+  feasibility shadow preflight, and the Cascadia-NX representation preflight.
+  Adaptive allocation, table-native values, reliability-sigma, stratified
+  worlds, and exactness expansion are deferred behind direct offline evidence.
+  See the reprioritized **L1-L10** in
+  [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md).
 
 Full chronological detail: `cascadiav3/EXPERIMENT_LOG.md`.
 Resume state / decision history: `docs/v3/CAMPAIGN_STATE.md`.
@@ -901,16 +906,19 @@ literature/repository decisions, not new promotion evidence.
 
 ### 8.5 Ordering and blocker
 
-**Superseding operational update (09:00):** the July-16 rules identity repair
+**Superseding operational update (11:10):** the July-16 rules identity repair
 completed at 03:50, and John fully authorized the Stage A restart plus the 15k
 D1 relabel/retrain/screen/gate chain. The full harvest, sentinel, teacher,
 repeat aggregation, masking, training mix/control/dose arms, bank screen, and
 fresh sequential-CUPED gate were frozen in `cascadiav3/EXPERIMENT_LOG.md`
-before Stage A output was read. Attempt 4 launched at 08:54 and was alive at
-the 09:27 read-only status check. Champion promotion remains separately
+before Stage A output was read. Attempt 4 completed no seed because 24 owned
+CUDA contexts thrashed. Attempt 5 launched at 10:02 on the v2-proven
+12-shared/Rayon-16 topology; the 11:10 read-only status check could not reach
+john0, so current liveness is unknown. Champion promotion remains separately
 reserved. The queue is now: let the authorized D1 chain reach its registered
 boundary untouched; exact-rules human calibration may proceed in parallel;
-then bounded adversarial diagnostics and the bounded Cascadia-NX offline
+then bounded adversarial diagnostics, the Cascadia-Anchor
+semantic/A-EXACT-feasibility shadow preflight, and the bounded Cascadia-NX offline
 preflight before lower-ranked allocator/table/reliability/world work.
 
 No source in the review authorizes a promotion, rules-design change, or live
@@ -1026,3 +1034,139 @@ states and targets. Only several-fold end-to-end throughput with retained or
 better high-budget teacher regret justifies the GPU planner. Only a fresh
 paired gameplay gate can establish strength, and the final objective remains
 mean seat score at least 100 over 1,000 games under one pinned identity.
+
+## 10. Incumbent-anchored GPU rollout policy improvement — 2026-07-16
+
+Complete proposal, architecture, inference contract, predecessor audit,
+falsifiers, and primary-source ledger:
+[`incumbent_anchored_gpu_rollout_policy_improvement_7_16.md`](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md).
+This section records the consolidated verdict; it is not current-rules
+strength evidence.
+
+### 10.1 Corrected proposal identity
+
+The leading bounded serving challenger is **Cascadia-Anchor**:
+
+1. let the exact frozen incumbent own the free-three accept/decline decision,
+   commit it, reveal any replacement, and begin only at the resulting
+   post-prelude public draft node;
+2. preserve the incumbent draft as mandatory anchor and build a small frozen
+   challenger set for that fixed visible market;
+3. use cheap direct-transformer or distilled continuations only to screen;
+4. compare one challenger with the anchor on fresh terminal worlds whose
+   continuation is the complete serving incumbent;
+5. override only when a multiplicity-valid lower bound on paired terminal
+   own-score advantage exceeds a preregistered practical margin; and
+6. fall back literally to the stored incumbent action on uncertainty, timeout,
+   incomplete evidence, or any provenance/parity failure.
+
+Three policies are versioned separately: `pi_I` is the complete serving
+incumbent, `pi_R` is the rollout continuation, and `pi_W` is the wrapper. The
+policy-improvement interpretation against the current system requires
+`pi_R = pi_I`. A greedy, direct-transformer, or distilled continuation changes
+the estimand and cannot certify improvement over transformer-plus-Gumbel.
+
+A-EXACT confirmation has two state/RNG layers: an outer physical chance world and
+the incumbent’s inner no-peek search determinizations at every future public
+state. Letting the policy see the outer hidden order is oracle leakage.
+Freezing an accept-branch draft before the replacement is public is also
+invalid; v1 does not override the current turn’s refresh decision.
+
+### 10.2 Direct Cascadia predecessor
+
+The anchor/fallback mechanism is not novel. Current source retains
+`LateConservativeBasePolicyImprovementStrategy` in
+`crates/cascadia-search/src/policy_improvement.rs`. Under the historical v2
+pattern-aware policy and old rules it:
+
+- activated in the final five personal turns;
+- evaluated the K8+H6+B8 frontier over eight shared canonical public worlds;
+- completed each candidate under the frozen pattern policy;
+- used acting-seat exact terminal base score;
+- admitted only challengers with a positive one-sided paired t-LCB; and
+- otherwise played the exact pattern anchor.
+
+Archived ADR 0024 confirmed **+0.420**, 95% CI
+**[+0.179,+0.661]**, over 50 games. ADR 0068’s canonical-redetermination
+requalification retained **+0.520**, 95% CI
+**[+0.260,+0.780]**, over 50 fresh games. The latter was demoted because the
+frozen non-Bear wildlife guardrail was -0.375, not because total-score signal
+failed. These are supportive mechanism results under a different policy and
+rules identity, not evidence for v3 or July-16 rules.
+
+The successor fixes the predecessor’s per-decision inference weakness: the old
+rule selected among multiple challengers using the same eight per-challenger
+90% bounds. Anchor uses a frozen selection stream and fresh confirmation
+stream, a positive practical margin, familywise control, and either fixed
+bounded-mean inference or a correctly implemented anytime/group-sequential
+rule.
+
+### 10.3 Architecture and central falsifier
+
+The GPU batch is nested:
+
+`roots x candidates x outer worlds`, then at each future decision
+`live states x legal actions x incumbent internal worlds/simulations`.
+
+Exact rules, legal masks, without-replacement chance, transitions, scoring,
+terminal detection, and compact state remain device-resident; the Rust engine
+is the bit-exact oracle. Wavefront queues compact states needing policy,
+chance, or terminal work. Forced-anchor mode must be action/RNG/score
+bit-identical to the incumbent. A-EXACT additionally requires complete nested
+policy-trace parity with the production bridge—packed rows, numerical mode,
+Gumbel/rollout traces, market branches, RNG consumption, actions, and scores.
+Rules parity alone is insufficient; any action divergence defines a proxy.
+
+The central risk is compute. Full incumbent continuation runs the expensive
+serving search at every future simulated decision. No paper or repo result
+shows this is affordable. Before the port, a root-specific score-range,
+paired-variance, alpha/margin, and interval-family power calculation must also
+show that a useful effect is statistically resolvable. Start in final-two
+through final-five personal-turn strata; exclude final-personal-turn roots
+from Anchor and leave the incumbent’s exact-K1 path unchanged. Treat completed
+A-EXACT terminal pairs per wall-second as a kill test. If only a cheap proxy
+is feasible, the wrapper loses its incumbent-improvement interpretation and
+remains an offline/shadow arm.
+
+### 10.4 Evidence and caveats
+
+- Tesauro and Galperin’s 1996 backgammon work directly supports terminal
+  action evaluation followed by a frozen base controller and reports large
+  reductions in base-policy decision error; it does not prove finite-sample
+  Cascadia safety.
+- HPCI and SPIBB support held-out evaluation and literal baseline fallback
+  under their own assumptions; their theorems do not transfer to this
+  four-player online wrapper.
+- Pgx and Mctx establish accelerator-native simulation/planning precedent, not
+  a Cascadia speedup.
+- Common random numbers help only through positive covariance. Current
+  root-world coupling is the control; R0.2’s added rollout-policy coupling
+  worsened gap variance by 4.4%. Any new depth-dependent coupling requires
+  exact marginal proof plus disjoint variance/selection-error calibration,
+  with independent fallback.
+- A local one-deviation result followed by `pi_I` does not prove that all four
+  seats repeatedly using `pi_W` improve symmetric self-play. Require a
+  one-seat diagnostic and a fresh four-seat paired gameplay gate.
+
+### 10.5 Decision and ordering
+
+**Status: OPEN POST-D1 HYPOTHESIS; ZERO CURRENT-RULES STRENGTH EVIDENCE.**
+Anchor is the lowest-downside bounded serving test and the preferred first
+preflight; its probability of finding a positive gain is unknown.
+Cascadia-NX retains higher clean-slate upside if evaluator economics are the
+true ceiling. Neither reorders the authorized D1 chain.
+
+After D1 reaches its frozen boundary, the bounded order is:
+
+1. exact CPU/GPU rules and complete incumbent-policy trace parity, including
+   post-prelude market-boundary golden traces;
+2. bounded-inference power and A-EXACT final-two-to-final-five feasibility;
+3. proxy-screen fidelity and fresh-confirmation shadow audit;
+4. equal-wall comparison with more ordinary Gumbel compute;
+5. unilateral diagnostic; and
+6. only then the preregistered symmetric paired game gate.
+
+The full policy promotion rule and 1,000-game ≥100 target remain unchanged.
+R0.2 generic CRN, R0.4 completed-Q LCB, R3.2 ordinary deeper Gumbel, exact
+K2, cooperative/risk serving, generic menu widening, and legacy NNUE revival
+remain closed.

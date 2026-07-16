@@ -5,24 +5,24 @@ Live working notes for the Gumbel self-play campaign. Companion to
 `cascadiav3/EXPERIMENT_LOG.md` (per-run records). Update this file whenever
 the in-flight picture changes.
 
-## RESUME HERE (07-16 09:27 — D1 fully authorized; Stage A attempt 4 live on john0)
+## RESUME HERE (07-16 11:10 — attempt 5 last durable state; john0 unreachable)
 
-**Live state, reverified read-only with `campaign_status.sh` at 09:27 EDT:**
-`stage_a_generation_v4_20260716` PID `15396` is alive; john0 is at `100%` GPU,
-`148.16 W`, and `31,092 MiB` VRAM. The persistent `HOLD_worlds_confirm` is
-unrelated and remains untouched. No partial Stage A output or score was read,
-and no process was killed or restarted during this status reconciliation.
+**Current reachability:** the read-only `campaign_status.sh` check at 11:10
+EDT could not reach john0. Therefore current process/GPU/heartbeat liveness is
+unknown. Do not infer failure, relaunch, or inspect scientific sidecars from
+that network fact. No partial Stage A scientific output or score was read, and
+no process was killed or restarted.
 
-**Stage A attempt 4 launched 08:54 under John's 09:00 full authorization.**
-It runs source rev `6f40f010`, the corrected engine and repaired
-`cascadia-base-official-2026-07-16` /
-`cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16`
-identity, cycle4's owned-session topology, workers=rayon with
-`--rayon-threads 32`, ghost off, and registered seeds
-`2026794000..5249`. Durable sidecars are
-`stage_a_20260716_{decisions,hard_roots}.jsonl`; monitor `bekcae52q` owns the
-chain/run logs. Launch ETA was approximately 17:00, but liveness—not an ETA or
-partial row count—is the current fact.
+**Last durable transition (EXPERIMENT_LOG 10:10):** attempt 4 completed no
+seed. The 24-owned-session topology held the GPU at nominal 100% while CUDA
+contexts time-sliced; zero-byte run/sidecar output and low power exposed the
+thrash. Attempt 5 launched at 10:02 as
+`stage_a_generation_v5_20260716` on PID `26197`, monitor `bn34wrswc`, source
+rev `689f9d69`, the v2-proven 12 shared sessions / Rayon 16, TF32 on, ghost
+off, and the same registered seeds `2026794000..5249`. The authorized
+`d1_pipeline_20260716.sh` waiter was repointed at v5. This is a launch record,
+not a current liveness claim; a generation arm is healthy only after completed
+seeds, not from startup GPU utilization.
 
 **Rules/provenance repair COMPLETE (03:50).** Commit `31fc2c30` reconciled the
 per-resolution wildlife return semantics, assigned the July-16 engine and
@@ -43,22 +43,29 @@ reserved to John.
 
 The follow-on
 [structured architecture review](../../stochastic_board_game_ai_architecture_research_7_16.md)
-does not change this queue. Its Cascadia-NX proposal is a post-D1 hypothesis
-and must not displace john0 or read live-arm output.
+and companion
+[Cascadia-Anchor proposal](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md)
+do not change this queue. Cascadia-NX and the incumbent-anchored GPU rollout
+wrapper are post-D1 hypotheses and must not displace john0 or read live-arm
+output.
 
 **Resume checklist:**
 
-1. Do not inspect partial Stage A scientific output. Verify only process and
-   heartbeat freshness through the durable monitor/status path.
-2. Do not kill, restart, deploy over, or compete with PID `15396` without
-   explicit user permission. Honor `HOLD_*` checks in the chain.
-3. After the wrapper declares completion, verify the complete manifest,
+1. Restore/recheck john0 reachability through the ordinary read-only status
+   path. Do not infer PID state from the 11:10 network failure.
+2. Do not inspect partial Stage A scientific output. Verify only complete-seed
+   progress plus process/heartbeat freshness through the durable
+   monitor/status path.
+3. Do not kill, restart, deploy over, or compete with last-recorded PID
+   `26197` or its waiter without explicit user permission. Honor `HOLD_*`
+   checks in the chain.
+4. After the wrapper declares completion, verify the complete manifest,
    July-16 rules/source/config identity, registered seeds, sidecar/tensor
    counts, and SHA-256 evidence before harvesting anything.
-4. Continue the already authorized harvest/sentinel, two-repeat relabel,
+5. Continue the already authorized harvest/sentinel, two-repeat relabel,
    aggregation/masked-view, retrain/control/dose, locked-bank, and conditional
    gate stages exactly as frozen in the 09:00 experiment-log entry.
-5. If a gate is positive, stop at the reserved champion-promotion decision and
+6. If a gate is positive, stop at the reserved champion-promotion decision and
    present John the complete provenance/verdict; do not auto-promote.
 
 Historical resume state follows; it is superseded by the block above.

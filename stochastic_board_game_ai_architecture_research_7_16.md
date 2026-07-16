@@ -76,6 +76,18 @@ this report's cutoff. Cascadia-NX is a post-D1 architecture challenger whose
 offline design and tests must not displace the live john0 chain or read partial
 scientific output.
 
+**Companion proposal and ordering.** A second July 16 report,
+[`incumbent_anchored_gpu_rollout_policy_improvement_7_16.md`](incumbent_anchored_gpu_rollout_policy_improvement_7_16.md),
+specifies Cascadia-Anchor: retain the exact transformer-plus-Gumbel incumbent,
+screen alternative actions, and authorize an override only after fresh
+full-incumbent terminal continuations clear a statistical guard. The repo has
+a historical v2 predecessor with CI-positive old-policy score deltas. Anchor
+is the lowest-downside bounded post-D1 serving-wrapper preflight and the
+preferred first test, although its probability of a positive gain is unknown;
+Cascadia-NX remains the higher-risk clean-slate architecture with potentially
+greater upside. Neither has current-rules strength evidence, and neither
+reorders D1.
+
 ## 1. Claim boundary and evidence labels
 
 This report uses four evidence labels:
@@ -1129,11 +1141,18 @@ frozen current-rules roots that:
    and fixed-wall selection error, or independent worlds become the production
    contract.
 
-If all four pass, the GPU-resident planner is the highest-upside engineering
+If all six pass, the GPU-resident planner is the highest-upside engineering
 investment in the portfolio. If representation fails, stop before the port. If
 coupling eligibility fails, keep the evaluator and use independent exact
 worlds. If the equal-wall gameplay gate fails, close the architecture
 regardless of how elegant or fast it is.
+
+This NX preflight follows or shares only semantically validated GPU-engine
+work with the bounded
+[Cascadia-Anchor preflight](incumbent_anchored_gpu_rollout_policy_improvement_7_16.md).
+Anchor’s forced-incumbent fallback makes it the lower-risk serving test; NX’s
+structured evaluator makes it the larger representation bet. A positive
+result from one does not qualify the other.
 
 The core strategic change is simple:
 

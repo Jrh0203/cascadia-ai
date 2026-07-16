@@ -10,15 +10,18 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-16 09:27 EDT)
+## Status at a glance (updated 2026-07-16 11:10 EDT)
 
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
-- **Live operational state:** D1 Stage A generation attempt 4 is alive on
-  john0 (PID `15396`, launched 08:54 EDT, monitor `bekcae52q`) at 100% GPU
-  utilization as of the 09:27 read-only status check. It runs the cycle4 owned-
-  session topology on rev `6f40f010`, ghost off, registered seeds
-  `2026794000..5249`, under the repaired July-16 identity. No partial output or
-  score was read and the unrelated `HOLD_worlds_confirm` remains untouched.
+- **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
+  no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02
+  EDT on the v2-proven 12-shared/Rayon-16 topology (PID `26197`, monitor
+  `bn34wrswc`, rev `689f9d69`), ghost off, registered seeds
+  `2026794000..5249`, and the repaired July-16 identity; the authorized
+  pipeline waiter was repointed at v5. The 11:10 read-only
+  `campaign_status.sh` check could not reach john0, so current liveness is
+  unknown—not failed and not asserted healthy. No partial scientific output or
+  score was read, and no process was killed or restarted.
 - **Rules/provenance blocker RESOLVED (03:50):** the engine, contract,
   exporter, manifests, and fresh-run comparators now use
   `cascadia-base-official-2026-07-16` /
@@ -43,6 +46,14 @@ over packed expert tensors with Gumbel search-supervised action values.
   component graph and covariance-audited GPU exact-rules sampled-world search above another
   larger transformer. It is an open, post-D1 challenger hypothesis—not
   promotion evidence and not a reason to disturb the live D1 chain.
+  The companion [Cascadia-Anchor proposal](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md)
+  ranks an incumbent-anchored, terminal-rollout override layer as the
+  lowest-downside bounded serving test and preferred first preflight: proxy
+  rollouts may screen, but only fresh full-incumbent continuations may confirm
+  an override.
+  The repo’s v2 predecessor posted historical CI-positive score deltas, while
+  nested current-policy compute and four-seat composition remain explicit
+  falsifiers. It is also post-D1 and has zero current-rules strength evidence.
 - **Historical July-9 corrected-rules scoreboard (100 games, seeds
   2027070900..99), COMPLETE for that pinned identity:**
   greedy `87.5450` → no-search policy `91.8425` → cycle4 n256/d4 `97.0675`
@@ -169,7 +180,7 @@ over packed expert tensors with Gumbel search-supervised action values.
 
 For exact live PIDs, artifact hashes, and the resume checklist, read
 [CAMPAIGN_STATE.md](CAMPAIGN_STATE.md) RESUME HERE first, then the latest
-dated handoff ([handoff-2026-07-10.md](../handoffs/handoff-2026-07-10.md) — a
+dated handoff ([handoff-2026-07-16.md](../handoffs/handoff-2026-07-16.md) — a
 timestamped snapshot, weaker than current `main`).
 
 ## Read order for a fresh session
@@ -179,15 +190,15 @@ timestamped snapshot, weaker than current `main`).
    operator manual: read results, run screens/gates/queues, deploy —
    every command, end to end, no prior context assumed.**
 3. [CAMPAIGN_STATE.md](CAMPAIGN_STATE.md) — live state; RESUME HERE first.
-3. `cascadiav3/EXPERIMENT_LOG.md` — chronological evidence, newest entries.
-4. [RESEARCH_LOG.md](RESEARCH_LOG.md) — consolidated verdicts and ranked
+4. `cascadiav3/EXPERIMENT_LOG.md` — chronological evidence, newest entries.
+5. [RESEARCH_LOG.md](RESEARCH_LOG.md) — consolidated verdicts and ranked
    directions.
-5. [RULES_CONTRACT.md](RULES_CONTRACT.md) — rules identity and compatibility
+6. [RULES_CONTRACT.md](RULES_CONTRACT.md) — rules identity and compatibility
    boundary.
-6. [INFRASTRUCTURE.md](INFRASTRUCTURE.md) and
+7. [INFRASTRUCTURE.md](INFRASTRUCTURE.md) and
    [cascadiav3/README.md](../../cascadiav3/README.md) — operations and
    command entry points.
-7. [RADICAL_DIRECTIONS.md](RADICAL_DIRECTIONS.md),
+8. [RADICAL_DIRECTIONS.md](RADICAL_DIRECTIONS.md),
    [ARCHITECTURE.md](ARCHITECTURE.md),
    [TRAINING_PIPELINE.md](TRAINING_PIPELINE.md) — architecture bets and
    methodology.
@@ -209,6 +220,10 @@ timestamped snapshot, weaker than current `main`).
   best-performing cross-game evidence, archived Cascadia NNUE audit,
   Cascadia-NX/Covariance-Audited GPU World Search proposal, falsifiers, and primary
   source ledger.
+- [Cascadia-Anchor proposal](../../incumbent_anchored_gpu_rollout_policy_improvement_7_16.md):
+  incumbent-fidelity terminal rollout improvement, GPU wavefront design,
+  statistical override contract, direct v2 predecessor, multiplayer caveats,
+  and staged falsifiers.
 - [Rules Contract](RULES_CONTRACT.md): official rules identity and the
   resulting baseline compatibility boundary.
 - [Radical Directions](RADICAL_DIRECTIONS.md): speculative architecture-level
@@ -226,7 +241,7 @@ timestamped snapshot, weaker than current `main`).
 - [Bridge Throughput](BRIDGE_THROUGHPUT.md): R2.4 serving-path
   investigation — request lifecycle, the serial-pipeline bound, ranked
   levers, and the staged GPU probe.
-- Latest handoff: [handoff-2026-07-10.md](../handoffs/handoff-2026-07-10.md).
+- Latest handoff: [handoff-2026-07-16.md](../handoffs/handoff-2026-07-16.md).
 
 The implementation package lives in
 [cascadiav3/README.md](../../cascadiav3/README.md).
