@@ -52,6 +52,28 @@ Next up after this slate: R0.5/R3.4 adaptive per-root budgets (supervision
 free from the puzzle bank + tonight's ledgers), R1.1c/R3.1 cooperative
 table values (after R1.4 infrastructure), R3.3 exactness expansion.
 
+## Literature-inspired candidates (07-16 light research pass)
+
+Mapped from KataGo methods, MuZero Reanalyze, and Gumbel-MuZero
+literature onto our four measured constraints; ranked by (fit to
+measured evidence × cost). None are queue-jumpers over Stage A.
+
+| # | Candidate | Maps to | Sketch |
+|---|---|---|---|
+| L1 | Continuous reanalyze (MuZero Reanalyze / ReZero) | label ceiling | D1 generalized: every future cycle relabels replay shards with the current champion at higher budget; reanalyzed targets drove ~80% of MuZero updates. Stage A is the pilot; if it gates +, make relabeling a standing pipeline stage, not a one-shot. |
+| L2 | Phase-keyed value bias correction at search (KataGo subtree value bias, ~30-60 Elo in Go) | decision noise | We already measured the phase-monotone calibration drift (−7 opening → +0.5 endgame). Correct Q at search time keyed on phase (later: pattern buckets). Cheap Rust change; bank screen then gate. |
+| L3 | Variance-scaled Gumbel sigma (KataGo dynamic variance-scaled cPUCT, ~75 Elo in Go) | decision noise | Our completed-Q sigma scale is hardcoded (gumbel.rs); scale it by empirical per-root utility variance. Cheap; screen+gate. |
+| L4 | Mixed-grade generation (KataGo playout cap randomization) | label ceiling / data volume | Generate most seeds at n256 (volume) and a random fraction at n1024+ (quality value labels); relieves the value-vs-policy target tension at any single budget. Next corpus. |
+| L5 | Surprise/uncertainty-weighted training (KataGo policy surprise weighting + uncertainty targets) | label ceiling | Weight samples by label movement / repeat disagreement / top2 gap — all already measured in the bank sidecars for free. Trainer-side but NOT a loss-shaping null: it reweights toward roots where labels carry real signal. |
+| L6 | Root softmax temperature / shaped noise in generation only | fixed point | Cheap coverage widener for selfplay corpora (blind-spot discovery); serving stays untouched. |
+| L7 | Opponent-seat auxiliary targets (KataGo aux policy; feeds R1.1c) | multi-seat | Predict other seats' next actions/outcomes as aux losses — the cheap on-ramp to cooperative table values. |
+| L8 | League/exploiter populations (AlphaStar) | fixed point | DEPRIORITIZED: our objective is mean seat score vs a fixed field, not head-to-head win rate; non-transitivity pressure is weak. Revisit only if table-value work exposes exploitable strategy cycles. |
+
+Reassuring negative result from the same pass: Gumbel-with-few-sims,
+sequential halving, and stochastic-game determinization — our existing
+stack — match current published practice; nothing suggests the search
+scaffold itself is the bottleneck.
+
 ## Program scoreboard
 
 ### Open
