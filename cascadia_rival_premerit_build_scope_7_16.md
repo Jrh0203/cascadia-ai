@@ -14,6 +14,15 @@ for walls/permits), [architecture](cascadia_rival_final_architecture_proposal_7_
 machinery on branch `feat/rival-cpu-machinery`
 (status ledger: `docs/v3/RIVAL_CPU_MACHINERY.md`).
 
+> **BUDGET RULING (John, 2026-07-16 evening): the total GPU allocation is
+> "a few GPU days." The full Rival build (P4/P5) and the P2a/P2b GPU probes
+> are DEAD/moot at this budget. Surviving items from this scope: WI-1
+> (CPU-1 battery), WI-2 (tomography, CPU-only), WI-3 golden-trace prep only
+> as needed by Rival-Lite (late-game-only terminal relabeling, the
+> budget-fit successor described in EXPERIMENT_LOG 2026-07-16 21:15).
+> WI-4a/b/c are HELD pending Rival-Lite's design. Do not build the held
+> items.**
+
 **Merit question this scope serves.** Four measurements decide whether Rival
 deserves its 100–200 day build:
 M1 selfish headroom (tomography) · M2 full-incumbent terminal-pair cost (P2a)
