@@ -7320,3 +7320,32 @@ overnight; **verdict expected ~07-18.**
   waiter repointed at v5 and relaunched. Revised pipeline ETAs: relabel
   ends ~07-18 morning; screens midday; gate overnight; **verdict
   ~07-18/19.**
+
+## 2026-07-16 21:15 — BUDGET RULING (John): "a few GPU days"; 125-day-class programs killed
+
+John: "125 gpu days is outrageously expensive, i have a few gpu days to
+allocate, i want a model that is faster than 125 days."
+
+Consequences, recorded as a campaign ruling:
+
+1. **Full Rival build (P4 GPU backend, P5 RivalNet, MF calibration) is
+   DEAD at this budget.** The P2a/P2b GPU merit probes (~2–4 GPU-days)
+   are consequently MOOT and canceled — no measuring the merit of an
+   unfundable build. NX's GPU-resident build dies with the same ruling.
+2. **Surviving portfolio** (fits "a few GPU-days"):
+   - D1 to verdict (running; ~1.5–2.5 GPU-days remaining);
+   - Gate 0 fresh 07-16 baseline (~0.3–0.5 day; campaign-required);
+   - if D1 positive: D1 cycle 2 (~2.5 days/cycle; dose arms 5k/10k/15k
+     decide whether the coverage curve justifies it);
+   - **Rival-Lite** (late-game-only terminal relabeling, final 2–5
+     turns, no RivalNet/MF/backend; reuses the complete D1 pipeline;
+     v2 precedent +0.42/+0.52 CI+): ~1.5–2 days, the natural post-D1
+     candidate under the budget.
+3. **Free tier retained:** M1 selfish ceiling tomography (CPU-only)
+   still runs — it gates whether ANY further GPU spend is rational.
+   The pre-merit CPU scope shrinks to: WI-1 (CPU-1 battery), WI-2
+   (tomography), and the WI-3 golden-trace prep only insofar as
+   Rival-Lite's late-game continuations need the extracted incumbent.
+   WI-4a/b/c (probe harnesses, chance-coupling machinery) are held
+   unless Rival-Lite's design needs coupling proofs for its paired
+   late-game panels — decide at design time, not by default.
