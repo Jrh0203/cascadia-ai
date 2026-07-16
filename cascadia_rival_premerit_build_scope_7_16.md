@@ -1,6 +1,9 @@
 # Cascadia Rival: pre-merit build scope
 
-**Date:** 2026-07-16
+**Date:** 2026-07-16 (v2 — corrected per the builder audit of the same date:
+P2a decoupled to independent worlds, P2b coupling work priced as WI-4c,
+T0/T1/T2 renumbered to the serialized schema, kill-bar witness/bound
+asymmetry fixed, MEASURED-0 dependencies completed, CPU-1 arithmetic fixed)
 **Purpose:** exact scope of the engineering required to reach the MEASURED-0
 merit verdict for Cascadia Rival. Everything in this document is buildable
 now or at the D1 boundary; everything the merit verdict does NOT need is
@@ -14,9 +17,10 @@ machinery on branch `feat/rival-cpu-machinery`
 **Merit question this scope serves.** Four measurements decide whether Rival
 deserves its 100–200 day build:
 M1 selfish headroom (tomography) · M2 full-incumbent terminal-pair cost (P2a)
-· M3 low/high correlation ρ (P2b) · M4 the power-envelope verdict
-(calculator already built; it consumes M2+M3). This document scopes exactly
-the code those measurements need and nothing else.
+· M3 low/high correlation ρ (P2b) · M4 the power-envelope verdict.
+MEASURED-0 consumes **Gate 0 (delta_b) + M1 + M2 + M3** — all four, not just
+cost and correlation. This document scopes exactly the code those
+measurements need and nothing else.
 
 ---
 
@@ -55,7 +59,10 @@ branch ledger says: "Not run; CPU-1 remains unclaimed."
 **Build:**
 - Parameterize the battery scale via environment (e.g.
   `RIVAL_BATTERY_GAMES`, default the current PR scale; release scale
-  10,000 games / 1,000,000 transition checks). Keep the PR-scale run in the
+  **12,500 games / 1,000,000 transition checks** — four-player games yield 80
+  transitions each, so the plan's original "10,000 games AND 1,000,000
+  transitions" was internally inconsistent; honor the stronger number). Keep
+  the PR-scale run in the
   ordinary test suite; the release run is invoked explicitly (ignored test +
   `--ignored`, or a dedicated bin) so CI time is unaffected.
 - Extend coverage per the plan's CPU-1 row: random legal play across all
@@ -86,7 +93,11 @@ hindsight replay optimizer exists.
 
 **Build two optimizers, both CPU-only, both in `cascadia-rival`:**
 
-### 2a. T1 — static own-seat repacking
+### 2a. T0 — static own-seat repacking
+
+(Numbering follows the serialized tomography schema: static repacking is
+**T0**; chronology-preserving replay is T1/T2's information-boundary family.
+The scope previously mislabeled these.)
 
 - Input: one terminal board from a completed game (via `TrajectoryLedger`).
 - Freeze that seat's realized multiset: tile identities, wildlife multiset,
@@ -103,7 +114,7 @@ hindsight replay optimizer exists.
   witness. Every emitted witness board must round-trip legality and exact
   score through the canonical engine.
 
-### 2b. T2 — chronology-preserving replay
+### 2b. T1 — chronology-preserving replay
 
 - Input: one seat's complete realized chronology from a `TrajectoryLedger`:
   the exact 20 draft pairs in order, free-refresh decisions/reveals, paid
@@ -125,14 +136,24 @@ hindsight replay optimizer exists.
   incumbent games from the fresh baseline battery. The harness must record
   which policy produced its inputs and refuse mixed populations.
 
-**Done when:** on random-play fixture games, T1/T2 find (obviously large)
+Additionally: the current `TomographyEvidenceDomain` is permanently
+`CpuProxy`. Scientific M1 on incumbent games requires a distinct, validated
+evidence-domain variant (schema + validation + tests) so proxy-population
+diagnostics can never be presented as incumbent measurements.
+
+**Done when:** on random-play fixture games, the optimizers find (obviously large)
 headroom with valid witnesses, all witnesses re-verify through the canonical
 engine, results are deterministic, and the JSON summary validates against a
 new schema. Unit tests: witness legality, score identity, chronology
 violation rejection, determinism, information-boundary labeling.
 
-**Kill bar it enables (preregistered separately, not in code):** unilateral
-recoverable headroom on incumbent games < the measured gap ⇒ close Rival.
+**Kill bar it enables (preregistered separately, not in code):** a witness
+is a LOWER bound — it can fund, never kill. Closing Rival on "insufficient
+headroom" additionally requires either (a) a certified upper bound from an
+admissible relaxation whose feasible set provably contains the exact
+problem, or (b) a preregistered search-sufficiency bar that the optimizer
+demonstrably cleared. Absent both, a small witness is inconclusive, not a
+kill.
 
 **Estimated effort:** 3–5 days. This is the largest new-code item.
 
@@ -182,19 +203,22 @@ after the D1 boundary.
 
 - Given a root cohort (S-cohort machinery already exists in
   `rival/cohorts.py`), one frozen challenger per root, and the extracted
-  incumbent policy: complete paired terminal continuations
-  (incumbent-action vs challenger-action, shared outer physical scenario,
-  independent inner policy randomness — the branch's `HonestWorldSampler`
-  and RNG-domain contracts apply).
+  incumbent policy: complete terminal continuations for incumbent-action and
+  challenger-action on **INDEPENDENT physical worlds with `beta_cv = 0`**
+  (the `estimate_high_fidelity_only` path). Cross-action physical coupling
+  is NOT claimed in P2a: valid coupling requires the WI-4c chance-oracle
+  proofs, and the branch correctly denies production coupling until they
+  exist. Independent worlds make P2a's cost and variance numbers
+  conservative, which is what a cost probe should be.
 - Measure and ledger: wall seconds per completed paired terminal (by phase
   stratum and remaining turns), completion/timeout rates, memory, and total
   incumbent decisions executed. Every row lands in the existing
   `appeal_journal` machinery.
 - Output feeds `rival/power.py`'s currently-`UNRESOLVED` cost fields.
 
-### 4b. P2b — coupled covariance probe
+### 4b. P2b — coupled covariance probe (requires WI-4c first)
 
-- Same roots and scenarios; additionally run the cheap continuation
+- Same roots; additionally run the cheap continuation
   (v1 low-fidelity policy = the existing typed proxy continuations; RivalNet
   explicitly does NOT exist yet and is not required for the merit verdict) to
   produce paired (D_H, D_L) rows.
@@ -203,6 +227,24 @@ after the D1 boundary.
   discipline enforced by the existing `CoefficientBinding`).
 - Output feeds the calculator's covariance fields; per-stratum ρ is the M3
   number.
+
+### 4c. Chance-coupling validity machinery (new; prerequisite for P2b)
+
+The plan's CPU-3b gate. Valid paired (D_H, D_L) rows require sharing physical
+scenarios across fidelities, which today's sampler cannot legally do:
+
+- a canonical **ChanceOracle**: semantic-event random domains for every
+  chance event (bag draws, wipes, refresh reveals, dynamic urn returns);
+- **stable physical token identities** so "the same world" is well-defined
+  across diverging action prefixes; and
+- **marginal-equality proofs**: exhaustive small-bag enumerations plus
+  property tests demonstrating that coupling never changes any single-arm
+  chance marginal (the branch's stated reason for denying production
+  coupling). Coupling that fails any proof falls back to independent worlds.
+
+Estimated effort: 2–4 days. Without WI-4c, P2b produces no admissible
+covariance and Rival-MF's merit cannot be measured — only P2a's
+independent-world cost bound would exist.
 
 **Build now:** the runners, ledgers, stratification, fixture-driven CPU tests
 (proxy policies both sides), and the two preregistration templates (sample
@@ -266,9 +308,11 @@ FREE:
   MEASURED-0: power calculator consumes M2+M3 -> fund P3+ / narrow / close
 ```
 
-Total new engineering to the merit verdict: **~7–12 focused days**, most of
-it parallelizable and startable immediately; only WI-3's landing and the
-probe executions wait on the D1 boundary and Permit A.
+Total new engineering to the merit verdict: **~10–16 focused days** (the
+earlier 7–12 omitted WI-4c's coupling-validity machinery), most of it
+parallelizable and startable immediately; only WI-3's landing and the probe
+executions wait on the D1 boundary and Permit A. D1 is NOT yet a durable
+boundary at this writing — generation is live; nothing D1-gated may start.
 
 ## Acceptance ledger (update as items complete)
 
@@ -277,9 +321,10 @@ probe executions wait on the D1 boundary and Permit A.
 | WI-1 CPU-1 release battery | NOT STARTED |
 | WI-2 T1/T2 tomography optimizers + harness | NOT STARTED |
 | WI-3 exporter extraction (prep / landing) | NOT STARTED / HELD AT D1 WALL |
-| WI-4 P2a/P2b harnesses + preregistration templates | NOT STARTED |
+| WI-4a/b P2a/P2b harnesses + preregistration templates | NOT STARTED |
+| WI-4c chance-coupling validity (ChanceOracle + proofs) | NOT STARTED |
 | WI-5 Gate 0 preregistration | NOT STARTED |
 | M1 headroom measured | BLOCKED (WI-2 + D1 boundary) |
 | M2 cost measured | BLOCKED (WI-3/4 + Permit A) |
 | M3 rho measured | BLOCKED (WI-3/4 + Permit A) |
-| M4 MEASURED-0 verdict | BLOCKED (M2 + M3) |
+| M4 MEASURED-0 verdict | BLOCKED (Gate 0 + M1 + M2 + M3) |
