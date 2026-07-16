@@ -1,0 +1,13 @@
+{
+  "action_seed_base": 5929365222866288640,
+  "battery": "release_scale_dense_cpu_reference_battery",
+  "elapsed_seconds": 220.791392583,
+  "game_seed_base": 5929365222857900032,
+  "games": 12500,
+  "json_boundary_stride": 500,
+  "notes": "Every transition compared canonical engine vs dense semantic compiler; every game sealed, replayed, and hash-verified; JSON boundary round-trip on every stride-th game.",
+  "schema_id": "cascadiav3.rival_cpu1_battery_receipt.v1",
+  "transition_checks": 1000000,
+  "transitions_per_game": 80,
+  "zero_mismatches": true
+}

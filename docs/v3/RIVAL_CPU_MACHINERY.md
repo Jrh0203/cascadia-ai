@@ -1036,7 +1036,7 @@ unrun.
 | Cross-language receipt test | Real Rust fixture, mandatory pins, Python semantic join | The two implementations agree on one replayed proxy contract |
 | Workspace regression | Existing Rust/Python/exporter behavior | The branch has not broken the tested surrounding system |
 | PR-scale chronology/replay | Curated cases plus 125 complete games and exactly 10,000 deterministic randomized reachable transitions | Strong finite engineering evidence only |
-| Release-scale CPU reference | 10,000 games and 1,000,000 transitions | **Not run; CPU-1 remains unclaimed** |
+| Release-scale CPU reference | 12,500 games and 1,000,000 transitions | **CLAIMED 2026-07-16: zero mismatches in 220.8s** ([receipt](../../cascadiav3/reports/rival_cpu1_battery_receipt_20260716.json)) |
 | Scientific premise/power | Production `B_k`, measured costs, covariance, activation, complete panels | **Not run; requires D1 and P2 permits** |
 | Gameplay strength | Paired current-rules games and the frozen 1,000-game target battery | **Not run and not authorized here** |
 
