@@ -121,6 +121,13 @@ struct Args {
     /// rows. When set it replaces stride sampling — only listed roots are
     /// resolved (D1-style targeted relabeling of harvested hard roots).
     probe_roots: Option<PathBuf>,
+    /// Optional --puzzle-bank output: packed v4 expert-tensor shard at the
+    /// resolved roots with repeat-aggregated teacher targets (visit-weighted
+    /// Q, mean renormalized improved policy, pooled population variance) and
+    /// realized behavior-trajectory outcomes. Also writes
+    /// <path>.repeat_audit.jsonl (per-repeat arrays) and
+    /// <path>.manifest.json.
+    training_records_out: Option<PathBuf>,
     /// Optional replay ledger sidecar for --gumbel-selfplay-tensor-corpus:
     /// one gumbel_decision row per root, replayable by --puzzle-bank.
     decisions_out: Option<PathBuf>,
@@ -434,6 +441,7 @@ fn parse_args() -> Result<Args> {
         probe_repeats: 6,
         probe_max_roots: 100,
         probe_roots: None,
+        training_records_out: None,
         decisions_out: None,
         hard_roots_out: None,
     };
@@ -476,6 +484,9 @@ fn parse_args() -> Result<Args> {
                 args.probe_max_roots = value()?.parse().context("invalid --probe-max-roots")?
             }
             "--probe-roots" => args.probe_roots = Some(PathBuf::from(value()?)),
+            "--training-records-out" => {
+                args.training_records_out = Some(PathBuf::from(value()?))
+            }
             "--decisions-out" => args.decisions_out = Some(PathBuf::from(value()?)),
             "--hard-roots-out" => args.hard_roots_out = Some(PathBuf::from(value()?)),
             "--output-dir" => args.output_dir = Some(PathBuf::from(value()?)),
@@ -878,6 +889,13 @@ Options:
                                Mega flags + repeats>=2 = frozen bank;
                                candidate flags + repeats=1 = screen run
                                (scored by analyze_puzzle_screen).
+  --training-records-out <path.npz>
+                               Optional --puzzle-bank output: packed v4
+                               expert-tensor shard at the resolved roots
+                               with repeat-aggregated teacher targets and
+                               realized behavior-trajectory outcomes, plus
+                               a per-repeat audit JSONL and a manifest
+                               alongside (D1 relabel emission).
   --gumbel-determinizations <n>
                            Hidden-order determinizations cycled per action [4].
   --gumbel-market-decision-samples <n>
@@ -3609,19 +3627,6 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     let eval_rows_sent = AtomicU64::new(0);
     let eval_cache_hits = AtomicU64::new(0);
     let seeds = (args.first_seed..seed_end).collect::<Vec<_>>();
-    let open_sidecar = |path: &Option<PathBuf>, label: &str| -> Result<Option<Mutex<BufWriter<File>>>> {
-        match path {
-            Some(path) => {
-                if let Some(parent) = path.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                let file = File::create(path)
-                    .with_context(|| format!("creating {label} {}", path.display()))?;
-                Ok(Some(Mutex::new(BufWriter::new(file))))
-            }
-            None => Ok(None),
-        }
-    };
     let decisions_writer = open_sidecar(&args.decisions_out, "--decisions-out")?;
     let hard_roots_writer = open_sidecar(&args.hard_roots_out, "--hard-roots-out")?;
     // Rare pathological seeds (e.g. a game line that empties the wildlife
@@ -4773,6 +4778,166 @@ fn gumbel_search_probe_settings(args: &Args) -> Value {
 /// run, scored against the bank by `cascadiav3.analyze_puzzle_screen`.
 /// Exact-K1 frontier roots and single-action menus are excluded, matching
 /// the stability probe. Divergent ledger seeds are skipped loudly.
+/// Line-buffered JSONL sidecar writer shared by generation and bank modes;
+/// None passes through so optional sidecars stay optional at call sites.
+fn open_sidecar(
+    path: &Option<PathBuf>,
+    label: &str,
+) -> Result<Option<Mutex<BufWriter<File>>>> {
+    match path {
+        Some(path) => {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let file = File::create(path)
+                .with_context(|| format!("creating {label} {}", path.display()))?;
+            Ok(Some(Mutex::new(BufWriter::new(file))))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Aggregate independent repeat searches of one root into a single teacher
+/// result (D1 preregistration, EXPERIMENT_LOG 2026-07-16 09:00): per-action
+/// visit-weighted Q over repeats that visited the action (model-fallback mean
+/// when no repeat visited it, which packs with q_valid=false), pooled
+/// population variance sum(n_i*(v_i+(Q_i-Q)^2))/N, mean renormalized improved
+/// policy with the aggregate argmax tie-broken by lowest action id, mean root
+/// value, and summed visit counts/simulations. Priors are taken from the
+/// first repeat (same model, same menu — repeats only vary the search seed).
+fn aggregate_repeat_search_results(
+    repeats: &[gumbel::GumbelSearchResult],
+    action_ids: &[String],
+) -> Result<gumbel::GumbelSearchResult> {
+    let first = repeats.first().context("aggregation requires >=1 repeat")?;
+    let action_count = first.completed_q.len();
+    if action_ids.len() != action_count {
+        bail!(
+            "aggregation action-id count {} != action count {}",
+            action_ids.len(),
+            action_count
+        );
+    }
+    for result in repeats {
+        if result.completed_q.len() != action_count
+            || result.visit_counts.len() != action_count
+            || result.improved_policy.len() != action_count
+            || result.value_variance.len() != action_count
+        {
+            bail!("repeat results disagree on the action count at aggregation");
+        }
+    }
+    let mut completed_q = vec![0.0_f64; action_count];
+    let mut value_variance = vec![0.0_f64; action_count];
+    let mut visit_counts = vec![0_u32; action_count];
+    let mut improved_policy = vec![0.0_f64; action_count];
+    for action in 0..action_count {
+        let total_visits: u64 = repeats
+            .iter()
+            .map(|result| u64::from(result.visit_counts[action]))
+            .sum();
+        if total_visits > 0 {
+            let weighted_q: f64 = repeats
+                .iter()
+                .map(|result| {
+                    f64::from(result.visit_counts[action]) * result.completed_q[action]
+                })
+                .sum();
+            let q = weighted_q / total_visits as f64;
+            completed_q[action] = q;
+            value_variance[action] = repeats
+                .iter()
+                .filter(|result| result.visit_counts[action] > 0)
+                .map(|result| {
+                    let delta = result.completed_q[action] - q;
+                    f64::from(result.visit_counts[action])
+                        * (result.value_variance[action] + delta * delta)
+                })
+                .sum::<f64>()
+                / total_visits as f64;
+        } else {
+            // No repeat visited this action: keep the mean model fallback so
+            // completed-Q semantics hold; visits stay 0 so it packs invalid.
+            completed_q[action] = repeats
+                .iter()
+                .map(|result| result.completed_q[action])
+                .sum::<f64>()
+                / repeats.len() as f64;
+        }
+        visit_counts[action] = u32::try_from(total_visits)
+            .context("aggregated visit count exceeds u32 at one action")?;
+        improved_policy[action] = repeats
+            .iter()
+            .map(|result| result.improved_policy[action])
+            .sum::<f64>()
+            / repeats.len() as f64;
+    }
+    let policy_mass: f64 = improved_policy.iter().sum();
+    if policy_mass <= 0.0 || !policy_mass.is_finite() {
+        bail!("aggregated improved policy has non-positive or non-finite mass");
+    }
+    for value in &mut improved_policy {
+        *value /= policy_mass;
+    }
+    let chosen_index = (0..action_count)
+        .max_by(|&a, &b| {
+            improved_policy[a]
+                .partial_cmp(&improved_policy[b])
+                .expect("finite policy")
+                // Equal policy mass: prefer the LOWEST action id, so invert
+                // the id ordering inside max_by.
+                .then_with(|| action_ids[b].cmp(&action_ids[a]))
+        })
+        .context("aggregation requires at least one action")?;
+    Ok(gumbel::GumbelSearchResult {
+        completed_q,
+        value_variance,
+        improved_policy,
+        visit_counts,
+        root_priors: first.root_priors.clone(),
+        root_value: repeats.iter().map(|result| result.root_value).sum::<f64>()
+            / repeats.len() as f64,
+        chosen_index,
+        simulations_run: repeats.iter().map(|result| result.simulations_run).sum(),
+    })
+}
+
+/// Provenance manifest for a --training-records-out shard. Deliberately not
+/// write_expert_tensor_manifest: that one derives its seed domain from the
+/// generation args, which are meaningless for a ledger-replayed bank run.
+fn write_training_records_manifest(
+    path: &Path,
+    shard_path: &Path,
+    shard: &ExpertTensorShardData,
+    checksum: &str,
+    metadata: &Value,
+) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let manifest = json!({
+        "schema_id": EXPERT_TENSOR_SCHEMA_ID_V4,
+        "version": EXPERT_SHARD_VERSION_V4,
+        "source_generator": "cascadiav3-real-root-exporter",
+        "source": "puzzle_bank_d1_relabel",
+        "shard_path": shard_path.display().to_string(),
+        "checksum": checksum,
+        "format": "npz",
+        "record_count": shard.record_count,
+        "total_token_count": shard.total_token_count,
+        "total_action_count": shard.total_action_count,
+        "total_relation_edge_count": shard.total_relation_edge_count,
+        "max_token_count": shard.max_token_count,
+        "max_action_count": shard.max_action_count,
+        "max_relation_edge_count": shard.max_relation_edge_count,
+        "metadata": metadata,
+        "notes": "Repeat-aggregated high-budget relabel records at harvested puzzle-bank roots; outcome fields carry the realized behavior-trajectory result and must be masked by the D1 training view.",
+    });
+    std::fs::write(path, format!("{}\n", canonical_json(&manifest)))
+        .with_context(|| format!("writing {}", path.display()))?;
+    Ok(())
+}
+
 fn run_puzzle_bank(args: &Args) -> Result<()> {
     let input = args
         .input
@@ -4800,6 +4965,12 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         Some(path) => Some(Arc::new(read_probe_roots_mask(path)?)),
         None => None,
     };
+    let repeat_audit_path = args
+        .training_records_out
+        .as_ref()
+        .map(|path| PathBuf::from(format!("{}.repeat_audit.jsonl", path.display())));
+    let repeat_audit_writer = open_sidecar(&repeat_audit_path, "--training-records-out audit")?;
+    let d1_records = Mutex::new(Vec::<(u64, Vec<Value>)>::new());
     let started = Instant::now();
     let mut seeds: Vec<u64> = by_seed.keys().copied().collect();
     if let Some(mask) = &probe_roots_mask {
@@ -4845,7 +5016,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         },
         |worker, seed| {
             let ledger_rows = &by_seed[&seed];
-            let (eval_rows, metas, _final_state) =
+            let (eval_rows, metas, final_state) =
                 match replay_ledger_seed(seed, ledger_rows, replay_menu_limit, args.player_count)
                 {
                     Ok(replayed) => replayed,
@@ -4855,7 +5026,10 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                         return Ok(());
                     }
                 };
+            let final_scores = score_game(&final_state);
             let mut records = Vec::new();
+            let mut seed_d1_records = Vec::new();
+            let mut seed_audit_rows = Vec::new();
             for (index, (replayed_row, meta)) in eval_rows.iter().zip(&metas).enumerate() {
                 let is_exact_frontier = replayed_row
                     .staged
@@ -4881,9 +5055,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                     replayed_row
                 };
                 let action_count = row.afterstates.len();
-                let mut mean_completed_q = vec![0.0_f64; action_count];
-                let mut total_visits = vec![0_u64; action_count];
-                let mut repeat_chosen = Vec::with_capacity(repeats);
+                let mut repeat_results = Vec::with_capacity(repeats);
                 for repeat in 0..repeats {
                     let cfg =
                         gumbel_config_from_args(args, stability_probe_seed(seed, meta.ply, repeat));
@@ -4897,15 +5069,23 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                         .with_context(|| {
                             format!("puzzle search at seed {seed} ply {} repeat {repeat}", meta.ply)
                         })?;
+                    repeat_results.push(result);
+                }
+                let mut mean_completed_q = vec![0.0_f64; action_count];
+                let mut total_visits = vec![0_u64; action_count];
+                for result in &repeat_results {
                     for action in 0..action_count {
                         mean_completed_q[action] += result.completed_q[action];
                         total_visits[action] += u64::from(result.visit_counts[action]);
                     }
-                    repeat_chosen.push(result.chosen_index);
                 }
                 for value in &mut mean_completed_q {
                     *value /= repeats as f64;
                 }
+                let repeat_chosen: Vec<usize> = repeat_results
+                    .iter()
+                    .map(|result| result.chosen_index)
+                    .collect();
                 let action_ids = row
                     .afterstates
                     .iter()
@@ -4933,7 +5113,102 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                     "repeats": repeats,
                     "search": gumbel_search_probe_settings(args),
                 }));
+                if args.training_records_out.is_some() {
+                    let aggregated = aggregate_repeat_search_results(&repeat_results, &action_ids)
+                        .with_context(|| {
+                            format!("aggregating repeats at seed {seed} ply {}", meta.ply)
+                        })?;
+                    let aggregated_chosen_index = aggregated.chosen_index;
+                    let mut record = gumbel_selfplay_root_record(
+                        row,
+                        &aggregated,
+                        false,
+                        0,
+                        0,
+                        aggregated.simulations_run,
+                        seed,
+                        meta.ply,
+                        args,
+                    )?;
+                    if let Some(metadata) =
+                        record.get_mut("metadata").and_then(Value::as_object_mut)
+                    {
+                        metadata.insert(
+                            "source".to_owned(),
+                            json!("puzzle_bank_d1_relabel"),
+                        );
+                        metadata.insert(
+                            "teacher".to_owned(),
+                            json!(format!(
+                                "gumbel_completed_q_n{}_d{}_x{}_visit_weighted_aggregate",
+                                args.gumbel_n_simulations, args.gumbel_determinizations, repeats
+                            )),
+                        );
+                        metadata.insert(
+                            "outcome_provenance".to_owned(),
+                            json!("behavior_trajectory_realized"),
+                        );
+                        metadata.insert("d1_repeats".to_owned(), json!(repeats));
+                        metadata.insert(
+                            "d1_repeat_agreement".to_owned(),
+                            json!(repeat_agreement),
+                        );
+                        metadata.insert(
+                            "ledger_chosen_action_id".to_owned(),
+                            json!(ledger_rows[meta.ply].chosen_action_id),
+                        );
+                    }
+                    backfill_final_outcome(std::slice::from_mut(&mut record), &final_scores)?;
+                    seed_d1_records.push(record);
+                    seed_audit_rows.push(json!({
+                        "type": "d1_repeat_audit",
+                        "ruleset_id": RULESET_ID,
+                        "seed": seed,
+                        "ply": meta.ply,
+                        "active_seat": row.staged.current_player(),
+                        "action_ids": action_ids,
+                        "repeat_completed_q": repeat_results
+                            .iter()
+                            .map(|result| json!(result.completed_q))
+                            .collect::<Vec<_>>(),
+                        "repeat_visit_counts": repeat_results
+                            .iter()
+                            .map(|result| json!(result.visit_counts))
+                            .collect::<Vec<_>>(),
+                        "repeat_value_variance": repeat_results
+                            .iter()
+                            .map(|result| json!(result.value_variance))
+                            .collect::<Vec<_>>(),
+                        "repeat_improved_policy": repeat_results
+                            .iter()
+                            .map(|result| json!(result.improved_policy))
+                            .collect::<Vec<_>>(),
+                        "repeat_root_value": repeat_results
+                            .iter()
+                            .map(|result| json!(result.root_value))
+                            .collect::<Vec<_>>(),
+                        "repeat_chosen_indexes": repeat_chosen,
+                        "repeat_agreement": repeat_agreement,
+                        "aggregated_chosen_index": aggregated_chosen_index,
+                        "search": gumbel_search_probe_settings(args),
+                    }));
+                }
                 resolved_roots.fetch_add(1, Ordering::Relaxed);
+            }
+            if !seed_audit_rows.is_empty() {
+                if let Some(writer) = &repeat_audit_writer {
+                    let mut writer = writer.lock().expect("repeat audit writer lock");
+                    for audit_row in &seed_audit_rows {
+                        writeln!(writer, "{}", canonical_json(audit_row))
+                            .context("writing --training-records-out audit row")?;
+                    }
+                }
+            }
+            if !seed_d1_records.is_empty() {
+                d1_records
+                    .lock()
+                    .expect("d1 record list lock")
+                    .push((seed, seed_d1_records));
             }
             let shard_path = output_dir.join(format!("puzzle_seed_{seed}.jsonl"));
             write_jsonl(&shard_path, &records)
@@ -4967,6 +5242,136 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
     let total_roots = resolved_roots.load(Ordering::Relaxed);
     if total_roots == 0 {
         bail!("puzzle bank resolved no roots (ledger too small or all excluded)");
+    }
+    if let Some(records_out) = &args.training_records_out {
+        if let Some(writer) = &repeat_audit_writer {
+            writer
+                .lock()
+                .expect("repeat audit writer lock")
+                .flush()
+                .context("flushing --training-records-out audit sidecar")?;
+        }
+        let mut per_seed_records = d1_records.into_inner().expect("d1 record list lock");
+        per_seed_records.sort_by_key(|(seed, _)| *seed);
+        let all_records: Vec<Value> = per_seed_records
+            .into_iter()
+            .flat_map(|(_, seed_records)| seed_records)
+            .collect();
+        if all_records.is_empty() {
+            bail!("--training-records-out resolved no training records");
+        }
+        let shard = ExpertTensorShardData::from_records(&all_records)
+            .context("packing --training-records-out shard")?;
+        if shard.improved_policy_records != shard.record_count
+            || shard.exact_endgame_field_records != shard.record_count
+            || shard.structured_value_field_records != shard.record_count
+        {
+            bail!(
+                "--training-records-out shard field coverage incomplete: {} policy / {} exact / {} structured of {} records",
+                shard.improved_policy_records,
+                shard.exact_endgame_field_records,
+                shard.structured_value_field_records,
+                shard.record_count
+            );
+        }
+        let mut metadata = expert_tensor_shard_metadata(args, &shard);
+        let teacher_model = model_artifact_identity(args)?;
+        let generator = generator_artifact_identity()?;
+        if let Some(object) = metadata.as_object_mut() {
+            object.insert("version".to_owned(), json!(EXPERT_SHARD_VERSION_V4));
+            object.insert("schema_id".to_owned(), json!(EXPERT_TENSOR_SCHEMA_ID_V4));
+            object.insert("source".to_owned(), json!("puzzle_bank_d1_relabel"));
+            object.insert(
+                "outcome_provenance".to_owned(),
+                json!("behavior_trajectory_realized"),
+            );
+            object.insert("ledger".to_owned(), json!(input.display().to_string()));
+            object.insert(
+                "probe_roots".to_owned(),
+                json!(args
+                    .probe_roots
+                    .as_ref()
+                    .map(|path| path.display().to_string())),
+            );
+            object.insert("repeats".to_owned(), json!(repeats));
+            object.insert(
+                "search".to_owned(),
+                gumbel_search_probe_settings(args),
+            );
+            object.insert("teacher_model".to_owned(), teacher_model);
+            object.insert("generator".to_owned(), generator);
+            object.insert(
+                "created_unix_seconds".to_owned(),
+                json!(created_unix_seconds()?),
+            );
+            object.insert(
+                "scientific_eligibility".to_owned(),
+                json!(
+                    if args.model_manifest.is_some() && !args.allow_model_fallback {
+                        "gumbel_selfplay_expert_iteration"
+                    } else {
+                        "audit_only_unverified_or_uniform_model_fallback"
+                    }
+                ),
+            );
+        }
+        let metadata_json = canonical_json(&metadata);
+        npz_writer::write_expert_tensor_npz(
+            records_out,
+            npz_writer::ExpertTensorNpz {
+                version: feature_tensors::EXPERT_SHARD_VERSION_V4,
+                metadata_json: &metadata_json,
+                tokens_f16_bits: &shard.tokens_f16_bits,
+                token_shape: [shard.total_token_count, PUBLIC_TOKEN_FEATURE_DIM],
+                actions_f16_bits: &shard.actions_f16_bits,
+                action_shape: [
+                    shard.total_action_count,
+                    SEMANTIC_PUBLIC_TOKEN_ACTION_FEATURE_DIM,
+                ],
+                token_offsets: &shard.token_offsets,
+                action_offsets: &shard.action_offsets,
+                relation_edges_i32: &shard.relation_edges_i32,
+                relation_edge_shape: [shard.total_relation_edge_count, 3],
+                relation_offsets: &shard.relation_offsets,
+                selected_action_index: &shard.selected_action_index,
+                target_q: &shard.target_q,
+                target_score_to_go: &shard.target_score_to_go,
+                q_valid: &shard.q_valid,
+                priors: &shard.priors,
+                visits: &shard.visits,
+                q_variance: &shard.q_variance,
+                q_count: &shard.q_count,
+                truncated_count: &shard.truncated_count,
+                exact_afterstate_score_active: &shard.exact_afterstate_score_active,
+                exact_afterstate_score_decomposition_active: Some(
+                    &shard.exact_afterstate_score_decomposition_active,
+                ),
+                active_seat: Some(&shard.active_seat),
+                final_score_vector: &shard.final_score_vector,
+                rank_vector: &shard.rank_vector,
+                score_decomposition: &shard.score_decomposition,
+                improved_policy: Some(&shard.improved_policy),
+                search_root_value: Some(&shard.search_root_value),
+                exact_endgame: Some(&shard.exact_endgame),
+                record_count: shard.record_count,
+                compression: args.tensor_compression,
+            },
+        )?;
+        let checksum = sha256_file_hex(records_out)?;
+        let training_manifest_path =
+            PathBuf::from(format!("{}.manifest.json", records_out.display()));
+        write_training_records_manifest(
+            &training_manifest_path,
+            records_out,
+            &shard,
+            &checksum,
+            &metadata,
+        )?;
+        eprintln!(
+            "[puzzle-bank] training records: {} records -> {} (audit sidecar + manifest alongside)",
+            shard.record_count,
+            records_out.display()
+        );
     }
     let manifest_path = output_dir.join("puzzle_bank_manifest.json");
     let manifest = json!({
@@ -6943,6 +7348,7 @@ mod tests {
     fn test_args() -> Args {
         Args {
             mode: Mode::ExportRoots,
+            training_records_out: None,
             gumbel_peek: false,
             gumbel_table_total: false,
             gumbel_table_native_q: false,
@@ -8070,6 +8476,162 @@ mod tests {
                 .as_str()
                 .expect("probe_roots recorded")
                 .ends_with("probe_roots.jsonl")
+        );
+        let _ = std::fs::remove_dir_all(&tempdir);
+    }
+
+    #[test]
+    fn aggregate_repeat_search_results_matches_hand_computation() {
+        let repeat_a = gumbel::GumbelSearchResult {
+            completed_q: vec![10.0, 20.0, 7.0],
+            value_variance: vec![1.0, 4.0, 0.0],
+            improved_policy: vec![0.6, 0.3, 0.1],
+            visit_counts: vec![3, 1, 0],
+            root_priors: vec![0.5, 0.3, 0.2],
+            root_value: 12.0,
+            chosen_index: 0,
+            simulations_run: 4,
+        };
+        let repeat_b = gumbel::GumbelSearchResult {
+            completed_q: vec![16.0, 20.0, 9.0],
+            value_variance: vec![2.0, 4.0, 0.0],
+            improved_policy: vec![0.2, 0.7, 0.1],
+            visit_counts: vec![1, 3, 0],
+            root_priors: vec![0.5, 0.3, 0.2],
+            root_value: 14.0,
+            chosen_index: 1,
+            simulations_run: 4,
+        };
+        let action_ids = vec!["a2".to_owned(), "a1".to_owned(), "a3".to_owned()];
+        let aggregated =
+            aggregate_repeat_search_results(&[repeat_a, repeat_b], &action_ids).expect("aggregates");
+
+        // Action 0: N=4, Q=(3*10+1*16)/4=11.5;
+        // var=(3*(1+(10-11.5)^2)+1*(2+(16-11.5)^2))/4 = (3*3.25+22.25)/4=8.0
+        assert!((aggregated.completed_q[0] - 11.5).abs() < 1e-12);
+        assert!((aggregated.value_variance[0] - 8.0).abs() < 1e-12);
+        assert_eq!(aggregated.visit_counts[0], 4);
+        // Action 1: N=4, Q=20 exactly, deltas zero -> pooled var = 4.
+        assert!((aggregated.completed_q[1] - 20.0).abs() < 1e-12);
+        assert!((aggregated.value_variance[1] - 4.0).abs() < 1e-12);
+        // Action 2: unvisited in both repeats -> mean model fallback, invalid.
+        assert!((aggregated.completed_q[2] - 8.0).abs() < 1e-12);
+        assert_eq!(aggregated.visit_counts[2], 0);
+        assert!((aggregated.value_variance[2] - 0.0).abs() < 1e-12);
+        // Policy: mean then renormalize -> (0.4, 0.5, 0.1); argmax action 1.
+        assert!((aggregated.improved_policy[0] - 0.4).abs() < 1e-12);
+        assert!((aggregated.improved_policy[1] - 0.5).abs() < 1e-12);
+        assert_eq!(aggregated.chosen_index, 1);
+        assert!((aggregated.root_value - 13.0).abs() < 1e-12);
+        assert_eq!(aggregated.simulations_run, 8);
+    }
+
+    #[test]
+    fn aggregate_repeat_search_results_breaks_policy_ties_by_lowest_action_id() {
+        let make = |policy: Vec<f64>| gumbel::GumbelSearchResult {
+            completed_q: vec![1.0, 1.0],
+            value_variance: vec![0.0, 0.0],
+            improved_policy: policy,
+            visit_counts: vec![1, 1],
+            root_priors: vec![0.5, 0.5],
+            root_value: 1.0,
+            chosen_index: 0,
+            simulations_run: 2,
+        };
+        // Equal aggregated mass; index 1 carries the lexicographically lower
+        // action id and must win the tie.
+        let action_ids = vec!["b".to_owned(), "a".to_owned()];
+        let aggregated = aggregate_repeat_search_results(
+            &[make(vec![0.5, 0.5]), make(vec![0.5, 0.5])],
+            &action_ids,
+        )
+        .expect("aggregates");
+        assert_eq!(aggregated.chosen_index, 1);
+    }
+
+    #[test]
+    fn puzzle_bank_training_records_out_emits_shard_audit_and_manifest() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-puzzle-bank-d1-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let seed = 2_026_070_782_u64;
+        let (mut args, _lines) = play_tiny_policy_game(&tempdir, seed);
+        args.mode = Mode::PuzzleBank;
+        args.input = Some(args.out.clone());
+        args.output_dir = Some(tempdir.join("bank"));
+        args.probe_stride = 1;
+        args.probe_repeats = 2;
+        args.model_sessions = Some(2);
+        let mask_path = tempdir.join("probe_roots.jsonl");
+        std::fs::write(
+            &mask_path,
+            format!("{{\"seed\":{seed},\"ply\":0}}\n{{\"seed\":{seed},\"ply\":4}}\n"),
+        )
+        .expect("mask written");
+        args.probe_roots = Some(mask_path);
+        let records_path = tempdir.join("d1_records.npz");
+        args.training_records_out = Some(records_path.clone());
+        run_puzzle_bank(&args).expect("puzzle bank runs");
+
+        // Shard exists and is a zip archive carrying the v4 arrays.
+        let file = std::fs::File::open(&records_path).expect("npz exists");
+        let mut zip = zip::ZipArchive::new(file).expect("npz is a zip");
+        let names: Vec<String> = (0..zip.len())
+            .map(|index| zip.by_index(index).expect("member").name().to_owned())
+            .collect();
+        for required in [
+            "version.npy",
+            "metadata_json.npy",
+            "improved_policy.npy",
+            "search_root_value.npy",
+            "final_score_vector.npy",
+            "target_q.npy",
+            "q_valid.npy",
+            "q_variance.npy",
+            "selected_action_index.npy",
+            "exact_endgame.npy",
+            "active_seat.npy",
+        ] {
+            assert!(
+                names.iter().any(|name| name == required),
+                "npz must contain {required}; members: {names:?}"
+            );
+        }
+
+        // Audit sidecar: one row per resolved root, two repeats each.
+        let audit_path = tempdir.join("d1_records.npz.repeat_audit.jsonl");
+        let audit = std::fs::read_to_string(&audit_path).expect("audit exists");
+        let rows: Vec<Value> = audit
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("audit json"))
+            .collect();
+        assert_eq!(rows.len(), 2, "one audit row per resolved root");
+        for row in &rows {
+            assert_eq!(row["type"], "d1_repeat_audit");
+            assert_eq!(row["repeat_completed_q"].as_array().expect("q").len(), 2);
+            assert_eq!(
+                row["repeat_improved_policy"].as_array().expect("pi").len(),
+                2
+            );
+            assert!(row["aggregated_chosen_index"].is_u64());
+            assert!(row["repeat_agreement"].is_number());
+        }
+
+        // Manifest: record count matches the resolved roots and provenance
+        // names the D1 relabel source.
+        let manifest: Value = serde_json::from_str(
+            &std::fs::read_to_string(tempdir.join("d1_records.npz.manifest.json"))
+                .expect("manifest exists"),
+        )
+        .expect("manifest json");
+        assert_eq!(manifest["record_count"].as_u64(), Some(2));
+        assert_eq!(manifest["source"].as_str(), Some("puzzle_bank_d1_relabel"));
+        assert!(manifest["checksum"].as_str().expect("checksum").len() == 64);
+        assert_eq!(
+            manifest["metadata"]["outcome_provenance"].as_str(),
+            Some("behavior_trajectory_realized")
         );
         let _ = std::fs::remove_dir_all(&tempdir);
     }
