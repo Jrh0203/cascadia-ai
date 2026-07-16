@@ -2,7 +2,7 @@
 
 **Deliverable doc.** Every research direction tried in the Gumbel self-play
 campaign: what it was, why we tried it, what we measured, and the verdict.
-Updated continuously; the freshest entries are in the "Active program" section.
+Updated continuously; §7 carries the latest consolidated verdicts (07-16); the live queue is [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md).
 
 Goal (the gate): **mean seat score ≥ 100 over 1,000 games of 4-player
 self-play.** Best legacy measurement as of 2026-07-08 evening: **98.40** (distq_k8
@@ -704,6 +704,77 @@ Artifacts: `sigma_sweep_20260710_n256_*` + `sigma_confirm_20260710_n256_*`.
   batch-invariant, bf16 not; paired verdicts via `paired_delta_stats`
   (t_ci_low/t_ci_high), promotion = CI excluding zero at ≥100 games;
   john0 jobs strictly sequential.
+
+## 7. Campaign week 2026-07-10 → 07-16 (consolidated verdicts)
+
+The densest verdict week of the campaign. Live queue and decision rules
+now live in [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md); this section is
+the permanent record of what closed and what it taught.
+
+### Adopted (velocity/economics — score-noninferior, ~10x cheaper experiments combined)
+
+- **Exact-K1 endgame** (07-10), **refresh-div4** (07-12, 1.24x),
+  **ghost+d32 serving default** (07-13, 0.688x wall), **puzzle-bank
+  screens** (~6 min candidate ranking, 07-12), **group-sequential gates**
+  (Lan-DeMets OBF, first live early stop 07-13), **CUPED** (10-25%
+  interval narrowing, 07-13).
+
+### Failed / closed — strength programs (do not re-propose without new evidence)
+
+- **R0.1 sigma calibration** confirm-null; **R0.2 CRN paired rollouts**
+  −4.4% vs −20% floor; **R0.3 q-bias at serving** structurally null;
+  **R0.4 LCB selection** flat — the root-estimation class is **0-for-4**
+  (07-11..12).
+- **R3.2 deep own-turn planning**: starves the root (07-13).
+- **R1.2 ghosts as a strength lever**: CI+ at n256-tier only; ns at
+  champion tier under both reinvestments (07-13). Survives as speed
+  default + cleared teacher (0.25-fold, 07-15). Pricing is
+  **serving-only** — ghost generation measured ~2x SLOWER (07-15).
+- **R1.3b menu widening** (root-menu 512): final look ns, RCI
+  [−0.27, +0.21] (07-14). Bank screens are VOID for menu candidates
+  (frozen menus). Coverage survives only via exact top-k (R3.3).
+- **R1.4 Stage 1 trainer arms V1b/V2/C1/T0**: ALL effects were
+  continued-training in disguise — the flagless control beat every arm;
+  the control's own SWA lead then died on the bank screen (07-14..15).
+- **R2.4 bridge throughput**: every lever below bar; serving is within
+  ~5% of the architectural ceiling (07-13).
+- **Structured-Q**: failed its preregistered pilot −17% vs +10% bar
+  (07-10).
+- **CascadiaFormer-L (207M vs M 88.2M)**: flat at every budget with the
+  optimization confound removed (07-06; context for the week's lesson).
+
+### Meta-lessons (measured, some twice)
+
+1. **Locked-val loss improvements of 5-15% carry ZERO decision-level
+   signal.** Only bank regret and paired gates screen training
+   candidates. Measured on Stage 1 and again on the ctrl-SWA lead.
+2. **Recipe fidelity is a failure class**: the champion's trainer knobs
+   (CGAB_FUSED etc., 11x step speed) and cycle4's generation topology
+   (24 owned sessions vs 12 shared — 3x pace) were both silently lost by
+   copying the wrong reference invocation. Always replicate the recorded
+   champion invocation exactly.
+3. **`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` kills trainers**
+   on this WSL2+5090 box (bridge tolerates it). See INFRASTRUCTURE.md.
+4. **Rules-contract bug found by deep search** (07-16): consecutive
+   four-of-a-kind wipes transiently drained the wildlife bag to zero
+   (official rule returns each resolution's tokens before the next);
+   replicated by unit test, fixed at rev 45fb5072. John's conservation
+   argument (>=16 tokens at game end) was the diagnosis.
+
+### Alive and funded
+
+- **R1.4-D1 label correction**: pilot PASSED 07-15 — mega-search
+  (n2048/d16) moves the label on **43.2-43.6% of repeat-stable roots**
+  (bar 20%), 0.40 pts mean regret at stake, replicated on 7,600 roots.
+  The only training-side idea with a measured mechanism; Stage A corpus
+  generation in flight. Externally validated by MuZero Reanalyze
+  (relabeling drove ~80% of its updates).
+- Next after Stage A: adaptive per-root budgets (R0.5/R3.4), cooperative
+  table values (R1.1c/R3.1), exactness expansion (R3.3), plus the
+  literature candidates **L1-L8** in
+  [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md) (07-16 light research pass:
+  KataGo bias-correction/variance-scaling/mixed-grade generation,
+  continuous reanalyze, surprise weighting, opponent-seat aux targets).
 
 Full chronological detail: `cascadiav3/EXPERIMENT_LOG.md`.
 Resume state / decision history: `docs/v3/CAMPAIGN_STATE.md`.
