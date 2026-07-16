@@ -993,7 +993,13 @@ impl GameState {
     }
 
     fn replace_wildlife(&mut self, slots: &[MarketSlot]) -> Result<(), RuleError> {
-        let mut set_aside = Vec::with_capacity(slots.len() + 4);
+        // Official wipe order: set the wiped tokens aside, refill from the
+        // bag, then return the set-aside tokens to the bag — completing each
+        // resolution before observing the next market state. Returning after
+        // every resolution (rather than once at the end) keeps the bag from
+        // transiently draining across consecutive four-of-a-kind wipes; a
+        // conserved 100-token supply can then never run dry mid-wipe.
+        let mut set_aside = Vec::with_capacity(4);
         for slot in slots {
             let wildlife = self.market.wildlife[slot.index()]
                 .take()
@@ -1001,6 +1007,9 @@ impl GameState {
             set_aside.push(wildlife);
         }
         self.fill_empty_wildlife()?;
+        for wildlife in set_aside.drain(..) {
+            self.return_wildlife(wildlife);
+        }
 
         let mut automatic_wipes = 0;
         while self.market.four_of_a_kind().is_some() {
@@ -1016,10 +1025,9 @@ impl GameState {
                 );
             }
             self.fill_empty_wildlife()?;
-        }
-
-        for wildlife in set_aside {
-            self.return_wildlife(wildlife);
+            for wildlife in set_aside.drain(..) {
+                self.return_wildlife(wildlife);
+            }
         }
         Ok(())
     }
@@ -1691,6 +1699,45 @@ mod tests {
         game.resolve_automatic_overpopulation().unwrap();
 
         assert!(game.market.four_of_a_kind().is_none());
+        game.validate().unwrap();
+    }
+
+    #[test]
+    fn consecutive_overpopulation_wipes_near_exhaustion_do_not_drain_the_bag() {
+        // Late-game shape: few tokens left in the bag, heavily skewed toward
+        // one species — exactly when consecutive four-of-a-kind draws are
+        // likely. The official rule returns each wipe's tokens to the bag
+        // after its refill, so the physical bag never shrinks across
+        // consecutive overpopulations and can never run dry (100 tokens minus
+        // at most 80 placed minus 4 in the market leaves at least 16).
+        let mut game = game(4, 7);
+        force_market_wildlife(&mut game, [Wildlife::Bear; 4]);
+        // Shrink the live bag to seven tokens (four Elk on top of three
+        // singletons) while preserving conservation: the Bear wipe refills
+        // with the four Elk, forcing a second wipe with only three left.
+        game.discarded_wildlife.append(&mut game.wildlife_bag);
+        for wanted in [
+            Wildlife::Salmon,
+            Wildlife::Hawk,
+            Wildlife::Fox,
+            Wildlife::Elk,
+            Wildlife::Elk,
+            Wildlife::Elk,
+            Wildlife::Elk,
+        ] {
+            let index = game
+                .discarded_wildlife
+                .iter()
+                .position(|wildlife| *wildlife == wanted)
+                .unwrap();
+            game.wildlife_bag
+                .push(game.discarded_wildlife.swap_remove(index));
+        }
+
+        game.resolve_automatic_overpopulation().unwrap();
+
+        assert!(game.market.four_of_a_kind().is_none());
+        assert_eq!(game.wildlife_bag.len() + 4, 11);
         game.validate().unwrap();
     }
 

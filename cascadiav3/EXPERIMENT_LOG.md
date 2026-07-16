@@ -7047,3 +7047,43 @@ anywhere cannot idle the GPU.
   variable from Stage A; the 18:35 safety clearance stands for future
   use. Same registered seeds `2026794000..5249`, both sidecars. ETA
   ~7.5h (~07:00) at cycle4's non-ghost rate.
+
+## 2026-07-16 00:30 — Wildlife-bag rules question RESOLVED by John: engine bug, found, replicated, fixed
+
+- **John's ruling:** the bag must never be empty. His conservation
+  argument: 100 tokens, at most 79-80 on boards plus 4 in the market
+  on the last turn leaves >=16 in the bag; a three-of-a-kind wipe
+  returns its tokens immediately, so 0 is unreachable under correct
+  rules. Any empty bag is an engine failure.
+- **Root cause (`crates/cascadia-game/src/game.rs`,
+  `replace_wildlife`):** wiped tokens were set aside and returned to
+  the bag only AFTER the automatic four-of-a-kind wipe loop finished,
+  accumulating across iterations — a transient drain of 4 tokens per
+  consecutive overpopulation. The official rule completes each
+  resolution (remove -> refill -> return) before observing the next
+  market, so the physical bag never shrinks across consecutive wipes.
+  Late game (bag ~16, composition skewed toward one species — exactly
+  when consecutive four-of-a-kinds are likely) the drain reached 0 and
+  the refill hard-errored. Conservation was never violated; the leak
+  was transient, which is why it took a rare deep line (ghost
+  trajectory, seed 2026794359) to surface it.
+- **Replicated** with a deterministic unit test
+  (`consecutive_overpopulation_wipes_near_exhaustion_do_not_drain_the_bag`):
+  market forced to four Bears, live bag shrunk to 7 tokens with four
+  Elk on top (conservation preserved via `discarded_wildlife`); the
+  Bear wipe refills with the four Elk, the second wipe needs 4 with 3
+  left -> `WildlifeBagEmpty` on the pre-fix code. No 5h run needed.
+- **Fix:** `replace_wildlife` now returns each resolution's set-aside
+  tokens right after its refill (voluntary wipe and each automatic
+  wipe iteration). Trajectories are bit-identical for all games whose
+  wipe loop runs at most once (same return order, same hash counter,
+  same bag state at each insert); only consecutive-four-of-a-kind
+  games — the buggy paths — change. Full suite green: cascadia-game
+  59/59 (incl. new repro), workspace all green, exporter 65/65
+  (replay + golden fixtures unaffected).
+- **Deployment:** NOT deployed to john0 — Stage A generation v2 is
+  running (one job at a time; never deploy mid-job). It runs ghost-off
+  on rev 78d5e10b where the edge is skip-and-record hardened (0 skips
+  so far), so the corpus is safe. The fix rides the next deploy.
+  Note for the record: corpora generated pre/post fix differ only on
+  consecutive-wipe games — negligible label impact, now logged.
