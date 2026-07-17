@@ -234,6 +234,73 @@ impl TrajectoryLedger {
         &self.turns
     }
 
+    pub fn config(&self) -> GameConfig {
+        self.config
+    }
+
+    pub fn seed(&self) -> GameSeed {
+        self.seed
+    }
+
+    pub fn source_game_id(&self) -> &str {
+        &self.source_game_id
+    }
+
+    /// The canonical pre-game state this ledger's trajectory started from,
+    /// hash-verified against the sealed initial-state commitment.
+    pub fn initial_state(&self) -> Result<GameState, LedgerError> {
+        self.validate_static_fields()?;
+        let game = GameState::new(self.config, self.seed)?;
+        if *game.canonical_hash().as_bytes() != self.initial_state_hash {
+            return Err(LedgerError::InitialStateHashMismatch);
+        }
+        Ok(game)
+    }
+
+    /// Hash-anchored physical replay: applies the sealed actions in order
+    /// and returns the state after every turn, checking each transition
+    /// against its sealed pre/post canonical hashes.
+    ///
+    /// Unlike [`Self::replay`], this does not re-verify policy decision
+    /// traces (which recompose every root menu, an expensive canonical
+    /// proof).  Every constructed [`TrajectoryLedger`] value has already
+    /// passed the full verification at its sealing or deserialization
+    /// boundary; consumers that only need the physical trajectory can rely
+    /// on the sealed per-turn hash anchors.
+    pub fn raw_state_trajectory(&self) -> Result<Vec<GameState>, LedgerError> {
+        let mut state = self.initial_state()?;
+        let mut states = Vec::with_capacity(self.turns.len());
+        for record in &self.turns {
+            if *state.canonical_hash().as_bytes() != record.pre_state_hash {
+                return Err(LedgerError::PreStateHashMismatch(record.turn_index));
+            }
+            state = state.transition(&record.action)?;
+            if *state.canonical_hash().as_bytes() != record.post_state_hash {
+                return Err(LedgerError::PostStateHashMismatch(record.turn_index));
+            }
+            states.push(state.clone());
+        }
+        if *state.canonical_hash().as_bytes() != self.final_state_hash {
+            return Err(LedgerError::FinalStateHashMismatch);
+        }
+        Ok(states)
+    }
+
+    /// The hash-anchored final state of [`Self::raw_state_trajectory`].
+    pub fn raw_final_state(&self) -> Result<GameState, LedgerError> {
+        let mut state = self.initial_state()?;
+        for record in &self.turns {
+            state = state.transition(&record.action)?;
+            if *state.canonical_hash().as_bytes() != record.post_state_hash {
+                return Err(LedgerError::PostStateHashMismatch(record.turn_index));
+            }
+        }
+        if *state.canonical_hash().as_bytes() != self.final_state_hash {
+            return Err(LedgerError::FinalStateHashMismatch);
+        }
+        Ok(state)
+    }
+
     pub fn completion(&self) -> LedgerCompletion {
         self.completion
     }
