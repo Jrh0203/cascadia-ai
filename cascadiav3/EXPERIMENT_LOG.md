@@ -7373,3 +7373,22 @@ Independent verification (this session, worktree at branch tip 9055e6fb):
 built+verified), WI-3 prep done. All pre-D1-wall CPU work is complete.**
 Remaining WI-3 half (production trace capture via extracted incumbent)
 stays held at the D1 durable boundary per the budget ruling.
+
+## 2026-07-17 11:05 — Stage A corpus COMPLETE; harvest clean; relabel running
+
+Generation v5 finished: 1250/1250 seeds, 100,000 decision records, 25.0h
+wall (~72 s/seed, zero skips), rules 07-16, rev 689f9d69. Artifacts:
+`stage_a_20260716_{tensor.npz (2.97 GB), decisions.jsonl (100k),
+hard_roots.jsonl (100k), manifest.json}`.
+
+Pipeline waiter verified artifacts and chained autonomously at 11:03:19.
+Harvest (d1_harvest_20260716): census 100k rows, hard pool 61,283;
+tranche 15,000 selected, ZERO shortfall in all phase cells (6k opening /
+6k mid / 3k late, decile-stratified, caps 12/16); sentinel 1,500, zero
+shortfall. Masks: tranche bdcc1387…, sentinel 662d568b…, salt
+`cascadia-d1-tranche-2026-07-16` as preregistered.
+
+Relabel launched 11:03 (PID 45634): pilot-exact n2048/d16 ×2 repeats,
+12-shared sessions, TF32=0 path via run_puzzle_bank.sh, records out
+`d1_records_20260716.npz`. ETA ~26h → views/retrains/screens/verdict
+~07-18 afternoon.
