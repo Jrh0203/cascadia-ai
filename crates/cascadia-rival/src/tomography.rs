@@ -12,6 +12,15 @@ use crate::Sha256Digest;
 
 pub const TOMOGRAPHY_RESULT_SCHEMA_ID: &str = "cascadiav3.rival_tomography_result.v1";
 
+/// Namespace prefix that every non-proxy (incumbent-measured) policy
+/// identity must carry.  The prefix is an explicit declaration, not a
+/// heuristic: a result can only enter the
+/// [`TomographyEvidenceDomain::IncumbentMeasured`] domain when its input
+/// manifest declared a policy identity inside this namespace, and a
+/// `cpu_proxy` result can never carry one.  Mislabeling in either direction
+/// fails closed at construction and at deserialization.
+pub const INCUMBENT_POLICY_NAMESPACE: &str = "incumbent:";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TomographyKind {
@@ -37,6 +46,57 @@ pub enum InformationBoundary {
 pub enum TomographyEvidenceDomain {
     /// CPU pattern-policy plumbing only; structurally non-funding.
     CpuProxy,
+    /// Measurements over games produced by a declared non-proxy incumbent
+    /// policy.  Admission requires the incumbent policy identity to live in
+    /// the [`INCUMBENT_POLICY_NAMESPACE`]; proxy-population diagnostics can
+    /// therefore never be presented as incumbent measurements.
+    IncumbentMeasured,
+}
+
+impl TomographyEvidenceDomain {
+    /// Fail-closed policy-identity admission for this evidence domain.
+    ///
+    /// `IncumbentMeasured` requires a non-empty identity inside
+    /// [`INCUMBENT_POLICY_NAMESPACE`]; `CpuProxy` rejects identities inside
+    /// that namespace so a proxy result cannot masquerade in either
+    /// direction.
+    pub fn admits_incumbent_policy_id(self, incumbent_policy_id: &str) -> bool {
+        let namespaced = incumbent_policy_id
+            .strip_prefix(INCUMBENT_POLICY_NAMESPACE)
+            .is_some_and(|rest| !rest.trim().is_empty());
+        match self {
+            Self::CpuProxy => !incumbent_policy_id.starts_with(INCUMBENT_POLICY_NAMESPACE),
+            Self::IncumbentMeasured => namespaced,
+        }
+    }
+}
+
+/// Population labeling shared by every tomography result of one harness run:
+/// which policy produced the input games, which table population opposed it,
+/// and the evidence domain those identities admit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TomographyPopulation {
+    pub incumbent_policy_id: String,
+    pub opponent_population_id: String,
+    pub evidence_domain: TomographyEvidenceDomain,
+}
+
+impl TomographyPopulation {
+    pub fn validate(&self) -> Result<(), TomographyError> {
+        if self.incumbent_policy_id.trim().is_empty()
+            || self.opponent_population_id.trim().is_empty()
+        {
+            return Err(TomographyError::EmptyIdentity);
+        }
+        if !self
+            .evidence_domain
+            .admits_incumbent_policy_id(&self.incumbent_policy_id)
+        {
+            return Err(TomographyError::EvidenceDomainPolicyMismatch);
+        }
+        Ok(())
+    }
 }
 
 impl TomographyKind {
@@ -150,6 +210,17 @@ pub struct TomographyResultInput {
 
 impl TomographyResult {
     pub fn try_new(input: TomographyResultInput) -> Result<Self, TomographyError> {
+        Self::try_new_in_domain(input, TomographyEvidenceDomain::CpuProxy)
+    }
+
+    /// Constructs a result in an explicit evidence domain.  The domain must
+    /// admit the incumbent policy identity
+    /// ([`TomographyEvidenceDomain::admits_incumbent_policy_id`]); every
+    /// other validation rule of [`Self::try_new`] applies unchanged.
+    pub fn try_new_in_domain(
+        input: TomographyResultInput,
+        evidence_domain: TomographyEvidenceDomain,
+    ) -> Result<Self, TomographyError> {
         let result = Self {
             schema_id: TOMOGRAPHY_RESULT_SCHEMA_ID.to_owned(),
             information_boundary: input.kind.required_information_boundary(),
@@ -162,7 +233,7 @@ impl TomographyResult {
             evidence: input.evidence,
             natural_frequency_weight_numerator: input.natural_frequency_weight_numerator,
             natural_frequency_weight_denominator: input.natural_frequency_weight_denominator,
-            evidence_domain: TomographyEvidenceDomain::CpuProxy,
+            evidence_domain,
         };
         result.validate()?;
         Ok(result)
@@ -183,6 +254,12 @@ impl TomographyResult {
             || self.opponent_population_id.trim().is_empty()
         {
             return Err(TomographyError::EmptyIdentity);
+        }
+        if !self
+            .evidence_domain
+            .admits_incumbent_policy_id(&self.incumbent_policy_id)
+        {
+            return Err(TomographyError::EvidenceDomainPolicyMismatch);
         }
         if self.natural_frequency_weight_denominator == 0
             || self.natural_frequency_weight_numerator > self.natural_frequency_weight_denominator
@@ -221,6 +298,18 @@ impl TomographyResult {
 
     pub fn kind(&self) -> TomographyKind {
         self.kind
+    }
+
+    pub fn source_game_id(&self) -> &str {
+        &self.source_game_id
+    }
+
+    pub fn acting_seat(&self) -> u8 {
+        self.acting_seat
+    }
+
+    pub fn incumbent_policy_id(&self) -> &str {
+        &self.incumbent_policy_id
     }
 
     pub fn evidence(&self) -> &TomographyEvidence {
@@ -292,6 +381,11 @@ pub enum TomographyError {
     EmptyIdentity,
     #[error("natural-frequency weight must satisfy 0 <= numerator <= denominator")]
     InvalidNaturalFrequencyWeight,
+    #[error(
+        "evidence domain does not admit the incumbent policy identity \
+         (incumbent_measured requires the 'incumbent:' namespace; cpu_proxy forbids it)"
+    )]
+    EvidenceDomainPolicyMismatch,
     #[error("certified lower bound exceeds certified upper bound")]
     InvertedBounds,
     #[error("evidence grade is not valid for {0:?}")]
@@ -355,6 +449,140 @@ mod tests {
                 TomographyKind::T4ResourceRelaxedBound
             ))
         );
+    }
+
+    #[test]
+    fn cpu_proxy_wire_form_is_stable_and_still_parses() {
+        let result = TomographyResult::try_new(input(
+            TomographyKind::T0OwnBoardRepack,
+            TomographyEvidence::BestFound {
+                score_delta: 2,
+                solver_config_sha256: digest("solver"),
+                witness_ledger_sha256: digest("ledger"),
+                explored_nodes: 5,
+            },
+        ))
+        .unwrap();
+        let value = serde_json::to_value(&result).unwrap();
+        assert_eq!(value["evidence_domain"], serde_json::json!("cpu_proxy"));
+        let decoded: TomographyResult = serde_json::from_value(value).unwrap();
+        assert_eq!(decoded, result);
+        assert_eq!(
+            decoded.evidence_domain(),
+            TomographyEvidenceDomain::CpuProxy
+        );
+    }
+
+    #[test]
+    fn incumbent_measured_requires_the_declared_namespace_and_roundtrips() {
+        let mut incumbent = input(
+            TomographyKind::T0OwnBoardRepack,
+            TomographyEvidence::BestFound {
+                score_delta: 4,
+                solver_config_sha256: digest("solver"),
+                witness_ledger_sha256: digest("ledger"),
+                explored_nodes: 9,
+            },
+        );
+        // A proxy-named policy id can never enter the incumbent domain.
+        assert_eq!(
+            TomographyResult::try_new_in_domain(
+                incumbent.clone(),
+                TomographyEvidenceDomain::IncumbentMeasured,
+            ),
+            Err(TomographyError::EvidenceDomainPolicyMismatch)
+        );
+        // A namespace prefix with no identity behind it also fails closed.
+        incumbent.incumbent_policy_id = "incumbent:".to_owned();
+        assert_eq!(
+            TomographyResult::try_new_in_domain(
+                incumbent.clone(),
+                TomographyEvidenceDomain::IncumbentMeasured,
+            ),
+            Err(TomographyError::EvidenceDomainPolicyMismatch)
+        );
+        incumbent.incumbent_policy_id = "incumbent:b0-serving".to_owned();
+        let result = TomographyResult::try_new_in_domain(
+            incumbent,
+            TomographyEvidenceDomain::IncumbentMeasured,
+        )
+        .unwrap();
+        let value = serde_json::to_value(&result).unwrap();
+        assert_eq!(
+            value["evidence_domain"],
+            serde_json::json!("incumbent_measured")
+        );
+        let decoded: TomographyResult = serde_json::from_value(value).unwrap();
+        assert_eq!(decoded, result);
+        assert_eq!(
+            decoded.evidence_domain(),
+            TomographyEvidenceDomain::IncumbentMeasured
+        );
+        assert!(!decoded.eligible_for_high_fidelity_funding_claim());
+    }
+
+    #[test]
+    fn incumbent_namespaced_identity_cannot_pose_as_cpu_proxy() {
+        let mut proxy = input(
+            TomographyKind::T1PublicOneSeatWitness,
+            TomographyEvidence::BestFound {
+                score_delta: 1,
+                solver_config_sha256: digest("solver"),
+                witness_ledger_sha256: digest("ledger"),
+                explored_nodes: 3,
+            },
+        );
+        proxy.incumbent_policy_id = "incumbent:b0-serving".to_owned();
+        assert_eq!(
+            TomographyResult::try_new(proxy),
+            Err(TomographyError::EvidenceDomainPolicyMismatch)
+        );
+    }
+
+    #[test]
+    fn domain_mislabeling_fails_closed_at_deserialization() {
+        let result = TomographyResult::try_new(input(
+            TomographyKind::T0OwnBoardRepack,
+            TomographyEvidence::BestFound {
+                score_delta: 2,
+                solver_config_sha256: digest("solver"),
+                witness_ledger_sha256: digest("ledger"),
+                explored_nodes: 5,
+            },
+        ))
+        .unwrap();
+        let mut value = serde_json::to_value(&result).unwrap();
+        // Relabeling a proxy-population result as incumbent-measured must be
+        // rejected on read, not silently accepted.
+        value["evidence_domain"] = serde_json::json!("incumbent_measured");
+        assert!(serde_json::from_value::<TomographyResult>(value.clone()).is_err());
+        // Unknown domains are rejected outright.
+        value["evidence_domain"] = serde_json::json!("gpu_incumbent");
+        assert!(serde_json::from_value::<TomographyResult>(value).is_err());
+    }
+
+    #[test]
+    fn population_validation_matches_result_validation() {
+        let proxy = TomographyPopulation {
+            incumbent_policy_id: "proxy-b0".to_owned(),
+            opponent_population_id: "proxy-b0:table".to_owned(),
+            evidence_domain: TomographyEvidenceDomain::CpuProxy,
+        };
+        proxy.validate().unwrap();
+        let mislabeled = TomographyPopulation {
+            evidence_domain: TomographyEvidenceDomain::IncumbentMeasured,
+            ..proxy.clone()
+        };
+        assert_eq!(
+            mislabeled.validate(),
+            Err(TomographyError::EvidenceDomainPolicyMismatch)
+        );
+        let incumbent = TomographyPopulation {
+            incumbent_policy_id: "incumbent:b0-serving".to_owned(),
+            opponent_population_id: "incumbent:b0-serving:table".to_owned(),
+            evidence_domain: TomographyEvidenceDomain::IncumbentMeasured,
+        };
+        incumbent.validate().unwrap();
     }
 
     #[test]
