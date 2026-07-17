@@ -21,6 +21,9 @@ mod ruleset_identity;
 mod scenario;
 mod terminal;
 mod tomography;
+mod tomography_harness;
+mod tomography_repack;
+mod tomography_replay;
 
 pub use action_id::{
     ACTION_CONTENT_ID_VERSION, ActionContentId, ActionIdError,
@@ -86,6 +89,20 @@ pub use terminal::{
     run_proxy_terminal_pair,
 };
 pub use tomography::{
-    InformationBoundary, TOMOGRAPHY_RESULT_SCHEMA_ID, TomographyError, TomographyEvidence,
-    TomographyEvidenceDomain, TomographyKind, TomographyResult, TomographyResultInput,
+    INCUMBENT_POLICY_NAMESPACE, InformationBoundary, TOMOGRAPHY_RESULT_SCHEMA_ID, TomographyError,
+    TomographyEvidence, TomographyEvidenceDomain, TomographyKind, TomographyPopulation,
+    TomographyResult, TomographyResultInput,
+};
+pub use tomography_harness::{
+    HarnessConfig, HarnessError, KindAggregate, SummaryGameRow, SummaryInput, SummarySeatRow,
+    TOMOGRAPHY_SUMMARY_SCHEMA_ID, TomographySummary, WITNESS_SEMANTICS_LOWER_BOUND_ONLY,
+    derive_population_id, run_directory,
+};
+pub use tomography_repack::{
+    REPACK_SOLVER_ID, RepackConfig, RepackError, RepackOutcome, RepackWitness,
+    WitnessTilePlacement, WitnessWildlifePlacement, repack_seat,
+};
+pub use tomography_replay::{
+    REPLAY_SOLVER_ID, ReplayConfig, ReplayError, ReplayOutcome, ReplayWitness,
+    chronology_deviation_is_feasible, replay_seat,
 };
