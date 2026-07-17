@@ -11,6 +11,7 @@ mod bounds;
 mod compiler;
 mod digest;
 mod dynamic_urn;
+mod golden_trace;
 mod identity;
 mod ledger;
 mod menu;
@@ -44,6 +45,14 @@ pub use dynamic_urn::{
     DYNAMIC_URN_PROOF_CONTRACT_ID, DynamicUrnAdmissionStatus, DynamicUrnError,
     DynamicUrnObligation, MAX_EXHAUSTIVE_SMALL_URN_ITEMS, SmallUrnOracleReport,
     verify_small_urn_priority_oracle,
+};
+pub use golden_trace::{
+    BridgeExchangeDigest, CanonicalF64, GOLDEN_DECISION_TRACE_SCHEMA_ID,
+    GOLDEN_TRACE_MANIFEST_SCHEMA_ID, GoldenChosenAction, GoldenDecisionTrace,
+    GoldenDecisionTraceInput, GoldenMenuDigest, GoldenPreludeRecord, GoldenSearchConfig,
+    GoldenTraceError, GoldenTraceIdentity, GoldenTraceManifest, GoldenTraceManifestEntry,
+    MAX_GOLDEN_TRACE_BRIDGE_EXCHANGES, MAX_GOLDEN_TRACE_MANIFEST_ENTRIES, TraceDivergence,
+    compare_traces,
 };
 pub use identity::{
     BkIdentity, CANONICAL_SIMULATOR_ID, FailureBehavior, FailureDisposition, ForbiddenCapabilities,
