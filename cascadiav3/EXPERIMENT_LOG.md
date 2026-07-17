@@ -7349,3 +7349,27 @@ Consequences, recorded as a campaign ruling:
    WI-4a/b/c (probe harnesses, chance-coupling machinery) are held
    unless Rival-Lite's design needs coupling proofs for its paired
    late-game panels — decide at design time, not by default.
+
+## 2026-07-16 23:55 — WI-3 prep (golden-trace machinery) landed and independently verified; runnable CPU list COMPLETE
+
+Agent commits `b0f36b71..9055e6fb` on `feat/rival-cpu-machinery`:
+`golden_trace.rs` (1,967 lines), lib.rs registration, doc section 21.
+Independent verification (this session, worktree at branch tip 9055e6fb):
+
+- **Scope**: diff touches exactly 3 files. Zero exporter / cascadia-game /
+  trainer / bridge / torch files; no `cascadia-v3-policy` crate created
+  (hold ledgered in the doc). D1 wall respected.
+- **Tests**: `cargo test -p cascadia-rival` green — 112 lib + all
+  integration suites (1 pre-existing `#[ignore]` release battery).
+  `cargo check --workspace` green (pre-existing cascadia-api warning only).
+- **Contents**: `GoldenDecisionTrace` v1 (deny_unknown_fields, canonical
+  JSON SHA-256, immutable publisher), `compare_traces` first-divergence
+  comparator (32 variants, causal order), `GoldenTraceManifest` v1
+  (seed-sorted, foreign-identity/duplicate-seed refusal), `CanonicalF64`.
+  Menu + bridge exchanges stored as ordered digests (SHA-256), scalar
+  decision facts verbatim.
+
+**CPU scoreboard: WI-1 done (CPU-1 claimed), WI-2 done (tomography
+built+verified), WI-3 prep done. All pre-D1-wall CPU work is complete.**
+Remaining WI-3 half (production trace capture via extracted incumbent)
+stays held at the D1 durable boundary per the budget ruling.
