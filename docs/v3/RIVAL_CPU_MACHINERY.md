@@ -1103,3 +1103,63 @@ Real measured power: UNRESOLVED
 GPU authorization: DENIED
 100-point claim: not evaluated
 ```
+
+## 21. Golden-trace prep (WI-3, held at the D1 wall)
+
+The preparation half of build-scope Work Item 3 (exporter extraction under
+golden traces) is delivered in `crates/cascadia-rival/src/golden_trace.rs`,
+sized to the 2026-07-16 budget ruling: only what Rival-Lite's late-game
+terminal continuations will need to prove behavioral identity of an extracted
+incumbent, and nothing speculative beyond it.
+
+**What exists (CPU-only, synthetic fixtures only):**
+
+- **`cascadiav3.rival_golden_decision_trace.v1`** — a fail-closed,
+  content-hashed record of ONE serving decision: the identity triple
+  (canonical ruleset, source revision, hash-pinned policy identity), public
+  state hash + ply + seat + completed turns, the free three-of-a-kind prelude
+  decision (with the revealed market's hash when accepted), a legal-menu
+  digest (action count, cap, first/last action ids, SHA-256 of the full
+  canonical ordered id list — the list itself is never stored), the complete
+  gumbel search configuration (n, top_m, depth_rounds, determinizations,
+  market samples, exact endgame turns, blend, menu cap, c_visit, c_scale,
+  seed), every model-bridge interaction in order as request-row-count +
+  request/response payload SHA-256 digests, the chosen action (id, menu
+  index, completed Q, improved-policy mass), and a whole-trace content hash
+  over the recursively key-sorted canonical JSON. Floats travel as canonical
+  shortest round-trip decimal strings, so traces are byte-deterministic
+  across platforms and float equality is bit-exact.
+- **`compare_traces(reference, candidate)`** — returns the FIRST divergent
+  field as a named `TraceDivergence` carrying both observed values (state
+  hash, prelude, each menu and search-config field, the k-th bridge digest,
+  chosen action, ...). Byte-identical traces compare equal; any single-field
+  mutation is detected and named. This is the identity check the post-D1
+  extraction must pass on every captured production trace.
+- **`cascadiav3.rival_golden_trace_manifest.v1`** — a sealed trace-set
+  container (identity triple, count, strictly seed-sorted per-trace SHA-256
+  entries, manifest content hash) with the tomography harness's immutable
+  publication pattern (`write_json_immutable` never overwrites). A trace
+  declaring any other ruleset, source revision, or policy identity is
+  refused, never mixed in.
+- **Fifteen synthetic-fixture tests** in the crate's unit suite: wire-form
+  lockdown, round-trips, every-leaf-required and every-leaf-perturbation
+  fail-closed sweeps, unknown-field rejection per layer, a 30-case
+  first-divergence matrix, manifest fault injection, immutable publication,
+  cross-identity rejection, and locked golden hashes for both v1 schemas.
+
+**What is deliberately absent (not unfinished — held):**
+
+- No production trace capture: nothing here reads a checkpoint, weights
+  manifest, model bridge, or accelerator, and no trace of the real serving
+  incumbent exists on this branch.
+- No `cascadia-v3-policy` crate: the extraction target crate is not stubbed
+  or scaffolded; creating it touches the exporter's dependency closure.
+- No change to `cascadiav3/real-root-exporter/**`, `crates/cascadia-game/**`,
+  the trainer, the bridge, or anything else the live D1 chain reads.
+
+**Unblock condition:** a durable D1 boundary plus an explicit instruction.
+Only then: capture production golden traces on pinned seeds/config (CPU
+bridge acceptable), extract the policy-critical exporter paths
+behavior-identically into the library crate, and require every captured
+trace to compare equal through the library path alongside the full
+pre-existing exporter and workspace suites.
