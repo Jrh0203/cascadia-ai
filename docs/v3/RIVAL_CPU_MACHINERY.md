@@ -29,6 +29,21 @@ The branch now contains five implemented contract layers:
    that wraps canonical `cascadia-game` transitions and scoring while owning
    Rival identities, public-policy boundaries, RNG domains, immutable replay,
    proxy terminal pairs, Rust-authored bounds, and typed tomography evidence.
+   As of 2026-07-16 (build scope WI-2) the tomography types are backed by two
+   working CPU optimizers plus a driver: `tomography_repack.rs` (T0 static
+   own-seat repacking, deterministic threshold annealing over the frozen
+   realized multiset), `tomography_replay.rs` (chronology-preserving
+   hindsight-placement beam replay, emitted at the
+   `KnownExogenousChanceTape` boundary as kind T3 — labeling by information
+   boundary, not by the scope's positional "T1" heading), and the
+   `rival-tomography` bin, which consumes a directory of sealed terminal
+   trajectory ledgers and emits one deterministic
+   `cascadiav3.rival_tomography_summary.v1` document.  Every witness is
+   engine-reverified and every summary carries
+   `witness_semantics = "lower_bound_only"`; the evidence-domain enum gained
+   a validated `incumbent_measured` variant gated on the `incumbent:` policy
+   namespace plus complete policy decision traces, so proxy-population
+   diagnostics can never be presented as incumbent measurements.
 2. A Python contract package,
    [`cascadiav3.rival`](../../cascadiav3/src/cascadiav3/rival/__init__.py), that
    strictly validates externally pinned manifests, root-source and seed
@@ -219,6 +234,7 @@ being treated as expert-tensor schemas:
 | `cascadiav3.rival_verified_terminal_pair_receipt.v1` | Rust verifier receipt |
 | `cascadia-rival.verify-terminal-pair.v1` | Mandatory pinned verifier protocol |
 | `cascadiav3.rival_tomography_result.v1` | Typed T0-T4 evidence grade |
+| `cascadiav3.rival_tomography_summary.v1` | Rust WI-2 tomography harness summary (lower-bound witnesses only) |
 | `cascadiav3.rival_dynamic_urn_proof_contract.v1` | Future coupling obligations; not an admission |
 | `cascadiav3.rival_appeal_event.v1` | Python immutable journal event |
 | `cascadiav3.rival_appeal_final.v1` | Python immutable one-look final receipt |

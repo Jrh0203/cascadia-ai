@@ -328,12 +328,12 @@ boundary at this writing — generation is live; nothing D1-gated may start.
 | Item | State |
 | --- | --- |
 | WI-1 CPU-1 release battery | NOT STARTED |
-| WI-2 T1/T2 tomography optimizers + harness | NOT STARTED |
+| WI-2 T1/T2 tomography optimizers + harness | DONE 2026-07-16 — T0 repack annealer + chronology-preserving replay (emitted as kind T3 / `KnownExogenousChanceTape`; the honest boundary for hindsight replay), `rival-tomography` harness bin, `cascadiav3.rival_tomography_summary.v1` (lower_bound_only), validated `incumbent_measured` evidence domain; mechanism validated on random-play fixtures. Scientific M1 still awaits the D1 boundary and incumbent games |
 | WI-3 exporter extraction (prep / landing) | NOT STARTED / HELD AT D1 WALL |
 | WI-4a/b P2a/P2b harnesses + preregistration templates | NOT STARTED |
 | WI-4c chance-coupling validity (ChanceOracle + proofs) | NOT STARTED |
 | WI-5 Gate 0 preregistration | NOT STARTED |
-| M1 headroom measured | BLOCKED (WI-2 + D1 boundary) |
+| M1 headroom measured | BLOCKED (D1 boundary; WI-2 machinery DONE) |
 | M2 cost measured | BLOCKED (WI-3/4 + Permit A) |
 | M3 rho measured | BLOCKED (WI-3/4 + Permit A) |
 | M4 MEASURED-0 verdict | BLOCKED (Gate 0 + M1 + M2 + M3) |
