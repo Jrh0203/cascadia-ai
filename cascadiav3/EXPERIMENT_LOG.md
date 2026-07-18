@@ -7392,3 +7392,21 @@ Relabel launched 11:03 (PID 45634): pilot-exact n2048/d16 ×2 repeats,
 12-shared sessions, TF32=0 path via run_puzzle_bank.sh, records out
 `d1_records_20260716.npz`. ETA ~26h → views/retrains/screens/verdict
 ~07-18 afternoon.
+
+## 2026-07-18 17:05 — RELABEL DONE; records verified; sentinel relabel running
+
+Tranche relabel finished 16:59 (25.9h, right on the ~26h estimate).
+Output `d1_records_20260716.npz` (246 MB) verified this session:
+- 15,000 roots (CSR action_offsets 15001), 3,835,162 candidate actions,
+  74.7M relation edges, 1.74M token rows.
+- Full v4 target set present: improved_policy, target_q,
+  target_score_to_go, q_valid/q_count/q_variance, visits, priors,
+  exact_afterstate_score_active(+decomp), final_score_vector,
+  rank_vector, search_root_value.
+- Metadata: mode/source = puzzle_bank_d1_relabel, outcome_provenance =
+  behavior_trajectory_realized, rev 689f9d69, ruleset ..._2026_07_16,
+  schema expert_tensor_shard.v4. All contract fields correct.
+
+Chain proceeded autonomously to sentinel relabel (1,500 roots, ~2.6h).
+Then: training views → preflight → 4 retrains → screens → mechanical
+verdict → CUPED gate. Verdict ETA tonight ~22:00–23:00.
