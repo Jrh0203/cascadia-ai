@@ -13,6 +13,7 @@ mod digest;
 mod dynamic_urn;
 mod golden_trace;
 mod identity;
+mod ingest_exporter;
 mod ledger;
 mod menu;
 mod observation;
@@ -58,6 +59,12 @@ pub use identity::{
     BkIdentity, CANONICAL_SIMULATOR_ID, FailureBehavior, FailureDisposition, ForbiddenCapabilities,
     FrozenPolicyIdentity, MNextIdentity, NumericalMode, POLICY_IDENTITY_SCHEMA_ID, PiLIdentity,
     PolicyIdentityError, PolicyIdentityFields, Precision, RngContractIdentity, WkIdentity,
+};
+pub use ingest_exporter::{
+    EXPORTER_DECISION_ROW_TYPE, EXPORTER_GAME_DONE_ROW_TYPE, EXPORTER_GAME_FILE_PREFIX,
+    EXPORTER_GAME_FILE_SUFFIX, IngestError, IngestedExporterGame, exporter_action_id,
+    ingest_exporter_game, ingest_exporter_game_file, parse_exporter_game_file_name,
+    validate_incumbent_policy_id,
 };
 pub use ledger::{
     LedgerCompletion, LedgerError, RootDecisionRecord, SelectedDecisionKind,
