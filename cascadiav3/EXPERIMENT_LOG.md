@@ -7658,3 +7658,14 @@ Stage 2 launching: 360+40-seed CBDDB corpus (n256/d4, seeds
 CBDDB val split, NOT the AAAAA val set), paired re-eval on the Stage-1
 block (n256/d4 x100, n1024/d16 x30). Script:
 cascadiav3/scripts/run_cbddb_smoke_stage2.sh. ETA ~12h.
+
+## 2026-07-19 15:20 — AUTHORIZATION (John): "continue trying to break past 105"
+
+Standing authorization for the CBDDB campaign: proceed through the
+Stage-2 decision branches autonomously (iterated warm-start self-play
+cycles while the dose-response supports them), inside the standing
+few-GPU-day envelope, with per-cycle logging and kill criteria. Any
+from-scratch CBDDB training run (week-scale) still requires a separate
+explicit ruling. Certification protocol: any claim of ">105 achieved"
+must come from a fresh touch-once seed block (2027195000+), not the
+paired screening block 2027190000-99.
