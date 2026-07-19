@@ -7509,3 +7509,46 @@ Campaign spend to date: ~2.6 GPU-days (D1 ~2.2 + Gate 0 ~0.4).
 Next per decision tree: M1 selfish-ceiling tomography (CPU, free) on
 this battery's champion games; then John rules Rival-Lite (1.5-2 days)
 vs campaign close.
+
+## 2026-07-19 09:40 — PREREGISTRATION: CBDDB smoke test (John's request)
+
+John: "can you try again on this CBDDB cards_alt rule set but using the
+techniques we know now? don't do a multi day run, i'm looking for a
+smoke test that can tell me if this has promise."
+
+CBDDB = Bear C, Elk B, Salmon D, Hawk D, Fox B — the April-2026
+cards_alt research set. Historical (v1/v2 NNUE/MCE era) anchors, base
+scores (no habitat bonus): greedy-MCE-750 ~96.5, NNUE-MCE-750 ~97.2;
+value-net RMSE plateaued 6.04–6.14 vs 4.81 on Card A (Hawk-D variance).
+
+Discovery: v3 cascadia-game already implements ScoringVariant B/C/D for
+all five animals (incl. Salmon-D/Hawk-D rescore invalidation); only
+selection plumbing + verification is missing. New ruleset identity:
+`cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19`.
+AAAAA paths must stay bit-identical (flag default aaaaa).
+
+Design (~0.5 GPU-day cap, stages gated in order):
+- Stage 0 (CPU): plumbing (ScoringCards::CBDDB, GameConfig::
+  research_cbddb, exporter --scoring-cards, python harness passthrough)
+  + port legacy alt-card tests from archive branch as
+  crates/cascadia-game/tests/alt_card_scoring.rs. Any legacy-vs-v3
+  scorer disagreement BLOCKS GPU stages until resolved and is reported
+  to John (scorer semantics = rules design = his authority).
+- Stage 1 (GPU ~1h): zero-shot transfer — champion cycle4 weights +
+  Gumbel search under CBDDB, no retraining. Arms: no-search floors,
+  n256/d4 x 100 games. Seeds 2027190000..99 (fresh block, touch-once).
+- Stage 2 (GPU ~9h): one adaptation cycle — CBDDB self-play corpus
+  ~400 seeds x 80 plies at n256/d4 (seeds 2027191000..1399), one
+  warm-start retrain (D1 recipe, K=8 distq init-skip-mismatched, seed
+  20260630), re-eval n256/d4 x 100 on the Stage-1 block + n1024/d16
+  x 30 spot (seeds 2027190000..29 subset).
+- Promise verdict (informal, this is a smoke not a gate): PROMISING if
+  zero-shot n256/d4 lands >= ~96.5 (old-tech ceiling zone) AND the one
+  cheap fine-tune adds >= +1.5 on the paired block; NOT PROMISING if
+  zero-shot craters (<94) and fine-tune moves < +0.5; anything between
+  = report facts to John, no auto-continuation. No champion/promotion
+  implications; CBDDB scores are NOT comparable to AAAAA numbers.
+
+GPU sequencing: john0 idle (Gate 0 done; Rival-Lite awaiting John's
+ruling; M1 is Mac-CPU). Stage 1 launches only after Stage 0 tests are
+fully green.
