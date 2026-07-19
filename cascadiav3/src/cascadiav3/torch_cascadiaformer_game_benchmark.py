@@ -22,7 +22,22 @@ from typing import Any
 from .torch_benchmark_stats import paired_delta_stats
 from .torch_inference_bridge import _load_model, collate_inference_roots
 
-EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
+# Ruleset identity resolved from --scoring-cards; must stay in lockstep with
+# the exporter's RULESET_ID_AAAAA / RULESET_ID_CBDDB constants.
+RULESET_IDS_BY_SCORING_CARDS = {
+    "aaaaa": "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16",
+    "cbddb": "cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19",
+}
+EXPECTED_RULESET_ID = RULESET_IDS_BY_SCORING_CARDS["aaaaa"]
+
+
+def expected_ruleset_id_for(scoring_cards: str) -> str:
+    if scoring_cards not in RULESET_IDS_BY_SCORING_CARDS:
+        raise ValueError(
+            f"unknown scoring cards {scoring_cards!r}; "
+            f"expected one of {sorted(RULESET_IDS_BY_SCORING_CARDS)}"
+        )
+    return RULESET_IDS_BY_SCORING_CARDS[scoring_cards]
 
 
 def parse_seeds(*, seeds: str, first_seed: int, games: int) -> list[int]:
@@ -114,8 +129,10 @@ def rank_root_with_model(
     }
 
 
-def _binary_command(binary: Path, *, seed: int, max_actions: int) -> list[str]:
-    return [
+def _binary_command(
+    binary: Path, *, seed: int, max_actions: int, scoring_cards: str = "aaaaa"
+) -> list[str]:
+    command = [
         str(binary),
         "--interactive-policy-game",
         "--first-seed",
@@ -125,6 +142,11 @@ def _binary_command(binary: Path, *, seed: int, max_actions: int) -> list[str]:
         "--rollouts-per-action",
         "0",
     ]
+    # Emitted only when non-default so default invocations stay replayable
+    # against older pinned binaries.
+    if scoring_cards != "aaaaa":
+        command.extend(["--scoring-cards", scoring_cards])
+    return command
 
 
 def run_interactive_game(
@@ -136,9 +158,12 @@ def run_interactive_game(
     selection_head: str,
     max_actions: int,
     model_lock: threading.Lock | None = None,
+    scoring_cards: str = "aaaaa",
 ) -> dict[str, Any]:
     process = subprocess.Popen(
-        _binary_command(binary, seed=seed, max_actions=max_actions),
+        _binary_command(
+            binary, seed=seed, max_actions=max_actions, scoring_cards=scoring_cards
+        ),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -322,7 +347,9 @@ def run_benchmark(
     decision_rows_path: Path | None,
     game_results_path: Path | None = None,
     source_revision: str | None = None,
+    scoring_cards: str = "aaaaa",
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    expected_ruleset_id = expected_ruleset_id_for(scoring_cards)
     if baseline_workers <= 0:
         raise ValueError("--baseline-workers must be positive")
     if treatment_workers <= 0:
@@ -356,6 +383,7 @@ def run_benchmark(
             selection_head=selection_head,
             max_actions=max_actions,
             model_lock=model_lock,
+            scoring_cards=scoring_cards,
         )
 
     for selection_head in selection_heads:
@@ -378,6 +406,7 @@ def run_benchmark(
             checkpoint=None,
             selection_head="greedy",
             max_actions=max_actions,
+            scoring_cards=scoring_cards,
         )
 
     greedy_results: list[dict[str, Any]] = []
@@ -415,14 +444,14 @@ def run_benchmark(
 
     all_results = all_model_results + greedy_results
     ruleset_ids = sorted({str(result["done"].get("ruleset_id")) for result in all_results})
-    if ruleset_ids != [EXPECTED_RULESET_ID]:
+    if ruleset_ids != [expected_ruleset_id]:
         raise RuntimeError(
-            f"game output ruleset mismatch: expected {EXPECTED_RULESET_ID}, got {ruleset_ids}"
+            f"game output ruleset mismatch: expected {expected_ruleset_id}, got {ruleset_ids}"
         )
 
     return {
         "status": "pass",
-        "ruleset_id": EXPECTED_RULESET_ID,
+        "ruleset_id": expected_ruleset_id,
         "source_revision": source_revision,
         "scientific_eligibility": "cascadiaformer_no_search_complete_game_benchmark",
         "experiment_id": experiment_id,
@@ -513,6 +542,13 @@ def main() -> int:
     parser.add_argument("--first-seed", type=int, default=2026990000)
     parser.add_argument("--games", type=int, default=20)
     parser.add_argument("--max-actions", type=int, default=256)
+    parser.add_argument(
+        "--scoring-cards",
+        choices=sorted(RULESET_IDS_BY_SCORING_CARDS),
+        default="aaaaa",
+        help="Scoring-card selection passed to the exporter; also resolves "
+        "the ruleset id expected in every emitted record",
+    )
     parser.add_argument("--baseline-workers", type=int, default=8)
     parser.add_argument("--treatment-workers", type=int, default=1)
     parser.add_argument("--device", default="cuda")
@@ -546,6 +582,7 @@ def main() -> int:
         decision_rows_path=Path(args.decisions_out),
         game_results_path=Path(args.game_results_out),
         source_revision=args.source_revision or None,
+        scoring_cards=args.scoring_cards,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

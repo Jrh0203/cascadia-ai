@@ -46,7 +46,22 @@ from .torch_cascadiaformer_search_benchmark import (
     summarize_game_results,
 )
 
-EXPECTED_RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
+# Ruleset identity resolved from --scoring-cards; must stay in lockstep with
+# the exporter's RULESET_ID_AAAAA / RULESET_ID_CBDDB constants.
+RULESET_IDS_BY_SCORING_CARDS = {
+    "aaaaa": "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16",
+    "cbddb": "cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19",
+}
+EXPECTED_RULESET_ID = RULESET_IDS_BY_SCORING_CARDS["aaaaa"]
+
+
+def expected_ruleset_id_for(scoring_cards: str) -> str:
+    if scoring_cards not in RULESET_IDS_BY_SCORING_CARDS:
+        raise ValueError(
+            f"unknown scoring cards {scoring_cards!r}; "
+            f"expected one of {sorted(RULESET_IDS_BY_SCORING_CARDS)}"
+        )
+    return RULESET_IDS_BY_SCORING_CARDS[scoring_cards]
 
 
 def _sha256(path: Path) -> str:
@@ -197,6 +212,7 @@ def run_gumbel_games(
     lcb_c: float = 0.0,
     refresh_sample_divisor: int = 1,
     root_menu: int = 256,
+    scoring_cards: str = "aaaaa",
 ) -> list[dict[str, Any]]:
     command = [
         str(binary),
@@ -250,6 +266,9 @@ def run_gumbel_games(
             else []
         ),
         *(["--gumbel-root-menu", str(root_menu)] if root_menu != 256 else []),
+        # Emitted only when non-default so default invocations stay
+        # replayable against older pinned binaries.
+        *(["--scoring-cards", scoring_cards] if scoring_cards != "aaaaa" else []),
         "--k-interior",
         str(k_interior),
         "--max-actions",
@@ -354,6 +373,7 @@ def run_gumbel_games_batch(
     lcb_c: float = 0.0,
     refresh_sample_divisor: int = 1,
     root_menu: int = 256,
+    scoring_cards: str = "aaaaa",
 ) -> list[dict[str, Any]]:
     """Runs the full seed list through --gumbel-benchmark-batch: one Rust
     process per contiguous seed run (one process total for the usual
@@ -413,6 +433,9 @@ def run_gumbel_games_batch(
                 else []
             ),
             *(["--gumbel-root-menu", str(root_menu)] if root_menu != 256 else []),
+            # Emitted only when non-default so default invocations stay
+            # replayable against older pinned binaries.
+            *(["--scoring-cards", scoring_cards] if scoring_cards != "aaaaa" else []),
             "--k-interior",
             str(k_interior),
             "--max-actions",
@@ -619,7 +642,9 @@ def run_gumbel_benchmark(
     lcb_c: float = 0.0,
     refresh_sample_divisor: int = 1,
     root_menu: int = 256,
+    scoring_cards: str = "aaaaa",
 ) -> dict[str, Any]:
+    expected_ruleset_id = expected_ruleset_id_for(scoring_cards)
     execution = execution_provenance(
         batch_runner=batch_runner,
         jobs=jobs,
@@ -699,6 +724,7 @@ def run_gumbel_benchmark(
                 lcb_c=lcb_c,
                 refresh_sample_divisor=refresh_sample_divisor,
                 root_menu=root_menu,
+                scoring_cards=scoring_cards,
             )
         else:
             # Chunk seeds across jobs first, then split each chunk into
@@ -745,6 +771,7 @@ def run_gumbel_benchmark(
                     lcb_c=lcb_c,
                     refresh_sample_divisor=refresh_sample_divisor,
                     root_menu=root_menu,
+                    scoring_cards=scoring_cards,
                 )
 
             if jobs <= 1 or len(runs) == 1:
@@ -767,9 +794,9 @@ def run_gumbel_benchmark(
             and line.get("ruleset_id") is not None
         }
     )
-    if ruleset_ids != [EXPECTED_RULESET_ID]:
+    if ruleset_ids != [expected_ruleset_id]:
         raise RuntimeError(
-            f"candidate output ruleset mismatch: expected {EXPECTED_RULESET_ID}, got {ruleset_ids}"
+            f"candidate output ruleset mismatch: expected {expected_ruleset_id}, got {ruleset_ids}"
         )
     if decision_rows_path is not None:
         decision_rows_path.parent.mkdir(parents=True, exist_ok=True)
@@ -801,6 +828,7 @@ def run_gumbel_benchmark(
                 rollout_top_k=control_rollout_top_k,
                 shadow_full_search=False,
                 rollout_determinize=rollout_determinize,
+                scoring_cards=scoring_cards,
             )
 
         if control_workers <= 1:
@@ -857,7 +885,7 @@ def run_gumbel_benchmark(
     ]
     return {
         "status": "pass",
-        "ruleset_id": EXPECTED_RULESET_ID,
+        "ruleset_id": expected_ruleset_id,
         "source_revision": source_revision,
         "candidate_per_seed": candidate_per_seed,
         "scientific_eligibility": (
@@ -978,6 +1006,13 @@ def main() -> int:
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--model-service", default="")
     parser.add_argument("--device", default="cuda")
+    parser.add_argument(
+        "--scoring-cards",
+        choices=sorted(RULESET_IDS_BY_SCORING_CARDS),
+        default="aaaaa",
+        help="Scoring-card selection passed to the exporter; also resolves "
+        "the ruleset id expected in every emitted record",
+    )
     parser.add_argument("--q-risk-mode", choices=Q_RISK_MODES, default="mean")
     parser.add_argument("--policy-mode", choices=POLICY_MODES, default="logits")
     parser.add_argument("--pairwise-policy-top-k", type=int, default=16)
@@ -1197,6 +1232,7 @@ def main() -> int:
         lcb_c=args.gumbel_lcb_c,
         refresh_sample_divisor=args.gumbel_refresh_sample_divisor,
         root_menu=args.gumbel_root_menu,
+        scoring_cards=args.scoring_cards,
     )
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

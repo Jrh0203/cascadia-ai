@@ -54,6 +54,12 @@ impl GameConfig {
         Ok(config)
     }
 
+    pub fn research_cbddb(player_count: u8) -> Result<Self, RuleError> {
+        let mut config = Self::standard(player_count, ScoringCards::CBDDB)?;
+        config.habitat_bonuses = false;
+        Ok(config)
+    }
+
     fn validate(self) -> Result<(), RuleError> {
         match (self.mode, self.player_count) {
             (GameMode::Solo, 1) | (GameMode::Standard, 2..=4) => Ok(()),
@@ -1235,6 +1241,35 @@ mod tests {
             GameSeed::from_u64(seed),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn research_cbddb_selects_cbddb_cards_without_habitat_bonuses() {
+        use crate::types::ScoringVariant;
+
+        let config = GameConfig::research_cbddb(4).unwrap();
+        assert_eq!(config.scoring_cards, ScoringCards::CBDDB);
+        assert_eq!(config.scoring_cards.bear, ScoringVariant::C);
+        assert_eq!(config.scoring_cards.elk, ScoringVariant::B);
+        assert_eq!(config.scoring_cards.salmon, ScoringVariant::D);
+        assert_eq!(config.scoring_cards.hawk, ScoringVariant::D);
+        assert_eq!(config.scoring_cards.fox, ScoringVariant::B);
+        assert!(!config.habitat_bonuses);
+        assert_eq!(config.mode, GameMode::Standard);
+        assert_eq!(config.player_count, 4);
+
+        // Same shape as research_aaaaa apart from the scoring cards.
+        let aaaaa = GameConfig::research_aaaaa(4).unwrap();
+        assert_eq!(aaaaa.scoring_cards, ScoringCards::AAAAA);
+        assert_eq!(aaaaa.habitat_bonuses, config.habitat_bonuses);
+        assert_eq!(aaaaa.mode, config.mode);
+        assert_eq!(aaaaa.player_count, config.player_count);
+    }
+
+    #[test]
+    fn research_cbddb_rejects_invalid_player_counts() {
+        assert!(GameConfig::research_cbddb(1).is_err());
+        assert!(GameConfig::research_cbddb(5).is_err());
     }
 
     fn first_legal_skip_action(game: &GameState) -> TurnAction {

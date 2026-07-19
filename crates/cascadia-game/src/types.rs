@@ -213,6 +213,14 @@ impl ScoringCards {
         hawk: ScoringVariant::A,
         fox: ScoringVariant::A,
     };
+
+    pub const CBDDB: Self = Self {
+        bear: ScoringVariant::C,
+        elk: ScoringVariant::B,
+        salmon: ScoringVariant::D,
+        hawk: ScoringVariant::D,
+        fox: ScoringVariant::B,
+    };
 }
 
 #[cfg(test)]

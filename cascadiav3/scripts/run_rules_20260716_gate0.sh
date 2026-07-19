@@ -26,6 +26,12 @@ CYCLE4_MANIFEST="${CYCLE4_MANIFEST:-cascadiav3/checkpoints/full_v3_gumbel_selfpl
 REPORT_DIR="${REPORT_DIR:-cascadiav3/reports}"
 LOG_DIR="${LOG_DIR:-cascadiav3/logs}"
 
+export PATH="$HOME/.cargo/bin:$PATH:/usr/lib/wsl/lib"
+if [ -x "$HOME/.local/bin/zig-cc" ] && ! command -v cc >/dev/null 2>&1; then
+  export BLAKE3_NO_ASM=1 CC="$HOME/.local/bin/zig-cc"
+  export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER="$HOME/.local/bin/zig-cc"
+fi
+
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH="cascadiav3/src"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"

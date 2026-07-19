@@ -7552,3 +7552,26 @@ Design (~0.5 GPU-day cap, stages gated in order):
 GPU sequencing: john0 idle (Gate 0 done; Rival-Lite awaiting John's
 ruling; M1 is Mac-CPU). Stage 1 launches only after Stage 0 tests are
 fully green.
+
+## 2026-07-19 11:05 — CBDDB Stage 0 COMPLETE; Elk-B ruling; GPU stages unblocked
+
+Stage 0 landed and independently verified (all suites run by this
+session): engine 61+49+1 green, exporter 72 green including the pinned
+AAAAA golden-hash test (bit-identity holds), python 383 tests with the
+pre-existing 32 environmental errors unchanged.
+
+- Plumbing: `ScoringCards::CBDDB`, `GameConfig::research_cbddb`,
+  exporter `--scoring-cards aaaaa|cbddb` (12 call sites switched, 22
+  emission sites resolved, fail-closed input validation), benchmark
+  harness passthrough incl. the search-benchmark control-arm path.
+  New identity: `cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19`.
+- Verification: 49 legacy tests ported from the archive branch
+  (tests/alt_card_scoring.rs). 48/49 agreed exactly (Bear C table+bonus,
+  Salmon D runs, Hawk D LOS/matching-DP, Fox B pairs).
+- **RULING (John, 11:00): Elk B uses v3 strict-diamond semantics** (4-elk
+  shape must be a true rhombus, per the official card). The legacy
+  engine's looser any-member rule is historical; the April-2026 anchors
+  (~96.5/97.2) are therefore slightly generous vs this rule. The
+  disagreement test now pins 11 (triangle+single) as ruled.
+
+Stage 1 (zero-shot) launches next on john0 (idle).

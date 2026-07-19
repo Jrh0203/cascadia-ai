@@ -44,7 +44,8 @@ const EXPERT_TENSOR_SCHEMA_ID: &str = "cascadiav3.expert_tensor_shard.v1";
 const EXPERT_TENSOR_SCHEMA_ID_V4: &str = "cascadiav3.expert_tensor_shard.v4";
 const GREEDY_TENSOR_SCHEMA_ID: &str = "greedy_policy_tensor_shard_v1";
 const ROOT_REPLAY_SCHEMA_ID: &str = "cascadiav3.root_replay.v1";
-const RULESET_ID: &str = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16";
+const RULESET_ID_AAAAA: &str = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16";
+const RULESET_ID_CBDDB: &str = "cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19";
 const DEFAULT_FIRST_SEED: u64 = 2_026_062_900;
 const DEFAULT_SEED_COUNT: u64 = 2;
 const DEFAULT_PLIES_PER_SEED: usize = 2;
@@ -53,6 +54,39 @@ const DEFAULT_ROLLOUTS_PER_ACTION: usize = 1;
 const DEFAULT_ROLLOUT_TOP_K: usize = 1;
 const SOFTMAX_TEMPERATURE: f64 = 10.0;
 const HIDDEN_DETERMINIZATION_SALT: u64 = 0x5eed_c0de_d371_a11e;
+
+/// Scoring-card selection for research runs. Every ruleset identity string
+/// emitted or validated by this binary must come from the resolved choice so
+/// AAAAA and CBDDB artifacts can never silently mix.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ScoringCardsChoice {
+    Aaaaa,
+    Cbddb,
+}
+
+impl ScoringCardsChoice {
+    fn parse(value: &str) -> Result<Self> {
+        match value {
+            "aaaaa" => Ok(Self::Aaaaa),
+            "cbddb" => Ok(Self::Cbddb),
+            other => bail!("invalid --scoring-cards {other}; use aaaaa|cbddb"),
+        }
+    }
+
+    fn ruleset_id(self) -> &'static str {
+        match self {
+            Self::Aaaaa => RULESET_ID_AAAAA,
+            Self::Cbddb => RULESET_ID_CBDDB,
+        }
+    }
+
+    fn game_config(self, player_count: u8) -> Result<GameConfig, RuleError> {
+        match self {
+            Self::Aaaaa => GameConfig::research_aaaaa(player_count),
+            Self::Cbddb => GameConfig::research_cbddb(player_count),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 struct Args {
@@ -66,6 +100,10 @@ struct Args {
     rollouts_per_action: usize,
     rollout_top_k: usize,
     player_count: u8,
+    /// Scoring-card selection (--scoring-cards). Drives both the game
+    /// config used for every CLI-driven simulation and the ruleset id
+    /// stamped on / validated against every emitted record.
+    scoring_cards: ScoringCardsChoice,
     rayon_threads: Option<usize>,
     tensor_compression: NpzCompression,
     input: Option<PathBuf>,
@@ -399,6 +437,7 @@ fn parse_args() -> Result<Args> {
         rollouts_per_action: DEFAULT_ROLLOUTS_PER_ACTION,
         rollout_top_k: DEFAULT_ROLLOUT_TOP_K,
         player_count: 4,
+        scoring_cards: ScoringCardsChoice::Aaaaa,
         rayon_threads: None,
         tensor_compression: NpzCompression::Deflate,
         input: None,
@@ -633,6 +672,9 @@ fn parse_args() -> Result<Args> {
             }
             "--player-count" => {
                 args.player_count = value()?.parse().context("invalid --player-count")?
+            }
+            "--scoring-cards" => {
+                args.scoring_cards = ScoringCardsChoice::parse(&value()?)?;
             }
             "--rayon-threads" => {
                 args.rayon_threads = Some(value()?.parse().context("invalid --rayon-threads")?)
@@ -924,6 +966,12 @@ Options:
   --shared-model-session   One bridge process (one CUDA context) serving all
                            workers with cross-worker request batching.
   --player-count <n>       Must be 4 for the current v3 schema [4]
+  --scoring-cards <aaaaa|cbddb>
+                           Scoring-card selection: aaaaa (bear/elk/salmon/
+                           hawk/fox all card A) or cbddb (bear C, elk B,
+                           salmon D, hawk D, fox B). Selects both the game
+                           rules and the ruleset id stamped on every record
+                           [aaaaa]
   --rayon-threads <n>      Set the Rayon worker thread count explicitly
   --tensor-compression <deflate|stored>
                            Compression for --greedy-policy-tensor-corpus NPZ
@@ -1004,7 +1052,7 @@ fn export_expert_records(args: &Args) -> Result<Vec<Value>> {
 }
 
 fn export_expert_seed_records(args: &Args, seed_u64: u64) -> Result<Vec<Value>> {
-    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let config = args.scoring_cards.game_config(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating expert seed {seed_u64}"))?;
     let mut records = Vec::new();
@@ -1185,7 +1233,7 @@ fn build_expert_root_record(
         .collect::<Vec<_>>();
     let model_request = json!({
         "schema_id": EXPERT_ROOT_SCHEMA_ID,
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "state_hash": root_public_hash,
         "public_hash": root_public_hash,
         "seed": seed_u64,
@@ -1252,7 +1300,7 @@ fn build_expert_root_record(
 
     let mut record = json!({
         "schema_id": EXPERT_ROOT_SCHEMA_ID,
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "state_hash": root_public_hash,
         "public_hash": root_public_hash,
         "seed": seed_u64,
@@ -1262,7 +1310,7 @@ fn build_expert_root_record(
         "binary_hash": binary_hash(),
         "root_replay": {
             "schema_id": ROOT_REPLAY_SCHEMA_ID,
-            "config_id": RULESET_ID,
+            "config_id": args.scoring_cards.ruleset_id(),
             "seed_u64": seed_u64,
             "ply": ply_index,
             "replay_prefix": replay_prefix,
@@ -1418,7 +1466,7 @@ fn validate_expert_reconstruction(args: &Args) -> Result<Value> {
     let mut legal_actions_checked = 0usize;
     let mut selected_actions_checked = 0usize;
     for (record_index, record) in records.iter().enumerate() {
-        validate_one_expert_reconstruction(record)
+        validate_one_expert_reconstruction(record, args.scoring_cards)
             .with_context(|| format!("validating expert reconstruction record {record_index}"))?;
         legal_actions_checked += record
             .get("legal_actions")
@@ -1437,16 +1485,38 @@ fn validate_expert_reconstruction(args: &Args) -> Result<Value> {
     }))
 }
 
-fn validate_one_expert_reconstruction(record: &Value) -> Result<()> {
+fn validate_one_expert_reconstruction(
+    record: &Value,
+    scoring_cards: ScoringCardsChoice,
+) -> Result<()> {
     if record.get("schema_id").and_then(Value::as_str) != Some(EXPERT_ROOT_SCHEMA_ID) {
         bail!("record schema_id is not {EXPERT_ROOT_SCHEMA_ID}");
+    }
+    let expected_ruleset_id = scoring_cards.ruleset_id();
+    // Fail closed on ruleset identity: a record produced under different
+    // scoring cards must never validate against this run's configuration.
+    if let Some(ruleset_id) = record.get("ruleset_id").and_then(Value::as_str) {
+        if ruleset_id != expected_ruleset_id {
+            bail!("record ruleset_id {ruleset_id} does not match resolved {expected_ruleset_id}");
+        }
+    }
+    if let Some(config_id) = record
+        .get("root_replay")
+        .and_then(|replay| replay.get("config_id"))
+        .and_then(Value::as_str)
+    {
+        if config_id != expected_ruleset_id {
+            bail!(
+                "root_replay config_id {config_id} does not match resolved {expected_ruleset_id}"
+            );
+        }
     }
     verify_record_checksum(record)?;
     let seed_u64 = record
         .get("seed")
         .and_then(Value::as_u64)
         .context("expert record missing seed")?;
-    let config = GameConfig::research_aaaaa(4)?;
+    let config = scoring_cards.game_config(4)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))?;
     let root_replay = record
         .get("root_replay")
@@ -1584,7 +1654,7 @@ fn bench_tokenize(args: &Args) -> Result<Value> {
     let mut token_count = 0usize;
     for offset in 0..args.seed_count {
         let seed_u64 = args.first_seed + offset;
-        let config = GameConfig::research_aaaaa(args.player_count)?;
+        let config = args.scoring_cards.game_config(args.player_count)?;
         let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))?;
         for ply_index in 0..args.plies_per_seed {
             if game.is_game_over() {
@@ -1633,7 +1703,7 @@ fn validate_hidden_redetermination(args: &Args) -> Result<Value> {
     let mut checked = 0usize;
     for offset in 0..args.seed_count {
         let seed_u64 = args.first_seed + offset;
-        let config = GameConfig::research_aaaaa(args.player_count)?;
+        let config = args.scoring_cards.game_config(args.player_count)?;
         let game = GameState::new(config, GameSeed::from_u64(seed_u64))?;
         let public = game.public_state();
         let public_hash_before = public.canonical_hash();
@@ -1738,7 +1808,7 @@ fn write_expert_manifest(path: &PathBuf, records: &[Value], args: &Args) -> Resu
         "scientific_eligibility": "dry_run",
         "created_at_utc": "2026-06-30T00:00:00+00:00",
         "format": "jsonl",
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "legal_action_coverage": 1.0,
         "total_legal_actions": action_count,
         "rollouts_per_action": args.rollouts_per_action,
@@ -1814,7 +1884,7 @@ fn export_greedy_policy_corpus(args: &Args) -> Result<usize> {
 }
 
 fn export_greedy_policy_seed_records(args: &Args, seed_u64: u64) -> Result<Vec<Value>> {
-    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let config = args.scoring_cards.game_config(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating greedy policy seed {seed_u64}"))?;
     let mut records = Vec::new();
@@ -2446,7 +2516,7 @@ fn export_greedy_state_search_bootstrap_seed_records(
     args: &Args,
     seed_u64: u64,
 ) -> Result<Vec<Value>> {
-    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let config = args.scoring_cards.game_config(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating greedy-state search-bootstrap seed {seed_u64}"))?;
     let mut records = Vec::new();
@@ -2548,7 +2618,7 @@ fn export_model_state_search_bootstrap_seed_records_with_session(
     seed_u64: u64,
     model_session: &mut Option<ModelServiceSession>,
 ) -> Result<Vec<Value>> {
-    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let config = args.scoring_cards.game_config(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating model-state search-bootstrap seed {seed_u64}"))?;
     let mut records = Vec::new();
@@ -3386,7 +3456,7 @@ fn gumbel_selfplay_root_record(
     ];
     Ok(json!({
         "schema_id": SCHEMA_ID,
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
         "active_seat": active_seat,
         "legal_actions": legal_actions,
@@ -3522,7 +3592,7 @@ fn play_gumbel_selfplay_seed(
     bridge: &mut ChunkBridge,
     eval_cache: &mut EvalRowCache,
 ) -> Result<SelfplaySeedOutput> {
-    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let config = args.scoring_cards.game_config(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating gumbel selfplay seed {seed_u64}"))?;
     let mut records = Vec::new();
@@ -3925,7 +3995,7 @@ fn play_gumbel_policy_game_seed(
     eval_cache: &mut EvalRowCache,
 ) -> Result<Vec<Value>> {
     let mut records = Vec::new();
-    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let config = args.scoring_cards.game_config(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating gumbel policy game seed {seed_u64}"))?;
     let game_started = Instant::now();
@@ -3957,7 +4027,7 @@ fn play_gumbel_policy_game_seed(
         let chosen = &row.afterstates[result.chosen_index];
         records.push(json!({
             "type": "gumbel_decision",
-            "ruleset_id": RULESET_ID,
+            "ruleset_id": args.scoring_cards.ruleset_id(),
             "seed": seed_u64,
             "ply": ply_index,
             "active_seat": row.staged.current_player(),
@@ -3990,7 +4060,7 @@ fn play_gumbel_policy_game_seed(
     let scores = score_game(&game);
     records.push(json!({
         "type": "gumbel_game_done",
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "seed": seed_u64,
         "scores": scores.iter().map(score_breakdown_json).collect::<Vec<_>>(),
         "decision_count": ply_index,
@@ -4130,7 +4200,7 @@ fn suggest_for_request(
         .collect::<Result<Vec<_>, _>>()?;
     Ok(json!({
         "type": "suggest_response",
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "game_over": false,
         "chosen_index": result.chosen_index,
         "actions": actions,
@@ -4244,7 +4314,15 @@ fn read_probe_roots_mask(path: &Path) -> Result<BTreeMap<u64, HashSet<u64>>> {
 
 /// Reads `gumbel_decision` rows from a decisions JSONL ledger, grouped by
 /// seed and validated to be contiguous plies from 0.
-fn read_ledger_decision_rows(path: &PathBuf) -> Result<BTreeMap<u64, Vec<LedgerDecisionRow>>> {
+///
+/// Fails closed on ruleset identity: any row that declares a `ruleset_id`
+/// must match `expected_ruleset_id` (the resolved --scoring-cards identity).
+/// Selfplay `--decisions-out` sidecar rows carry no `ruleset_id` field and
+/// are accepted as-is.
+fn read_ledger_decision_rows(
+    path: &PathBuf,
+    expected_ruleset_id: &str,
+) -> Result<BTreeMap<u64, Vec<LedgerDecisionRow>>> {
     let contents = std::fs::read_to_string(path)
         .with_context(|| format!("reading decisions ledger {}", path.display()))?;
     let mut by_seed: BTreeMap<u64, Vec<LedgerDecisionRow>> = BTreeMap::new();
@@ -4256,6 +4334,15 @@ fn read_ledger_decision_rows(path: &PathBuf) -> Result<BTreeMap<u64, Vec<LedgerD
             .with_context(|| format!("parsing ledger line {}", line_index + 1))?;
         if value.get("type").and_then(Value::as_str) != Some("gumbel_decision") {
             continue;
+        }
+        if let Some(ruleset_id) = value.get("ruleset_id").and_then(Value::as_str) {
+            if ruleset_id != expected_ruleset_id {
+                bail!(
+                    "ledger line {} ruleset_id {ruleset_id} does not match resolved \
+                     {expected_ruleset_id}; refusing to mix scoring-card identities",
+                    line_index + 1
+                );
+            }
         }
         let seed = value
             .get("seed")
@@ -4334,8 +4421,9 @@ fn replay_ledger_seed(
     rows: &[LedgerDecisionRow],
     menu_limit: Option<usize>,
     player_count: u8,
+    scoring_cards: ScoringCardsChoice,
 ) -> Result<(Vec<gumbel::EvalRow>, Vec<ReplayedRootMeta>, GameState)> {
-    let config = GameConfig::research_aaaaa(player_count)?;
+    let config = scoring_cards.game_config(player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed))
         .with_context(|| format!("creating replay game for seed {seed}"))?;
     let mut eval_rows = Vec::with_capacity(rows.len());
@@ -4487,7 +4575,7 @@ fn run_table_contention_audit(args: &Args) -> Result<()> {
         .input
         .as_ref()
         .context("--table-contention-audit requires --in <decisions.jsonl>")?;
-    let by_seed = read_ledger_decision_rows(input)?;
+    let by_seed = read_ledger_decision_rows(input, args.scoring_cards.ruleset_id())?;
     let menu_limit = gumbel_root_menu_limit(args);
     let mut chunk_bridge = ChunkBridge::Owned(model_state_worker_session(args)?);
     let mut eval_cache = EvalRowCache::new();
@@ -4502,7 +4590,7 @@ fn run_table_contention_audit(args: &Args) -> Result<()> {
         // seeds (2027071427 precedent); skip them loudly instead of
         // stranding the audit.
         let (eval_rows, metas, _final_state) =
-            match replay_ledger_seed(*seed, ledger_rows, menu_limit, args.player_count) {
+            match replay_ledger_seed(*seed, ledger_rows, menu_limit, args.player_count, args.scoring_cards) {
                 Ok(replayed) => replayed,
                 Err(error) => {
                     eprintln!("[table-contention-audit] SKIPPING seed {seed}: {error:#}");
@@ -4536,7 +4624,7 @@ fn run_table_contention_audit(args: &Args) -> Result<()> {
                 afterstate_table_estimate(&runner_after.state, menu_limit, &mut evaluator)?;
             records.push(json!({
                 "type": "contention_decision",
-                "ruleset_id": RULESET_ID,
+                "ruleset_id": args.scoring_cards.ruleset_id(),
                 "seed": seed,
                 "ply": meta.ply,
                 "active_seat": row.staged.current_player(),
@@ -4577,7 +4665,7 @@ fn run_table_contention_audit(args: &Args) -> Result<()> {
     }
     records.push(json!({
         "type": "contention_summary",
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "seeds": seed_count,
         "decisions_audited": decisions_audited,
         "single_action_skipped": single_action_skipped,
@@ -4647,7 +4735,7 @@ fn run_search_stability_probe(args: &Args) -> Result<()> {
              --max-actions 64 --rollout-top-k 4)"
         );
     }
-    let by_seed = read_ledger_decision_rows(input)?;
+    let by_seed = read_ledger_decision_rows(input, args.scoring_cards.ruleset_id())?;
     let menu_limit = gumbel_root_menu_limit(args);
     let stride = args.probe_stride.max(1);
     let repeats = args.probe_repeats.max(2);
@@ -4663,7 +4751,7 @@ fn run_search_stability_probe(args: &Args) -> Result<()> {
         // Same skip-and-count policy as the contention audit for rare
         // concurrency-divergent ledger seeds.
         let (eval_rows, metas, _final_state) =
-            match replay_ledger_seed(*seed, ledger_rows, menu_limit, args.player_count) {
+            match replay_ledger_seed(*seed, ledger_rows, menu_limit, args.player_count, args.scoring_cards) {
                 Ok(replayed) => replayed,
                 Err(error) => {
                     eprintln!("[search-stability-probe] SKIPPING seed {seed}: {error:#}");
@@ -4703,7 +4791,7 @@ fn run_search_stability_probe(args: &Args) -> Result<()> {
                         })?;
                     records.push(json!({
                         "type": "stability_search",
-                        "ruleset_id": RULESET_ID,
+                        "ruleset_id": args.scoring_cards.ruleset_id(),
                         "seed": seed,
                         "ply": meta.ply,
                         "action_count": row.afterstates.len(),
@@ -4736,7 +4824,7 @@ fn run_search_stability_probe(args: &Args) -> Result<()> {
     }
     records.push(json!({
         "type": "stability_summary",
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "sampled_roots": sampled_roots,
         "repeats_per_variant": repeats,
         "stride": stride,
@@ -4949,7 +5037,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         .context("--puzzle-bank requires --output-dir")?;
     std::fs::create_dir_all(output_dir)
         .with_context(|| format!("creating --output-dir {}", output_dir.display()))?;
-    let by_seed = read_ledger_decision_rows(input)?;
+    let by_seed = read_ledger_decision_rows(input, args.scoring_cards.ruleset_id())?;
     // Trajectory reconstruction must use the cap the ledger was recorded
     // with. A capped --gumbel-root-menu applies to both replay and
     // resolution (the normal case); the FULL menu (0) applies only to the
@@ -5017,7 +5105,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         |worker, seed| {
             let ledger_rows = &by_seed[&seed];
             let (eval_rows, metas, final_state) =
-                match replay_ledger_seed(seed, ledger_rows, replay_menu_limit, args.player_count)
+                match replay_ledger_seed(seed, ledger_rows, replay_menu_limit, args.player_count, args.scoring_cards)
                 {
                     Ok(replayed) => replayed,
                     Err(error) => {
@@ -5099,7 +5187,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                     / repeats as f64;
                 records.push(json!({
                     "type": "puzzle_root",
-                    "ruleset_id": RULESET_ID,
+                    "ruleset_id": args.scoring_cards.ruleset_id(),
                     "seed": seed,
                     "ply": meta.ply,
                     "active_seat": row.staged.current_player(),
@@ -5162,7 +5250,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                     seed_d1_records.push(record);
                     seed_audit_rows.push(json!({
                         "type": "d1_repeat_audit",
-                        "ruleset_id": RULESET_ID,
+                        "ruleset_id": args.scoring_cards.ruleset_id(),
                         "seed": seed,
                         "ply": meta.ply,
                         "active_seat": row.staged.current_player(),
@@ -5411,7 +5499,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
     let manifest_path = output_dir.join("puzzle_bank_manifest.json");
     let manifest = json!({
         "type": "puzzle_bank_manifest",
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "source_revision": args.source_revision,
         "ledger": input.display().to_string(),
         "seeds": seeds.len(),
@@ -5632,7 +5720,7 @@ fn build_greedy_policy_root_record(
 }
 
 fn export_seed_records(args: &Args, seed_u64: u64) -> Result<Vec<Value>> {
-    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let config = args.scoring_cards.game_config(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating seed {seed_u64}"))?;
     let mut records = Vec::new();
@@ -5956,7 +6044,7 @@ fn best_rollout_index(
 
 fn run_interactive_policy_game(args: &Args) -> Result<()> {
     let seed_u64 = args.first_seed;
-    let config = GameConfig::research_aaaaa(args.player_count)?;
+    let config = args.scoring_cards.game_config(args.player_count)?;
     let mut game = GameState::new(config, GameSeed::from_u64(seed_u64))
         .with_context(|| format!("creating interactive seed {seed_u64}"))?;
     let stdin = std::io::stdin();
@@ -5970,7 +6058,7 @@ fn run_interactive_policy_game(args: &Args) -> Result<()> {
         let root_bundle = build_interactive_root(&game, seed_u64, ply_index, args)?;
         let root_message = json!({
             "type": "root",
-            "ruleset_id": RULESET_ID,
+            "ruleset_id": args.scoring_cards.ruleset_id(),
             "seed_u64": seed_u64,
             "ply_index": ply_index,
             "active_seat": root_bundle.active_seat,
@@ -6005,7 +6093,7 @@ fn run_interactive_policy_game(args: &Args) -> Result<()> {
         let decision_seconds = decision_started.elapsed().as_secs_f64();
         let decision_record = json!({
             "type": "decision",
-            "ruleset_id": RULESET_ID,
+            "ruleset_id": args.scoring_cards.ruleset_id(),
             "seed_u64": seed_u64,
             "ply_index": ply_index,
             "active_seat": root_bundle.active_seat,
@@ -6030,7 +6118,7 @@ fn run_interactive_policy_game(args: &Args) -> Result<()> {
     let scores = score_game(&game);
     let done_message = json!({
         "type": "done",
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "seed_u64": seed_u64,
         "turns": game.completed_turns(),
         "scores": scores.iter().map(score_breakdown_json).collect::<Vec<_>>(),
@@ -6096,7 +6184,7 @@ fn build_interactive_root(
     let public_hash = staged.public_state().canonical_hash();
     let mut record = json!({
         "schema_id": SCHEMA_ID,
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
         "active_seat": active_seat,
         "legal_actions": legal_actions,
@@ -7117,7 +7205,7 @@ fn expert_tensor_shard_metadata(args: &Args, shard: &ExpertTensorShardData) -> V
     json!({
         "version": EXPERT_SHARD_VERSION,
         "schema_id": EXPERT_TENSOR_SCHEMA_ID,
-        "ruleset_id": RULESET_ID,
+        "ruleset_id": args.scoring_cards.ruleset_id(),
         "mode": mode_name,
         "source_revision": args.source_revision,
         "source": "expert_root_chance_mcts_dry_run_tensor_corpus",
@@ -7414,6 +7502,7 @@ mod tests {
             rollouts_per_action: 2,
             rollout_top_k: 2,
             player_count: 4,
+            scoring_cards: ScoringCardsChoice::Aaaaa,
             rayon_threads: None,
             tensor_compression: NpzCompression::Stored,
             input: None,
@@ -7524,6 +7613,115 @@ mod tests {
     }
 
     #[test]
+    fn scoring_cards_choice_resolves_ids_and_configs() {
+        assert_eq!(
+            ScoringCardsChoice::parse("aaaaa").unwrap(),
+            ScoringCardsChoice::Aaaaa
+        );
+        assert_eq!(
+            ScoringCardsChoice::parse("cbddb").unwrap(),
+            ScoringCardsChoice::Cbddb
+        );
+        assert!(ScoringCardsChoice::parse("abcde").is_err());
+
+        assert_eq!(
+            ScoringCardsChoice::Aaaaa.ruleset_id(),
+            "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
+        );
+        assert_eq!(
+            ScoringCardsChoice::Cbddb.ruleset_id(),
+            "cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19"
+        );
+
+        let aaaaa = ScoringCardsChoice::Aaaaa.game_config(4).unwrap();
+        assert_eq!(aaaaa, GameConfig::research_aaaaa(4).unwrap());
+        let cbddb = ScoringCardsChoice::Cbddb.game_config(4).unwrap();
+        assert_eq!(cbddb, GameConfig::research_cbddb(4).unwrap());
+        assert_ne!(aaaaa, cbddb);
+    }
+
+    #[test]
+    fn cbddb_mode_records_carry_the_cbddb_ruleset_id() {
+        let mut args = test_args();
+        args.scoring_cards = ScoringCardsChoice::Cbddb;
+        let config = args
+            .scoring_cards
+            .game_config(args.player_count)
+            .expect("cbddb config");
+        assert_eq!(config.scoring_cards, cascadia_game::ScoringCards::CBDDB);
+        let game =
+            GameState::new(config, GameSeed::from_u64(args.first_seed)).expect("cbddb game");
+        let root = build_interactive_root(&game, args.first_seed, 0, &args)
+            .expect("cbddb interactive root");
+        assert_eq!(root.record["ruleset_id"], RULESET_ID_CBDDB);
+
+        // The same emission under default args stays on the aaaaa identity.
+        let aaaaa_args = test_args();
+        let aaaaa_config = aaaaa_args
+            .scoring_cards
+            .game_config(aaaaa_args.player_count)
+            .expect("aaaaa config");
+        let aaaaa_game = GameState::new(aaaaa_config, GameSeed::from_u64(aaaaa_args.first_seed))
+            .expect("aaaaa game");
+        let aaaaa_root = build_interactive_root(&aaaaa_game, aaaaa_args.first_seed, 0, &aaaaa_args)
+            .expect("aaaaa interactive root");
+        assert_eq!(aaaaa_root.record["ruleset_id"], RULESET_ID_AAAAA);
+    }
+
+    #[test]
+    fn expert_record_validation_fails_closed_on_ruleset_identity() {
+        // Identity is checked before checksum/replay, so a foreign-identity
+        // record errors out with the ruleset mismatch, never a replay diff.
+        let record = json!({
+            "schema_id": EXPERT_ROOT_SCHEMA_ID,
+            "ruleset_id": RULESET_ID_CBDDB,
+            "root_replay": { "config_id": RULESET_ID_CBDDB },
+        });
+        let err = validate_one_expert_reconstruction(&record, ScoringCardsChoice::Aaaaa)
+            .expect_err("cbddb record must not validate under aaaaa identity");
+        assert!(err.to_string().contains(RULESET_ID_AAAAA));
+        assert!(err.to_string().contains(RULESET_ID_CBDDB));
+
+        let config_only = json!({
+            "schema_id": EXPERT_ROOT_SCHEMA_ID,
+            "ruleset_id": RULESET_ID_AAAAA,
+            "root_replay": { "config_id": RULESET_ID_CBDDB },
+        });
+        let err = validate_one_expert_reconstruction(&config_only, ScoringCardsChoice::Aaaaa)
+            .expect_err("mismatched root_replay config_id must fail closed");
+        assert!(err.to_string().contains("config_id"));
+    }
+
+    #[test]
+    fn ledger_rows_with_foreign_ruleset_id_fail_closed() {
+        let tempdir = std::env::temp_dir().join(format!(
+            "cascadia-ledger-ruleset-test-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&tempdir).expect("tempdir");
+        let ledger_path = tempdir.join("mixed_ledger.jsonl");
+        let row = json!({
+            "type": "gumbel_decision",
+            "ruleset_id": RULESET_ID_CBDDB,
+            "seed": 1,
+            "ply": 0,
+            "chosen_action_id": "a0",
+            "free_three_of_a_kind_choice": "not_available",
+        });
+        std::fs::write(&ledger_path, format!("{row}\n")).expect("ledger");
+
+        let err = read_ledger_decision_rows(&ledger_path, RULESET_ID_AAAAA)
+            .expect_err("mixing ruleset identities must fail closed");
+        assert!(err.to_string().contains(RULESET_ID_CBDDB));
+
+        // The same ledger is accepted when the resolved identity matches.
+        let by_seed = read_ledger_decision_rows(&ledger_path, RULESET_ID_CBDDB)
+            .expect("matching identity parses");
+        assert_eq!(by_seed.len(), 1);
+        std::fs::remove_file(&ledger_path).ok();
+    }
+
+    #[test]
     fn golden_rollout_labels_are_stable() {
         let args = test_args();
         let records = export_seed_records(&args, args.first_seed).expect("golden seed exports");
@@ -7622,12 +7820,12 @@ mod tests {
             lines.push('\n');
         }
         std::fs::write(&ledger_path, lines).expect("ledger written");
-        let by_seed = read_ledger_decision_rows(&ledger_path).expect("ledger parses");
+        let by_seed = read_ledger_decision_rows(&ledger_path, args.scoring_cards.ruleset_id()).expect("ledger parses");
         let rows = &by_seed[&seed];
         assert_eq!(rows.len(), output.records.len());
         let menu_limit = gumbel_root_menu_limit(&args);
         let (eval_rows, metas, _final_state) =
-            replay_ledger_seed(seed, rows, menu_limit, args.player_count)
+            replay_ledger_seed(seed, rows, menu_limit, args.player_count, args.scoring_cards)
                 .expect("sidecar ledger replays");
         assert_eq!(eval_rows.len(), output.records.len());
         assert_eq!(metas.len(), output.records.len());
@@ -7762,7 +7960,7 @@ mod tests {
             manifest["metadata"]["created_unix_seconds"]
         );
         assert!(manifest.get("created_at_utc").is_none());
-        assert_eq!(manifest["metadata"]["ruleset_id"], RULESET_ID);
+        assert_eq!(manifest["metadata"]["ruleset_id"], RULESET_ID_AAAAA);
         assert_eq!(
             manifest["metadata"]["source_revision"],
             "test-source-revision"
@@ -8293,12 +8491,12 @@ mod tests {
             .find(|line| line["type"] == "gumbel_game_done")
             .expect("done record");
 
-        let by_seed = read_ledger_decision_rows(&args.out).expect("ledger parses");
+        let by_seed = read_ledger_decision_rows(&args.out, args.scoring_cards.ruleset_id()).expect("ledger parses");
         assert_eq!(by_seed.len(), 1);
         let rows = by_seed.get(&seed).expect("seed present");
         assert_eq!(rows.len(), decision_count);
         let (eval_rows, metas, final_state) =
-            replay_ledger_seed(seed, rows, gumbel_root_menu_limit(&args), args.player_count)
+            replay_ledger_seed(seed, rows, gumbel_root_menu_limit(&args), args.player_count, args.scoring_cards)
                 .expect("replay succeeds");
         assert_eq!(eval_rows.len(), decision_count);
         assert_eq!(metas.len(), decision_count);

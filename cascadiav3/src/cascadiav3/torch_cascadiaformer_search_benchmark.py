@@ -58,6 +58,7 @@ def _binary_command(
     rollouts_per_action: int,
     rollout_top_k: int,
     rollout_determinize: bool = False,
+    scoring_cards: str = "aaaaa",
 ) -> list[str]:
     command = [
         str(binary),
@@ -73,6 +74,10 @@ def _binary_command(
     ]
     if rollout_determinize:
         command.append("--rollout-determinize")
+    # Emitted only when non-default so default invocations stay replayable
+    # against older pinned binaries.
+    if scoring_cards != "aaaaa":
+        command.extend(["--scoring-cards", scoring_cards])
     return command
 
 
@@ -90,6 +95,7 @@ def run_interactive_game(
     shadow_full_search: bool,
     model_lock: threading.Lock | None = None,
     rollout_determinize: bool = False,
+    scoring_cards: str = "aaaaa",
 ) -> dict[str, Any]:
     process = subprocess.Popen(
         _binary_command(
@@ -99,6 +105,7 @@ def run_interactive_game(
             rollouts_per_action=rollouts_per_action,
             rollout_top_k=rollout_top_k,
             rollout_determinize=rollout_determinize,
+            scoring_cards=scoring_cards,
         ),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
