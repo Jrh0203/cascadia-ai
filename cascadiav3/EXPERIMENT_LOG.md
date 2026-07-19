@@ -7484,3 +7484,28 @@ No decision rule attached; no promotion implications by itself.
 - Reference points (07-09, closed identity, NOT comparable pairwise):
   champion n1024/d16 98.2975; n256/d4 and no-search floors in the
   07-09 rebaseline reports.
+
+## 2026-07-19 06:40 — GATE 0 COMPLETE: fresh champion baseline under rules 2026-07-16 = 98.19
+
+Battery ran clean overnight (PID 174918, ~9.5h, seeds 2027160000x100,
+rev 689f9d69, all reports status=pass, completion marker written):
+
+| arm                        | mean seat | P50  | P90   |
+|----------------------------|-----------|------|-------|
+| no-search policy-head      | 92.055    | 92.0 | 96.0  |
+| no-search q-head           | 90.8975   | 91.0 | 95.0  |
+| no-search greedy heuristic | 87.7675   | 88.0 | 92.0  |
+| cycle4 n256/d4             | 97.145    | —    | —     |
+| **cycle4 n1024/d16 (canonical)** | **98.19** | 98.0 | 101.0 |
+
+**98.19 is now the canonical champion baseline under
+`..._rules_2026_07_16`.** It sits 0.1075 below the closed 07-09 number
+(98.2975, P50 98.0, P90 102.0) on a DIFFERENT fresh seed block — the
+delta is within seed noise for 100 games and is NOT evidence of a
+rules-fix effect (the bag fix only alters trajectories on consecutive
+four-of-a-kind wipes). The 100-goal gap under current rules: 1.81 pts.
+
+Campaign spend to date: ~2.6 GPU-days (D1 ~2.2 + Gate 0 ~0.4).
+Next per decision tree: M1 selfish-ceiling tomography (CPU, free) on
+this battery's champion games; then John rules Rival-Lite (1.5-2 days)
+vs campaign close.
