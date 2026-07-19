@@ -7575,3 +7575,37 @@ pre-existing 32 environmental errors unchanged.
   disagreement test now pins 11 (triangle+single) as ruled.
 
 Stage 1 (zero-shot) launches next on john0 (idle).
+
+## 2026-07-19 13:40 — M1 SELFISH-CEILING TOMOGRAPHY COMPLETE: ~zero provable endgame headroom
+
+Pipeline: Gate 0 champion battery (100 games, n1024/d16, rules 07-16) →
+rival-ingest-exporter (all 100 games ingested; every one of 8,000
+action hashes resolved uniquely; replayed finals exactly reproduced all
+recorded score breakdowns; 100 sealed rival_trajectory_ledger.v1 files)
+→ rival-tomography (evidence domain incumbent_measured, witness
+semantics lower_bound_only). Two runs, 400 seat-trajectories each:
+
+| config                        | T0 repack sum | T3 hindsight sum | mean/seat  | p90 | max |
+|-------------------------------|---------------|------------------|------------|-----|-----|
+| default (4k iters, beam 4)    | 0             | +18              | 0 / 0.045  | 0   | 2   |
+| strong (40k iters, beam 16)   | +48           | +49              | 0.12/0.122 | 0/1 | 3-4 |
+
+Reading: with the FULL chance tape known in hindsight, bounded oracle
+search finds ~0.12 pts/seat of provable improvement over the champion's
+realized play; final-board wildlife repacking finds ~0.12 pts/seat.
+Median seat improvement is ZERO in every configuration. Against the
+1.81-pt gap to 100, witnesses fund at most ~7-13% of the needed
+distance — and these witness classes cover exactly the late-game
+window Rival-Lite targets.
+
+Preregistered asymmetry honored: witnesses fund, never kill — these
+lower bounds do NOT prove the ceiling is low (bounded beam, chronology-
+preserving pruning is conservative). But the funding test comes back
+EMPTY: M1 provides zero evidentiary support for spending 1.5-2 GPU-days
+on late-game terminal relabeling. Rival-Lite's case now rests solely on
+the v2-era precedent, which D1 taught us transfers poorly.
+
+Artifacts pinned: reports/m1_tomography_gate0_{default,strong}_20260719
+.json (summary sha256 in-file); ingest bridge commits 93cbf603..9f0ab642
+on feat/rival-cpu-machinery (151 tests green, verified this session).
+Recommendation to John: do NOT fund Rival-Lite; ruling is his.
