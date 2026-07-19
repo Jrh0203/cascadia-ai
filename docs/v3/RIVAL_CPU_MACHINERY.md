@@ -1163,3 +1163,68 @@ bridge acceptable), extract the policy-critical exporter paths
 behavior-identically into the library crate, and require every captured
 trace to compare equal through the library path alongside the full
 pre-existing exporter and workspace suites.
+
+## 22. Incumbent exporter ingest bridge (M1 input)
+
+`crates/cascadia-rival/src/ingest_exporter.rs` plus the
+`rival-ingest-exporter` binary turn REAL incumbent games — the Gate 0
+champion battery written by `cascadiav3/real-root-exporter` as one
+`gumbel_game_seed_<seed>.jsonl` per game (80 `gumbel_decision` rows + 1
+`gumbel_game_done` row) — into sealed
+`cascadiav3.rival_trajectory_ledger.v1` files. The resulting ledger
+directory is the M1 selfish-ceiling input: `rival-tomography` derives the
+`incumbent:` population from each ledger's `source_game_id`
+(`<policy-id>-<seed>`) and, because every ingested turn carries a complete
+`PolicyDecisionTrace`, labels the summary
+`TomographyEvidenceDomain::IncumbentMeasured`.
+
+**What it reads.** Only the physical claims of the raw rows: seed, ply,
+active seat, `free_three_of_a_kind_choice`, `chosen_action_id`,
+`ruleset_id`, and the recorded terminal score breakdowns. Search outputs
+(root values, visit counts, timings, search config) are schema-validated
+(`deny_unknown_fields` end to end) and deliberately ignored: the ledger's
+evidence is the canonical replay, never the exporter's self-report.
+
+**Hash equivalence.** A decision row carries no action, only the exporter's
+content address `action_id = "sha256:" + hex(SHA-256(serde_json bytes of
+the root-local cascadia_game::TurnAction))` (`real-root-exporter/src/
+main.rs`, `fn action_id`). The exporter builds its menu on the post-prelude
+staged state with a default prelude, so the hashed action always has
+`replace_three_of_a_kind == false` and no wipes; the free three-of-a-kind
+decision travels separately. `exporter_action_id` reimplements that digest
+inside `cascadia-rival` over the same `TurnAction` serde encoding, and the
+committed real fixture (`tests/fixtures/gumbel_game_seed_2027160000.jsonl`)
+proves equivalence end to end: all 80 recorded digests must resolve against
+the recomposed canonical draft root, and the replayed terminal scores must
+equal the recorded ones bit-for-bit.
+
+**Fail-closed rules (any violation aborts the file; the CLI then aborts the
+run with a non-zero exit — no partial success):**
+
+- `ruleset_id` must equal
+  `cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16` on
+  every row of every file.
+- The recorded `chosen_action_id` must match EXACTLY one legal draft on the
+  canonical draft root; zero matches and multiple matches are both hard
+  errors, never skips.
+- Plies must be contiguous from zero in file order; duplicate, missing, or
+  reordered plies are refused, as are seed mismatches (rows vs
+  `gumbel_game_done` vs filename) and a `decision_count` that does not
+  equal the number of decision rows.
+- The replayed terminal `ScoreBreakdown`s must equal the recorded per-seat
+  scores on every field (total, base total, nature tokens, all five habitat
+  and wildlife entries) before the ledger is sealed.
+- The policy identity must live in the `incumbent:` namespace
+  (`validate_incumbent_policy_id`); anything else would silently downgrade
+  the tomography evidence domain and is refused before any replay.
+- Publication uses the crate's immutable no-replace publisher; an existing
+  artifact is an error, never an overwrite.
+
+**CLI.** `rival-ingest-exporter <raw-games-dir> --out-dir <ledger-dir>
+[--policy-id <incumbent:...>]` (default policy id
+`incumbent:cascadia-v3-cycle4-n1024-d16-gate0-20260716`). Non-matching
+filenames (worker stderr logs, manifests) are skipped with a stderr note;
+stdout carries one deterministic line per ingested game (seed, decision
+count, per-seat totals, ledger file, file SHA-256) plus a final
+manifest-style summary (policy id, count, per-file SHA-256s, sorted by file
+name). The published directory feeds `rival-tomography` unchanged.
