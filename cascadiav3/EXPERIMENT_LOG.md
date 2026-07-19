@@ -7609,3 +7609,24 @@ Artifacts pinned: reports/m1_tomography_gate0_{default,strong}_20260719
 .json (summary sha256 in-file); ingest bridge commits 93cbf603..9f0ab642
 on feat/rival-cpu-machinery (151 tests green, verified this session).
 Recommendation to John: do NOT fund Rival-Lite; ruling is his.
+
+## 2026-07-19 14:05 — RULING (John): Rival-Lite KILLED; AAAAA GPU campaign CLOSED; CBDDB is the active line
+
+John: "kill rival lite / continue with the alt rule set experiments /
+this rule set should comfortably score above 105"
+
+1. **Rival-Lite: KILLED.** With D1's screen kill, the fine-tune
+   continuity leak, and M1's empty witness table, no relabeling program
+   survives. The AAAAA (Card-A) GPU campaign closes at ~2.6 GPU-days
+   total (D1 ~2.2 + Gate 0 ~0.4). Final AAAAA state: champion cycle4
+   scalar at 98.19 (rules 07-16 canonical baseline), goal gap 1.81 pts,
+   unresolved levers exhausted at this budget.
+2. **CBDDB is the active experimental line.** John's calibration: this
+   ruleset "should comfortably score above 105" — that number replaces
+   100 as the aspirational bar for CBDDB work. Historical old-tech base
+   anchors (~96.5/97.2) were nowhere near it; the smoke test measures
+   how much of that distance v3 techniques close for free.
+3. CPU machinery (rival crate: battery, tomography, golden traces,
+   ingest bridge) remains merged on its feature branch as reusable
+   measurement infrastructure — the tomography harness applies to any
+   future CBDDB incumbent unchanged.
