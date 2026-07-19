@@ -7410,3 +7410,77 @@ Output `d1_records_20260716.npz` (246 MB) verified this session:
 Chain proceeded autonomously to sentinel relabel (1,500 roots, ~2.6h).
 Then: training views → preflight → 4 retrains → screens → mechanical
 verdict → CUPED gate. Verdict ETA tonight ~22:00–23:00.
+
+## 2026-07-18 21:10 — D1 SCREEN VERDICT: KILL. Program stops before the gate per preregistration
+
+The chain completed autonomously at 20:51:57 (`D1 PIPELINE DONE (screen
+kill)`). All four retrains (~10 min each, warm-start) and five screens
+ran clean. The preregistered mechanical rule (d1_15k must beat ctrl by
+>= 0.010 mean bank regret AND land <= 0.2370 absolute) fired KILL:
+
+| arm            | mean_regret | vs ctrl   | p95    | zero-regret |
+|----------------|-------------|-----------|--------|-------------|
+| ctrl           | 0.2631      | —         | 1.0558 | 0.3059      |
+| d1_5k          | 0.2504      | −0.0127   | 0.9630 | 0.3447      |
+| d1_10k         | 0.2609      | −0.0022   | 0.9703 | 0.3152      |
+| d1_15k (best)  | 0.2721      | +0.0090   | 1.0731 | 0.3401      |
+| d1_15k (swa)   | 0.2650      | +0.0019   | 1.0411 | 0.3230      |
+
+Verdict JSON: `reports/d1_20260716_screen_verdict.json`
+(d1_vs_ctrl −0.00899 vs bar 0.010 → fail; absolute 0.2721 vs 0.2370 →
+fail). **D1 is closed. No CUPED gate was run; seed block 2027079000–99
+remains untouched.**
+
+Honest observations recorded for the post-mortem, none of which
+override the mechanical verdict:
+
+1. **The primary arm went the wrong direction**: the full 15k deep-label
+   dose made bank regret WORSE than the control fine-tune (+0.009).
+   This is not "no effect"; it is mild harm at full dose.
+2. **The dose curve is inverted-U**: 5k improved on ctrl by 0.0127
+   (nominally larger than the 0.010 margin bar), 10k roughly flat,
+   15k negative. Post-hoc, no CI, screens-rank-gates-decide —
+   hypothesis-generating only. Consistent with the deep-label tranche
+   (hard roots only, distributionally skewed) acting as a mild
+   regularizer at low dose and a distribution-shift penalty at high
+   dose.
+3. **Every arm, including ctrl, failed the absolute continuity bar**
+   (0.2370, the incumbent's pilot regret on this bank). The warm-start
+   fine-tune recipe itself regresses the incumbent's bank behavior
+   before any deep labels enter. Any future retrain-based program must
+   first fix this continuity leak or the absolute bar will kill it
+   regardless of label quality.
+4. GPU cost of the full D1 cycle as run: ~2.2 GPU-days (25.0h gen +
+   25.9h relabel + 2.7h sentinel + ~1.7h trains/screens).
+
+Portfolio consequence (per the 07-16 budget ruling decision tree): the
+"D1 positive" branches are dead. Remaining: Gate 0 (campaign-required
+fresh baseline), M1 selfish-ceiling tomography on Gate 0's incumbent
+games (CPU, free), then John rules on whether Rival-Lite's 1.5–2
+GPU-days are justified by the M1 ceiling number — or the GPU campaign
+closes at ~2.6 days total spend.
+
+## 2026-07-18 21:15 — PREREGISTRATION: Gate 0 fresh champion baseline under rules 2026-07-16
+
+Purpose: measurement, not hypothesis test. Mints the canonical champion
+baseline under the post-bag-fix rules identity; its decision ledgers
+double as the incumbent-measured game set for M1 tomography replay.
+No decision rule attached; no promotion implications by itself.
+
+- Script: `cascadiav3/scripts/run_rules_20260716_gate0.sh` (versioned;
+  07-09 rebaseline structure, distq arms omitted per budget ruling).
+- Config: champion identity only — cycle4 scalar CascadiaFormer-M,
+  `full_v3_gumbel_selfplay_cycle4/best_locked_val`. Arms: 1-game smoke,
+  no-search floor, n256/d4, n1024/d16 (canonical champion grade).
+  All champion serving params pinned (top-m 16, depth-rounds 1,
+  market-samples 8, blend 0.5, k-interior 16, jobs 12).
+- Seeds: `2027160000..2027160099` (100 games), fresh block, zero prior
+  references in any log or report. Touch-once.
+- Rules: `..._rules_2026_07_16`, rev 689f9d69 (already deployed and
+  built on john0 by the D1 chain; script re-verifies the ruleset grep
+  and revision match before reusing anything).
+- Budget: ~0.4 GPU-day (n1024/d16 dominates at ~46 s/dec × 8,000
+  decisions / 12 jobs ≈ 8.6h; n256/d4 ~0.7h; floor ~minutes).
+- Reference points (07-09, closed identity, NOT comparable pairwise):
+  champion n1024/d16 98.2975; n256/d4 and no-search floors in the
+  07-09 rebaseline reports.
