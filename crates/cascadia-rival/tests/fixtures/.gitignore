@@ -1,0 +1,5 @@
+# The repository-root .gitignore excludes *.jsonl (bulk data artifacts).
+# Committed test fixtures in this directory are deliberate evidence — the
+# real Gate 0 exporter game backing the ingest-bridge equivalence proof —
+# and must ship with the crate.
+!*.jsonl
