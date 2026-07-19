@@ -7630,3 +7630,31 @@ this rule set should comfortably score above 105"
    ingest bridge) remains merged on its feature branch as reusable
    measurement infrastructure — the tomography harness applies to any
    future CBDDB incumbent unchanged.
+
+## 2026-07-19 14:45 — CBDDB STAGE 1 ZERO-SHOT: 99.4675 — promise bar CLEARED
+
+Zero-shot battery complete (report pass, ruleset ..._2026_07_19, rev
+9e71ff1d, seeds 2027190000x100, 8000 decisions):
+
+| arm                     | mean seat | P50   | P90   |
+|-------------------------|-----------|-------|-------|
+| no-search policy-head   | 88.58     | —     | —     |
+| no-search q-head        | 88.53     | —     | —     |
+| greedy heuristic        | 80.89     | —     | —     |
+| **zero-shot n256/d4**   | **99.4675** | 100.0 | 105.0 |
+
+The AAAAA champion, with NO retraining, already beats the entire
+April-2026 old-tech line under CBDDB (~96.5 greedy-MCE / ~97.2
+NNUE-MCE, both under the more generous legacy Elk-B) by +2.3, and
+scores +2.3 above its own AAAAA n256/d4 number (97.145) — consistent
+with John's calibration that CBDDB "should comfortably score above
+105": half the games already reach 100 zero-shot at generation-grade
+search. Preregistered promise condition #1 (zero-shot >= ~96.5) is met
+decisively. Search + true-scored rollouts recover ~11 points over the
+miscalibrated no-search floor (88.6 -> 99.5).
+
+Stage 2 launching: 360+40-seed CBDDB corpus (n256/d4, seeds
+2027191000..1399), warm-start fine-tune (D1 recipe; selection on the
+CBDDB val split, NOT the AAAAA val set), paired re-eval on the Stage-1
+block (n256/d4 x100, n1024/d16 x30). Script:
+cascadiav3/scripts/run_cbddb_smoke_stage2.sh. ETA ~12h.
