@@ -7669,3 +7669,35 @@ from-scratch CBDDB training run (week-scale) still requires a separate
 explicit ruling. Certification protocol: any claim of ">105 achieved"
 must come from a fresh touch-once seed block (2027195000+), not the
 paired screening block 2027190000-99.
+
+## 2026-07-20 09:45 — CBDDB Stage 2 fine-tune REGRESSED; trust-region anchor fix built + launched
+
+Stage 2 naive warm-start fine-tune: n256/d4 = **98.75** (P50 99, P90 105)
+vs zero-shot **99.4675** — paired **-0.72 regression**. Training metrics
+showed the tell: value loss improved (val Q 8.74->5.61) while policy loss
+stayed flat (~2.79) and PLAY got worse — the value head drifted in a way
+that hurt search-time blending (blend-weight 0.5). Same continuity-leak
+signature as D1's screen kill. Two rulesets, same failure => RECIPE
+problem, not rules.
+
+Killed the in-flight ft n1024/d16 eval (John's call): it measured the
+abandoned model at champion grade with no paired zero-shot control, so
+~2h of GPU for an uninterpretable number. Freed the GPU for the fix.
+
+FIX (built + verified this session): trust-region anchor in
+torch_train_cascadiaformer.py — a frozen incumbent supplies forward
+KL(anchor||current) on the policy (action_mask-aligned, mirrors the
+policy loss exactly) and L2 on the value_vector+score_decomposition
+(outcome_valid, mirrors the value loss). Default-off bit-identical
+(13/13 anchor tests pass on john0 incl. bit-identity). Loader tolerates
+the incumbent's scalar q-head under --init-skip-mismatched (no anchor
+term uses the q-head). Flags: --anchor-manifest,
+--anchor-policy-kl-weight, --anchor-value-l2-weight.
+
+Fix sweep running (rev d27949df, existing Stage-2 corpus reused — NO
+regeneration): arm A "vonly" (l2=2.0, kl=0 — tests the value-drift
+diagnosis), arm B "both" (kl=2.0, l2=2.0 — full trust region), each
+eval'd n256/d4 x100 paired vs the 99.4675 floor; plus the missing
+zero-shot n1024/d16 x30 control. Anchor confirmed live (val
+anchor_value_l2=0.93 being penalized). Promote only if an arm beats
+99.4675. ETA ~evening.
