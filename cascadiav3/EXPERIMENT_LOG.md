@@ -7739,3 +7739,39 @@ matching, absent from the adjacency-only relation graph); (2) card-aware
 recompute of 6 stale Card-A hint dims (bear group-size, elk shape,
 hawk-LOS-typed, fox pair-type). Seeds: fresh blocks 2027193000+ (gen),
 2027195000+ reserved for certification.
+
+## 2026-07-20 17:55 — Anchor-fix CONCLUSION: warm-start fine-tune cannot beat zero-shot on CBDDB (98.75 across all arms)
+
+All three warm-start fine-tune variants on the n256/d4 CBDDB corpus land
+at IDENTICAL 98.75 mean / 99.0 p50 / 105.0 p90 (n256/d4 x100, block
+2027190000-99), below zero-shot 99.4675:
+- naive ft (no anchor): 98.75
+- vonly (value L2 anchor, w=2): 98.75
+- both (policy KL + value L2, w=2): 98.75
+Verified genuinely distinct checkpoints (games-file SHAs 8ac27e56 /
+4237334d / 5b484940 all differ) that independently converge to the same
+aggregate. Anchor at w=2 was too weak to differentiate (value L2 still
+drifted to 2.38), but the deeper cause is the TEACHER-STUDENT GAP: the
+n256/d4 self-play targets are generated at the SAME budget the student
+plays, so imitating them caps the student at ~its own level while the
+fine-tune step slightly degrades the 99.47 warm-start point. Anchoring
+can at best recover 99.47; it cannot manufacture headroom from
+same-budget targets.
+
+Conclusion: warm-start fine-tuning on same-budget self-play is a
+dead-end for beating zero-shot on CBDDB. This validates BOTH surviving
+levers: (a) from-scratch (escape the transferred priors), (b) stronger-
+teacher corpus (targets from deeper search than the student plays). The
+from-scratch campaign is the active path. Anchor machinery retained
+(default-off bit-identical) for any future stronger-teacher warm-start.
+
+Zero-shot n1024/d16 x30 control still running (~20:30) — champion-grade
+CBDDB baseline, banked regardless.
+
+## 2026-07-20 17:55 — Path B feature (action-sourced Hawk-LOS edge) VERIFIED
+
+Independently verified this session: action_relation_tail parity tests
+pass for AAAAA AND CBDDB (fixture + real-state), golden hash unchanged,
+80/80 exporter tests. Byte-exact train/serve parity for the new
+action-source LOS edges (ids 13-16) confirmed. From-scratch feature set
+is now complete and locked (commit 319e373b).
