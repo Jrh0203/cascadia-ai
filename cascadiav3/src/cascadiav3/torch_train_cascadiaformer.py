@@ -98,6 +98,25 @@ RETENTION_METRIC_KEYS = (
     "policy_recall_examples",
 )
 AGGREGATE_KEYS = LOSS_COMPONENT_KEYS + RETENTION_METRIC_KEYS
+# Trust-region anchor regularizer metrics. These keys are ONLY present in the
+# `_loss_components` return dict (and therefore only aggregated / itemized into
+# metrics) when an anchor is configured with a positive weight. Keeping them
+# out of AGGREGATE_KEYS is what preserves the default-off byte-identity of the
+# metrics jsonl: with no anchor the aggregated key set is exactly AGGREGATE_KEYS.
+ANCHOR_METRIC_KEYS = (
+    "anchor_policy_kl",
+    "anchor_value_l2",
+)
+
+
+def _anchor_active(anchor_policy_kl_weight: float, anchor_value_l2_weight: float) -> bool:
+    """True when at least one anchor regularizer is switched on."""
+    return anchor_policy_kl_weight > 0.0 or anchor_value_l2_weight > 0.0
+
+
+def _aggregate_keys_with_anchor(anchor_enabled: bool) -> tuple[str, ...]:
+    """Aggregation key set, extended with the anchor metrics only when active."""
+    return AGGREGATE_KEYS + ANCHOR_METRIC_KEYS if anchor_enabled else AGGREGATE_KEYS
 
 
 def loss_weights_for_objective(objective: str) -> LossWeights:
@@ -676,6 +695,10 @@ def _loss_components(
     batch: dict[str, Any],
     weights: LossWeights,
     options: Stage1TargetOptions | None = None,
+    *,
+    anchor_outputs: dict[str, Any] | None = None,
+    anchor_policy_kl_weight: float = 0.0,
+    anchor_value_l2_weight: float = 0.0,
 ):  # type: ignore[no-untyped-def]
     import torch
     import torch.nn.functional as F
@@ -1007,6 +1030,81 @@ def _loss_components(
         # is byte-identical to the pre-Stage-1 trainer (no extra graph node,
         # no zero-add), preserving the R0.x bit-identity contract.
         total = total + weights.path_consistency * path_consistency
+    # ---- Trust-region anchor regularizers (default-off) ----
+    # Warm-start fine-tuning a strong incumbent can lower value-prediction loss
+    # while drifting the value head in a way that hurts search-time blending
+    # (observed regression). These two optional terms pin the fine-tune toward a
+    # FROZEN anchor model's behavior. `anchor_outputs` is that anchor's forward
+    # on the SAME batch, produced by the caller under torch.no_grad() with the
+    # anchor's parameters frozen (requires_grad False); it is None unless an
+    # anchor is configured AND at least one weight is positive. Because the guard
+    # below is the ONLY place `total` is touched here, the flag-off `total`
+    # expression above stays byte-identical to the pre-anchor trainer (no extra
+    # graph node, no 0.0-add), and no anchor keys are emitted into the return
+    # dict, so the aggregated metrics are byte-identical too.
+    anchor_policy_kl_metric = None
+    anchor_value_l2_metric = None
+    if anchor_outputs is not None and (
+        anchor_policy_kl_weight > 0.0 or anchor_value_l2_weight > 0.0
+    ):
+        # --- Forward KL(anchor || current) over the candidate action set ---
+        # Alignment is the subtle part: the KL is only meaningful if the anchor
+        # and live policies live on the IDENTICAL per-root candidate support.
+        # The live policy above is `log_policy = log_softmax(logits)` where
+        # `logits = outputs["logits"].masked_fill(~mask, -1e9)` and
+        # `mask = batch["action_mask"]`. We rebuild the anchor policy with the
+        # SAME `mask`, the SAME masked_fill sentinel, and the SAME log_softmax,
+        # so both distributions are normalized over exactly the same valid
+        # actions per root. Invalid actions receive anchor probability exactly
+        # 0.0 (masked_fill after exp, mirroring the target_distribution masking
+        # convention used by weighted_policy), so the summand
+        # `anchor_prob * (anchor_logp - log_policy)` is `0 * finite = 0` there:
+        # no log(0), no NaN, matching the epsilon-free masking the existing
+        # policy cross-entropy already depends on. Forward KL with the anchor as
+        # target penalizes the new policy for moving probability mass off the
+        # actions the anchor liked.
+        # The anchor is a frozen constant target: the caller runs its forward
+        # under torch.no_grad() with requires_grad False, and we .detach() here
+        # as belt-and-braces so no gradient can ever flow into the anchor no
+        # matter how the outputs were produced.
+        anchor_logits = anchor_outputs["logits"].detach().masked_fill(~mask, -1.0e9)
+        anchor_log_policy = torch.log_softmax(anchor_logits, dim=1)
+        anchor_policy_probs = anchor_log_policy.exp().masked_fill(~mask, 0.0)
+        anchor_kl_per_record = (
+            anchor_policy_probs * (anchor_log_policy - log_policy)
+        ).sum(dim=1)
+        if policy_valid is None:
+            anchor_policy_kl = anchor_kl_per_record.mean()
+        else:
+            # Same per-record validity reduction as the live policy loss.
+            anchor_policy_kl = _record_masked_mean(anchor_kl_per_record, policy_valid)
+        # --- Value/score head L2 toward the anchor ---
+        # Reduced over exactly the rows the existing value/score losses use
+        # (outcome_valid): value_vector mirrors the `value` component reduction
+        # and score_decomposition mirrors the `score` component reduction. Both
+        # anchor tensors are detached constants (frozen anchor forward under
+        # no_grad), so gradient flows only into the live heads and pulls them
+        # back toward the incumbent's outputs on this batch.
+        value_residual = outputs["value_vector"] - anchor_outputs["value_vector"].detach()
+        value_l2_per_record = (value_residual * value_residual).mean(dim=1)
+        score_residual = outputs["score_decomposition"] - anchor_outputs["score_decomposition"].detach()
+        score_l2_per_record = (score_residual * score_residual).reshape(
+            score_residual.shape[0], -1
+        ).mean(dim=1)
+        if outcome_valid is None:
+            anchor_value_l2 = value_l2_per_record.mean() + score_l2_per_record.mean()
+        else:
+            anchor_value_l2 = _record_masked_mean(
+                value_l2_per_record, outcome_valid
+            ) + _record_masked_mean(score_l2_per_record, outcome_valid)
+        # Weight each term independently so passing only one weight adds only
+        # that one graph node; the other is still reported as a metric.
+        if anchor_policy_kl_weight > 0.0:
+            total = total + anchor_policy_kl_weight * anchor_policy_kl
+        if anchor_value_l2_weight > 0.0:
+            total = total + anchor_value_l2_weight * anchor_value_l2
+        anchor_policy_kl_metric = anchor_policy_kl.detach()
+        anchor_value_l2_metric = anchor_value_l2.detach()
     predicted = logits.argmax(dim=1)
     predicted_by_final_q = predicted_final_q.masked_fill(~mask, -1.0e9).argmax(dim=1)
     teacher_target_logit = logits.gather(1, teacher_target.unsqueeze(1)).squeeze(1)
@@ -1017,7 +1115,7 @@ def _loss_components(
     predicted_target_final_q = target_final_q.gather(1, predicted_by_final_q.unsqueeze(1)).squeeze(1)
     final_q_regret = (selected_final_q - predicted_target_final_q).clamp_min(0.0).mean()
     teacher_advantage = (selected_final_q - greedy_final_q).mean()
-    return {
+    result = {
         "total": total,
         "policy": policy.detach(),
         "weighted_policy": weighted_policy.detach(),
@@ -1047,6 +1145,12 @@ def _loss_components(
         "policy_confident_best_top16_correct": policy_confident_best_top16_correct.detach(),
         "policy_recall_examples": policy_recall_examples.detach(),
     }
+    # Anchor metrics are added ONLY when active; the flag-off return dict is
+    # byte-identical to the pre-anchor trainer (same keys, same values).
+    if anchor_policy_kl_metric is not None:
+        result["anchor_policy_kl"] = anchor_policy_kl_metric
+        result["anchor_value_l2"] = anchor_value_l2_metric
+    return result
 
 
 def _policy_recall_terms(
@@ -1749,6 +1853,9 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
     max_batches: int | None,
     options: Stage1TargetOptions | None = None,
     path_consistency_arrays=None,
+    anchor_model=None,
+    anchor_policy_kl_weight: float = 0.0,
+    anchor_value_l2_weight: float = 0.0,
 ) -> dict[str, Any]:
     record_count = _corpus_len(records)
     if record_count <= 0:
@@ -1759,9 +1866,15 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
     batch_limit = total_batches if max_batches is None else min(max_batches, total_batches)
     if batch_limit <= 0:
         raise ValueError("validation max batches must be positive when provided")
+    # The anchor terms itemize into locked_val_* only when active; otherwise the
+    # aggregated key set (and the returned metrics) is byte-identical to today.
+    anchor_enabled = anchor_model is not None and _anchor_active(
+        anchor_policy_kl_weight, anchor_value_l2_weight
+    )
+    aggregate_keys = _aggregate_keys_with_anchor(anchor_enabled)
     was_training = model.training
     model.eval()
-    totals = {key: 0.0 for key in AGGREGATE_KEYS}
+    totals = {key: 0.0 for key in aggregate_keys}
     confident_top16_correct_total = 0.0
     confident_top16_example_total = 0.0
     record_total = 0
@@ -1775,10 +1888,20 @@ def _evaluate_records(  # type: ignore[no-untyped-def]
                 _attach_path_consistency(host_batch, path_consistency_arrays, indices)
             batch = _move_to_device(host_batch, device)
             outputs = _model_forward(model, batch)
-            losses = _loss_components(outputs, batch, weights, options=options)
+            # Frozen anchor forward on the SAME batch (already inside no_grad).
+            anchor_outputs = _model_forward(anchor_model, batch) if anchor_enabled else None
+            losses = _loss_components(
+                outputs,
+                batch,
+                weights,
+                options=options,
+                anchor_outputs=anchor_outputs,
+                anchor_policy_kl_weight=anchor_policy_kl_weight,
+                anchor_value_l2_weight=anchor_value_l2_weight,
+            )
             batch_weight = len(batch_records)
             record_total += batch_weight
-            loss_values = _loss_scalars(losses, AGGREGATE_KEYS)
+            loss_values = _loss_scalars(losses, aggregate_keys)
             confident_top16_correct_total += loss_values[
                 "policy_confident_best_top16_correct"
             ]
@@ -2272,6 +2395,9 @@ def run_training(
     compile_model: bool = False,
     grad_checkpoint: str = "auto",
     cgab_fused: bool = False,
+    anchor_manifest: Path | None = None,
+    anchor_policy_kl_weight: float = 0.0,
+    anchor_value_l2_weight: float = 0.0,
 ) -> dict[str, Any]:
     try:
         import torch
@@ -2312,6 +2438,14 @@ def run_training(
         raise ValueError("value_target_search_mix must be in [0, 1]")
     if value_target_search_mix_min_tiles < 0:
         raise ValueError("value_target_search_mix_min_tiles must be nonnegative")
+    if anchor_policy_kl_weight < 0.0:
+        raise ValueError("anchor_policy_kl_weight must be nonnegative")
+    if anchor_value_l2_weight < 0.0:
+        raise ValueError("anchor_value_l2_weight must be nonnegative")
+    if anchor_manifest is None and _anchor_active(anchor_policy_kl_weight, anchor_value_l2_weight):
+        raise ValueError(
+            "anchor regularizer weights require --anchor-manifest to load the frozen anchor model"
+        )
     q_decomposition = q_decomposition or objective == "gumbel-selfplay-structured-q"
     if pairwise_rank <= 0:
         raise ValueError("pairwise_rank must be positive")
@@ -2503,6 +2637,41 @@ def run_training(
                 )
             else:
                 raise ValueError("--init-manifest config does not match requested model config")
+    # ---- Trust-region anchor model (default-off) ----
+    # Built ONLY when an anchor manifest is supplied AND a weight is positive,
+    # so with no anchor the model is never constructed or loaded and the run is
+    # byte-identical to today. The anchor is architecturally identical to the
+    # model being trained, so it is constructed via the SAME build_cascadiaformer
+    # + _load_weights_from_manifest path as --init-manifest above and loaded
+    # strictly. It is frozen (requires_grad False), kept in eval mode, and only
+    # ever used for forward passes under torch.no_grad(): it never enters the
+    # optimizer, SWA, or any checkpoint.
+    anchor_model = None
+    anchor_payload: dict[str, Any] | None = None
+    anchor_enabled = _anchor_active(anchor_policy_kl_weight, anchor_value_l2_weight)
+    if anchor_manifest is not None and anchor_enabled:
+        anchor_model = build_cascadiaformer(config).to(device)
+        anchor_payload = _load_weights_from_manifest(anchor_model, anchor_manifest)
+        anchor_config = anchor_payload.get("config")
+        if isinstance(anchor_config, dict):
+            anchor_config = CascadiaFormerConfig(**anchor_config).to_dict()
+        if anchor_config and anchor_config != config.to_dict():
+            raise ValueError(
+                "--anchor-manifest config does not match the trained model config; "
+                "the anchor must be architecturally identical"
+            )
+        anchor_model.eval()
+        anchor_model.requires_grad_(False)
+        print(
+            "[trainer] trust-region anchor loaded: "
+            f"policy_kl_weight={anchor_policy_kl_weight} value_l2_weight={anchor_value_l2_weight}",
+            flush=True,
+        )
+    # Aggregation key set for both train and val itemization. Includes the two
+    # anchor metrics only when the anchor is live; otherwise it is exactly
+    # AGGREGATE_KEYS, keeping the metrics jsonl byte-identical to the no-anchor
+    # trainer.
+    aggregate_keys = _aggregate_keys_with_anchor(anchor_model is not None)
     trainable_parameter_count = parameter_count(model)
     if pairwise_head_only:
         trainable_parameter_count = _configure_pairwise_head_only(model)
@@ -2717,7 +2886,7 @@ def run_training(
     for step in range(start_step, steps + 1):
         completed_steps = step
         stop_after_checkpoint = False
-        train_totals = {key: 0.0 for key in AGGREGATE_KEYS}
+        train_totals = {key: 0.0 for key in aggregate_keys}
         last_cursor: dict[str, Any] = {}
         for accum_index in range(grad_accum):
             global_batch = (step - 1) * grad_accum + accum_index + 1
@@ -2771,13 +2940,30 @@ def run_training(
                 enabled=autocast_enabled,
             ):
                 outputs = _model_forward(train_model, batch)
-                losses = _loss_components(outputs, batch, weights, options=stage1_target_options)
+                # Frozen anchor forward on the SAME batch, under the SAME
+                # autocast context as the live forward so the two sets of
+                # outputs are directly comparable; no_grad keeps the anchor out
+                # of the training graph entirely.
+                if anchor_model is not None:
+                    with torch.no_grad():
+                        anchor_outputs = _model_forward(anchor_model, batch)
+                else:
+                    anchor_outputs = None
+                losses = _loss_components(
+                    outputs,
+                    batch,
+                    weights,
+                    options=stage1_target_options,
+                    anchor_outputs=anchor_outputs,
+                    anchor_policy_kl_weight=anchor_policy_kl_weight,
+                    anchor_value_l2_weight=anchor_value_l2_weight,
+                )
                 loss = losses["total"] / grad_accum
             timer.stop("forward", phase_started)
             phase_started = timer.start()
             loss.backward()
             timer.stop("backward", phase_started)
-            loss_values = _loss_scalars(losses, AGGREGATE_KEYS)
+            loss_values = _loss_scalars(losses, aggregate_keys)
             for key in train_totals:
                 train_totals[key] += loss_values[key] / grad_accum
         phase_started = timer.start()
@@ -2800,6 +2986,9 @@ def run_training(
                     max_batches=val_max_batches,
                     options=stage1_target_options,
                     path_consistency_arrays=val_path_consistency,
+                    anchor_model=anchor_model,
+                    anchor_policy_kl_weight=anchor_policy_kl_weight,
+                    anchor_value_l2_weight=anchor_value_l2_weight,
                 )
             timer.stop("eval", phase_started)
             loader_cursor = {
@@ -2812,7 +3001,7 @@ def run_training(
                 "step": step,
                 "lr": scheduler.get_last_lr()[0],
             }
-            latest_metrics.update({f"train_{key}": train_totals[key] for key in AGGREGATE_KEYS})
+            latest_metrics.update({f"train_{key}": train_totals[key] for key in aggregate_keys})
             latest_metrics.update(val_metrics)
             passes_selection_guards = _passes_selection_guards(
                 latest_metrics,
@@ -2988,6 +3177,16 @@ def run_training(
         "train_format": train_format,
         "val_format": val_format,
         "init_manifest": str(init_manifest) if init_manifest else None,
+        "anchor_manifest": str(anchor_manifest) if anchor_model is not None else None,
+        "anchor_policy_kl_weight": anchor_policy_kl_weight,
+        "anchor_value_l2_weight": anchor_value_l2_weight,
+        "anchor_manifest_payload": {
+            "step": anchor_payload.get("step"),
+            "checkpoint_tag": anchor_payload.get("checkpoint_tag"),
+            "objective": anchor_payload.get("objective"),
+        }
+        if anchor_payload
+        else None,
         "resume_manifest": str(resume) if resume else None,
         "resume_start_step": start_step,
         "init_manifest_payload": {
@@ -3165,6 +3364,37 @@ def main() -> int:
     parser.add_argument("--metrics-jsonl", default="cascadiav3/reports/cascadiaformer_metrics.jsonl")
     parser.add_argument("--checkpoint-dir", default="cascadiav3/checkpoints/cascadiaformer")
     parser.add_argument("--init-manifest")
+    parser.add_argument(
+        "--anchor-manifest",
+        default=None,
+        help=(
+            "Optional manifest of a FROZEN anchor model (architecturally identical "
+            "to the model being trained). When absent, no anchor is loaded and the "
+            "run is byte-identical to today. Combine with the anchor weights below "
+            "to add trust-region regularizers that stop a warm-start fine-tune from "
+            "drifting away from the anchor's behavior."
+        ),
+    )
+    parser.add_argument(
+        "--anchor-policy-kl-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Weight on forward KL(anchor_policy || current_policy) over each root's "
+            "candidate-action distribution (anchor as target; penalizes moving "
+            "probability mass off actions the anchor liked). 0.0 disables the term."
+        ),
+    )
+    parser.add_argument(
+        "--anchor-value-l2-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Weight on the mean-squared difference between the current model's "
+            "value/score head outputs and the frozen anchor's outputs on the same "
+            "batch, over the same valid rows the value loss uses. 0.0 disables it."
+        ),
+    )
     parser.add_argument("--resume")
     parser.add_argument("--val-max-batches", type=int, default=0, help="0 evaluates the full locked validation set")
     parser.add_argument(
@@ -3312,6 +3542,9 @@ def main() -> int:
         selection_metric=args.selection_metric,
         selection_mode=args.selection_mode,
         init_manifest=Path(args.init_manifest) if args.init_manifest else None,
+        anchor_manifest=Path(args.anchor_manifest) if args.anchor_manifest else None,
+        anchor_policy_kl_weight=args.anchor_policy_kl_weight,
+        anchor_value_l2_weight=args.anchor_value_l2_weight,
         init_skip_mismatched=args.init_skip_mismatched,
         resume=Path(args.resume) if args.resume else None,
         eval_every_steps=args.eval_every_steps,
