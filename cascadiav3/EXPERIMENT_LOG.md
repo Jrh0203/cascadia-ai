@@ -7701,3 +7701,41 @@ eval'd n256/d4 x100 paired vs the 99.4675 floor; plus the missing
 zero-shot n1024/d16 x30 control. Anchor confirmed live (val
 anchor_value_l2=0.93 being penalized). Promote only if an arm beats
 99.4675. ETA ~evening.
+
+## 2026-07-20 15:40 — From-scratch CBDDB campaign PREREGISTERED (re-scoped to ~3 GPU-days)
+
+John ruled: TRUE random-init from-scratch CBDDB model (tests whether
+Card-A priors are a ceiling vs a floor). Then re-scoped: "12 GPU days is
+too high, we can reduce the number of evaluations and use cheaper search
+budgets." Revised plan (levers applied):
+
+- Bootstrap: greedy + EI-0 greedy-state search bootstrap under
+  --scoring-cards cbddb (gen largely model-free) -> random-init
+  supervised train (model-S, ~25k steps, LR 2e-4 from-scratch fallback).
+  ~0.4 GPU-day.
+- Self-play cycles at CHEAP search n128/d2, ~800 seeds x 80 plies
+  (~0.3 GPU-day/cycle vs 1.7 at n256/d4 1250 seeds). Ramp to n256/d4 for
+  the final 1-2 sharpening cycles only.
+- Evals at MILESTONES only, n256/d4 x100 (the paired bar vs zero-shot
+  99.4675); single n1024/d16 x30 at the very end.
+- MILESTONE GATE at bootstrap + 2 cheap cycles (~1.0 GPU-day cumulative):
+  read climb rate toward 99.4675; continue only if the slope projects to
+  reach/beat it. Full campaign ~2.5-3 GPU-days; worst-case exposure ~1
+  day at the gate.
+- Honest caveat on record: cheaper generation search = weaker teacher
+  targets, may need more cycles / cap the ceiling; the cheap-early/
+  expensive-late ramp mitigates; first knob to turn if the climb stalls
+  is generation search budget.
+- Interpretation: if from-scratch plateaus below 99.4675, that PROVES
+  the Card-A transfer priors help (pivot back to warm-start + stronger-
+  teacher). Not-comparable to AAAAA numbers; CBDDB target >105 (John).
+
+FEATURES (John asked to re-evaluate; audit found no Card-A scoring bug,
+all scoring-derived features auto-adapt via the variant-aware engine):
+building CARD-AWARE encoder changes (Card-A output byte-identical =
+golden-hash gate; only CBDDB paths change): (1) Hawk-D line-of-sight
+relation edge (the one genuine structural gap — Hawk D scores LOS-pair
+matching, absent from the adjacency-only relation graph); (2) card-aware
+recompute of 6 stale Card-A hint dims (bear group-size, elk shape,
+hawk-LOS-typed, fox pair-type). Seeds: fresh blocks 2027193000+ (gen),
+2027195000+ reserved for certification.
