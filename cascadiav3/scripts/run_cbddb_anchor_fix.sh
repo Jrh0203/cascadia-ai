@@ -87,7 +87,7 @@ train_arm() {
     --anchor-manifest "$INCUMBENT" \
     --anchor-policy-kl-weight "$kl" \
     --anchor-value-l2-weight "$l2" \
-    --data-workers 4 --prefetch-factor 4 --tf32 --fused-optimizer --cgab-fused \
+    --data-workers 0 --tf32 --fused-optimizer --cgab-fused \
     --checkpoint-dir "$ckpt" \
     --metrics-jsonl "$REPORT_DIR/cbddb_anchor_${arm}_metrics.jsonl" \
     --out "$REPORT_DIR/cbddb_anchor_${arm}_train.json" \
