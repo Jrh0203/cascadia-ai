@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::{Context, Result, bail};
+use cascadia_game::{GRID_DIM, ScoringCards, ScoringVariant};
 use half::f16;
 use serde_json::Value;
 
@@ -41,6 +42,9 @@ pub struct TensorShardData {
     pub max_action_count: usize,
     pub first_state_hash: Option<String>,
     pub last_state_hash: Option<String>,
+    /// Active scoring-card ruleset for this shard's card-aware semantic
+    /// features. Defaults to AAAAA (byte-identical to legacy output).
+    pub scoring_cards: ScoringCards,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -88,6 +92,11 @@ pub struct ExpertTensorShardData {
     pub max_relation_edge_count: usize,
     pub first_state_hash: Option<String>,
     pub last_state_hash: Option<String>,
+    /// Active scoring-card ruleset for this shard. Card-aware feature builders
+    /// (semantic action hints + hawk line-of-sight relation edges) key off this
+    /// so a CBDDB shard is scored-matched while an AAAAA shard is byte-identical
+    /// to the legacy Card-A output. Defaults to AAAAA.
+    pub scoring_cards: ScoringCards,
 }
 
 impl ExpertTensorShardData {
@@ -100,8 +109,24 @@ impl ExpertTensorShardData {
         }
     }
 
+    /// Aggregator variant that stamps the active scoring-card ruleset so every
+    /// record packed into this shard uses card-matched features.
+    pub fn with_scoring_cards(cards: ScoringCards) -> Self {
+        Self {
+            scoring_cards: cards,
+            ..Self::new()
+        }
+    }
+
+    /// AAAAA convenience constructor retained for the byte-identity golden
+    /// tests; production always routes through `from_records_with_cards`.
+    #[cfg(test)]
     pub fn from_records(records: &[Value]) -> Result<Self> {
-        let mut data = Self::new();
+        Self::from_records_with_cards(records, ScoringCards::AAAAA)
+    }
+
+    pub fn from_records_with_cards(records: &[Value], cards: ScoringCards) -> Result<Self> {
+        let mut data = Self::with_scoring_cards(cards);
         for record in records {
             data.push_record(record)?;
         }
@@ -111,6 +136,17 @@ impl ExpertTensorShardData {
     pub fn merge(&mut self, other: Self) {
         if other.record_count == 0 {
             return;
+        }
+        // Every shard in a run shares the run's ruleset; adopt it from the
+        // first non-empty contributor and assert the rest agree so an AAAAA and
+        // a CBDDB shard can never be silently concatenated.
+        if self.record_count == 0 {
+            self.scoring_cards = other.scoring_cards;
+        } else {
+            assert_eq!(
+                self.scoring_cards, other.scoring_cards,
+                "cannot merge shards built under different scoring-card rulesets",
+            );
         }
         if self.first_state_hash.is_none() {
             self.first_state_hash = other.first_state_hash.clone();
@@ -180,7 +216,7 @@ impl ExpertTensorShardData {
 
     fn push_record(&mut self, record: &Value) -> Result<()> {
         let token_rows = public_token_features(record)?;
-        let action_rows = semantic_public_token_action_features(record)?;
+        let action_rows = semantic_public_token_action_features(record, self.scoring_cards)?;
         let action_count = action_rows.len();
         if action_count == 0 {
             bail!("expert tensor record has no legal actions");
@@ -189,7 +225,8 @@ impl ExpertTensorShardData {
         if selected >= action_count {
             bail!("selected action index exceeds legal action count");
         }
-        let relation_edges = combined_relation_edges(record, token_rows.len(), action_count)?;
+        let relation_edges =
+            combined_relation_edges(record, token_rows.len(), action_count, self.scoring_cards)?;
 
         let target_q = f32_array(record, "per_action_Q", action_count)?;
         let score_to_go = f32_array(record, "per_action_score_to_go", action_count)?;
@@ -319,8 +356,17 @@ impl TensorShardData {
         }
     }
 
-    pub fn from_records(records: &[Value]) -> Result<Self> {
-        let mut data = Self::new();
+    /// Aggregator variant that stamps the active scoring-card ruleset so every
+    /// record packed into this shard uses card-matched semantic features.
+    pub fn with_scoring_cards(cards: ScoringCards) -> Self {
+        Self {
+            scoring_cards: cards,
+            ..Self::new()
+        }
+    }
+
+    pub fn from_records_with_cards(records: &[Value], cards: ScoringCards) -> Result<Self> {
+        let mut data = Self::with_scoring_cards(cards);
         for record in records {
             data.push_record(record)?;
         }
@@ -330,6 +376,14 @@ impl TensorShardData {
     pub fn merge(&mut self, other: Self) {
         if other.record_count == 0 {
             return;
+        }
+        if self.record_count == 0 {
+            self.scoring_cards = other.scoring_cards;
+        } else {
+            assert_eq!(
+                self.scoring_cards, other.scoring_cards,
+                "cannot merge shards built under different scoring-card rulesets",
+            );
         }
         if self.first_state_hash.is_none() {
             self.first_state_hash = other.first_state_hash.clone();
@@ -364,7 +418,7 @@ impl TensorShardData {
 
     fn push_record(&mut self, record: &Value) -> Result<()> {
         let token_rows = public_token_features(record)?;
-        let action_rows = semantic_public_token_action_features(record)?;
+        let action_rows = semantic_public_token_action_features(record, self.scoring_cards)?;
         let selected = selected_action_index(record)?;
         if selected >= action_rows.len() {
             bail!("selected action index exceeds legal action count");
@@ -632,6 +686,7 @@ fn combined_relation_edges(
     root: &Value,
     token_count: usize,
     action_count: usize,
+    cards: ScoringCards,
 ) -> Result<Vec<[i32; 3]>> {
     const ADJACENT_HEX: i32 = 1;
     const TERRAIN_MATCH_ADJACENT: i32 = 2;
@@ -761,6 +816,20 @@ fn combined_relation_edges(
         }
     }
 
+    // Hawk line-of-sight edges (Hawk C/D only). Under Hawk A this block is
+    // skipped entirely, so the AAAAA edge set is byte-identical. The
+    // between-species count is bucketed into distinct relation ids so the model
+    // sees the Hawk-D weight tier (0/4/7/9) directly. These are token->token
+    // edges (both endpoints are placed hawk tiles); they overwrite the generic
+    // SAME_OWNER_BOARD edge for that specific pair because line-of-sight is the
+    // strictly more informative relation.
+    if matches!(cards.hawk, ScoringVariant::C | ScoringVariant::D) {
+        for (source, target, relation_id) in hawk_line_of_sight_relation_edges(tokens) {
+            set_relation(&mut edges, source, target, relation_id, true, seq_len);
+            set_relation(&mut edges, target, source, relation_id, true, seq_len);
+        }
+    }
+
     let mut out = edges
         .into_iter()
         .filter_map(|((source, target), relation_id)| {
@@ -769,6 +838,112 @@ fn combined_relation_edges(
         .collect::<Vec<_>>();
     out.sort_unstable_by_key(|edge| (edge[0], edge[1], edge[2]));
     Ok(out)
+}
+
+/// Line-of-sight relation edges among placed hawk tokens, grouped per owner
+/// board (a hawk can only see hawks on its own board). Each returned tuple is
+/// `(source_node, target_node, relation_id)` where the id encodes the count of
+/// DISTINCT non-hawk species strictly between the pair, mirroring the engine's
+/// `hawk_line_of_sight_pairs` (see crates/cascadia-game/scoring.rs). Callers
+/// emit both directions.
+fn hawk_line_of_sight_relation_edges(tokens: &[Value]) -> Vec<(i32, i32, i32)> {
+    const HAWK_LOS_BETWEEN_0: i32 = 9;
+    const HAWK_LOS_BETWEEN_1: i32 = 10;
+    const HAWK_LOS_BETWEEN_2: i32 = 11;
+    const HAWK_LOS_BETWEEN_3_PLUS: i32 = 12;
+
+    // Per-owner: placed hawks as (coord, node index) and the full wildlife map
+    // used for between-species counting.
+    let mut hawks_by_owner: HashMap<i64, Vec<(Coord, i32)>> = HashMap::new();
+    let mut wildlife_by_owner: HashMap<i64, HashMap<Coord, i64>> = HashMap::new();
+    for token in tokens {
+        if field(token, "token_kind").and_then(Value::as_str) != Some("placed_tile") {
+            continue;
+        }
+        let Some(coord) = coord_key(field(token, "coord_ref")) else {
+            continue;
+        };
+        let species = safe_i64(field(token, "placed_wildlife"), -1);
+        if !(0..WILDLIFE_COUNT as i64).contains(&species) {
+            continue;
+        }
+        let owner = safe_i64(field(token, "owner_seat"), -1);
+        wildlife_by_owner
+            .entry(owner)
+            .or_default()
+            .insert(coord, species);
+        if species == 3 {
+            let node = safe_i64(field(token, "token_index"), -1) as i32;
+            hawks_by_owner.entry(owner).or_default().push((coord, node));
+        }
+    }
+
+    let mut edges = Vec::new();
+    for (owner, hawks) in &hawks_by_owner {
+        if hawks.len() < 2 {
+            continue;
+        }
+        let hawk_coords: HashSet<Coord> = hawks.iter().map(|(coord, _)| *coord).collect();
+        let wildlife = wildlife_by_owner.get(owner);
+        for (index, (coord, node)) in hawks.iter().enumerate() {
+            // Exclude self so the scan reports partners, matching the engine.
+            let mut others = hawk_coords.clone();
+            others.remove(coord);
+            let empty = HashMap::new();
+            let all_wildlife = wildlife.unwrap_or(&empty);
+            let partners =
+                hawk_los_partner_nodes(*coord, &others, all_wildlife, hawks, index);
+            for (target_node, between) in partners {
+                let relation_id = match between {
+                    0 => HAWK_LOS_BETWEEN_0,
+                    1 => HAWK_LOS_BETWEEN_1,
+                    2 => HAWK_LOS_BETWEEN_2,
+                    _ => HAWK_LOS_BETWEEN_3_PLUS,
+                };
+                edges.push((*node, target_node, relation_id));
+            }
+        }
+    }
+    edges
+}
+
+/// Line-of-sight partners of the hawk at `coord` returned as
+/// `(partner_node, distinct_species_between)`, deduped so each unordered pair
+/// is emitted once (only when the partner's list index exceeds `self_index`).
+fn hawk_los_partner_nodes(
+    coord: Coord,
+    others: &HashSet<Coord>,
+    all_wildlife: &HashMap<Coord, i64>,
+    hawks: &[(Coord, i32)],
+    self_index: usize,
+) -> Vec<(i32, u32)> {
+    let mut partners = Vec::new();
+    for direction in DIRECTIONS {
+        let mut current = coord.neighbor(direction);
+        let mut distance = 1;
+        let mut between: u8 = 0;
+        while distance <= MAX_LOS_STEPS {
+            if others.contains(&current) {
+                if distance > 1
+                    && let Some(partner_index) =
+                        hawks.iter().position(|(hawk, _)| *hawk == current)
+                    && self_index < partner_index
+                {
+                    partners.push((hawks[partner_index].1, u32::from(between).count_ones()));
+                }
+                break;
+            }
+            if let Some(species) = all_wildlife.get(&current).copied()
+                && (0..WILDLIFE_COUNT as i64).contains(&species)
+                && species != 3
+            {
+                between |= 1 << species as u8;
+            }
+            current = current.neighbor(direction);
+            distance += 1;
+        }
+    }
+    partners
 }
 
 fn coord_features(coord: Option<&Value>) -> [f32; 6] {
@@ -1184,6 +1359,124 @@ fn hawk_line_of_sight_count(coord: Coord, hawks: &HashSet<Coord>) -> i32 {
     count
 }
 
+/// Upper bound on line-of-sight step length. No Cascadia board straight line
+/// spans the canonical grid, so bounding by its diameter mirrors the engine's
+/// `to_index().is_none()` stop condition while guaranteeing termination.
+const MAX_LOS_STEPS: i32 = GRID_DIM as i32;
+
+fn coords_adjacent(a: Coord, b: Coord) -> bool {
+    DIRECTIONS.iter().any(|direction| a.neighbor(*direction) == b)
+}
+
+/// Line-of-sight partners of the hawk at `coord`, each reported as the count of
+/// DISTINCT non-hawk species strictly between the two hawks. Mirrors the engine
+/// `hawk_lines_of_sight` scan (see `scoring.rs`): the first hawk encountered in
+/// a direction is the partner; intervening non-hawk wildlife only contributes
+/// to the between-count. `coord` itself must be excluded from `hawks`.
+fn hawk_los_between_counts(
+    coord: Coord,
+    hawks: &HashSet<Coord>,
+    all_wildlife: &HashMap<Coord, i64>,
+) -> Vec<u32> {
+    let mut partners = Vec::new();
+    for direction in DIRECTIONS {
+        let mut current = coord.neighbor(direction);
+        let mut distance = 1;
+        let mut between: u8 = 0;
+        while distance <= MAX_LOS_STEPS {
+            if hawks.contains(&current) {
+                if distance > 1 {
+                    partners.push(u32::from(between).count_ones());
+                }
+                break;
+            }
+            if let Some(species) = all_wildlife.get(&current).copied()
+                && (0..WILDLIFE_COUNT as i64).contains(&species)
+                && species != 3
+            {
+                between |= 1 << species as u8;
+            }
+            current = current.neighbor(direction);
+            distance += 1;
+        }
+    }
+    partners
+}
+
+/// Sizes of every connected component in `positions`. JSON-space mirror of the
+/// engine's `wildlife_components` size list (see `bear_component_sizes` in
+/// crates/cascadia-game/scoring.rs), used for Bear-C set bookkeeping.
+fn all_component_sizes(positions: &HashSet<Coord>) -> Vec<usize> {
+    let mut remaining = positions.clone();
+    let mut sizes = Vec::new();
+    while let Some(start) = remaining.iter().next().copied() {
+        remaining.remove(&start);
+        let mut size = 1usize;
+        let mut stack = vec![start];
+        while let Some(current) = stack.pop() {
+            for direction in DIRECTIONS {
+                let neighbor = current.neighbor(direction);
+                if remaining.remove(&neighbor) {
+                    size += 1;
+                    stack.push(neighbor);
+                }
+            }
+        }
+        sizes.push(size);
+    }
+    sizes
+}
+
+/// Bear-C set progress: how many of the three distinct group sizes {1, 2, 3}
+/// are currently represented among `sizes` (0..=3). Holding one group of each
+/// is what earns the +3 set bonus in `score_bears` (`ScoringVariant::C`).
+fn bear_set_progress(sizes: &[usize]) -> u32 {
+    let mut present = [false; 3];
+    for &size in sizes {
+        if (1..=3).contains(&size) {
+            present[size - 1] = true;
+        }
+    }
+    present.iter().filter(|seen| **seen).count() as u32
+}
+
+/// Compactness tier of the elk shape the placement at `coord` joins, matching
+/// the Elk-B / connected-shape ladder: 0 isolated, 1 in a line/pair, 2 in a
+/// triangle, 3 in a triangle-plus-one fan.
+fn elk_shape_level(coord: Coord, positions: &HashSet<Coord>) -> i32 {
+    let elk_neighbors: Vec<Coord> = DIRECTIONS
+        .iter()
+        .map(|direction| coord.neighbor(*direction))
+        .filter(|neighbor| positions.contains(neighbor))
+        .collect();
+    if elk_neighbors.is_empty() {
+        return 0;
+    }
+    let mut level = 1;
+    for i in 0..elk_neighbors.len() {
+        for j in (i + 1)..elk_neighbors.len() {
+            if !coords_adjacent(elk_neighbors[i], elk_neighbors[j]) {
+                continue;
+            }
+            level = level.max(2);
+            let triangle = [coord, elk_neighbors[i], elk_neighbors[j]];
+            for candidate in positions {
+                if triangle.contains(candidate) {
+                    continue;
+                }
+                let shared = triangle
+                    .iter()
+                    .filter(|corner| coords_adjacent(**corner, *candidate))
+                    .count();
+                if shared >= 2 {
+                    level = level.max(3);
+                }
+            }
+        }
+    }
+    level
+}
+
 fn habitat_edge_counts(action: &Value, state: &StateView) -> (i32, i32, i32) {
     let Some(target) = coord_key(field(action, "target_coord_ref")) else {
         return (0, 0, 6);
@@ -1211,7 +1504,7 @@ fn habitat_edge_counts(action: &Value, state: &StateView) -> (i32, i32, i32) {
     (matches, mismatches, 6 - matches - mismatches)
 }
 
-fn semantic_action_features(root: &Value) -> Result<Vec<Vec<f32>>> {
+fn semantic_action_features(root: &Value, cards: ScoringCards) -> Result<Vec<Vec<f32>>> {
     let state = state_view(root)?;
     let actions = field(root, "legal_actions")
         .and_then(Value::as_array)
@@ -1363,6 +1656,132 @@ fn semantic_action_features(root: &Value) -> Result<Vec<Vec<f32>>> {
                 .count();
         }
 
+        // --- Card-aware semantic hints ---------------------------------
+        // Six dims are Card-A-shaped. Under Card A each reproduces the exact
+        // legacy value (byte-identical AAAAA output is a hard invariant); under
+        // the CBDDB variant for that species it instead carries a hint matched
+        // to how that card actually scores (see crates/cascadia-game/scoring.rs).
+        let bear_dim_pair;
+        let bear_dim_over;
+        match cards.bear {
+            ScoringVariant::A => {
+                bear_dim_pair = bear_pair_signal;
+                bear_dim_over = bear_overcluster_signal;
+            }
+            _ => {
+                // Bear C's defining structure is the +3 bonus for holding one
+                // group each of sizes {1,2,3}. The model must plan toward
+                // completing that set, so encode:
+                //   dim 1 = current board set progress (0..3 distinct sizes
+                //           held) BEFORE this action, broadcast to every action
+                //           row as shared context;
+                //   dim 2 = this placement's MARGINAL effect on set progress,
+                //           centered at 0.5 (neutral): >0.5 advances a
+                //           still-missing size, <0.5 regresses (e.g. merging a
+                //           size-1 and size-2 into a size-3 drops two held
+                //           sizes) or overgrows past 3.
+                let before_progress = state
+                    .active_wildlife
+                    .get(&0)
+                    .map(|bears| bear_set_progress(&all_component_sizes(bears)))
+                    .unwrap_or(0);
+                let after_progress = if species == 0
+                    && wildlife_present
+                    && let Some(bears) = after_species_positions.get(&0)
+                {
+                    bear_set_progress(&all_component_sizes(bears))
+                } else {
+                    before_progress
+                };
+                let delta = after_progress as i32 - before_progress as i32;
+                bear_dim_pair = normalizer(before_progress as f32, 3.0);
+                bear_dim_over = (0.5 + delta as f32 / 2.0).clamp(0.0, 1.0);
+            }
+        }
+
+        let elk_dim = match cards.elk {
+            ScoringVariant::A => normalizer(elk_line_length.min(4) as f32, 4.0),
+            _ => {
+                // Elk B rewards compact connected shapes (pair/triangle/fan)
+                // instead of straight-line length.
+                let level = if species == 1
+                    && let Some(coord) = wildlife_coord
+                    && let Some(elk) = after_species_positions.get(&1)
+                    && elk.contains(&coord)
+                {
+                    elk_shape_level(coord, elk)
+                } else {
+                    0
+                };
+                normalizer(level as f32, 3.0)
+            }
+        };
+
+        let hawk_dim_iso;
+        let hawk_dim_pen;
+        match cards.hawk {
+            ScoringVariant::A => {
+                hawk_dim_iso = hawk_isolated;
+                hawk_dim_pen = hawk_adjacent_penalty;
+            }
+            _ => {
+                // Hawk D scores a max-weight matching over LINE-OF-SIGHT pairs
+                // weighted by DISTINCT species between (0/4/7/9), so adjacency
+                // isolation/penalty is meaningless. Surface the best reachable
+                // pair weight and the number of "productive" (>=1 species
+                // between) partners for the placed hawk. The plain LOS partner
+                // count stays in its own general dim below.
+                let (best_weight, productive) = if species == 3
+                    && let Some(coord) = wildlife_coord
+                {
+                    let counts = hawk_los_between_counts(coord, &hawks, &after_all_wildlife);
+                    let best = counts
+                        .iter()
+                        .map(|between| match between {
+                            0 => 0u16,
+                            1 => 4,
+                            2 => 7,
+                            _ => 9,
+                        })
+                        .max()
+                        .unwrap_or(0);
+                    let productive = counts.iter().filter(|between| **between >= 1).count();
+                    (best, productive)
+                } else {
+                    (0, 0)
+                };
+                hawk_dim_iso = normalizer(best_weight as f32, 9.0);
+                hawk_dim_pen = normalizer(productive.min(6) as f32, 6.0);
+            }
+        }
+
+        let fox_dim = match cards.fox {
+            ScoringVariant::A => normalizer(fox_unique as f32, 5.0),
+            _ => {
+                // Fox B scores each fox by how many neighbor species appear as
+                // a PAIR (>=2 adjacent) — 0/3/5/7 for 0/1/2/3+ — not by the
+                // count of distinct neighbor species.
+                let pair_types = if species == 4
+                    && let Some(coord) = wildlife_coord
+                {
+                    let mut counts = [0i32; WILDLIFE_COUNT];
+                    for direction in DIRECTIONS {
+                        if let Some(neighbor_species) =
+                            after_all_wildlife.get(&coord.neighbor(direction)).copied()
+                            && (0..WILDLIFE_COUNT as i64).contains(&neighbor_species)
+                            && neighbor_species != 4
+                        {
+                            counts[neighbor_species as usize] += 1;
+                        }
+                    }
+                    counts.iter().filter(|count| **count >= 2).count()
+                } else {
+                    0
+                };
+                normalizer(pair_types as f32, 3.0)
+            }
+        };
+
         let supply_bag = if (0..WILDLIFE_COUNT as i64).contains(&species) {
             state.supply_bag[species as usize]
         } else {
@@ -1405,9 +1824,9 @@ fn semantic_action_features(root: &Value) -> Result<Vec<Vec<f32>>> {
             normalizer(same_neighbors as f32, 6.0),
             normalizer(any_neighbors as f32, 6.0),
             normalizer(other_species.len() as f32, 4.0),
-            bear_pair_signal,
-            bear_overcluster_signal,
-            normalizer(elk_line_length.min(4) as f32, 4.0),
+            bear_dim_pair,
+            bear_dim_over,
+            elk_dim,
             normalizer(
                 if species == 1 {
                     same_neighbors as f32
@@ -1419,10 +1838,10 @@ fn semantic_action_features(root: &Value) -> Result<Vec<Vec<f32>>> {
             normalizer(salmon_component_size.min(7) as f32, 7.0),
             normalizer(salmon_degree.min(3) as f32, 3.0),
             salmon_branch_risk as f32,
-            hawk_isolated,
+            hawk_dim_iso,
             normalizer(hawk_los.min(6) as f32, 6.0),
-            hawk_adjacent_penalty,
-            normalizer(fox_unique as f32, 5.0),
+            hawk_dim_pen,
+            fox_dim,
             normalizer(fox_nonfox as f32, 6.0),
             normalizer(supply_bag, 100.0),
             normalizer(supply_capacity, 100.0),
@@ -1435,9 +1854,12 @@ fn semantic_action_features(root: &Value) -> Result<Vec<Vec<f32>>> {
     Ok(rows)
 }
 
-pub fn semantic_public_token_action_features(root: &Value) -> Result<Vec<Vec<f32>>> {
+pub fn semantic_public_token_action_features(
+    root: &Value,
+    cards: ScoringCards,
+) -> Result<Vec<Vec<f32>>> {
     let base_rows = public_token_action_features(root)?;
-    let semantic_rows = semantic_action_features(root)?;
+    let semantic_rows = semantic_action_features(root, cards)?;
     let mut rows = Vec::with_capacity(base_rows.len());
     for (mut base, semantic) in base_rows.into_iter().zip(semantic_rows.into_iter()) {
         base.extend(semantic);
@@ -1474,7 +1896,226 @@ pub fn selected_action_index(record: &Value) -> Result<usize> {
 mod tests {
     use serde_json::json;
 
-    use super::{coord_features, normalizer, selected_action_index};
+    use super::{
+        ScoringCards, ScoringVariant, coord_features, combined_relation_edges, normalizer,
+        selected_action_index, semantic_action_features,
+    };
+
+    fn placed(index: i64, owner: i64, q: i64, r: i64, wildlife: Option<i64>) -> serde_json::Value {
+        let mut token = json!({
+            "token_index": index,
+            "token_kind": "placed_tile",
+            "owner_seat": owner,
+            "coord_ref": {"kind": "canonical", "q": q, "r": r},
+            "terrain_a": 0,
+            "terrain_b": -1,
+            "rotation": 0,
+            "wildlife_mask": 0,
+        });
+        if let Some(species) = wildlife {
+            token["placed_wildlife"] = json!(species);
+        }
+        token
+    }
+
+    fn place_wildlife_action(species: i64, q: i64, r: i64) -> serde_json::Value {
+        json!({
+            "action_id": "place",
+            "wildlife_species": species,
+            "wildlife_placement_present": true,
+            "wildlife_coord_ref": {"kind": "canonical", "q": q, "r": r},
+        })
+    }
+
+    fn root(active_seat: i64, tokens: Vec<serde_json::Value>, actions: Vec<serde_json::Value>) -> serde_json::Value {
+        json!({
+            "active_seat": active_seat,
+            "public_tokens": {"tokens": tokens, "relations": []},
+            "legal_actions": actions,
+        })
+    }
+
+    fn cbddb_with(species: char, variant: ScoringVariant) -> ScoringCards {
+        let mut cards = ScoringCards::AAAAA;
+        match species {
+            'b' => cards.bear = variant,
+            'e' => cards.elk = variant,
+            'h' => cards.hawk = variant,
+            'f' => cards.fox = variant,
+            _ => unreachable!(),
+        }
+        cards
+    }
+
+    fn find_edge(edges: &[[i32; 3]], source: i32, target: i32) -> Option<i32> {
+        edges
+            .iter()
+            .find(|edge| edge[0] == source && edge[1] == target)
+            .map(|edge| edge[2])
+    }
+
+    #[test]
+    fn hawk_los_relation_edges_gate_on_hawk_variant() {
+        // Active seat hawks at (0,0)#0 and (3,0)#2 with one elk (#1) between:
+        // a line-of-sight pair with a single distinct species between -> the
+        // bucket-1 relation id (10).
+        let tokens = vec![
+            placed(0, 0, 0, 0, Some(3)),
+            placed(1, 0, 1, 0, Some(1)),
+            placed(2, 0, 3, 0, Some(3)),
+        ];
+        let actions = vec![json!({"action_id": "noop"})];
+        let record = root(0, tokens, actions);
+
+        let aaaaa = combined_relation_edges(&record, 3, 1, ScoringCards::AAAAA).unwrap();
+        assert!(
+            aaaaa.iter().all(|edge| !(9..=12).contains(&edge[2])),
+            "AAAAA must never emit a hawk line-of-sight edge: {aaaaa:?}",
+        );
+        // Same-owner-board edge still connects the two hawk tokens under AAAAA.
+        assert_eq!(find_edge(&aaaaa, 0, 2), Some(4));
+
+        let cbddb = combined_relation_edges(&record, 3, 1, ScoringCards::CBDDB).unwrap();
+        // Bucketed id 10 (exactly one distinct species between), both
+        // directions, overwriting the generic same-owner edge for this pair.
+        assert_eq!(find_edge(&cbddb, 0, 2), Some(10));
+        assert_eq!(find_edge(&cbddb, 2, 0), Some(10));
+        // Non-hawk pairs keep their same-owner-board relation.
+        assert_eq!(find_edge(&cbddb, 0, 1), Some(4));
+    }
+
+    #[test]
+    fn hawk_los_edges_bucket_by_species_between_and_stay_per_board() {
+        // Two distinct species (elk + salmon) between the active hawks -> id
+        // 11; an opponent hawk pair on a different board must not link.
+        let tokens = vec![
+            placed(0, 0, 0, 0, Some(3)),
+            placed(1, 0, 1, 0, Some(1)),
+            placed(2, 0, 2, 0, Some(2)),
+            placed(3, 0, 4, 0, Some(3)),
+            // Opponent (seat 1) hawks in line of sight on their own board.
+            placed(4, 1, 0, 0, Some(3)),
+            placed(5, 1, 3, 0, Some(3)),
+        ];
+        let record = root(0, tokens, vec![json!({"action_id": "noop"})]);
+        let cbddb = combined_relation_edges(&record, 6, 1, ScoringCards::CBDDB).unwrap();
+        assert_eq!(find_edge(&cbddb, 0, 3), Some(11));
+        // Opponent hawks (#4,#5) are on seat 1's board: LOS edge present there
+        // too, but never crossing boards.
+        assert_eq!(find_edge(&cbddb, 4, 5), Some(9));
+        assert_eq!(find_edge(&cbddb, 0, 4), None);
+        assert_eq!(find_edge(&cbddb, 0, 5), None);
+    }
+
+    #[test]
+    fn bear_dims_encode_set_completion_under_bear_c() {
+        // Active board: a lone bear (#0, size 1) plus two separate size-2
+        // groups (#1/#2 and #3/#4). Distinct sizes held = {1, 2} -> progress 2.
+        let tokens = vec![
+            placed(0, 0, 0, 0, Some(0)),
+            placed(1, 0, 5, 0, Some(0)),
+            placed(2, 0, 6, 0, Some(0)),
+            placed(3, 0, 5, 3, Some(0)),
+            placed(4, 0, 6, 3, Some(0)),
+        ];
+        // Placement grows the second size-2 group into a size-3 group,
+        // completing the {1,2,3} set: progress 2 -> 3 (advance).
+        let actions = vec![place_wildlife_action(0, 7, 3)];
+        let record = root(0, tokens, actions);
+
+        let aaaaa = semantic_action_features(&record, ScoringCards::AAAAA).unwrap();
+        // Placement at (7,3) touches exactly one bear (6,3): legacy Card-A
+        // pair signal fires, overcluster does not.
+        assert_eq!(aaaaa[0][14], 1.0);
+        assert_eq!(aaaaa[0][15], 0.0);
+
+        let bear_c = semantic_action_features(&record, cbddb_with('b', ScoringVariant::C)).unwrap();
+        // dim 1: current set progress 2/3 before the action.
+        assert!((bear_c[0][14] - 2.0 / 3.0).abs() < 1e-6, "got {}", bear_c[0][14]);
+        // dim 2: marginal effect advances the set (+1), centered scheme -> 1.0.
+        assert!((bear_c[0][15] - 1.0).abs() < 1e-6, "got {}", bear_c[0][15]);
+    }
+
+    #[test]
+    fn bear_c_marginal_regression_is_encoded_below_neutral() {
+        // Board holds a size-1 and a size-2 group (progress 2). Placing a bear
+        // that merges them into a size-3 drops both held sizes: progress 2 -> 1
+        // (regression), which must read below the 0.5 neutral midpoint.
+        let tokens = vec![
+            placed(0, 0, 0, 0, Some(0)),
+            placed(1, 0, 2, 0, Some(0)),
+            placed(2, 0, 3, 0, Some(0)),
+        ];
+        // (1,0) bridges the lone bear (0,0) and the pair (2,0)/(3,0) -> size 4.
+        let actions = vec![place_wildlife_action(0, 1, 0)];
+        let record = root(0, tokens, actions);
+        let bear_c = semantic_action_features(&record, cbddb_with('b', ScoringVariant::C)).unwrap();
+        assert!((bear_c[0][14] - 2.0 / 3.0).abs() < 1e-6);
+        // progress 2 -> 0 (a single size-4 group), delta -2 clamps to 0.0.
+        assert!(bear_c[0][15] < 0.5, "got {}", bear_c[0][15]);
+    }
+
+    #[test]
+    fn hawk_dims_are_los_typed_under_hawk_d() {
+        // Existing hawk at (3,0), elk at (1,0); the action places a hawk at
+        // (0,0), forming a line-of-sight pair with one species between.
+        let tokens = vec![placed(0, 0, 3, 0, Some(3)), placed(1, 0, 1, 0, Some(1))];
+        let actions = vec![place_wildlife_action(3, 0, 0)];
+        let record = root(0, tokens, actions);
+
+        let aaaaa = semantic_action_features(&record, ScoringCards::AAAAA).unwrap();
+        // Card A: isolated (no adjacent hawk) -> 1.0, no adjacency penalty.
+        assert_eq!(aaaaa[0][21], 1.0);
+        assert_eq!(aaaaa[0][23], 0.0);
+
+        let hawk_d = semantic_action_features(&record, cbddb_with('h', ScoringVariant::D)).unwrap();
+        // Best reachable Hawk-D pair weight: one species between -> 4, /9.
+        assert!((hawk_d[0][21] - 4.0 / 9.0).abs() < 1e-6, "got {}", hawk_d[0][21]);
+        // One productive (>=1 species between) partner, /6.
+        assert!((hawk_d[0][23] - 1.0 / 6.0).abs() < 1e-6, "got {}", hawk_d[0][23]);
+        // The plain LOS partner count (general dim) is unchanged across cards.
+        assert_eq!(aaaaa[0][22], hawk_d[0][22]);
+    }
+
+    #[test]
+    fn fox_dim_counts_pair_types_under_fox_b() {
+        // Fox placed at (0,0) with two bears and two elk adjacent: two neighbor
+        // species appear as a PAIR (>=2), the Fox-B "2" tier.
+        let tokens = vec![
+            placed(0, 0, 1, 0, Some(0)),
+            placed(1, 0, 1, -1, Some(0)),
+            placed(2, 0, 0, -1, Some(1)),
+            placed(3, 0, -1, 1, Some(1)),
+        ];
+        let actions = vec![place_wildlife_action(4, 0, 0)];
+        let record = root(0, tokens, actions);
+
+        let aaaaa = semantic_action_features(&record, ScoringCards::AAAAA).unwrap();
+        // Card A fox_unique = distinct neighbor species (bear, elk) = 2, /5.
+        assert!((aaaaa[0][24] - 2.0 / 5.0).abs() < 1e-6, "got {}", aaaaa[0][24]);
+
+        let fox_b = semantic_action_features(&record, cbddb_with('f', ScoringVariant::B)).unwrap();
+        // Fox B: two species with >=2 adjacent -> 2, /3.
+        assert!((fox_b[0][24] - 2.0 / 3.0).abs() < 1e-6, "got {}", fox_b[0][24]);
+    }
+
+    #[test]
+    fn elk_dim_reflects_shape_compactness_under_elk_b() {
+        // Existing elk at (1,0) and (0,1); the action places an elk at (0,0)
+        // forming a triangle (all three mutually adjacent) -> shape level 2.
+        let tokens = vec![placed(0, 0, 1, 0, Some(1)), placed(1, 0, 0, 1, Some(1))];
+        let actions = vec![place_wildlife_action(1, 0, 0)];
+        let record = root(0, tokens, actions);
+
+        let aaaaa = semantic_action_features(&record, ScoringCards::AAAAA).unwrap();
+        // Card A straight-line length through (0,0): the (1,0)/(0,0) axis has
+        // length 2 -> /4.
+        assert!((aaaaa[0][16] - 2.0 / 4.0).abs() < 1e-6, "got {}", aaaaa[0][16]);
+
+        let elk_b = semantic_action_features(&record, cbddb_with('e', ScoringVariant::B)).unwrap();
+        // Elk B compactness: a triangle is level 2 -> /3.
+        assert!((elk_b[0][16] - 2.0 / 3.0).abs() < 1e-6, "got {}", elk_b[0][16]);
+    }
 
     #[test]
     fn coord_features_match_python_contract() {
@@ -1625,7 +2266,10 @@ pub fn action_relation_tail_reference(
     action_count: usize,
 ) -> Result<Vec<u8>> {
     let seq_len = token_count + action_count;
-    let edges = combined_relation_edges(root, token_count, action_count)?;
+    // The action tail only ever carries action-source edges; hawk line-of-sight
+    // edges are token->token and are filtered out below regardless of ruleset,
+    // so AAAAA keeps the fast path exact.
+    let edges = combined_relation_edges(root, token_count, action_count, ScoringCards::AAAAA)?;
     let mut tail = vec![0u8; action_count * seq_len];
     for [source, target, relation_id] in edges {
         let source = source as usize;

@@ -86,6 +86,16 @@ impl ScoringCardsChoice {
             Self::Cbddb => GameConfig::research_cbddb(player_count),
         }
     }
+
+    /// Engine scoring-card set for this choice. Card-aware tensor feature
+    /// builders key off this so a CBDDB corpus is scored-matched while AAAAA
+    /// stays byte-identical to the legacy Card-A output.
+    fn scoring_cards(self) -> cascadia_game::ScoringCards {
+        match self {
+            Self::Aaaaa => cascadia_game::ScoringCards::AAAAA,
+            Self::Cbddb => cascadia_game::ScoringCards::CBDDB,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1951,14 +1961,17 @@ fn export_greedy_policy_tensor_corpus(args: &Args) -> Result<usize> {
         .map(|seed_u64| {
             let records = export_greedy_policy_seed_records(args, seed_u64)
                 .with_context(|| format!("exporting tensor seed {seed_u64}"))?;
-            let shard = TensorShardData::from_records(&records)
-                .with_context(|| format!("extracting Rust tensor features for seed {seed_u64}"))?;
+            let shard =
+                TensorShardData::from_records_with_cards(&records, args.scoring_cards.scoring_cards())
+                    .with_context(|| {
+                        format!("extracting Rust tensor features for seed {seed_u64}")
+                    })?;
             Ok((seed_u64, shard))
         })
         .collect::<Result<Vec<_>>>()?;
     per_seed.sort_by_key(|(seed, _)| *seed);
 
-    let mut shard = TensorShardData::new();
+    let mut shard = TensorShardData::with_scoring_cards(args.scoring_cards.scoring_cards());
     for (_, seed_shard) in per_seed {
         shard.merge(seed_shard);
     }
@@ -2006,7 +2019,11 @@ fn export_expert_tensor_corpus(args: &Args) -> Result<usize> {
         .map(|seed_u64| {
             let records = export_expert_seed_records(args, seed_u64)
                 .with_context(|| format!("exporting expert tensor seed {seed_u64}"))?;
-            let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
+            let shard = ExpertTensorShardData::from_records_with_cards(
+                &records,
+                args.scoring_cards.scoring_cards(),
+            )
+            .with_context(|| {
                 format!("extracting Rust expert tensor features for seed {seed_u64}")
             })?;
             Ok((seed_u64, shard))
@@ -2014,7 +2031,7 @@ fn export_expert_tensor_corpus(args: &Args) -> Result<usize> {
         .collect::<Result<Vec<_>>>()?;
     per_seed.sort_by_key(|(seed, _)| *seed);
 
-    let mut shard = ExpertTensorShardData::new();
+    let mut shard = ExpertTensorShardData::with_scoring_cards(args.scoring_cards.scoring_cards());
     for (_, seed_shard) in per_seed {
         shard.merge(seed_shard);
     }
@@ -2083,7 +2100,11 @@ fn export_greedy_expert_tensor_corpus(args: &Args) -> Result<usize> {
         .map(|seed_u64| {
             let records = export_greedy_policy_seed_records(args, seed_u64)
                 .with_context(|| format!("exporting greedy expert tensor seed {seed_u64}"))?;
-            let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
+            let shard = ExpertTensorShardData::from_records_with_cards(
+                &records,
+                args.scoring_cards.scoring_cards(),
+            )
+            .with_context(|| {
                 format!("extracting Rust greedy expert tensor features for seed {seed_u64}")
             })?;
             Ok((seed_u64, shard))
@@ -2091,7 +2112,7 @@ fn export_greedy_expert_tensor_corpus(args: &Args) -> Result<usize> {
         .collect::<Result<Vec<_>>>()?;
     per_seed.sort_by_key(|(seed, _)| *seed);
 
-    let mut shard = ExpertTensorShardData::new();
+    let mut shard = ExpertTensorShardData::with_scoring_cards(args.scoring_cards.scoring_cards());
     for (_, seed_shard) in per_seed {
         shard.merge(seed_shard);
     }
@@ -2180,7 +2201,11 @@ fn export_greedy_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usi
                 .with_context(|| {
                     format!("exporting greedy-state search-bootstrap tensor seed {seed_u64}")
                 })?;
-            let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
+            let shard = ExpertTensorShardData::from_records_with_cards(
+                &records,
+                args.scoring_cards.scoring_cards(),
+            )
+            .with_context(|| {
                 format!(
                     "extracting Rust greedy-state search-bootstrap tensor features for seed {seed_u64}"
                 )
@@ -2201,7 +2226,7 @@ fn export_greedy_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usi
         .collect::<Result<Vec<_>>>()?;
     per_seed.sort_by_key(|(seed, _)| *seed);
 
-    let mut shard = ExpertTensorShardData::new();
+    let mut shard = ExpertTensorShardData::with_scoring_cards(args.scoring_cards.scoring_cards());
     for (_, seed_shard) in per_seed {
         shard.merge(seed_shard);
     }
@@ -2305,7 +2330,11 @@ fn export_model_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usiz
             .with_context(|| {
                 format!("exporting model-state search-bootstrap tensor seed {seed_u64}")
             })?;
-            let shard = ExpertTensorShardData::from_records(&records).with_context(|| {
+            let shard = ExpertTensorShardData::from_records_with_cards(
+                &records,
+                args.scoring_cards.scoring_cards(),
+            )
+            .with_context(|| {
                 format!(
                     "extracting Rust model-state search-bootstrap tensor features for seed {seed_u64}"
                 )
@@ -2326,7 +2355,7 @@ fn export_model_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usiz
     )?;
     per_seed.sort_by_key(|(seed, _)| *seed);
 
-    let mut shard = ExpertTensorShardData::new();
+    let mut shard = ExpertTensorShardData::with_scoring_cards(args.scoring_cards.scoring_cards());
     for (_, seed_shard) in per_seed {
         shard.merge(seed_shard);
     }
@@ -2912,7 +2941,9 @@ fn eval_request_for_row_with_public_hash(
         "public_tokens": public_tokens(staged, active_seat),
     });
     if packed {
-        return pack_eval_request(request);
+        // Serve-time features must match the ruleset the model was trained on;
+        // the staged game state carries the authoritative scoring cards.
+        return pack_eval_request(request, staged.config().scoring_cards);
     }
     Ok(request)
 }
@@ -2921,8 +2952,8 @@ fn eval_request_for_row_with_public_hash(
 /// function of the raw request, so a raw request fully determines its packed
 /// twin (which lets the dedup path key on cheap raw payloads and pack only
 /// the unique rows it actually sends).
-fn pack_eval_request(mut request: Value) -> Result<Value> {
-    let packed_features = packed_features_for_request(&request)?;
+fn pack_eval_request(mut request: Value, cards: cascadia_game::ScoringCards) -> Result<Value> {
+    let packed_features = packed_features_for_request(&request, cards)?;
     let object = request
         .as_object_mut()
         .expect("eval request is always an object");
@@ -2937,11 +2968,14 @@ fn pack_eval_request(mut request: Value) -> Result<Value> {
 /// Precomputed model-input features for an eval request, base64-encoded
 /// little-endian arrays. Row-major shapes: tokens `T x 41` f32, actions
 /// `A x 61` f32, relation tail `A x (T + A)` u8 (token columns first).
-fn packed_features_for_request(request: &Value) -> Result<Value> {
+fn packed_features_for_request(
+    request: &Value,
+    cards: cascadia_game::ScoringCards,
+) -> Result<Value> {
     use base64::Engine as _;
 
     let token_rows = feature_tensors::public_token_features(request)?;
-    let action_rows = feature_tensors::semantic_public_token_action_features(request)?;
+    let action_rows = feature_tensors::semantic_public_token_action_features(request, cards)?;
     let token_count = token_rows.len();
     let action_count = action_rows.len();
     let relation_tail = feature_tensors::action_relation_tail(request, token_count, action_count)?;
@@ -3756,7 +3790,11 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                     return Ok(ExpertTensorShardData::new());
                 }
             };
-            let shard = ExpertTensorShardData::from_records(&output.records).with_context(
+            let shard = ExpertTensorShardData::from_records_with_cards(
+                &output.records,
+                args.scoring_cards.scoring_cards(),
+            )
+            .with_context(
                 || format!("extracting gumbel selfplay tensor features for seed {seed_u64}"),
             )?;
             if let Some(writer) = &decisions_writer {
@@ -3826,7 +3864,7 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
     }
     per_seed.sort_by_key(|(seed, _)| *seed);
 
-    let mut shard = ExpertTensorShardData::new();
+    let mut shard = ExpertTensorShardData::with_scoring_cards(args.scoring_cards.scoring_cards());
     for (_, seed_shard) in per_seed {
         shard.merge(seed_shard);
     }
@@ -5348,8 +5386,11 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         if all_records.is_empty() {
             bail!("--training-records-out resolved no training records");
         }
-        let shard = ExpertTensorShardData::from_records(&all_records)
-            .context("packing --training-records-out shard")?;
+        let shard = ExpertTensorShardData::from_records_with_cards(
+            &all_records,
+            args.scoring_cards.scoring_cards(),
+        )
+        .context("packing --training-records-out shard")?;
         if shard.improved_policy_records != shard.record_count
             || shard.exact_endgame_field_records != shard.record_count
             || shard.structured_value_field_records != shard.record_count

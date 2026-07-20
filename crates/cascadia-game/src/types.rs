@@ -188,15 +188,18 @@ impl MarketSlot {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum ScoringVariant {
+    /// Base-game (Card A) variant; also the neutral default so an unconfigured
+    /// [`ScoringCards`] is the all-Card-A (AAAAA) ruleset.
+    #[default]
     A,
     B,
     C,
     D,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct ScoringCards {
     pub bear: ScoringVariant,
     pub elk: ScoringVariant,

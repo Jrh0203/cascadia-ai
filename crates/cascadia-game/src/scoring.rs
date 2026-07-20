@@ -335,6 +335,18 @@ fn wildlife_components(
     components
 }
 
+/// Sizes of every connected bear group on `board`, reusing the exact component
+/// search that drives bear scoring (see [`score_bears`]). Exposed so feature
+/// pipelines can reason about Bear-C set completion — which rewards holding one
+/// group each of distinct sizes {1, 2, 3} — without re-deriving component
+/// structure. Order is unspecified; this never changes any score.
+pub fn bear_component_sizes(board: &Board) -> Vec<usize> {
+    wildlife_components(board, Wildlife::Bear)
+        .into_iter()
+        .map(|component| component.len())
+        .collect()
+}
+
 fn score_bears(board: &Board, variant: ScoringVariant) -> u16 {
     let sizes: Vec<_> = wildlife_components(board, Wildlife::Bear)
         .into_iter()
@@ -684,6 +696,30 @@ fn hawk_count_score(count: usize) -> u16 {
     }
 }
 
+/// Public view of the hawk line-of-sight graph used by Hawk C/D scoring.
+///
+/// Returns every unordered pair of mutually-visible hawks on `board` together
+/// with the count of DISTINCT non-hawk species strictly between them along the
+/// straight line separating them. This is exactly the quantity Hawk D weights:
+/// the between-count maps to the per-pair value `0/4/7/9` for `0/1/2/>=3`
+/// distinct species (see `score_hawks`, `ScoringVariant::D`). Two hawks are
+/// "in line of sight" when they lie on a common hex axis with no other hawk
+/// between them; intervening non-hawk wildlife and empty cells do not block the
+/// line, they only contribute to the between-count.
+///
+/// This reuses the exact internal scan that drives scoring, so it never
+/// changes any score; it merely exposes the intermediate pairing so feature
+/// pipelines can build hawk-aware structure without re-deriving hex geometry.
+pub fn hawk_line_of_sight_pairs(board: &Board) -> Vec<(HexCoord, HexCoord, u8)> {
+    let positions = board.wildlife_positions(Wildlife::Hawk);
+    hawk_lines_of_sight(board, &positions)
+        .into_iter()
+        .map(|(left, right, between)| {
+            (positions[left], positions[right], between.count_ones() as u8)
+        })
+        .collect()
+}
+
 fn hawk_lines_of_sight(board: &Board, positions: &[HexCoord]) -> Vec<(usize, usize, u8)> {
     let mut pairs = Vec::new();
     for (left_index, left) in positions.iter().enumerate() {
@@ -998,6 +1034,93 @@ mod tests {
             (HexCoord::new(3, 0), Wildlife::Hawk),
         ]);
         assert_eq!(score_hawks(&board, ScoringVariant::B), 0);
+    }
+
+    fn normalized_los_pairs(board: &Board) -> Vec<(HexCoord, HexCoord, u8)> {
+        let mut pairs = hawk_line_of_sight_pairs(board);
+        for (left, right, _) in &mut pairs {
+            if *left > *right {
+                std::mem::swap(left, right);
+            }
+        }
+        pairs.sort_unstable();
+        pairs
+    }
+
+    #[test]
+    fn hawk_line_of_sight_pairs_count_distinct_species_between() {
+        // Two hawks share the (1, 0) axis with an elk and a salmon between
+        // them: two distinct non-hawk species -> between-count 2, which is the
+        // Hawk D "7" tier.
+        let board = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Hawk),
+            (HexCoord::new(1, 0), Wildlife::Elk),
+            (HexCoord::new(2, 0), Wildlife::Salmon),
+            (HexCoord::new(3, 0), Wildlife::Hawk),
+        ]);
+        assert_eq!(
+            normalized_los_pairs(&board),
+            vec![(HexCoord::new(0, 0), HexCoord::new(3, 0), 2)],
+        );
+        // The exposed between-count is exactly what Hawk D weights.
+        assert_eq!(score_hawks(&board, ScoringVariant::D), 7);
+    }
+
+    #[test]
+    fn hawk_line_of_sight_pairs_dedupe_species_and_ignore_blockers() {
+        // An intervening hawk at (1, 0) blocks (0, 0) <-> (3, 0); (1, 0) <->
+        // (3, 0) sees an empty cell (0 between) plus a duplicate salmon that
+        // must not be double-counted on the (0, 1) diagonal pair.
+        let board = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Hawk),
+            (HexCoord::new(1, 0), Wildlife::Hawk),
+            (HexCoord::new(3, 0), Wildlife::Hawk),
+            (HexCoord::new(0, 1), Wildlife::Hawk),
+            (HexCoord::new(0, 2), Wildlife::Salmon),
+            (HexCoord::new(0, 3), Wildlife::Salmon),
+            (HexCoord::new(0, 4), Wildlife::Hawk),
+        ]);
+        assert_eq!(
+            normalized_los_pairs(&board),
+            vec![
+                // (0, 1) <-> (0, 4): two salmon between, one distinct species.
+                (HexCoord::new(0, 1), HexCoord::new(0, 4), 1),
+                // (1, 0) <-> (3, 0): only the empty (2, 0) between.
+                (HexCoord::new(1, 0), HexCoord::new(3, 0), 0),
+            ],
+        );
+        // Hawk C simply counts every line-of-sight pair (3 points each).
+        assert_eq!(score_hawks(&board, ScoringVariant::C), 6);
+    }
+
+    #[test]
+    fn bear_component_sizes_match_group_structure() {
+        // Two adjacent bears (size 2), a lone bear (size 1), and a size-3
+        // triangle: the Bear-C set {1, 2, 3} is fully represented.
+        let board = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Bear),
+            (HexCoord::new(1, 0), Wildlife::Bear),
+            (HexCoord::new(4, 0), Wildlife::Bear),
+            (HexCoord::new(-3, 0), Wildlife::Bear),
+            (HexCoord::new(-2, 0), Wildlife::Bear),
+            (HexCoord::new(-3, 1), Wildlife::Bear),
+        ]);
+        let mut sizes = bear_component_sizes(&board);
+        sizes.sort_unstable();
+        assert_eq!(sizes, vec![1, 2, 3]);
+        // Distinct sizes {1,2,3} each present -> Bear C awards 2+5+8 plus the
+        // +3 set bonus.
+        assert_eq!(score_bears(&board, ScoringVariant::C), 18);
+    }
+
+    #[test]
+    fn hawk_line_of_sight_pairs_empty_without_pairs() {
+        let board = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Hawk),
+            (HexCoord::new(1, 0), Wildlife::Hawk),
+        ]);
+        // Adjacent hawks are never in line of sight (distance must exceed 1).
+        assert!(hawk_line_of_sight_pairs(&board).is_empty());
     }
 
     #[test]
