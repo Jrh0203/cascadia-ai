@@ -2651,14 +2651,22 @@ def run_training(
     anchor_enabled = _anchor_active(anchor_policy_kl_weight, anchor_value_l2_weight)
     if anchor_manifest is not None and anchor_enabled:
         anchor_model = build_cascadiaformer(config).to(device)
-        anchor_payload = _load_weights_from_manifest(anchor_model, anchor_manifest)
+        # Skip shape-mismatched tensors on the same terms as --init-manifest:
+        # the incumbent may carry a scalar q_head while the trained config uses
+        # q-quantiles, but no anchor term touches the q-head (KL uses the policy
+        # logits; the L2 uses value_vector/score_decomposition), so a skipped
+        # q_head leaves every anchored output exact.
+        anchor_payload = _load_weights_from_manifest(
+            anchor_model, anchor_manifest, skip_mismatched=init_skip_mismatched
+        )
         anchor_config = anchor_payload.get("config")
         if isinstance(anchor_config, dict):
             anchor_config = CascadiaFormerConfig(**anchor_config).to_dict()
-        if anchor_config and anchor_config != config.to_dict():
+        if anchor_config and anchor_config != config.to_dict() and not init_skip_mismatched:
             raise ValueError(
                 "--anchor-manifest config does not match the trained model config; "
-                "the anchor must be architecturally identical"
+                "the anchor must be architecturally identical (or pass "
+                "--init-skip-mismatched to tolerate q-head-only differences)"
             )
         anchor_model.eval()
         anchor_model.requires_grad_(False)
