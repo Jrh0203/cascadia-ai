@@ -830,6 +830,19 @@ fn combined_relation_edges(
         }
     }
 
+    // Action-source hawk line-of-sight edges (Hawk C/D only), consumed by the
+    // model's gated action bias. Emitted AFTER the ids-5..8 action loop above so
+    // that, on the rare cell where an action row already points at the partner
+    // token, the more-informative LOS id wins under the same last-write-wins
+    // overwrite convention (matched byte-for-byte by `action_relation_tail`).
+    for (action_index, partner_node, relation_id) in
+        hawk_los_action_edges(root, active_seat, cards)
+    {
+        let action_pos = token_count as i32 + action_index as i32;
+        set_relation(&mut edges, action_pos, partner_node, relation_id, true, seq_len);
+        set_relation(&mut edges, partner_node, action_pos, relation_id, true, seq_len);
+    }
+
     let mut out = edges
         .into_iter()
         .filter_map(|((source, target), relation_id)| {
@@ -944,6 +957,111 @@ fn hawk_los_partner_nodes(
         }
     }
     partners
+}
+
+/// Action-source hawk line-of-sight relation edges (Hawk C/D only).
+///
+/// For each hawk-placing legal action, emits an edge from the action row to
+/// every EXISTING placed hawk on the active seat's board that the candidate
+/// placement would sit in line of sight of, bucketed by the count of DISTINCT
+/// non-hawk species strictly between the pair (mirroring the token->token
+/// buckets in `hawk_line_of_sight_relation_edges`, one tier up: ids 13..=16).
+/// Unlike ids 9..=12 (token-source, inert for CascadiaFormer because its gated
+/// action bias slices those rows away), these live on the action-source rows the
+/// model actually consumes.
+///
+/// This is the SINGLE source of truth for action-sourced hawk LOS geometry: it
+/// reuses the same `hawk_los_partner_nodes` scan the semantic Hawk-D dims feed
+/// (via `hawk_los_between_counts`), so training (`combined_relation_edges`) and
+/// serving (`action_relation_tail`) compute byte-identical edges. Under Hawk A
+/// the vector is empty, keeping the AAAAA path byte-identical.
+///
+/// Returns `(action_index, partner_token_index, relation_id)` where
+/// `action_index` is the 0-based index into `legal_actions` (the action's row
+/// within the action block); callers add `token_count` to reach its node index.
+fn hawk_los_action_edges(root: &Value, active_seat: i64, cards: ScoringCards) -> Vec<(usize, i32, i32)> {
+    const ACTION_HAWK_LOS_0: i32 = 13;
+    const ACTION_HAWK_LOS_1: i32 = 14;
+    const ACTION_HAWK_LOS_2: i32 = 15;
+    const ACTION_HAWK_LOS_3_PLUS: i32 = 16;
+
+    // Action-source LOS edges exist only under Hawk C/D; Hawk A stays exactly on
+    // the pre-existing ids-5..8 edge set.
+    if !matches!(cards.hawk, ScoringVariant::C | ScoringVariant::D) {
+        return Vec::new();
+    }
+    let Some(tokens) = field(root, "public_tokens")
+        .and_then(|public_tokens| field(public_tokens, "tokens"))
+        .and_then(Value::as_array)
+    else {
+        return Vec::new();
+    };
+
+    // Existing placed hawks and the full wildlife map for the ACTIVE board only:
+    // a hawk only ever sees hawks on its own board, and the placing action is the
+    // active seat's own move.
+    let mut existing_hawks: Vec<(Coord, i32)> = Vec::new();
+    let mut active_wildlife: HashMap<Coord, i64> = HashMap::new();
+    for token in tokens {
+        if field(token, "token_kind").and_then(Value::as_str) != Some("placed_tile") {
+            continue;
+        }
+        if safe_i64(field(token, "owner_seat"), -1) != active_seat {
+            continue;
+        }
+        let Some(coord) = coord_key(field(token, "coord_ref")) else {
+            continue;
+        };
+        let species = safe_i64(field(token, "placed_wildlife"), -1);
+        if !(0..WILDLIFE_COUNT as i64).contains(&species) {
+            continue;
+        }
+        active_wildlife.insert(coord, species);
+        if species == 3 {
+            let node = safe_i64(field(token, "token_index"), -1) as i32;
+            existing_hawks.push((coord, node));
+        }
+    }
+    if existing_hawks.is_empty() {
+        return Vec::new();
+    }
+    let existing_coords: HashSet<Coord> = existing_hawks.iter().map(|(coord, _)| *coord).collect();
+
+    let Some(actions) = field(root, "legal_actions").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+
+    let mut out = Vec::new();
+    for (action_index, action) in actions.iter().enumerate() {
+        if species_from_action(action) != 3 {
+            continue;
+        }
+        if !bool_field(action, "wildlife_placement_present") {
+            continue;
+        }
+        let Some(candidate) = coord_key(field(action, "wildlife_coord_ref")) else {
+            continue;
+        };
+        // Reuse the token->token scan as the single geometry source: place the
+        // candidate hawk at scan index 0 (dummy node) and every existing hawk
+        // after it, so `self_index = 0 < partner_index` never dedups a real
+        // partner away, and each returned node is an existing hawk token index.
+        let mut scan_hawks: Vec<(Coord, i32)> = Vec::with_capacity(existing_hawks.len() + 1);
+        scan_hawks.push((candidate, -1));
+        scan_hawks.extend(existing_hawks.iter().copied());
+        for (partner_node, between) in
+            hawk_los_partner_nodes(candidate, &existing_coords, &active_wildlife, &scan_hawks, 0)
+        {
+            let relation_id = match between {
+                0 => ACTION_HAWK_LOS_0,
+                1 => ACTION_HAWK_LOS_1,
+                2 => ACTION_HAWK_LOS_2,
+                _ => ACTION_HAWK_LOS_3_PLUS,
+            };
+            out.push((action_index, partner_node, relation_id));
+        }
+    }
+    out
 }
 
 fn coord_features(coord: Option<&Value>) -> [f32; 6] {
@@ -1897,8 +2015,9 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        ScoringCards, ScoringVariant, coord_features, combined_relation_edges, normalizer,
-        selected_action_index, semantic_action_features,
+        ScoringCards, ScoringVariant, action_relation_tail, action_relation_tail_reference,
+        coord_features, combined_relation_edges, normalizer, selected_action_index,
+        semantic_action_features,
     };
 
     fn placed(index: i64, owner: i64, q: i64, r: i64, wildlife: Option<i64>) -> serde_json::Value {
@@ -2005,6 +2124,64 @@ mod tests {
         assert_eq!(find_edge(&cbddb, 4, 5), Some(9));
         assert_eq!(find_edge(&cbddb, 0, 4), None);
         assert_eq!(find_edge(&cbddb, 0, 5), None);
+    }
+
+    #[test]
+    fn action_relation_tail_matches_reference_for_hawk_los_action_edges() {
+        // Acceptance gate for train/serve parity of action-sourced hawk LOS.
+        //
+        // Active seat 0 board (all on the q-axis so LOS is a straight scan):
+        //   #0 hawk (0,0), #1 elk (1,0), #2 hawk (5,0), #3 salmon (3,0),
+        //   #4 elk (4,0). Existing hawks #0 and #2 are already a LOS pair.
+        // Candidate hawk placement action at (2,0):
+        //   - scanning -q toward (0,0): one distinct species between (elk at
+        //     (1,0)) -> bucket 1 -> id 14 on partner token #0;
+        //   - scanning +q toward (5,0): two distinct species between (salmon at
+        //     (3,0) + elk at (4,0)) -> bucket 2 -> id 15 on partner token #2.
+        let tokens = vec![
+            placed(0, 0, 0, 0, Some(3)),
+            placed(1, 0, 1, 0, Some(1)),
+            placed(2, 0, 5, 0, Some(3)),
+            placed(3, 0, 3, 0, Some(2)),
+            placed(4, 0, 4, 0, Some(1)),
+        ];
+        let actions = vec![place_wildlife_action(3, 2, 0)];
+        let record = root(0, tokens, actions);
+        let token_count = 5usize;
+        let action_count = 1usize;
+        let seq_len = token_count + action_count;
+
+        for cards in [ScoringCards::AAAAA, ScoringCards::CBDDB] {
+            // THE gate: the serve fast path must byte-equal the reference
+            // (sliced `combined_relation_edges`) for BOTH rulesets.
+            let fast = action_relation_tail(&record, token_count, action_count, cards).unwrap();
+            let reference =
+                action_relation_tail_reference(&record, token_count, action_count, cards).unwrap();
+            assert_eq!(
+                fast, reference,
+                "action_relation_tail must byte-match reference under {cards:?}",
+            );
+            assert_eq!(fast.len(), action_count * seq_len);
+
+            let row0 = &fast[0..seq_len];
+            if matches!(cards.hawk, ScoringVariant::C | ScoringVariant::D) {
+                // Non-zero LOS action-edge ids on the hawk-placing action row.
+                assert_eq!(row0[0], 14, "partner hawk #0 -> bucket-1 id 14 under {cards:?}");
+                assert_eq!(row0[2], 15, "partner hawk #2 -> bucket-2 id 15 under {cards:?}");
+                assert!(
+                    fast.iter().any(|value| (13..=16).contains(value)),
+                    "CBDDB tail must carry action-sourced LOS ids 13..=16",
+                );
+            } else {
+                // AAAAA: no action-sourced LOS edges; every id stays <= 8.
+                assert_eq!(row0[0], 0, "no LOS edge to #0 under {cards:?}");
+                assert_eq!(row0[2], 0, "no LOS edge to #2 under {cards:?}");
+                assert!(
+                    fast.iter().all(|value| *value <= 8),
+                    "AAAAA tail must never carry a LOS action-edge id (>8)",
+                );
+            }
+        }
     }
 
     #[test]
@@ -2152,6 +2329,7 @@ pub fn action_relation_tail(
     root: &Value,
     token_count: usize,
     action_count: usize,
+    cards: ScoringCards,
 ) -> Result<Vec<u8>> {
     const ACTION_USES_TILE_SLOT: u8 = 5;
     const ACTION_USES_WILDLIFE_SLOT: u8 = 6;
@@ -2254,6 +2432,32 @@ pub fn action_relation_tail(
             }
         }
     }
+
+    // Action-source hawk line-of-sight edges (Hawk C/D only). Same shared
+    // geometry as `combined_relation_edges`, written AFTER the ids-5..8 loop so a
+    // LOS id overwrites any 5..8 id already at the same (action_row, partner)
+    // cell — reproducing that path's last-write-wins overwrite for byte parity.
+    for (action_index, partner_node, relation_id) in
+        hawk_los_action_edges(root, active_seat, cards)
+    {
+        if action_index >= action_count {
+            continue;
+        }
+        let action_pos = (token_count + action_index) as i32;
+        let target = partner_node;
+        // Same guards as `set_relation` (out-of-range and self edges dropped).
+        if target < 0 || target >= seq_len as i32 || target == action_pos {
+            continue;
+        }
+        let relation_id = relation_id as u8;
+        tail[action_index * seq_len + target as usize] = relation_id;
+        // Mirror `(partner, action_pos)` reaches the tail only if the partner is
+        // itself in the action range (never true for a real hawk token index,
+        // mirrored here for exactness with `combined_relation_edges`).
+        if target as usize >= token_count {
+            tail[(target as usize - token_count) * seq_len + action_pos as usize] = relation_id;
+        }
+    }
     Ok(tail)
 }
 
@@ -2264,12 +2468,16 @@ pub fn action_relation_tail_reference(
     root: &Value,
     token_count: usize,
     action_count: usize,
+    cards: ScoringCards,
 ) -> Result<Vec<u8>> {
     let seq_len = token_count + action_count;
-    // The action tail only ever carries action-source edges; hawk line-of-sight
-    // edges are token->token and are filtered out below regardless of ruleset,
-    // so AAAAA keeps the fast path exact.
-    let edges = combined_relation_edges(root, token_count, action_count, ScoringCards::AAAAA)?;
+    // The action tail carries only action-source edges. Under AAAAA the sole
+    // action-source edges are ids 5..8; under Hawk C/D the shared
+    // `hawk_los_action_edges` also lands action-source LOS ids (13..16), while
+    // token->token hawk LOS edges (ids 9..12) are sliced away by the source
+    // range guard below. Reference is parameterized by `cards` so both rulesets
+    // are checked against the fast path.
+    let edges = combined_relation_edges(root, token_count, action_count, cards)?;
     let mut tail = vec![0u8; action_count * seq_len];
     for [source, target, relation_id] in edges {
         let source = source as usize;

@@ -2978,7 +2978,8 @@ fn packed_features_for_request(
     let action_rows = feature_tensors::semantic_public_token_action_features(request, cards)?;
     let token_count = token_rows.len();
     let action_count = action_rows.len();
-    let relation_tail = feature_tensors::action_relation_tail(request, token_count, action_count)?;
+    let relation_tail =
+        feature_tensors::action_relation_tail(request, token_count, action_count, cards)?;
 
     let mut token_bytes = Vec::with_capacity(token_count * PUBLIC_TOKEN_FEATURE_DIM * 4);
     for value in token_rows.iter().flatten() {
@@ -8138,16 +8139,29 @@ mod tests {
                 .expect("token features")
                 .len();
             let action_count = row.afterstates.len();
-            let fast = feature_tensors::action_relation_tail(&raw, token_count, action_count)
-                .expect("fast tail");
-            let reference =
-                feature_tensors::action_relation_tail_reference(&raw, token_count, action_count)
-                    .expect("reference tail");
-            assert_eq!(
-                fast, reference,
-                "tail mismatch for seed {seed} plies {plies}"
-            );
-            assert!(fast.iter().any(|value| *value != 0));
+            // Parity must hold on real mid-game states under BOTH rulesets: the
+            // action-sourced hawk LOS edges only emit under Hawk C/D, and the
+            // fast path must reproduce them byte-for-byte.
+            for cards in [
+                cascadia_game::ScoringCards::AAAAA,
+                cascadia_game::ScoringCards::CBDDB,
+            ] {
+                let fast =
+                    feature_tensors::action_relation_tail(&raw, token_count, action_count, cards)
+                        .expect("fast tail");
+                let reference = feature_tensors::action_relation_tail_reference(
+                    &raw,
+                    token_count,
+                    action_count,
+                    cards,
+                )
+                .expect("reference tail");
+                assert_eq!(
+                    fast, reference,
+                    "tail mismatch for seed {seed} plies {plies} cards {cards:?}"
+                );
+                assert!(fast.iter().any(|value| *value != 0));
+            }
         }
     }
 
