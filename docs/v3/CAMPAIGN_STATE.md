@@ -986,3 +986,42 @@ EXPERIMENT_LOG 01:15 → 05:50):
   relabel tranche; John has since fully authorized it and the remaining
   bank-mode/training-view engineering is in progress.
   Monitors: bsfmncz84 (fold), b6f1ousg5 (Stage A gen).
+
+## SNAPSHOT 2026-07-21 14:00 — SUPERSEDES EVERYTHING ABOVE
+
+Full narrative + numbers: docs/v3/RESEARCH_LOG.md section 13.
+Blow-by-blow: cascadiav3/EXPERIMENT_LOG.md (2026-07-16 09:00 onward).
+
+**Goal state:** AAAAA (Card-A) campaign CLOSED by John's ruling 07-19 at
+~2.6 GPU-days (final baseline 98.19 n1024/d16, goal gap 1.81; D1 screen-
+killed, Rival-Lite killed after M1 found ~zero provable endgame headroom).
+**Active line: CBDDB** (Bear C, Elk B strict-diamond, Salmon D, Hawk D,
+Fox B), target **>105** (John). Identity `..._cbddb_..._2026_07_19`.
+
+**Banked CBDDB numbers (AAAAA champion, zero retraining, screening block
+2027190000-99):** floors 88.6/88.5/80.9; n256/d4 x100 = 99.4675;
+n1024/d16 x30 = 101.2. Warm-start fine-tune on same-budget self-play is
+a PROVEN DEAD END (98.75 across naive/vonly/both anchor arms — teacher-
+student gap). Trust-region anchor exists in the trainer (default-off).
+
+**Running now:** from-scratch campaign (random-init; John 07-20; re-
+scoped ~3 GPU-days). Bootstrap trained (EI-0 greedy, model-S, 15k steps,
+checkpoints/full_v3_cbddb_from_scratch_bootstrap). Cycle fs_c1 live on
+john0 (launched 13:09: 400+40 seeds n128/d2 from seeds 2027194000+,
+warm-start train w/ q-quantiles 8, eval n256/d4 x100 + n1024/d16 x30;
+first number ~21:00 07-21). Monitor bt3xnnmwf; log
+cascadiav3/logs/cbddb_fs_c1.log; runner run_cbddb_cycle.sh.
+
+**Next decision:** milestone gate after cycle 2 (seeds 2027196000+):
+continue only if slope projects past 99.4675 (n256/d4); ultimate bar
+101.2 (n1024/d16); >105 certification ONLY on fresh block 2027195000+.
+Fallback if from-scratch stalls: stronger-teacher warm-start (deep-
+search labels) + anchor — the one warm-start shape not killed.
+
+**Standing rules:** one scientific job at a time on john0; never deploy
+during a scientific run; preregister before peeking; kill only by
+explicit PID; poll terminal state on long jobs (monitors can drop);
+seeds ledger — spent: 2026794000-5249 (Stage A), 2027160000-99 (Gate 0),
+2027190000-99 (CBDDB screening, reusable paired), 2027191000-1399 (s2),
+2027193000-3550 (bootstrap), 2027194000-4840 (fs_c1); reserved:
+2027195000+ (certification), 2027079000-99 (unused D1 gate block).
