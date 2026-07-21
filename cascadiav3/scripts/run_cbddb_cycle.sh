@@ -30,6 +30,10 @@ TRAIN_SEEDS="${TRAIN_SEEDS:-360}"
 VAL_SEEDS="${VAL_SEEDS:-40}"
 STEPS="${STEPS:-2500}"
 EVAL_N1024_GAMES="${EVAL_N1024_GAMES:-30}"
+# Cheap generation search for the from-scratch climb (re-scoped plan): n128/d2
+# by default; ramp to n256/d4 for late sharpening cycles via env override.
+GEN_N_SIMULATIONS="${GEN_N_SIMULATIONS:-128}"
+GEN_DETERMINIZATIONS="${GEN_DETERMINIZATIONS:-2}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 JOBS="${JOBS:-12}"
@@ -74,15 +78,15 @@ gen_corpus() {
     hb "GEN $tag reuse $out"
     return
   fi
-  hb "GEN $tag starting (${count} seeds @ ${first}, n256/d4)"
+  hb "GEN $tag starting (${count} seeds @ ${first}, n${GEN_N_SIMULATIONS}/d${GEN_DETERMINIZATIONS})"
   "$BINARY" \
     --gumbel-selfplay-tensor-corpus \
     --scoring-cards cbddb \
     --model-service "/home/john0/venvs/torch/bin/python3 -m cascadiav3.torch_inference_bridge --manifest $INCUMBENT --device cuda" \
     --model-manifest "$INCUMBENT" \
     --model-timeout-ms 300000 \
-    --gumbel-n-simulations 256 --gumbel-top-m 16 --gumbel-depth-rounds 1 \
-    --gumbel-determinizations 4 --gumbel-market-decision-samples 8 \
+    --gumbel-n-simulations "$GEN_N_SIMULATIONS" --gumbel-top-m 16 --gumbel-depth-rounds 1 \
+    --gumbel-determinizations "$GEN_DETERMINIZATIONS" --gumbel-market-decision-samples 8 \
     --gumbel-exact-endgame-turns 0 --gumbel-blend-weight 0.5 --k-interior 16 \
     --source-revision "$SOURCE_REVISION" \
     --first-seed "$first" --seed-count "$count" --plies-per-seed 80 \
