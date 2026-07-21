@@ -7816,3 +7816,23 @@ milestone gate (~1 GPU-day cumulative) vs zero-shot 99.4675 (n256/d4)
 and ultimately champion-grade 101.2 (n1024/d16). q-quantiles=1 (scalar)
 for the greedy bootstrap; the distributional q-quantiles-8 head (suited
 to Hawk-D variance) switches on for the gumbel self-play cycles.
+
+## 2026-07-21 11:05 — From-scratch bootstrap TRAINED; ~8h GPU-idle gap (dropped monitor event); eval launched
+
+Bootstrap training completed 02:56 (15k steps, selection_guard_passed
+True, locked_val_greedy_top1 0.313, locked_val_total 8.58 from random
+init). Checkpoint: full_v3_cbddb_from_scratch_bootstrap/best_locked_val.
+
+PROCESS NOTE (honest): the monitor's "[full-v3] completed" event did not
+surface (ssh tail stream dropped over the ~1.5h training phase), so the
+GPU sat idle ~02:56→10:58 before I ran the bootstrap eval. ~8 GPU-hours
+lost. Lesson: for long single-phase jobs, poll the terminal state at
+status checks rather than relying solely on a streaming monitor that can
+silently drop. No scientific impact (deterministic artifacts intact).
+
+Bootstrap-level eval launched (n256/d4 x100, block 2027190000-99,
+scoring-cards cbddb): the from-scratch STARTING POINT vs zero-shot
+99.4675 (n256/d4) and champion-grade 101.2 (n1024/d16). Cheap-cycle
+runner prepped (run_cbddb_cycle.sh now defaults GEN n128/d2; cycle 1
+warm-starts from the bootstrap, q-quantiles 8 distributional head via
+init-skip-mismatched). Cycle 1 fires when the eval frees the GPU.
