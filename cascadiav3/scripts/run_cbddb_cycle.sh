@@ -37,6 +37,11 @@ GEN_DETERMINIZATIONS="${GEN_DETERMINIZATIONS:-2}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 JOBS="${JOBS:-12}"
+# Eval concurrency kept lower than generation: early-campaign models have
+# softer policies -> wider Gumbel menus -> larger batched eval requests, which
+# can OOM at jobs 12. Fewer jobs only slows the eval; per-seed scores are
+# deterministic and unchanged. Raise once the policy sharpens.
+EVAL_JOBS="${EVAL_JOBS:-6}"
 RULESET_ID="cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19"
 REPORT_DIR="${REPORT_DIR:-cascadiav3/reports}"
 LOG_DIR="${LOG_DIR:-cascadiav3/logs}"
@@ -163,7 +168,7 @@ run_eval() {
     --device cuda \
     --first-seed "$EVAL_FIRST_SEED" \
     --games "$games" \
-    --jobs "$JOBS" \
+    --jobs "$EVAL_JOBS" \
     --batch-runner \
     --gumbel-n-simulations "$simulations" \
     --gumbel-top-m 16 \
