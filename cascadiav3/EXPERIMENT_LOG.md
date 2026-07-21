@@ -7836,3 +7836,20 @@ scoring-cards cbddb): the from-scratch STARTING POINT vs zero-shot
 runner prepped (run_cbddb_cycle.sh now defaults GEN n128/d2; cycle 1
 warm-starts from the bootstrap, q-quantiles 8 distributional head via
 init-skip-mismatched). Cycle 1 fires when the eval frees the GPU.
+
+## 2026-07-21 13:10 — Raw-bootstrap eval abandoned (weak-model OOM/slowness); cycle 1 launched
+
+Raw from-scratch bootstrap eval at n256/d4 OOM'd then ground at 14% GPU
+util (~15 min/game, 1/30 seeds) — the near-uniform bootstrap policy
+makes Gumbel search fan out over the benchmark's wide --max-actions 64
+menus, ballooning batched eval requests. Root cause is the weak model,
+not a leak (GPU clean, only Xwayland). John ruled: kill it, characterize
+bootstrap as "confirmed weak (expected for EI-0)", go straight to cycle 1.
+
+Cycle 1 (fs_c1) launched: warm-start from the bootstrap, CBDDB self-play
+400 train + 40 val seeds (2027194000+/2027194800+) at CHEAP n128/d2,
+--max-actions 8 (generation caps menus, so tractable unlike the eval).
+Then warm-start train (D1 recipe, q-quantiles 8 distributional head via
+init-skip-mismatched) + eval n256/d4 x100 (EVAL_JOBS lowered to 6 to
+avoid soft-policy OOM) + n1024/d16 x30. This is the first MEANINGFUL
+from-scratch number vs 99.4675 / 101.2.
