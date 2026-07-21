@@ -7795,3 +7795,24 @@ route to 105 may be stronger-teacher warm-start + deep search rather
 than from-scratch — surfacing for a possible redirect.
 
 Anchor-fix chain fully complete; GPU now FREE for from-scratch bootstrap.
+
+## 2026-07-21 01:22 — From-scratch CBDDB bootstrap LAUNCHED (smoke-verified chain)
+
+Smoke (2 seeds / 50 steps, profile cbddb_fs_smoke) completed the full
+chain end-to-end: CBDDB greedy-state EI-0 generation -> filter top-K32
+-> relation-tail -> random-init training -> checkpoint + SWA -> pipeline
+"completed" marker. Confirmed correct: scoring_cards=cbddb, init_manifest
+empty (true random init), model-S, LR 2e-4.
+
+Real bootstrap launched (pid 413745, rev 2b8eea28, profile
+cbddb_from_scratch_bootstrap): 300 train + 50 val CBDDB seeds
+(2027193000+/2027193500+), greedy_search_bootstrap, objective
+search-improved-greedy-retention, model-S, LR 2e-4, 15k steps,
+filter top-K32 greedy-prefix-strict, INIT_MANIFEST=none. This is the
+random-init foundation the self-play cycles warm-start from.
+Next: bootstrap-level eval (n256/d4) to establish the from-scratch
+starting point, then cheap n128/d2 self-play cycles toward the
+milestone gate (~1 GPU-day cumulative) vs zero-shot 99.4675 (n256/d4)
+and ultimately champion-grade 101.2 (n1024/d16). q-quantiles=1 (scalar)
+for the greedy bootstrap; the distributional q-quantiles-8 head (suited
+to Hawk-D variance) switches on for the gumbel self-play cycles.
