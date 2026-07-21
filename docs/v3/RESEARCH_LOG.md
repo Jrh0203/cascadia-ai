@@ -1472,3 +1472,165 @@ STRENGTH EVIDENCE.** Rival supersedes the combined ordering of NX, Anchor, and
 Foundry. It does not erase their source audits or component designs, does not
 reorder the fully authorized D1 chain, and does not authorize a launch or
 promotion.
+
+## 13. Campaign 2026-07-17 → 07-21: D1 kill, AAAAA closure, CBDDB pivot (consolidated)
+
+This section is reconstruction-grade: with only this file plus
+`cascadiav3/EXPERIMENT_LOG.md`, the full scientific state as of
+2026-07-21 can be rebuilt. All numbers are mean seat score over the
+stated games/config unless noted.
+
+### 13.1 Rules identities (unchanged this period)
+
+- AAAAA (active until 07-19 closure):
+  `cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16`
+  (successor of the 07-09 identity after the wildlife-bag conservation
+  fix, commit 45fb5072; 07-09 artifacts are a closed evidence boundary).
+- CBDDB (minted 07-19, active line): Bear C, Elk B, Salmon D, Hawk D,
+  Fox B — `cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19`;
+  exporter/harness flag `--scoring-cards cbddb` (default aaaaa is
+  flag-absent and byte-identical). RULING (John 07-19): Elk B uses v3
+  STRICT-DIAMOND semantics (4th elk must touch two triangle members,
+  official card); the legacy April-2026 engine was looser (any member),
+  so old alt-rules anchors (~96.5 greedy-MCE / ~97.2 NNUE-MCE base) are
+  slightly generous. 48/49 ported legacy scorer tests agreed exactly
+  (crates/cascadia-game/tests/alt_card_scoring.rs).
+
+### 13.2 D1 (deep relabeling of hard roots): SCREEN KILL 07-18 20:52
+
+Chain ran fully autonomously (Stage A 1,250 seeds x 80 plies n256/d4 =
+100k decisions, 25.0h; harvest 15k tranche + 1.5k sentinel zero
+shortfall; relabel n2048/d16 x2 25.9h; 4 warm-start retrains ~10 min
+each; 5 bank screens). Preregistered rule (d1_15k <= ctrl - 0.010 AND
+<= 0.2370 abs) fired KILL:
+
+ctrl 0.2631 | 5k 0.2504 (-0.0127) | 10k 0.2609 | 15k best 0.2721
+(+0.0090 WORSE) | 15k swa 0.2650. Verdict JSON:
+reports/d1_20260716_screen_verdict.json.
+
+Three load-bearing lessons: (1) full-dose hard-root deep labels HURT
+(distribution shift); (2) dose curve inverted-U (small targeted dose
+only positive arm, post-hoc); (3) CONTINUITY LEAK: every warm-start
+retrain incl. ctrl regressed the incumbent's bank behavior (~0.026) —
+any retrain program must control for the recipe tax. CUPED gate never
+ran; block 2027079000-99 still untouched.
+
+### 13.3 AAAAA endgame: Gate 0, M1, Rival-Lite kill, campaign closure
+
+- Gate 0 (07-19): fresh canonical champion baseline under 07-16 rules,
+  seeds 2027160000x100 (touch-once, spent): **n1024/d16 = 98.19**
+  (P50 98, P90 101); n256/d4 97.145; no-search floors 92.06 (policy) /
+  90.90 (q) / 87.77 (greedy). Script run_rules_20260716_gate0.sh.
+  Delta to closed 07-09 number (98.2975) is seed noise, not rules.
+- M1 selfish-ceiling tomography (07-19, CPU): Gate 0's 100 champion
+  games ingested to sealed ledgers (rival-ingest-exporter; every action
+  hash resolved; replays reproduced all finals) then rival-tomography
+  over 400 seat-trajectories, evidence domain incumbent_measured,
+  witnesses lower_bound_only: T0 repack 0 (default) / +48 total
+  (strong 40k-iter beam-16); T3 known-chance-tape hindsight +18 / +49.
+  Median 0 everywhere; ~0.12 pts/seat max at 10x power vs the 1.81-pt
+  goal gap. Summaries pinned:
+  reports/m1_tomography_gate0_{default,strong}_20260719.json.
+- RULING (John 07-19): Rival-Lite KILLED; AAAAA GPU campaign CLOSED at
+  ~2.6 GPU-days. Rival CPU machinery (battery, tomography, golden
+  traces, ingest) remains on feat/rival-cpu-machinery, 151 tests green.
+
+### 13.4 CBDDB pivot: zero-shot results (banked)
+
+RULING (John 07-19): CBDDB is the active line; "this rule set should
+comfortably score above 105" — the CBDDB bar is >105 (not 100).
+All CBDDB evals on screening block 2027190000-99 (paired comparisons);
+2027195000+ RESERVED fresh for any >105 certification claim.
+
+AAAAA champion (cycle4 scalar, best_locked_val), ZERO retraining, under
+CBDDB: no-search floors 88.58/88.53/80.89; **n256/d4 x100 = 99.4675**
+(P50 100, P90 105); **n1024/d16 x30 = 101.2** (P50 102, P90 106.1).
+Beats the entire old-tech line by >2 despite the stricter Elk-B. Deep
+search alone is worth ~1.7 under CBDDB; path to 105 = better model +
+deep search; from-scratch must ultimately beat 101.2 at n1024/d16.
+
+### 13.5 Warm-start fine-tune on CBDDB: DEAD END (three-way 98.75)
+
+One adaptation cycle (360+40 seeds n256/d4 self-play by the champion,
+seeds 2027191000-1399; warm-start D1 recipe) REGRESSED: 98.75 vs
+99.4675 paired. Trust-region anchor built into the trainer
+(--anchor-manifest, --anchor-policy-kl-weight, --anchor-value-l2-weight;
+default-off bit-identical; 13 tests) and swept: vonly (l2=2) 98.75,
+both (kl=2,l2=2) 98.75 — identical to naive to the decimal on distinct
+checkpoints (games-file SHAs differ). Mechanism: TEACHER-STUDENT GAP —
+same-budget self-play targets cap the student at its own level; the
+fine-tune step pays the recipe tax with no headroom to buy. Confirms
+D1's lesson on a second ruleset. Anchor machinery retained for any
+future stronger-teacher warm-start. Value-head drift under CBDDB
+(anchor_value_l2 0.93->2.38 despite w=2) hurt search blending while
+val metrics improved — never trust training metrics as play evidence.
+
+### 13.6 CBDDB feature work (locked 07-20, commits 0b120edc + 319e373b)
+
+Audit verdict: no hardcoded-Card-A bug anywhere (all scoring-derived
+features/labels route through the variant-aware engine); 6 hand-crafted
+hints were Card-A-shaped (bear pair/overcluster, elk line, hawk
+isolation/adjacency, fox unique-count) — some sign-inverted for CBDDB.
+Built card-aware (Card A arms byte-identical; golden hash unchanged;
+AAAAA champion still loadable; no Python change):
+- Hawk-D LOS: token->token relation edges ids 9-12 (species-between
+  buckets; inert for CascadiaFormer, live for full-matrix models) AND
+  action-sourced edges ids 13-16 on the CGAB-consumed rows, single
+  shared geometry helper, byte-exact train/serve parity proven for both
+  rulesets (extended action_relation_tail parity tests).
+- Card-aware hints: Bear-C SET-COMPLETION (progress toward {1,2,3}
+  distinct-size set + marginal effect, John-requested), Elk-B shape
+  compactness, Hawk-D LOS-typed dims, Fox-B pair-type count.
+- Engine APIs: hawk_line_of_sight_pairs, bear_component_sizes.
+- Deliberately NOT retuned: score normalizers (soft divide, no clip —
+  CBDDB overflow >1.0 is harmless); no further hand-crafted strategy
+  (model sees exact per-action CBDDB afterstate scores).
+
+### 13.7 From-scratch CBDDB campaign (ACTIVE, re-scoped ~3 GPU-days)
+
+RULING (John 07-20): TRUE random-init from-scratch (tests whether
+Card-A priors are ceiling vs floor), then re-scoped: cheap n128/d2
+generation (~46 s/seed measured), milestone-only evals, gate at
+bootstrap + 2 cycles (~1 GPU-day) reading the climb toward 99.4675;
+full campaign ~2.5-3 GPU-days; from-scratch runs need no further
+ruling but week-scale spends do.
+
+State as of 07-21 13:45:
+- Bootstrap DONE: greedy+EI-0 CBDDB corpus (300+50 seeds,
+  2027193000+/2027193500+, greedy_search_bootstrap, top-K32
+  greedy-prefix-strict) -> random-init model-S, LR 2e-4, 15k steps,
+  objective search-improved-greedy-retention, scalar q. Checkpoint:
+  checkpoints/full_v3_cbddb_from_scratch_bootstrap/best_locked_val.
+  Pipeline: run_cbddb_from_scratch_bootstrap.sh ->
+  run_full_v3_training_pipeline.sh (gained SCORING_CARDS env; aaaaa
+  default = command-identical).
+- Raw-bootstrap eval ABANDONED (John's call): near-uniform policy +
+  benchmark --max-actions 64 => search fan-out, OOM at jobs 12, 14%
+  util at jobs 3 (~15 min/game). Characterized "weak, expected".
+  Mitigations now standard: eval EVAL_JOBS=6, generation caps
+  --max-actions 8.
+- Cycle 1 (fs_c1) RUNNING since 13:09: 400+40 seeds n128/d2
+  (2027194000+/2027194800+), warm-start from bootstrap with
+  q-quantiles 8 (init-skip-mismatched), then eval n256/d4 x100 +
+  n1024/d16 x30 on the screening block. ETA: first number ~21:00
+  07-21. Runner: run_cbddb_cycle.sh (env: CYCLE_TAG, INCUMBENT,
+  TRAIN_FIRST_SEED/SEEDS, VAL_FIRST_SEED/SEEDS, GEN_N_SIMULATIONS/128,
+  GEN_DETERMINIZATIONS/2, EVAL_JOBS/6).
+- Milestone gate (after cycle 2, seeds 2027196000+ next): continue only
+  if the cycle-over-cycle slope projects to reach/beat 99.4675
+  (n256/d4); ultimate bar 101.2 (n1024/d16); certification of >105 on
+  fresh block 2027195000+ only.
+- Fallback if from-scratch stalls: stronger-teacher warm-start (deep-
+  search targets, e.g. n1024/d16 labels for an n256/d4 student) +
+  trust-region anchor — the one warm-start shape NOT killed by 13.5,
+  since it restores a teacher-student gap.
+
+### 13.8 Budget ledger (John's few-GPU-day envelope)
+
+AAAAA closed at ~2.6 (D1 2.2 + Gate 0 0.4). CBDDB spend through 07-21
+morning: smoke ~0.75 (zero-shot arms + s2 corpus 13h + ft) + anchor
+sweep ~0.5 + n1024 control ~0.2 + bootstrap ~0.35 + overhead ~0.1
+≈ 1.9. Cycle 1 ~0.5. Idle-time incident 07-21 (~8h GPU idle on a
+dropped monitor event) logged; mitigation: poll terminal state at
+status checks, kill only by explicit PID (pkill self-match trap
+recurred 07-21).
