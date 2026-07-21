@@ -7775,3 +7775,23 @@ pass for AAAAA AND CBDDB (fixture + real-state), golden hash unchanged,
 80/80 exporter tests. Byte-exact train/serve parity for the new
 action-source LOS edges (ids 13-16) confirmed. From-scratch feature set
 is now complete and locked (commit 319e373b).
+
+## 2026-07-20 22:15 — Champion-grade CBDDB baseline: zero-shot n1024/d16 = 101.2
+
+The AAAAA champion, zero-shot under CBDDB at champion-grade search
+(n1024/d16 x30, block 2027190000-99): mean 101.2, p50 102, p90 106.1.
++1.73 over its own n256/d4 zero-shot (99.4675) — search budget alone
+buys ~1.7 pts under CBDDB, with NO retraining. Only 30 games (SE ~0.8)
+but clearly above 100 and within ~3.8 of the >105 target.
+
+Strategic read: under CBDDB, deep search on the transferred Card-A
+policy already clears 100. The path to 105 is (better model) + (deep
+search). The from-scratch model's bar at champion grade is therefore
+101.2, not 99.47 — the from-scratch bet is that CBDDB-native priors
+beat transferred Card-A priors by enough to matter on top of search.
+Milestone gate reads the cheap-search climb; final comparison is vs
+101.2 at n1024/d16. NOTE for John: if from-scratch is slow, the cheaper
+route to 105 may be stronger-teacher warm-start + deep search rather
+than from-scratch — surfacing for a possible redirect.
+
+Anchor-fix chain fully complete; GPU now FREE for from-scratch bootstrap.
