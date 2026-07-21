@@ -28,6 +28,17 @@ FILTER_TOP_K="${FILTER_TOP_K:-256}"
 FILTER_MODE="${FILTER_MODE:-top-q-with-selected}"
 FILTER_GREEDY_PREFIX_K="${FILTER_GREEDY_PREFIX_K:-}"
 EXPERT_TENSOR_MODE="${EXPERT_TENSOR_MODE:-expert}"
+# Scoring-card selection. "aaaaa" (default) keeps this pipeline byte-for-byte
+# compatible with existing AAAAA history: no --scoring-cards flag is emitted, so
+# even older pinned exporter binaries (which predate the flag) keep working.
+# "cbddb" threads --scoring-cards cbddb into every exporter generation call so
+# the CBDDB ruleset drives self-play, feature extraction, and shard tagging.
+SCORING_CARDS="${SCORING_CARDS:-aaaaa}"
+case "$SCORING_CARDS" in
+  aaaaa) RULESET_ID="cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16" ;;
+  cbddb) RULESET_ID="cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19" ;;
+  *) echo "invalid SCORING_CARDS=$SCORING_CARDS; use aaaaa|cbddb" >&2; exit 2 ;;
+esac
 REGENERATE_ROOTS="${REGENERATE_ROOTS:-0}"
 MODEL_SERVICE="${MODEL_SERVICE:-}"
 MODEL_MANIFEST="${MODEL_MANIFEST:-}"
@@ -153,6 +164,7 @@ fi
 echo "[full-v3] started \$(date -Is)"
 echo "[full-v3] profile=$PROFILE train_seeds=$TRAIN_SEED_COUNT val_seeds=$VAL_SEED_COUNT plies=$PLIES_PER_SEED rollouts_per_action=$ROLLOUTS_PER_ACTION rollout_top_k=$ROLLOUT_TOP_K expert_tensor_mode=$EXPERT_TENSOR_MODE"
 echo "[full-v3] source_revision=$SOURCE_REVISION"
+echo "[full-v3] scoring_cards=$SCORING_CARDS ruleset_id=$RULESET_ID"
 echo "[full-v3] model_size=$MODEL_SIZE steps=$TRAIN_STEPS batch_size=$BATCH_SIZE grad_accum=$GRAD_ACCUM lr=$LR val_max_batches=$VAL_MAX_BATCHES eval_every_steps=$EVAL_EVERY_STEPS min_selection_greedy_top1=$MIN_SELECTION_GREEDY_TOP1 early_stop_guard_failures=$EARLY_STOP_SELECTION_GUARD_FAILURES early_stop_after_step=$EARLY_STOP_AFTER_STEP filter_top_k=$FILTER_TOP_K filter_mode=$FILTER_MODE objective=$OBJECTIVE q_quantiles=$Q_QUANTILES q_decomposition=$Q_DECOMPOSITION q_decomposition_head_only=$Q_DECOMPOSITION_HEAD_ONLY selection=$SELECTION_MODE:$SELECTION_METRIC"
 echo "[full-v3] note: phase0 writes packed expert_tensor_shard.v1 NPZ directly, filters to top-K, then materializes fixed relation-tail tensors for GPU training"
 echo "[full-v3] init_manifest=$INIT_MANIFEST"
@@ -254,6 +266,13 @@ generate_tensor_roots() {
         exit 2
         ;;
     esac
+    if [ '$SCORING_CARDS' = 'cbddb' ]; then
+      # AAAAA runs never emit this flag (exporter default is aaaaa), preserving
+      # compatibility with older pinned binaries. CBDDB runs require an exporter
+      # new enough to know --scoring-cards; it drives self-play config, feature
+      # extraction, and shard ruleset tagging for the whole generation pass.
+      mode_args+=(--scoring-cards cbddb)
+    fi
     '$BINARY' "\${mode_args[@]}" \
       --first-seed "\$first_seed" \
       --seed-count "\$seed_count" \
@@ -445,6 +464,8 @@ report = {
     "profile": "$PROFILE",
     "runbook": "docs/v3/TRAINING_PIPELINE.md",
     "source_revision": "$SOURCE_REVISION",
+    "scoring_cards": "$SCORING_CARDS",
+    "ruleset_id": "$RULESET_ID",
     "scale_note": "phase0 bootstrap uses packed expert_tensor_shard.v1 NPZ; JSONL is used only for tiny audit gates",
     "train_roots": train_manifest,
     "val_roots": val_manifest,
