@@ -7935,3 +7935,36 @@ bootstrap. Eval: n256/d4 x100 on block 2027190000-99; n1024/d16 skipped
 soft-policy speed -> true from-scratch cycle-1 number by ~05:30-06:00.
 This is the honest datapoint 77.85 failed to be; gate math unchanged
 (bar 99.4675 at n256/d4).
+
+## 2026-07-22 01:30 — PREREGISTERED decision rule for fs_c1s + X1 draft (autonomy grant)
+
+John: "agreed, i trust your judgement to assess the next experiment
+after this autonomously." Locking the decision rule BEFORE the fs_c1s
+number exists, to keep the autonomous call honest:
+
+- fs_c1s screen (n256/d4 x100, block 2027190000-99) >= 95.0 -> the
+  from-scratch line has a plausible one-more-cycle path; run cycle 2 at
+  MODEL_SIZE=S, fresh seeds 2027196000x400 + 2027196400x40, same cheap
+  n128/d2 gen. (Rationale: needs < +4.5 to reach the 99.4675 bar.)
+- fs_c1s < 95.0 -> from-scratch line CLOSED (weak-teacher math
+  confirmed; reaching the bar would need an unprecedented jump), and X1
+  launches instead. No middle ground, no re-litigation.
+
+X1 DRAFT — stronger-teacher distillation (the one un-killed warm-start
+shape): teacher = AAAAA champion cycle4 under CBDDB (zero-shot 101.2 at
+n1024/d16); generate a fresh CBDDB corpus with DEEPER search than the
+n256/d4 student will use; fine-tune the champion (model M, q-quantiles
+8) on those labels WITH the trust-region anchor (policy-KL + value-L2,
+weights per test suite defaults); screen n256/d4 x100 vs 99.4675;
+escalate to n1024/d16 x30 vs 101.2 only if screen >= 100.5.
+Certification (>105 claim) only on fresh block 2027195000+, John-visible.
+Teacher-budget options (choose at launch on remaining-envelope math;
+champion CBDDB gen measured ~120 s/seed at n256/d4):
+  (a) n512/d8, 400+40 seeds ~ 2.3 GPU-days (strongest labels)
+  (b) n512/d8, 260+26 seeds ~ 1.5 GPU-days
+  (c) n512/d4, 400+40 seeds ~ 1.2 GPU-days (weakest acceptable teacher)
+Optional add-on: --gumbel-exact-endgame-turns 2 for exact late-ply
+labels (the long-queued exact-late-labels idea) if CPU cost stays <10%
+of gen wall. Seeds: X1 takes 2027196000-6439 if the from-scratch line
+closes (cycle 2 then never runs); a later experiment would take
+2027197000+. Fresh-block discipline unchanged.
