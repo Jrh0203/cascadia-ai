@@ -7853,3 +7853,32 @@ Then warm-start train (D1 recipe, q-quantiles 8 distributional head via
 init-skip-mismatched) + eval n256/d4 x100 (EVAL_JOBS lowered to 6 to
 avoid soft-policy OOM) + n1024/d16 x30. This is the first MEANINGFUL
 from-scratch number vs 99.4675 / 101.2.
+
+## 2026-07-22 00:40 — fs_c1 first from-scratch number: 77.85 (n256/d4 x100) — far below bar
+
+Cycle fs_c1 completed gen (400+40 seeds, ~6.6h) + train (666 steps —
+the --max-example-passes 4 cap bound the requested 2500 on a ~32k-row
+corpus; status pass, best locked_val_final_q_regret 1.565) + screening
+eval. Report verified (status pass, ruleset ..._2026_07_19, manifest
+cbddb_fs_c1_ft/best_locked_val, rev 48966a16, 100 games).
+
+RESULT: mean seat 77.85 (P50 78, P90 87) vs zero-shot bar 99.4675 and
+CBDDB greedy-heuristic floor 80.89. Bootstrap+1 cycle is still BELOW
+greedy. Additionally mean_search_seconds 12.1 s/decision — policy still
+near-soft, so the n256/d4 x100 eval alone took 4.6h wall.
+
+No preregistered kill fires here (milestone gate is slope-based after
+cycle 2), but two flags for John:
+1) BUDGET: the in-flight n1024/d16 x30 eval extrapolates to ~20h wall
+   (~16x per-decision cost at 12.1 s/dec baseline) — ~0.9 GPU-day for a
+   number that is NOT the gate metric (gate slope is measured at
+   n256/d4). Killing it requires John's permission (standing rule);
+   push notification sent with recommendation to kill and either launch
+   cycle 2 directly or rule the gate early.
+2) SLOPE REALITY CHECK: to hit 99.47 by cycle 2 the jump would need to
+   be +21.6 pts in one cycle. From-scratch curves are steepest early,
+   but that magnitude would be unprecedented in this campaign.
+
+GPU now: fs_c1 n1024/d16 x30 eval running (started 00:35). Default
+(absent John's ruling): let it run — no process killed without
+permission. Cycle 2 blocked behind it either way (one job at a time).
