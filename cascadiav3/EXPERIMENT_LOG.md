@@ -7968,3 +7968,28 @@ labels (the long-queued exact-late-labels idea) if CPU cost stays <10%
 of gen wall. Seeds: X1 takes 2027196000-6439 if the from-scratch line
 closes (cycle 2 then never runs); a later experiment would take
 2027197000+. Fresh-block discipline unchanged.
+
+## 2026-07-22 06:15 — fs_c1s RESULT: 98.3 (n256/d4 x100) — rule fires >=95 branch; cycle 2 LAUNCHED
+
+True from-scratch cycle-1 number (corrected model-S warm start):
+mean seat 98.3, P50 99, P90 104 on block 2027190000-99. Report
+verified (status pass, ruleset ..._2026_07_19, manifest
+cbddb_fs_c1s_ft/best_locked_val, rev 01000bce, 100 games,
+mean_search_seconds 12.7). Context: 15.0M-param model S, greedy+EI-0
+bootstrap + ONE cheap n128/d2 cycle, ~0.7 GPU-days cumulative — vs
+88M champion zero-shot 99.4675 on the same block. The S->M bug was
+masking a 20.45-point difference (77.85 invalid vs 98.3 real).
+Implication vs the weak-teacher hypothesis: search amplification at
+n128/d2 + distributional q head extracts far more than the greedy
+label floor predicted. P90 already 104 at screen budget.
+
+PREREGISTERED RULE (2026-07-22 01:30): 98.3 >= 95.0 -> cycle 2 at
+model S. LAUNCHED 06:13 under the autonomy grant: CYCLE_TAG=fs_c2,
+INCUMBENT=cbddb_fs_c1s_ft/best_locked_val, fresh seeds 2027196000x400
++ 2027196400x40 (as preregistered), n128/d2 gen, n256/d4 x100 screen,
+n1024 skipped. Skip-list check due at TRAIN start: incumbent now has
+the 8-quantile head, so the expected skip list is EMPTY. ETA: gen ~6h,
+train ~15 min, eval ~5h -> fs_c2 number ~17:30. MILESTONE GATE then:
+slope (98.3 -> fs_c2) decides continue-vs-pivot; bar remains 99.4675
+screen / 101.2 ultimate; >105 cert only on 2027195000+, John-visible.
+X1 stronger-teacher draft stays on the shelf unless the slope dies.
