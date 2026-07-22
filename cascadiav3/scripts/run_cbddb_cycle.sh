@@ -14,7 +14,12 @@ set -euo pipefail
 #   TRAIN_FIRST_SEED / VAL_FIRST_SEED  fresh, never-used generation
 #                    seed blocks (log-audited before launch)
 # Optional env: TRAIN_SEEDS (360), VAL_SEEDS (40), STEPS (2500),
-#   EVAL_N1024_GAMES (30).
+#   EVAL_N1024_GAMES (default 0 = SKIPPED). The n1024/d16 eval is
+#   opt-in: on a weak early-cycle model its soft policy makes deep
+#   search ~16x slower per decision (fs_c1 measured 12.1 s/dec at
+#   n256/d4 -> ~20h extrapolated for 30 games at n1024/d16), and the
+#   milestone gate is scored on the n256/d4 screen anyway. Set
+#   EVAL_N1024_GAMES=30 only for milestone/pre-certification cycles.
 #
 # The certification battery (fresh block 2027195000+, 100g n1024/d16)
 # is deliberately NOT part of this script — claiming >105 uses
@@ -29,7 +34,7 @@ VAL_FIRST_SEED="${VAL_FIRST_SEED:?set VAL_FIRST_SEED}"
 TRAIN_SEEDS="${TRAIN_SEEDS:-360}"
 VAL_SEEDS="${VAL_SEEDS:-40}"
 STEPS="${STEPS:-2500}"
-EVAL_N1024_GAMES="${EVAL_N1024_GAMES:-30}"
+EVAL_N1024_GAMES="${EVAL_N1024_GAMES:-0}"
 # Cheap generation search for the from-scratch climb (re-scoped plan): n128/d2
 # by default; ramp to n256/d4 for late sharpening cycles via env override.
 GEN_N_SIMULATIONS="${GEN_N_SIMULATIONS:-128}"
@@ -189,6 +194,10 @@ run_eval() {
 }
 
 run_eval screen_n256_d4 256 4 100
-run_eval screen_n1024_d16 1024 16 "$EVAL_N1024_GAMES"
+if [ "$EVAL_N1024_GAMES" -gt 0 ]; then
+  run_eval screen_n1024_d16 1024 16 "$EVAL_N1024_GAMES"
+else
+  hb "EVAL screen_n1024_d16 SKIPPED (EVAL_N1024_GAMES=0; opt-in for milestone cycles)"
+fi
 
 hb "CYCLE $CYCLE_TAG COMPLETE"

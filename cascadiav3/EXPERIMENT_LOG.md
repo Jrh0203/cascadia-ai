@@ -7882,3 +7882,20 @@ cycle 2), but two flags for John:
 GPU now: fs_c1 n1024/d16 x30 eval running (started 00:35). Default
 (absent John's ruling): let it run — no process killed without
 permission. Cycle 2 blocked behind it either way (one job at a time).
+
+## 2026-07-22 00:55 — John's ruling: n1024/d16 eval on fs_c1 killed (~18 min in); cycle runner fixed
+
+John (on the 77.85 result + eval-cost flag): "why run this expensive
+eval on something we know to be low" — treated as the kill ruling. The
+eval tree (cycle script 483306, benchmark 566416, exporter 566417 +
+bridge) was SIGTERM'd by explicit PID ~00:53, GPU verified clean (no
+compute apps). ~18 min spent of a ~20h extrapolated run.
+
+Root cause was mine: run_cbddb_cycle.sh ran the n1024/d16 x30 eval
+unconditionally every cycle, which is only meaningful near the
+milestone/ultimate bars. Fixed: EVAL_N1024_GAMES now defaults to 0
+(skipped, logged) and is opt-in for milestone/pre-certification cycles.
+
+fs_c1 is otherwise COMPLETE for gate purposes: the n256/d4 x100 screen
+(77.85) is the gate metric. GPU idle pending John's direction on
+cycle 2 vs pivot to the stronger-teacher warm-start fallback.
