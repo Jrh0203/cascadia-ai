@@ -7993,3 +7993,17 @@ train ~15 min, eval ~5h -> fs_c2 number ~17:30. MILESTONE GATE then:
 slope (98.3 -> fs_c2) decides continue-vs-pivot; bar remains 99.4675
 screen / 101.2 ultimate; >105 cert only on 2027195000+, John-visible.
 X1 stronger-teacher draft stays on the shelf unless the slope dies.
+
+## 2026-07-22 09:15 — Capacity: john0 gen concurrency doubled for cycle 3+ (John: "definitely optimize (1)")
+
+Measured during fs_c2 gen at old defaults (model-sessions 12, rayon
+16): GPU 12% util (RTX 5090, 3.9/32.6 GB), CPU 37% of 32 cores —
+concurrency-limited, not compute-limited. run_cbddb_cycle.sh defaults
+now JOBS=24, GEN_RAYON_THREADS=28 (new env). EVAL_JOBS stays 6 on
+purpose: screen-series comparability — batch composition varies with
+job count and per-seed float invariance is unproven; queued micro-test
+(same manifest, 10 seeds, jobs 6 vs 12, assert identical finals) gates
+any change. NOT deployed to john0 yet — fs_c2 is executing the
+deployed script and bash reads scripts incrementally; deploy happens
+at cycle-3 launch after CYCLE fs_c2 COMPLETE. Cluster fan-out review
+(john1-4) running separately.

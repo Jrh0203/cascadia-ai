@@ -46,11 +46,20 @@ GEN_DETERMINIZATIONS="${GEN_DETERMINIZATIONS:-2}"
 MODEL_SIZE="${MODEL_SIZE:?set MODEL_SIZE to the incumbent architecture (S for the from-scratch line, M for champion-lineage)}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
-JOBS="${JOBS:-12}"
-# Eval concurrency kept lower than generation: early-campaign models have
-# softer policies -> wider Gumbel menus -> larger batched eval requests, which
-# can OOM at jobs 12. Fewer jobs only slows the eval; per-seed scores are
-# deterministic and unchanged. Raise once the policy sharpens.
+# Generation concurrency. Measured during fs_c2 gen at the old defaults
+# (sessions 12 / rayon 16): GPU 12%, CPU 37% of 32 cores — the pipeline
+# was concurrency-limited, not compute-limited (RTX 5090, 32.6GB, model
+# S bridge held only ~3.9GB). Doubled for capacity utilization.
+JOBS="${JOBS:-24}"
+GEN_RAYON_THREADS="${GEN_RAYON_THREADS:-28}"
+# Eval concurrency stays at 6 DELIBERATELY even though the box has slack:
+# every screen number in the fs series (98.3, and the 99.4675 bar's block)
+# must stay comparable, and shared-session batch composition varies with
+# job count, which is not yet proven float-invariant per seed. Before
+# raising this, run the queued invariance micro-test: same manifest, same
+# 10 seeds, jobs=6 vs jobs=12, assert identical per-seed finals. OOM
+# history (jobs 12 died on the near-uniform bootstrap policy) is the
+# secondary reason.
 EVAL_JOBS="${EVAL_JOBS:-6}"
 RULESET_ID="cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19"
 REPORT_DIR="${REPORT_DIR:-cascadiav3/reports}"
@@ -107,7 +116,7 @@ gen_corpus() {
     --first-seed "$first" --seed-count "$count" --plies-per-seed 80 \
     --max-actions 8 --rollouts-per-action 1 --rollout-top-k 4 \
     --tensor-compression stored \
-    --rayon-threads 16 --model-sessions "$JOBS" --shared-model-session \
+    --rayon-threads "$GEN_RAYON_THREADS" --model-sessions "$JOBS" --shared-model-session \
     --decisions-out "$FIX/cbddb_${CYCLE_TAG}_${tag}_decisions.jsonl" \
     --out "$out" \
     --manifest "$FIX/cbddb_${CYCLE_TAG}_${tag}_manifest.json"
