@@ -8155,3 +8155,77 @@ documented Torch 2.12.1 runtime (408 tests, 45 artifact-dependent skips);
 cluster/tooling pytest PASS (109/109); exact-solver Python tests PASS (4/4);
 Ruff format/check PASS. The bare Homebrew Python 3.14 attempt lacked NumPy and
 Torch and was environment-invalid, so it contributed no code verdict.
+
+## 2026-07-22 17:31 — AAAAA all-compositions solver performance preregistration
+
+John requested one exact optimal board for every legal 20-animal count vector
+under the six-per-species cap, and explicitly required a performance pass
+aiming for 20x before launching the catalog search. This is a local CPU
+engineering/analysis run. It will not touch, inspect, interrupt, or compete
+with any live john0/fleet scientific process.
+
+The fixed cap-six catalog contains 826 vectors. The pre-optimization
+labeled-token formulation was benchmarked with OR-Tools 9.15.6755, eight
+workers, random seed 20260722, and the same exact Python scorer used by the
+published proof. Frozen exact benchmark panel and measured baselines:
+
+- maximize `(6,6,6,2,0)`: `OPTIMAL`, score 62, 2.4168 s;
+- maximize `(4,4,4,4,4)`: `OPTIMAL`, score 65, 8.4992 s;
+- maximize `(6,1,6,1,6)`: `OPTIMAL`, score 67, 44.6858 s;
+- feasibility threshold >=69 for `(4,2,6,2,6)`: `INFEASIBLE`, 56.684007 s
+  in the hash-pinned v1 proof ledger.
+
+The frozen aggregate baseline is 112.285807 wall-seconds. The aspirational
+20x gate is <=5.614290 s on the same machine and worker count, with identical
+scores/statuses and every emitted witness independently rescored. We will
+report the achieved ratio honestly even if it misses 20x. Candidate changes
+may reduce redundant SAT encodings, add sound symmetry breaking and bounds,
+or parallelize independent count vectors; no approximation, timeout-as-proof,
+or scorer substitution is allowed. Any panel member returning `UNKNOWN`, a
+different optimum/status, or an independently invalid witness fails the
+candidate regardless of speed.
+
+Only after the selected formulation passes exact unit/regression tests will
+the 826-vector production run begin. The production runner must be durable and
+resumable, hash-pin its source/config, never publish a partial ledger as
+complete, require `OPTIMAL` for every vector, verify every witness with an
+independent scorer, and emit both a machine-readable ledger and a documented
+Markdown catalog. The cap-eight comparison is analytic and fixed at 3,951
+vectors, 4.783293x the cap-six catalog.
+
+## 2026-07-22 17:40 — MILESTONE GATE FAILED: fs_c2 = 98.3375 (slope +0.04). From-scratch CLOSED; X1 LAUNCHED
+
+fs_c2 screen (verified: status pass, ruleset ..._2026_07_19, manifest
+cbddb_fs_c2_ft/best_locked_val, 100 games): mean 98.3375, P50 98,
+P90 104. Slope vs fs_c1s (98.3) = +0.0375/cycle -> ~30 cycles to the
+99.4675 bar: does NOT project. Preregistered gate FAILS. FROM-SCRATCH
+LINE CLOSED at its plateau — the same-budget self-play ceiling, 4th
+sighting this campaign (D1, s2 triple-98.75, and now fs at 98.3x2).
+The 6.4x locked-val q-regret jump (1.44 -> 9.24) reads in hindsight
+as the plateau's signature. Positive residue: a 15M CBDDB-native
+model at 98.3 for ~1.4 GPU-days, and proof that Card-A priors are NOT
+required to reach 98+ under CBDDB.
+
+Speculative fs_c3 fleet shards (2027198000-179): DISCARDED per prereg;
+mini jobs left to run out (finish ~19:05/~20:55, no contention, no
+kill needed). Block logged as burned. Reserved-but-unused cycle-3
+block 2027197000-7640 returns to the fresh pool.
+
+X1 LAUNCHED 17:36 (autonomy grant; prereg draft 2026-07-22 01:30,
+option (a)-sized): teacher = AAAAA champion cycle4 generating CBDDB
+corpus at n512/d8 (deeper than the student's n256/d4 eval budget),
+seeds 2027199000x300 + 2027199400x30 (fresh, now spent); then distill
+INTO the champion (model M, q-quantiles 8 + init-skip-mismatched —
+skip list must be q-head only) with trust-region anchor kl=2.0
+l2=2.0 (the exact arm recipe from the anchor battery), max-example-
+passes 8 (distillation on strong labels; locked-val selection + SWA
+guard overfit; deliberate departure from the self-play 4-pass cap,
+logged here). Eval: screen n256/d4 x100 on 2027190000-99 vs 99.4675,
+AUTO-ESCALATE to n1024/d16 x30 iff screen >= 100.5. New concurrency
+live (JOBS=24 RAYON=28, first use). Script: run_cbddb_x1.sh (deployed
+with the updated run_cbddb_cycle.sh after fs_c2 completed). Rough ETA:
+gen ~20-26h, train ~40 min, screen ~3-5h -> verdict tomorrow evening.
+Success = screen > 99.4675 (beats zero-shot); real target = full
+n1024/d16 > 101.2. GPU budget note: CBDDB spend ~3.1 GPU-days through
+fs_c2; X1 adds ~1.2-1.4 — within the "few-GPU-day" pivot envelope
+John acknowledged when approving the stronger-teacher direction.
