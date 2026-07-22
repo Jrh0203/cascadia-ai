@@ -8070,3 +8070,26 @@ deeper request queues batch better on MPS, throughput should rise
 measurably; otherwise fleet stays a ~25% top-up and cycle-3 sizing
 uses john0-dominant math. Scratch ledger now: 2027300000-01,
 2027300100-135, 2027300200-211, 2027300300-311 (all burn-only).
+
+## 2026-07-22 13:40 — Session tuning NULL; speculative cycle-3 fleet shards launched (pipelining)
+
+fleetcal2a (john2, SESSIONS=12): 294 s/seed; fleetcal2b (john3,
+SESSIONS=9): 352 s/seed; baseline (SESSIONS=6): 312/323. Verdict:
+session count is noise — ~300 s/seed/host is the MPS bridge floor.
+Fleet = ~+30% of john0's post-doubling throughput. Default stays
+SESSIONS=6.
+
+PIPELINING DECISION (autonomy grant + "utilize our capacity"): the
+minis would sit idle during fs_c2's 5h eval, which is exactly the time
+to pre-generate cycle-3 fleet shards from the fs_c2 checkpoint (train
+completed 12:45; eval does not alter it). Launched 13:40: CYCLE_TAG=
+fs_c3, seeds 2027198000x60 john2 / 2027198060x60 john3 / 2027198120x60
+john4 (FRESH block 2027198000-179, now spent), incumbent
+cbddb_fs_c2_ft/best_locked_val, n128/d2. ETA ~18:40.
+- Gate PASSES -> cycle 3 trains on john0's 400-seed shard (fresh block
+  2027197000+400 / val 2027197600+40, reserved here) + these 180 fleet
+  seeds: ~45% larger corpus, near-zero added wall clock.
+- Gate FAILS -> shards discarded; cost = idle mini time + a burned
+  block (logged, no reuse).
+MPS-vs-CUDA distribution mix in a train corpus follows fleet3/4/5
+precedent (AAAAA era). Evals remain john0-only, unchanged.
