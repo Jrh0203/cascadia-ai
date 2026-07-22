@@ -8007,3 +8007,30 @@ any change. NOT deployed to john0 yet — fs_c2 is executing the
 deployed script and bash reads scripts incrementally; deploy happens
 at cycle-3 launch after CYCLE fs_c2 COMPLETE. Cluster fan-out review
 (john1-4) running separately.
+
+## 2026-07-22 11:05 — Fleet fan-out: john2-4 provisioned + parameterized fleet tooling (John: reuse john1-4 infra)
+
+Infra review findings (full report relayed to John): distributed
+self-play across the minis was already done in the AAAAA era (fleet3/
+4/5) via hand-edited scripts + native MPS bridge; the Bacalhau fabric
+is real but CPU-only linux containers — wrong tool for this workload;
+trainer natively takes comma-separated multi-shard --train, so no
+merge tool is needed.
+
+Done today (all CPU-side, zero contact with john0's running fs_c2):
+- john2/3/4: current source (rev dae9fe14) rsynced, exporter rebuilt
+  natively (Apple M4, 10 cores each; torch 2.12.1 MPS verified). Old
+  binaries were Jul 9 pre-CBDDB.
+- NEW scripts (parameterized successors of fleet5_gen.sh):
+  fleet_cbddb_gen.sh (per-host MPS shard gen, same gen args as
+  run_cbddb_cycle.sh), fleet_cbddb_launch.sh (seed-range allocation,
+  incumbent rsync, detached launch + pid files, fleet ledger json,
+  double-launch guard), fleet_cbddb_collect.sh (status/collect,
+  ledger-vs-manifest seed-range verification, push to john0).
+- Smoke in flight: 2 seeds @ SCRATCH range 2027300000 (discard-only,
+  recorded here as burned) on john2 with the fs_c1s incumbent —
+  validates build/bridge/artifacts and measures MPS s/seed.
+- john1: reachable via Tailscale (user john1, john0_codex key; ssh
+  config entry added) but now in sshd per-source auth-penalty cooldown
+  after my key-probe burst; retry later. Optional host (web-UI
+  contention, INFRASTRUCTURE.md).
