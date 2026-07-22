@@ -39,6 +39,11 @@ EVAL_N1024_GAMES="${EVAL_N1024_GAMES:-0}"
 # by default; ramp to n256/d4 for late sharpening cycles via env override.
 GEN_N_SIMULATIONS="${GEN_N_SIMULATIONS:-128}"
 GEN_DETERMINIZATIONS="${GEN_DETERMINIZATIONS:-2}"
+# MUST match the incumbent's architecture. fs_c1 hardcoded M while the
+# from-scratch bootstrap was S: --init-skip-mismatched silently skipped
+# EVERY tensor and the cycle trained a random-init 88M model (77.85).
+# There is no safe default across lineages, so this is now required.
+MODEL_SIZE="${MODEL_SIZE:?set MODEL_SIZE to the incumbent architecture (S for the from-scratch line, M for champion-lineage)}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 JOBS="${JOBS:-12}"
@@ -114,7 +119,7 @@ gen_corpus val "$VAL_FIRST_SEED" "$VAL_SEEDS"
 
 hb "TRAIN starting"
 if python3 -m cascadiav3.torch_train_cascadiaformer \
-  --model-size M \
+  --model-size "$MODEL_SIZE" \
   --train "$FIX/cbddb_${CYCLE_TAG}_train_tensor.npz" \
   --val "$FIX/cbddb_${CYCLE_TAG}_val_tensor.npz" \
   --train-format npz --val-format npz \

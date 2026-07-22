@@ -7899,3 +7899,25 @@ milestone/ultimate bars. Fixed: EVAL_N1024_GAMES now defaults to 0
 fs_c1 is otherwise COMPLETE for gate purposes: the n256/d4 x100 screen
 (77.85) is the gate metric. GPU idle pending John's direction on
 cycle 2 vs pivot to the stronger-teacher warm-start fallback.
+
+## 2026-07-22 01:10 — fs_c1 77.85 INVALIDATED as a from-scratch measurement: model-size mismatch bug
+
+Investigating John's "why did this do so much worse": the cycle runner
+hardcoded --model-size M (copied from the D1 recipe) while the
+from-scratch bootstrap is model S (15.0M params vs 88.2M). Under
+--init-skip-mismatched the trainer skipped EVERY tensor (confirmed in
+cbddb_fs_c1_train.log: the skip list covers the whole network). fs_c1
+therefore trained a RANDOM-INIT 88M model for 666 steps on 32k rows —
+the bootstrap contributed nothing. 77.85 measures "random M + 666 steps
++ n256/d4 search", not the from-scratch arc. The n128/d2 GENERATION was
+correct (bootstrap model generated it); the corpus remains valid.
+
+Fix: run_cbddb_cycle.sh now REQUIRES MODEL_SIZE (no cross-lineage
+default) and threads it into the trainer. Lesson (recurring): 
+--init-skip-mismatched converts architecture mismatches into silent
+science bugs; any warm-start run must assert the skip list is small
+(ideally just the q head) before trusting downstream numbers.
+
+True cycle-1 datapoint (if wanted) is cheap: retrain at MODEL_SIZE=S on
+the existing fs_c1 corpus (~15 min) + n256/d4 x100 eval (~4-5h at
+soft-policy speed) ≈ ~0.2 GPU-day. GPU idle pending John's direction.
