@@ -17,6 +17,7 @@ cascadia-cluster-manifest = "cascadia_cluster.manifest_writer:main"
 
 [dependency-groups]
 dev = [
+    "ortools>=9.14,<10",
     "pytest>=8.4,<10",
     "ruff>=0.11,<1",
 ]

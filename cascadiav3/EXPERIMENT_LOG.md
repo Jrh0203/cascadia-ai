@@ -8093,3 +8093,65 @@ cbddb_fs_c2_ft/best_locked_val, n128/d2. ETA ~18:40.
   block (logged, no reuse).
 MPS-vs-CUDA distribution mix in a train corpus follows fleet3/4/5
 precedent (AAAAA era). Evals remain john0-only, unchanged.
+
+## 2026-07-22 15:31 — AAAAA pure-wildlife exact-solver development and proof preregistration
+
+John asked for the maximum AAAAA wildlife-only score with exactly 20 animals,
+no other game mechanics, arbitrary species choice, and a cap of six per
+species. This is a local CPU combinatorial analysis; it does not touch john0,
+the fleet, the active CBDDB campaign, rules identity, or any live process.
+
+Development evidence before the exact run: a deterministic Rust simulated-
+annealing search found a connected 68-point incumbent with counts B/E/S/H/F =
+6/4/6/0/4 and breakdown 19/13/20/0/16. The production
+`cascadia_game::score_board(..., ScoringCards::AAAAA)` scorer reproduced that
+breakdown. Earlier cell-indexed HiGHS and CP-SAT formulations were discarded
+as too symmetric; they produced no verdict and their unshipped source was
+removed. A 20-labeled-token CP-SAT replacement independently found a
+68-point witness for the same count allocation and rejected the highest
+count-only relaxation allocation (6/1/6/1/6, bound 73) at threshold 69.
+
+Preregistered exact decision rule before the final durable proof: enumerate
+all 826 legal count vectors; eliminate only vectors whose standalone
+count-only score upper bound is <69; solve every remaining vector at exact
+score threshold >=69. Declare 68 optimal iff all 128 surviving allocations
+return `INFEASIBLE`, the bundled 68 witness passes the independent Python
+scorer and production Rust scorer, and all solver/test commands pass. Any
+`UNKNOWN` allocation is retried unchanged with a longer per-allocation limit;
+it is never treated as evidence. A feasible >=69 witness invalidates the
+68 claim and must be production-scored before use.
+
+Frozen final-run configuration: `tools/aaaaa_wildlife_exact.py`, labeled-token
+CP-SAT model v1, OR-Tools 9.15.6755, 20 distinct connected axial coordinates,
+global radius 19 around the lexicographically first fox, per-species token
+ordering, exact AAAAA scoring witnesses, 8 workers, base seed 20260722 plus
+allocation index, 120 seconds per allocation. Durable output:
+`docs/v3/evidence/aaaaa_wildlife_optimum_2026-07-22.json`; source and artifact
+SHA-256 values, wall result, and decision will be appended when complete.
+
+**15:48 FINAL VERDICT — 68 PROVED OPTIMAL.** All 128/128 allocations with
+count-only upper bound >=69 returned `INFEASIBLE`; there were zero feasible,
+unknown, invalid, or timed-out allocations. Aggregate CP-SAT solver time was
+462.741265 s; the slowest allocation took 56.684007 s, inside the frozen
+120-second limit. The emitted optimum has counts 6/4/6/0/4 and wildlife
+breakdown 19/13/20/0/16. Independent Python scoring and the production Rust
+AAAAA scorer both return 68; the layout is connected and all counts are <=6.
+
+Provenance: base revision `2ccc27c155b15040dde7a22a74d683e1cb7dc57f` plus
+model source `tools/aaaaa_wildlife_exact.py` SHA-256
+`39f1e503788df285615d27fa9dbeb9a0f49ba86c01aafcf79d374e0bb2130fd9` and
+production verifier `crates/cascadia-game/src/bin/aaaaa_wildlife_solver.rs`
+SHA-256
+`39cdf1220e515b97bf72c023aaa902e49751a040c2466896e475c5efab13ddd2`.
+Durable proof ledger SHA-256:
+`163c338643fd7c14d45eb00fa1b833b4043260cef47effe14816787e124e3828`.
+Decision: publish 68 as the exact optimum for the stated connected-20-token
+model; this is a side analysis and does not change the active CBDDB campaign.
+
+Validation after verdict: `cargo check --workspace` PASS; `cargo test
+--workspace` PASS (280 tests, one timing harness ignored); exporter PASS
+(80/80); v3 Python PASS under the project Python 3.12 environment with the
+documented Torch 2.12.1 runtime (408 tests, 45 artifact-dependent skips);
+cluster/tooling pytest PASS (109/109); exact-solver Python tests PASS (4/4);
+Ruff format/check PASS. The bare Homebrew Python 3.14 attempt lacked NumPy and
+Torch and was environment-invalid, so it contributed no code verdict.

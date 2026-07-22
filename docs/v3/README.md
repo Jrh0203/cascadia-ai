@@ -234,6 +234,9 @@ timestamped snapshot, weaker than current `main`).
 - [Research Log](RESEARCH_LOG.md): **the experiment record** — architecture,
   every direction tried with verdicts, scaling laws, decision-SNR
   measurement, and ranked future directions.
+- [Exact AAAAA pure-wildlife optimum](AAAAA_WILDLIFE_OPTIMUM.md): certified
+  20-token, six-per-species optimization result, layout, proof model, and
+  reproduction commands.
 - [July 16 research brief](../../research_questions_7_16.md) and
   [answers](../../research_answers_7_16.md): frozen external-research scope,
   primary-source synthesis, gated Q1–Q10 decisions, and the complete D1
