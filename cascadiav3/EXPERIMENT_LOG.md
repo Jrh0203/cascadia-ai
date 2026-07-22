@@ -8051,3 +8051,22 @@ sessions occupied + bridge warmup. Calibration launched: fleetcal,
 2027300100-2027300135, burned), measures steady-state MPS throughput
 per host for cycle-3 corpus sizing. Scratch ranges burned so far:
 2027300000-01 (smoke), 2027300100-135 (cal).
+
+## 2026-07-22 12:25 — Fleet calibration: MPS is bridge-latency bound (~312 s/seed); session tuning in flight
+
+fleetcal (12 seeds/host, SESSIONS=6, RAYON=8, all three minis
+simultaneously): john2 62.4 min, john3 64.7, john4 62.3 -> ~312
+s/seed/host, statistically identical to the 2-seed smoke (296) —
+raising in-flight games 2->6 bought nothing. Diagnosis: the shared
+single-process MPS bridge serializes model evals; games are
+latency-bound on inference, not CPU-bound (M4 GPU small batches).
+At this rate john2+3+4 combined = ~0.0096 seeds/s ≈ 25-30% of john0
+after its concurrency doubling — usable but modest.
+
+Tuning probe launched (one variable, two hosts in parallel):
+fleetcal2a = john2 SESSIONS=12 (seeds 2027300200-211 scratch),
+fleetcal2b = john3 SESSIONS=9 (seeds 2027300300-311 scratch). If
+deeper request queues batch better on MPS, throughput should rise
+measurably; otherwise fleet stays a ~25% top-up and cycle-3 sizing
+uses john0-dominant math. Scratch ledger now: 2027300000-01,
+2027300100-135, 2027300200-211, 2027300300-311 (all burn-only).
