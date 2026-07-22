@@ -8034,3 +8034,20 @@ Done today (all CPU-side, zero contact with john0's running fs_c2):
   config entry added) but now in sshd per-source auth-penalty cooldown
   after my key-probe burst; retry later. Optional host (web-UI
   contention, INFRASTRUCTURE.md).
+
+## 2026-07-22 11:20 — Fleet smoke PASSED end-to-end; 36-seed calibration running
+
+fleetsmoke (john2, 2 seeds @ 2027300000, fs_c1s incumbent, MPS):
+GEN 11:01:44 -> 11:11:36, 160 records, zero skipped seeds; collect
+path verified seed-domain-vs-ledger, ruleset id, and npz sha256 (a
+manifest-schema fix landed in fleet_cbddb_collect.sh: seed range is
+parsed from metadata.seed_domain, and the manifest checksum is now
+enforced). Shard pushed to john0 fixtures (namespaced fleetsmoke_*,
+delete at cycle-3 deploy).
+
+2-seed timing (296 s/seed) is NOT representative — only 2 of 6
+sessions occupied + bridge warmup. Calibration launched: fleetcal,
+12 seeds/host on john2/3/4 simultaneously (scratch seeds
+2027300100-2027300135, burned), measures steady-state MPS throughput
+per host for cycle-3 corpus sizing. Scratch ranges burned so far:
+2027300000-01 (smoke), 2027300100-135 (cal).

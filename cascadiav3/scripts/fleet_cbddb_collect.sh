@@ -47,15 +47,24 @@ for h in $HOSTS; do
            "$h:~/cascadia/cascadiav3/fixtures/${TAG}_manifest.json" \
            "$h:~/cascadia/cascadiav3/fixtures/${TAG}_decisions.jsonl" \
            "$STAGING/"
-  # Integrity: recorded seed range and record count must match the ledger.
-  python3 - "$STAGING/${TAG}_manifest.json" "$LEDGER" "$h" <<'PY'
-import json, sys
-m = json.load(open(sys.argv[1])); ledger = json.load(open(sys.argv[2]))
-shard = next(s for s in ledger["shards"] if s["host"] == sys.argv[3])
-first = m.get("first_seed"); count = m.get("seed_count")
-assert first == shard["first_seed"] and count == shard["seed_count"], \
-    f"{sys.argv[3]}: manifest {first}x{count} != ledger {shard['first_seed']}x{shard['seed_count']}"
-print(f"[{sys.argv[3]}] verified {first}x{count}, records={m.get('record_count', m.get('records', '?'))}")
+  # Integrity: seed range + ruleset from metadata.seed_domain must match
+  # the ledger; npz sha256 must match the manifest checksum; no skipped
+  # seeds tolerated.
+  python3 - "$STAGING/${TAG}_manifest.json" "$STAGING/${TAG}_tensor.npz" "$LEDGER" "$h" <<'PY'
+import hashlib, json, re, sys
+m = json.load(open(sys.argv[1])); md = m["metadata"]
+ledger = json.load(open(sys.argv[3]))
+shard = next(s for s in ledger["shards"] if s["host"] == sys.argv[4])
+dom = md["seed_domain"]
+first = int(re.search(r"first_seed=(\d+)", dom).group(1))
+count = int(re.search(r"seed_count=(\d+)", dom).group(1))
+assert (first, count) == (shard["first_seed"], shard["seed_count"]), \
+    f"{sys.argv[4]}: manifest {first}x{count} != ledger {shard['first_seed']}x{shard['seed_count']}"
+assert md["ruleset_id"] == "cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19", md["ruleset_id"]
+assert md.get("generation_skipped_seeds") in (None, []), f"skipped seeds: {md['generation_skipped_seeds']}"
+digest = hashlib.sha256(open(sys.argv[2], "rb").read()).hexdigest()
+assert digest == m["checksum"], f"{sys.argv[4]}: npz sha256 mismatch"
+print(f"[{sys.argv[4]}] verified {first}x{count}, records={md['record_count']}, sha256 ok")
 PY
 done
 
