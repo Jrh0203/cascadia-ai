@@ -7921,3 +7921,17 @@ science bugs; any warm-start run must assert the skip list is small
 True cycle-1 datapoint (if wanted) is cheap: retrain at MODEL_SIZE=S on
 the existing fs_c1 corpus (~15 min) + n256/d4 x100 eval (~4-5h at
 soft-policy speed) ≈ ~0.2 GPU-day. GPU idle pending John's direction.
+
+## 2026-07-22 01:06 — fs_c1s launched: corrected model-S cycle 1 (John: "try model S overnight")
+
+Relaunched cycle 1 with the fixed runner under tag fs_c1s: MODEL_SIZE=S
+(matches the 15M bootstrap), corpus REUSED via symlinks (no regen —
+same 400+40 seed n128/d2 corpus, still valid), warm-start verified this
+time: trainer skip list is exactly ['q_head.bias','q_head.weight'] (the
+intended scalar->8-quantile swap); every other tensor loaded from the
+bootstrap. Eval: n256/d4 x100 on block 2027190000-99; n1024/d16 skipped
+(now opt-in). Provenance rev 01000bce (script-only delta vs deployed
+48966a16; no Rust/py changes). ETA: train ~15 min, eval ~4-5h at
+soft-policy speed -> true from-scratch cycle-1 number by ~05:30-06:00.
+This is the honest datapoint 77.85 failed to be; gate math unchanged
+(bar 99.4675 at n256/d4).
