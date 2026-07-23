@@ -9817,3 +9817,14 @@ and log. Preflight must find no existing tag artifact and no wildlife worker.
 Collection requires exact disjoint coverage of all 1,024 indices, schema and
 configuration agreement, cap/connectivity validation, and independent plus
 production rescoring of every board. No exact proof job is displaced.
+
+**13:17 launch.** All four hash-pinned release builds passed. john1 launched
+range `[0,256)` at `17:16:59Z`, wrapper PID 47397. The first remote launch
+loop was invalid before starting a remote process because zsh did not split a
+quoted host/range tuple; SSH rejected the combined string as an invalid
+hostname. No remote worker or artifact existed after that attempt. The root
+fix uses explicit function arguments. john2/3/4 then launched their planned
+ranges at `17:17:12Z`, wrapper PIDs 37975/5482/32540. Startup lines on every
+host report the pinned source, exact range, and frozen search settings.
+Durable launch ledger:
+`cascadiav3/fleet/all_cards_candidates_full_20260723_fleet.json`.

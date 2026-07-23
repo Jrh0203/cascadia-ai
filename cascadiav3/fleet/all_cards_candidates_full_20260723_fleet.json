@@ -1,0 +1,46 @@
+{
+  "schema": "all-wildlife-candidate-fleet-v1",
+  "state": "running",
+  "created_local": "2026-07-23T13:16:00-04:00",
+  "tag": "all_cards_candidates_full_20260723",
+  "source_revision": "9de711ec2dca221dd1a73ffbd9e1f1b494eb1a40",
+  "candidate_source_sha256": "df5888c5baf3e6ccc80ad5ec7b62d5182275b3fc92dc700c9b2377c3e71ecede",
+  "worker_sha256": "cd252332a8e3910afa315ab8121dfa28d6e523299068ac71ae4e05dabad80394",
+  "configuration": {
+    "ruleset_count": 1024,
+    "threads_per_host": 8,
+    "restarts_per_ruleset": 12,
+    "iterations_per_restart": 100000,
+    "base_seed": 20260723
+  },
+  "shards": [
+    {
+      "host": "john1",
+      "range_start": 0,
+      "range_end": 256,
+      "wrapper_pid": 47397,
+      "launched_utc": "2026-07-23T17:16:59Z"
+    },
+    {
+      "host": "john2",
+      "range_start": 256,
+      "range_end": 512,
+      "wrapper_pid": 37975,
+      "launched_utc": "2026-07-23T17:17:12Z"
+    },
+    {
+      "host": "john3",
+      "range_start": 512,
+      "range_end": 768,
+      "wrapper_pid": 5482,
+      "launched_utc": "2026-07-23T17:17:12Z"
+    },
+    {
+      "host": "john4",
+      "range_start": 768,
+      "range_end": 1024,
+      "wrapper_pid": 32540,
+      "launched_utc": "2026-07-23T17:17:12Z"
+    }
+  ]
+}

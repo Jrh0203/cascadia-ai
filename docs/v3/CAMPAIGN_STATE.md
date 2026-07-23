@@ -1076,5 +1076,6 @@ yet been accepted as optimal and no production proof shard has launched.
 
 Full all-card incumbent staging is preregistered at 13:16 over four disjoint
 256-ruleset john1–john4 shards (revision `9de711ec`, 12×100k annealing states
-per ruleset). This is heuristic warm-start generation only; exact proof work
-remains gated on its collection and proof-frontier calibration.
+per ruleset). All four shards launched by 13:17; durable wrapper PIDs are in
+the fleet ledger. This is heuristic warm-start generation only; exact proof
+work remains gated on its collection and proof-frontier calibration.
