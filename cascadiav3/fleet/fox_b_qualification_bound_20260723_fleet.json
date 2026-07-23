@@ -1,6 +1,6 @@
 {
   "schema": "hex-bipartite-bound-fleet-v1",
-  "state": "running",
+  "state": "complete",
   "tag": "fox_b_qualification_bound_20260723",
   "metric": "qualified_left",
   "source_revision": "388e9c8732a7740e4e9b7ac55957cc672264a5e8",
@@ -17,5 +17,34 @@
     {"host": "john2", "start_index": 9, "end_index": 18, "wrapper_pid": 43235},
     {"host": "john3", "start_index": 18, "end_index": 27, "wrapper_pid": 9538},
     {"host": "john4", "start_index": 27, "end_index": 36, "wrapper_pid": 33155}
-  ]
+  ],
+  "terminal_utc": {
+    "john1": "2026-07-23T18:01:41Z",
+    "john2": "2026-07-23T18:01:41Z",
+    "john3": "2026-07-23T18:01:41Z",
+    "john4": "2026-07-23T18:01:42Z"
+  },
+  "exit_codes": {"john1": 0, "john2": 0, "john3": 0, "john4": 0},
+  "shard_sha256": {
+    "john1": "05d21499b7f4da33986208babcd3b64ca31735c0b95da50f17ecdb31ce5c8f7a",
+    "john2": "d525d37047078374adee071858fe88fe38ae26f5b7192d43e1376068edd550bb",
+    "john3": "9431c34509eb8accac3203087791cbab641fa3527bbc864410a8c4244f016c1c",
+    "john4": "dee9ba2c5dbd62a44da9a09af0717420260e972991c629c8e576510cc1bcfffa"
+  },
+  "derivation_sha256": "3609ce2218007982ea823994c8d5d00bcafe2a8699cfe3c151210c11f50ed79e",
+  "result": {
+    "optimal_components": 36,
+    "components": 36,
+    "solver_seconds": 0.9107134989462793,
+    "branches": 19366,
+    "conflicts": 41,
+    "fox_b_frontier_old": 65519,
+    "fox_b_frontier_new": 59188,
+    "fox_b_frontier_reduction_percent": 9.662845892031319,
+    "adccb_frontier_old": 94,
+    "adccb_frontier_new": 71,
+    "cbddb_frontier_old": 309,
+    "cbddb_frontier_new": 283
+  },
+  "decision": "selected: all correctness gates pass and the Fox-B and ADCCB preregistered thresholds are exceeded"
 }

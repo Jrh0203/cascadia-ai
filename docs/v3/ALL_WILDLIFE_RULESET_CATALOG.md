@@ -102,7 +102,10 @@ Two important non-separable geometric filters are:
   non-fox species. A target pair has at most two common hex neighbors; three
   or more distinct target cells have at most one.
 - Fox B: every doubled-species qualification uses a pair of target tokens,
-  and one target pair can have at most two qualifying fox neighbors.
+  and one target pair can have at most two qualifying fox neighbors. The
+  stronger selected table exactly maximizes foxes with at least two neighbors
+  of one target class for every cap-six side-size pair, again using connected
+  components plus a complete disconnected-support DP.
 
 The proof runner skips any count branch whose upper bound is at most the
 current incumbent. Its production mode solves the connected coordinate model
@@ -158,6 +161,10 @@ and batch-compares every board with the production Rust scorer.
   70.01% and the all-ruleset frontier by 22.33%; its 36/36 optimal component
   derivation is retained at
   `docs/v3/evidence/hex_bipartite_edge_bounds_2026-07-23.json`.
+- The selected exact Fox-B qualification table cuts the frozen Fox-B frontier
+  by 9.66%, ADCCB 94→71 branches, and CBDDB 309→283. Its 36 component proofs
+  are retained at
+  `docs/v3/evidence/hex_fox_qualification_bounds_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

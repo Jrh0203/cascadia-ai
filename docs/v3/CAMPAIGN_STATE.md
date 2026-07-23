@@ -1125,3 +1125,8 @@ symmetry assertion before publishing a table. Qualification is asymmetric by
 definition. The fixed collector retains exact ordered coverage and
 objective/bound equality, adds an asymmetric regression, and will re-collect
 the same immutable proofs.
+
+The corrected collector accepted all 36/36 exact Fox-B component proofs.
+The selected table cuts the frozen Fox-B frontier 65,519→59,188 (−9.66%),
+ADCCB 94→71, and CBDDB 309→283. Together the Fox-C/B tables remove 42,632
+of the original 162,591 all-rule count branches (−26.22%).

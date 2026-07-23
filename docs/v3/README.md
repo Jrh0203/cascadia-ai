@@ -44,8 +44,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   inside five minutes, triggering its preregistered rejection band; the
   generic 1,024-row launch did not run. The first selected specialized filter
   is a 36/36-certified exact Fox-C lattice edge table; it removes 70.01% of
-  Fox-C and 22.33% of all surviving count branches. Further specialized
-  sound-filter work is current. No
+  Fox-C branches. A second 36/36 exact Fox-B qualification table removes
+  9.66% of Fox-B branches. Together they remove 26.22% of the original
+  all-rule count frontier. Further specialized sound-filter work is current. No
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).

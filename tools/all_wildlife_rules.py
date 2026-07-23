@@ -518,11 +518,20 @@ def _fox_c_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
 
 @cache
 def _fox_b_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
-    # A fox/species qualification needs a pair of target tokens. Any two
-    # distinct hexes have at most two common neighbors, so one target pair can
-    # qualify at most two foxes.
+    # Exact lattice maximum for fox vertices with at least two neighbors in
+    # one target class, derived componentwise through the cap and then combined
+    # over disconnected support.
+    qualification_maximum = (
+        (0, 0, 0, 0, 0, 0, 0),
+        (0, 0, 1, 1, 1, 1, 1),
+        (0, 0, 2, 2, 2, 2, 2),
+        (0, 0, 2, 3, 3, 3, 3),
+        (0, 0, 2, 4, 4, 4, 4),
+        (0, 0, 2, 4, 5, 5, 5),
+        (0, 0, 2, 4, 6, 6, 6),
+    )
     qualifications = sum(
-        min(foxes, target * (target - 1)) for target in targets if target >= 2
+        qualification_maximum[foxes][target] for target in targets
     )
     maximum_types = min(3, sum(target >= 2 for target in targets))
     dp = [0] + [-1] * qualifications

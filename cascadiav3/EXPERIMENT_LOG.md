@@ -10090,3 +10090,33 @@ test passes. Corrected collector SHA-256
 five-test SHA-256
 `4311246fec5461bb0301b987acc7e111946051fa0633aaa525553af60fdf8c07`.
 Re-collect the same immutable four shards; do not rerun or alter a solve.
+
+**14:03 terminal/selection verdict.** All four shards had exited 0 by
+`18:01:42Z`. The corrected collector accepted exact ordered 36/36 coverage
+and objective-equals-bound for every component. Aggregate solver work was
+0.911 seconds, 19,366 branches, and 41 conflicts. Derivation SHA-256
+`3609ce2218007982ea823994c8d5d00bcafe2a8699cfe3c151210c11f50ed79e`;
+shard hashes are frozen in the completed fleet ledger.
+
+The exact global maximum qualified-fox table (rows fox count, columns one
+target-species count, 0..6) is:
+
+```text
+0 0 0 0 0 0 0
+0 0 1 1 1 1 1
+0 0 2 2 2 2 2
+0 0 2 3 3 3 3
+0 0 2 4 4 4 4
+0 0 2 4 5 5 5
+0 0 2 4 6 6 6
+```
+
+The frozen 256-rule Fox-B frontier falls **65,519→59,188 (−9.66%)**,
+passing the ≥5% selection gate. ADCCB falls 94→71 (−24.47%), also passing;
+CBDDB falls 309→283 (−8.41%). The exact table is selected. Combined with the
+Fox-C table, specialized filters have now removed 42,632 of the original
+162,591 all-rule count branches (−26.22%), leaving 119,959. Production bound
+source SHA-256
+`d8c78ea6ae37cee14c072b7a0fa55919a940e85854bdf66b990721b4d86fa820`;
+test SHA-256
+`d71f8eed9a73db8586906a2fcdb3594df0944fbc202367c34e2e5379f2df758e`.
