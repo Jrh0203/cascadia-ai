@@ -1275,3 +1275,8 @@ Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
 screen. The terminal john2–john4 parent outputs and new local output remain
 sealed until the recovery terminal marker exists.
+
+The hash/collision/idle preflight passed and recovery launched at
+`2026-07-23T19:42:18Z` in detached screen
+`wildlife_candidate_deep_recovery_john1` (wrapper PID `28671`), initially on
+AAAAA index 0. Do not inspect any candidate output before its terminal marker.

@@ -10701,3 +10701,10 @@ This remains heuristic warm-start generation and cannot certify a score
 unless a separate sound bound or exclusion proof does so. Frozen recovery
 ledger:
 `cascadiav3/fleet/all_cards_candidate_deep_recovery_john1_20260723_fleet.json`.
+
+**19:42:18Z recovery launch.** The fresh target paths were collision-free; no
+candidate or exact wildlife worker was active; and the source, support,
+worker, and release-binary hashes all matched the frozen ledger. Detached
+screen `wildlife_candidate_deep_recovery_john1` launched with screen PID
+`28668`, wrapper PID `28671`, and first solver PID `28686`; its fresh
+heartbeat identifies index `0`. Parent and recovery outputs remain sealed.

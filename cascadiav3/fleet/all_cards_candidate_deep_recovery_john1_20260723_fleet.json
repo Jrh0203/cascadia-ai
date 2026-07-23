@@ -1,7 +1,11 @@
 {
   "schema": "all-wildlife-targeted-candidate-recovery-v1",
-  "state": "planned",
+  "state": "running",
   "tag": "all_cards_candidate_deep_recovery_john1_20260723",
+  "launch_utc": "2026-07-23T19:42:18Z",
+  "screen_pid": 28668,
+  "wrapper_pid": 28671,
+  "solver_pid_at_launch": 28686,
   "parent_tag": "all_cards_candidate_deep_calibration_20260723",
   "authorization": "John explicitly approved the requested recovery on 2026-07-23",
   "source_revision": "f00fcd8efbf76ee7fec946c95c7c089145cf722d",
