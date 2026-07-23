@@ -8850,3 +8850,23 @@ or fox adjacency can span both clusters, and use one representative for all
 farther separations where the local set-packing model factorizes. Model all
 five foxes and all non-salmon coverage cells explicitly. Preregister that
 refinement separately after its source and tests are frozen.
+
+## 2026-07-23 08:01 — AAAAA joint split-salmon diagnostic preregistration
+
+The refined branch enumerates 49 symmetry-reduced pair-plus-singleton
+placements: every component separation two through seven, plus one separation-
+eight representative. Possible fox cells around components farther than seven
+are at least six apart; no Bear pair/singleton, Hawk singleton, fox edge, or
+straight Elk group of length at most four can span them, so the local packing
+problem factorizes and the representative covers every farther translation.
+All five foxes and all Bear/Elk/Hawk coverage cells are explicit; Bear/Hawk
+isolation and whole-board connectivity remain dropped, preserving a superset.
+
+Source SHA-256
+`d1e33dc2f541ae6a729621f91e698259324e51985c89825ce28473f0af3d1c86`;
+tests SHA-256
+`555caf7705a08194f749179667f7e00c23c767ddf1152ae2ccc1e23dfe189367`;
+Ruff and both tests pass. Re-run the retained 15-case maximum-salmon branch
+and the 98 joint split cases with one worker and 30 seconds per case. Select
+only if all 113 submodels are exact and the combined relaxed upper is at most
+61; otherwise no proof.
