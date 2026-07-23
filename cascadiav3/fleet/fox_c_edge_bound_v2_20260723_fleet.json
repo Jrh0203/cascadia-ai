@@ -1,6 +1,6 @@
 {
   "schema": "hex-bipartite-bound-fleet-v1",
-  "state": "preregistered",
+  "state": "running",
   "tag": "fox_c_edge_bound_v2_20260723",
   "source_revision": "5f4c48fb2944f6b4aac49369884baae902e2a812",
   "source_sha256": "4f5ad319e8dc890337c07c2b95a206cdbec3308efd1af5762de8320f4f84ed38",
@@ -12,9 +12,9 @@
     "ortools_version": "9.15.6755"
   },
   "shards": [
-    {"host": "john1", "start_index": 0, "end_index": 9},
-    {"host": "john2", "start_index": 9, "end_index": 18},
-    {"host": "john3", "start_index": 18, "end_index": 27},
-    {"host": "john4", "start_index": 27, "end_index": 36}
+    {"host": "john1", "start_index": 0, "end_index": 9, "wrapper_pid": 60848},
+    {"host": "john2", "start_index": 9, "end_index": 18, "wrapper_pid": 42565},
+    {"host": "john3", "start_index": 18, "end_index": 27, "wrapper_pid": 9032},
+    {"host": "john4", "start_index": 27, "end_index": 36, "wrapper_pid": 33082}
   ]
 }

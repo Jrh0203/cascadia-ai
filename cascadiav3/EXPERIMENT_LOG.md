@@ -9998,3 +9998,10 @@ three-test SHA-256
 self-recording worker SHA-256
 `e8d24582e61df3e75dae6d35510ed77a02cceded17343c3f3e042b037f9e4753`.
 The failed tag remains immutable.
+
+**13:55 v2 launch.** All four idle/runtime/source/tag preflights passed.
+john1–john4 launched `[0,9)`, `[9,18)`, `[18,27)`, `[27,36)` at
+`17:55:33Z`, wrapper PIDs 60848/42565/9032/33082. All self-written PID files
+are valid and all four heartbeats name their live solver PID and exact range.
+Durable ledger:
+`cascadiav3/fleet/fox_c_edge_bound_v2_20260723_fleet.json`.

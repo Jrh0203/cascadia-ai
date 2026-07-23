@@ -1105,4 +1105,5 @@ The 13:53 first launch failed before its first solve because a reused
 adjacency helper assumed 20 tokens; no result artifact exists. The corrected
 v2 uses a size-generic adjacency model, has a live one-by-one regression test,
 and makes the worker self-record its PID. Its identical frozen rerun is
-preregistered under a new single-use tag.
+preregistered under a new single-use tag. All four corrected shards launched
+at 13:55 with valid self-written PIDs and fresh heartbeats.
