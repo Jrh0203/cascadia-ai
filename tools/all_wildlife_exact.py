@@ -735,6 +735,7 @@ def solve_counts(
     initial_tokens: list[dict[str, Any]] | None = None,
     fix_initial_tokens: bool = False,
     enforce_connectivity: bool = True,
+    maximize: bool = True,
 ) -> SolveResult:
     started = time.monotonic()
     model, variables = build_model(
@@ -744,6 +745,7 @@ def solve_counts(
         initial_tokens=initial_tokens,
         fix_initial_tokens=fix_initial_tokens,
         enforce_connectivity=enforce_connectivity,
+        maximize=maximize,
     )
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_seconds
@@ -756,7 +758,7 @@ def solve_counts(
     tokens = None
     breakdown = None
     if status_code in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        objective = round(solver.objective_value)
+        objective = solver.value(variables.total_score)
         tokens = rules.normalized_tokens(
             [
                 {
@@ -770,7 +772,7 @@ def solve_counts(
         breakdown = rules.score_tokens(tokens, ruleset)
         if sum(breakdown) < objective:
             raise AssertionError(f"unsound certificate: model={objective}, independent={breakdown}")
-    if status_code != cp_model.MODEL_INVALID:
+    if maximize and status_code != cp_model.MODEL_INVALID:
         best_bound = int(solver.best_objective_bound)
     return SolveResult(
         status=status,

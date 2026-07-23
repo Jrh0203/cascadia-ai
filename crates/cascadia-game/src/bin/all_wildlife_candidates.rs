@@ -3,11 +3,12 @@
 #[allow(dead_code)]
 mod wildlife_solver_support;
 
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
 use serde::Serialize;
@@ -123,6 +124,113 @@ fn fox_c_upper(foxes: u8, targets: [u8; 4]) -> u16 {
     best
 }
 
+fn fox_b_upper(foxes: u8, targets: [u8; 4]) -> u16 {
+    let qualifications: usize = targets
+        .into_iter()
+        .filter(|target| *target >= 2)
+        .map(|target| usize::from(foxes.min(target * (target - 1))))
+        .sum();
+    let maximum_types = targets
+        .into_iter()
+        .filter(|target| *target >= 2)
+        .count()
+        .min(3);
+    let mut dp = vec![0i16];
+    dp.resize(qualifications + 1, -1);
+    for _ in 0..foxes {
+        let mut updated = dp.clone();
+        for (used, prior) in dp.iter().copied().enumerate() {
+            if prior < 0 {
+                continue;
+            }
+            for count in 1..=maximum_types {
+                if used + count <= qualifications {
+                    updated[used + count] = updated[used + count].max(prior + [0, 3, 5, 7][count]);
+                }
+            }
+        }
+        dp = updated;
+    }
+    dp.into_iter().max().unwrap() as u16
+}
+
+fn fox_a_upper(foxes: u8, mut targets: [u8; 4]) -> u16 {
+    targets.sort_unstable();
+    static CACHE: OnceLock<Mutex<HashMap<(u8, [u8; 4]), u16>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Some(value) = cache
+        .lock()
+        .expect("fox A bound cache")
+        .get(&(foxes, targets))
+    {
+        return *value;
+    }
+
+    let mut subset_capacities = Vec::new();
+    for subset in 0u8..16 {
+        let size = subset.count_ones();
+        if size < 2 {
+            continue;
+        }
+        let mut capacity = if size == 2 { 2u16 } else { 1u16 };
+        for species in 0..4 {
+            if subset & (1 << species) != 0 {
+                capacity *= u16::from(targets[species]);
+            }
+        }
+        subset_capacities.push((subset, capacity.min(u16::from(foxes))));
+    }
+
+    fn visit(
+        position: usize,
+        foxes: usize,
+        start_mask: u8,
+        masks: &mut [u8; 6],
+        subset_capacities: &[(u8, u16)],
+        best: &mut u16,
+    ) {
+        if position == foxes {
+            let score: u16 = masks[..foxes]
+                .iter()
+                .map(|mask| mask.count_ones() as u16)
+                .sum();
+            if score <= *best {
+                return;
+            }
+            if subset_capacities.iter().all(|(subset, capacity)| {
+                masks[..foxes]
+                    .iter()
+                    .filter(|mask| **mask & *subset == *subset)
+                    .count()
+                    <= usize::from(*capacity)
+            }) {
+                *best = score;
+            }
+            return;
+        }
+        for mask in start_mask..16 {
+            masks[position] = mask;
+            visit(position + 1, foxes, mask, masks, subset_capacities, best);
+        }
+    }
+
+    let mut best = 0;
+    visit(
+        0,
+        usize::from(foxes),
+        0,
+        &mut [0; 6],
+        &subset_capacities,
+        &mut best,
+    );
+    let result = best + if foxes >= 2 { u16::from(foxes) } else { 0 };
+    cache
+        .lock()
+        .expect("fox A bound cache")
+        .insert((foxes, targets), result);
+    result
+}
+
 fn count_upper(counts: [u8; SPECIES_COUNT], cards: [usize; SPECIES_COUNT]) -> u16 {
     let [bear, elk, salmon, hawk, fox] = counts;
     let mut total =
@@ -143,21 +251,8 @@ fn count_upper(counts: [u8; SPECIES_COUNT], cards: [usize; SPECIES_COUNT]) -> u1
         _ => unreachable!(),
     };
     total += match cards[4] {
-        0 => {
-            let observed = [bear, elk, salmon, hawk]
-                .into_iter()
-                .filter(|count| *count > 0)
-                .count()
-                + usize::from(fox >= 2);
-            u16::from(fox) * observed as u16
-        }
-        1 => {
-            let doubled = [bear, elk, salmon, hawk]
-                .into_iter()
-                .filter(|count| *count >= 2)
-                .count();
-            u16::from(fox) * [0, 3, 5, 7][doubled.min(3)]
-        }
+        0 => fox_a_upper(fox, [bear, elk, salmon, hawk]),
+        1 => fox_b_upper(fox, [bear, elk, salmon, hawk]),
         2 => fox_c_upper(fox, [bear, elk, salmon, hawk]),
         3 => {
             let doubled = [bear, elk, salmon, hawk]
@@ -375,8 +470,8 @@ mod tests {
 
     #[test]
     fn count_upper_matches_known_rulesets() {
-        assert_eq!(global_upper(ruleset(0).0), 73);
-        assert_eq!(global_upper([2, 1, 3, 3, 1]), 100);
+        assert_eq!(global_upper(ruleset(0).0), 72);
+        assert_eq!(global_upper([2, 1, 3, 3, 1]), 99);
         assert_eq!(global_upper(ruleset(RULESET_COUNT - 1).0), 87);
     }
 }

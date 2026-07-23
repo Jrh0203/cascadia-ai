@@ -1076,6 +1076,8 @@ yet been accepted as optimal and no production proof shard has launched.
 
 Full all-card incumbent staging is preregistered at 13:16 over four disjoint
 256-ruleset john1–john4 shards (revision `9de711ec`, 12×100k annealing states
-per ruleset). All four shards launched by 13:17; durable wrapper PIDs are in
-the fleet ledger. This is heuristic warm-start generation only; exact proof
-work remains gated on its collection and proof-frontier calibration.
+per ruleset). All four shards completed naturally by 13:28. Cross-scoring
+3,502 direct and retained boards improved 444/1,024 rows; every merged winner
+passed independent and production scoring. Scores span 65–85, with eight
+85-point leaders, but none reaches its sound bound. The merged artifact is now
+the frozen exact warm start; stratified proof-runtime calibration is next.

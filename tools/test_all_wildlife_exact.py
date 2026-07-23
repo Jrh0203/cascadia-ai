@@ -49,3 +49,21 @@ def test_known_cbddb_84_board() -> None:
     assert result.status == "OPTIMAL"
     assert result.objective == 84
     assert result.score_breakdown == (18, 0, 12, 27, 27)
+
+
+def test_fixed_board_feasibility_mode_returns_real_certificate_score() -> None:
+    board = random_connected_board(202)
+    result = solve_counts(
+        "AAAAA",
+        (4, 4, 4, 4, 4),
+        20,
+        time_limit_seconds=10,
+        workers=1,
+        initial_tokens=board,
+        fix_initial_tokens=True,
+        maximize=False,
+    )
+    assert result.status == "OPTIMAL"
+    assert result.objective is not None and result.objective >= 20
+    assert result.score_breakdown is not None
+    assert sum(result.score_breakdown) >= result.objective

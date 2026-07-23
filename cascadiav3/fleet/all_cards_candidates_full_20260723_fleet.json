@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-candidate-fleet-v1",
-  "state": "running",
+  "state": "complete",
   "created_local": "2026-07-23T13:16:00-04:00",
   "tag": "all_cards_candidates_full_20260723",
   "source_revision": "9de711ec2dca221dd1a73ffbd9e1f1b494eb1a40",
@@ -13,34 +13,56 @@
     "iterations_per_restart": 100000,
     "base_seed": 20260723
   },
+  "collection": {
+    "directory": "cascadiav3/fleet/collected_all_cards_candidates_full_20260723",
+    "merged_catalog": "docs/v3/evidence/all_wildlife_candidates_merged_2026-07-23.json",
+    "merged_catalog_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+    "production_response_sha256": "76bf1c58388a5e01f7f9dd7138f74ff6e20fc9ccdb33b10540261c2790f32683",
+    "source_candidate_count": 3502,
+    "cross_improved_rulesets": 444,
+    "shard_sha256": {
+      "john1": "a337fbe1e09ebd5f70a907a21a60426e1758bcbd247ea40dc3138900c5600449",
+      "john2": "d3278292ea714f0d07ba4ae3e090deadff374fae8dd4feaf41cb68b2541df5be",
+      "john3": "c07e3c2610d33a3fd63a3b4b90d790d96a5ec5b4c2b4f5006390399fc33502d6",
+      "john4": "1b754054ad1961210ada0693fc9d72a38bff9213882f99ac747a354bb1c99cf4"
+    }
+  },
   "shards": [
     {
       "host": "john1",
       "range_start": 0,
       "range_end": 256,
       "wrapper_pid": 47397,
-      "launched_utc": "2026-07-23T17:16:59Z"
+      "launched_utc": "2026-07-23T17:16:59Z",
+      "exit_code": 0,
+      "elapsed_seconds": 594.222562417
     },
     {
       "host": "john2",
       "range_start": 256,
       "range_end": 512,
       "wrapper_pid": 37975,
-      "launched_utc": "2026-07-23T17:17:12Z"
+      "launched_utc": "2026-07-23T17:17:12Z",
+      "exit_code": 0,
+      "elapsed_seconds": 609.06783975
     },
     {
       "host": "john3",
       "range_start": 512,
       "range_end": 768,
       "wrapper_pid": 5482,
-      "launched_utc": "2026-07-23T17:17:12Z"
+      "launched_utc": "2026-07-23T17:17:12Z",
+      "exit_code": 0,
+      "elapsed_seconds": 594.2905415
     },
     {
       "host": "john4",
       "range_start": 768,
       "range_end": 1024,
       "wrapper_pid": 32540,
-      "launched_utc": "2026-07-23T17:17:12Z"
+      "launched_utc": "2026-07-23T17:17:12Z",
+      "exit_code": 0,
+      "elapsed_seconds": 600.589226167
     }
   ]
 }

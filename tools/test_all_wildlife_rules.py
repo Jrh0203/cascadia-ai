@@ -37,7 +37,7 @@ def test_aaaaa_scorer_and_bound_match_existing_implementation() -> None:
         board = random_connected_board(seed)
         assert rules.score_tokens(board, "AAAAA") == aaaaa.score_tokens(board)
     for counts, expected in aaaaa.count_vectors():
-        assert rules.count_upper(counts, "AAAAA") == expected
+        assert rules.count_upper(counts, "AAAAA") <= expected
 
 
 def test_cbddb_scorer_and_bound_match_existing_implementation() -> None:
@@ -45,7 +45,7 @@ def test_cbddb_scorer_and_bound_match_existing_implementation() -> None:
         board = random_connected_board(seed)
         assert rules.score_tokens(board, "CBDDB") == cbddb.score_tokens(board)
     for counts, expected in cbddb.count_vectors():
-        assert rules.count_upper(counts, "CBDDB") == expected
+        assert rules.count_upper(counts, "CBDDB") <= expected
 
 
 def test_all_rulesets_have_sound_nonnegative_count_bounds() -> None:
@@ -101,3 +101,23 @@ def test_hawk_c_uses_the_tight_cap_six_visibility_bound() -> None:
 def test_fox_c_uses_planar_bipartite_edge_bound() -> None:
     assert rules._fox_c_upper(6, (4, 4, 4, 2)) == 24
     assert rules._fox_c_upper(6, (6, 4, 2, 2)) == 24
+
+
+def test_fox_b_uses_target_pair_common_neighbor_capacity() -> None:
+    assert rules._fox_b_upper(6, (6, 4, 2, 2)) == 38
+    assert rules._fox_b_upper(6, (4, 4, 4, 2)) == 42
+
+
+def test_fox_a_uses_common_neighbor_overlap_capacities() -> None:
+    assert rules._fox_a_upper(6, (6, 6, 1, 1)) == 26
+    assert rules._fox_a_upper(6, (6, 4, 2, 2)) == 30
+
+
+def test_every_count_bound_dominates_frozen_board_scores() -> None:
+    for seed in (101, 202, 303, 404):
+        board = random_connected_board(seed)
+        counts = (4, 4, 4, 4, 4)
+        for ruleset in rules.rulesets():
+            assert sum(rules.score_tokens(board, ruleset)) <= rules.count_upper(
+                counts, ruleset
+            )

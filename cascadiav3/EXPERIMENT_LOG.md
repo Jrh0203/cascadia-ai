@@ -9828,3 +9828,60 @@ ranges at `17:17:12Z`, wrapper PIDs 37975/5482/32540. Startup lines on every
 host report the pinned source, exact range, and frozen search settings.
 Durable launch ledger:
 `cascadiav3/fleet/all_cards_candidates_full_20260723_fleet.json`.
+
+**13:28 terminal/collection verdict.** All four shards exited naturally with
+code 0 and exact 256-row coverage. Elapsed times were 594.223, 609.068,
+594.291, and 600.589 seconds on john1–john4. The collector validated all
+1,024 direct boards, then cross-scored them together with 2,478 retained
+AAAAA/CBDDB candidate and exact-catalog boards: 3,502 source boards total.
+Cross-scoring strictly improved 444/1,024 ruleset incumbents. Every merged
+winner passed cap/connectivity checks, the independent scorer, and the
+production Rust oracle. Merged catalog SHA-256
+`72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c`;
+production-response SHA-256
+`76bf1c58388a5e01f7f9dd7138f74ff6e20fc9ccdb33b10540261c2790f32683`.
+
+Heuristic scores span 65–85. Eight rulesets currently tie at 85; these are
+incumbents, not optimum claims. The strongest two layouts score
+`0/21/10/27/27` at counts `(0,6,3,6,5)` and
+`20/0/17/27/21` at `(6,0,5,6,3)`. No incumbent reaches its sound global
+count bound. After the new Hawk-C and Fox-A/B/C filters, gap distribution is:
+one ruleset at 1, three at 2, 23 at 3, and the remaining 997 at 4–17; mean
+gap 8.3203. Median/mean/max count branches above an incumbent are
+125/158.780/612. Decision: accept the merged boards as the frozen proof warm
+starts; exact certification remains required for every row.
+
+## 2026-07-23 13:29 — Stronger Fox proof filters and global runner
+
+Two additional sound neighborhood relaxations landed after the pinned
+candidate binary had launched (so they did not alter that run). Fox A now
+enumerates per-fox observed-species masks subject to the universal capacities
+that a target pair has at most two common hex neighbors and any target tuple
+of size at least three has at most one. Fox B caps doubled-species
+qualifications because one target-token pair can qualify at most two foxes.
+Together with Hawk C and Fox C, the frozen 64-row pilot mean gap is now
+10.9844, median/mean/max surviving count branches 268/278.75/689. The AAAAA
+global count ceiling tightens 73→72 and its score-69 frontier 128→108;
+CBDDB tightens 100→99 and its score-85 frontier 332→309.
+
+The resumable all-card global proof runner uses fixed-threshold feasibility,
+atomically checkpoints every count attempt, retains infeasibility
+certificates across incumbent improvements, and fail-closes on every
+`UNKNOWN`. Candidate merge and verification tools preserve shard/library
+hashes and production-rescore all final rows. Unit tests cover score-matrix
+composition, proof-completeness bookkeeping, and feasibility-mode witness
+scores. These tools must pass a stratified runtime calibration before the
+four-host exact launch.
+
+Source hashes: merger
+`fa6d6977704158a9f57bdf6b2e0a59274ae56009591a7f55200448ca00d60361`;
+merged verifier
+`45c6249c41c6e3da842346db77ae8e413f32c8f28aef0696c19b5f98dce979b9`;
+global proof runner
+`3c7ca3d9d840eed0505bfd8aa2c8a0d03d36c164058cb2d61db344c4d6ed63d7`;
+exact model
+`4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e`;
+independent bounds
+`48cfe51e750cdbc755a1770d6b161d2551c066c14ca0fd0e70126db4f022d2d8`;
+future candidate engine
+`8510a450caab1db02f2c4d1541716367e8e3cdeb185fbe12b98b79960dec99ef`.

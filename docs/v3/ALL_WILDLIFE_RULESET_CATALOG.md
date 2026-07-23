@@ -95,6 +95,11 @@ Two important non-separable geometric filters are:
 - Fox C: assign every fox to the species whose adjacent count it scores.
   Each assignment group and target species form a simple planar bipartite
   subgraph with maximum degree six, giving an edge ceiling for that group.
+- Fox A: aggregate common-neighbor capacities over every subset of observed
+  non-fox species. A target pair has at most two common hex neighbors; three
+  or more distinct target cells have at most one.
+- Fox B: every doubled-species qualification uses a pair of target tokens,
+  and one target pair can have at most two qualifying fox neighbors.
 
 The proof runner skips any count branch whose upper bound is at most the
 current incumbent. It first tries the stronger disconnected relaxation:
@@ -115,9 +120,13 @@ then rescored and revalidated on john1 before catalog publication.
 - Exact fixed-board ruleset comparisons: `1,024/1,024` passed.
 - Release candidate rate: about 0.11 CPU-seconds per 10,000 evaluated layouts
   in the initial AAAAA microbenchmark.
-- Frozen shallow 64-ruleset pilot after the Hawk-C/Fox-C filters:
-  mean global-bound gap `11.1875`; median count branches above the incumbent
-  `275.5`, mean `288.016`, maximum `689`.
+- Frozen shallow 64-ruleset pilot after all four Hawk/Fox filters: mean
+  global-bound gap `10.984375`; median
+  count branches above the incumbent `268`, mean `278.75`, maximum `689`.
+- AAAAA's count ceiling is `72` (down from `73`) and only 108 count
+  allocations remain above its certified 68-point incumbent (down from 128).
+- CBDDB's count ceiling is `99` (down from `100`) and 309 allocations remain
+  above its 84-point incumbent (down from 332).
 - Known AAAAA global-leader count `(6,1,6,2,5)` excludes score 69 in the
   generalized disconnected model in 12.4 seconds.
 - CBDDB count `(6,0,3,6,5)` did not exclude score 85 in 60 seconds; it is a

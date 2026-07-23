@@ -506,6 +506,59 @@ def _fox_c_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
     return best
 
 
+@cache
+def _fox_b_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
+    # A fox/species qualification needs a pair of target tokens. Any two
+    # distinct hexes have at most two common neighbors, so one target pair can
+    # qualify at most two foxes.
+    qualifications = sum(
+        min(foxes, target * (target - 1)) for target in targets if target >= 2
+    )
+    maximum_types = min(3, sum(target >= 2 for target in targets))
+    dp = [0] + [-1] * qualifications
+    table = (0, 3, 5, 7)
+    for _ in range(foxes):
+        updated = dp[:]
+        for used, score in enumerate(dp):
+            if score < 0:
+                continue
+            for count in range(1, maximum_types + 1):
+                if used + count <= qualifications:
+                    updated[used + count] = max(updated[used + count], score + table[count])
+        dp = updated
+    return max(dp)
+
+
+@cache
+def _fox_a_upper_cached(foxes: int, targets: tuple[int, int, int, int]) -> int:
+    subset_capacities = []
+    for size in range(2, len(targets) + 1):
+        for species in itertools.combinations(range(len(targets)), size):
+            capacity = 2 if size == 2 else 1
+            for index in species:
+                capacity *= targets[index]
+            mask = sum(1 << index for index in species)
+            subset_capacities.append((mask, min(foxes, capacity)))
+
+    best = 0
+    for observed_masks in itertools.combinations_with_replacement(
+        range(1 << len(targets)), foxes
+    ):
+        score = sum(mask.bit_count() for mask in observed_masks)
+        if score <= best:
+            continue
+        if all(
+            sum(mask & subset == subset for mask in observed_masks) <= capacity
+            for subset, capacity in subset_capacities
+        ):
+            best = score
+    return best + (foxes if foxes >= 2 else 0)
+
+
+def _fox_a_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
+    return _fox_a_upper_cached(foxes, tuple(sorted(targets)))
+
+
 def count_upper(
     counts: tuple[int, int, int, int, int],
     ruleset: str,
@@ -534,11 +587,9 @@ def count_upper(
         distinct_between = sum(count > 0 for count in (bear, elk, salmon, fox))
         total += (hawk // 2) * (0, 4, 7, 9)[min(distinct_between, 3)]
     if cards[4] == "A":
-        observed = sum(count > 0 for count in counts[:4]) + int(fox >= 2)
-        total += fox * observed
+        total += _fox_a_upper(fox, counts[:4])
     elif cards[4] == "B":
-        doubled = sum(count >= 2 for count in counts[:4])
-        total += fox * (0, 3, 5, 7)[min(doubled, 3)]
+        total += _fox_b_upper(fox, counts[:4])
     elif cards[4] == "C":
         total += _fox_c_upper(fox, counts[:4])
     else:
