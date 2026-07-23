@@ -10,14 +10,15 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-23 15:35 EDT)
+## Status at a glance (updated 2026-07-23 16:09 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, in progress):** AAAAA has
-  one certified optimal board for 728/826 count vectors after unioning the
+  one certified optimal board for 732/826 count vectors after unioning the
   terminal 711-row base catalog, the terminal three-host exact pass, and seven
   frozen specialized
   certificates. The fleet pass returned all 115 requested rows but proved
-  only 13; 98 unique vectors remain after certificate overlap. CBDDB
+  only 13; a new four-vector exact split-Salmon bitset certificate leaves 94
+  unique vectors after certificate overlap. CBDDB
   heuristic staging completed and independently verified all 826 vectors;
   its 84-point leader is only a warm start, not exact evidence. Its four-host
   taskset is staged but remains blocked on AAAAA completion. Methodology and
@@ -29,7 +30,8 @@ over packed expert tensors with Gumbel search-supervised action values.
   [AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md](AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md).
   The base retry exited naturally at 11:07 with one proof beyond its imported
   ledger and 115 timeouts; that proof was already included in the union, so
-  the 728/826 total is unchanged.
+  that pass itself changed no proof; the subsequent bitset certificate raises
+  the union to 732/826.
   A separate exhaustive cap-seven bound analysis covers all 2,226 allocations:
   AAAAA has a sound incidence-aware ceiling of 74 and CBDDB a geometry-free
   ceiling of 102; neither is an achievability claim:
@@ -66,8 +68,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   profiles and 32 timeouts, missing both selection conditions; external
   profile sharding is closed and its five exclusions are retained. The next
   component-local step now has an exact bitset set-packing implementation:
-  its first split-Salmon diagnostic closed 57 formerly timed-out submodels in
-  92.6 seconds (6.5× serial), with a four-host formal reproduction next. No other
+  its four-host formal run certified all four targeted AAAAA count optima.
+  Fleet wall speedup was only 4.82× because one quadratic dominance tail
+  remained, so that primitive is being optimized before generalization. No other
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).

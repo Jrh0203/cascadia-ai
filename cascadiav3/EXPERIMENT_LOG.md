@@ -10767,6 +10767,27 @@ case-specific heartbeats. john1 uses detached screen
 and does not alter, the separately authorized eight-thread candidate recovery.
 All four result shards remain sealed until terminal.
 
+**20:03:35Z formal verdict — four exact certificates passed.** All four
+shards exited zero. The collector verified frozen identities/runtimes,
+57/57/57/95 exact submodel coverage, and exact `INFEASIBLE` status throughout;
+combined each split-Salmon exclusion with the already-exact maximum-Salmon
+branch; validated all four connected cap-six incumbents; and matched the
+production Rust scorer. Certified count optima are `(4,5,2,3,6)=66`,
+`(5,5,2,2,6)=63`, `(3,5,2,4,6)=62`, and `(3,6,2,3,6)=62`.
+
+Certificate SHA-256
+`3b8df5ff08fe67f7d7f830e2508b6bf321308f29967b68e401515e37bd93159f`.
+The base/fleet/certificate union now has **732/826** exact AAAAA allocations,
+leaving 94.
+
+Performance did not meet the 20× target: shard solver walls were
+93.063/621.085/88.604/181.938 seconds (984.691 total); the fleet critical
+path was 621 seconds versus 2,994.788 seconds for the old sequential screen,
+only 4.82× wall and 3.04× aggregate speedup. Read-only sampling localized the
+tail to quadratic subset-dominance checks in the Bear-heavy case. Preserve
+this formal result, but optimize that primitive before generalizing the
+component engine.
+
 **19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
 zero after completing indices 0 and 562. This satisfies the authorized
 recovery condition, so all six parent/recovery files were unsealed and copied

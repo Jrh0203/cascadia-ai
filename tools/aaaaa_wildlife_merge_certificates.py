@@ -20,6 +20,8 @@ from tools import aaaaa_wildlife_gap_one_salmon_bound as gap_one
 from tools import aaaaa_wildlife_hawk_packing_bound as hawk
 from tools import aaaaa_wildlife_motif_certificate as motif
 from tools import aaaaa_wildlife_zero_hawk_bound as zero_hawk
+from tools.aaaaa_wildlife_split_salmon_dp import split_branch_packing
+from tools.aaaaa_wildlife_split_salmon_dp_screen import CASES as SPLIT_CASES
 
 
 def sha256(path: Path) -> str:
@@ -281,6 +283,98 @@ def validate_gap_one_salmon_certificate(
     return merged
 
 
+def validate_split_salmon_bitset_certificates(
+    certificate_path: Path,
+    rows: dict[tuple[int, ...], dict[str, Any]],
+    *,
+    reproduce: bool = True,
+) -> list[tuple[tuple[int, ...], dict[str, Any]]]:
+    certificate = json.loads(certificate_path.read_text(encoding="utf-8"))
+    if (
+        certificate.get("schema") != "aaaaa-split-salmon-bitset-certificate-v1"
+        or not certificate.get("proof_complete")
+    ):
+        raise ValueError("split-Salmon bitset certificate is incomplete")
+    fleet = certificate.get("fleet", {})
+    fleet_path = Path(fleet.get("path", ""))
+    if not fleet_path.is_file() or sha256(fleet_path) != fleet.get("sha256"):
+        raise ValueError("split-Salmon fleet ledger hash mismatch")
+    fleet_payload = json.loads(fleet_path.read_text(encoding="utf-8"))
+    if (
+        fleet_payload.get("schema") != "aaaaa-split-salmon-bitset-fleet-v1"
+        or fleet_payload.get("state") != "completed"
+        or fleet_payload.get("terminal_exit_codes")
+        != {"john1": 0, "john2": 0, "john3": 0, "john4": 0}
+    ):
+        raise ValueError("split-Salmon fleet ledger is incomplete")
+    for evidence_key in ("maximum_salmon_evidence", "candidate_evidence"):
+        evidence = certificate.get(evidence_key, {})
+        evidence_path = Path(evidence.get("path", ""))
+        if not evidence_path.is_file() or sha256(evidence_path) != evidence.get("sha256"):
+            raise ValueError(f"split-Salmon {evidence_key} hash mismatch")
+
+    certificate_rows = {
+        tuple(int(value) for value in row["counts"]): row
+        for row in certificate.get("certificates", [])
+    }
+    if set(certificate_rows) != {counts for counts, _ in SPLIT_CASES}:
+        raise ValueError("split-Salmon certificate count coverage mismatch")
+    promoted = []
+    for counts, target in SPLIT_CASES:
+        if counts not in rows:
+            raise ValueError(f"catalog has no row for split-Salmon counts {counts}")
+        result = certificate_rows[counts]
+        if (
+            result.get("optimum") != target - 1
+            or result.get("maximum_salmon_upper", target) >= target
+            or result.get("split_salmon_upper", target) >= target
+            or result.get("split_submodels")
+            not in {
+                row["expected_submodels"]
+                for row in fleet_payload["cases"]
+                if tuple(row["counts"]) == counts
+            }
+        ):
+            raise ValueError(f"split-Salmon row {counts} conclusion mismatch")
+        if reproduce:
+            reproduced = split_branch_packing(counts, target)
+            if (
+                reproduced.get("status") != "INFEASIBLE"
+                or reproduced.get("upper_bound") != target - 1
+                or reproduced.get("case_count") != result["split_submodels"]
+            ):
+                raise ValueError(f"split-Salmon row {counts} did not reproduce")
+        tokens, breakdown = catalog.validate_witness(counts, result["tokens"])
+        if sum(breakdown) != result["optimum"] or breakdown != result["score_breakdown"]:
+            raise ValueError(f"split-Salmon row {counts} incumbent mismatch")
+        merged = copy.deepcopy(rows[counts])
+        merged.update(
+            {
+                "optimum": result["optimum"],
+                "score_breakdown": breakdown,
+                "tokens": tokens,
+                "proof_method": "maximum_and_split_salmon_local_bitset_exclusion",
+                "proof_complete": True,
+                "external_certificate": {
+                    "path": str(certificate_path),
+                    "sha256": sha256(certificate_path),
+                    "schema": certificate["schema"],
+                    "fleet": certificate["fleet"],
+                    "maximum_salmon_evidence": certificate[
+                        "maximum_salmon_evidence"
+                    ],
+                    "candidate_evidence": certificate["candidate_evidence"],
+                    "production_oracle": certificate["production_oracle"],
+                    "maximum_salmon_upper": result["maximum_salmon_upper"],
+                    "split_salmon_upper": result["split_salmon_upper"],
+                    "split_submodels": result["split_submodels"],
+                },
+            }
+        )
+        promoted.append((counts, merged))
+    return promoted
+
+
 def merge(
     payload: dict[str, Any],
     certificate_paths: list[Path],
@@ -328,6 +422,10 @@ def merge(
                     ),
                 )
             ]
+        elif certificate.get("schema") == "aaaaa-split-salmon-bitset-certificate-v1":
+            promoted = validate_split_salmon_bitset_certificates(
+                certificate_path, results, reproduce=reproduce
+            )
         else:
             raise ValueError(f"unsupported certificate schema: {certificate_path}")
         records = [
@@ -367,9 +465,18 @@ def main() -> int:
     parser.add_argument("--certificate", action="append", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--markdown", required=True, type=Path)
+    parser.add_argument(
+        "--skip-reproduction",
+        action="store_true",
+        help="validate frozen certificate identities/conclusions without rerunning solvers",
+    )
     args = parser.parse_args()
     payload = json.loads(args.catalog.read_text(encoding="utf-8"))
-    merged = merge(payload, args.certificate)
+    merged = merge(
+        payload,
+        args.certificate,
+        reproduce=not args.skip_reproduction,
+    )
     atomic_write(args.output, json.dumps(merged, indent=2) + "\n")
     atomic_write(args.markdown, catalog.render_markdown(merged) + "\n")
     print(f"merged exact certificates: {merged['completed_count']}/{merged['allocation_count']}")

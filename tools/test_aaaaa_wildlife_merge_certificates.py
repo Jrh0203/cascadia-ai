@@ -9,6 +9,7 @@ from tools.aaaaa_wildlife_merge_certificates import (
     validate_gap_one_salmon_certificate,
     validate_hawk_one_loss_certificates,
     validate_motif_certificate,
+    validate_split_salmon_bitset_certificates,
     validate_zero_hawk_certificates,
 )
 
@@ -28,6 +29,13 @@ GAP_ONE_CERTIFICATE = (
     / "v3"
     / "evidence"
     / "aaaaa_gap_one_joint_salmon_certificate_2026-07-23.json"
+)
+SPLIT_SALMON_CERTIFICATE = (
+    ROOT
+    / "docs"
+    / "v3"
+    / "evidence"
+    / "aaaaa_split_salmon_bitset_certificate_2026-07-23.json"
 )
 
 
@@ -113,6 +121,26 @@ class AaaaaWildlifeMergeCertificatesTests(unittest.TestCase):
         )
         self.assertTrue(promoted["proof_complete"])
         self.assertEqual(promoted["optimum"], 61)
+
+    def test_split_salmon_certificate_promotes_all_four_rows(self) -> None:
+        certificate = json.loads(SPLIT_SALMON_CERTIFICATE.read_text(encoding="utf-8"))
+        rows = {
+            tuple(result["counts"]): {
+                "counts": result["counts"],
+                "optimum": result["optimum"],
+                "score_breakdown": result["score_breakdown"],
+                "tokens": result["tokens"],
+                "proof_method": "incomplete_timeout",
+                "proof_complete": False,
+                "attempts": [],
+            }
+            for result in certificate["certificates"]
+        }
+        promoted = validate_split_salmon_bitset_certificates(
+            SPLIT_SALMON_CERTIFICATE, rows, reproduce=False
+        )
+        self.assertEqual(len(promoted), 4)
+        self.assertTrue(all(row["proof_complete"] for _, row in promoted))
 
 
 if __name__ == "__main__":

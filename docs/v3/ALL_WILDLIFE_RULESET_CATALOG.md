@@ -210,6 +210,12 @@ and batch-compares every board with the production Rust scorer.
   1/2, hard AAAAA 4/6, CADAC 0/29). It misses both selection conditions and
   is not scaled. Its five exclusions remain reusable; collection evidence:
   `docs/v3/evidence/all_wildlife_profile_shard_calibration_2026-07-23.json`.
+- The first canonical component-local bitset engine exactly closed all 266
+  registered split-Salmon packing submodels and certified four AAAAA
+  count-vector optima. Only one of those four was still in the arbitrary-
+  ruleset AAAAA frontier, so its reusable exclusion reduces that row 23→22.
+  Formal certificate:
+  `docs/v3/evidence/aaaaa_split_salmon_bitset_certificate_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

@@ -1032,11 +1032,11 @@ This is independent local CPU work and does not displace or make claims about
 the john0 campaign above. The requested 20-token/cap-6 pure-wildlife catalog
 is sequenced AAAAA then CBDDB. The base AAAAA retry exited naturally at 11:07
 with 711/826 exact: one result beyond the imported 710 proofs and 115
-timeouts. AAAAA remains 728/826 exact after the terminal three-host fleet pass
+timeouts. AAAAA reached 732/826 exact after the terminal three-host fleet pass
 added 13 coordinate-model certificates, three
 overlapping the seven frozen specialized certificates. The collector
-validated 115/115 returned rows; 102 timed out and 98 unique vectors remain
-uncertified after the specialized-proof union. CBDDB's
+validated 115/115 returned rows; 102 timed out and 94 unique vectors remain
+uncertified after the specialized-proof and split-Salmon bitset union. CBDDB's
 two-spare-core heuristic staging completed all 826 vectors in 224.244154
 seconds with zero independent scorer/connectivity failures. Its current
 84-point leader at counts `(6,0,3,6,5)` is only an exact-solver warm start.
@@ -1282,8 +1282,11 @@ Only four exact-infeasible results may combine with the already-passed
 maximum-Salmon branches and validated incumbents.
 
 All four hash/runtime/collision preflights passed and the formal bitset shards
-launched at `2026-07-23T19:53:14Z` with fresh heartbeats. Outputs remain
-sealed until four terminal markers.
+launched at `2026-07-23T19:53:14Z`. All four exited zero by `20:03:35Z`;
+the collector certified optima 66/63/62/62 for the four registered counts
+after maximum-Salmon union and Rust rescoring. AAAAA is now 732/826 exact.
+Fleet speedup was 4.82×, below 20×; the Bear-heavy quadratic dominance tail is
+the next performance target.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

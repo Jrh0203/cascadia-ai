@@ -1684,6 +1684,17 @@ representation is therefore **CLOSED**. The exact five exclusions are kept,
 but the active direction remains canonical complete fox/motif components plus
 proved far-component factorization and local cell-set packing.
 
+The first implementation of that active direction is now positive. A direct
+bitset set-packing engine replaced 266 split-Salmon CP-SAT submodels with
+canonical six-fox layouts and inclusion-minimal Bear/Elk/Hawk covers. The
+formal four-host run certified four new AAAAA count optima and moves the union
+728→732/826. This validates component-local enumeration as an exact method.
+Its current implementation is not yet the requested throughput result:
+quadratic occupancy-subset dominance made the Bear-heavy shard take 621
+seconds, limiting fleet speedup to 4.82× rather than 20×. The direction is
+**OPEN/SELECTED**, with dominance indexing the immediate engineering target
+before generalizing beyond these four branches.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from

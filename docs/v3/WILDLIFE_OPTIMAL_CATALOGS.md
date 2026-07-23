@@ -250,20 +250,29 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 11:08 EDT, AAAAA has 728/826 formally certified vectors.
+As of 2026-07-23 16:09 EDT, AAAAA has 732/826 formally certified vectors.
 The base retry exited naturally with 711/826 exact, adding
 `(4,4,2,4,6)=66` beyond its imported 710-row ledger and leaving 115 timeouts.
 The first exact fleet pass returned all 115 requested tail rows and added 13
 coordinate-model proofs at 60/120-second limits; 102 rows timed out. Three new
 proofs overlap the seven frozen specialized certificates, and the base
-retry's one new proof was already in the fleet snapshot, leaving 98 unique
-vectors unresolved after union. Of those, 19 are soundly bounded within two
+retry's one new proof was already in the fleet snapshot. A subsequent exact
+split-Salmon bitset certificate adds four non-overlapping vectors, leaving 94
+unique vectors unresolved after union. Of the prior 98-row tail, 19 were
+soundly bounded within two
 points of their incumbent; the remaining sound gaps are 3 (30 rows), 4 (31),
 5 (15), and 6 (3). Empirically, the deep candidate was never more than one
 point low across all 728 certified rows—including 126 certified rows whose
 original relaxation gap was at least three—but the unresolved tail is
 selection-biased toward the hardest proofs. A timeout remains an incumbent
 only, not an optimum claim.
+
+The new bitset certificate exhausts 57/57/57/95 canonical fox-layout and
+Bear/Elk/Hawk packing submodels for counts `(4,5,2,3,6)`,
+`(5,5,2,2,6)`, `(3,5,2,4,6)`, and `(3,6,2,3,6)`, then combines them with
+the already-exact maximum-Salmon branches. Optima are respectively
+66/63/62/62. Machine-readable certificate:
+`docs/v3/evidence/aaaaa_split_salmon_bitset_certificate_2026-07-23.json`.
 
 The online-literature implementation pass added no new proof: its single-
 anchor, radius-two relation, and canonical-witness calibrations all failed
