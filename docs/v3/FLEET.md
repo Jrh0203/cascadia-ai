@@ -10,7 +10,7 @@ for distributing CPU-safe independent work across the minis.
 
 | Host | HW | Access | Notes |
 |---|---|---|---|
-| john1 | Mac mini (10 cores) | `ssh john1` → `john1@100.110.109.6`, key `~/.ssh/john0_codex` | Orchestrator + web-UI host — do not run generation while the UI is in use. NOT provisioned for CBDDB yet. |
+| john1 | Mac mini (10 cores) | local workspace (`Johns-Mac-mini.local`) | Orchestrator + web-UI host; John authorized local CPU exact work for CBDDB on 2026-07-23. |
 | john2 | Mac mini M4, 10 cores | `ssh john2` (ssh config) | Provisioned 2026-07-22 |
 | john3 | Mac mini M4, 10 cores | `ssh john3` | Provisioned 2026-07-22; consistently ~10% slower than john2/4 |
 | john4 | Mac mini M4, 10 cores | `ssh john4` | Provisioned 2026-07-22 |
@@ -73,8 +73,9 @@ from the fleet's Python 3.12 generation interpreter but isolated from its
 Torch/MPS packages. Both Python (currently `3.12.13`) and OR-Tools (currently
 `9.15.6755`) are exact preflight/worker requirements.
 `WILDLIFE_VENV` can select another safe path under `~/cascadia`; the path and
-runtime versions are recorded in the launch ledger. Only john2–john4 are
-used; john1 remains reserved for the web UI.
+runtime versions are recorded in the launch ledger. The AAAAA run uses only
+john2–john4. John authorized the subsequent CBDDB exact run to add local
+john1 without stopping its web UI or champion service.
 
 **Live 2026-07-23 09:16 EDT:** AAAAA tag
 `aaaaa_exact_tail_fleet3_20260723` runs the 115-vector exact tail as
@@ -85,9 +86,11 @@ mode rather than inspecting partial scores.
 **Next ruleset authorization:** John authorized john1 for the CBDDB exact
 catalog on 2026-07-23. The frozen 826-vector taskset is therefore planned as
 207/207/206/206 shards on john1–john4. This does not waive preflight: john1
-must authenticate, receive the isolated Python 3.12/OR-Tools environment, and
-pass the same exact version/source/collision checks before launch. Its web UI
-must not be stopped or restarted.
+is the local orchestrator workspace and uses the repo `.venv`; john2–john4
+remain SSH targets using `wildlife-venv-py312`. Every host must pass the same
+exact runtime/source/collision checks before launch. The local worker runs in
+a detached named `screen` session. john1's web UI and champion service must
+not be stopped or restarted.
 
 1. **`tools/wildlife_catalog_taskset.py`** freezes the currently unresolved
    canonical count vectors from a validated catalog snapshot:
@@ -167,11 +170,10 @@ must not be stopped or restarted.
 - **Stopping a shard**: read the pid file
   (`~/cascadia/cascadiav3/logs/cbddb_<tag>_shard_<host>.pid`) and kill
   that explicit pid — never pkill by pattern.
-- **john1**: authenticates as `john1@100.110.109.6` with
-  `~/.ssh/john0_codex` (config entry exists), but repeated failed auth
-  attempts trip macOS sshd per-source penalties — if you get
-  "Permission denied" unexpectedly, wait a few minutes. It needs the
-  provisioning refresh above before first CBDDB use.
+- **john1 from another machine**: the legacy SSH entry names
+  `john1@100.110.109.6`, but this run's orchestrator is john1 itself and must
+  use the launcher's explicit local-host path. Do not loop SSH back to the
+  local mini. Remote account/key repair is a separate infrastructure issue.
 - **Bacalhau/MinIO fabric** (`infra/`, `tools/cluster_*`): working but
   intentionally NOT used for self-play — it runs linux/arm64
   containers with no Metal access. Don't route generation through it.

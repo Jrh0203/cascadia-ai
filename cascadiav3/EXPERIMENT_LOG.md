@@ -9318,3 +9318,35 @@ trigger sshd source penalties. No UI or host process was stopped or restarted.
 Decision: john1 is authorized but not eligible until a cooled-down retry
 authenticates and exact runtime/source provisioning passes. The four-host
 launch must fail closed rather than silently omit or trust an unverified host.
+
+**Access follow-up:** a cooled-down direct retry and ProxyJump retries through
+john2 both rejected the documented key for both `john1` and `johnherrick`.
+Because the jump changes the connection source, this is not safely
+attributable only to the direct-source sshd penalty; the account/key
+authorization itself needs repair or confirmation. The UI remained reachable
+and untouched. No provisioning or CBDDB computation started. Keep the
+four-host shard plan frozen, but do not claim john1 capacity or launch it until
+SSH access and the exact environment preflight actually pass.
+
+**Topology correction from John:** this orchestrator workspace is john1
+itself (`Johns-Mac-mini.local`, user `johnherrick`); it is not a fourth SSH
+target. The failed SSH checks changed nothing. Local read-only preflight found
+10 cores, Python `3.12.13` and OR-Tools `9.15.6755` already available in the
+repo `.venv`, with the web UI and champion suggestion service live. Disk
+headroom is 2.8 GiB, so do not create a duplicate environment; the exact run's
+few-megabyte inputs/ledgers fit in place.
+
+Decision: add explicit local-host execution to the exact launcher/collector.
+For host label `john1`, preflight and deploy within the current repo and launch
+the worker in a detached named `screen` session; john2–john4 remain SSH
+targets. Record the distinct local venv path in the launch ledger. Do not stop
+or restart the UI, champion server, or any active AAAAA process.
+
+Implementation adds ledger-pinned `local_host` / `local_wildlife_venv`,
+local preflight and input staging, detached-screen launch, and local status /
+collection routing. The first two screen plumbing smokes used blocking
+`screen -DmS`; their short children terminated naturally before the
+post-command liveness check, revealing the option error without running a
+solver. Switching to detached `screen -dmS` passed both PID liveness and
+natural-exit checks. Shell syntax, the 10 catalog/sharding unit tests, and
+`git diff --check` pass.

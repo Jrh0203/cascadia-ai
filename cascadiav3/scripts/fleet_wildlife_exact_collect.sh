@@ -20,6 +20,24 @@ test -s "$LEDGER"
 test -s "$INPUT_DIR/candidates.json"
 test -s "$INPUT_DIR/counts.json"
 
+local_host="$(
+  .venv/bin/python - "$LEDGER" <<'PY'
+import json, sys
+payload = json.load(open(sys.argv[1]))
+print(payload.get("configuration", {}).get("local_host", "john1"))
+PY
+)"
+
+fleet_exec() {
+  local host="$1"
+  local command="$2"
+  if [ "$host" = "$local_host" ]; then
+    bash -c "$command"
+  else
+    ssh "$host" "$command"
+  fi
+}
+
 hosts="$(
   python3 - "$LEDGER" <<'PY'
 import json, sys
@@ -32,7 +50,7 @@ PY
 
 all_terminal=1
 for host in $hosts; do
-  ssh "$host" "cd ~/cascadia && python3 - '$FLEET_TAG' '$host' <<'PY'
+  fleet_exec "$host" "cd ~/cascadia && python3 - '$FLEET_TAG' '$host' <<'PY'
 import json, os, signal, sys, time
 from pathlib import Path
 
@@ -71,7 +89,7 @@ print(json.dumps({
 }, sort_keys=True))
 PY"
   terminal="$(
-    ssh "$host" \
+    fleet_exec "$host" \
       "test -s ~/cascadia/cascadiav3/logs/wildlife_${FLEET_TAG}_shard_${host}.exit && echo yes || echo no"
   )"
   [ "$terminal" = yes ] || all_terminal=0
@@ -86,12 +104,21 @@ fi
 mkdir -p "$STAGING"
 for host in $hosts; do
   remote_base="wildlife_${FLEET_TAG}_shard_${host}"
-  rsync -a "$host:~/cascadia/cascadiav3/fleet_outputs/${FLEET_TAG}/shard_${host}.json" \
-    "$STAGING/"
-  rsync -a "$host:~/cascadia/cascadiav3/logs/${remote_base}.log" \
-    "$host:~/cascadia/cascadiav3/logs/${remote_base}.heartbeat" \
-    "$host:~/cascadia/cascadiav3/logs/${remote_base}.exit" \
-    "$STAGING/"
+  if [ "$host" = "$local_host" ]; then
+    rsync -a "$ROOT/cascadiav3/fleet_outputs/${FLEET_TAG}/shard_${host}.json" \
+      "$STAGING/"
+    rsync -a "$ROOT/cascadiav3/logs/${remote_base}.log" \
+      "$ROOT/cascadiav3/logs/${remote_base}.heartbeat" \
+      "$ROOT/cascadiav3/logs/${remote_base}.exit" \
+      "$STAGING/"
+  else
+    rsync -a "$host:~/cascadia/cascadiav3/fleet_outputs/${FLEET_TAG}/shard_${host}.json" \
+      "$STAGING/"
+    rsync -a "$host:~/cascadia/cascadiav3/logs/${remote_base}.log" \
+      "$host:~/cascadia/cascadiav3/logs/${remote_base}.heartbeat" \
+      "$host:~/cascadia/cascadiav3/logs/${remote_base}.exit" \
+      "$STAGING/"
+  fi
 done
 
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - \

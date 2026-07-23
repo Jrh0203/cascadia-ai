@@ -31,10 +31,22 @@ BASE_SEED="${BASE_SEED:-20260725}"
 ORTOOLS_VERSION="${ORTOOLS_VERSION:-9.15.6755}"
 WILDLIFE_PYTHON_VERSION="${WILDLIFE_PYTHON_VERSION:-3.12.13}"
 WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv-py312}"
+LOCAL_FLEET_HOST="${LOCAL_FLEET_HOST:-john1}"
+LOCAL_WILDLIFE_VENV="${LOCAL_WILDLIFE_VENV:-.venv}"
 
-case "$WILDLIFE_VENV" in
-  ""|/*|*".."*|*[!A-Za-z0-9._/-]*)
-    echo "WILDLIFE_VENV must be a safe relative path under ~/cascadia" >&2
+validate_relative_path() {
+  case "$1" in
+    ""|/*|*".."*|*[!A-Za-z0-9._/-]*)
+      echo "wildlife venvs must be safe relative paths under the repo" >&2
+      exit 64
+      ;;
+  esac
+}
+validate_relative_path "$WILDLIFE_VENV"
+validate_relative_path "$LOCAL_WILDLIFE_VENV"
+case "$FLEET_TAG:$LOCAL_FLEET_HOST" in
+  *[!A-Za-z0-9._:-]*)
+    echo "FLEET_TAG and LOCAL_FLEET_HOST must be safe identifiers" >&2
     exit 64
     ;;
 esac
@@ -76,6 +88,16 @@ shard_count="${#host_array[@]}"
 [ "$shard_count" -gt 0 ] || {
   echo "HOSTS is empty" >&2
   exit 66
+}
+
+fleet_exec() {
+  local host="$1"
+  local command="$2"
+  if [ "$host" = "$LOCAL_FLEET_HOST" ]; then
+    bash -c "$command"
+  else
+    ssh "$host" "$command"
+  fi
 }
 
 FLEET_DIR="$ROOT/cascadiav3/fleet"
@@ -146,11 +168,15 @@ PY
 # Preflight every host before writing the launch ledger. No process is stopped
 # or replaced; any collision or missing dependency fails the whole launch.
 for host in "${host_array[@]}"; do
-  ssh "$host" \
+  host_venv="$WILDLIFE_VENV"
+  if [ "$host" = "$LOCAL_FLEET_HOST" ]; then
+    host_venv="$LOCAL_WILDLIFE_VENV"
+  fi
+  fleet_exec "$host" \
     "cd ~/cascadia && \
-     test -x '$WILDLIFE_VENV/bin/python' && \
-     test \"\$('$WILDLIFE_VENV/bin/python' -c 'import platform; print(platform.python_version())')\" = '$WILDLIFE_PYTHON_VERSION' && \
-     test \"\$('$WILDLIFE_VENV/bin/python' -c 'import ortools; print(ortools.__version__)')\" = '$ORTOOLS_VERSION' && \
+     test -x '$host_venv/bin/python' && \
+     test \"\$('$host_venv/bin/python' -c 'import platform; print(platform.python_version())')\" = '$WILDLIFE_PYTHON_VERSION' && \
+     test \"\$('$host_venv/bin/python' -c 'import ortools; print(ortools.__version__)')\" = '$ORTOOLS_VERSION' && \
      test ! -e cascadiav3/fleet_outputs/$FLEET_TAG && \
      test ! -e cascadiav3/logs/wildlife_${FLEET_TAG}_shard_${host}.pid && \
      ! pgrep -f 'fleet_wildlife_exact_worker.sh.*$FLEET_TAG' >/dev/null"
@@ -160,7 +186,8 @@ done
   "$import_sha" "$catalog_sha" "$exact_sha" "$ORTOOLS_VERSION" \
   "$WILDLIFE_PYTHON_VERSION" "$JOBS" \
   "$SOLVER_WORKERS" "$RELAXATION_TIME_LIMIT" "$CONNECTED_TIME_LIMIT" \
-  "$BASE_SEED" "$WILDLIFE_VENV" "$HOSTS" <<'PY'
+  "$BASE_SEED" "$WILDLIFE_VENV" "$LOCAL_FLEET_HOST" \
+  "$LOCAL_WILDLIFE_VENV" "$HOSTS" <<'PY'
 import json, os, sys, tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -168,7 +195,7 @@ from pathlib import Path
 (
     ledger_path, ruleset, revision, candidate_sha, counts_sha, import_sha,
     catalog_sha, exact_sha, ortools, python_version, jobs, workers, relaxation, connected,
-    base_seed, wildlife_venv, hosts_text,
+    base_seed, wildlife_venv, local_host, local_wildlife_venv, hosts_text,
 ) = sys.argv[1:]
 hosts = hosts_text.split()
 payload = {
@@ -197,6 +224,8 @@ payload = {
         "connected_time_limit_seconds": float(connected),
         "base_seed": int(base_seed),
         "wildlife_venv": wildlife_venv,
+        "local_host": local_host,
+        "local_wildlife_venv": local_wildlife_venv,
     },
     "shards": [
         {"host": host, "shard_index": index, "shard_count": len(hosts)}
@@ -218,19 +247,23 @@ for index in "${!host_array[@]}"; do
   host="${host_array[$index]}"
   remote_input="cascadiav3/fleet_inputs/${FLEET_TAG}"
   candidate_parent="$(dirname "$CANDIDATE_SOURCE")"
-  ssh "$host" "cd ~/cascadia && \
-    mkdir -p '$remote_input' cascadiav3/fleet_outputs/${FLEET_TAG} \
-      '$candidate_parent'"
-  rsync -a --exclude __pycache__ "$ROOT/tools/" "$host:~/cascadia/tools/"
-  rsync -a "$ROOT/cascadiav3/scripts/fleet_wildlife_exact_worker.sh" \
-    "$host:~/cascadia/cascadiav3/scripts/"
-  rsync -a "$ROOT/$CANDIDATE_SOURCE" \
-    "$host:~/cascadia/$CANDIDATE_SOURCE"
-  if [ "$RULESET" = cbddb ]; then
-    rsync -a "$ROOT/crates/cascadia-game/src/bin/wildlife_solver_support/" \
-      "$host:~/cascadia/crates/cascadia-game/src/bin/wildlife_solver_support/"
+  fleet_exec "$host" "cd ~/cascadia && \
+      mkdir -p '$remote_input' cascadiav3/fleet_outputs/${FLEET_TAG} \
+        '$candidate_parent'"
+  if [ "$host" != "$LOCAL_FLEET_HOST" ]; then
+    rsync -a --exclude __pycache__ "$ROOT/tools/" "$host:~/cascadia/tools/"
+    rsync -a "$ROOT/cascadiav3/scripts/fleet_wildlife_exact_worker.sh" \
+      "$host:~/cascadia/cascadiav3/scripts/"
+    rsync -a "$ROOT/$CANDIDATE_SOURCE" \
+      "$host:~/cascadia/$CANDIDATE_SOURCE"
+    if [ "$RULESET" = cbddb ]; then
+      rsync -a "$ROOT/crates/cascadia-game/src/bin/wildlife_solver_support/" \
+        "$host:~/cascadia/crates/cascadia-game/src/bin/wildlife_solver_support/"
+    fi
+    rsync -a "$INPUT_DIR/" "$host:~/cascadia/$remote_input/"
+  else
+    rsync -a "$INPUT_DIR/" "$ROOT/$remote_input/"
   fi
-  rsync -a "$INPUT_DIR/" "$host:~/cascadia/$remote_input/"
 done
 
 declare -a launched_pids=()
@@ -238,8 +271,32 @@ for index in "${!host_array[@]}"; do
   host="${host_array[$index]}"
   log="cascadiav3/logs/wildlife_${FLEET_TAG}_shard_${host}.log"
   pid_file="cascadiav3/logs/wildlife_${FLEET_TAG}_shard_${host}.pid"
-  pid="$(
-    ssh "$host" "cd ~/cascadia && \
+  host_venv="$WILDLIFE_VENV"
+  if [ "$host" = "$LOCAL_FLEET_HOST" ]; then
+    host_venv="$LOCAL_WILDLIFE_VENV"
+    screen_name="wildlife_${FLEET_TAG}_${host}"
+    screen -dmS "$screen_name" bash -c "cd '$ROOT' && \
+      printf '%s\n' \$\$ > '$pid_file'; \
+      exec env RULESET='$RULESET' FLEET_TAG='$FLEET_TAG' SHARD_HOST='$host' \
+      SHARD_INDEX='$index' SHARD_COUNT='$shard_count' \
+      SOURCE_REVISION='$SOURCE_REVISION' JOBS='$JOBS' \
+      SOLVER_WORKERS='$SOLVER_WORKERS' RELAXATION_TIME_LIMIT='$RELAXATION_TIME_LIMIT' \
+      CONNECTED_TIME_LIMIT='$CONNECTED_TIME_LIMIT' BASE_SEED='$BASE_SEED' \
+      ORTOOLS_VERSION='$ORTOOLS_VERSION' \
+      WILDLIFE_PYTHON_VERSION='$WILDLIFE_PYTHON_VERSION' \
+      WILDLIFE_VENV='$host_venv' CATALOG_SOURCE_SHA256='$catalog_sha' \
+      EXACT_SOURCE_SHA256='$exact_sha' \
+      bash cascadiav3/scripts/fleet_wildlife_exact_worker.sh \
+      > '$log' 2>&1 < /dev/null"
+    for _ in 1 2 3 4 5; do
+      [ -s "$pid_file" ] && break
+      sleep 1
+    done
+    test -s "$pid_file"
+    pid="$(cat "$pid_file")"
+  else
+    pid="$(
+      ssh "$host" "cd ~/cascadia && \
       nohup env RULESET='$RULESET' FLEET_TAG='$FLEET_TAG' SHARD_HOST='$host' \
       SHARD_INDEX='$index' SHARD_COUNT='$shard_count' \
       SOURCE_REVISION='$SOURCE_REVISION' JOBS='$JOBS' \
@@ -247,13 +304,14 @@ for index in "${!host_array[@]}"; do
       CONNECTED_TIME_LIMIT='$CONNECTED_TIME_LIMIT' BASE_SEED='$BASE_SEED' \
       ORTOOLS_VERSION='$ORTOOLS_VERSION' \
       WILDLIFE_PYTHON_VERSION='$WILDLIFE_PYTHON_VERSION' \
-      WILDLIFE_VENV='$WILDLIFE_VENV' \
+      WILDLIFE_VENV='$host_venv' \
       CATALOG_SOURCE_SHA256='$catalog_sha' \
       EXACT_SOURCE_SHA256='$exact_sha' \
       bash cascadiav3/scripts/fleet_wildlife_exact_worker.sh \
       > '$log' 2>&1 < /dev/null & \
       echo \$! > '$pid_file'; cat '$pid_file'"
-  )"
+    )"
+  fi
   launched_pids+=("$pid")
   echo "[fleet] $host shard=$index/$shard_count pid=$pid"
 done
