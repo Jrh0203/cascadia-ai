@@ -232,7 +232,7 @@ def collect_shards(
         if proof["maximum"] != proof["best_bound"]:
             raise ValueError(f"objective/bound mismatch for {proof['left']},{proof['right']}")
         component[proof["left"]][proof["right"]] = int(proof["maximum"])
-    if any(
+    if expected_metric == "edges" and any(
         component[left][right] != component[right][left]
         for left in range(1, CAP + 1)
         for right in range(1, CAP + 1)

@@ -77,3 +77,38 @@ def test_collector_requires_exact_disjoint_symmetric_coverage(tmp_path) -> None:
     duplicate.write_text(shard.read_text())
     with pytest.raises(ValueError, match="duplicate component pair"):
         collect_shards([shard, duplicate])
+
+
+def test_qualification_collector_does_not_require_asymmetric_table_to_be_symmetric(
+    tmp_path,
+) -> None:
+    proofs = []
+    for left in range(1, CAP + 1):
+        for right in range(1, CAP + 1):
+            value = left if right >= 2 else 0
+            proofs.append(
+                {
+                    "left": left,
+                    "right": right,
+                    "metric": "qualified_left",
+                    "status": "OPTIMAL",
+                    "maximum": value,
+                    "best_bound": value,
+                }
+            )
+    shard = tmp_path / "qualification.json"
+    shard.write_text(
+        json.dumps(
+            {
+                "schema": "hex-bipartite-bound-shard-v1",
+                "metric": "qualified_left",
+                "proofs": proofs,
+            }
+        )
+    )
+
+    payload = collect_shards([shard], expected_metric="qualified_left")
+
+    assert payload["proof_complete"]
+    assert payload["global_maximum"][6][1] == 0
+    assert payload["global_maximum"][1][6] == 1

@@ -10076,3 +10076,17 @@ frozen ranges launched at `18:01:11–12Z`, wrapper PIDs
 63519/43235/9538/33155, with metric `qualified_left` present in every worker
 environment and fresh self-recorded PID/solver/heartbeat metadata. Ledger:
 `cascadiav3/fleet/fox_b_qualification_bound_20260723_fleet.json`.
+
+**14:02 collection assertion corrected before table publication.** All 36
+ordered component solves were terminal and exact, but the collector stopped:
+the preregistration had mechanically carried over left/right symmetry from
+the edge-count metric. `qualified_left` is intentionally asymmetric under
+side exchange, so that assertion is mathematically inapplicable. No combined
+table or frontier statistic had been emitted. The root fix applies symmetry
+only to metric `edges`; ordered-pair coverage plus objective-equals-bound
+remain the qualification correctness gate. A new asymmetric-table regression
+test passes. Corrected collector SHA-256
+`3d77ead3c6a50a8544db06bfbe9d2ba25595e82310d33209ecf107fd1a8bec4c`;
+five-test SHA-256
+`4311246fec5461bb0301b987acc7e111946051fa0633aaa525553af60fdf8c07`.
+Re-collect the same immutable four shards; do not rerun or alter a solve.

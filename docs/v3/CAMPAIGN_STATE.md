@@ -1120,3 +1120,8 @@ two neighbors of one target species for all 36 cap-six side-size pairs.
 Selection requires complete proofs plus ≥5% Fox-B or ≥10% ADCCB/CBDDB
 frontier reduction.
 All four Fox-B derivation shards launched at 14:01 with fresh heartbeats.
+They exited cleanly; collection then rejected an inapplicable left/right
+symmetry assertion before publishing a table. Qualification is asymmetric by
+definition. The fixed collector retains exact ordered coverage and
+objective/bound equality, adds an asymmetric regression, and will re-collect
+the same immutable proofs.
