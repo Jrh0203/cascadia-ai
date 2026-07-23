@@ -10070,3 +10070,9 @@ than the current target-pair/common-neighbor capacity and must reduce either
 the frozen 256-rule Fox-B count frontier by ≥5% or one of frozen hard rows
 ADCCB/CBDDB by ≥10%. Otherwise retain it as a proved negative. No incumbent
 score is inspected or changed by this derivation.
+
+**14:01 launch.** All idle/tag/source/runtime preflights passed. The four
+frozen ranges launched at `18:01:11–12Z`, wrapper PIDs
+63519/43235/9538/33155, with metric `qualified_left` present in every worker
+environment and fresh self-recorded PID/solver/heartbeat metadata. Ledger:
+`cascadiav3/fleet/fox_b_qualification_bound_20260723_fleet.json`.

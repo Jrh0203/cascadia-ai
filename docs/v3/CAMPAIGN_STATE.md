@@ -1119,3 +1119,4 @@ connected-component-plus-DP derivation to Fox B: maximum foxes with at least
 two neighbors of one target species for all 36 cap-six side-size pairs.
 Selection requires complete proofs plus ≥5% Fox-B or ≥10% ADCCB/CBDDB
 frontier reduction.
+All four Fox-B derivation shards launched at 14:01 with fresh heartbeats.
