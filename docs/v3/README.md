@@ -60,7 +60,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   shared-edge/degree relaxation passed 846,848 containment
   checks but tightened zero cells, so it is closed and not integrated. A
   twelve-way fox-anchor symmetry break also failed its runtime gate and was
-  removed; the narrower anchor-centroid variant failed identically. No other
+  removed; the narrower anchor-centroid variant failed identically. An
+  in-model score-profile table did not resolve a case, but its 35% CADAC
+  branch reduction triggered external profile sharding. No other
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).

@@ -1,0 +1,73 @@
+{
+  "schema": "all-wildlife-score-profile-calibration-v1",
+  "date": "2026-07-23",
+  "implementation_revision": "da341ad113ffb5c17c7bd14293e472f91fd3539c",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "exact_source_sha256": "60e3cdbc02cddead96aad7bed52e19e9bf53c2db1f0d1dabbbf8ded7bbcc5eb1",
+  "configuration": {
+    "time_limit_seconds": 30,
+    "workers": 1,
+    "connectivity_required": true,
+    "seed": 20260723
+  },
+  "correctness": {
+    "focused_tests": 23,
+    "fixed_board_exact_cases": 1024,
+    "fixed_board_failures": 0,
+    "fixed_board_sha256": "005153bf58a77d32feca858fc225e04db3101d7008b295eabde9fedecb878f2f"
+  },
+  "rows": [
+    {
+      "ruleset": "AAAAA",
+      "counts": [6, 1, 6, 2, 5],
+      "threshold": 69,
+      "profiles": 2,
+      "baseline": {
+        "status": "INFEASIBLE",
+        "elapsed_seconds": 20.77597574982792,
+        "branches": 351372
+      },
+      "profile_table": {
+        "status": "INFEASIBLE",
+        "elapsed_seconds": 22.191107125021517,
+        "branches": 358038
+      }
+    },
+    {
+      "ruleset": "AAAAA",
+      "counts": [4, 2, 6, 2, 6],
+      "threshold": 69,
+      "profiles": 6,
+      "baseline_status": "UNKNOWN",
+      "profile_table_status": "UNKNOWN",
+      "baseline_branches": 487266,
+      "profile_table_branches": 481248
+    },
+    {
+      "ruleset": "CADAC",
+      "counts": [0, 2, 6, 6, 6],
+      "threshold": 67,
+      "profiles": 29,
+      "baseline_status": "UNKNOWN",
+      "profile_table_status": "UNKNOWN",
+      "baseline_branches": 894847,
+      "profile_table_branches": 577987,
+      "branch_reduction_fraction": 0.3540940518323244
+    },
+    {
+      "ruleset": "CBDDB",
+      "counts": [0, 2, 6, 6, 6],
+      "threshold": 85,
+      "profiles": 886,
+      "baseline_status": "UNKNOWN",
+      "profile_table_status": "UNKNOWN",
+      "baseline_branches": 657724,
+      "profile_table_branches": 529383,
+      "branch_reduction_fraction": 0.19512895986766485
+    }
+  ],
+  "elapsed_seconds": 223.2363724997267,
+  "in_model_selected": false,
+  "next": "external fixed-score-profile sharding for the 2/6/29-profile AAAAA/CADAC cases",
+  "decision": "the in-model table misses the runtime gate, but material CADAC/CBDDB branch reductions with negligible construction cost trigger the preregistered external profile-sharding follow-up"
+}

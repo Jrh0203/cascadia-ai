@@ -10585,3 +10585,17 @@ Frozen high-score table sizes are small and construction is negligible:
 AAAAA known case 2 profiles in 0.0013 seconds; hard AAAAA 6 in 0.0016;
 CADAC 29 in 0.0014; CBDDB 886 in 0.0038. Proceed to the paired runtime gate;
 production remains default-off.
+
+**15:38 verdict — in-model table rejected; external sharding triggered.**
+The known AAAAA exclusion slowed from 20.776 to 22.191 seconds (351,372→
+358,038 branches), so the ≥2× gate fails. All three hard cases remain
+`UNKNOWN`. The table is not selected as a production default.
+
+The structural secondary is material: CADAC branches fall 894,847→577,987
+(−35.41%) and CBDDB 657,724→529,383 (−19.51%), while table construction is
+under 0.004 seconds. Per preregistration, this triggers an external fixed-score
+profile sharder for the tractable 2/6/29-profile AAAAA/CADAC cases, where each
+profile receives an independent exact search and fleet scheduling rather than
+one shared CP-SAT tree. CBDDB's 886 profiles are not in the first external
+calibration. Evidence:
+`docs/v3/evidence/all_wildlife_score_profile_calibration_2026-07-23.json`.

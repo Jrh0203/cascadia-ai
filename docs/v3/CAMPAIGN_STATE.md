@@ -1250,3 +1250,8 @@ same complete correctness and paired runtime gate.
 The implementation is reproducibly landed default-off. All correctness gates
 pass; the four frozen cases need only 2/6/29/886 score tuples and table
 construction is under 0.004 seconds. The paired runtime verdict is next.
+
+The in-model table misses selection: the known proof is 6.8% slower and no
+hard case resolves. It remains default-off. CADAC and CBDDB branch counts do
+fall 35% and 20%, which triggers the preregistered external profile-sharding
+follow-up for the tractable AAAAA/CADAC 2/6/29-profile cases.

@@ -195,6 +195,10 @@ and batch-compares every board with the production Rust scorer.
 - A reproducible anchor-centroid variant preserving all but one fox ordering
   also regressed the known proof and resolved no hard case. It was removed:
   `docs/v3/evidence/all_wildlife_anchor_centroid_calibration_2026-07-23.json`.
+- A discrete in-model score table missed its runtime gate but cut CADAC
+  branches 35% and CBDDB 20%. It remains default-off and triggers external
+  score-profile sharding for the tractable 2/6/29-profile calibration cases:
+  `docs/v3/evidence/all_wildlife_score_profile_calibration_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.
