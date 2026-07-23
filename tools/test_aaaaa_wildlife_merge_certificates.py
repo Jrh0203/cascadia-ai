@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from tools.aaaaa_wildlife_merge_certificates import (
+    validate_gap_one_salmon_certificate,
     validate_hawk_one_loss_certificates,
     validate_motif_certificate,
     validate_zero_hawk_certificates,
@@ -20,6 +21,13 @@ ZERO_HAWK_CERTIFICATE = (
 )
 HAWK_CERTIFICATE = (
     ROOT / "docs" / "v3" / "evidence" / "aaaaa_hawk_one_loss_certificates_2026-07-23.json"
+)
+GAP_ONE_CERTIFICATE = (
+    ROOT
+    / "docs"
+    / "v3"
+    / "evidence"
+    / "aaaaa_gap_one_joint_salmon_certificate_2026-07-23.json"
 )
 
 
@@ -88,6 +96,23 @@ class AaaaaWildlifeMergeCertificatesTests(unittest.TestCase):
         )
         self.assertEqual(len(promoted), 2)
         self.assertTrue(all(row["proof_complete"] for _, row in promoted))
+
+    def test_gap_one_salmon_certificate_promotes_row(self) -> None:
+        certificate = json.loads(GAP_ONE_CERTIFICATE.read_text(encoding="utf-8"))
+        row = {
+            "counts": certificate["counts"],
+            "optimum": certificate["incumbent"]["score"],
+            "score_breakdown": certificate["incumbent"]["score_breakdown"],
+            "tokens": certificate["incumbent"]["tokens"],
+            "proof_method": "incomplete_timeout",
+            "proof_complete": False,
+            "attempts": [],
+        }
+        promoted = validate_gap_one_salmon_certificate(
+            GAP_ONE_CERTIFICATE, row, reproduce=False
+        )
+        self.assertTrue(promoted["proof_complete"])
+        self.assertEqual(promoted["optimum"], 61)
 
 
 if __name__ == "__main__":

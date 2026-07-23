@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from tools import aaaaa_wildlife_catalog as catalog
+from tools import aaaaa_wildlife_gap_one_salmon_bound as gap_one
 from tools import aaaaa_wildlife_hawk_packing_bound as hawk
 from tools import aaaaa_wildlife_motif_certificate as motif
 from tools import aaaaa_wildlife_zero_hawk_bound as zero_hawk
@@ -221,6 +222,65 @@ def validate_hawk_one_loss_certificates(
     return merged_rows
 
 
+def validate_gap_one_salmon_certificate(
+    certificate_path: Path,
+    row: dict[str, Any],
+    *,
+    reproduce: bool = True,
+) -> dict[str, Any]:
+    certificate = json.loads(certificate_path.read_text(encoding="utf-8"))
+    if certificate.get("schema") != "aaaaa-gap-one-joint-salmon-certificate-v1":
+        raise ValueError(f"unsupported certificate schema: {certificate_path}")
+    if (
+        not certificate.get("proof_complete")
+        or tuple(certificate.get("counts", ())) != gap_one.COUNTS
+        or certificate.get("source_sha256") != sha256(Path(gap_one.__file__).resolve())
+    ):
+        raise ValueError("gap-one salmon certificate identity mismatch")
+    bound = certificate["bound"]
+    if bound.get("status") != "INFEASIBLE" or bound.get("upper_bound") != 61:
+        raise ValueError("gap-one salmon certificate conclusion mismatch")
+    if reproduce:
+        configuration = certificate["configuration"]
+        reproduced = gap_one.refined_relaxed_upper_bound(
+            workers=int(configuration["workers"]),
+            per_shape_time_limit=float(configuration["per_shape_time_limit_seconds"]),
+        )
+        for field in ("status", "upper_bound"):
+            if reproduced.get(field) != bound.get(field):
+                raise ValueError(f"gap-one salmon certificate failed reproduction on {field}")
+        for branch, expected_cases in (("maximum_salmon", 15), ("joint_split_salmon", 98)):
+            if reproduced[branch].get("cases") != expected_cases:
+                raise ValueError(f"gap-one salmon certificate failed {branch} case count")
+    counts = tuple(int(value) for value in row["counts"])
+    if counts != gap_one.COUNTS:
+        raise ValueError("catalog row does not match gap-one salmon certificate")
+    tokens, breakdown = catalog.validate_witness(counts, certificate["incumbent"]["tokens"])
+    if sum(breakdown) != int(certificate["certified_upper_bound"]):
+        raise ValueError("gap-one salmon incumbent score mismatch")
+    merged = copy.deepcopy(row)
+    merged.update(
+        {
+            "optimum": sum(breakdown),
+            "score_breakdown": breakdown,
+            "tokens": tokens,
+            "proof_method": certificate["proof_method"],
+            "proof_complete": True,
+            "external_certificate": {
+                "path": str(certificate_path),
+                "sha256": sha256(certificate_path),
+                "schema": certificate["schema"],
+                "source_sha256": certificate["source_sha256"],
+                "elapsed_seconds": certificate["elapsed_seconds"],
+                "excluded_score": certificate["excluded_score"],
+                "relaxation": certificate["relaxation"],
+                "bound": bound,
+            },
+        }
+    )
+    return merged
+
+
 def merge(
     payload: dict[str, Any],
     certificate_paths: list[Path],
@@ -256,6 +316,18 @@ def merge(
             promoted = validate_hawk_one_loss_certificates(
                 certificate_path, results, reproduce=reproduce
             )
+        elif certificate.get("schema") == "aaaaa-gap-one-joint-salmon-certificate-v1":
+            counts = tuple(int(value) for value in certificate.get("counts", ()))
+            if counts not in results:
+                raise ValueError(f"catalog has no row for certificate counts {counts}")
+            promoted = [
+                (
+                    counts,
+                    validate_gap_one_salmon_certificate(
+                        certificate_path, results[counts], reproduce=reproduce
+                    ),
+                )
+            ]
         else:
             raise ValueError(f"unsupported certificate schema: {certificate_path}")
         records = [
