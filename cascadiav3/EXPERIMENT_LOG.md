@@ -8580,3 +8580,11 @@ output: `docs/v3/evidence/aaaaa_dihedral_calibration_2026-07-23.json`.
 Selection rule: exact `INFEASIBLE` within 60 seconds selects the wrapper;
 otherwise `UNKNOWN` rejects it. Any feasible independently valid witness is
 retained but does not alone select a proof formulation.
+
+**Calibration result — NOT SELECTED.** The dihedral lex-leader model returned
+`UNKNOWN` after 60.057452 seconds with no witness, 350,219 branches, and
+64,465 conflicts. Artifact SHA-256
+`5f457f47d590b05513f9c99cb28e1fe6a5fb24267286b77c1bd316e062f351d0`.
+It fails the preregistered exact-result gate. Decision: retain the sound
+symmetry implementation and tests, but do not substitute it into the catalog;
+generic orbit reduction is too small relative to the high-fox score search.

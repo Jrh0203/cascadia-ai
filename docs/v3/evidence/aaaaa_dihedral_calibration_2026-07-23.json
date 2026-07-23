@@ -1,0 +1,42 @@
+{
+  "schema": "aaaaa-dihedral-calibration-v1",
+  "counts": [
+    3,
+    6,
+    6,
+    0,
+    5
+  ],
+  "threshold": 62,
+  "incumbent_score": 61,
+  "wrapper_source_sha256": "d2f5681852f58475a6a4a9963c8e229408b72dbcb5856923c5000dd6db4fa2ad",
+  "base_source_sha256": "55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8",
+  "result": {
+    "counts": [
+      3,
+      6,
+      6,
+      0,
+      5
+    ],
+    "count_relaxation": 62,
+    "model_status": "UNKNOWN",
+    "objective": null,
+    "model_score": null,
+    "score_breakdown": null,
+    "best_bound": 0.0,
+    "wall_seconds": 60.057452000000005,
+    "branches": 350219,
+    "conflicts": 64465,
+    "solver_parameters": {
+      "time_limit_seconds": 60,
+      "workers": 2,
+      "random_seed": 20260723,
+      "maximize": false,
+      "maximum_score": 62,
+      "enforce_connectivity": true,
+      "symmetry_breaking": "conditional_dihedral_species_moment_v1"
+    },
+    "tokens": []
+  }
+}
