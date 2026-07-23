@@ -1276,6 +1276,11 @@ Bear/Elk/Hawk set packing. An unregistered first-case diagnostic closed all
 57 prior timeouts in 92.606 seconds (6.50× serial); it is not proof evidence.
 A hash-frozen four-host formal reproduction is next.
 
+The formal split-Salmon proof is now preregistered as one frozen case per
+john1–john4 host, with 57/57/57/95 exact submodels and sealed shard outputs.
+Only four exact-infeasible results may combine with the already-passed
+maximum-Salmon branches and validated incumbents.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

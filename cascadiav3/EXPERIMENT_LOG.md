@@ -10734,3 +10734,27 @@ seconds in the frozen CP-SAT screen (6.50× serial). It is diagnostic only and
 does not enter a certificate. The four-case formal reproduction must be
 preregistered and run from frozen hashes; four-way fleet wall parallelism is
 expected to exceed the requested 20× end-to-end speedup.
+
+## 2026-07-23 19:50Z — PREREGISTRATION: formal split-Salmon bitset proof
+
+Freeze the four original AAAAA gap-three/two-Salmon challenges and assign one
+to each john1–john4 host: `(4,5,2,3,6)>=67`,
+`(5,5,2,2,6)>=64`, `(3,5,2,4,6)>=63`, and
+`(3,6,2,3,6)>=63`. Expected exhaustive submodel counts remain
+57/57/57/95. Source revision
+`14797423692ac7e8c46265bceefc915b9c68ffad`; runner/engine/worker hashes are
+`aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50`,
+`14b65c0dc6069ce9f106059e70f459fe530c323707b403fa97db892d7ace4da9`,
+and
+`b177903767016cec975bba83f04d82f2245ad11dbce9de7e3862a7ccd526eb5b`.
+Every geometric dependency and exact Python/OR-Tools runtime is separately
+pinned in the fleet ledger.
+
+Do not read a shard until all four terminal exit-zero markers exist. Accept
+only if all identities/cases/submodel counts validate and all four split
+branches are exactly infeasible. Then combine them only with the hash-pinned
+already-exact maximum-Salmon artifact
+`9aefbb263bdd121c05823ef60436005a542694c556328bc8f2735d0506675fa1`
+and independently validated connected cap-six incumbent boards. Any unknown,
+feasible, missing, mismatched, or invalid result fails closed. Planned ledger:
+`cascadiav3/fleet/aaaaa_split_salmon_bitset_formal_20260723_fleet.json`.

@@ -1,0 +1,32 @@
+{
+  "schema": "aaaaa-split-salmon-bitset-fleet-v1",
+  "state": "planned",
+  "tag": "aaaaa_split_salmon_bitset_formal_20260723",
+  "source_revision": "14797423692ac7e8c46265bceefc915b9c68ffad",
+  "runner_sha256": "aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50",
+  "dp_sha256": "14b65c0dc6069ce9f106059e70f459fe530c323707b403fa97db892d7ace4da9",
+  "gap_source_sha256": "eb4012f74802a12341365a167bdf3cb0b0884f7c8280ef732f966cf071c7a23a",
+  "zero_source_sha256": "47d4f3970d0f4144188b4dc4ee7074c13a23254ee8df677ede5deb2cc622d499",
+  "exact_source_sha256": "55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8",
+  "motif_source_sha256": "1d67cf1ee1b830b634f67ea8ba550e1ba305692a4ac3c2ea84c9799349ce078a",
+  "worker_sha256": "b177903767016cec975bba83f04d82f2245ad11dbce9de7e3862a7ccd526eb5b",
+  "maximum_salmon_evidence": {
+    "path": "docs/v3/evidence/aaaaa_two_missing_fox_screen_2026-07-23.json",
+    "sha256": "9aefbb263bdd121c05823ef60436005a542694c556328bc8f2735d0506675fa1"
+  },
+  "candidate_evidence": {
+    "path": "docs/v3/evidence/aaaaa_wildlife_candidates_deep_2026-07-23.json",
+    "sha256": "d8c4f1ce9d9b7decac3156c6500b9e35407d70c74573877529666ba02ff496ae"
+  },
+  "runtime": {
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "cases": [
+    {"case_index": 0, "host": "john1", "counts": [4, 5, 2, 3, 6], "target": 67, "expected_submodels": 57},
+    {"case_index": 1, "host": "john2", "counts": [5, 5, 2, 2, 6], "target": 64, "expected_submodels": 57},
+    {"case_index": 2, "host": "john3", "counts": [3, 5, 2, 4, 6], "target": 63, "expected_submodels": 57},
+    {"case_index": 3, "host": "john4", "counts": [3, 6, 2, 3, 6], "target": 63, "expected_submodels": 95}
+  ],
+  "selection_rule": "wait for all four terminal exit-zero markers without reading partial shards; require every pinned shard identity/runtime/case to match, every registered submodel to be present, and all four split branches to return exact INFEASIBLE; then combine only with the hash-pinned already-exact maximum-Salmon evidence and independently validated incumbent boards; any missing, feasible, unknown, mismatched, or invalid row fails closed"
+}
