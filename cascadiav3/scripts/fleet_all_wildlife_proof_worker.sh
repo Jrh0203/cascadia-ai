@@ -14,6 +14,7 @@ WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv-py312}"
 TIME_LIMIT="${TIME_LIMIT:-30}"
 TOTAL_TIME_LIMIT="${TOTAL_TIME_LIMIT:-300}"
 SOLVER_WORKERS="${SOLVER_WORKERS:-4}"
+CONNECTIVITY_REQUIRED="${CONNECTIVITY_REQUIRED:-1}"
 
 case "$FLEET_TAG:$SHARD_HOST" in
   *[!A-Za-z0-9._:-]*)
@@ -30,6 +31,13 @@ esac
 case "$WILDLIFE_VENV" in
   ""|/*|*".."*|*[!A-Za-z0-9._/-]*)
     echo "WILDLIFE_VENV must be a safe relative path" >&2
+    exit 64
+    ;;
+esac
+case "$CONNECTIVITY_REQUIRED" in
+  0|1) ;;
+  *)
+    echo "CONNECTIVITY_REQUIRED must be 0 or 1" >&2
     exit 64
     ;;
 esac
@@ -64,6 +72,10 @@ printf '%s\n' "$$" > "${WRAPPER_PID_FILE}.tmp"
 mv "${WRAPPER_PID_FILE}.tmp" "$WRAPPER_PID_FILE"
 
 IFS=',' read -r -a index_array <<< "$INDICES"
+connectivity_args=()
+if [ "$CONNECTIVITY_REQUIRED" = 0 ]; then
+  connectivity_args+=(--no-connectivity)
+fi
 for index in "${index_array[@]}"; do
   output="${OUTPUT_DIR}/ruleset_${index}.json"
   printf '%s source=%s host=%s index=%s\n' \
@@ -72,7 +84,7 @@ for index in "${index_array[@]}"; do
   PYTHONDONTWRITEBYTECODE=1 "$PYTHON" -u -m tools.all_wildlife_global_proof \
     --candidates "$INPUT" --index "$index" --output "$output" \
     --time-limit "$TIME_LIMIT" --total-time-limit "$TOTAL_TIME_LIMIT" \
-    --workers "$SOLVER_WORKERS" --resume &
+    --workers "$SOLVER_WORKERS" "${connectivity_args[@]}" --resume &
   solver_pid=$!
   printf '%s\n' "$solver_pid" > "${CHILD_PID_FILE}.tmp"
   mv "${CHILD_PID_FILE}.tmp" "$CHILD_PID_FILE"

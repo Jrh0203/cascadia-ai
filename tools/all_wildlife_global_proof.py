@@ -91,6 +91,7 @@ def run(args: argparse.Namespace) -> int:
             "exact_source_sha256": exact_sha,
             "exact_support_source_sha256": exact_support_sha,
             "rules_source_sha256": rules_sha,
+            "connectivity_required": not args.no_connectivity,
         }
         if identity != expected_identity:
             raise ValueError("resume identity mismatch")
@@ -123,6 +124,7 @@ def run(args: argparse.Namespace) -> int:
                 "exact_source_sha256": exact_sha,
                 "exact_support_source_sha256": exact_support_sha,
                 "rules_source_sha256": rules_sha,
+                "connectivity_required": not args.no_connectivity,
             },
             "configuration": {
                 "time_limit_seconds": args.time_limit,

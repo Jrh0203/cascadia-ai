@@ -10265,3 +10265,37 @@ the production architecture. Next measure a disconnected-relaxation
 prescreen on these same six rows. Infeasibility in that strictly larger
 layout space is a sound connected-board exclusion, and it removes the
 380-choice connectivity arborescence that dominates the coordinate model.
+
+## 2026-07-23 14:32 — PREREGISTRATION: disconnected proof prescreen
+
+Measure the specialized technique suggested by both the literature pass and
+the earlier AAAAA calibration: solve the same six frozen rows in the strictly
+larger space of arbitrary distinct layouts, omitting connected-board
+arborescence variables. Any threshold infeasibility in this relaxation is a
+sound exclusion for connected boards. A feasible disconnected layout is not
+a witness and never changes the connected incumbent.
+
+Use the same host/index assignment, 30 seconds/count, 300 seconds/ruleset,
+eight workers, seed, candidates, exact model, and selected bounds as the
+connected recalibration; only `connectivity_required=false` changes. Proof
+identity now includes that flag, preventing cross-mode resume. Candidate
+SHA-256
+`72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c`;
+disconnected-aware runner
+`fe71485120e078cf419cf1bdc482b898b39bdf3ac2bdb493be094a67b8a03a05`;
+exact model
+`4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e`;
+exact support
+`362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329`;
+bounds
+`d8c78ea6ae37cee14c072b7a0fa55919a940e85854bdf66b990721b4d86fa820`;
+mode-aware worker
+`03480072ff67259679df9fb110f0eb0dc2c3d1551ea691bbb5644d8911950277`.
+Connected/disconnected zero-time identity smokes both fail-closed as
+incomplete and record `true/false` correctly.
+
+After all shards are terminal, union only exact disconnected infeasibilities
+with the already-frozen connected exclusions. Select a two-stage production
+prescreen if this completes at least one additional calibration row or reduces
+the six-row unresolved total by ≥20% from the connected baseline 997. A
+disconnected `FEASIBLE`/`UNKNOWN` is no evidence. Do not read partial output.

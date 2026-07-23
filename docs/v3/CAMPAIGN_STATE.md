@@ -1164,3 +1164,8 @@ band. The new bounds still cut unresolved breadth (AAAAA 23, ADCCB 64, CADAC
 361, CADDA 125, CBDDB 283, DDDDD 141), but four rows spent their full budget
 on ten unknowns. No full launch occurred. The next preregistered optimization
 is a disconnected-relaxation prescreen on the same frozen rows.
+
+The disconnected prescreen is preregistered with identical budgets and
+assignments. Its proof identity now includes connectivity mode. Selection
+requires exact-exclusion union to complete another frozen row or reduce the
+six-row unresolved total by at least 20% from 997.
