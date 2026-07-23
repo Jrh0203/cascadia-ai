@@ -1318,6 +1318,11 @@ reported only five completed rows after adding AAAAA. A fresh correction now
 recollects all three frozen proof directories and must recover exactly six
 base rows before the unchanged augmentation may produce seven.
 
+The first correction wrapper passed collection parents to a non-recursive
+collector and found no proof files, so it is invalidated. Retry 2 enumerates
+all 12 john1–john4 leaf directories explicitly and retains the same six-row
+base/seven-row augmented acceptance rule.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

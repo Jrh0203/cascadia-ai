@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-catalog-augmentation-run-v1",
-  "state": "planned",
+  "state": "invalidated",
   "tag": "all_wildlife_catalog_augment_deep_retry1_20260723",
   "source_revision": "0f798dd0df6c8d0b2694db9df706764d0a4dd02f",
   "collector_source_sha256": "69428e3ee59b4b0fd9f738c000e1105229f58bb8d1f7067fa37840d22da35041",
@@ -17,5 +17,11 @@
   "corrected_base_output": "docs/v3/evidence/all_wildlife_catalog_proof_union_complete_sources_2026-07-23.json",
   "output": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_retry1_2026-07-23.json",
   "markdown": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_DEEP_RETRY1.md",
-  "acceptance_rule": "First recollect the SHA-72c proof catalog from all three frozen proof directories and require exactly six complete rows: ACACA, ADACA, DCAAC, DCCAC, DDAAC, DDCAC. Then apply the unchanged augmentation contract and require exactly seven completed rows after importing AAAAA, 17 rebased incumbent improvements, all 1,024 independent and production score validations, and holistic incumbent maximum 85."
+  "acceptance_rule": "First recollect the SHA-72c proof catalog from all three frozen proof directories and require exactly six complete rows: ACACA, ADACA, DCAAC, DDAAC, DDCAC. Then apply the unchanged augmentation contract and require exactly seven completed rows after importing AAAAA, 17 rebased incumbent improvements, all 1,024 independent and production score validations, and holistic incumbent maximum 85.",
+  "invalidation": {
+    "at": "2026-07-23T21:01:26Z",
+    "observed_completed_rulesets": 4,
+    "output_sha256": "39994d0ddf43bfafd683ddcf6cb9bd728a3c77b4fa5ffb5a82b313cd41fffe1c",
+    "reason": "The collector scans only the directories passed directly to it. The wrapper passed three parent collection roots while the proof files live in their john1-john4 leaf directories, so no proof JSON was discovered and only four direct bound matches were emitted."
+  }
 }

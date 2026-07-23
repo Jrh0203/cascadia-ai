@@ -10985,3 +10985,17 @@ deep-candidate/AAAAA augmentation. Final acceptance requires exactly seven
 completed rows, 17 improved rebases, 1,024 production matches, and incumbent
 holistic maximum 85. Fresh ledger:
 `cascadiav3/fleet/all_wildlife_catalog_augment_deep_retry1_20260723.json`.
+
+**17:01 EDT retry 1 invalidated; leaf-directory retry preregistered.** The
+collector returned four rows because the wrapper passed three collection
+parents while `_proof_paths` intentionally performs a non-recursive glob.
+All proof JSON files are one level down under john1–john4; the resulting
+artifact SHA
+`39994d0ddf43bfafd683ddcf6cb9bd728a3c77b4fa5ffb5a82b313cd41fffe1c`
+contains no discovered proof shards and is invalidated.
+
+Retry under a fresh tag with the same hashes and decision rule, changing only
+the collector arguments to the 12 explicit john1–john4 leaf paths enumerated
+in
+`cascadiav3/fleet/all_wildlife_catalog_augment_deep_retry2_20260723.json`.
+Require the exact six-row base set before augmentation.
