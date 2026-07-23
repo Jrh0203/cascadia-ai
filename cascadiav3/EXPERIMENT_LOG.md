@@ -8835,3 +8835,18 @@ Ruff and the fixed-case test pass. Run one worker, 30 seconds per subcase.
 Select for formal certification only if both salmon branches exhaust exactly
 and their combined relaxed upper is at most 61. `UNKNOWN` or upper >=62
 promotes nothing.
+
+**Diagnostic result — NOT YET SELECTED.** The maximum-salmon branch exhausted
+15 subcases at relaxed upper 61 in 40.848628 solver-seconds. The seven-point
+pair-plus-singleton branch exhausted 12 anchor relaxations but remained
+feasible at 62 because two foxes and their non-salmon observations were
+awarded abstractly. Combined result: upper 62 in 42.089895 elapsed seconds;
+no proof and no catalog change.
+
+Decision: retain the successful maximum-salmon half and replace only the loose
+split branch. Fix a salmon pair, enumerate the singleton at every separation
+where a Bear pair/singleton, Elk line of length at most four, Hawk singleton,
+or fox adjacency can span both clusters, and use one representative for all
+farther separations where the local set-packing model factorizes. Model all
+five foxes and all non-salmon coverage cells explicitly. Preregister that
+refinement separately after its source and tests are frozen.
