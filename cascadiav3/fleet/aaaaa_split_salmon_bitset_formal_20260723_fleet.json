@@ -1,7 +1,8 @@
 {
   "schema": "aaaaa-split-salmon-bitset-fleet-v1",
-  "state": "planned",
+  "state": "running",
   "tag": "aaaaa_split_salmon_bitset_formal_20260723",
+  "launch_utc": "2026-07-23T19:53:14Z",
   "source_revision": "14797423692ac7e8c46265bceefc915b9c68ffad",
   "runner_sha256": "aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50",
   "dp_sha256": "14b65c0dc6069ce9f106059e70f459fe530c323707b403fa97db892d7ace4da9",
@@ -23,10 +24,10 @@
     "ortools": "9.15.6755"
   },
   "cases": [
-    {"case_index": 0, "host": "john1", "counts": [4, 5, 2, 3, 6], "target": 67, "expected_submodels": 57},
-    {"case_index": 1, "host": "john2", "counts": [5, 5, 2, 2, 6], "target": 64, "expected_submodels": 57},
-    {"case_index": 2, "host": "john3", "counts": [3, 5, 2, 4, 6], "target": 63, "expected_submodels": 57},
-    {"case_index": 3, "host": "john4", "counts": [3, 6, 2, 3, 6], "target": 63, "expected_submodels": 95}
+    {"case_index": 0, "host": "john1", "counts": [4, 5, 2, 3, 6], "target": 67, "expected_submodels": 57, "wrapper_pid": 36886, "launch_mode": "screen:wildlife_split_salmon_bitset_john1"},
+    {"case_index": 1, "host": "john2", "counts": [5, 5, 2, 2, 6], "target": 64, "expected_submodels": 57, "wrapper_pid": 56528, "launch_mode": "ssh-nohup"},
+    {"case_index": 2, "host": "john3", "counts": [3, 5, 2, 4, 6], "target": 63, "expected_submodels": 57, "wrapper_pid": 19468, "launch_mode": "ssh-nohup"},
+    {"case_index": 3, "host": "john4", "counts": [3, 6, 2, 3, 6], "target": 63, "expected_submodels": 95, "wrapper_pid": 34108, "launch_mode": "ssh-nohup"}
   ],
   "selection_rule": "wait for all four terminal exit-zero markers without reading partial shards; require every pinned shard identity/runtime/case to match, every registered submodel to be present, and all four split branches to return exact INFEASIBLE; then combine only with the hash-pinned already-exact maximum-Salmon evidence and independently validated incumbent boards; any missing, feasible, unknown, mismatched, or invalid row fails closed"
 }

@@ -10758,3 +10758,11 @@ already-exact maximum-Salmon artifact
 and independently validated connected cap-six incumbent boards. Any unknown,
 feasible, missing, mismatched, or invalid result fails closed. Planned ledger:
 `cascadiav3/fleet/aaaaa_split_salmon_bitset_formal_20260723_fleet.json`.
+
+**19:53:14Z formal launch.** All seven hashes, Python `3.12.13`, OR-Tools
+`9.15.6755`, case assignments, and collision checks passed on john1–john4.
+Wrappers `36886/56528/19468/34108` and their children emitted fresh
+case-specific heartbeats. john1 uses detached screen
+`wildlife_split_salmon_bitset_john1`; its single-core branch coexists with,
+and does not alter, the separately authorized eight-thread candidate recovery.
+All four result shards remain sealed until terminal.

@@ -1281,6 +1281,10 @@ john1–john4 host, with 57/57/57/95 exact submodels and sealed shard outputs.
 Only four exact-infeasible results may combine with the already-passed
 maximum-Salmon branches and validated incumbents.
 
+All four hash/runtime/collision preflights passed and the formal bitset shards
+launched at `2026-07-23T19:53:14Z` with fresh heartbeats. Outputs remain
+sealed until four terminal markers.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
