@@ -10498,3 +10498,25 @@ the original exact source was restored byte-for-byte at
 `4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e`.
 Evidence:
 `docs/v3/evidence/all_wildlife_dihedral_calibration_2026-07-23.json`.
+
+## 2026-07-23 15:15 — PREREGISTRATION: anchor-centroid symmetry break
+
+Test the narrower value-symmetry formulation suggested by the failed pair
+gate. Keep full coordinate ordering for every non-fox species and for all
+foxes except token 0. Token 0 is an arbitrary fox at the origin (at most six
+anchor choices); sort the remaining foxes. Map the whole-board centroid
+vector `(sum q, sum r)` to the same closed dihedral wedge
+`sum q >= sum r >= 0`. For any chosen fox anchor, that integer vector has a
+wedge image under the twelve lattice symmetries; if it is zero, every image
+satisfies the constraint. Thus every unlabeled board remains represented.
+The expected symmetry accounting is twelve geometric images exchanged for at
+most six anchor labels, rather than the failed pair formulation's up to thirty
+ordered labels.
+
+Land the implementation default-off and source-reproducible before measuring.
+Correctness repeats the radius-six vector coverage, transformed-score, and
+1,024 fixed-board gates. Then repeat the identical four-case, 30-second,
+single-worker paired calibration from the fox-pair gate. Select only on the
+same rule: known exclusion at least 2× faster without status regression, or
+at least one formerly unknown hard case resolved only by the candidate.
+Otherwise keep the production default off.

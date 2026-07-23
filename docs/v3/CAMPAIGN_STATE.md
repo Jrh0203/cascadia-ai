@@ -1229,3 +1229,8 @@ AAAAA exclusion from 20.55 seconds/INFEASIBLE to 30 seconds/UNKNOWN and
 resolved no hard case. Arbitrary anchor labels cost more than the twelve
 geometric images saved. It is rejected and the original exact source is
 restored byte-for-byte.
+
+A narrower anchor-centroid symmetry experiment is preregistered default-off:
+it exchanges twelve geometric images for at most six anchor labels while
+preserving every other within-species order. It must pass the same correctness
+and paired runtime gate before any production selection.
