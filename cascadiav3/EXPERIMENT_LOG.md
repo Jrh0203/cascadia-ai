@@ -8682,3 +8682,21 @@ tests SHA-256
 Decision: add fail-closed certificate serialization and incumbent validation,
 then preregister one frozen three-vector evidence run. Diagnostic output alone
 does not yet promote the rows.
+
+## 2026-07-23 07:16 — AAAAA zero-hawk certificates preregistration
+
+Certificate source is frozen at SHA-256
+`47d4f3970d0f4144188b4dc4ee7074c13a23254ee8df677ede5deb2cc622d499`;
+tests remain
+`3724eb36b80c266a701e5877d8ba06e231a5bc28f55d2f3635848006e87874e2`.
+Ruff and all four unit tests pass. Run the three fixed cases with one CP-SAT
+worker per subcase and a 30-second per-shape limit; durable output:
+`docs/v3/evidence/aaaaa_zero_hawk_certificates_2026-07-23.json`.
+
+Accept a row only if every enumerated submodel returns exact `OPTIMAL`, the
+relaxed upper is respectively 60 / 63 / 64 for `(3,6,5,0,6)` /
+`(4,6,4,0,6)` / `(4,5,5,0,6)`, and the independently rescored retained
+connected incumbent matches that upper. Require 50 / 20 / 30 exhausted
+subcases respectively. Any `UNKNOWN`, count mismatch, disconnected incumbent,
+or larger relaxed upper fails closed and promotes nothing. This evidence is
+kept separate until the active catalog writer exits naturally.
