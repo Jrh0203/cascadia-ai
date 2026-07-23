@@ -10299,3 +10299,9 @@ with the already-frozen connected exclusions. Select a two-stage production
 prescreen if this completes at least one additional calibration row or reduces
 the six-row unresolved total by ≥20% from the connected baseline 997. A
 disconnected `FEASIBLE`/`UNKNOWN` is no evidence. Do not read partial output.
+
+**14:28 launch.** All mode-aware identity, candidate, source, support,
+runtime, tag, and idle preflights passed. The frozen four shards launched at
+`18:28:57Z`, wrapper PIDs 74738/46781/12276/33575. Every live proof identity
+has `connectivity_required=false`; heartbeats are fresh. Ledger:
+`cascadiav3/fleet/all_cards_disconnected_prescreen_20260723_fleet.json`.

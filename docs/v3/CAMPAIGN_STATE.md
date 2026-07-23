@@ -1169,3 +1169,5 @@ The disconnected prescreen is preregistered with identical budgets and
 assignments. Its proof identity now includes connectivity mode. Selection
 requires exact-exclusion union to complete another frozen row or reduce the
 six-row unresolved total by at least 20% from 997.
+All four disconnected prescreen shards launched at 14:28 with mode-pinned
+identities and fresh self-recorded heartbeats.
