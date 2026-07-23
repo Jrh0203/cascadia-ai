@@ -101,10 +101,21 @@ def _minimal_masks(masks: Iterable[int]) -> tuple[int, ...]:
     """Discard occupancy supersets, which can only make packing harder."""
 
     kept: list[int] = []
+    kept_set: set[int] = set()
     for mask in sorted(set(masks), key=lambda value: (value.bit_count(), value)):
-        if any(previous & mask == previous for previous in kept):
+        subset = mask
+        dominated = False
+        while True:
+            if subset in kept_set:
+                dominated = True
+                break
+            if subset == 0:
+                break
+            subset = (subset - 1) & mask
+        if dominated:
             continue
         kept.append(mask)
+        kept_set.add(mask)
     return tuple(kept)
 
 

@@ -10788,6 +10788,19 @@ tail to quadratic subset-dominance checks in the Bear-heavy case. Preserve
 this formal result, but optimize that primitive before generalizing the
 component engine.
 
+**16:10 EDT dominance-index implementation.** Replace the quadratic
+`any(previous ⊆ mask)` scan with exact subset enumeration against a hash set.
+Every species occupancy mask contains at most six cells, so dominance now
+costs at most 64 membership checks per candidate rather than scanning the
+entire retained frontier. A 100-instance deterministic property test proves
+byte-for-byte agreement with the naive algorithm; all 15 bitset, certificate,
+and merger tests plus Ruff pass. Optimized engine SHA-256
+`cac4781e88874ed29e8f27aa736b9628b6df4f5cc380cae07ccf730c8a066246`.
+No proof output changed or was opened. Freeze a four-case performance rerun
+after committing this source; select generalized use only if projected
+four-host critical path is at most 149.739 seconds (≥20× versus the frozen
+2,994.788-second sequential CP-SAT screen).
+
 **19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
 zero after completing indices 0 and 562. This satisfies the authorized
 recovery condition, so all six parent/recovery files were unsealed and copied

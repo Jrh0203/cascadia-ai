@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import random
 
 from tools.aaaaa_wildlife_gap_two_salmon_pair_bound import split_singleton_shapes
 from tools.aaaaa_wildlife_motif_certificate import adjacent
@@ -15,6 +16,17 @@ from tools.aaaaa_wildlife_split_salmon_dp import (
 
 def test_minimal_masks_remove_only_occupancy_supersets() -> None:
     assert _minimal_masks([0b0011, 0b0111, 0b1010, 0b1010]) == (0b0011, 0b1010)
+
+
+def test_subset_index_matches_naive_dominance() -> None:
+    generator = random.Random(20260723)
+    for _ in range(100):
+        masks = [generator.randrange(1 << 12) for _ in range(40)]
+        expected = []
+        for mask in sorted(set(masks), key=lambda value: (value.bit_count(), value)):
+            if not any(previous & mask == previous for previous in expected):
+                expected.append(mask)
+        assert _minimal_masks(masks) == tuple(expected)
 
 
 def test_disjoint_packing_finds_and_rejects_exactly() -> None:
