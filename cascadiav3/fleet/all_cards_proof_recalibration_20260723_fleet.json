@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-proof-fleet-v1",
-  "state": "preregistered",
+  "state": "running",
   "tag": "all_cards_proof_recalibration_20260723",
   "source_revision": "6fc7099f1c607d1b1617c43395324f14bf082d2e",
   "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
@@ -17,9 +17,9 @@
   },
   "frozen_completed_indices": [136, 200],
   "shards": [
-    {"host": "john1", "indices": [0, 562]},
-    {"host": "john2", "indices": [233, 572]},
-    {"host": "john3", "indices": [637]},
-    {"host": "john4", "indices": [1023]}
+    {"host": "john1", "indices": [0, 562], "wrapper_pid": 71296},
+    {"host": "john2", "indices": [233, 572], "wrapper_pid": 44974},
+    {"host": "john3", "indices": [637], "wrapper_pid": 10948},
+    {"host": "john4", "indices": [1023], "wrapper_pid": 33385}
   ]
 }

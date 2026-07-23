@@ -10237,3 +10237,10 @@ The proof worker now also atomically records its own wrapper PID, removing the
 outer-shell escaping hazard seen in the first lattice-bound launch. Final
 prelaunch worker SHA-256
 `bcb8217d863184520c98759547a632039f27d9333727ca5564dd310f714fa1bf`.
+
+**14:14 launch.** All candidate/source/support/runtime/tag/idle preflights
+passed. john1 launched indices `0,562`, john2 `233,572`, john3 `637`, and
+john4 `1023` at `18:14:30–31Z`; self-recorded wrapper PIDs are
+71296/44974/10948/33385 and every heartbeat identifies the first live index.
+Ledger:
+`cascadiav3/fleet/all_cards_proof_recalibration_20260723_fleet.json`.

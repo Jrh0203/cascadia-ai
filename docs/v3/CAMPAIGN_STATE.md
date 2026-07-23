@@ -1155,3 +1155,5 @@ incomplete frozen rows, retaining certified ACACA/ADACA as the original
 eight-row baseline. It uses the same 30-second/count, five-minute/ruleset
 shape and applies the original combined completion band before any full
 launch.
+All four specialized-bound recalibration shards launched at 14:14 with fully
+pinned exact-support and bound identities and fresh self-recorded heartbeats.
