@@ -1,0 +1,45 @@
+{
+  "schema": "aaaaa-fox-neighborhood-calibration-v1",
+  "proof_complete": false,
+  "result": {
+    "counts": [
+      3,
+      6,
+      6,
+      0,
+      5
+    ],
+    "minimum_score": 62,
+    "model_status": "UNKNOWN",
+    "objective": null,
+    "score_breakdown": null,
+    "best_bound": 0.0,
+    "wall_seconds": 60.011027000000006,
+    "elapsed_seconds": 69.86082408297807,
+    "branches": 287656,
+    "conflicts": 60345,
+    "solver_parameters": {
+      "time_limit_seconds": 60.0,
+      "workers": 2,
+      "random_seed": 20260723,
+      "maximum_score": 68,
+      "enforce_connectivity": true,
+      "fox_neighborhood_table_size": 5
+    },
+    "tokens": []
+  },
+  "ortools_version": "9.15.6755",
+  "source_sha256": "5ac47104e9d38fa4629ceb9d9f31a7da6a783f6c61f606adc3b09ecb87107434",
+  "exact_source_sha256": "55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8",
+  "catalog": {
+    "path": "docs/v3/evidence/aaaaa_wildlife_catalog_first_pass_2026-07-23.json",
+    "sha256": "9aeb528830e95fed89c7d5bcc26c9b87654f534daf2044f5a297f8b54480df1f"
+  },
+  "table_rows": {
+    "1": 1,
+    "2": 3,
+    "3": 24,
+    "4": 437,
+    "5": 14073
+  }
+}

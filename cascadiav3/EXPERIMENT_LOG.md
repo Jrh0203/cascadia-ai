@@ -9443,3 +9443,154 @@ connected attempts remained `UNKNOWN` (204/204 attempts) after a median
 remaining cases are hard primarily because they require proving subtle
 high-fox motif incompatibility across many symmetric near-solutions, not
 because good incumbent boards are difficult to find.
+
+## 2026-07-23 10:44 — AAAAA layered single-anchor calibration preregistration
+
+Primary-source review of recent exact combinatorial search converges on a
+layered alternative to another monolithic coordinate solve: arithmetic-profile
+filtering, canonical local signatures, reduced SAT/CP realization, and an
+independent decoding check. The new strict relaxation applies that pattern to
+vectors with a unique non-Fox species token. It enumerates every subset of
+foxes around that token modulo the ring's full dihedral symmetry, exhausts
+every non-Fox score structure capable of reaching the challenged threshold,
+and locally packs every scoring group or leftover token that covers an
+explicit fox. Non-covering groups and foxes are awarded optimistic abstract
+placements/coverage; Bear/Hawk isolation, Salmon-component separation, and
+whole-board connectivity are dropped. Therefore local infeasibility remains
+a sound exclusion.
+
+Frozen source SHA-256
+`0284fcac82dd453b187136ff0914a7ee7a169ff882d3e612ebe051d55b856eb4`;
+tests SHA-256
+`2f32972889070fa7b0be196b59223b4b972dd587e018ccb5153ce6948b8d756d`.
+Ruff, five new structural tests, and all 17 retained specialized-bound tests
+pass. Calibrate four already-proven hard-tail vectors chosen before output,
+covering each possible anchor family and raw gaps five or six:
+`(1,1,6,6,6)=64`, `(2,1,6,5,6)=64`, `(6,6,1,1,6)=66`, and
+`(5,3,5,1,6)=62`.
+
+First run a positive-containment challenge at the known incumbent score
+(`--challenge-offset 0`), one worker and ten seconds per local submodel.
+Every row must return `RELAXATION_FEASIBLE`, never `INFEASIBLE` or `UNKNOWN`,
+with a returned upper at least the independently rescored incumbent. Durable
+output:
+`docs/v3/evidence/aaaaa_single_anchor_containment_calibration_2026-07-23.json`.
+Then challenge incumbent plus one with the identical cases and limits; output:
+`docs/v3/evidence/aaaaa_single_anchor_strength_calibration_2026-07-23.json`.
+Select the formulation for a separately preregistered unresolved screen only
+if containment passes, no strength case is `UNKNOWN`, and at least one of the
+four plus-one challenges is exactly `INFEASIBLE`. Otherwise record no proof
+and revise the representation rather than extending time.
+
+**Result — CONTAINMENT PASSED; STRENGTH GATE FAILED.** All four incumbent-
+score challenges returned `RELAXATION_FEASIBLE` after one exact local solve,
+so the positive containment check passed. All four plus-one challenges also
+returned `RELAXATION_FEASIBLE` after one solve; no known exclusion was
+reproduced. The decisive witnesses used only one locally explicit anchor-
+observing fox in three cases (two in the fourth), while the remaining foxes
+received optimistic abstract coverage. This identifies the missing coupling:
+the non-anchor fox clusters and the scoring motifs covering them must be
+represented explicitly.
+
+Containment artifact SHA-256
+`6007e88dec30cf2eff3734501a3fe199bbbf6cff7ed3f6fa9e327b608a05588c`;
+strength artifact SHA-256
+`0d2a3dae9811b9c50256625bcc9f8332eebee96059c9e402a55bac02922f92dc`;
+logs SHA-256
+`e08bad0f17038e4400ac91aca4da333bb59bdb846fbdcd3404a0a6cf7de3e81d` /
+`be4c861183d36305f3df2dd5b5bda4a1ca389006c24a7ceeb3a2213fa0d6b219`.
+Elapsed was 0.143339 / 0.460073 seconds. Per the frozen decision rule, do not
+screen unresolved rows and do not extend this abstraction's time. Retain it
+as a tested first-stage filter and proceed only with explicit multi-cluster
+coupling or a different exact representation.
+
+## 2026-07-23 10:55 — AAAAA radius-two fox-neighborhood preregistration
+
+The direct fox-adjacency table rejected at 06:10 does not expose when foxes
+can share a non-Fox witness. Add a stronger redundant propagator inspired by
+the recent specialized-propagator and canonical-local-signature literature:
+classify every fox pair as hex distance one, distance two, or farther, and
+allow only radius-two relation graphs realizable on the hex lattice. Connected
+canonical coordinate shapes through five foxes number
+`1,3,15,127,1338`; after graph isomorphism and arbitrary far separation of
+components, the labeled allowed tables contain `1,3,24,437,14073` rows.
+The table is globally exact through five foxes. Six-fox vectors receive all
+six overlapping five-fox tables, a sound local-consistency relaxation.
+
+This couples fox-fox adjacency and common-neighbor possibility before the
+score model chooses per-species witnesses. The exact coordinate constraints
+remain authoritative, so the tables are redundant and cannot remove a legal
+board. The impossible four-fox unit-distance clique is rejected, actual
+radius-two layouts are retained, and the fixed 68-point optimum remains
+exactly feasible.
+
+Frozen wrapper SHA-256
+`5ac47104e9d38fa4629ceb9d9f31a7da6a783f6c61f606adc3b09ecb87107434`;
+test SHA-256
+`0f49e7ffaec389c1780ceb6918b85670080ee1ba341f9b3d83f62e8a14fcbb4f`.
+Ruff and four focused tests pass. Calibrate the same already-certified
+`(3,6,6,0,5)` threshold-62 connected case, retained 61-point hint, two
+workers, 60 seconds, seed 20260723, and global ceiling 68. Durable output:
+`docs/v3/evidence/aaaaa_fox_neighborhood_calibration_2026-07-23.json`;
+log:
+`cascadiav3/logs/aaaaa_fox_neighborhood_calibration_2026-07-23.log`.
+Select only an exact `INFEASIBLE` result. `UNKNOWN` or a feasible relaxation
+witness changes no catalog row and rejects this wrapper for unresolved work;
+do not lengthen it.
+
+**Calibration result — NOT SELECTED.** The radius-two table model returned
+`UNKNOWN` after 60.011027 solver-seconds (69.860824 end-to-end including table
+construction), with no witness, 287,656 branches, and 60,345 conflicts. This
+is fewer branches than the direct fox-graph calibration's 337,376, but it did
+not produce an exact result and therefore fails the registered gate. Artifact
+SHA-256
+`68e73bee7ab71f7859e2c50b03afc168ec16f4f2cc79ed1124dcc566a4701c8a`;
+log SHA-256
+`d73953611ee5287e679940c6f3fcdf10dbfe4671258bdfa90a580815bce11a39`.
+Decision: do not run it over unresolved rows or lengthen it. The local
+relation table must be coupled directly to the per-species Fox-A witness
+choices before another calibration.
+
+## 2026-07-23 10:59 — AAAAA canonical Fox-witness coupling preregistration
+
+Couple the retained radius-two tables directly to Fox-A coverage. Each scored
+fox/species observation is assigned to the lowest-index adjacent token, a
+deterministic canonical witness that removes assignment symmetry. Foxes with
+the same witness are constrained pairwise to distance at most two, and every
+common-witness triple must realize the exact distance pattern of three
+distinct cells in the witness token's six-cell ring. These are redundant
+consequences of the exact coordinates and scoring rule, but expose the
+per-species motif/coverage interaction requested by the failed 06:10 and
+11:22 calibrations.
+
+Frozen wrapper SHA-256
+`78c90a138598f05fca3072cbe759bffc4cf85a652359b31a03a704c099939599`;
+test SHA-256
+`ca472af86b7fe86fda92c59223dfbf1cad0ab6f8638d974c4863c6778a35f2da`;
+retained neighborhood wrapper SHA-256
+`5ac47104e9d38fa4629ceb9d9f31a7da6a783f6c61f606adc3b09ecb87107434`.
+Ruff and all six focused neighborhood/witness tests pass, including fixed
+68-point containment.
+
+Repeat the fixed already-certified `(3,6,6,0,5)` threshold-62 connected
+calibration with its retained 61-point hint, two workers, 60 seconds, seed
+20260723, and global ceiling 68. Durable output:
+`docs/v3/evidence/aaaaa_fox_witness_calibration_2026-07-23.json`; log:
+`cascadiav3/logs/aaaaa_fox_witness_calibration_2026-07-23.log`. Select only
+exact `INFEASIBLE`; `UNKNOWN` or any witness rejects this formulation for the
+unresolved tail, with no longer retry.
+
+**Calibration result — NOT SELECTED.** The coupled model returned `UNKNOWN`
+after 60.014552 seconds with no witness, 312,024 branches, and 65,484
+conflicts. It is weaker in this calibration than the radius-two-only table
+despite stronger propagation, consistent with the extra canonical-witness
+Boolean structure costing more than its pruning saves. Artifact SHA-256
+`6b82f03c4dd71fc73eb2e577197e005cd77dbec915b45a71634d45b59f9b8b08`;
+log SHA-256
+`f2814576742fb76dc69b2009749abfb6d3055341cebdb74d185813b7210050d7`.
+Decision: reject it for the unresolved tail and do not lengthen. The online
+review's general lesson survives, but the measured implementation verdict is
+specific: static local tables inside the monolithic coordinate model are not
+enough. Continue only with the already-successful layered finite
+shape/profile/filter pipeline, where local geometry is enumerated outside the
+20-coordinate solve.

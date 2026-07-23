@@ -1653,3 +1653,22 @@ motifs. This method has already supplied seven independently serialized exact
 certificates beyond the live catalog ledger. The next extension must model a
 second explicit fox component for cases with two salmon-missing foxes; the
 older abstract treatment was exactly the remaining source of looseness.
+
+The 2026-07-23 primary-literature pass confirms and narrows that ranking.
+Layered exact filtering, canonical BFS/component codes, specialized
+propagators, and counterexample-guided family refinements are the relevant
+modern techniques. Three sound implementations were measured: a
+single-unique-token profile/local-packing filter, exact radius-two fox
+relation tables, and canonical Fox-A witnesses with common-witness ring
+geometry. The first was too loose because remote foxes remained abstract; the
+two table variants stayed `UNKNOWN` on the frozen `(3,6,6,0,5)>=62`
+calibration. No proof count changed.
+
+Verdict: static symmetry/relation tables inside the monolithic coordinate
+model join longer coordinate time as **CLOSED**. The active direction is a
+layered external generator that enumerates arithmetic loss profiles and
+complete interacting fox/motif components canonically, factorizes proved-far
+components, solves local cell packing, and refines relaxed witness families.
+Independent profile/component branches are the correct fleet shard unit.
+Full sources and implementation contract:
+`docs/v3/AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md`.

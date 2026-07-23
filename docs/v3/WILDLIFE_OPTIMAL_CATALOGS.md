@@ -154,6 +154,18 @@ search is not treated as useful evidence. Tail work uses finite explicit fox
 components and local cell-set packing, which removes the free-coordinate
 symmetry and has already produced the accepted specialized certificates.
 
+A 2026/2025 primary-literature review then tested three stronger transfers:
+layered unique-token anchoring, exact radius-two fox relation tables, and
+canonical per-species Fox-A witnesses with common-witness ring geometry. All
+passed containment but failed preregistered known-exclusion strength gates.
+They produced no catalog proof and were not run over unresolved rows. The
+measured conclusion is that canonicality and specialized propagation must be
+applied to externally enumerated finite component/profile branches; redundant
+tables inside the full coordinate model do not remove enough search. The
+sources, measurements, and generalized multi-component implementation
+contract are in
+[AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md](AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md).
+
 ### Why the remaining AAAAA tail is harder
 
 The unresolved tail is dominated by Fox-A geometry: every one of the 98
@@ -225,7 +237,7 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 10:21 EDT, AAAAA has 728/826 formally certified vectors.
+As of 2026-07-23 11:01 EDT, AAAAA has 728/826 formally certified vectors.
 The first exact fleet pass returned all 115 requested tail rows and added 13
 coordinate-model proofs at 60/120-second limits; 102 rows timed out. Three new
 proofs overlap the seven frozen specialized certificates, leaving 98 unique
@@ -236,6 +248,13 @@ point low across all 728 certified rows—including 126 certified rows whose
 original relaxation gap was at least three—but the unresolved tail is
 selection-biased toward the hardest proofs. A timeout remains an incumbent
 only, not an optimum claim.
+
+The online-literature implementation pass added no new proof: its single-
+anchor, radius-two relation, and canonical-witness calibrations all failed
+their frozen exact-result gates. Their negative result is durable and narrows
+the remaining work to canonical external multi-component enumeration plus
+local set packing; longer generic coordinate time and additional static table
+wrappers are closed.
 
 CBDDB heuristic staging completed all 826 vectors in 224.244154 seconds with
 zero independent-score or connectivity failures; the current 84-point leader

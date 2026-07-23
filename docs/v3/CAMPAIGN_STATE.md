@@ -1026,7 +1026,7 @@ seeds ledger — spent: 2026794000-5249 (Stage A), 2027160000-99 (Gate 0),
 2027193000-3550 (bootstrap), 2027194000-4840 (fs_c1); reserved:
 2027195000+ (certification), 2027079000-99 (unused D1 gate block).
 
-## LOCAL PUZZLE EXPLORATION 2026-07-23 10:21 — LIVE
+## LOCAL PUZZLE EXPLORATION 2026-07-23 11:01 — LIVE
 
 This is independent local CPU work and does not displace or make claims about
 the john0 campaign above. The requested 20-token/cap-6 pure-wildlife catalog
@@ -1041,3 +1041,14 @@ seconds with zero independent scorer/connectivity failures. Its current
 Its four-host exact taskset is staged but remains blocked on AAAAA completion.
 Durable methodology/status: `docs/v3/WILDLIFE_OPTIMAL_CATALOGS.md`; detailed
 provenance: `cascadiav3/EXPERIMENT_LOG.md`.
+
+Latest exact-tail transition: a primary-literature pass implemented layered
+single-anchor packing, exact radius-two fox-neighborhood tables, and canonical
+Fox-A witness/ring coupling. All are sound and containment-tested; all failed
+their preregistered strength gates on already-certified exclusions, so no
+unresolved row was screened and no proof count changed. Static local tables
+inside the monolithic coordinate model are now closed. The next ranked
+architecture is external canonical enumeration of complete interacting
+fox/motif components, arithmetic profile sharding, factorized far cases, and
+local cell-set packing. Review and implementation contract:
+`docs/v3/AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md`.
