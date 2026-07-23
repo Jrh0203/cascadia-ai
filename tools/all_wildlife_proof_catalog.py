@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,61 @@ def _proof_paths(directories: list[Path]) -> dict[int, list[Path]]:
     return found
 
 
+def _git_blob_sha256(revision: str, path: str) -> str:
+    completed = subprocess.run(
+        ["git", "show", f"{revision}:{path}"],
+        capture_output=True,
+        check=True,
+    )
+    return hashlib.sha256(completed.stdout).hexdigest()
+
+
+def _legacy_identities(
+    ledgers: list[Path],
+) -> tuple[dict[tuple[str, str, str], dict[str, Any]], dict[str, str]]:
+    identities = {}
+    ledger_hashes = {}
+    for path in ledgers:
+        encoded = path.read_bytes()
+        ledger_hashes[str(path)] = hashlib.sha256(encoded).hexdigest()
+        ledger = json.loads(encoded)
+        if (
+            ledger.get("schema") != "all-wildlife-proof-fleet-v1"
+            or ledger.get("state") != "complete"
+        ):
+            raise ValueError(f"{path}: invalid legacy fleet ledger")
+        revision = ledger["source_revision"]
+        proof_sha = _git_blob_sha256(revision, "tools/all_wildlife_global_proof.py")
+        exact_sha = _git_blob_sha256(revision, "tools/all_wildlife_exact.py")
+        support_sha = _git_blob_sha256(revision, "tools/cbddb_wildlife_exact.py")
+        rules_sha = _git_blob_sha256(revision, "tools/all_wildlife_rules.py")
+        if (
+            proof_sha != ledger["proof_source_sha256"]
+            or exact_sha != ledger["exact_source_sha256"]
+            or (
+                ledger.get("exact_support_source_sha256") is not None
+                and support_sha != ledger["exact_support_source_sha256"]
+            )
+            or (
+                ledger.get("rules_source_sha256") is not None
+                and rules_sha != ledger["rules_source_sha256"]
+            )
+        ):
+            raise ValueError(f"{path}: legacy source revision mismatch")
+        key = (ledger["candidate_sha256"], proof_sha, exact_sha)
+        if key in identities:
+            raise ValueError(f"{path}: duplicate legacy identity")
+        identities[key] = {
+            "exact_support_source_sha256": support_sha,
+            "rules_source_sha256": rules_sha,
+            "result_sha256": {
+                int(result["index"]): result["sha256"] for result in ledger["results"]
+            },
+            "ledger_path": str(path),
+        }
+    return identities, ledger_hashes
+
+
 def _validate_board(row: dict[str, Any], ruleset: str) -> None:
     tokens = rules.normalized_tokens(row["tokens"])
     counts = tuple(
@@ -58,13 +114,21 @@ def _validate_board(row: dict[str, Any], ruleset: str) -> None:
         raise ValueError(f"{ruleset}: incumbent score mismatch")
 
 
-def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
+def collect(
+    candidates_path: Path,
+    directories: list[Path],
+    legacy_fleet_ledgers: list[Path] | None = None,
+) -> dict[str, Any]:
     candidate_encoded = candidates_path.read_bytes()
     candidate_sha = hashlib.sha256(candidate_encoded).hexdigest()
     candidates = json.loads(candidate_encoded)
     if candidates.get("schema") != "all-wildlife-merged-candidates-v1":
         raise ValueError("unexpected candidate schema")
     paths = _proof_paths(directories)
+    legacy_identities, legacy_ledger_hashes = _legacy_identities(
+        legacy_fleet_ledgers or []
+    )
+    used_legacy_ledgers: set[str] = set()
     rows = []
     proof_hashes = {}
     proof_source_hashes: set[str] = set()
@@ -124,8 +188,29 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
             connectivity_modes.add(mode)
             proof_source_hashes.add(identity["proof_source_sha256"])
             exact_source_hashes.add(identity["exact_source_sha256"])
-            exact_support_hashes.add(identity["exact_support_source_sha256"])
-            rules_source_hashes.add(identity["rules_source_sha256"])
+            if (
+                "exact_support_source_sha256" in identity
+                and "rules_source_sha256" in identity
+            ):
+                exact_support_hash = identity["exact_support_source_sha256"]
+                rules_source_hash = identity["rules_source_sha256"]
+            else:
+                legacy_key = (
+                    identity["candidate_sha256"],
+                    identity["proof_source_sha256"],
+                    identity["exact_source_sha256"],
+                )
+                legacy = legacy_identities.get(legacy_key)
+                if (
+                    legacy is None
+                    or legacy["result_sha256"].get(index) != digest
+                ):
+                    raise ValueError(f"{path}: unverified legacy proof identity")
+                exact_support_hash = legacy["exact_support_source_sha256"]
+                rules_source_hash = legacy["rules_source_sha256"]
+                used_legacy_ledgers.add(legacy["ledger_path"])
+            exact_support_hashes.add(exact_support_hash)
+            rules_source_hashes.add(rules_source_hash)
             incumbent = proof["incumbent"]
             _validate_board(incumbent, ruleset)
             incumbents.append(incumbent)
@@ -207,6 +292,9 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
         "exact_support_source_sha256": sorted(exact_support_hashes),
         "rules_source_sha256": sorted(rules_source_hashes),
         "connectivity_modes": sorted(connectivity_modes),
+        "legacy_fleet_ledger_sha256": {
+            path: legacy_ledger_hashes[path] for path in sorted(used_legacy_ledgers)
+        },
         "holistic_optimum": holistic,
         "holistic_rulesets": (
             [row["ruleset"] for row in rows if row["optimum"] == holistic]
@@ -266,10 +354,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--candidates", type=Path, required=True)
     parser.add_argument("--proof-directories", type=Path, nargs="+", required=True)
+    parser.add_argument("--legacy-fleet-ledgers", type=Path, nargs="*", default=[])
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--markdown", type=Path)
     args = parser.parse_args()
-    payload = collect(args.candidates, args.proof_directories)
+    payload = collect(
+        args.candidates,
+        args.proof_directories,
+        args.legacy_fleet_ledgers,
+    )
     _write_atomic(args.output, payload)
     if args.markdown:
         _write_text_atomic(args.markdown, render_markdown(payload) + "\n")
