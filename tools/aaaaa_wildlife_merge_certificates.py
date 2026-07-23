@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from tools import aaaaa_wildlife_catalog as catalog
+from tools import aaaaa_wildlife_hawk_packing_bound as hawk
 from tools import aaaaa_wildlife_motif_certificate as motif
 from tools import aaaaa_wildlife_zero_hawk_bound as zero_hawk
 
@@ -147,6 +148,79 @@ def validate_zero_hawk_certificates(
     return merged_rows
 
 
+def validate_hawk_one_loss_certificates(
+    certificate_path: Path,
+    rows: dict[tuple[int, ...], dict[str, Any]],
+    *,
+    reproduce: bool = True,
+) -> list[tuple[tuple[int, ...], dict[str, Any]]]:
+    certificate = json.loads(certificate_path.read_text(encoding="utf-8"))
+    if certificate.get("schema") != "aaaaa-hawk-one-loss-local-packing-certificates-v1":
+        raise ValueError(f"unsupported certificate schema: {certificate_path}")
+    if not certificate.get("proof_complete"):
+        raise ValueError("Hawk one-loss certificate is incomplete")
+    if certificate.get("source_sha256") != sha256(Path(hawk.__file__).resolve()):
+        raise ValueError("Hawk one-loss certificate source hash mismatch")
+    expected_counts = {counts for counts, _ in hawk.CERTIFICATE_CASES}
+    observed_counts = {
+        tuple(int(value) for value in row["counts"]) for row in certificate["results"]
+    }
+    if observed_counts != expected_counts:
+        raise ValueError("Hawk one-loss certificate count set mismatch")
+
+    configuration = certificate["configuration"]
+    merged_rows = []
+    for result in certificate["results"]:
+        counts = tuple(int(value) for value in result["counts"])
+        if counts not in rows:
+            raise ValueError(f"catalog has no row for Hawk one-loss counts {counts}")
+        target = int(result["excluded_score"])
+        upper = int(result["certified_upper_bound"])
+        bound = result["bound"]
+        if (
+            not result.get("proof_complete")
+            or bound.get("status") != "INFEASIBLE"
+            or int(bound.get("upper_bound", -1)) != upper
+        ):
+            raise ValueError(f"Hawk one-loss row {counts} has an invalid conclusion")
+        if reproduce:
+            reproduced = hawk.relaxed_upper_bound(
+                counts,
+                target,
+                workers=int(configuration["workers"]),
+                per_shape_time_limit=float(configuration["per_shape_time_limit_seconds"]),
+                explicit_missing_foxes=True,
+            )
+            for field in ("status", "upper_bound", "cases"):
+                if reproduced.get(field) != bound.get(field):
+                    raise ValueError(f"Hawk one-loss row {counts} failed reproduction on {field}")
+        tokens, breakdown = catalog.validate_witness(counts, result["incumbent"]["tokens"])
+        if sum(breakdown) != upper:
+            raise ValueError(f"Hawk one-loss row {counts} incumbent score mismatch")
+        merged = copy.deepcopy(rows[counts])
+        merged.update(
+            {
+                "optimum": upper,
+                "score_breakdown": breakdown,
+                "tokens": tokens,
+                "proof_method": result["proof_method"],
+                "proof_complete": True,
+                "external_certificate": {
+                    "path": str(certificate_path),
+                    "sha256": sha256(certificate_path),
+                    "schema": certificate["schema"],
+                    "source_sha256": certificate["source_sha256"],
+                    "elapsed_seconds": certificate["elapsed_seconds"],
+                    "excluded_score": target,
+                    "relaxation": certificate["relaxation"],
+                    "bound": bound,
+                },
+            }
+        )
+        merged_rows.append((counts, merged))
+    return merged_rows
+
+
 def merge(
     payload: dict[str, Any],
     certificate_paths: list[Path],
@@ -176,6 +250,10 @@ def merge(
             ]
         elif certificate.get("schema") == "aaaaa-zero-hawk-local-packing-certificates-v1":
             promoted = validate_zero_hawk_certificates(
+                certificate_path, results, reproduce=reproduce
+            )
+        elif certificate.get("schema") == "aaaaa-hawk-one-loss-local-packing-certificates-v1":
+            promoted = validate_hawk_one_loss_certificates(
                 certificate_path, results, reproduce=reproduce
             )
         else:

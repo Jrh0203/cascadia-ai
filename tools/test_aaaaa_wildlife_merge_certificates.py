@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from tools.aaaaa_wildlife_merge_certificates import (
+    validate_hawk_one_loss_certificates,
     validate_motif_certificate,
     validate_zero_hawk_certificates,
 )
@@ -16,6 +17,9 @@ CERTIFICATE = (
 )
 ZERO_HAWK_CERTIFICATE = (
     ROOT / "docs" / "v3" / "evidence" / "aaaaa_zero_hawk_certificates_2026-07-23.json"
+)
+HAWK_CERTIFICATE = (
+    ROOT / "docs" / "v3" / "evidence" / "aaaaa_hawk_one_loss_certificates_2026-07-23.json"
 )
 
 
@@ -63,6 +67,26 @@ class AaaaaWildlifeMergeCertificatesTests(unittest.TestCase):
             ZERO_HAWK_CERTIFICATE, rows, reproduce=False
         )
         self.assertEqual(len(promoted), 3)
+        self.assertTrue(all(row["proof_complete"] for _, row in promoted))
+
+    def test_hawk_certificate_promotes_both_rows(self) -> None:
+        certificate = json.loads(HAWK_CERTIFICATE.read_text(encoding="utf-8"))
+        rows = {
+            tuple(result["counts"]): {
+                "counts": result["counts"],
+                "optimum": result["incumbent"]["score"],
+                "score_breakdown": result["incumbent"]["score_breakdown"],
+                "tokens": result["incumbent"]["tokens"],
+                "proof_method": "incomplete_timeout",
+                "proof_complete": False,
+                "attempts": [],
+            }
+            for result in certificate["results"]
+        }
+        promoted = validate_hawk_one_loss_certificates(
+            HAWK_CERTIFICATE, rows, reproduce=False
+        )
+        self.assertEqual(len(promoted), 2)
         self.assertTrue(all(row["proof_complete"] for _, row in promoted))
 
 
