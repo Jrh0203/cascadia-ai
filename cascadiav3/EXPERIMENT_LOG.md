@@ -10914,3 +10914,29 @@ curated report:
 `docs/v3/evidence/all_wildlife_candidate_deep_recovery_2026-07-23.json`.
 This stronger merged catalog replaces the earlier warm start for every
 subsequent proof task.
+
+## 2026-07-23 14:45 — John's ruling: NO full battery mid-ladder; distill-round loop preregistered
+
+John: "no need to run the full battery, we're going to go through
+multiple rounds of iteration right? if we verify it is better in 256
+that's enough signal to proceed." Methodology locked accordingly:
+- Per-round go/no-go = paired n256/d4 x100 screen on block
+  2027190000-99 ONLY. Full battery (n1024/d16 x30) deferred until the
+  ladder stalls or pre-certification — run once, manually, on the
+  ladder's best.
+- X1's in-flight script still has the >=100.5 auto-escalation baked in
+  (cannot edit a mid-execution bash script safely). If it fires, the
+  n1024 eval gets killed immediately per this ruling and logged.
+
+PREREGISTERED LADDER RULE (autonomy grant): let S_k = round-k screen.
+- S_1 (X1) > 99.4675  -> launch X2 via run_cbddb_distill_round.sh
+  (NEW, generalization of run_cbddb_x1.sh with no auto-escalation):
+  TEACHER = X1 best_locked_val, ROUND_TAG=x2, fresh seeds
+  2027200000x300 + 2027200400x30. Same recipe (n512/d8 labels,
+  anchor kl=2.0 l2=2.0, passes 8).
+- S_{k+1} > S_k + 0.15 (half the screen's ~0.3 SEM) -> next round,
+  next fresh block (2027201000+, 2027202000+, ...).
+- S_{k+1} <= S_k + 0.15 -> ladder stalled: run the full battery once
+  on the best round, then bring results + options to John.
+- S_1 <= 99.4675 -> stronger-teacher shape failed too: STOP, report
+  to John (strategy crossroads, his call).
