@@ -10154,3 +10154,23 @@ negative. No incumbent score changes.
 The four 54-triple shards launched at `18:08:04–05Z`, wrapper PIDs
 66899/44138/10298/33244, with fresh self-recorded solver heartbeats. Ledger:
 `cascadiav3/fleet/fox_a_dual_observation_bound_20260723_fleet.json`.
+
+**14:09 component-absence semantics corrected before collection.** All 216
+models reached terminal exact statuses: 194 `OPTIMAL`, 22 `INFEASIBLE`, and
+zero `UNKNOWN`. The two workers owning impossible large-class components
+exited 2 because the shard wrapper had equated “component exists and is
+optimal” with “component subproblem resolved.” For example, a connected
+cross-edge support containing one fox and twelve target vertices cannot
+exist. Exact `INFEASIBLE` therefore means that component type is absent; the
+global DP still represents the requested counts using isolates or smaller
+components. No table had yet been collected.
+
+The corrected collector accepts only `OPTIMAL` with equal objective/bound or
+exact `INFEASIBLE`, maps absent component types to no DP transition, and
+continues to fail on `UNKNOWN`. A live one-fox/six/six infeasibility test and
+an infeasible-component collector/DP regression now pass. Corrected source
+SHA-256
+`81a78064080846b03539ff97f0bd34e7bcd10014a0d227fe1a666592d39d08ce`;
+five-test SHA-256
+`8764b189a85437ae53bedc9aea6eb54b5f71efab39e823004bba94b71d571035`.
+Re-collect the immutable shards; do not rerun a solver.

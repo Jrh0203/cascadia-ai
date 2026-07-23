@@ -1138,3 +1138,8 @@ pair capacity only if exact coverage/symmetry and the frozen ≥5% Fox-A or
 ≥10% AAAAA/CADDA reduction gate pass.
 All four 54-triple Fox-A derivation shards launched at 14:08 with fresh
 heartbeats.
+All 216 subproblems resolved exactly (194 optimal component types, 22
+impossible connected component types, zero unknown). Collection paused before
+publication to correct the wrapper's component-absence semantics; immutable
+proofs will be re-collected with exact infeasibility represented as no DP
+transition.

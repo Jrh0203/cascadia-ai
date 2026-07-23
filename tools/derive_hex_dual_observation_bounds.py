@@ -193,20 +193,21 @@ def collect_shards(paths: list[Path]) -> dict[str, Any]:
     if set(proofs_by_counts) != expected:
         raise ValueError("component coverage is not exact")
     proofs = [proofs_by_counts[counts] for counts in sorted(expected)]
-    if any(
-        proof["status"] != "OPTIMAL"
-        or proof["maximum"] != proof["best_bound"]
-        for proof in proofs
-    ):
-        raise ValueError("one or more component proofs are incomplete")
+    for proof in proofs:
+        if proof["status"] == "OPTIMAL":
+            if proof["maximum"] != proof["best_bound"]:
+                raise ValueError("component objective/bound mismatch")
+        elif proof["status"] != "INFEASIBLE":
+            raise ValueError("one or more component proofs are incomplete")
     component = [
         [[0] * (CAP + 1) for _ in range(CAP + 1)]
         for _ in range(CAP + 1)
     ]
     for proof in proofs:
-        component[proof["foxes"]][proof["first_targets"]][
-            proof["second_targets"]
-        ] = int(proof["maximum"])
+        if proof["status"] == "OPTIMAL":
+            component[proof["foxes"]][proof["first_targets"]][
+                proof["second_targets"]
+            ] = int(proof["maximum"])
     if any(
         component[foxes][first][second] != component[foxes][second][first]
         for foxes in range(1, CAP + 1)
@@ -257,7 +258,11 @@ def main() -> int:
         )
         for foxes, first, second in triples
     ]
-    incomplete = [proof for proof in proofs if proof["status"] != "OPTIMAL"]
+    incomplete = [
+        proof
+        for proof in proofs
+        if proof["status"] not in ("OPTIMAL", "INFEASIBLE")
+    ]
     payload = {
         "schema": "hex-dual-observation-bound-shard-v1",
         "proof_complete": not incomplete,
@@ -276,7 +281,7 @@ def main() -> int:
         json.dumps(
             {
                 "proof_complete": not incomplete,
-                "optimal_components": len(proofs) - len(incomplete),
+                "resolved_components": len(proofs) - len(incomplete),
                 "components": len(proofs),
             },
             sort_keys=True,
