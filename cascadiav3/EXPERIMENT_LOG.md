@@ -8422,3 +8422,22 @@ or substituted into the active catalog. Artifact SHA-256
 `fb171f2c486d1abd42c0503d0de908285f259ae5aeb29bea2841465a8f90039c`.
 Decision: connectivity-tree symmetry alone is not the tail's root cause; the
 next optimization must expose high-fox adjacency/coverage structure directly.
+
+## 2026-07-23 06:00 — AAAAA eager-score channeling calibration preregistration
+
+The high-fox feasibility model currently permits true deterministic score
+features to remain false, because one-way implications are sufficient for
+logical completeness. That creates many score-variable assignments for the
+same coordinates. A separate wrapper adds the sound reverse implications:
+Fox-A distinct-species flags equal the OR of relevant adjacency edges,
+Hawk-A isolated flags equal the absence of hawk edges, and Bear-A pair flags
+equal full two-bear components. The known 68 board remains exactly feasible;
+wrapper source SHA-256
+`86114e79a0d48fdd6261a5dd46be94a874f3f14bc5a668d85a7a585db6271d3a`.
+
+Before output, repeat the fixed `(3,6,6,0,5)` threshold-62 connected case,
+retained hint, two idle workers, 60 seconds, seed 20260723. Select only on
+exact `INFEASIBLE` or a material search reduction versus the rejected
+deterministic-connectivity calibration; `UNKNOWN` remains no evidence.
+Durable output:
+`docs/v3/evidence/aaaaa_eager_score_calibration_2026-07-23.json`.
