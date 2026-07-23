@@ -1,0 +1,184 @@
+{
+  "schema": "all-wildlife-score-profile-collection-v1",
+  "taskset": {
+    "path": "cascadiav3/fleet_inputs/all_cards_profile_shard_calibration_20260723/taskset.json",
+    "sha256": "285eef17ef60f0aa74e949ccafa6c8fe88607e679693a9d3125904104e77826b",
+    "task_count": 37
+  },
+  "fleet": {
+    "path": "cascadiav3/fleet/all_cards_profile_shard_calibration_20260723_fleet.json",
+    "sha256": "50443cf47d39ad9a7da422f54b2128bd889adb767c34c1c786bf3f471e5ac9af",
+    "tag": "all_cards_profile_shard_calibration_20260723",
+    "launch_utc": "2026-07-23T19:35:12Z",
+    "source_revision": "c3113d0f"
+  },
+  "shards": [
+    {
+      "host": "john1",
+      "path": "cascadiav3/fleet/collected_all_cards_profile_shard_calibration_20260723/shard_john1.json",
+      "sha256": "5a4808241266419d8b364396df2847d6ec40bcda7b5d036fa86373772fa01094",
+      "task_indices": [
+        0,
+        4,
+        8,
+        12,
+        16,
+        20,
+        24,
+        28,
+        32,
+        36
+      ],
+      "elapsed_seconds": 60.32489895820618
+    },
+    {
+      "host": "john2",
+      "path": "cascadiav3/fleet/collected_all_cards_profile_shard_calibration_20260723/shard_john2.json",
+      "sha256": "2ed28b8bfb8b7a71fcade8bf0d98e33719361c9abc6385831038af702c983695",
+      "task_indices": [
+        1,
+        5,
+        9,
+        13,
+        17,
+        21,
+        25,
+        29,
+        33
+      ],
+      "elapsed_seconds": 35.9413678329438
+    },
+    {
+      "host": "john3",
+      "path": "cascadiav3/fleet/collected_all_cards_profile_shard_calibration_20260723/shard_john3.json",
+      "sha256": "9e9c9d8800b3529aad3f616ad167bbf944c5f1c2d960ee29bcbb7cd80e7c00d6",
+      "task_indices": [
+        2,
+        6,
+        10,
+        14,
+        18,
+        22,
+        26,
+        30,
+        34
+      ],
+      "elapsed_seconds": 32.54204362491146
+    },
+    {
+      "host": "john4",
+      "path": "cascadiav3/fleet/collected_all_cards_profile_shard_calibration_20260723/shard_john4.json",
+      "sha256": "175dde0b541ab9b9c88c91e634ab329232ae652f1d84806749af6b7d904190b0",
+      "task_indices": [
+        3,
+        7,
+        11,
+        15,
+        19,
+        23,
+        27,
+        31,
+        35
+      ],
+      "elapsed_seconds": 30.981230833102018
+    }
+  ],
+  "cases": [
+    {
+      "case_index": 0,
+      "case_id": "AAAAA_6_1_6_2_5_ge_69",
+      "ruleset": "AAAAA",
+      "counts": [
+        6,
+        1,
+        6,
+        2,
+        5
+      ],
+      "threshold": 69,
+      "upper": 70,
+      "profile_count": 2,
+      "status_counts": {
+        "INFEASIBLE": 1,
+        "UNKNOWN": 1
+      },
+      "exact_profiles": 1,
+      "complete_exact": false,
+      "max_elapsed_seconds": 30.00071145920083,
+      "total_branches": 382479,
+      "exact_infeasible_profiles": [
+        1
+      ]
+    },
+    {
+      "case_index": 1,
+      "case_id": "AAAAA_4_2_6_2_6_ge_69",
+      "ruleset": "AAAAA",
+      "counts": [
+        4,
+        2,
+        6,
+        2,
+        6
+      ],
+      "threshold": 69,
+      "upper": 71,
+      "profile_count": 6,
+      "status_counts": {
+        "INFEASIBLE": 4,
+        "UNKNOWN": 2
+      },
+      "exact_profiles": 4,
+      "complete_exact": false,
+      "max_elapsed_seconds": 30.051305125001818,
+      "total_branches": 964818,
+      "exact_infeasible_profiles": [
+        1,
+        2,
+        4,
+        5
+      ]
+    },
+    {
+      "case_index": 2,
+      "case_id": "CADAC_0_2_6_6_6_ge_67",
+      "ruleset": "CADAC",
+      "counts": [
+        0,
+        2,
+        6,
+        6,
+        6
+      ],
+      "threshold": 67,
+      "upper": 71,
+      "profile_count": 29,
+      "status_counts": {
+        "UNKNOWN": 29
+      },
+      "exact_profiles": 0,
+      "complete_exact": false,
+      "max_elapsed_seconds": 30.036445625126362,
+      "total_branches": 11472300,
+      "exact_infeasible_profiles": []
+    }
+  ],
+  "totals": {
+    "profiles": 37,
+    "exact_profiles": 5,
+    "unknown_profiles": 32,
+    "exact_infeasible_profiles": 5
+  },
+  "selection": {
+    "selected": false,
+    "known_case_index": 0,
+    "known_max_seconds": 10.388,
+    "known_case_selected": false,
+    "hard_case_indices": [
+      1,
+      2
+    ],
+    "complete_hard_cases": [],
+    "verdict": "REJECT"
+  }
+}

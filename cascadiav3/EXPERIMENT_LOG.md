@@ -10665,3 +10665,21 @@ and no wildlife solver was active. The 37-branch calibration launched at
 john4 PID `34003`. All four wrapper and child PIDs were live with fresh
 heartbeats after launch. Shard outputs remain sealed until all four exit
 markers exist.
+
+**19:36:22Z terminal verdict — external profile sharding rejected.** All
+four shards exited zero, after which the fail-closed collector verified the
+37-task exact-cover assignment, all pinned identities/configurations, and
+every result field. Five profiles were exactly infeasible and 32 remained
+`UNKNOWN`: known AAAAA `1/2`, hard AAAAA `4/6`, and CADAC `0/29`. There were
+no feasible witnesses.
+
+Neither selection arm passes: the known case is incomplete (and its maximum
+branch time is 30.001 seconds, not at most 10.388), while neither hard case is
+complete. Do not scale this architecture. The five exact exclusions remain
+reusable branch evidence. Collection SHA-256
+`b4475f989d67f7a402dc0408d5d794fdba4d814b09ab341d461fb274299d980a`;
+fleet-ledger SHA-256
+`50443cf47d39ad9a7da422f54b2128bd889adb767c34c1c786bf3f471e5ac9af`.
+The next ranked exact representation remains canonical enumeration of
+complete interacting fox/motif components with proved far-component
+factorization and local cell-set packing.

@@ -199,10 +199,11 @@ and batch-compares every board with the production Rust scorer.
   branches 35% and CBDDB 20%. It remains default-off and triggers external
   score-profile sharding for the tractable 2/6/29-profile calibration cases:
   `docs/v3/evidence/all_wildlife_score_profile_calibration_2026-07-23.json`.
-- The frozen 37-profile external calibration launched across john1–john4 at
-  `2026-07-23T19:35:12Z` after every source/input hash, exact runtime, idle,
-  and collision preflight passed. Its outputs remain sealed until all four
-  shards are terminal.
+- The frozen 37-profile external calibration completed across john1–john4:
+  5 profiles were exactly infeasible and 32 remained unknown (known AAAAA
+  1/2, hard AAAAA 4/6, CADAC 0/29). It misses both selection conditions and
+  is not scaled. Its five exclusions remain reusable; collection evidence:
+  `docs/v3/evidence/all_wildlife_profile_shard_calibration_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

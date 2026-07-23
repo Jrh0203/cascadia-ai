@@ -1264,5 +1264,8 @@ for one hard case; all shard outputs remain closed until four terminal markers.
 The fixed-profile runner and deterministic 37-task set are now frozen and
 smoke-validated, with round-robin 10/9/9/9 assignments. All four exact
 runtimes and seven source/input hashes passed preflight. The calibration
-launched at `2026-07-23T19:35:12Z` with live wrappers and fresh heartbeats on
-john1–john4; shard results remain sealed until all four terminal markers.
+launched at `2026-07-23T19:35:12Z` and all four shards exited zero by
+`19:36:22Z`. Terminal collection verified exact coverage and identity:
+5/37 profiles were infeasible and 32 remained unknown (AAAAA known 1/2,
+AAAAA hard 4/6, CADAC 0/29). Both frozen selection conditions fail, so
+external score-profile sharding is closed; its five exclusions remain reusable.

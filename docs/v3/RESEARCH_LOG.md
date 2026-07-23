@@ -1675,6 +1675,15 @@ Independent profile/component branches are the correct fleet shard unit.
 Full sources and implementation contract:
 `docs/v3/AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md`.
 
+An external arithmetic-profile-only split was then tested before implementing
+the full component generator. Thirty-seven connected branches covered a known
+AAAAA exclusion and hard AAAAA/CADAC cases on john1–john4. It resolved only
+5/37 profiles (AAAAA 1/2 and 4/6; CADAC 0/29), missing both the 2× known-proof
+and complete-hard-case gates. Profile sharding without a new geometric
+representation is therefore **CLOSED**. The exact five exclusions are kept,
+but the active direction remains canonical complete fox/motif components plus
+proved far-component factorization and local cell-set packing.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from
