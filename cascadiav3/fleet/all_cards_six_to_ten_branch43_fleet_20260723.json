@@ -1,0 +1,99 @@
+{
+  "schema": "all-wildlife-six-to-ten-branch-fleet-v1",
+  "state": "active",
+  "tag": "all_cards_six_to_ten_branch43_fleet_20260723",
+  "source_revision": "f349a8cfbd61451f7e92a8015a3a657847385416",
+  "taskset_sha256": "d4c159c5f4b4990baf6696bc156c8ff1a8085bfd39b07e0c698d39c7da25736a",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "comparison_candidate_sha256": "96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9",
+  "proof_source_sha256": "fe71485120e078cf419cf1bdc482b898b39bdf3ac2bdb493be094a67b8a03a05",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "5b5e6fa0112c75e5194d9df70e00fdb8e2632f31e625615b15ee2654f2a93d9e",
+  "configuration": {
+    "time_limit_seconds_per_count": 300,
+    "total_time_limit_seconds_per_ruleset": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "heartbeat_interval_seconds": 5,
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "assignments": [
+    {
+      "host": "john1",
+      "indices": [
+        10,
+        330,
+        490,
+        1003,
+        282,
+        206,
+        226,
+        491,
+        134,
+        154,
+        662
+      ],
+      "count_queries": 90,
+      "local_screen": "wildlife_six_to_ten_john1",
+      "wrapper_pid": 28706
+    },
+    {
+      "host": "john2",
+      "indices": [
+        43,
+        390,
+        718,
+        14,
+        168,
+        334,
+        474,
+        642,
+        142,
+        218,
+        986
+      ],
+      "count_queries": 90,
+      "wrapper_pid": 69743
+    },
+    {
+      "host": "john3",
+      "indices": [
+        74,
+        406,
+        934,
+        78,
+        172,
+        346,
+        152,
+        411,
+        654,
+        222,
+        990
+      ],
+      "count_queries": 90,
+      "wrapper_pid": 29167
+    },
+    {
+      "host": "john4",
+      "indices": [
+        266,
+        475,
+        987,
+        158,
+        270,
+        918,
+        216,
+        478,
+        902,
+        394
+      ],
+      "count_queries": 84,
+      "wrapper_pid": 35080
+    }
+  ],
+  "launched_at": "2026-07-23T21:40:31Z",
+  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all 43 rulesets become proof_complete, advance the integrated catalog from 44 to 87 exact rows. UNKNOWN or timeout remains unresolved."
+}

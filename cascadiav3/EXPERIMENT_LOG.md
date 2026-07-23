@@ -11246,3 +11246,9 @@ eight solver workers, and five-second handoff/heartbeat. The per-host hard
 wall is at most 60m30s. Results remain sealed until all four terminal
 markers. Keep exact exclusions and validated witnesses; timeout/`UNKNOWN`
 remain unresolved. A clean pass would advance 44→87 exact.
+
+**17:40:31 EDT launch.** All four hosts passed pinned source, candidate,
+runtime, collision, and idle checks under revision `f349a8cf`. Wrapper PIDs
+are 28706/69743/29167/35080 on john1/john2/john3/john4. Ledger:
+`cascadiav3/fleet/all_cards_six_to_ten_branch43_fleet_20260723.json`.
+Results remain sealed until all four terminal markers.

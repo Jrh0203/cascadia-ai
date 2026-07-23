@@ -1401,6 +1401,10 @@ It covers 43 rulesets / 354 queries, balanced 90/90/90/84 across
 john1–john4. The 330-second row cap gives a 60m30s hard wall per host.
 DCACC's two residual branches remain separate; no unknown is discarded.
 
+The 6–10-branch batch launched at `2026-07-23T21:40:31Z` under revision
+`f349a8cf`; all four wrappers were active after pinned preflight. Results
+remain sealed until every shard is terminal.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
