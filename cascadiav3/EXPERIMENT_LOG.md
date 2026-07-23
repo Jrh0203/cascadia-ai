@@ -9209,3 +9209,24 @@ partial fleet remains incomplete and fails closed. Collection waits for all
 three terminal shards and cannot mutate the active local catalog. The fleet
 run is an exact finite puzzle computation, not a gameplay gate or strength
 claim.
+
+**09:17 launch failed before computation.** Tag
+`aaaaa_exact_tail_fleet1_20260723`, revision `d180b0a2`, passed local input
+validation and all-host preflight, then failed during john2 deployment because
+the remote snapshot lacked the parent directory for
+`crates/cascadia-game/src/bin/aaaaa_wildlife_solver.rs`. No worker PID or
+output shard exists on any host. The planned launch ledger is retained with
+SHA-256
+`a55a205b35e48354bf6e9a722024ad09f3455fde99920b57d2fb2cc8d4c8d2b3`;
+the single-use tag will not be reused or deleted. Decision: make deployment a
+complete all-host phase that creates every source parent before any process
+launch, test it, and preregister a fresh tag with otherwise identical inputs
+and acceptance rule.
+
+**09:19 retry preregistration.** Use fresh tag
+`aaaaa_exact_tail_fleet2_20260723`. Inputs, 39/38/38 shard assignment,
+hosts, solver configuration, and fail-closed decision rule are unchanged from
+09:15. The resulting source revision must pass shell syntax, the 10
+catalog/sharding unit tests, and `git diff --check`; its launcher must complete
+deployment to all three hosts before starting the first worker. Any remaining
+tag collision or deploy error blocks this retry without deleting prior state.

@@ -208,11 +208,15 @@ with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as handle:
 os.replace(temporary, path)
 PY
 
-declare -a launched_pids=()
+# Deploy and hash-pin every host before starting any worker. This prevents a
+# source-layout failure on a later host from leaving an avoidable partial run.
 for index in "${!host_array[@]}"; do
   host="${host_array[$index]}"
   remote_input="cascadiav3/fleet_inputs/${FLEET_TAG}"
-  ssh "$host" "cd ~/cascadia && mkdir -p '$remote_input' cascadiav3/fleet_outputs/${FLEET_TAG}"
+  candidate_parent="$(dirname "$CANDIDATE_SOURCE")"
+  ssh "$host" "cd ~/cascadia && \
+    mkdir -p '$remote_input' cascadiav3/fleet_outputs/${FLEET_TAG} \
+      '$candidate_parent'"
   rsync -a --exclude __pycache__ "$ROOT/tools/" "$host:~/cascadia/tools/"
   rsync -a "$ROOT/cascadiav3/scripts/fleet_wildlife_exact_worker.sh" \
     "$host:~/cascadia/cascadiav3/scripts/"
@@ -223,7 +227,11 @@ for index in "${!host_array[@]}"; do
       "$host:~/cascadia/crates/cascadia-game/src/bin/wildlife_solver_support/"
   fi
   rsync -a "$INPUT_DIR/" "$host:~/cascadia/$remote_input/"
+done
 
+declare -a launched_pids=()
+for index in "${!host_array[@]}"; do
+  host="${host_array[$index]}"
   log="cascadiav3/logs/wildlife_${FLEET_TAG}_shard_${host}.log"
   pid_file="cascadiav3/logs/wildlife_${FLEET_TAG}_shard_${host}.pid"
   pid="$(
