@@ -9280,3 +9280,13 @@ each log reported exactly 711 imported proofs plus its registered 39/38/38
 assigned vectors. Launch-ledger SHA-256
 `a8dd6c12f7418a2960417555162872984461d6872e115fa4b6ec757f7b02e2de`.
 State: live; do not read a partial shard as evidence or restart a worker.
+
+Durable collector waiter PID `52984` polls terminal markers only, emits
+heartbeats to
+`cascadiav3/logs/aaaaa_exact_tail_fleet3_collect.log`, and can be paused
+between stages with
+`cascadiav3/logs/HOLD_aaaaa_exact_tail_fleet3_collect`. After all three
+workers terminate naturally it runs the fail-closed collector and accepts
+completion only for 115/115 independently verified exact rows. It launches
+no follow-on computation; an incomplete exact tail exits nonzero for explicit
+analysis rather than silently advancing to CBDDB.
