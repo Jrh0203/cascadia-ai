@@ -10384,6 +10384,16 @@ worker, and host-specific binary preflights. The shards launched at
 The fleet ledger is now `running`; do not inspect result files until all four
 terminal markers exist.
 
+**15:02 operational failure, results still closed.** The john1 wrapper PID
+82739 and child 82753 are both dead; its heartbeat and log never advanced
+past `18:50:56Z`, and no terminal marker exists. The local launch used
+`nohup`, contrary to `docs/v3/FLEET.md`'s required detached `screen` session
+for john1. This is an orchestration failure, not a candidate-search result.
+john2 remains live and john3/john4 have terminal exit-0 markers, but no result
+file from any shard has been read. Do not restart or reassign john1 without
+John's explicit permission. The ledger remains running/degraded until the
+undisturbed remote shards reach terminal state.
+
 ## 2026-07-23 14:55 — PREREGISTRATION: coupled adjacency-resource bound
 
 The remaining count bounds maximize each animal independently even though

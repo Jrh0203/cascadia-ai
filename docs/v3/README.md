@@ -53,7 +53,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   shapes are rejected; no full 1,024-row proof launch occurred. Six rows are
   now certified: two by coordinate proof and four because their boards meet
   the sound all-count bound. A 40× deep incumbent calibration is running on
-  the six hard strata across john1–john4; it remains warm-start work, never
+  the six hard strata across john1–john4; john1's local `nohup` shard died
+  without a terminal marker and will not be restarted without permission,
+  while the remote results remain closed. This is warm-start work, never
   proof. A complete shared-edge/degree relaxation passed 846,848 containment
   checks but tightened zero cells, so it is closed and not integrated. No other
   arbitrary-ruleset row is called optimal before its exact certificate

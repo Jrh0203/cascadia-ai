@@ -1195,6 +1195,13 @@ improvements will be merged, and heuristic equality alone never certifies a
 row. All four shards launched at 14:50 with pinned sources/binaries, fresh
 self-recorded PIDs, and live first-index heartbeats.
 
+At 15:02 john1's local wrapper and child were found dead without a terminal
+marker; its log never advanced past launch. Root cause is orchestration:
+`nohup` was used instead of the fleet contract's detached local `screen`.
+john2 remains live and john3/john4 are terminal, but every result file remains
+closed. No restart or reassignment is authorized; the exact-catalog work
+continues independently.
+
 In parallel, a coupled adjacency-resource bound is preregistered. It will
 charge Bear/Elk/Salmon motifs and Fox observations against shared exact
 lattice edge caps and degree-six budgets, including explicit sharing of

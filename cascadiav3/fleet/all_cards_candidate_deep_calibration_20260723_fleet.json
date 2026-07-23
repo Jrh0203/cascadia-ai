@@ -28,6 +28,16 @@
     {"index": 1023, "ruleset": "DDDDD", "score": 78}
   ],
   "launch_utc": "2026-07-23T18:50:56Z",
+  "operational_issue": {
+    "host": "john1",
+    "observed_utc": "2026-07-23T19:02:00Z",
+    "wrapper_pid": 82739,
+    "solver_pid": 82753,
+    "terminal_marker": false,
+    "last_heartbeat_utc": "2026-07-23T18:50:56Z",
+    "cause": "local shard was launched under nohup instead of the FLEET.md-required detached screen session; both processes are dead and the wrapper could not publish a terminal marker",
+    "action": "do not inspect any shard output and do not restart or reassign without explicit user permission"
+  },
   "shards": [
     {"host": "john1", "indices": [0, 562], "wrapper_pid": 82739},
     {"host": "john2", "indices": [233, 572], "wrapper_pid": 49454},
