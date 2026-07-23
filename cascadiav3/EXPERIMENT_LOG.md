@@ -9967,6 +9967,9 @@ objective/bound for all 36 rows, plus left/right symmetry. Source
 `3a6ea9eedfaecdae464b3016916a09a0ffe189ce47cf32c7fa266ca0cfe426aa`;
 test SHA-256
 `ed997ec0f55026489ddf518b6353cfb7a812d898781b326d365fa0d8c77911d8`.
+The durable heartbeat/terminal worker is
+`cascadiav3/scripts/fleet_hex_bipartite_bound_worker.sh`, SHA-256
+`3be5b67e38ce0fc8d915e58bd08cd1ce366441f83c9a16283fd7d959412ba8af`.
 
 Decision rule, fixed before table output: select the new Fox-C bound only if
 all 36 proofs complete and it is everywhere no weaker than the current sound
