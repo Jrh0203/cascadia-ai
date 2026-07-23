@@ -8960,3 +8960,37 @@ Python score mismatches. Compare each row to the frozen first staging file and
 retain the higher independently scored incumbent (seed/order breaks exact
 ties). Neither file is proof evidence. Report the holistic candidate change,
 but do not call it optimal until exact exclusions are complete.
+
+## 2026-07-23 07:50 — AAAAA motif-coordinate relaxation screen preregistration
+
+The long hinted retry has shown that additional generic coordinate-model time
+has very low marginal proof yield. Screen a new strict relaxation that retains
+all 20 coordinates, exact non-overlap, forced Bear-A pairs, Elk-A scoring
+lines, valid Salmon-A component shapes, and every positive Fox-A observation.
+It deliberately drops whole-board connectivity, bear-pair isolation,
+separation between scored salmon components, and hawk isolation. Every legal
+board meeting the challenged score is therefore contained; only `INFEASIBLE`
+is proof evidence.
+
+Positive containment calibration is frozen before the screen: the fixed
+holistic `(6,4,6,0,4)` 68-point board solves at exactly 52 non-fox plus 16 fox
+points. Five unit tests and Ruff pass. Relaxation source SHA-256
+`3b0ddd8e2e8015f41392f3a7810930eff1c02aeb58c6e9e71f4fb410c6a66065`;
+batch source SHA-256
+`0162dd5d83083ecb134a4ed71d79f604853ab012c02ee7154483878c9748ffef`;
+tests SHA-256
+`eb5013bbcb8caf7f1db01727e5aad403c1c29bc108a1a9df1901924fcaf4f0b7`.
+
+Run eight fixed cases sequentially with one worker, 30 seconds per case, and
+base seed 20260723. Three already-certified challenges calibrate strength:
+`(3,6,6,0,5)>=62`, `(3,6,3,3,5)>=62`, and `(4,6,4,2,4)>=65`. Five unresolved
+challenges sample distinct motif regimes: `(1,4,6,3,6)>=66`,
+`(2,2,6,4,6)>=66`, `(4,2,4,4,6)>=66`, `(6,1,5,2,6)>=68`, and
+`(4,5,2,3,6)>=67`. Durable output:
+`docs/v3/evidence/aaaaa_motif_coordinate_relaxation_screen_2026-07-23.json`;
+log: `cascadiav3/logs/aaaaa_motif_coordinate_relaxation_screen_2026-07-23.log`.
+Accept each case independently only when CP-SAT returns exact `INFEASIBLE`.
+`FEASIBLE` means the relaxation is too loose; `UNKNOWN` means the proof is
+incomplete. Either outcome changes no catalog row. A passed unresolved case
+still requires frozen incumbent validation and certificate serialization
+before merge.
