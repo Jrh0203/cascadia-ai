@@ -10383,3 +10383,31 @@ worker, and host-specific binary preflights. The shards launched at
 82739/49454/14271/33835 and every heartbeat identifies its first live index.
 The fleet ledger is now `running`; do not inspect result files until all four
 terminal markers exist.
+
+## 2026-07-23 14:55 — PREREGISTRATION: coupled adjacency-resource bound
+
+The remaining count bounds maximize each animal independently even though
+their scoring motifs compete for the same degree-six lattice incidences.
+Implement a second, sound count relaxation over the ten species-pair edge
+budgets. Same-species edge caps use the exact cap-six triangular-lattice
+sequence `0,0,1,3,5,7,9`; cross-species caps use the selected exact 7×7
+bipartite table; every species obeys
+`2*same_edges + cross_edges <= 6*count`.
+
+Enumerate card score/resource profiles: connected Bear/Elk/Salmon motifs
+consume their minimum same-species edges; Salmon D's adjacent-token bonus
+consumes cross edges; Fox A observations, Fox B doubled-species
+qualifications, Fox C neighbor counts, and Fox D matched pairs consume
+cross/fox-pair edges. A salmon–fox edge may satisfy both animals, handled by
+an exact two-source capacitated flow over Bear/Elk/Hawk residual degrees.
+Hawk remains at its existing sound maximum. The selected bound will be the
+minimum of this relaxation and the existing specialized bound.
+
+Correctness gates: the coupled value must never exceed the current bound;
+all 4,096 frozen scorer-oracle rows, every frozen merged candidate, and a
+deterministic random-board suite must score at or below it; resource-profile
+and flow unit tests must cover all cards and zero/count-cap boundaries.
+Selection is fixed before frontier output: integrate only if it removes at
+least 5% of the frozen 119,959 all-ruleset count frontier or at least 10% for
+two of the six hard rows. Otherwise retain it as a documented negative. No
+incumbent score changes during this bound experiment.

@@ -1194,3 +1194,9 @@ start intervention, not a proof: only independently rescored strict
 improvements will be merged, and heuristic equality alone never certifies a
 row. All four shards launched at 14:50 with pinned sources/binaries, fresh
 self-recorded PIDs, and live first-index heartbeats.
+
+In parallel, a coupled adjacency-resource bound is preregistered. It will
+charge Bear/Elk/Salmon motifs and Fox observations against shared exact
+lattice edge caps and degree-six budgets, including explicit sharing of
+salmon–fox edges. Selection requires ≥5% total frontier reduction or ≥10% on
+two hard rows after containment tests; otherwise it is a frozen negative.
