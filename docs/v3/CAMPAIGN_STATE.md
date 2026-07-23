@@ -1462,6 +1462,14 @@ outputs. A durable HOLD-aware waiter may launch only after four zero exit
 files and a complete hash/collision/runtime preflight. At the measured
 five-minute cadence it should use the fleet through roughly 08:45 EDT.
 
+That waiter is active in detached screen
+`wildlife_bound_secondfrontier224_waiter`, PID 82731, with SHA
+`c2471c8fe1282ca3e84f93d2bf758d3e17864d122617762482ef85a244e13a2a`.
+Its first heartbeat at `23:42:04Z` reported 0/4 predecessor terminals. HOLD
+path: `cascadiav3/logs/HOLD_all_wildlife_bound_secondfrontier224`. Queue
+ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier224_queue_20260723.json`.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

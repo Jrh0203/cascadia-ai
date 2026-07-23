@@ -1,0 +1,72 @@
+{
+  "schema": "all-wildlife-bound-probe-queue-v1",
+  "state": "queued",
+  "tag": "all_wildlife_bound_probe_secondfrontier224_20260723",
+  "source_revision": "7558230c9738700144bf9f95b13a877ddba0c3d6",
+  "predecessor": {
+    "tag": "all_wildlife_bound_probe_topfrontier435_20260723",
+    "ledger_path": "cascadiav3/fleet/all_wildlife_bound_probe_topfrontier435_fleet_20260723.json",
+    "ledger_sha256": "80ec14960c96053a5fb5a17e72dd84ec5eee7b74e20713449a15645f46c63a02",
+    "required_terminal_exit": {
+      "john1": 0,
+      "john2": 0,
+      "john3": 0,
+      "john4": 0
+    },
+    "result_access_before_launch": "forbidden"
+  },
+  "taskset_path": "cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier224_taskset_20260723.json",
+  "taskset_sha256": "5c7221f6fb63c8d4777a8d68d4f93bfe86c78c3c9ca63f1c39bef64ee0c2a8c0",
+  "catalog_path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_pilot8_2026-07-23.json",
+  "catalog_sha256": "e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82",
+  "probe_source_sha256": "4c5047c99370d9a433f0b448fe31db5a1dda85fa4b4519aa52498990b788fe31",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "c7dcc31a7bd7d55016d470ebb04112341766cb050a39811d0f8c40aa777008e4",
+  "taskset_builder_sha256": "bb78307e06914341c3f1f296c472034769a2d094c530a214d482c38244cfa129",
+  "selection": {
+    "frontier_layer": 2,
+    "minimum_upper_exclusive": 85,
+    "task_budget": 224,
+    "task_count": 224,
+    "ruleset_count": 113,
+    "disjoint_from_predecessor": true,
+    "priority": "upper descending, whole-group size ascending, ruleset index ascending",
+    "current_upper_distribution": {
+      "91": 6,
+      "92": 94,
+      "93": 56,
+      "94": 17,
+      "95": 11,
+      "96": 20,
+      "97": 10,
+      "98": 10
+    }
+  },
+  "configuration": {
+    "tasks_per_host": 56,
+    "time_limit_seconds_per_task": 300,
+    "total_time_limit_seconds_per_task": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "heartbeat_interval_seconds": 5,
+    "python": "3.12.13",
+    "ortools": "9.15.6755",
+    "projected_completion_local": "approximately 2026-07-24 08:45 EDT",
+    "forced_stop_at_0900": false
+  },
+  "waiter": {
+    "path": "cascadiav3/logs/queue_all_wildlife_bound_secondfrontier224_20260723.sh",
+    "sha256": "c2471c8fe1282ca3e84f93d2bf758d3e17864d122617762482ef85a244e13a2a",
+    "screen": "wildlife_bound_secondfrontier224_waiter",
+    "pid": 82731,
+    "activated_utc": "2026-07-23T23:42:04Z",
+    "heartbeat_path": "cascadiav3/logs/queue_all_wildlife_bound_secondfrontier224.heartbeat",
+    "exit_path": "cascadiav3/logs/queue_all_wildlife_bound_secondfrontier224.exit",
+    "launch_receipt_path": "cascadiav3/logs/queue_all_wildlife_bound_secondfrontier224.launched",
+    "hold_path": "cascadiav3/logs/HOLD_all_wildlife_bound_secondfrontier224"
+  },
+  "result_visibility": "sealed until all four continuation exit files exist",
+  "collection": "Validate and merge predecessor plus continuation probes together against the shared base catalog."
+}

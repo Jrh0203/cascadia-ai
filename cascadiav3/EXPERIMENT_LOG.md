@@ -11452,3 +11452,14 @@ Because both tasksets are disjoint and frozen against the same base, this is
 not an adaptive peek. Second-pass results remain sealed until its own four
 terminal markers, after which both probe directories are validated and merged
 together. Any nonzero predecessor exit or identity mismatch fails closed.
+
+**23:42:04Z waiter activation.** All four staged input/source hash sets match.
+The durable Bash-3-valid waiter has SHA
+`c2471c8fe1282ca3e84f93d2bf758d3e17864d122617762482ef85a244e13a2a`
+and is live in detached screen `wildlife_bound_secondfrontier224_waiter`
+(PID 82731), with its first heartbeat reporting 0/4 predecessor terminals.
+Eleven focused bound-lane tests and Ruff pass after adding the whole-group
+layer/budget selector regressions.
+Queue ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier224_queue_20260723.json`.
+No predecessor task JSON was read.

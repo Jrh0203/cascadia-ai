@@ -125,7 +125,7 @@ over packed expert tensors with Gumbel search-supervised action values.
   outputs remain sealed until every host is terminal.
   John authorized continuing through approximately 09:00 EDT, so a disjoint
   224-task second-frontier layer is frozen 56/host against the same base. A
-  durable HOLD-aware waiter will launch it only after four clean first-pass
+  durable HOLD-aware waiter is active and will launch it only after four clean first-pass
   exits, without inspecting the first pass; projected completion is about
   08:45 EDT.
   The current holistic interval remains `[85,99]` because eight untouched
