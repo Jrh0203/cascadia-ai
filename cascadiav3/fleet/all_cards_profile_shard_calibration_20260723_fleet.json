@@ -1,7 +1,8 @@
 {
   "schema": "all-wildlife-score-profile-fleet-v1",
-  "state": "planned",
+  "state": "running",
   "tag": "all_cards_profile_shard_calibration_20260723",
+  "launch_utc": "2026-07-23T19:35:12Z",
   "source_revision": "c3113d0f",
   "taskset_sha256": "285eef17ef60f0aa74e949ccafa6c8fe88607e679693a9d3125904104e77826b",
   "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
@@ -27,10 +28,10 @@
     {"case_index": 2, "ruleset": "CADAC", "counts": [0, 2, 6, 6, 6], "threshold": 67, "profiles": 29}
   ],
   "shards": [
-    {"host": "john1", "task_indices": [0, 4, 8, 12, 16, 20, 24, 28, 32, 36]},
-    {"host": "john2", "task_indices": [1, 5, 9, 13, 17, 21, 25, 29, 33]},
-    {"host": "john3", "task_indices": [2, 6, 10, 14, 18, 22, 26, 30, 34]},
-    {"host": "john4", "task_indices": [3, 7, 11, 15, 19, 23, 27, 31, 35]}
+    {"host": "john1", "task_indices": [0, 4, 8, 12, 16, 20, 24, 28, 32, 36], "wrapper_pid": 21652, "launch_mode": "screen:wildlife_profile_cal_john1"},
+    {"host": "john2", "task_indices": [1, 5, 9, 13, 17, 21, 25, 29, 33], "wrapper_pid": 54492, "launch_mode": "ssh-nohup"},
+    {"host": "john3", "task_indices": [2, 6, 10, 14, 18, 22, 26, 30, 34], "wrapper_pid": 17952, "launch_mode": "ssh-nohup"},
+    {"host": "john4", "task_indices": [3, 7, 11, 15, 19, 23, 27, 31, 35], "wrapper_pid": 34003, "launch_mode": "ssh-nohup"}
   ],
   "selection_rule": "select if both known profiles are exact INFEASIBLE with maximum branch elapsed <=10.388 seconds, or if all profiles for hard AAAAA or CADAC have exact status (a feasible witness must independently score at least threshold); otherwise do not scale"
 }

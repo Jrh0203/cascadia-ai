@@ -10647,3 +10647,21 @@ identity hash correct. Round-robin assignments are frozen as 10/9/9/9 tasks
 on john1–john4 in
 `cascadiav3/fleet/all_cards_profile_shard_calibration_20260723_fleet.json`.
 Proceed to deploy/preflight; no result-bearing branch has launched.
+
+**19:35:12Z launch transition.** The first remote deployment attempt failed
+closed before launch: an unbraced shell host variable was parsed as a local
+path modifier and created `john2ascadia/`, `john3ascadia/`, and
+`john4ascadia/` staging paths instead of changing any remote source. Remote
+hash preflight detected the stale/missing files. No solver branch ran and no
+result was produced or opened.
+
+The correction used explicit absolute SCP destinations
+`/Users/johnN/cascadia/...`. All seven frozen hashes then matched on all four
+hosts; each runtime reported Python `3.12.13` and OR-Tools `9.15.6755`;
+all target result, PID, heartbeat, exit, and log paths were collision-free;
+and no wildlife solver was active. The 37-branch calibration launched at
+`2026-07-23T19:35:12Z`: john1 wrapper PID `21652` in detached screen
+`wildlife_profile_cal_john1`, john2 PID `54492`, john3 PID `17952`, and
+john4 PID `34003`. All four wrapper and child PIDs were live with fresh
+heartbeats after launch. Shard outputs remain sealed until all four exit
+markers exist.

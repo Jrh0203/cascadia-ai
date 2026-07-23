@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-23 14:40 EDT)
+## Status at a glance (updated 2026-07-23 15:35 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, in progress):** AAAAA has
   one certified optimal board for 728/826 count vectors after unioning the
@@ -62,7 +62,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   twelve-way fox-anchor symmetry break also failed its runtime gate and was
   removed; the narrower anchor-centroid variant failed identically. An
   in-model score-profile table did not resolve a case, but its 35% CADAC
-  branch reduction triggered external profile sharding. No other
+  branch reduction triggered external profile sharding. The frozen 37-branch
+  AAAAA/CADAC calibration is live and hash-verified across john1–john4 as of
+  15:35 EDT; outputs stay sealed until all four shards are terminal. No other
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
