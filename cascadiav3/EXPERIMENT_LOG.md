@@ -9667,3 +9667,77 @@ cap-seven maximizing allocation. Production Rust regression
 seventh-token AAAAA and Bear-C/Elk-B values; the complete
 `cargo test -p cascadia-game` gate passes 124 tests. Durable interpretation:
 `docs/v3/WILDLIFE_CAP7_UPPER_BOUNDS.md`.
+
+## 2026-07-23 12:55 — PREREGISTRATION: all 1,024 wildlife-card rulesets
+
+John requested one maximum-scoring pure-wildlife board for every ordered
+combination of Bear/Elk/Salmon/Hawk/Fox A/B/C/D cards, still exactly 20 tokens
+and at most six of each species. Scope is therefore all `4^5 = 1,024`
+five-letter ruleset IDs in lexical product order. Habitats, tile compatibility,
+drafting, Nature tokens, and every other game mechanic remain excluded.
+
+Deliverable contract:
+
+1. exactly one connected 20-token board per ruleset;
+2. every species count in `[0,6]`;
+3. score and five-part breakdown agree between an independent executable
+   specification and the production Rust scorer under that exact card ID;
+4. optimality requires either a witness matching a sound all-board upper bound
+   or exact infeasibility of every strictly better count/profile branch;
+5. `UNKNOWN`, timeout, heuristic search, an incomplete ledger, or a strong
+   incumbent is never published as an optimum;
+6. retain one canonical board under score ties and preserve per-result source,
+   rules, solver, seed, and fleet provenance.
+
+Engineering gate before production: implement and unit-test all twenty card
+scorers and sound fixed-count bounds; reproduce AAAAA and CBDDB scorers and
+known boards exactly; add exact encodings for the ten card variants absent
+from the two current coordinate models; demonstrate independent model/oracle
+agreement on adversarial fixtures; then calibrate throughput on a frozen,
+stratified ruleset sample. Optimize before the 1,024-row launch. Production
+will be sharded over john1–john4 only after that gate. The existing AAAAA
+98-row tail remains an honest incomplete catalog and is not silently treated
+as solved input for this broader task.
+
+## 2026-07-23 13:00 — All-card scorer gate passes; candidate calibration
+
+Source base `7a8ed38a4cb24f3ebcdcd99d7faaa259953feb5d` on john1. The independent
+Python specification now covers all twenty wildlife cards and all 826 legal
+cap-six count allocations. A separate Rust batch oracle constructs the
+canonical production `Board` and invokes `score_board`. Four frozen connected
+20-token boards (seeds `101,202,303,404`) crossed with all 1,024 ordered
+rulesets produced **4,096/4,096 exact five-part score matches**. Canonical
+oracle-response SHA-256:
+`06ee8d41dbd14766291d70022259ac930d6ddbf4fc2d7592be7ce0a9cbbd1bc9`.
+The verifier is permanent and rerunnable, not an inline-only assertion.
+
+The first performance change constructs one production board per evaluated
+layout and scores uniform A/B/C/D once each; a ruleset then selects its five
+relevant components. It also searches species counts directly while preserving
+the cap. Release calibration measured 10,000 evaluations of AAAAA in 0.11 CPU
+seconds. The frozen 64-ruleset lexical pilot used eight threads, four restarts,
+25,000 iterations/restart, seed `20260723`, and completed in 12.570 seconds.
+Every emitted board passed the independent scorer. This deliberately shallow
+quality pilot matched no global count relaxation: mean relaxation gap 16.8125;
+the median ruleset still had 406 of 826 count branches above its incumbent
+(mean 389.953, maximum 747). Decision: the candidate engine is fast enough,
+but the present separable count relaxation is far too loose to serve as the
+main proof architecture. Do not launch the 1,024-row production search until
+the generalized exact encoding and a substantially stronger proof filter pass
+their frozen calibration.
+
+Hashes: independent scorer
+`527988200686617997f7e7564b337aa62e2c23342f70972e8478422331c366d8`;
+tests `7ca8d18eb6f0476fa751fe2874374f0d661c8814ee3d650dff1da784e6208733`;
+oracle verifier
+`031bed4ea5468ecd4350d58507b7199f02a8f9243b92968172814f7e27bb0e92`;
+Rust oracle
+`c2b6761562e8487d388e51637768cedb35b3845d0bb49f176241f295420024da`;
+candidate engine
+`a889a4ba34856c3d2605a06802da4509feb348df44d0bc21b01b5256927618da`;
+shared search support
+`e094671b33c4f525a189acce590416bfe1cc17856edbda0360770db540468ee0`;
+pilot JSON
+`8449b1d386ca83c061bfe7ece6881420c7d5865bfc5afa799e13187c75d96696`;
+pilot log
+`fce5f3657cd15d3045fdd30e08393d212870dbe20bd2b7c1d20ef3136da58711`.

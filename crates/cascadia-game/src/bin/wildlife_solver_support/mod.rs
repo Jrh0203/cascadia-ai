@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
 use cascadia_game::{
-    Board, HexCoord, Rotation, ScoringCards, Terrain, Tile, TileId, Wildlife, WildlifeMask,
-    score_board,
+    Board, HexCoord, Rotation, ScoringCards, ScoringVariant, Terrain, Tile, TileId, Wildlife,
+    WildlifeMask, score_board,
 };
 
 pub const TOKEN_COUNT: usize = 20;
@@ -236,6 +236,7 @@ fn random_layout(counts: [u8; SPECIES_COUNT], rng: &mut Rng) -> Layout {
 
 enum Undo {
     SwapWildlife { left: usize, right: usize },
+    ChangeWildlife { index: usize, prior: Wildlife },
     MoveToken { index: usize, prior: HexCoord },
 }
 
@@ -247,6 +248,7 @@ impl Undo {
                 layout.tokens[left].wildlife = layout.tokens[right].wildlife;
                 layout.tokens[right].wildlife = prior;
             }
+            Self::ChangeWildlife { index, prior } => layout.tokens[index].wildlife = prior,
             Self::MoveToken { index, prior } => layout.tokens[index].coord = prior,
         }
     }
@@ -264,6 +266,51 @@ fn mutate_fixed_counts(layout: &mut Layout, rng: &mut Rng) -> Option<Undo> {
             layout.tokens[left].wildlife = layout.tokens[right].wildlife;
             layout.tokens[right].wildlife = prior;
             Some(Undo::SwapWildlife { left, right })
+        }
+        _ => {
+            let frontier = layout.frontier();
+            if frontier.is_empty() {
+                return None;
+            }
+            let index = rng.usize(TOKEN_COUNT);
+            let prior = layout.tokens[index].coord;
+            layout.tokens[index].coord = frontier[rng.usize(frontier.len())];
+            if layout.is_connected() {
+                Some(Undo::MoveToken { index, prior })
+            } else {
+                layout.tokens[index].coord = prior;
+                None
+            }
+        }
+    }
+}
+
+fn mutate_any_counts(layout: &mut Layout, rng: &mut Rng) -> Option<Undo> {
+    match rng.usize(10) {
+        0..=4 => {
+            let left = rng.usize(TOKEN_COUNT);
+            let mut right = rng.usize(TOKEN_COUNT - 1);
+            if right >= left {
+                right += 1;
+            }
+            let prior = layout.tokens[left].wildlife;
+            layout.tokens[left].wildlife = layout.tokens[right].wildlife;
+            layout.tokens[right].wildlife = prior;
+            Some(Undo::SwapWildlife { left, right })
+        }
+        5..=7 => {
+            let counts = layout.counts();
+            let index = rng.usize(TOKEN_COUNT);
+            let prior = layout.tokens[index].wildlife;
+            let candidates: Vec<_> = Wildlife::ALL
+                .into_iter()
+                .filter(|wildlife| *wildlife != prior && counts[*wildlife as usize] < COUNT_CAP)
+                .collect();
+            if candidates.is_empty() {
+                return None;
+            }
+            layout.tokens[index].wildlife = candidates[rng.usize(candidates.len())];
+            Some(Undo::ChangeWildlife { index, prior })
         }
         _ => {
             let frontier = layout.frontier();
@@ -331,7 +378,55 @@ pub fn anneal_fixed_counts(
     (global_layout, global_score, evaluated)
 }
 
-pub fn production_score(layout: &Layout, cards: ScoringCards) -> [u16; SPECIES_COUNT] {
+pub fn anneal_any_counts(
+    restarts: usize,
+    iterations: usize,
+    seed: u64,
+    score_layout: impl Fn(&Layout) -> WildlifeScore,
+    global_upper: u16,
+) -> (Layout, WildlifeScore, u64) {
+    let mut rng = Rng::new(seed);
+    let initial_counts = [4; SPECIES_COUNT];
+    let mut global_layout = random_layout(initial_counts, &mut rng);
+    let mut global_score = score_layout(&global_layout);
+    let mut evaluated = 1u64;
+
+    for _ in 0..restarts {
+        let mut current = random_layout(initial_counts, &mut rng);
+        let mut current_score = score_layout(&current);
+        evaluated += 1;
+        for iteration in 0..iterations {
+            let Some(undo) = mutate_any_counts(&mut current, &mut rng) else {
+                continue;
+            };
+            let candidate_score = score_layout(&current);
+            evaluated += 1;
+            let fraction = iteration as f64 / iterations.max(1) as f64;
+            let temperature = 4.0 * (0.025f64 / 4.0).powf(fraction);
+            let delta = f64::from(candidate_score.total()) - f64::from(current_score.total());
+            if delta >= 0.0 || rng.unit() < (delta / temperature).exp() {
+                current_score = candidate_score;
+                if current_score.total() > global_score.total() {
+                    global_layout = current.clone();
+                    global_score = current_score;
+                    if global_score.total() == global_upper {
+                        break;
+                    }
+                }
+            } else {
+                undo.apply(&mut current);
+            }
+        }
+        if global_score.total() == global_upper {
+            break;
+        }
+    }
+
+    global_layout.normalize();
+    (global_layout, global_score, evaluated)
+}
+
+fn production_board(layout: &Layout) -> Board {
     assert!(layout.is_connected());
     let mut board = Board::empty();
     let mut pending = layout.tokens.clone();
@@ -370,7 +465,28 @@ pub fn production_score(layout: &Layout, cards: ScoringCards) -> [u16; SPECIES_C
             .expect("synthetic wildlife places");
         next_id += 1;
     }
-    score_board(&board, cards).wildlife
+    board
+}
+
+pub fn production_score(layout: &Layout, cards: ScoringCards) -> [u16; SPECIES_COUNT] {
+    score_board(&production_board(layout), cards).wildlife
+}
+
+pub fn production_score_all(layout: &Layout) -> [[u16; SPECIES_COUNT]; 4] {
+    let board = production_board(layout);
+    let uniform_cards = |variant| ScoringCards {
+        bear: variant,
+        elk: variant,
+        salmon: variant,
+        hawk: variant,
+        fox: variant,
+    };
+    [
+        score_board(&board, ScoringCards::AAAAA).wildlife,
+        score_board(&board, uniform_cards(ScoringVariant::B)).wildlife,
+        score_board(&board, uniform_cards(ScoringVariant::C)).wildlife,
+        score_board(&board, uniform_cards(ScoringVariant::D)).wildlife,
+    ]
 }
 
 pub fn wildlife_name(wildlife: Wildlife) -> &'static str {

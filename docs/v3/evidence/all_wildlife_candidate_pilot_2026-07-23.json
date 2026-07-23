@@ -1,0 +1,7950 @@
+{
+  "schema": "all-wildlife-candidates-v1",
+  "token_count": 20,
+  "count_cap": 6,
+  "range_start": 0,
+  "range_end": 64,
+  "seed": 20260723,
+  "threads": 8,
+  "restarts_per_ruleset": 4,
+  "iterations_per_restart": 25000,
+  "elapsed_seconds": 12.569605959,
+  "candidates": [
+    {
+      "index": 0,
+      "ruleset": "AAAAA",
+      "count_upper": 73,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        6,
+        4,
+        8,
+        29
+      ],
+      "counts": [
+        6,
+        3,
+        2,
+        3,
+        6
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91641,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "ruleset": "AAAAB",
+      "count_upper": 86,
+      "score": 73,
+      "score_breakdown": [
+        19,
+        0,
+        12,
+        18,
+        24
+      ],
+      "counts": [
+        6,
+        0,
+        4,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92300,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "ruleset": "AAAAC",
+      "count_upper": 80,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        0,
+        20,
+        18,
+        9
+      ],
+      "counts": [
+        6,
+        0,
+        6,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89857,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 9,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "ruleset": "AAAAD",
+      "count_upper": 75,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        0,
+        20,
+        18,
+        9
+      ],
+      "counts": [
+        6,
+        0,
+        6,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90394,
+      "tokens": [
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 7,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "ruleset": "AAABA",
+      "count_upper": 73,
+      "score": 67,
+      "score_breakdown": [
+        19,
+        0,
+        20,
+        20,
+        8
+      ],
+      "counts": [
+        6,
+        0,
+        6,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90176,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "ruleset": "AAABB",
+      "count_upper": 87,
+      "score": 75,
+      "score_breakdown": [
+        0,
+        13,
+        20,
+        20,
+        22
+      ],
+      "counts": [
+        0,
+        4,
+        6,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92188,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "ruleset": "AAABC",
+      "count_upper": 81,
+      "score": 69,
+      "score_breakdown": [
+        19,
+        0,
+        20,
+        20,
+        10
+      ],
+      "counts": [
+        6,
+        0,
+        6,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89540,
+      "tokens": [
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 8,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 9,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 10,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "ruleset": "AAABD",
+      "count_upper": 75,
+      "score": 69,
+      "score_breakdown": [
+        19,
+        0,
+        20,
+        12,
+        18
+      ],
+      "counts": [
+        6,
+        0,
+        6,
+        4,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90320,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "ruleset": "AAACA",
+      "count_upper": 98,
+      "score": 75,
+      "score_breakdown": [
+        19,
+        5,
+        2,
+        27,
+        22
+      ],
+      "counts": [
+        6,
+        2,
+        1,
+        6,
+        5
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92525,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "ruleset": "AAACB",
+      "count_upper": 112,
+      "score": 82,
+      "score_breakdown": [
+        0,
+        15,
+        16,
+        27,
+        24
+      ],
+      "counts": [
+        0,
+        5,
+        5,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93041,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "fox"
+        },
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "salmon"
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "ruleset": "AAACC",
+      "count_upper": 106,
+      "score": 75,
+      "score_breakdown": [
+        0,
+        18,
+        20,
+        27,
+        10
+      ],
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90086,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "salmon"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "ruleset": "AAACD",
+      "count_upper": 100,
+      "score": 71,
+      "score_breakdown": [
+        19,
+        18,
+        0,
+        27,
+        7
+      ],
+      "counts": [
+        6,
+        6,
+        0,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90975,
+      "tokens": [
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 8,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 9,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "ruleset": "AAADA",
+      "count_upper": 80,
+      "score": 73,
+      "score_breakdown": [
+        19,
+        2,
+        7,
+        27,
+        18
+      ],
+      "counts": [
+        6,
+        1,
+        3,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90666,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "ruleset": "AAADB",
+      "count_upper": 94,
+      "score": 80,
+      "score_breakdown": [
+        0,
+        13,
+        20,
+        27,
+        20
+      ],
+      "counts": [
+        0,
+        4,
+        6,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92711,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "ruleset": "AAADC",
+      "count_upper": 88,
+      "score": 73,
+      "score_breakdown": [
+        19,
+        0,
+        20,
+        27,
+        7
+      ],
+      "counts": [
+        6,
+        0,
+        6,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89927,
+      "tokens": [
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 8,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 8,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 8,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 7,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 9,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 9,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "ruleset": "AAADD",
+      "count_upper": 82,
+      "score": 71,
+      "score_breakdown": [
+        19,
+        5,
+        20,
+        18,
+        9
+      ],
+      "counts": [
+        6,
+        2,
+        6,
+        4,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89234,
+      "tokens": [
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "ruleset": "AABAA",
+      "count_upper": 73,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        0,
+        17,
+        18,
+        12
+      ],
+      "counts": [
+        6,
+        0,
+        5,
+        6,
+        3
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91768,
+      "tokens": [
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 7,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 7,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 8,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 4,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "ruleset": "AABAB",
+      "count_upper": 87,
+      "score": 71,
+      "score_breakdown": [
+        19,
+        13,
+        9,
+        11,
+        19
+      ],
+      "counts": [
+        6,
+        4,
+        3,
+        4,
+        3
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91922,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 8,
+          "wildlife": "elk"
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "ruleset": "AABAC",
+      "count_upper": 81,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        13,
+        17,
+        8,
+        9
+      ],
+      "counts": [
+        6,
+        4,
+        5,
+        3,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89792,
+      "tokens": [
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 8,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "ruleset": "AABAD",
+      "count_upper": 75,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        13,
+        17,
+        8,
+        9
+      ],
+      "counts": [
+        6,
+        4,
+        5,
+        3,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89921,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "ruleset": "AABBA",
+      "count_upper": 73,
+      "score": 67,
+      "score_breakdown": [
+        19,
+        13,
+        2,
+        20,
+        13
+      ],
+      "counts": [
+        6,
+        4,
+        1,
+        6,
+        3
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90367,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "ruleset": "AABBB",
+      "count_upper": 88,
+      "score": 75,
+      "score_breakdown": [
+        0,
+        13,
+        17,
+        20,
+        25
+      ],
+      "counts": [
+        0,
+        4,
+        5,
+        6,
+        5
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91701,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 6,
+          "wildlife": "salmon"
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "ruleset": "AABBC",
+      "count_upper": 82,
+      "score": 68,
+      "score_breakdown": [
+        19,
+        0,
+        17,
+        20,
+        12
+      ],
+      "counts": [
+        6,
+        0,
+        5,
+        6,
+        3
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 88983,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 8,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "ruleset": "AABBD",
+      "count_upper": 76,
+      "score": 65,
+      "score_breakdown": [
+        19,
+        9,
+        17,
+        20,
+        0
+      ],
+      "counts": [
+        6,
+        3,
+        5,
+        6,
+        0
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 88948,
+      "tokens": [
+        {
+          "q": 11,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 10,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 11,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 8,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 9,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 11,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 8,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 8,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 9,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "ruleset": "AABCA",
+      "count_upper": 98,
+      "score": 75,
+      "score_breakdown": [
+        19,
+        13,
+        0,
+        27,
+        16
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91410,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 8,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "ruleset": "AABCB",
+      "count_upper": 113,
+      "score": 82,
+      "score_breakdown": [
+        11,
+        0,
+        17,
+        27,
+        27
+      ],
+      "counts": [
+        4,
+        0,
+        5,
+        6,
+        5
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93127,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "ruleset": "AABCC",
+      "count_upper": 107,
+      "score": 73,
+      "score_breakdown": [
+        19,
+        5,
+        17,
+        27,
+        5
+      ],
+      "counts": [
+        6,
+        2,
+        5,
+        6,
+        1
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90175,
+      "tokens": [
+        {
+          "q": 8,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 8,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 8,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "ruleset": "AABCD",
+      "count_upper": 100,
+      "score": 73,
+      "score_breakdown": [
+        19,
+        18,
+        0,
+        27,
+        9
+      ],
+      "counts": [
+        6,
+        6,
+        0,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89908,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 8,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 9,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "ruleset": "AABDA",
+      "count_upper": 80,
+      "score": 70,
+      "score_breakdown": [
+        19,
+        18,
+        2,
+        18,
+        13
+      ],
+      "counts": [
+        6,
+        6,
+        1,
+        4,
+        3
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91650,
+      "tokens": [
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 8,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "ruleset": "AABDB",
+      "count_upper": 95,
+      "score": 80,
+      "score_breakdown": [
+        0,
+        13,
+        17,
+        27,
+        23
+      ],
+      "counts": [
+        0,
+        4,
+        5,
+        6,
+        5
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93064,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "ruleset": "AABDC",
+      "count_upper": 89,
+      "score": 73,
+      "score_breakdown": [
+        19,
+        0,
+        17,
+        27,
+        10
+      ],
+      "counts": [
+        6,
+        0,
+        5,
+        6,
+        3
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91582,
+      "tokens": [
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 8,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 8,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 8,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "ruleset": "AABDD",
+      "count_upper": 82,
+      "score": 70,
+      "score_breakdown": [
+        19,
+        15,
+        9,
+        27,
+        0
+      ],
+      "counts": [
+        6,
+        5,
+        3,
+        6,
+        0
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90079,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 9,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 9,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "ruleset": "AACAA",
+      "count_upper": 74,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        13,
+        10,
+        11,
+        13
+      ],
+      "counts": [
+        6,
+        4,
+        3,
+        4,
+        3
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90737,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "elk"
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "ruleset": "AACAB",
+      "count_upper": 86,
+      "score": 72,
+      "score_breakdown": [
+        19,
+        11,
+        20,
+        0,
+        22
+      ],
+      "counts": [
+        6,
+        4,
+        6,
+        0,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91032,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 7,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "ruleset": "AACAC",
+      "count_upper": 80,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        13,
+        20,
+        2,
+        12
+      ],
+      "counts": [
+        6,
+        4,
+        6,
+        1,
+        3
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89593,
+      "tokens": [
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 7,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "ruleset": "AACAD",
+      "count_upper": 76,
+      "score": 68,
+      "score_breakdown": [
+        19,
+        13,
+        10,
+        8,
+        18
+      ],
+      "counts": [
+        6,
+        4,
+        3,
+        3,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91158,
+      "tokens": [
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "ruleset": "AACBA",
+      "count_upper": 73,
+      "score": 69,
+      "score_breakdown": [
+        0,
+        9,
+        20,
+        20,
+        20
+      ],
+      "counts": [
+        0,
+        3,
+        6,
+        6,
+        5
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92063,
+      "tokens": [
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "salmon"
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "ruleset": "AACBB",
+      "count_upper": 87,
+      "score": 75,
+      "score_breakdown": [
+        0,
+        13,
+        20,
+        20,
+        22
+      ],
+      "counts": [
+        0,
+        4,
+        6,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92109,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "ruleset": "AACBC",
+      "count_upper": 81,
+      "score": 66,
+      "score_breakdown": [
+        0,
+        18,
+        20,
+        20,
+        8
+      ],
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89219,
+      "tokens": [
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "ruleset": "AACBD",
+      "count_upper": 76,
+      "score": 67,
+      "score_breakdown": [
+        19,
+        13,
+        10,
+        16,
+        9
+      ],
+      "counts": [
+        6,
+        4,
+        3,
+        5,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89584,
+      "tokens": [
+        {
+          "q": 0,
+          "r": 0,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 0,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "elk"
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "ruleset": "AACCA",
+      "count_upper": 98,
+      "score": 74,
+      "score_breakdown": [
+        19,
+        9,
+        10,
+        27,
+        9
+      ],
+      "counts": [
+        6,
+        3,
+        3,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91123,
+      "tokens": [
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 8,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "ruleset": "AACCB",
+      "count_upper": 112,
+      "score": 81,
+      "score_breakdown": [
+        19,
+        13,
+        0,
+        27,
+        22
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93000,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "ruleset": "AACCC",
+      "count_upper": 106,
+      "score": 72,
+      "score_breakdown": [
+        19,
+        0,
+        20,
+        27,
+        6
+      ],
+      "counts": [
+        6,
+        0,
+        6,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90461,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "ruleset": "AACCD",
+      "count_upper": 101,
+      "score": 74,
+      "score_breakdown": [
+        19,
+        9,
+        10,
+        27,
+        9
+      ],
+      "counts": [
+        6,
+        3,
+        3,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 89874,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 7,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 4,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "ruleset": "AACDA",
+      "count_upper": 80,
+      "score": 72,
+      "score_breakdown": [
+        19,
+        4,
+        10,
+        18,
+        21
+      ],
+      "counts": [
+        6,
+        2,
+        3,
+        4,
+        5
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91811,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "ruleset": "AACDB",
+      "count_upper": 94,
+      "score": 79,
+      "score_breakdown": [
+        19,
+        0,
+        10,
+        27,
+        23
+      ],
+      "counts": [
+        6,
+        0,
+        3,
+        6,
+        5
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93606,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 8,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "ruleset": "AACDC",
+      "count_upper": 88,
+      "score": 71,
+      "score_breakdown": [
+        19,
+        5,
+        20,
+        27,
+        0
+      ],
+      "counts": [
+        6,
+        2,
+        6,
+        6,
+        0
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 88566,
+      "tokens": [
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 6,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "ruleset": "AACDD",
+      "count_upper": 83,
+      "score": 72,
+      "score_breakdown": [
+        19,
+        9,
+        10,
+        18,
+        16
+      ],
+      "counts": [
+        6,
+        3,
+        3,
+        4,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91233,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 9,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 9,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 9,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 10,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 10,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "ruleset": "AADAA",
+      "count_upper": 79,
+      "score": 69,
+      "score_breakdown": [
+        19,
+        2,
+        12,
+        18,
+        18
+      ],
+      "counts": [
+        6,
+        1,
+        3,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92906,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "ruleset": "AADAB",
+      "count_upper": 92,
+      "score": 75,
+      "score_breakdown": [
+        19,
+        0,
+        13,
+        18,
+        25
+      ],
+      "counts": [
+        6,
+        0,
+        3,
+        6,
+        5
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93970,
+      "tokens": [
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "ruleset": "AADAC",
+      "count_upper": 86,
+      "score": 63,
+      "score_breakdown": [
+        19,
+        13,
+        10,
+        18,
+        3
+      ],
+      "counts": [
+        6,
+        4,
+        3,
+        6,
+        1
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 90381,
+      "tokens": [
+        {
+          "q": 0,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 7,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 7,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 5,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 8,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 9,
+          "wildlife": "elk"
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "ruleset": "AADAD",
+      "count_upper": 81,
+      "score": 66,
+      "score_breakdown": [
+        19,
+        9,
+        11,
+        18,
+        9
+      ],
+      "counts": [
+        6,
+        3,
+        3,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91023,
+      "tokens": [
+        {
+          "q": 1,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "ruleset": "AADBA",
+      "count_upper": 78,
+      "score": 69,
+      "score_breakdown": [
+        19,
+        9,
+        12,
+        20,
+        9
+      ],
+      "counts": [
+        6,
+        3,
+        3,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91481,
+      "tokens": [
+        {
+          "q": 1,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "ruleset": "AADBB",
+      "count_upper": 93,
+      "score": 74,
+      "score_breakdown": [
+        19,
+        13,
+        0,
+        20,
+        22
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92259,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "ruleset": "AADBC",
+      "count_upper": 87,
+      "score": 68,
+      "score_breakdown": [
+        19,
+        13,
+        13,
+        20,
+        3
+      ],
+      "counts": [
+        6,
+        4,
+        3,
+        6,
+        1
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91399,
+      "tokens": [
+        {
+          "q": 0,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "ruleset": "AADBD",
+      "count_upper": 81,
+      "score": 68,
+      "score_breakdown": [
+        19,
+        13,
+        0,
+        20,
+        16
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92261,
+      "tokens": [
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "ruleset": "AADCA",
+      "count_upper": 103,
+      "score": 75,
+      "score_breakdown": [
+        19,
+        13,
+        0,
+        27,
+        16
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92010,
+      "tokens": [
+        {
+          "q": 6,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 7,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 5,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 0,
+          "r": 7,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "ruleset": "AADCB",
+      "count_upper": 118,
+      "score": 81,
+      "score_breakdown": [
+        19,
+        13,
+        0,
+        27,
+        22
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93617,
+      "tokens": [
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "ruleset": "AADCC",
+      "count_upper": 112,
+      "score": 72,
+      "score_breakdown": [
+        19,
+        9,
+        11,
+        27,
+        6
+      ],
+      "counts": [
+        6,
+        3,
+        3,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91430,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 8,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 8,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 9,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 8,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "ruleset": "AADCD",
+      "count_upper": 104,
+      "score": 73,
+      "score_breakdown": [
+        19,
+        18,
+        0,
+        27,
+        9
+      ],
+      "counts": [
+        6,
+        6,
+        0,
+        6,
+        2
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92247,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "elk"
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "ruleset": "AADDA",
+      "count_upper": 85,
+      "score": 71,
+      "score_breakdown": [
+        19,
+        11,
+        0,
+        18,
+        23
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        4,
+        6
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 91251,
+      "tokens": [
+        {
+          "q": 3,
+          "r": 0,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 2,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "ruleset": "AADDB",
+      "count_upper": 100,
+      "score": 79,
+      "score_breakdown": [
+        19,
+        13,
+        0,
+        27,
+        20
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 92144,
+      "tokens": [
+        {
+          "q": 2,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 3,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 3,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "fox"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 7,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 8,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 9,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 9,
+          "wildlife": "bear"
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "ruleset": "AADDC",
+      "count_upper": 94,
+      "score": 74,
+      "score_breakdown": [
+        19,
+        13,
+        11,
+        27,
+        4
+      ],
+      "counts": [
+        6,
+        4,
+        3,
+        6,
+        1
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93744,
+      "tokens": [
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 5,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 6,
+          "r": 1,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "salmon"
+        },
+        {
+          "q": 6,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 5,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 0,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "hawk"
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "ruleset": "AADDD",
+      "count_upper": 86,
+      "score": 75,
+      "score_breakdown": [
+        19,
+        13,
+        0,
+        27,
+        16
+      ],
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "upper_bound_matched": false,
+      "states_evaluated": 93085,
+      "tokens": [
+        {
+          "q": 7,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 8,
+          "r": 0,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 7,
+          "r": 1,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 2,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 2,
+          "wildlife": "bear"
+        },
+        {
+          "q": 6,
+          "r": 2,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 3,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 3,
+          "wildlife": "bear"
+        },
+        {
+          "q": 0,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 1,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 4,
+          "wildlife": "bear"
+        },
+        {
+          "q": 3,
+          "r": 4,
+          "wildlife": "fox"
+        },
+        {
+          "q": 4,
+          "r": 4,
+          "wildlife": "elk"
+        },
+        {
+          "q": 5,
+          "r": 4,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 5,
+          "wildlife": "fox"
+        },
+        {
+          "q": 3,
+          "r": 5,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 4,
+          "r": 5,
+          "wildlife": "elk"
+        },
+        {
+          "q": 1,
+          "r": 6,
+          "wildlife": "hawk"
+        },
+        {
+          "q": 2,
+          "r": 6,
+          "wildlife": "bear"
+        },
+        {
+          "q": 2,
+          "r": 7,
+          "wildlife": "bear"
+        }
+      ]
+    }
+  ]
+}

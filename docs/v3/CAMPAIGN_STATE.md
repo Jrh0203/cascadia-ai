@@ -1060,3 +1060,13 @@ allocations without launching a coordinate search. The comparable elementary
 AAAAA bound changes 73→74 after the universal six-neighbor fox-incidence
 constraint; CBDDB changes 100→102. These are bounds, not achieved scores.
 Durable derivation: `docs/v3/WILDLIFE_CAP7_UPPER_BOUNDS.md`.
+
+New local catalog scope (12:55): John requested one certified-optimal board
+for each of all 1,024 ordered A/B/C/D wildlife-card combinations at cap six.
+The exactness/provenance contract is preregistered in `EXPERIMENT_LOG.md`.
+All 4,096 frozen independent/production scorer comparisons passed. The first
+64-ruleset candidate calibration completed in 12.57 seconds, but its separable
+count bounds left a median 406/826 count branches above the incumbent.
+Generalized exact encoding and stronger proof filtering are therefore active;
+no arbitrary-ruleset score has yet been accepted as optimal and no production
+fleet shard has launched.
