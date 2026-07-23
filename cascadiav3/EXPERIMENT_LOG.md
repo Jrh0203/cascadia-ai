@@ -9030,3 +9030,15 @@ output:
 Accept only exact `INFEASIBLE` per case. If both calibrations remain `UNKNOWN`,
 close this coordinate-relaxation direction regardless of branch-count change
 and proceed to finite fox-component enumeration; no longer run more time.
+
+**Result — DIRECTION CLOSED.** All three v2 cases remained `UNKNOWN` at the
+30-second boundary. V2 reduced branches versus v1 from 290,449 to 215,029 on
+`(3,6,6,0,5)` and from 283,731 to 243,547 on `(3,6,3,3,5)`, but did not prove
+either known calibration; `(6,1,5,2,6)` likewise ended at 243,368 branches.
+Elapsed 90.148777 seconds. Artifact SHA-256
+`8f0229bc7a528ea1cd3362c1415a2aa9128c61edeacbbb92b3b0ee8295fd0133`;
+log SHA-256
+`7723dd55aad0e0f32092a8442f4c522175958c3e9129656f39fa5668b822b4bd`.
+No proof and no catalog change. Per the registered rule, do not lengthen or
+further tune the 20-coordinate relaxation. Continue only with finite local
+fox-component enumeration and cell-set packing.

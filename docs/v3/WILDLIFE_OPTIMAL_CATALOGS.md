@@ -146,6 +146,14 @@ translations share a factorized representative. Every certificate is
 source-hashed, rerunnable, independently checks its incumbent, and remains
 separate from the live catalog until the catalog writer exits.
 
+A generalized relaxation retaining all 20 coordinates but only forced scoring
+motifs was also implemented and containment-tested. Two preregistered screens,
+including a symmetry-pruned v2, remained `UNKNOWN` on already-certified
+calibrations at 30 seconds. That direction is closed: longer generic coordinate
+search is not treated as useful evidence. Tail work uses finite explicit fox
+components and local cell-set packing, which removes the free-coordinate
+symmetry and has already produced the accepted specialized certificates.
+
 ## Independent validation
 
 Every final board must pass all of the following:

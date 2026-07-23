@@ -1634,3 +1634,22 @@ sweep ~0.5 + n1024 control ~0.2 + bootstrap ~0.35 + overhead ~0.1
 dropped monitor event) logged; mitigation: poll terminal state at
 status checks, kill only by explicit PID (pkill self-match trap
 recurred 07-21).
+
+## 14. Pure-wildlife catalog exact-tail engineering (2026-07-23)
+
+The all-count AAAAA catalog's generic labeled-token coordinate model resolves
+the broad body but times out on a high-Fox-A tail. Adding more hinted runtime
+had negligible yield. A smaller 20-coordinate motif relaxation was tested in
+two preregistered screens: v1 kept exact non-overlap and positive fox
+observations while dropping score-lowering isolation/connectivity constraints;
+v2 added species/group symmetry breaking, target-based choice pruning, and
+single observation witnesses. Both remained `UNKNOWN` at 30 seconds on known
+exact calibration cases. This direction is **CLOSED**; more coordinate-model
+time is not a ranked tail strategy.
+
+Finite local cell-set packing is the active exact-tail method. It explicitly
+enumerates forced salmon/fox geometry and relaxes only remote, noncovering
+motifs. This method has already supplied seven independently serialized exact
+certificates beyond the live catalog ledger. The next extension must model a
+second explicit fox component for cases with two salmon-missing foxes; the
+older abstract treatment was exactly the remaining source of looseness.
