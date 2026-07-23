@@ -24,7 +24,9 @@ from tools.aaaaa_wildlife_exact import (
     solve_counts,
 )
 
-SCHEMA = "aaaaa-wildlife-optimal-catalog-v1"
+SCHEMA = "aaaaa-wildlife-optimal-catalog-v2"
+LEGACY_SCHEMA = "aaaaa-wildlife-optimal-catalog-v1"
+GLOBAL_EXACT_UPPER_BOUND = 68
 
 
 def file_sha256(path: Path) -> str:
@@ -101,23 +103,31 @@ def attempt_summary(result: dict[str, Any], connectivity: bool, threshold: int) 
 
 def solve_one(task: dict[str, Any]) -> dict[str, Any]:
     counts = tuple(int(value) for value in task["counts"])
-    upper = count_relaxation(counts)
+    count_upper = count_relaxation(counts)
+    upper = min(count_upper, GLOBAL_EXACT_UPPER_BOUND)
     tokens, breakdown = validate_witness(counts, task["tokens"])
     incumbent = sum(breakdown)
     attempts: list[dict[str, Any]] = []
     started = time.monotonic()
+    upper_method = (
+        "witness_matches_count_relaxation"
+        if upper == count_upper
+        else "witness_matches_global_upper_bound"
+    )
 
     if incumbent == upper:
         return {
             "counts": list(counts),
             "optimum": incumbent,
-            "count_relaxation": upper,
+            "count_relaxation": count_upper,
+            "effective_upper_bound": upper,
             "score_breakdown": breakdown,
             "tokens": tokens,
-            "proof_method": "witness_matches_count_relaxation",
+            "proof_method": upper_method,
             "proof_complete": True,
             "attempts": attempts,
             "wall_seconds": time.monotonic() - started,
+            "proof_provenance": task["proof_provenance"],
         }
 
     while incumbent < upper:
@@ -132,19 +142,22 @@ def solve_one(task: dict[str, Any]) -> dict[str, Any]:
             maximize=False,
             maximum_score=upper,
             enforce_connectivity=False,
+            initial_tokens=tokens,
         )
         attempts.append(attempt_summary(relaxed, False, threshold))
         if relaxed["model_status"] == "INFEASIBLE":
             return {
                 "counts": list(counts),
                 "optimum": incumbent,
-                "count_relaxation": upper,
+                "count_relaxation": count_upper,
+                "effective_upper_bound": upper,
                 "score_breakdown": breakdown,
                 "tokens": tokens,
                 "proof_method": "disconnected_relaxation_infeasible",
                 "proof_complete": True,
                 "attempts": attempts,
                 "wall_seconds": time.monotonic() - started,
+                "proof_provenance": task["proof_provenance"],
             }
         if relaxed["objective"] is not None:
             relaxed_tokens = normalized_tokens(relaxed["tokens"])
@@ -166,31 +179,36 @@ def solve_one(task: dict[str, Any]) -> dict[str, Any]:
             maximize=False,
             maximum_score=upper,
             enforce_connectivity=True,
+            initial_tokens=tokens,
         )
         attempts.append(attempt_summary(connected, True, threshold))
         if connected["model_status"] == "INFEASIBLE":
             return {
                 "counts": list(counts),
                 "optimum": incumbent,
-                "count_relaxation": upper,
+                "count_relaxation": count_upper,
+                "effective_upper_bound": upper,
                 "score_breakdown": breakdown,
                 "tokens": tokens,
                 "proof_method": "connected_model_infeasible",
                 "proof_complete": True,
                 "attempts": attempts,
                 "wall_seconds": time.monotonic() - started,
+                "proof_provenance": task["proof_provenance"],
             }
         if connected["objective"] is None:
             return {
                 "counts": list(counts),
                 "optimum": incumbent,
-                "count_relaxation": upper,
+                "count_relaxation": count_upper,
+                "effective_upper_bound": upper,
                 "score_breakdown": breakdown,
                 "tokens": tokens,
                 "proof_method": "incomplete_timeout",
                 "proof_complete": False,
                 "attempts": attempts,
                 "wall_seconds": time.monotonic() - started,
+                "proof_provenance": task["proof_provenance"],
             }
         tokens, breakdown = validate_witness(counts, connected["tokens"])
         improved = sum(breakdown)
@@ -201,13 +219,15 @@ def solve_one(task: dict[str, Any]) -> dict[str, Any]:
     return {
         "counts": list(counts),
         "optimum": incumbent,
-        "count_relaxation": upper,
+        "count_relaxation": count_upper,
+        "effective_upper_bound": upper,
         "score_breakdown": breakdown,
         "tokens": tokens,
-        "proof_method": "witness_matches_count_relaxation",
+        "proof_method": upper_method,
         "proof_complete": True,
         "attempts": attempts,
         "wall_seconds": time.monotonic() - started,
+        "proof_provenance": task["proof_provenance"],
     }
 
 
@@ -244,6 +264,14 @@ def payload_for(
             "connected_time_limit_seconds": args.connected_time_limit,
             "base_seed": args.seed,
         },
+        "global_upper_bound": {
+            "score": GLOBAL_EXACT_UPPER_BOUND,
+            "proof_ledger": "docs/v3/evidence/aaaaa_wildlife_optimum_2026-07-22.json",
+            "proof_ledger_sha256": (
+                "163c338643fd7c14d45eb00fa1b833b4043260cef47effe14816787e124e3828"
+            ),
+        },
+        "imported_ledgers": getattr(args, "imported_ledger_records", []),
         "candidates_sha256": candidates_sha256,
         "catalog_source_sha256": file_sha256(source),
         "exact_model_source_sha256": file_sha256(exact_source),
@@ -312,7 +340,48 @@ def run(args: argparse.Namespace) -> int:
     candidates_sha256 = file_sha256(candidate_path)
     candidates = load_candidates(candidate_path)
     canonical_counts = [counts for counts, _ in count_vectors()]
+    candidate_by_counts = {
+        counts: candidate for counts, candidate in zip(canonical_counts, candidates, strict=True)
+    }
     results: dict[tuple[int, ...], dict[str, Any]] = {}
+    args.imported_ledger_records = []
+
+    for imported_path_string in args.import_ledger:
+        imported_path = Path(imported_path_string)
+        imported_sha256 = file_sha256(imported_path)
+        prior = json.loads(imported_path.read_text(encoding="utf-8"))
+        if prior.get("schema") not in (LEGACY_SCHEMA, SCHEMA):
+            raise SystemExit(f"unsupported imported ledger schema: {imported_path}")
+        if int(prior.get("allocation_count", -1)) != len(canonical_counts):
+            raise SystemExit(f"imported ledger count mismatch: {imported_path}")
+        ledger_record = {
+            "path": str(imported_path),
+            "sha256": imported_sha256,
+            "schema": prior["schema"],
+            "catalog_source_sha256": prior.get("catalog_source_sha256"),
+            "exact_model_source_sha256": prior.get("exact_model_source_sha256"),
+            "candidate_generator_source_sha256": prior.get("candidate_generator_source_sha256"),
+            "candidates_sha256": prior.get("candidates_sha256"),
+            "configuration": prior.get("configuration"),
+        }
+        args.imported_ledger_records.append(ledger_record)
+        for result in prior.get("results", []):
+            counts = tuple(int(value) for value in result["counts"])
+            if counts not in candidate_by_counts:
+                raise SystemExit(f"imported ledger has unexpected counts {counts}")
+            tokens, breakdown = validate_witness(counts, result["tokens"])
+            if sum(breakdown) != int(result["optimum"]):
+                raise SystemExit(f"imported ledger witness mismatch for {counts}")
+            if result.get("proof_complete"):
+                imported_result = dict(result)
+                imported_result["tokens"] = tokens
+                imported_result["score_breakdown"] = breakdown
+                imported_result.setdefault("proof_provenance", ledger_record)
+                results[counts] = imported_result
+            elif sum(breakdown) > int(candidate_by_counts[counts]["score"]):
+                candidate_by_counts[counts]["tokens"] = tokens
+                candidate_by_counts[counts]["score"] = sum(breakdown)
+                candidate_by_counts[counts]["score_breakdown"] = breakdown
 
     if args.resume and output.exists():
         prior = json.loads(output.read_text(encoding="utf-8"))
@@ -326,10 +395,22 @@ def run(args: argparse.Namespace) -> int:
         ):
             if prior.get(field) != current_provenance[field]:
                 raise SystemExit(f"resume ledger {field} mismatch")
+        if not args.imported_ledger_records:
+            args.imported_ledger_records = list(prior.get("imported_ledgers", []))
         for result in prior.get("results", []):
             counts = tuple(int(value) for value in result["counts"])
             if result.get("proof_complete"):
                 results[counts] = result
+
+    current_payload = payload_for(args, candidates_sha256, {})
+    current_proof_provenance = {
+        "catalog_schema": SCHEMA,
+        "catalog_source_sha256": current_payload["catalog_source_sha256"],
+        "exact_model_source_sha256": current_payload["exact_model_source_sha256"],
+        "candidate_generator_source_sha256": current_payload["candidate_generator_source_sha256"],
+        "candidates_sha256": candidates_sha256,
+        "configuration": current_payload["configuration"],
+    }
 
     tasks = []
     for index, (counts, candidate) in enumerate(zip(canonical_counts, candidates, strict=True)):
@@ -342,7 +423,9 @@ def run(args: argparse.Namespace) -> int:
             "relaxation_time_limit": args.relaxation_time_limit,
             "connected_time_limit": args.connected_time_limit,
             "seed": args.seed + index * 1000,
-            "candidate_gap": count_relaxation(counts) - int(candidate["score"]),
+            "candidate_gap": min(count_relaxation(counts), GLOBAL_EXACT_UPPER_BOUND)
+            - int(candidate["score"]),
+            "proof_provenance": current_proof_provenance,
         }
         if task["candidate_gap"] == 0:
             results[counts] = solve_one(task)
@@ -398,6 +481,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--connected-time-limit", type=float, default=300.0)
     parser.add_argument("--seed", type=int, default=20260722)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--import-ledger",
+        action="append",
+        default=[],
+        help="import completed proofs and stronger incomplete incumbents from a prior ledger",
+    )
     parser.add_argument("--limit", type=int, help="calibration only: submit at most this many")
     args = parser.parse_args()
     if args.jobs < 1 or args.solver_workers < 1:

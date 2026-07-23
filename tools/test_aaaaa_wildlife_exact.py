@@ -4,7 +4,6 @@ from ortools.sat.python import cp_model
 
 from tools.aaaaa_wildlife_exact import (
     KNOWN_INCUMBENT_TOKENS,
-    SPECIES,
     build_model,
     count_relaxation,
     count_vectors,
@@ -40,28 +39,12 @@ class AaaaaWildlifeExactTests(unittest.TestCase):
         self.assertEqual("", fox_free_model.validate())
 
     def test_exact_model_accepts_the_production_witness(self) -> None:
-        model, variables = build_model((6, 4, 6, 0, 4), 68)
-        foxes = [
-            (int(token["q"]), int(token["r"]))
-            for token in KNOWN_INCUMBENT_TOKENS
-            if token["wildlife"] == "fox"
-        ]
-        origin_q, origin_r = min(foxes)
-        positions = {
-            species: sorted(
-                (int(token["q"]) - origin_q, int(token["r"]) - origin_r)
-                for token in KNOWN_INCUMBENT_TOKENS
-                if token["wildlife"] == species
-            )
-            for species in SPECIES
-        }
-        offsets = {species: 0 for species in SPECIES}
-        for token, species_code in enumerate(variables.species_by_token):
-            species = SPECIES[species_code]
-            q, r = positions[species][offsets[species]]
-            offsets[species] += 1
-            model.add(variables.q[token] == q)
-            model.add(variables.r[token] == r)
+        model, variables = build_model(
+            (6, 4, 6, 0, 4),
+            68,
+            initial_tokens=KNOWN_INCUMBENT_TOKENS,
+            fix_initial_tokens=True,
+        )
 
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = 10

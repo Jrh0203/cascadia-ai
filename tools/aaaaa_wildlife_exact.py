@@ -263,6 +263,8 @@ def build_model(
     maximize: bool = True,
     maximum_score: int | None = None,
     enforce_connectivity: bool = True,
+    initial_tokens: list[dict[str, int | str]] | None = None,
+    fix_initial_tokens: bool = False,
 ) -> tuple[cp_model.CpModel, ExactVariables]:
     if sum(counts) != TOKEN_COUNT or any(count < 0 or count > COUNT_CAP for count in counts):
         raise ValueError(f"invalid counts: {counts}")
@@ -304,6 +306,36 @@ def build_model(
     for indices in by_species.values():
         for left, right in itertools.pairwise(indices):
             model.add(coordinate_id[left] < coordinate_id[right])
+
+    if initial_tokens is not None:
+        rows_by_species = {
+            species: sorted(
+                (
+                    (int(row["q"]), int(row["r"]))
+                    for row in initial_tokens
+                    if str(row["wildlife"]) == SPECIES[species]
+                ),
+                key=lambda coord: coord[0] * width + coord[1],
+            )
+            for species in range(len(SPECIES))
+        }
+        if any(len(rows_by_species[species]) != counts[species] for species in range(len(SPECIES))):
+            raise ValueError("initial token counts do not match model counts")
+        anchor_species = species_by_token[0]
+        anchor_q, anchor_r = rows_by_species[anchor_species][0]
+        translated = {
+            species: [(coord_q - anchor_q, coord_r - anchor_r) for coord_q, coord_r in rows]
+            for species, rows in rows_by_species.items()
+        }
+        for token, species in enumerate(species_by_token):
+            species_offset = sum(value == species for value in species_by_token[:token])
+            initial_q, initial_r = translated[species][species_offset]
+            if fix_initial_tokens:
+                model.add(q[token] == initial_q)
+                model.add(r[token] == initial_r)
+            else:
+                model.add_hint(q[token], initial_q)
+                model.add_hint(r[token], initial_r)
 
     adjacency = adjacency_variables(model, q, r)
 
@@ -508,6 +540,7 @@ def solve_counts(
     maximize: bool = True,
     maximum_score: int | None = None,
     enforce_connectivity: bool = True,
+    initial_tokens: list[dict[str, int | str]] | None = None,
 ) -> dict[str, object]:
     started = time.monotonic()
     model, variables = build_model(
@@ -516,6 +549,7 @@ def solve_counts(
         maximize=maximize,
         maximum_score=maximum_score,
         enforce_connectivity=enforce_connectivity,
+        initial_tokens=initial_tokens,
     )
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit

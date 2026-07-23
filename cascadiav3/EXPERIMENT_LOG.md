@@ -8322,3 +8322,46 @@ Rust candidate/verifier
 `8181ddf434fdde8309bca619d51923b927408a6167614ab0cd9573a12094fe6d`,
 and shared Rust support
 `110dc92dcc95b5d0effbcfe17d6ac124ff2f216c6716ae860d496abe77956af9`.
+
+## 2026-07-23 05:10 — AAAAA catalog first pass complete; deeper incumbent pass preregistered
+
+The preregistered AAAAA all-compositions first pass exited normally with the
+runner's incomplete status (exit 2). All 826 count vectors were attempted:
+710 are formally certified and 116 are retained as incomplete, never as
+proof. Certificate mix: 332 witnesses exactly matched the count relaxation,
+344 disconnected relaxations proved no improvement, and 34 connected models
+proved no improvement. Aggregate per-task solver wall time was 34,255.382497
+seconds; slowest task 355.974106 seconds. Frozen first-pass ledger SHA-256
+`9aeb528830e95fed89c7d5bcc26c9b87654f534daf2044f5a297f8b54480df1f`;
+partial Markdown SHA-256
+`f979561013c03279776bc8a3bf0f249ac0e9c3363fe8fa9e7f611ddf2cb356ed`;
+durable log SHA-256
+`ae5ef6639b498e1d36e3971320c83fd3aa5dea1c7477bb322ae0cea153e510c2`.
+The frozen copies are
+`docs/v3/evidence/aaaaa_wildlife_catalog_first_pass_2026-07-23.{json,md}`.
+
+Performance diagnosis before retry: the v1 resume path would discard every
+improved incumbent found inside an incomplete CP attempt and reload only the
+shallower Rust board. That would repeat work. The next pass is therefore
+strictly incumbent generation, not proof: release binary
+`target/release/aaaaa_wildlife_solver` SHA-256
+`fcf619f30ec21fa7d2b5a587d7ba44ca41976189f2074c501e91d4c3f223b207`,
+8 threads, 32 restarts/count, 100,000 iterations/restart (20x the original
+annealing effort), seed 20260723. Output:
+`docs/v3/evidence/aaaaa_wildlife_candidates_deep_2026-07-23.json`; log:
+`cascadiav3/logs/aaaaa_wildlife_candidates_deep_2026-07-23.log`.
+
+Decision rule fixed before launch: for each count, retain the highest
+independently rescored board across the original candidates, deep candidates,
+and first-pass CP incumbent. Preserve the 710 completed certificates with
+their original source/artifact provenance. Retry only the remaining counts,
+using the retained board as a CP coordinate hint. A timeout remains
+incomplete; no score or proof threshold is weakened.
+
+The real 826-row v1→v2 migration smoke passed before production use: 710
+completed proofs imported, all witnesses independently rescored, the frozen
+ledger hash retained, and zero retry tasks submitted under `--limit 0`.
+Frozen retry source SHA-256: exact model
+`55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8`;
+catalog runner
+`d291ff58b8a17af07bb47f83c67dbfdef34b68290ded7aa50d67cf064b3cbd6b`.

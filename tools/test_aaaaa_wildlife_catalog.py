@@ -19,6 +19,7 @@ class AaaaaWildlifeCatalogTests(unittest.TestCase):
                 "relaxation_time_limit": 1.0,
                 "connected_time_limit": 1.0,
                 "seed": 20260722,
+                "proof_provenance": {"test": True},
             }
         )
         self.assertTrue(result["proof_complete"])
@@ -53,6 +54,7 @@ class AaaaaWildlifeCatalogTests(unittest.TestCase):
                     "relaxation_time_limit": 1.0,
                     "connected_time_limit": 1.0,
                     "seed": 20260722,
+                    "proof_provenance": {"test": True},
                 }
             )
         self.assertEqual(68, result["optimum"])
@@ -68,6 +70,7 @@ class AaaaaWildlifeCatalogTests(unittest.TestCase):
                 "relaxation_time_limit": 1.0,
                 "connected_time_limit": 1.0,
                 "seed": 20260722,
+                "proof_provenance": {"test": True},
             }
         )
         markdown = render_markdown(
