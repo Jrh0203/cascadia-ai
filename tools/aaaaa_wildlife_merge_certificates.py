@@ -17,6 +17,7 @@ from typing import Any
 
 from tools import aaaaa_wildlife_catalog as catalog
 from tools import aaaaa_wildlife_motif_certificate as motif
+from tools import aaaaa_wildlife_zero_hawk_bound as zero_hawk
 
 
 def sha256(path: Path) -> str:
@@ -75,6 +76,77 @@ def validate_motif_certificate(
     return merged
 
 
+def validate_zero_hawk_certificates(
+    certificate_path: Path,
+    rows: dict[tuple[int, ...], dict[str, Any]],
+    *,
+    reproduce: bool = True,
+) -> list[tuple[tuple[int, ...], dict[str, Any]]]:
+    certificate = json.loads(certificate_path.read_text(encoding="utf-8"))
+    if certificate.get("schema") != "aaaaa-zero-hawk-local-packing-certificates-v1":
+        raise ValueError(f"unsupported certificate schema: {certificate_path}")
+    if not certificate.get("proof_complete"):
+        raise ValueError("zero-hawk certificate is incomplete")
+    if certificate.get("source_sha256") != sha256(Path(zero_hawk.__file__).resolve()):
+        raise ValueError("zero-hawk certificate source hash mismatch")
+    expected_counts = {counts for counts, _ in zero_hawk.CERTIFICATE_CASES}
+    observed_counts = {
+        tuple(int(value) for value in row["counts"]) for row in certificate["results"]
+    }
+    if observed_counts != expected_counts:
+        raise ValueError("zero-hawk certificate count set mismatch")
+
+    configuration = certificate["configuration"]
+    merged_rows = []
+    for result in certificate["results"]:
+        counts = tuple(int(value) for value in result["counts"])
+        if counts not in rows:
+            raise ValueError(f"catalog has no row for zero-hawk counts {counts}")
+        if not result.get("proof_complete"):
+            raise ValueError(f"zero-hawk row {counts} is incomplete")
+        target = int(result["excluded_score"])
+        upper = int(result["certified_upper_bound"])
+        bound = result["bound"]
+        if bound.get("status") != "INFEASIBLE" or int(bound.get("upper_bound", -1)) != upper:
+            raise ValueError(f"zero-hawk row {counts} has an invalid bound conclusion")
+        if reproduce:
+            reproduced = zero_hawk.relaxed_upper_bound(
+                counts,
+                target,
+                workers=int(configuration["workers"]),
+                per_shape_time_limit=float(configuration["per_shape_time_limit_seconds"]),
+            )
+            for field in ("status", "upper_bound", "cases"):
+                if reproduced.get(field) != bound.get(field):
+                    raise ValueError(f"zero-hawk row {counts} failed reproduction on {field}")
+
+        tokens, breakdown = catalog.validate_witness(counts, result["incumbent"]["tokens"])
+        if sum(breakdown) != upper:
+            raise ValueError(f"zero-hawk row {counts} incumbent score mismatch")
+        merged = copy.deepcopy(rows[counts])
+        merged.update(
+            {
+                "optimum": upper,
+                "score_breakdown": breakdown,
+                "tokens": tokens,
+                "proof_method": result["proof_method"],
+                "proof_complete": True,
+                "external_certificate": {
+                    "path": str(certificate_path),
+                    "sha256": sha256(certificate_path),
+                    "schema": certificate["schema"],
+                    "source_sha256": certificate["source_sha256"],
+                    "elapsed_seconds": certificate["elapsed_seconds"],
+                    "excluded_score": target,
+                    "relaxation": certificate["relaxation"],
+                    "bound": bound,
+                },
+            }
+        )
+        merged_rows.append((counts, merged))
+    return merged_rows
+
+
 def merge(
     payload: dict[str, Any],
     certificate_paths: list[Path],
@@ -90,15 +162,30 @@ def merge(
     records = list(payload.get("external_certificates", []))
     for certificate_path in certificate_paths:
         certificate = json.loads(certificate_path.read_text(encoding="utf-8"))
-        counts = tuple(int(value) for value in certificate.get("counts", ()))
-        if counts not in results:
-            raise ValueError(f"catalog has no row for certificate counts {counts}")
-        results[counts] = validate_motif_certificate(
-            certificate_path, results[counts], reproduce=reproduce
-        )
-        record = results[counts]["external_certificate"]
-        records = [existing for existing in records if existing.get("path") != record["path"]]
-        records.append(record)
+        if certificate.get("schema") == "aaaaa-motif-incompatibility-certificate-v1":
+            counts = tuple(int(value) for value in certificate.get("counts", ()))
+            if counts not in results:
+                raise ValueError(f"catalog has no row for certificate counts {counts}")
+            promoted = [
+                (
+                    counts,
+                    validate_motif_certificate(
+                        certificate_path, results[counts], reproduce=reproduce
+                    ),
+                )
+            ]
+        elif certificate.get("schema") == "aaaaa-zero-hawk-local-packing-certificates-v1":
+            promoted = validate_zero_hawk_certificates(
+                certificate_path, results, reproduce=reproduce
+            )
+        else:
+            raise ValueError(f"unsupported certificate schema: {certificate_path}")
+        records = [
+            existing for existing in records if existing.get("path") != str(certificate_path)
+        ]
+        for counts, promoted_row in promoted:
+            results[counts] = promoted_row
+            records.append(promoted_row["external_certificate"])
 
     ordered = [
         results[counts]
