@@ -1696,8 +1696,12 @@ seconds, limiting fleet speedup to 4.82× rather than 20×. The direction is
 57/57/57/95 exclusions but took 101.818/618.447/100.767/194.250 seconds:
 only 4.84× projected speedup, failing the 20× gate. The hard case instead
 materialized 14,648,710 cover configurations, more than 55× any other case.
-The active engineering target is therefore fused cover generation and packing
-with early infeasibility pruning before generalizing beyond these branches.
+Species ordering plus identical-query caching eliminated that work: a frozen
+hard-case probe fell 618.447→12.279 seconds, and a fresh four-case reproduction
+retained all 57/57/57/95 exact exclusions with a 106.349-second critical path.
+That is 28.16× versus the frozen sequential CP-SAT screen and passes the
+preregistered 20× gate. The component-local bitset direction is
+**OPEN/SELECTED** for generalization beyond these branches.
 
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 

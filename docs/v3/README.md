@@ -75,9 +75,11 @@ over packed expert tensors with Gumbel search-supervised action values.
   cover-generation/set-packing pruning as the next performance target. The
   exact species-order/cache implementation cut the frozen hard case
   618.447→12.279 seconds (50.36×) without changing any of its 57 exclusions;
-  the fresh four-case reproduction is now the final speed gate. No other
-  arbitrary-ruleset row is called optimal before its exact certificate
-  completes. Methodology:
+  the fresh four-case reproduction retained all 266 exclusions and reached a
+  106.349-second critical path, 28.16× versus the frozen sequential solver.
+  The engine is selected for all-rules generalization. No other arbitrary
+  ruleset row is called optimal before its exact certificate completes.
+  Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed

@@ -1,6 +1,6 @@
 {
   "schema": "aaaaa-split-salmon-bitset-performance-v1",
-  "state": "planned",
+  "state": "completed",
   "tag": "aaaaa_split_salmon_bitset_perf3_full_retry1_20260723",
   "source_revision": "33bc7403c1e24c5454f769ff35779373a8064e0b",
   "runner_sha256": "aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50",
@@ -20,5 +20,38 @@
     "maximum_selected_critical_path_seconds": 149.739406183362,
     "wrapper_change": "use a native zsh PID array and wait for each child independently"
   },
-  "selection_rule": "select the species-ordered cached engine for generalized component work only if all four fresh outputs retain exact INFEASIBLE status and 57/57/57/95 submodels, and the maximum per-case wall is at most 149.739406183362 seconds (at least 20x projected four-host wall speedup versus the frozen sequential CP-SAT screen)."
+  "selection_rule": "select the species-ordered cached engine for generalized component work only if all four fresh outputs retain exact INFEASIBLE status and 57/57/57/95 submodels, and the maximum per-case wall is at most 149.739406183362 seconds (at least 20x projected four-host wall speedup versus the frozen sequential CP-SAT screen).",
+  "results": {
+    "completed_at": "2026-07-23T20:32:14Z",
+    "exact_statuses": [
+      "INFEASIBLE",
+      "INFEASIBLE",
+      "INFEASIBLE",
+      "INFEASIBLE"
+    ],
+    "case_counts": [
+      57,
+      57,
+      57,
+      95
+    ],
+    "case_wall_seconds": [
+      75.10827641701326,
+      12.992025334388018,
+      72.16703962534666,
+      106.34873466659337
+    ],
+    "aggregate_wall_seconds": 266.6160760433413,
+    "critical_path_seconds": 106.34873466659337,
+    "projected_speedup": 28.16007292476018,
+    "selection_margin_seconds": 43.390671516768634,
+    "output_sha256": [
+      "ed20472b9ed520fc681c4040cdcafe5822f1d08827277cbfc551aa24a5615a44",
+      "2901438d51096242cef5756123fa5242134655b90d742060006b791906daa70b",
+      "135a9b7c8e7256a8cdd951cb5ad59e8ffb092edc046f1e876a909d9a0e80c048",
+      "fa8a86d20e328ba45d73c77e85c0a089dc17d2f41d6b47e58da22456488d2038"
+    ],
+    "verdict": "SELECT",
+    "reason": "All exact statuses, identities, and submodel counts reproduced. The 106.348735-second critical path is below the preregistered 149.739406-second limit and projects to 28.16x four-host wall speedup versus the frozen sequential CP-SAT screen."
+  }
 }

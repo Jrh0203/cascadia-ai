@@ -10875,6 +10875,23 @@ tag `aaaaa_split_salmon_bitset_perf3_full_retry1_20260723`; change only the
 wrapper to a native zsh PID array and wait on each child. Durable ledger:
 `cascadiav3/fleet/aaaaa_split_salmon_bitset_perf3_full_retry1_20260723.json`.
 
+**16:32 EDT four-case performance verdict — SELECT.** All four fresh
+processes exited zero. Hashes/runtimes match; exact statuses are infeasible;
+and submodel counts remain 57/57/57/95. Case walls were
+75.108/12.992/72.167/106.349 seconds. The 106.349-second critical path is
+28.16× faster than the frozen 2,994.788-second sequential CP-SAT screen and
+clears the preregistered 149.739-second gate by 43.391 seconds. Select the
+species-ordered cached bitset engine for generalized component work.
+
+Case output SHA-256 values are
+`ed20472b9ed520fc681c4040cdcafe5822f1d08827277cbfc551aa24a5615a44`,
+`2901438d51096242cef5756123fa5242134655b90d742060006b791906daa70b`,
+`135a9b7c8e7256a8cdd951cb5ad59e8ffb092edc046f1e876a909d9a0e80c048`,
+and
+`fa8a86d20e328ba45d73c77e85c0a089dc17d2f41d6b47e58da22456488d2038`.
+These reproduce existing certificates and are performance evidence, not new
+optimal-board claims.
+
 **19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
 zero after completing indices 0 and 562. This satisfies the authorized
 recovery condition, so all six parent/recovery files were unsealed and copied

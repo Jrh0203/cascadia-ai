@@ -1299,7 +1299,11 @@ retained all 57 exact exclusions and fell 618.447→12.279 seconds (50.36×).
 A fresh four-case reproduction must now retain 57/57/57/95 exact exclusions
 and a ≤149.739-second critical path before generalization. Its first wrapper
 attempt produced no scientific output because of a zsh PID-scalar error; the
-same frozen run is registered under a fresh retry tag with a native PID array.
+same frozen run was registered under a fresh retry tag with a native PID
+array. The retry reproduced all exact 57/57/57/95 exclusions in
+75.108/12.992/72.167/106.349 seconds. Its 106.349-second critical path is
+28.16× versus the frozen sequential screen and clears the 20× gate. The
+species-ordered cached bitset engine is selected for generalization.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

@@ -276,8 +276,10 @@ the already-exact maximum-Salmon branches. Optima are respectively
 An exact performance rerun after subset-dominance indexing retained all four
 proofs but failed the requested 20× gate: critical path 618.447 seconds,
 4.84× versus the frozen sequential screen. The dominant case generated
-14,648,710 candidate covers, so the next optimization fuses cover generation
-with packing and prunes infeasible covers before materialization.
+14,648,710 candidate covers. Species ordering and identical-query caching then
+retained all 266 exact submodels while reducing the fresh four-case critical
+path to 106.349 seconds, a selected 28.16× versus the frozen sequential
+screen.
 
 The online-literature implementation pass added no new proof: its single-
 anchor, radius-two relation, and canonical-witness calibrations all failed

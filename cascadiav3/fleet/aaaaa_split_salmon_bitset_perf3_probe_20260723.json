@@ -29,7 +29,7 @@
     "case_count": 57,
     "wall_seconds": 12.279384416993707,
     "prior_wall_seconds": 618.4466151660308,
-    "hard_case_speedup": 50.36462693315558,
+    "hard_case_speedup": 50.36462693603346,
     "cover_searches": 62606,
     "cover_configurations": 231778,
     "packing_nodes": 4104,
