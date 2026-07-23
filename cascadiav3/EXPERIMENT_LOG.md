@@ -11356,3 +11356,9 @@ Decision rule:
   while the broad gate fails.
 - Otherwise **DO_NOT_SCALE**. Exact closures remain reusable under every
   verdict; `UNKNOWN` is never relabeled.
+
+**22:25:51Z launch.** All four hosts passed pinned source, catalog, taskset,
+runtime, collision, and idle checks under revision `7c7ce831`. Wrapper PIDs
+are 53736/75527/33742/35865 on john1/john2/john3/john4. Ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_pilot8_fleet_20260723.json`.
+Results remain sealed until four terminal markers.

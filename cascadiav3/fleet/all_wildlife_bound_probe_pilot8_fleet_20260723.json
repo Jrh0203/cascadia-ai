@@ -1,0 +1,64 @@
+{
+  "schema": "all-wildlife-bound-probe-fleet-v1",
+  "state": "active",
+  "tag": "all_wildlife_bound_probe_pilot8_20260723",
+  "source_revision": "7c7ce8319423c23fe5c28d8ea6dad26bd32e1866",
+  "taskset_sha256": "d605047697ffc7ffdd89216f61ee36f12c2dd545ae1c19b4c417d512c99c0a8b",
+  "catalog_sha256": "3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb",
+  "probe_source_sha256": "4c5047c99370d9a433f0b448fe31db5a1dda85fa4b4519aa52498990b788fe31",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "c7dcc31a7bd7d55016d470ebb04112341766cb050a39811d0f8c40aa777008e4",
+  "collector_source_sha256": "61eabaac960247f5cfecac6263967e09c57609cb512a29199968b31e9005ebe1",
+  "configuration": {
+    "time_limit_seconds_per_task": 300,
+    "total_time_limit_seconds_per_task": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "heartbeat_interval_seconds": 5,
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "assignments": [
+    {
+      "host": "john1",
+      "task_indices": [
+        0,
+        4
+      ],
+      "local_screen": "wildlife_bound_pilot8_john1",
+      "wrapper_pid": 53736
+    },
+    {
+      "host": "john2",
+      "task_indices": [
+        1,
+        5
+      ],
+      "wrapper_pid": 75527
+    },
+    {
+      "host": "john3",
+      "task_indices": [
+        2,
+        6
+      ],
+      "wrapper_pid": 33742
+    },
+    {
+      "host": "john4",
+      "task_indices": [
+        3,
+        7
+      ],
+      "wrapper_pid": 35865
+    }
+  ],
+  "launched_at": "2026-07-23T22:25:51Z",
+  "decision_rule": {
+    "broad_scale": "At least one high-ceiling task 4-7 strictly lowers its upper or improves its incumbent, or any witness scores above 85.",
+    "targeted_only": "The broad gate fails and at least two timeout tasks 0-3 strictly contract.",
+    "otherwise": "DO_NOT_SCALE"
+  }
+}

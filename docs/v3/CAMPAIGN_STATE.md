@@ -1421,6 +1421,10 @@ ceilings. Broad scaling requires a strict high-ceiling contraction or a board
 above 85; timeout-only success keeps the lane targeted. Results remain sealed
 until four terminal markers.
 
+The eight-case bound pilot launched at `2026-07-23T22:25:51Z` under revision
+`7c7ce831`; all four wrappers were active after pinned preflight. The hard
+terminal deadline is approximately `22:36Z`.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
