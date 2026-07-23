@@ -69,9 +69,11 @@ over packed expert tensors with Gumbel search-supervised action values.
   profile sharding is closed and its five exclusions are retained. The next
   component-local step now has an exact bitset set-packing implementation:
   its four-host formal run certified all four targeted AAAAA count optima.
-  Fleet wall speedup was only 4.82× because one quadratic dominance tail
-  remained, so that primitive is being optimized before generalization. No other
-  arbitrary-ruleset row is called optimal before its exact certificate
+  Fleet wall speedup was only 4.82×. The exact subset-index optimization
+  reproduced all proofs but was rejected at 4.84× projected speedup: the hard
+  case materializes 14.65 million cover configurations, identifying fused
+  cover-generation/set-packing pruning as the next performance target. No
+  other arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.

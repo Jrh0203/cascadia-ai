@@ -250,7 +250,7 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 16:09 EDT, AAAAA has 732/826 formally certified vectors.
+As of 2026-07-23 16:22 EDT, AAAAA has 732/826 formally certified vectors.
 The base retry exited naturally with 711/826 exact, adding
 `(4,4,2,4,6)=66` beyond its imported 710-row ledger and leaving 115 timeouts.
 The first exact fleet pass returned all 115 requested tail rows and added 13
@@ -273,6 +273,11 @@ Bear/Elk/Hawk packing submodels for counts `(4,5,2,3,6)`,
 the already-exact maximum-Salmon branches. Optima are respectively
 66/63/62/62. Machine-readable certificate:
 `docs/v3/evidence/aaaaa_split_salmon_bitset_certificate_2026-07-23.json`.
+An exact performance rerun after subset-dominance indexing retained all four
+proofs but failed the requested 20× gate: critical path 618.447 seconds,
+4.84× versus the frozen sequential screen. The dominant case generated
+14,648,710 candidate covers, so the next optimization fuses cover generation
+with packing and prunes infeasible covers before materialization.
 
 The online-literature implementation pass added no new proof: its single-
 anchor, radius-two relation, and canonical-witness calibrations all failed

@@ -10809,6 +10809,28 @@ infeasibility and 57/57/57/95 submodels. Selection requires maximum case wall
 ≤149.739406 seconds, the exact ≥20× projected four-host boundary. Outputs are
 performance/correctness reproduction, not new proof evidence.
 
+**16:22 EDT performance verdict — REJECT.** All four concurrent processes
+exited zero and reproduced exact `INFEASIBLE` status with the required
+57/57/57/95 submodels. Case walls were
+101.818/618.447/100.767/194.250 seconds, for a 618.447-second critical path
+and only 4.84× projected speedup versus the frozen 2,994.788-second sequential
+CP-SAT screen. This exceeds the preregistered 149.739-second selection limit.
+The optimized engine is therefore not selected as the requested 20×
+throughput solution.
+
+The result corrects the sampled bottleneck diagnosis: case 1 is essentially
+unchanged from 621.085 seconds and generated 14,648,710 cover configurations,
+versus 108,932/251,684/266,858 for cases 0/2/3. Its governing cost is cover
+configuration materialization, not the now-indexed occupancy dominance scan.
+Output hashes in case order are
+`3db7b0817e65dbaaf60697b5cecaebc3abb6bafc2a8af44577f70c4bf8d4c655`,
+`a2d314264c806119ddc0806753c0b72addcfb3f25d736a84275f2c7ecd85727a`,
+`cca36bfb0a487a3687a3f707f433b29d2da5ac163f41c4a6d75005d3814eb44c`,
+and
+`e2a699f8c08cae786d241d01308fb83362363feb496811988237cc5a8e2c2941`.
+Next optimization target: fuse cover generation with set packing so rejected
+cover assignments are pruned before materialization.
+
 **19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
 zero after completing indices 0 and 562. This satisfies the authorized
 recovery condition, so all six parent/recovery files were unsealed and copied

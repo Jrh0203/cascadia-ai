@@ -1,6 +1,6 @@
 {
   "schema": "aaaaa-split-salmon-bitset-performance-v1",
-  "state": "planned",
+  "state": "completed",
   "tag": "aaaaa_split_salmon_bitset_perf2_20260723",
   "source_revision": "3e7db21a4f7292ca9d06558bacecb94198302a2b",
   "runner_sha256": "aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50",
@@ -14,5 +14,36 @@
     "old_sequential_wall_seconds": 2994.78812366724,
     "maximum_selected_critical_path_seconds": 149.739406183362
   },
-  "selection_rule": "select the dominance-indexed engine for generalized component work only if all four outputs retain exact INFEASIBLE status and 57/57/57/95 submodels, and the maximum per-case wall is at most 149.739406183362 seconds (at least 20x projected four-host wall speedup versus the frozen sequential CP-SAT screen)"
+  "selection_rule": "select the dominance-indexed engine for generalized component work only if all four outputs retain exact INFEASIBLE status and 57/57/57/95 submodels, and the maximum per-case wall is at most 149.739406183362 seconds (at least 20x projected four-host wall speedup versus the frozen sequential CP-SAT screen)",
+  "results": {
+    "completed_at": "2026-07-23T20:22:38Z",
+    "exact_statuses": [
+      "INFEASIBLE",
+      "INFEASIBLE",
+      "INFEASIBLE",
+      "INFEASIBLE"
+    ],
+    "case_counts": [
+      57,
+      57,
+      57,
+      95
+    ],
+    "case_wall_seconds": [
+      101.81805758271366,
+      618.4466151660308,
+      100.76738320896402,
+      194.24958050018176
+    ],
+    "critical_path_seconds": 618.4466151660308,
+    "projected_speedup": 4.842429067425364,
+    "output_sha256": [
+      "3db7b0817e65dbaaf60697b5cecaebc3abb6bafc2a8af44577f70c4bf8d4c655",
+      "a2d314264c806119ddc0806753c0b72addcfb3f25d736a84275f2c7ecd85727a",
+      "cca36bfb0a487a3687a3f707f433b29d2da5ac163f41c4a6d75005d3814eb44c",
+      "e2a699f8c08cae786d241d01308fb83362363feb496811988237cc5a8e2c2941"
+    ],
+    "verdict": "REJECT",
+    "reason": "Correctness reproduced exactly, but the 618.446615-second critical path exceeds the preregistered 149.739406-second limit. Case 1 generated 14,648,710 cover configurations and remained essentially unchanged from the formal engine's 621.085 seconds, disproving the sampled diagnosis that occupancy-subset dominance was its governing bottleneck."
+  }
 }

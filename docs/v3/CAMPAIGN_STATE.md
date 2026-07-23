@@ -1286,9 +1286,13 @@ launched at `2026-07-23T19:53:14Z`. All four exited zero by `20:03:35Z`;
 the collector certified optima 66/63/62/62 for the four registered counts
 after maximum-Salmon union and Rust rescoring. AAAAA is now 732/826 exact.
 Fleet speedup was 4.82×, below 20×; the Bear-heavy quadratic dominance tail is
-the next performance target. Its exact subset-index replacement now passes all
-property/certificate tests; a frozen four-case speed rerun must reach a
-projected fleet critical path ≤149.739 seconds before generalization.
+not the governing bottleneck. Its exact subset-index replacement passes all
+property/certificate tests, but the frozen speed rerun reproduced exact
+57/57/57/95 exclusions in 101.818/618.447/100.767/194.250 seconds. The
+618.447-second critical path is only 4.84× and fails the ≤149.739-second gate.
+The hard case materialized 14,648,710 cover configurations; fuse cover
+generation with packing so infeasible assignments are pruned before
+materialization, then remeasure before generalization.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

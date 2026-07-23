@@ -1692,8 +1692,12 @@ formal four-host run certified four new AAAAA count optima and moves the union
 Its current implementation is not yet the requested throughput result:
 quadratic occupancy-subset dominance made the Bear-heavy shard take 621
 seconds, limiting fleet speedup to 4.82× rather than 20×. The direction is
-**OPEN/SELECTED**, with dominance indexing the immediate engineering target
-before generalizing beyond these four branches.
+**OPEN/SELECTED**. A frozen exact rerun after subset indexing reproduced all
+57/57/57/95 exclusions but took 101.818/618.447/100.767/194.250 seconds:
+only 4.84× projected speedup, failing the 20× gate. The hard case instead
+materialized 14,648,710 cover configurations, more than 55× any other case.
+The active engineering target is therefore fused cover generation and packing
+with early infeasibility pruning before generalizing beyond these branches.
 
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
