@@ -52,10 +52,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   (0.30%), failing the frozen 20% selection gate. Both direct coordinate
   shapes are rejected; no full 1,024-row proof launch occurred. Six rows are
   now certified: two by coordinate proof and four because their boards meet
-  the sound all-count bound. The first 40× deep-incumbent calibration failed
-  sealed when john1's local `nohup` shard died; John has now authorized a
-  fresh detached-screen recovery of its missing AAAAA/CADAC rows. The three
-  terminal remote shards remain sealed until that recovery exits. A complete
+  the sound all-count bound. The failed-sealed 40× deep-incumbent calibration
+  has completed through its authorized detached-screen recovery. Its six
+  validated boards improve 17/1,024 rows after cross-scoring, notably CADAC
+  66→68 and DDDDD 78→79; the holistic candidate remains 85 on eight rows. A complete
   shared-edge/degree relaxation passed 846,848 containment
   checks but tightened zero cells, so it is closed and not integrated. A
   twelve-way fox-anchor symmetry break also failed its runtime gate and was

@@ -56,5 +56,11 @@
   "authorized_recovery_tag": "all_cards_candidate_deep_recovery_john1_20260723",
   "authorized_recovery_terminal_utc": "2026-07-23T19:59:49Z",
   "result_files_unsealed_after_recovery": true,
+  "recovery_validation": {
+    "status": "completed",
+    "validated_ruleset_files": 6,
+    "strictly_improved_rulesets_after_cross_scoring": 17,
+    "holistic_candidate_score": 85
+  },
   "selection_rule": "after every shard is terminal, independently validate connectivity, cap six, and Python/production score agreement; retain every strict incumbent improvement and otherwise retain the frozen merged candidate; heuristic equality never certifies optimality"
 }

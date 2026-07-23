@@ -183,6 +183,12 @@ and batch-compares every board with the production Rust scorer.
   exclusion, plus bound-matched DCAAC 69, DCCAC 69, DDAAC 72, and DDCAC 72.
   Proof-less bound matches are now recognized directly by the collector and
   covered by a regression test.
+- The recovered 40× hard-row candidate calibration passed all independent and
+  production checks. Its six boards strictly improve 17 rulesets after
+  cross-scoring, led by CADAC 66→68 and DDDDD 78→79; the total proof frontier
+  falls 119,959→119,273. The holistic candidate remains 85 on the same eight
+  rulesets. These are stronger warm starts, not optimum claims:
+  `docs/v3/evidence/all_wildlife_candidate_deep_recovery_2026-07-23.json`.
 - A coupled same/cross-edge and degree-six relaxation passed all 846,848
   count/ruleset containment comparisons but equaled the existing bound in
   every cell. It is not selected; pair-edge resource coupling without richer

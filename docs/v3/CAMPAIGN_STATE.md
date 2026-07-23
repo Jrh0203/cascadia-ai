@@ -1298,5 +1298,9 @@ AAAAA index 0. Do not inspect any candidate output before its terminal marker.
 
 The candidate recovery exited zero at `2026-07-23T19:59:49Z`, satisfying the
 all-six unseal condition. Six files are durably collected; board validation
-and all-1,024 cross-scoring are in progress, so no new incumbent is accepted
-yet.
+and all-1,024 production cross-scoring passed. Seventeen rulesets improve;
+CADAC rises 66→68 and DDDDD 78→79, reducing their frontiers 361→214 and
+141→100. The holistic warm-start score remains 85 on eight rulesets. The
+new merged candidate SHA is
+`96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9`;
+it is heuristic evidence only.

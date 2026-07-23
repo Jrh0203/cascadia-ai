@@ -10774,3 +10774,18 @@ to durable local collection. Their original 96×500,000/seed configuration is
 consistent and all rows stayed within 48 million evaluated states. Direct
 scores are not yet accepted: independent/production validation and full
 1,024-way cross-scoring are in progress.
+
+**20:01 validated deep-candidate verdict.** All six boards passed connected
+cap-six and independent scoring; after strict-only cross-scoring, all 1,024
+merged boards passed the production Rust oracle. Seventeen rulesets improve.
+The material hard-row changes are CADAC `66→68` (frontier `361→214`) and
+DDDDD `78→79` (`141→100`); the all-ruleset frontier falls
+`119,959→119,273`. The holistic candidate remains 85 on the same eight
+rulesets. No heuristic row is called optimal.
+
+Merged candidate SHA-256
+`96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9`;
+curated report:
+`docs/v3/evidence/all_wildlife_candidate_deep_recovery_2026-07-23.json`.
+This stronger merged catalog replaces the earlier warm start for every
+subsequent proof task.
