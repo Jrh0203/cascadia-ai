@@ -152,6 +152,10 @@ created them.
 - `docs/v3/evidence/aaaaa_motif_certificate_3_6_6_0_5_2026-07-23.json`:
   exact relaxed-superset certificate that proves `(3,6,6,0,5)` has optimum
   61; it remains separate until the active catalog writer exits.
+- `docs/v3/evidence/aaaaa_zero_hawk_certificates_2026-07-23.json`: exact
+  relaxed local-packing certificates for `(3,6,5,0,6)=60`,
+  `(4,6,4,0,6)=63`, and `(4,5,5,0,6)=64`; also pending safe post-writer
+  merge.
 - `docs/v3/evidence/cbddb_wildlife_catalog_2026-07-23.json`: machine-readable
   CBDDB catalog ledger.
 - `docs/v3/CBDDB_WILDLIFE_CATALOG.md`: human-readable CBDDB summary, holistic
@@ -162,9 +166,9 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 06:48 EDT, AAAAA has 712/826 formally certified vectors: 711
-are embedded in its live ledger and one is frozen in a separate exact motif
-certificate pending a safe post-writer merge. Its hash-pinned hinted retry
+As of 2026-07-23 07:30 EDT, AAAAA has 715/826 formally certified vectors: 711
+are embedded in its live ledger and four are frozen in separate exact motif
+and local-packing certificates pending a safe post-writer merge. Its hash-pinned hinted retry
 continues over the remaining tail. CBDDB heuristic staging completed all 826 vectors in
 224.244154 seconds with zero independent-score or connectivity failures; the
 current 84-point leader is only an incumbent. The CBDDB exact model,

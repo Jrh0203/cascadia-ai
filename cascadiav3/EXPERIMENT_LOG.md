@@ -8701,6 +8701,15 @@ subcases respectively. Any `UNKNOWN`, count mismatch, disconnected incumbent,
 or larger relaxed upper fails closed and promotes nothing. This evidence is
 kept separate until the active catalog writer exits naturally.
 
+**Result — ALL THREE EXACT CERTIFICATES PASSED.** The frozen run completed in
+417.013025 seconds. It exhausted 50 / 20 / 30 subcases and reproduced relaxed
+upper bounds 60 / 63 / 64 for `(3,6,5,0,6)` / `(4,6,4,0,6)` /
+`(4,5,5,0,6)`, exactly matching the independently rescored connected
+incumbents. No submodel returned `UNKNOWN`. Artifact SHA-256
+`e4d11f62b4d04118ffe059273be6bf2cc691ae48d912face0941a3ec0c348d76`.
+Decision: accept these as the 713th through 715th AAAAA per-vector proofs;
+merge them only after the active catalog writer exits naturally.
+
 ## 2026-07-23 07:23 — AAAAA Hawk-aware packing diagnostic preregistration
 
 Six additional unresolved thresholds force Bear A, Salmon A, and Hawk A to

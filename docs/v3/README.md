@@ -13,8 +13,8 @@ over packed expert tensors with Gumbel search-supervised action values.
 ## Status at a glance (updated 2026-07-23 06:08 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, live):** AAAAA has one
-  certified optimal board for 712/826 count vectors (711 in the live catalog
-  plus one frozen motif certificate); its hash-pinned retry continues without
+  certified optimal board for 715/826 count vectors (711 in the live catalog
+  plus four frozen motif/local-packing certificates); its hash-pinned retry continues without
   interruption. CBDDB
   heuristic staging completed and independently verified all 826 vectors;
   its 84-point leader is only a warm start, not exact evidence. Methodology
