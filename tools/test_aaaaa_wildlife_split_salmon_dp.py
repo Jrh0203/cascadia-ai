@@ -10,6 +10,7 @@ from tools.aaaaa_wildlife_split_salmon_dp import (
     _minimal_masks,
     _pack_disjoint,
     _self_observations_hold,
+    _species_priority,
     fox_layouts,
 )
 
@@ -34,6 +35,15 @@ def test_disjoint_packing_finds_and_rejects_exactly() -> None:
     assert feasible
     assert chosen[0] & chosen[1] == 0
     assert not _pack_disjoint([(0b001,), (0b001,)])[0]
+
+
+def test_species_priority_puts_smaller_candidate_volume_first() -> None:
+    singles = (frozenset({(0, 0)}),) * 3
+    pairs = (frozenset({(0, 0), (1, 0)}),) * 5
+    hawk = ((singles, 2),)
+    elk = ((singles, 1), (pairs, 1))
+    bear = ((pairs, 2), (singles, 1))
+    assert _species_priority(hawk) < _species_priority(elk) < _species_priority(bear)
 
 
 def test_cover_enumerator_matches_small_exhaustive_set_cover() -> None:

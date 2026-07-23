@@ -191,6 +191,17 @@ def _cover_configurations(
     return _minimal_masks(found)
 
 
+def _species_priority(
+    placement_types: tuple[tuple[tuple[Shape, ...], int], ...],
+) -> tuple[int, int]:
+    """Estimate cover-search work without changing the exact search space."""
+
+    return (
+        sum(len(placements) * cap for placements, cap in placement_types),
+        sum(cap for _, cap in placement_types),
+    )
+
+
 def _pack_disjoint(configuration_sets: list[tuple[int, ...]]) -> tuple[bool, list[int], int]:
     """Find one disjoint choice from every configuration set."""
 
@@ -283,10 +294,19 @@ def solve_split_shape_packing(
     ]
     cells = sorted({cell for shape in all_shapes for cell in shape})
     cell_index = {cell: index for index, cell in enumerate(cells)}
+    ordered_species = sorted(
+        (
+            ("bear", bear_types),
+            ("elk", elk_types),
+            ("hawk", hawk_types),
+        ),
+        key=lambda row: (*_species_priority(row[1]), row[0]),
+    )
 
     stats = PackingStats()
     for foxes in fox_layouts(salmon, missing_salmon_foxes):
         stats = stats.add(fox_layouts=1)
+        configuration_cache: dict[tuple[str, tuple[Coord, ...]], tuple[int, ...]] = {}
         for missing_kind, missing_fox in _deficit_branches(foxes, deficit):
             stats = stats.add(deficit_branches=1)
             if not _self_observations_hold(
@@ -295,26 +315,27 @@ def solve_split_shape_packing(
                 continue
             configuration_sets = []
             descriptions = []
-            for kind, placement_types in (
-                ("bear", bear_types),
-                ("elk", elk_types),
-                ("hawk", hawk_types),
-            ):
+            for kind, placement_types in ordered_species:
                 required = tuple(
                     fox
                     for fox in foxes
                     if not (missing_kind == kind and missing_fox == fox)
                 )
-                configurations = _cover_configurations(
-                    required,
-                    foxes,
-                    placement_types,
-                    cell_index,
-                )
-                stats = stats.add(
-                    cover_searches=1,
-                    cover_configurations=len(configurations),
-                )
+                cache_key = (kind, required)
+                if cache_key in configuration_cache:
+                    configurations = configuration_cache[cache_key]
+                else:
+                    configurations = _cover_configurations(
+                        required,
+                        foxes,
+                        placement_types,
+                        cell_index,
+                    )
+                    configuration_cache[cache_key] = configurations
+                    stats = stats.add(
+                        cover_searches=1,
+                        cover_configurations=len(configurations),
+                    )
                 if not configurations:
                     break
                 configuration_sets.append(configurations)
