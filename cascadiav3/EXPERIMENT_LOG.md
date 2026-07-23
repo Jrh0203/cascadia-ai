@@ -8441,3 +8441,12 @@ exact `INFEASIBLE` or a material search reduction versus the rejected
 deterministic-connectivity calibration; `UNKNOWN` remains no evidence.
 Durable output:
 `docs/v3/evidence/aaaaa_eager_score_calibration_2026-07-23.json`.
+
+**Calibration result — NOT SELECTED.** The eager-channeling model returned
+`UNKNOWN` after 60.043956 seconds with no witness, 346,984 branches, and
+69,402 conflicts. Although it processed more search nodes than the
+deterministic-distance variant, it made no exact or bound progress and fails
+the preregistered selection rule. Artifact SHA-256
+`e71687f5888596866ee2326c6c95703f5e672ad3db24783f024224b04a164a97`.
+Decision: preserve the tested sound wrapper, but do not use it as catalog
+evidence; direct fox-layout structure remains necessary.

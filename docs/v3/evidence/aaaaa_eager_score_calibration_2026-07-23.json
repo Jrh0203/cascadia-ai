@@ -1,0 +1,11 @@
+{
+  "schema": "aaaaa-eager-score-calibration-v1",
+  "source_sha256": "86114e79a0d48fdd6261a5dd46be94a874f3f14bc5a668d85a7a585db6271d3a",
+  "result": {
+    "model_status": "UNKNOWN",
+    "wall_seconds": 60.043956,
+    "best_bound": 0.0,
+    "branches": 346984,
+    "conflicts": 69402
+  }
+}
