@@ -10,12 +10,15 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-23 06:08 EDT)
+## Status at a glance (updated 2026-07-23 09:16 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, live):** AAAAA has one
   certified optimal board for 718/826 count vectors (711 in the live catalog
-  plus seven frozen motif/local-packing certificates); its hash-pinned retry continues without
-  interruption. CBDDB
+  plus seven frozen motif/local-packing certificates). Its active local retry
+  continues without interruption, while the frozen 115-vector exact tail is
+  also running as disjoint 39/38/38 shards on john2–john4 under tag
+  `aaaaa_exact_tail_fleet3_20260723`; collection fails closed until every
+  shard is terminal. CBDDB
   heuristic staging completed and independently verified all 826 vectors;
   its 84-point leader is only a warm start, not exact evidence. Methodology
   and live status: [WILDLIFE_OPTIMAL_CATALOGS.md](WILDLIFE_OPTIMAL_CATALOGS.md).

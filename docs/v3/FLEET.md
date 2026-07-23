@@ -76,6 +76,12 @@ Torch/MPS packages. Both Python (currently `3.12.13`) and OR-Tools (currently
 runtime versions are recorded in the launch ledger. Only john2–john4 are
 used; john1 remains reserved for the web UI.
 
+**Live 2026-07-23 09:16 EDT:** AAAAA tag
+`aaaaa_exact_tail_fleet3_20260723` runs the 115-vector exact tail as
+39/38/38 disjoint shards on john2/john3/john4 from revision `c726df87`.
+See the experiment log for pinned hashes and PIDs; use the collector's status
+mode rather than inspecting partial scores.
+
 1. **`tools/wildlife_catalog_taskset.py`** freezes the currently unresolved
    canonical count vectors from a validated catalog snapshot:
 

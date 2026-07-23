@@ -9272,3 +9272,11 @@ snapshot, deep candidates, 39/38/38 assignment, three hosts, 2 jobs × 4
 workers, 60/120-second limits, seed, and exact fail-closed decision rule from
 09:15. Both prior failed tags remain immutable evidence. Launch only if the
 new exact runtime preflight and collision checks pass on all hosts.
+
+**Launch passed.** Tag `aaaaa_exact_tail_fleet3_20260723` launched from
+revision `c726df878c6f49df7c4aee22dfd498c117c713df`. Wrapper PIDs are john2
+`1862`, john3 `74966`, and john4 `21552`; initial heartbeats were fresh and
+each log reported exactly 711 imported proofs plus its registered 39/38/38
+assigned vectors. Launch-ledger SHA-256
+`a8dd6c12f7418a2960417555162872984461d6872e115fa4b6ec757f7b02e2de`.
+State: live; do not read a partial shard as evidence or restart a worker.
