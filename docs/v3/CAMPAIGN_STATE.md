@@ -1246,3 +1246,7 @@ The next default-off exact optimization is an arithmetic score-profile
 propagator: enumerate only attainable per-card score tuples above threshold
 while preserving the existing coordinate and token-symmetry model. It has the
 same complete correctness and paired runtime gate.
+
+The implementation is reproducibly landed default-off. All correctness gates
+pass; the four frozen cases need only 2/6/29/886 score tuples and table
+construction is under 0.004 seconds. The paired runtime verdict is next.

@@ -10568,3 +10568,20 @@ rule: ≥2× faster known exclusion without regression, or at least one hard
 case resolved only by the candidate. Otherwise remove it. A later external
 profile sharder is considered only if the in-model table shows material
 pruning but model construction dominates.
+
+**15:34 implementation/correctness gate.** Default-off implementation landed
+at revision `da341ad113ffb5c17c7bd14293e472f91fd3539c`. Rules/profile source
+SHA-256
+`c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790`;
+exact source
+`60e3cdbc02cddead96aad7bed52e19e9bf53c2db1f0d1dabbbf8ded7bbcc5eb1`;
+verifier
+`62266b8fa525d3fe86e53659dc31fbdd813d0c35505fd53fd05d053ca8b3c67f`.
+All 23 focused tests and Ruff pass. The profile-enabled 1,024 fixed-board gate
+has zero failures and canonical SHA-256
+`005153bf58a77d32feca858fc225e04db3101d7008b295eabde9fedecb878f2f`.
+
+Frozen high-score table sizes are small and construction is negligible:
+AAAAA known case 2 profiles in 0.0013 seconds; hard AAAAA 6 in 0.0016;
+CADAC 29 in 0.0014; CBDDB 886 in 0.0038. Proceed to the paired runtime gate;
+production remains default-off.
