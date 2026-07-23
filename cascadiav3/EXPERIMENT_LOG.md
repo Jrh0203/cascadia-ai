@@ -8813,3 +8813,25 @@ SHA-256
 `d2f769f5a4e5bafc57485c57a90739a8368ce6ec244096f92eca9ae8f5cb3c04`.
 Decision: accept these as the 716th and 717th AAAAA per-vector proofs, pending
 safe post-writer merge.
+
+## 2026-07-23 07:53 — AAAAA final raw-gap-one salmon diagnostic preregistration
+
+The only raw two-point-gap vector not covered by accepted certificates is
+`(3,6,3,3,5)`, incumbent 61, challenged at 62 versus standalone ceiling 63.
+Score 62 has exactly three branch types: maximum non-fox scores with one Fox-A
+observation missing; Elk-A 17 with every other category maximal; or Salmon-A
+seven with every other category maximal. The first two use the explicit
+one-loss model over all three maximum three-salmon shapes. Seven salmon points
+requires a pair plus singleton; assign each fox to a salmon component, so by
+pigeonhole one component covers at least three foxes. Model each possible
+anchor component/local-fox count and award the other component/foxes free
+coverage, a sound relaxation.
+
+Source SHA-256
+`4a73a72e87afdc8be4c776baa3aff0a5a1ff0e0ca5fb71da05a1d58eed3b5dac`;
+test SHA-256
+`492d0a5e9653d8a7144b6dea7c57080f46035759a1f886929ffc7b003ac3b46c`;
+Ruff and the fixed-case test pass. Run one worker, 30 seconds per subcase.
+Select for formal certification only if both salmon branches exhaust exactly
+and their combined relaxed upper is at most 61. `UNKNOWN` or upper >=62
+promotes nothing.
