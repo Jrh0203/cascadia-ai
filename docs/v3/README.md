@@ -85,6 +85,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   onto all inherited exclusions and importing the existing complete AAAAA
   global certificate; acceptance requires independent and production scoring
   of all 1,024 selected boards.
+  Its first output was rejected because the selected base artifact omitted
+  ACACA/ADACA's earlier complete shards; the fresh retry unions all three
+  frozen proof directories before augmentation.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

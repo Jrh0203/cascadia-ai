@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-catalog-augmentation-run-v1",
-  "state": "planned",
+  "state": "rejected",
   "tag": "all_wildlife_catalog_augment_deep_20260723",
   "source_revision": "0f798dd0df6c8d0b2694db9df706764d0a4dd02f",
   "augment_source_sha256": "7894aa3ba6436e460381f5d72e1f7ac3638a9f9c4c261b44dc9f0e27fd43205d",
@@ -15,5 +15,23 @@
   },
   "output": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_2026-07-23.json",
   "markdown": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_DEEP.md",
-  "acceptance_rule": "Accept only if all 1,024 base and candidate boards validate independently, every inherited unresolved set is canonical, stronger candidates only monotonically remove unresolved branches, the AAAAA certificate has all 128 expected exact INFEASIBLE exclusions at threshold 69, and all 1,024 selected boards match the production Rust scorer. Expected minimum completed rulesets: 7, including AAAAA."
+  "acceptance_rule": "Accept only if all 1,024 base and candidate boards validate independently, every inherited unresolved set is canonical, stronger candidates only monotonically remove unresolved branches, the AAAAA certificate has all 128 expected exact INFEASIBLE exclusions at threshold 69, and all 1,024 selected boards match the production Rust scorer. Expected minimum completed rulesets: 7, including AAAAA.",
+  "results": {
+    "completed_at": "2026-07-23T21:00:00Z",
+    "completed_rulesets": 5,
+    "complete_rulesets": [
+      "AAAAA",
+      "DCAAC",
+      "DCCAC",
+      "DDAAC",
+      "DDCAC"
+    ],
+    "rebased_improved_rulesets": 17,
+    "incumbent_holistic_maximum": 85,
+    "production_response_sha256": "e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca",
+    "output_sha256": "6f548aecb6c0356fa5009f7258acc8726efb8c17734598a2ae2d43c22ec81ae5",
+    "markdown_sha256": "56d38a7bd871f605b0f87d747a3bf3cff29187e7a5ee8e57e977b670b4c93807",
+    "verdict": "REJECT",
+    "reason": "The input base catalog omitted the earlier complete ACACA and ADACA proof shards. All scoring and certificate checks passed, but 5 completed rows failed the preregistered minimum of 7."
+  }
 }

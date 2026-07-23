@@ -1,0 +1,21 @@
+{
+  "schema": "all-wildlife-catalog-augmentation-run-v1",
+  "state": "planned",
+  "tag": "all_wildlife_catalog_augment_deep_retry1_20260723",
+  "source_revision": "0f798dd0df6c8d0b2694db9df706764d0a4dd02f",
+  "collector_source_sha256": "69428e3ee59b4b0fd9f738c000e1105229f58bb8d1f7067fa37840d22da35041",
+  "augment_source_sha256": "7894aa3ba6436e460381f5d72e1f7ac3638a9f9c4c261b44dc9f0e27fd43205d",
+  "oracle_sha256": "cccc01f69a7739c11792fb67e39c9bceb8e5d8fd8217aa09e41e517974153b3a",
+  "inputs": {
+    "original_candidates_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+    "initial_proof_directory_manifest_sha256": "a5b51d197a3e26786fc0f24520afe53b175be3852a369363153c625bb2ea3812",
+    "recalibration_proof_directory_manifest_sha256": "3c71ea41cf5ca7507a0d6ba695f2ead7898cd39b45fab2c1af99a124a2728dee",
+    "disconnected_proof_directory_manifest_sha256": "5ef88c5d65492d586364baebbca5b0fca6aba30dbc353c9a1c003c82352f0ea4",
+    "deep_candidates_sha256": "96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9",
+    "aaaaa_global_certificate_sha256": "163c338643fd7c14d45eb00fa1b833b4043260cef47effe14816787e124e3828"
+  },
+  "corrected_base_output": "docs/v3/evidence/all_wildlife_catalog_proof_union_complete_sources_2026-07-23.json",
+  "output": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_retry1_2026-07-23.json",
+  "markdown": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_DEEP_RETRY1.md",
+  "acceptance_rule": "First recollect the SHA-72c proof catalog from all three frozen proof directories and require exactly six complete rows: ACACA, ADACA, DCAAC, DCCAC, DDAAC, DDCAC. Then apply the unchanged augmentation contract and require exactly seven completed rows after importing AAAAA, 17 rebased incumbent improvements, all 1,024 independent and production score validations, and holistic incumbent maximum 85."
+}

@@ -1312,6 +1312,12 @@ validate every board through both scorers and all 128 AAAAA threshold-69
 exclusions; if accepted it raises the integrated completed-ruleset count from
 six to at least seven without rerunning solved proof work.
 
+The first augmentation output is rejected despite passing every scoring check:
+its base artifact omitted the earlier complete ACACA/ADACA shards and therefore
+reported only five completed rows after adding AAAAA. A fresh correction now
+recollects all three frozen proof directories and must recover exactly six
+base rows before the unchanged augmentation may produce seven.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

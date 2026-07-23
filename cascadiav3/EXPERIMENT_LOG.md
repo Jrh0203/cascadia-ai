@@ -10965,3 +10965,23 @@ because a synthetic fixture regenerated the entire count-bound matrix; the
 fixture was reduced to canonical inherited tails and now passes in 0.49
 seconds. Durable run ledger:
 `cascadiav3/fleet/all_wildlife_catalog_augment_deep_20260723.json`.
+
+**17:00 EDT augmentation verdict — REJECT; source-union correction
+preregistered.** All 1,024 independent and production scores, all 128 AAAAA
+exclusions, and 17 stronger-board rebases passed. The output contained only
+five completed rows (`AAAAA` plus four bound matches), failing the expected
+minimum seven. Root cause: the input base artifact contains only four complete
+rows and omitted the earlier complete ACACA/ADACA proof shards.
+
+Do not accept that artifact. Recollect the old-SHA proof catalog from all
+three frozen directories: initial calibration (8 files, manifest
+`a5b51d197a3e26786fc0f24520afe53b175be3852a369363153c625bb2ea3812`),
+recalibration (6,
+`3c71ea41cf5ca7507a0d6ba695f2ead7898cd39b45fab2c1af99a124a2728dee`),
+and disconnected prescreen (6,
+`5ef88c5d65492d586364baebbca5b0fca6aba30dbc353c9a1c003c82352f0ea4`).
+Require exactly the six known completed rows before applying the unchanged
+deep-candidate/AAAAA augmentation. Final acceptance requires exactly seven
+completed rows, 17 improved rebases, 1,024 production matches, and incumbent
+holistic maximum 85. Fresh ledger:
+`cascadiav3/fleet/all_wildlife_catalog_augment_deep_retry1_20260723.json`.
