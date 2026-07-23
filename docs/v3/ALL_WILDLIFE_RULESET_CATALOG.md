@@ -102,9 +102,10 @@ Two important non-separable geometric filters are:
   and one target pair can have at most two qualifying fox neighbors.
 
 The proof runner skips any count branch whose upper bound is at most the
-current incumbent. It first tries the stronger disconnected relaxation:
-infeasibility there also proves the connected problem infeasible. Only
-survivors enter the connected coordinate model.
+current incumbent. Its production mode solves the connected coordinate model
+directly. A disconnected relaxation remains available as a deliberately
+separate proof screen: infeasibility there also proves the connected problem
+infeasible, while a feasible disconnected layout is not a valid board.
 
 ### 5. Fleet execution
 
@@ -113,6 +114,12 @@ units. Production artifacts are sharded over john1–john4 with atomic
 checkpoints, heartbeats, single-use tags, and exact source/input hashes.
 Returned boards and ledgers are collected only after every shard is terminal,
 then rescored and revalidated on john1 before catalog publication.
+`tools/all_wildlife_proof_catalog.py` refuses duplicate ruleset proofs,
+candidate/proof identity mismatches, disconnected incumbents, cap or scoring
+mismatches, proofs that omitted connectivity, and inconsistent unresolved
+branch bookkeeping. It writes the machine-readable JSON catalog and the
+1,024-board Markdown catalog atomically. Incomplete rows are visibly labeled
+as unproven incumbents rather than optima.
 
 ## Current measured state
 
