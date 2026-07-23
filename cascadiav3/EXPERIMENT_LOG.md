@@ -8759,3 +8759,24 @@ certifies zero of six cases and fails its selection gate. Decision: retain the
 tested sound diagnostic implementation, but do not build certificate
 serialization or alter catalog evidence. Cross-component isolation—not local
 cell capacity alone—is required to tighten the Hawk-A tail.
+
+## 2026-07-23 07:36 — AAAAA explicit one-loss fox diagnostic preregistration
+
+The two four-salmon Hawk cases sit exactly one point below their standalone
+relaxations. Therefore a fox that misses salmon cannot also miss its fox
+neighbor: with at most one salmon-missing fox, that fox must be adjacent to a
+salmon-seeing fox. Extend the local model's fox domain from the salmon boundary
+to the immediately adjacent outer ring, place the missing fox explicitly, and
+score all of its bear/elk/hawk/fox observations through actual local cells.
+This removes the prior free abstract coverage while still dropping Hawk
+isolation, Bear isolation, whole-board connectivity, and noncovering remote
+groups, so it remains a sound superset.
+
+Frozen source SHA-256
+`be00c8ede53917d3a8fdd2a0a3115b9f948ec1ed0636f573cfe633ac38af4b19`;
+tests SHA-256
+`28854a6533934a6534eb800eaf78b76df13aa5836be05b242d6b621599aa1366`;
+Ruff and four tests pass. Screen only `(4,6,4,2,4)>=65` and
+`(3,5,4,3,5)>=63`, one worker, 30 seconds per shape. Select for formal
+certification only on exact exhaustion with a relaxed upper below threshold;
+`UNKNOWN` or threshold feasibility remains no proof.
