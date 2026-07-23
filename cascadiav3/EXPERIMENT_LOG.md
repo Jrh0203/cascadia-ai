@@ -9230,3 +9230,21 @@ hosts, solver configuration, and fail-closed decision rule are unchanged from
 catalog/sharding unit tests, and `git diff --check`; its launcher must complete
 deployment to all three hosts before starting the first worker. Any remaining
 tag collision or deploy error blocks this retry without deleting prior state.
+
+**09:23 retry failed before solving a vector.** Tag
+`aaaaa_exact_tail_fleet2_20260723`, revision `136e1a1f`, deployed completely
+and launched wrapper PIDs john2 `1005`, john3 `74154`, john4 `21079`.
+The local post-launch ledger update then exposed macOS system Python 3.9's
+lack of `zip(strict=...)`; the same error occurred immediately in all three
+remote catalog processes. All wrappers terminated naturally with exit 1,
+produced no shard ledger, and were not killed or restarted. The recovered
+launch ledger records the PIDs and has SHA-256
+`01f5158c517c0f5fda03bf26044a747e316087da946f99e00c9f61829258daa8`.
+
+The 09:12 note's Python 3.12 description was incorrect: that environment was
+created from system Python 3.9.6. The existing fleet generation venv is the
+verified Python 3.12.13 source. Decision: retain both failed tags, require
+Python 3.12.13 exactly in launcher and worker, use the repo venv for local
+ledger transitions, and create a fresh isolated `wildlife-venv-py312` from
+the known fleet interpreter. A third run may be preregistered only after all
+hosts pass exact Python, OR-Tools, and identical-freeze checks.

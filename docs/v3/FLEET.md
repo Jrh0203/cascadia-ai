@@ -68,11 +68,13 @@ CPU-only OR-Tools. John authorized distributing this computation on
 promotion evidence; each returned witness and proof ledger is validated again
 on the orchestrator before import.
 
-The minis use a dedicated CPU-only `~/cascadia/wildlife-venv`, isolated from
-the Torch/MPS generation environment, with the orchestrator's pinned OR-Tools
-version (currently `9.15.6755`). `WILDLIFE_VENV` can select another safe path
-under `~/cascadia`, and that path is recorded in the launch ledger. Only
-john2–john4 are used; john1 remains reserved for the web UI.
+The minis use a dedicated CPU-only `~/cascadia/wildlife-venv-py312`, created
+from the fleet's Python 3.12 generation interpreter but isolated from its
+Torch/MPS packages. Both Python (currently `3.12.13`) and OR-Tools (currently
+`9.15.6755`) are exact preflight/worker requirements.
+`WILDLIFE_VENV` can select another safe path under `~/cascadia`; the path and
+runtime versions are recorded in the launch ledger. Only john2–john4 are
+used; john1 remains reserved for the web UI.
 
 1. **`tools/wildlife_catalog_taskset.py`** freezes the currently unresolved
    canonical count vectors from a validated catalog snapshot:

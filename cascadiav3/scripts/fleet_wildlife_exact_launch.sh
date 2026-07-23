@@ -29,7 +29,8 @@ RELAXATION_TIME_LIMIT="${RELAXATION_TIME_LIMIT:-60}"
 CONNECTED_TIME_LIMIT="${CONNECTED_TIME_LIMIT:-120}"
 BASE_SEED="${BASE_SEED:-20260725}"
 ORTOOLS_VERSION="${ORTOOLS_VERSION:-9.15.6755}"
-WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv}"
+WILDLIFE_PYTHON_VERSION="${WILDLIFE_PYTHON_VERSION:-3.12.13}"
+WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv-py312}"
 
 case "$WILDLIFE_VENV" in
   ""|/*|*".."*|*[!A-Za-z0-9._/-]*)
@@ -148,14 +149,16 @@ for host in "${host_array[@]}"; do
   ssh "$host" \
     "cd ~/cascadia && \
      test -x '$WILDLIFE_VENV/bin/python' && \
+     test \"\$('$WILDLIFE_VENV/bin/python' -c 'import platform; print(platform.python_version())')\" = '$WILDLIFE_PYTHON_VERSION' && \
      test \"\$('$WILDLIFE_VENV/bin/python' -c 'import ortools; print(ortools.__version__)')\" = '$ORTOOLS_VERSION' && \
      test ! -e cascadiav3/fleet_outputs/$FLEET_TAG && \
      test ! -e cascadiav3/logs/wildlife_${FLEET_TAG}_shard_${host}.pid && \
      ! pgrep -f 'fleet_wildlife_exact_worker.sh.*$FLEET_TAG' >/dev/null"
 done
 
-python3 - "$LEDGER" "$RULESET" "$SOURCE_REVISION" "$candidate_sha" "$counts_sha" \
-  "$import_sha" "$catalog_sha" "$exact_sha" "$ORTOOLS_VERSION" "$JOBS" \
+.venv/bin/python - "$LEDGER" "$RULESET" "$SOURCE_REVISION" "$candidate_sha" "$counts_sha" \
+  "$import_sha" "$catalog_sha" "$exact_sha" "$ORTOOLS_VERSION" \
+  "$WILDLIFE_PYTHON_VERSION" "$JOBS" \
   "$SOLVER_WORKERS" "$RELAXATION_TIME_LIMIT" "$CONNECTED_TIME_LIMIT" \
   "$BASE_SEED" "$WILDLIFE_VENV" "$HOSTS" <<'PY'
 import json, os, sys, tempfile
@@ -164,7 +167,7 @@ from pathlib import Path
 
 (
     ledger_path, ruleset, revision, candidate_sha, counts_sha, import_sha,
-    catalog_sha, exact_sha, ortools, jobs, workers, relaxation, connected,
+    catalog_sha, exact_sha, ortools, python_version, jobs, workers, relaxation, connected,
     base_seed, wildlife_venv, hosts_text,
 ) = sys.argv[1:]
 hosts = hosts_text.split()
@@ -185,6 +188,7 @@ payload = {
         "catalog_sha256": catalog_sha,
         "exact_sha256": exact_sha,
         "ortools_version": ortools,
+        "python_version": python_version,
     },
     "configuration": {
         "jobs": int(jobs),
@@ -241,7 +245,9 @@ for index in "${!host_array[@]}"; do
       SOURCE_REVISION='$SOURCE_REVISION' JOBS='$JOBS' \
       SOLVER_WORKERS='$SOLVER_WORKERS' RELAXATION_TIME_LIMIT='$RELAXATION_TIME_LIMIT' \
       CONNECTED_TIME_LIMIT='$CONNECTED_TIME_LIMIT' BASE_SEED='$BASE_SEED' \
-      ORTOOLS_VERSION='$ORTOOLS_VERSION' WILDLIFE_VENV='$WILDLIFE_VENV' \
+      ORTOOLS_VERSION='$ORTOOLS_VERSION' \
+      WILDLIFE_PYTHON_VERSION='$WILDLIFE_PYTHON_VERSION' \
+      WILDLIFE_VENV='$WILDLIFE_VENV' \
       CATALOG_SOURCE_SHA256='$catalog_sha' \
       EXACT_SOURCE_SHA256='$exact_sha' \
       bash cascadiav3/scripts/fleet_wildlife_exact_worker.sh \
@@ -252,7 +258,7 @@ for index in "${!host_array[@]}"; do
   echo "[fleet] $host shard=$index/$shard_count pid=$pid"
 done
 
-python3 - "$LEDGER" "${launched_pids[*]}" <<'PY'
+.venv/bin/python - "$LEDGER" "${launched_pids[*]}" <<'PY'
 import json, os, sys, tempfile
 from datetime import datetime, timezone
 from pathlib import Path

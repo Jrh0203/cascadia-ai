@@ -17,7 +17,8 @@ RELAXATION_TIME_LIMIT="${RELAXATION_TIME_LIMIT:-60}"
 CONNECTED_TIME_LIMIT="${CONNECTED_TIME_LIMIT:-120}"
 BASE_SEED="${BASE_SEED:-20260725}"
 ORTOOLS_VERSION="${ORTOOLS_VERSION:?set ORTOOLS_VERSION}"
-WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv}"
+WILDLIFE_PYTHON_VERSION="${WILDLIFE_PYTHON_VERSION:?set WILDLIFE_PYTHON_VERSION}"
+WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv-py312}"
 CATALOG_SOURCE_SHA256="${CATALOG_SOURCE_SHA256:?set CATALOG_SOURCE_SHA256}"
 EXACT_SOURCE_SHA256="${EXACT_SOURCE_SHA256:?set EXACT_SOURCE_SHA256}"
 
@@ -65,20 +66,25 @@ if [ -s "$EXIT_FILE" ] || [ -s "$OUTPUT" ]; then
   exit 65
 fi
 
+observed_python="$("$PYTHON" -c 'import platform; print(platform.python_version())')"
+[ "$observed_python" = "$WILDLIFE_PYTHON_VERSION" ] || {
+  echo "Python $observed_python, expected $WILDLIFE_PYTHON_VERSION" >&2
+  exit 66
+}
 observed_ortools="$("$PYTHON" -c 'import ortools; print(ortools.__version__)')"
 [ "$observed_ortools" = "$ORTOOLS_VERSION" ] || {
   echo "OR-Tools $observed_ortools, expected $ORTOOLS_VERSION" >&2
-  exit 66
+  exit 67
 }
 observed_catalog="$(shasum -a 256 "$CATALOG_SOURCE" | awk '{print $1}')"
 observed_exact="$(shasum -a 256 "$EXACT_SOURCE" | awk '{print $1}')"
 [ "$observed_catalog" = "$CATALOG_SOURCE_SHA256" ] || {
   echo "catalog source hash mismatch" >&2
-  exit 67
+  exit 68
 }
 [ "$observed_exact" = "$EXACT_SOURCE_SHA256" ] || {
   echo "exact source hash mismatch" >&2
-  exit 68
+  exit 69
 }
 
 args=(
