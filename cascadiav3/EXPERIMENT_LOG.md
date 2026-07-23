@@ -9042,3 +9042,40 @@ log SHA-256
 No proof and no catalog change. Per the registered rule, do not lengthen or
 further tune the 20-coordinate relaxation. Continue only with finite local
 fox-component enumeration and cell-set packing.
+
+## 2026-07-23 08:05 — AAAAA explicit two-missing-fox screen preregistration
+
+Tighten the four gap-three/two-salmon maximum-salmon branches that previously
+remained feasible only because two salmon-missing foxes were abstract. At each
+registered target, maximum Bear/Elk/Salmon/Hawk scores force exactly 28 Fox-A
+points: the two missing salmon observations are the only permitted losses, so
+every other observation—including fox self-observation—is forced.
+
+Exhaust two cases. If either missing fox touches a salmon-adjacent fox, both
+can be represented in the explicit second ring unless they form an adjacent
+chain; if neither touches the local cluster, the two must be adjacent to each
+other. The existing explicit-ring model covers the first geometry. A new
+colored enumeration covers the adjacent-pair geometry with 144 dihedral-
+reduced placements at salmon-component distance two through seven and one
+distance-eight representative for all farther factorized translations. It
+then packs maximum Bear pairs/singles, Hawk singletons, and each maximum Elk
+line partition around all six foxes with exact cell non-overlap and exact
+positive observations. Bear/Hawk isolation and board connectivity remain
+dropped, preserving a strict superset.
+
+Bound source SHA-256
+`5050fae63465251dd95667d13cd8ad96e9ec3be76b91952e13eecddd0419ea3f`;
+runner SHA-256
+`2b72a9f53fa31e2446735f65299b68c1cb7c05a7d352b26ab248b024178e6b58`;
+tests SHA-256
+`c27adecfcfbf36dcf58ed278150afd7873727e2f287629a5556cbdebe7505c33`.
+Ruff and three structural tests pass. Run the four fixed cases sequentially
+with one worker and 30 seconds per submodel. Durable output:
+`docs/v3/evidence/aaaaa_two_missing_fox_screen_2026-07-23.json`; log:
+`cascadiav3/logs/aaaaa_two_missing_fox_screen_2026-07-23.log`.
+
+Select each maximum-salmon branch independently only if every explicit-ring
+and remote-pair submodel is `OPTIMAL` and the union upper is below its fixed
+target. `UNKNOWN` or an upper at/above target proves nothing. Even four passed
+branches do not yet certify rows: the split two-singleton salmon branches must
+be closed separately before certificate serialization and catalog merge.
