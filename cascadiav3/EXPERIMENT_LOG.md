@@ -8526,3 +8526,26 @@ in 118.925412 seconds. Retained witness breakdown `(11,13,5,11,26)`.
 The durable live ledger is now 711/826 exact, 725/826 boards stored, with 115
 vectors still unproved. This is a progress transition inside the already
 preregistered retry, not an adaptive run change; the process continues.
+
+## 2026-07-23 06:12 — AAAAA occupied-center bound calibration preregistration
+
+Every connected graph on twenty vertices has an occupied center with graph
+eccentricity at most ten, and hex distance is no greater than occupied-graph
+distance. A new exact wrapper therefore requires the solver to choose an
+occupied token whose axial hex distance to every token is at most ten. The
+choice is species-neutral and the extremal twenty-token path remains feasible,
+so this removes no legal connected board. The known 68-point witness and the
+diameter-19 path tests pass. Wrapper SHA-256
+`32aa014a8749bde5a749139b606b71f96c6e205bdaaa94e90ebb940c35cf6310`;
+test SHA-256
+`94c60d79201d4e6b246970c896318d2ab86bfb26e92db4f41f64173bcde0db60`;
+imported exact source SHA-256
+`55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8`.
+
+Before output, calibrate the same fixed `(3,6,6,0,5)` threshold-62 connected
+case and retained 61-point hint used by the three rejected variants, with two
+idle workers, 60 seconds, seed 20260723. Durable output:
+`docs/v3/evidence/aaaaa_occupied_center_calibration_2026-07-23.json`.
+Selection rule: only an exact `INFEASIBLE` result within 60 seconds selects
+this wrapper for catalog proof work; a feasible witness is retained if valid
+but does not by itself select the proof formulation; `UNKNOWN` rejects it.
