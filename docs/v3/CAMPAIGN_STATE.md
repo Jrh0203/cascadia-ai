@@ -1294,9 +1294,10 @@ The hard case materialized 14,648,710 cover configurations; fuse cover
 generation with packing so infeasible assignments are pruned before
 materialization, then remeasure before generalization. The first exact
 implementation orders species by candidate volume and caches identical
-per-layout deficit queries; 16 tests and Ruff pass. A frozen case-1 probe must
-retain 57 exact exclusions and finish within 149.739 seconds before the full
-four-case performance reproduction.
+per-layout deficit queries; 16 tests and Ruff pass. The frozen case-1 probe
+retained all 57 exact exclusions and fell 618.447→12.279 seconds (50.36×).
+A fresh four-case reproduction must now retain 57/57/57/95 exact exclusions
+and a ≤149.739-second critical path before generalization.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

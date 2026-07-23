@@ -73,9 +73,11 @@ over packed expert tensors with Gumbel search-supervised action values.
   reproduced all proofs but was rejected at 4.84× projected speedup: the hard
   case materializes 14.65 million cover configurations, identifying fused
   cover-generation/set-packing pruning as the next performance target. The
-  first exact species-order/cache implementation is now under a frozen
-  hard-case speed probe. No other arbitrary-ruleset row is called optimal
-  before its exact certificate completes. Methodology:
+  exact species-order/cache implementation cut the frozen hard case
+  618.447→12.279 seconds (50.36×) without changing any of its 57 exclusions;
+  the fresh four-case reproduction is now the final speed gate. No other
+  arbitrary-ruleset row is called optimal before its exact certificate
+  completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed

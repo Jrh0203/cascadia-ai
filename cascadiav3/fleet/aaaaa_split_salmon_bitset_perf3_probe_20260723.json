@@ -1,6 +1,6 @@
 {
   "schema": "aaaaa-split-salmon-bitset-performance-probe-v1",
-  "state": "planned",
+  "state": "completed",
   "tag": "aaaaa_split_salmon_bitset_perf3_probe_20260723",
   "source_revision": "33bc7403c1e24c5454f769ff35779373a8064e0b",
   "runner_sha256": "aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50",
@@ -22,5 +22,18 @@
     "expected_case_count": 57,
     "maximum_selected_wall_seconds": 149.739406183362
   },
-  "selection_rule": "advance to the frozen four-case performance reproduction only if case 1 exits zero, reproduces exact INFEASIBLE status across all 57 submodels, and completes in at most 149.739406183362 seconds. This diagnostic is performance/correctness reproduction, not new proof evidence."
+  "selection_rule": "advance to the frozen four-case performance reproduction only if case 1 exits zero, reproduces exact INFEASIBLE status across all 57 submodels, and completes in at most 149.739406183362 seconds. This diagnostic is performance/correctness reproduction, not new proof evidence.",
+  "result": {
+    "completed_at": "2026-07-23T20:28:38Z",
+    "status": "INFEASIBLE",
+    "case_count": 57,
+    "wall_seconds": 12.279384416993707,
+    "prior_wall_seconds": 618.4466151660308,
+    "hard_case_speedup": 50.36462693315558,
+    "cover_searches": 62606,
+    "cover_configurations": 231778,
+    "packing_nodes": 4104,
+    "output_sha256": "12eee9c90b1a70f7d091978c8134b2a80e9b088e4fd12e75a2c65226f9848c0f",
+    "verdict": "SELECT"
+  }
 }

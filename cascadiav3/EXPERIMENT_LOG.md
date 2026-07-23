@@ -10848,6 +10848,22 @@ exactly infeasible and wall time is at most 149.739406 seconds. The probe is
 not new proof evidence. Durable ledger:
 `cascadiav3/fleet/aaaaa_split_salmon_bitset_perf3_probe_20260723.json`.
 
+**16:28 EDT hard-case probe — SELECT.** The process exited zero; all 57
+submodels remain exactly infeasible. Wall time fell from 618.447 to 12.279
+seconds, a 50.36× hard-case speedup. Actual cover searches/configurations fell
+from 223,163/14,648,710 to 62,606/231,778 while packing nodes remained 4,104,
+which confirms that the optimization removed redundant intermediate work
+without changing the final packing search. Output SHA-256
+`12eee9c90b1a70f7d091978c8134b2a80e9b088e4fd12e75a2c65226f9848c0f`.
+
+**16:28 EDT four-case performance reproduction preregistration.** Freeze the
+same source/runner hashes and rerun fresh cases 0–3 as four concurrent john1
+processes. Select the engine for generalized component work only if all four
+statuses remain exactly infeasible with 57/57/57/95 submodels and maximum
+case wall is at most 149.739406 seconds. This is correctness/performance
+reproduction, not new proof evidence. Durable ledger:
+`cascadiav3/fleet/aaaaa_split_salmon_bitset_perf3_full_20260723.json`.
+
 **19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
 zero after completing indices 0 and 562. This satisfies the authorized
 recovery condition, so all six parent/recovery files were unsealed and copied

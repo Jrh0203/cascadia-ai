@@ -1,0 +1,23 @@
+{
+  "schema": "aaaaa-split-salmon-bitset-performance-v1",
+  "state": "planned",
+  "tag": "aaaaa_split_salmon_bitset_perf3_full_20260723",
+  "source_revision": "33bc7403c1e24c5454f769ff35779373a8064e0b",
+  "runner_sha256": "aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50",
+  "engine_sha256": "f7f3c84b5a6aca2dae816140d5e7689dbbbb4e78575fc5154f5ea6aa0b7e9876",
+  "configuration": {
+    "host": "john1",
+    "parallel_cases": 4,
+    "case_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "python": "3.12.13",
+    "ortools": "9.15.6755",
+    "old_sequential_wall_seconds": 2994.78812366724,
+    "maximum_selected_critical_path_seconds": 149.739406183362
+  },
+  "selection_rule": "select the species-ordered cached engine for generalized component work only if all four fresh outputs retain exact INFEASIBLE status and 57/57/57/95 submodels, and the maximum per-case wall is at most 149.739406183362 seconds (at least 20x projected four-host wall speedup versus the frozen sequential CP-SAT screen)."
+}
