@@ -9,10 +9,16 @@ are deliberately dropped, making the model a superset of real boards.
 
 from __future__ import annotations
 
+import argparse
+import hashlib
 import itertools
+import json
+import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+from ortools import __version__ as ORTOOLS_VERSION
 from ortools.sat.python import cp_model
 
 from tools import aaaaa_wildlife_exact as base
@@ -27,6 +33,7 @@ SCREEN_CASES = (
     ((4, 6, 4, 2, 4), 65),
     ((3, 5, 4, 3, 5), 63),
 )
+CERTIFICATE_CASES = SCREEN_CASES[-2:]
 
 
 def second_hawk_score(count: int) -> int:
@@ -292,3 +299,107 @@ def relaxed_upper_bound(
         "aggregate_solver_wall_seconds": total_wall,
         "explicit_missing_foxes": explicit_missing_foxes,
     }
+
+
+def certificates(
+    catalog_path: Path,
+    *,
+    workers: int,
+    per_shape_time_limit: float,
+) -> dict[str, Any]:
+    started = time.monotonic()
+    catalog_payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    results = []
+    for counts, target in CERTIFICATE_CASES:
+        incumbent = zero.validate_incumbent(catalog_payload, counts)
+        bound = relaxed_upper_bound(
+            counts,
+            target,
+            workers=workers,
+            per_shape_time_limit=per_shape_time_limit,
+            explicit_missing_foxes=True,
+        )
+        if bound["status"] != "INFEASIBLE" or bound["upper_bound"] != incumbent["score"]:
+            raise RuntimeError(
+                f"{counts}: bound {bound['status']} / {bound['upper_bound']} "
+                f"does not certify incumbent {incumbent['score']}"
+            )
+        results.append(
+            {
+                "counts": list(counts),
+                "excluded_score": target,
+                "certified_upper_bound": int(bound["upper_bound"]),
+                "proof_complete": True,
+                "proof_method": "hawk_one_loss_relaxed_local_packing_infeasible",
+                "bound": bound,
+                "incumbent": incumbent,
+            }
+        )
+    source = Path(__file__).resolve()
+    zero_source = source.with_name("aaaaa_wildlife_zero_hawk_bound.py")
+    exact_source = source.with_name("aaaaa_wildlife_exact.py")
+    return {
+        "schema": "aaaaa-hawk-one-loss-local-packing-certificates-v1",
+        "proof_complete": True,
+        "configuration": {
+            "workers": workers,
+            "per_shape_time_limit_seconds": per_shape_time_limit,
+            "explicit_missing_foxes": True,
+        },
+        "relaxation": {
+            "whole_board_connectivity_required": False,
+            "target_forces_maximum_bear_score": True,
+            "target_forces_one_maximum_salmon_component": True,
+            "target_forces_maximum_hawk_score": True,
+            "hawk_isolation_dropped": True,
+            "bear_isolation_dropped": True,
+            "noncovering_scoring_groups_may_be_abstract": True,
+            "salmon_missing_foxes_placed_explicitly": True,
+            "forced_local_cells_must_not_overlap": True,
+        },
+        "ortools_version": ORTOOLS_VERSION,
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "zero_hawk_support_source_sha256": hashlib.sha256(zero_source.read_bytes()).hexdigest(),
+        "exact_scorer_source_sha256": hashlib.sha256(exact_source.read_bytes()).hexdigest(),
+        "elapsed_seconds": time.monotonic() - started,
+        "results": results,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--catalog", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--per-shape-time-limit", type=float, default=30.0)
+    args = parser.parse_args()
+    payload = certificates(
+        args.catalog,
+        workers=args.workers,
+        per_shape_time_limit=args.per_shape_time_limit,
+    )
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = args.output.with_suffix(args.output.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(args.output)
+    print(
+        json.dumps(
+            {
+                "elapsed_seconds": payload["elapsed_seconds"],
+                "results": [
+                    {
+                        "counts": row["counts"],
+                        "optimum": row["certified_upper_bound"],
+                        "cases": row["bound"]["cases"],
+                    }
+                    for row in payload["results"]
+                ],
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
