@@ -1,6 +1,6 @@
 {
   "schema": "hex-dual-observation-bound-fleet-v1",
-  "state": "preregistered",
+  "state": "running",
   "tag": "fox_a_dual_observation_bound_20260723",
   "source_revision": "b757bc85def7f7be5faec0359ff996e125f85c7a",
   "source_sha256": "24d88c9c4dafacaf7a540960e2a2f396d9643b58c94f87be906a40dd8a74fe52",
@@ -13,9 +13,9 @@
     "ortools_version": "9.15.6755"
   },
   "shards": [
-    {"host": "john1", "start_index": 0, "end_index": 54},
-    {"host": "john2", "start_index": 54, "end_index": 108},
-    {"host": "john3", "start_index": 108, "end_index": 162},
-    {"host": "john4", "start_index": 162, "end_index": 216}
+    {"host": "john1", "start_index": 0, "end_index": 54, "wrapper_pid": 66899},
+    {"host": "john2", "start_index": 54, "end_index": 108, "wrapper_pid": 44138},
+    {"host": "john3", "start_index": 108, "end_index": 162, "wrapper_pid": 10298},
+    {"host": "john4", "start_index": 162, "end_index": 216, "wrapper_pid": 33244}
   ]
 }

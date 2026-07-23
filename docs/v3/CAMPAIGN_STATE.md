@@ -1136,3 +1136,5 @@ cap-six `(foxes, target-A, target-B)` maxima for foxes observing both species,
 then combines components in a complete 3-D DP. It replaces the loose `2ab`
 pair capacity only if exact coverage/symmetry and the frozen ≥5% Fox-A or
 ≥10% AAAAA/CADDA reduction gate pass.
+All four 54-triple Fox-A derivation shards launched at 14:08 with fresh
+heartbeats.

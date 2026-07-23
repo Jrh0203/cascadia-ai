@@ -10149,3 +10149,8 @@ Selection rule fixed before output: everywhere no weaker than
 `min(foxes,2ab)`, and either ≥5% reduction in the frozen 256-rule Fox-A
 frontier or ≥10% reduction for AAAAA or CADDA. Otherwise retain as a proved
 negative. No incumbent score changes.
+
+**14:08 launch.** All idle/tag/source/support/runtime preflights passed.
+The four 54-triple shards launched at `18:08:04–05Z`, wrapper PIDs
+66899/44138/10298/33244, with fresh self-recorded solver heartbeats. Ledger:
+`cascadiav3/fleet/fox_a_dual_observation_bound_20260723_fleet.json`.
