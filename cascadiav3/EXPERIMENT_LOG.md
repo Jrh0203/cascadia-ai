@@ -11362,3 +11362,56 @@ runtime, collision, and idle checks under revision `7c7ce831`. Wrapper PIDs
 are 53736/75527/33742/35865 on john1/john2/john3/john4. Ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_pilot8_fleet_20260723.json`.
 Results remain sealed until four terminal markers.
+
+**18:41 EDT terminal verdict — BROAD_SCALE.** All four wrappers were terminal
+zero at `22:36:07Z`; only then were all eight payloads unsealed. All attempts
+were valid `UNKNOWN` maximization results and no new witness was found. The
+four known one-point proof-tail cases retained their prior sound uppers.
+Every high-ceiling case contracted: CBDDB and DDDDB moved 99→98 at the
+ruleset level after their selected count bounds fell 99→95; DBDAB and DADAB
+moved 94→92 after their selected count bounds fell 94→90. This satisfies the
+frozen broad-scale gate four independent ways.
+
+The fail-closed merge and all-1,024 production rescore preserve 80 certified
+rows, the score-85 incumbent, and the holistic `[85,99]` interval because
+eight unprobed rows still have 99-point ceilings. Catalog/Markdown SHA-256:
+`e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82`
+and
+`d8c3712e2d41199f58cca495a1331b3b3a78139db1eea1f54f7f522744263348`;
+production response SHA-256 remains
+`5f3b7b5dcc0fee92b766e59b3f99b5b1a25b8afd5f38431a0264b64809c251d4`.
+Curated evidence:
+`docs/v3/evidence/all_wildlife_bound_probe_pilot8_2026-07-23.json`.
+
+Before recursive use, the merger was strengthened to serialize a current
+upper beside every unresolved count and to union inherited probe
+paths/hashes. A two-generation regression proves that a later catalog cannot
+silently revert an earlier CP-SAT contraction to the analytical bound. The
+taskset builder now has deterministic top-frontier selection and consumes
+those persisted bounds. Nine focused tests and Ruff pass.
+
+## 2026-07-23 18:41 EDT — bounded-maximization top-frontier broad pass
+
+The positive pilot gate selects a complete first top-frontier pass. Freeze
+every unresolved count tied for its ruleset's current sound upper where that
+upper is above the holistic incumbent 85. Against bound-catalog SHA
+`e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82`,
+the deterministic selector yields 435 count tasks across 280 rulesets;
+taskset SHA-256 is
+`623cb660909c8e0d86e46c8a5776f4e567d9a573c760252505733508ab844759`.
+Its current-upper distribution is 86:79, 87:88, 88:41, 89:5, 90:12,
+91:23, 92:32, 93:58, 94:43, 95:14, 96:8, 97:4, 98:18, 99:10.
+
+Assign task indices round-robin to john1–john4 for 109/109/109/108 tasks.
+Retain connected exact maximization, 300 seconds/task, 330 seconds total/task,
+eight solver workers, and five-second heartbeats/handoffs. The hard per-host
+wall is just under ten hours. Results remain sealed until all four terminal
+markers. Every stored bound is intersected monotonically with the inherited
+per-count upper; every witness must pass independent and production scoring.
+
+All valid contractions, exact closures, and verified witnesses are reusable.
+After collection, run another top-frontier round only if at least 109/435
+counts strictly contract (25%) or any witness improves a ruleset incumbent;
+otherwise return the remaining frontier to the specialized exact-proof lane.
+`UNKNOWN` is never relabeled, and a higher solver bound can never erase an
+inherited lower bound.

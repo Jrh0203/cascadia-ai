@@ -26,6 +26,60 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _hash_set(value: Any, field: str) -> set[str]:
+    if value is None:
+        return set()
+    values = [value] if isinstance(value, str) else value
+    if not isinstance(values, list) or any(
+        not isinstance(item, str) or len(item) != 64 for item in values
+    ):
+        raise ValueError(f"invalid {field}")
+    return set(values)
+
+
+def _base_count_bounds(
+    row: dict[str, Any],
+    ruleset: str,
+    unresolved: list[tuple[int, int, int, int, int]],
+) -> dict[tuple[int, int, int, int, int], int]:
+    analytical = {counts: rules.count_upper(counts, ruleset) for counts in unresolved}
+    stored = row.get("unresolved_count_upper_bounds")
+    if stored is None:
+        return analytical
+    if not isinstance(stored, list) or len(stored) != len(unresolved):
+        raise ValueError(f"{ruleset}: invalid unresolved count upper bounds")
+    incumbent = int(row["optimum"])
+    bounds = {}
+    for counts, value in zip(unresolved, stored, strict=True):
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or value <= incumbent
+            or value > analytical[counts]
+        ):
+            raise ValueError(f"{ruleset} {counts}: invalid stored count upper")
+        bounds[counts] = value
+    expected_sound_upper = max([incumbent, *bounds.values()])
+    if int(row.get("sound_upper", expected_sound_upper)) != expected_sound_upper:
+        raise ValueError(f"{ruleset}: stored count bounds disagree with sound upper")
+    return bounds
+
+
+def _base_probe_provenance(row: dict[str, Any], ruleset: str) -> tuple[list[str], dict[str, str]]:
+    paths = row.get("bound_probe_paths", [])
+    hashes = row.get("bound_probe_sha256", {})
+    if (
+        not isinstance(paths, list)
+        or any(not isinstance(path, str) for path in paths)
+        or len(paths) != len(set(paths))
+        or not isinstance(hashes, dict)
+        or set(hashes) != set(paths)
+        or any(not isinstance(value, str) or len(value) != 64 for value in hashes.values())
+    ):
+        raise ValueError(f"{ruleset}: invalid inherited bound-probe provenance")
+    return list(paths), dict(hashes)
+
+
 def _paths(directories: list[Path]) -> list[Path]:
     return sorted(
         (path for directory in directories for path in directory.glob("task_*.json")),
@@ -37,9 +91,7 @@ def _expected_sources() -> dict[str, str]:
     return {
         "probe_source_sha256": _sha256(Path("tools/all_wildlife_bound_probe.py")),
         "exact_source_sha256": _sha256(Path("tools/all_wildlife_exact.py")),
-        "exact_support_source_sha256": _sha256(
-            Path("tools/cbddb_wildlife_exact.py")
-        ),
+        "exact_support_source_sha256": _sha256(Path("tools/cbddb_wildlife_exact.py")),
         "rules_source_sha256": _sha256(Path("tools/all_wildlife_rules.py")),
     }
 
@@ -124,17 +176,21 @@ def collect(
     base_encoded = base_catalog_path.read_bytes()
     base_sha = hashlib.sha256(base_encoded).hexdigest()
     base = json.loads(base_encoded)
-    if (
-        base.get("schema") != "all-wildlife-optimal-catalog-v1"
-        or len(base.get("results", [])) != len(rules.rulesets())
-    ):
+    if base.get("schema") != "all-wildlife-optimal-catalog-v1" or len(
+        base.get("results", [])
+    ) != len(rules.rulesets()):
         raise ValueError("unexpected base catalog schema or row count")
 
     paths = _paths(directories)
     if not paths:
         raise ValueError("no bound-probe outputs found")
     by_index: dict[int, list[tuple[Path, dict[str, Any]]]] = {}
-    probe_hashes = {}
+    probe_hashes = dict(base.get("bound_probe_sha256", {}))
+    if any(
+        not isinstance(path, str) or not isinstance(value, str) or len(value) != 64
+        for path, value in probe_hashes.items()
+    ):
+        raise ValueError("invalid inherited bound-probe hashes")
     for path in paths:
         encoded = path.read_bytes()
         payload = json.loads(encoded)
@@ -142,12 +198,22 @@ def collect(
         if index < 0 or index >= len(rules.rulesets()):
             raise ValueError(f"{path}: invalid ruleset index")
         by_index.setdefault(index, []).append((path, payload))
-        probe_hashes[str(path)] = hashlib.sha256(encoded).hexdigest()
+        digest = hashlib.sha256(encoded).hexdigest()
+        previous = probe_hashes.get(str(path))
+        if previous is not None and previous != digest:
+            raise ValueError(f"{path}: inherited bound-probe hash collision")
+        probe_hashes[str(path)] = digest
 
     rows = []
-    improved_rulesets = []
-    probe_source_hashes = set()
-    exact_source_hashes = set()
+    improved_rulesets = list(base.get("bound_probe_improved_rulesets", []))
+    if any(ruleset not in rules.rulesets() for ruleset in improved_rulesets):
+        raise ValueError("invalid inherited improved-ruleset list")
+    probe_source_hashes = _hash_set(
+        base.get("bound_probe_source_sha256"), "bound-probe source hashes"
+    )
+    exact_source_hashes = _hash_set(
+        base.get("bound_probe_exact_source_sha256"), "bound-probe exact hashes"
+    )
     for index, ruleset in enumerate(rules.rulesets()):
         row = deepcopy(base["results"][index])
         if row.get("index") != index or row.get("ruleset") != ruleset:
@@ -158,12 +224,9 @@ def collect(
             counts not in COUNT_VECTORS for counts in base_unresolved
         ):
             raise ValueError(f"{ruleset}: invalid base unresolved set")
-        bounds = {
-            counts: rules.count_upper(counts, ruleset) for counts in base_unresolved
-        }
+        bounds = _base_count_bounds(row, ruleset, base_unresolved)
         witnesses = []
-        row_paths = []
-        row_hashes = {}
+        row_paths, row_hashes = _base_probe_provenance(row, ruleset)
         for path, probe in by_index.get(index, []):
             attempts = _validate_probe(
                 path,
@@ -173,8 +236,10 @@ def collect(
             )
             probe_source_hashes.add(probe["identity"]["probe_source_sha256"])
             exact_source_hashes.add(probe["identity"]["exact_source_sha256"])
-            row_paths.append(str(path))
-            row_hashes[str(path)] = probe_hashes[str(path)]
+            path_text = str(path)
+            if path_text not in row_hashes:
+                row_paths.append(path_text)
+            row_hashes[path_text] = probe_hashes[path_text]
             for attempt in attempts:
                 counts = tuple(attempt["counts"])
                 bounds[counts] = min(bounds[counts], int(attempt["refined_upper"]))
@@ -206,12 +271,11 @@ def collect(
                 }
             )
         incumbent = int(row["optimum"])
-        unresolved = [
-            list(counts) for counts in base_unresolved if bounds[counts] > incumbent
-        ]
-        row["unresolved_counts"] = unresolved
-        row["proof_complete"] = not unresolved
-        row["sound_upper"] = max([incumbent, *bounds.values()])
+        unresolved_counts = [counts for counts in base_unresolved if bounds[counts] > incumbent]
+        row["unresolved_counts"] = [list(counts) for counts in unresolved_counts]
+        row["unresolved_count_upper_bounds"] = [bounds[counts] for counts in unresolved_counts]
+        row["proof_complete"] = not unresolved_counts
+        row["sound_upper"] = max([incumbent, *(bounds[counts] for counts in unresolved_counts)])
         if row_paths:
             row["bound_probe_paths"] = row_paths
             row["bound_probe_sha256"] = row_hashes
@@ -239,7 +303,9 @@ def collect(
             "bound_probe_sha256": probe_hashes,
             "bound_probe_source_sha256": sorted(probe_source_hashes),
             "bound_probe_exact_source_sha256": sorted(exact_source_hashes),
-            "bound_probe_improved_rulesets": improved_rulesets,
+            "bound_probe_improved_rulesets": [
+                ruleset for ruleset in rules.rulesets() if ruleset in set(improved_rulesets)
+            ],
             "production_response_sha256": production_sha,
             "holistic_optimum": incumbent_maximum if complete else None,
             "holistic_rulesets": (
@@ -297,9 +363,7 @@ def main() -> int:
         json.dumps(
             {
                 "completed_rulesets": payload["completed_rulesets"],
-                "incumbent_holistic_maximum": payload[
-                    "incumbent_holistic_maximum"
-                ],
+                "incumbent_holistic_maximum": payload["incumbent_holistic_maximum"],
                 "holistic_sound_upper": payload["holistic_sound_upper"],
                 "improved_rulesets": len(payload["bound_probe_improved_rulesets"]),
             },

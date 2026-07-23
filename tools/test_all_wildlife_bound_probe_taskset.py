@@ -38,6 +38,7 @@ def test_taskset_freezes_explicit_unresolved_case(tmp_path: Path) -> None:
     assert payload["task_count"] == 1
     assert payload["tasks"][0]["ruleset"] == "AAAAA"
     assert payload["tasks"][0]["counts"] == list(counts)
+    assert payload["tasks"][0]["current_upper"] == rules.count_upper(counts, "AAAAA")
 
 
 def test_taskset_rejects_resolved_case(tmp_path: Path) -> None:
@@ -50,3 +51,36 @@ def test_taskset_rejects_resolved_case(tmp_path: Path) -> None:
 def test_parse_case_rejects_noncanonical_counts() -> None:
     with pytest.raises(ValueError, match="invalid case"):
         parse_case("0:6,6,6,6,6")
+
+
+def test_top_frontier_selection_uses_persisted_count_bounds(tmp_path: Path) -> None:
+    catalog = tmp_path / "catalog.json"
+    _catalog(catalog)
+    payload = json.loads(catalog.read_text())
+    row = payload["results"][0]
+    ranked = sorted(
+        rules.count_vectors(),
+        key=lambda counts: rules.count_upper(counts, "AAAAA"),
+        reverse=True,
+    )
+    highest = ranked[0]
+    second = next(
+        counts
+        for counts in ranked
+        if rules.count_upper(counts, "AAAAA") < rules.count_upper(highest, "AAAAA")
+    )
+    second_upper = rules.count_upper(second, "AAAAA")
+    row["unresolved_counts"] = [list(highest), list(second)]
+    row["unresolved_count_upper_bounds"] = [second_upper - 1, second_upper]
+    row["sound_upper"] = second_upper
+    catalog.write_text(json.dumps(payload))
+
+    selected = build_taskset(
+        catalog,
+        top_frontier_above=second_upper - 1,
+    )
+
+    assert selected["selection"]["mode"] == "top_frontier"
+    assert selected["task_count"] == 1
+    assert selected["tasks"][0]["counts"] == list(second)
+    assert selected["tasks"][0]["current_upper"] == second_upper

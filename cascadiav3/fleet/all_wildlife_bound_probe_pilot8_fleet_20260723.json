@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-bound-probe-fleet-v1",
-  "state": "active",
+  "state": "complete",
   "tag": "all_wildlife_bound_probe_pilot8_20260723",
   "source_revision": "7c7ce8319423c23fe5c28d8ea6dad26bd32e1866",
   "taskset_sha256": "d605047697ffc7ffdd89216f61ee36f12c2dd545ae1c19b4c417d512c99c0a8b",
@@ -60,5 +60,42 @@
     "broad_scale": "At least one high-ceiling task 4-7 strictly lowers its upper or improves its incumbent, or any witness scores above 85.",
     "targeted_only": "The broad gate fails and at least two timeout tasks 0-3 strictly contract.",
     "otherwise": "DO_NOT_SCALE"
+  },
+  "terminal_utc": "2026-07-23T22:36:07Z",
+  "terminal_status": {
+    "john1": 0,
+    "john2": 0,
+    "john3": 0,
+    "john4": 0
+  },
+  "results": {
+    "task_count": 8,
+    "unknown": 8,
+    "feasible_or_optimal": 0,
+    "new_witnesses": 0,
+    "strict_count_upper_contractions": 4,
+    "strict_ruleset_upper_contractions": 4,
+    "high_ceiling_ruleset_upper_changes": {
+      "CBDDB": [99, 98],
+      "DDDDB": [99, 98],
+      "DBDAB": [94, 92],
+      "DADAB": [94, 92]
+    },
+    "one_point_tail_ruleset_upper_changes": {
+      "DCACC": [78, 78],
+      "BABCC": [78, 78],
+      "BBBCC": [78, 78],
+      "DDBCC": [79, 79]
+    },
+    "completed_rulesets": 80,
+    "holistic_interval": [85, 99],
+    "production_response_sha256": "5f3b7b5dcc0fee92b766e59b3f99b5b1a25b8afd5f38431a0264b64809c251d4"
+  },
+  "verdict": "BROAD_SCALE",
+  "merged_catalog": {
+    "path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_pilot8_2026-07-23.json",
+    "sha256": "e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82",
+    "markdown_path": "docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_PILOT8.md",
+    "markdown_sha256": "d8c3712e2d41199f58cca495a1331b3b3a78139db1eea1f54f7f522744263348"
   }
 }

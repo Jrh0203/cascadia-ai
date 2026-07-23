@@ -162,6 +162,12 @@ CP-SAT objective bound, refined analytical intersection, and resumable
 identity. Collection is performed by
 `tools/all_wildlife_bound_probe_collect.py`, which validates every bound and
 witness before production-rescoring all selected boards.
+Merged bound catalogs serialize `unresolved_count_upper_bounds` in exact
+parallel with `unresolved_counts` and union inherited probe paths/hashes.
+Subsequent tasksets must be based on that merged catalog, never on the older
+analytical-only catalog; this makes repeated passes monotonic. The taskset
+builder's `--top-frontier-above SCORE` mode deterministically selects every
+count tied for its row's current sound upper above `SCORE`.
 
 ## Throughput (measured 2026-07-22, model-S incumbent, n128/d2)
 

@@ -1747,6 +1747,18 @@ heavy tail, while the exact witness path continues to improve stored sample
 boards:
 `docs/v3/evidence/all_wildlife_six_to_ten_branch43_2026-07-23.json`.
 
+The complementary five-minute maximization lane passed its frozen usefulness
+gate. Four one-point proof-tail controls retained their bounds, but all four
+high-ceiling cases contracted: CBDDB/DDDDB 99→98 and DBDAB/DADAB 94→92 at
+ruleset level. No witness or closure was fabricated from `UNKNOWN`; the
+CP-SAT objective bounds are retained as sound upper evidence. Verdict:
+**OPEN/BROAD_SCALE** for top-frontier contraction, while the specialized
+component-local engine remains the exact-certification method. The first
+broad tranche is the complete 435-count top frontier above score 85 across
+280 rulesets. Recursive artifacts persist aligned per-count bounds and union
+their provenance, with a regression proving monotonic two-generation merges:
+`docs/v3/evidence/all_wildlife_bound_probe_pilot8_2026-07-23.json`.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from

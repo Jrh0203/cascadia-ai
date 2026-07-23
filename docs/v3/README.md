@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-23 18:17 EDT)
+## Status at a glance (updated 2026-07-23 18:41 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, in progress):** AAAAA has
   one certified optimal board for 732/826 count vectors after unioning the
@@ -111,12 +111,17 @@ over packed expert tensors with Gumbel search-supervised action values.
   retained exact partial work in seven, and found five improved incumbents.
   The integrated catalog is now **80/1,024 exact**, with 118,704 branches
   across 944 unresolved rows. The holistic incumbent remains 85.
-  A separate bounded-maximization sidecar now passes its engineering smoke:
-  it stores sound CP-SAT upper bounds and concrete witnesses without changing
-  the default feasibility prover. The smoke preserved the current holistic
-  interval `[85,99]`; usefulness awaits the frozen multi-case fleet pilot.
-  That pilot is now frozen as four known one-point timeout cases plus four
-  high-ceiling cases, two tasks per mini and five minutes per task.
+  A separate bounded-maximization sidecar now passes both its engineering
+  smoke and its frozen eight-case fleet pilot. The four one-point proof-tail
+  cases did not contract, but all four high-ceiling cases did: CBDDB/DDDDB
+  99→98 and DBDAB/DADAB 94→92 at ruleset level. This triggers the
+  preregistered `BROAD_SCALE` verdict. The merge format now persists every
+  unresolved count's current certified upper and unions prior provenance, so
+  recursive passes cannot forget earlier contractions. The first complete
+  top-frontier pass is frozen at 435 count ties across 280 rulesets whose
+  current upper exceeds 85, balanced 109/109/109/108 across john1–john4.
+  The current holistic interval remains `[85,99]` because eight untouched
+  rulesets still carry 99-point ceilings.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

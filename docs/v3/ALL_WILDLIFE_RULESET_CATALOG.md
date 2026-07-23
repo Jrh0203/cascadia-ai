@@ -140,6 +140,23 @@ incumbent witness.
 catalog and every row to be proof-complete, recomputes its holistic summary,
 and batch-compares every board with the production Rust scorer.
 
+### 6. Bounded-maximization sidecar
+
+`tools/all_wildlife_bound_probe.py` complements threshold feasibility with a
+time-bounded exact CP-SAT maximization model. A timeout remains `UNKNOWN`, but
+the solver's objective bound is still a sound count-specific upper; any
+feasible solution is serialized as a concrete board and independently
+rescored. The catalog merger intersects that bound with both the analytical
+count bound and every inherited probe bound.
+
+For recursive passes, each row stores `unresolved_count_upper_bounds` aligned
+one-for-one with `unresolved_counts`, plus the complete probe path/hash
+provenance. The collector validates this state and unions it monotonically.
+The deterministic `--top-frontier-above` taskset mode selects every count tied
+for a row's current sound upper, avoiding both forgotten contractions and
+selective cherry-picking. A two-generation regression explicitly proves that
+a later pass cannot loosen an earlier bound.
+
 ## Current measured state
 
 - Independent/production score comparisons: `4,096/4,096` passed.

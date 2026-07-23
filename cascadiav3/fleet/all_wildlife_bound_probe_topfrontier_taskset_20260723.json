@@ -1,0 +1,6537 @@
+{
+  "schema": "all-wildlife-bound-probe-taskset-v1",
+  "catalog_path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_pilot8_2026-07-23.json",
+  "catalog_sha256": "e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82",
+  "selection": {
+    "mode": "top_frontier",
+    "minimum_upper_exclusive": 85
+  },
+  "task_count": 435,
+  "tasks": [
+    {
+      "task_index": 0,
+      "ruleset_index": 1,
+      "ruleset": "AAAAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 1,
+      "ruleset_index": 1,
+      "ruleset": "AAAAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 2,
+      "ruleset_index": 1,
+      "ruleset": "AAAAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 3,
+      "ruleset_index": 5,
+      "ruleset": "AAABB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 4,
+      "ruleset_index": 5,
+      "ruleset": "AAABB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 5,
+      "ruleset_index": 5,
+      "ruleset": "AAABB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 6,
+      "ruleset_index": 9,
+      "ruleset": "AAACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 7,
+      "ruleset_index": 13,
+      "ruleset": "AAADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 81,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 8,
+      "ruleset_index": 17,
+      "ruleset": "AABAB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 9,
+      "ruleset_index": 21,
+      "ruleset": "AABBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 10,
+      "ruleset_index": 25,
+      "ruleset": "AABCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 11,
+      "ruleset_index": 25,
+      "ruleset": "AABCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 12,
+      "ruleset_index": 25,
+      "ruleset": "AABCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 13,
+      "ruleset_index": 29,
+      "ruleset": "AABDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 14,
+      "ruleset_index": 29,
+      "ruleset": "AABDB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 15,
+      "ruleset_index": 33,
+      "ruleset": "AACAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 16,
+      "ruleset_index": 33,
+      "ruleset": "AACAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 17,
+      "ruleset_index": 33,
+      "ruleset": "AACAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 18,
+      "ruleset_index": 37,
+      "ruleset": "AACBB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 19,
+      "ruleset_index": 37,
+      "ruleset": "AACBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 20,
+      "ruleset_index": 41,
+      "ruleset": "AACCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 21,
+      "ruleset_index": 45,
+      "ruleset": "AACDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 22,
+      "ruleset_index": 49,
+      "ruleset": "AADAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 23,
+      "ruleset_index": 49,
+      "ruleset": "AADAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 24,
+      "ruleset_index": 53,
+      "ruleset": "AADBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 80,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 25,
+      "ruleset_index": 57,
+      "ruleset": "AADCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 26,
+      "ruleset_index": 59,
+      "ruleset": "AADCD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 27,
+      "ruleset_index": 61,
+      "ruleset": "AADDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 28,
+      "ruleset_index": 63,
+      "ruleset": "AADDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 29,
+      "ruleset_index": 63,
+      "ruleset": "AADDD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 30,
+      "ruleset_index": 65,
+      "ruleset": "ABAAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 31,
+      "ruleset_index": 65,
+      "ruleset": "ABAAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 32,
+      "ruleset_index": 65,
+      "ruleset": "ABAAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 33,
+      "ruleset_index": 69,
+      "ruleset": "ABABB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 34,
+      "ruleset_index": 69,
+      "ruleset": "ABABB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 35,
+      "ruleset_index": 69,
+      "ruleset": "ABABB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 36,
+      "ruleset_index": 73,
+      "ruleset": "ABACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 37,
+      "ruleset_index": 77,
+      "ruleset": "ABADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 38,
+      "ruleset_index": 81,
+      "ruleset": "ABBAB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 39,
+      "ruleset_index": 85,
+      "ruleset": "ABBBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 40,
+      "ruleset_index": 89,
+      "ruleset": "ABBCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 41,
+      "ruleset_index": 89,
+      "ruleset": "ABBCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 42,
+      "ruleset_index": 89,
+      "ruleset": "ABBCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 43,
+      "ruleset_index": 93,
+      "ruleset": "ABBDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 44,
+      "ruleset_index": 93,
+      "ruleset": "ABBDB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 45,
+      "ruleset_index": 97,
+      "ruleset": "ABCAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 46,
+      "ruleset_index": 97,
+      "ruleset": "ABCAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 47,
+      "ruleset_index": 97,
+      "ruleset": "ABCAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 48,
+      "ruleset_index": 101,
+      "ruleset": "ABCBB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 49,
+      "ruleset_index": 101,
+      "ruleset": "ABCBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 50,
+      "ruleset_index": 105,
+      "ruleset": "ABCCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 51,
+      "ruleset_index": 109,
+      "ruleset": "ABCDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 52,
+      "ruleset_index": 113,
+      "ruleset": "ABDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 53,
+      "ruleset_index": 113,
+      "ruleset": "ABDAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 54,
+      "ruleset_index": 117,
+      "ruleset": "ABDBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 80,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 55,
+      "ruleset_index": 121,
+      "ruleset": "ABDCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 56,
+      "ruleset_index": 123,
+      "ruleset": "ABDCD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 57,
+      "ruleset_index": 125,
+      "ruleset": "ABDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 58,
+      "ruleset_index": 127,
+      "ruleset": "ABDDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 59,
+      "ruleset_index": 127,
+      "ruleset": "ABDDD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 60,
+      "ruleset_index": 137,
+      "ruleset": "ACACB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 61,
+      "ruleset_index": 141,
+      "ruleset": "ACADB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 81,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 62,
+      "ruleset_index": 149,
+      "ruleset": "ACBBB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 63,
+      "ruleset_index": 153,
+      "ruleset": "ACBCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 64,
+      "ruleset_index": 153,
+      "ruleset": "ACBCB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 65,
+      "ruleset_index": 157,
+      "ruleset": "ACBDB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 66,
+      "ruleset_index": 157,
+      "ruleset": "ACBDB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 67,
+      "ruleset_index": 169,
+      "ruleset": "ACCCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 68,
+      "ruleset_index": 173,
+      "ruleset": "ACCDB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 69,
+      "ruleset_index": 177,
+      "ruleset": "ACDAB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 70,
+      "ruleset_index": 181,
+      "ruleset": "ACDBB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 80,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 71,
+      "ruleset_index": 185,
+      "ruleset": "ACDCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 96,
+      "current_upper": 96
+    },
+    {
+      "task_index": 72,
+      "ruleset_index": 189,
+      "ruleset": "ACDDB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 97,
+      "current_upper": 97
+    },
+    {
+      "task_index": 73,
+      "ruleset_index": 193,
+      "ruleset": "ADAAB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 74,
+      "ruleset_index": 193,
+      "ruleset": "ADAAB",
+      "counts": [
+        4,
+        6,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 75,
+      "ruleset_index": 197,
+      "ruleset": "ADABB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 76,
+      "ruleset_index": 201,
+      "ruleset": "ADACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 77,
+      "ruleset_index": 205,
+      "ruleset": "ADADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 78,
+      "ruleset_index": 205,
+      "ruleset": "ADADB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 79,
+      "ruleset_index": 209,
+      "ruleset": "ADBAB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 80,
+      "ruleset_index": 209,
+      "ruleset": "ADBAB",
+      "counts": [
+        4,
+        5,
+        5,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 81,
+      "ruleset_index": 213,
+      "ruleset": "ADBBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 82,
+      "ruleset_index": 213,
+      "ruleset": "ADBBB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 83,
+      "ruleset_index": 217,
+      "ruleset": "ADBCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 84,
+      "ruleset_index": 217,
+      "ruleset": "ADBCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 85,
+      "ruleset_index": 217,
+      "ruleset": "ADBCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 86,
+      "ruleset_index": 221,
+      "ruleset": "ADBDB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 87,
+      "ruleset_index": 225,
+      "ruleset": "ADCAB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 88,
+      "ruleset_index": 225,
+      "ruleset": "ADCAB",
+      "counts": [
+        4,
+        6,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 89,
+      "ruleset_index": 229,
+      "ruleset": "ADCBB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 90,
+      "ruleset_index": 233,
+      "ruleset": "ADCCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 91,
+      "ruleset_index": 237,
+      "ruleset": "ADCDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 92,
+      "ruleset_index": 237,
+      "ruleset": "ADCDB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 93,
+      "ruleset_index": 241,
+      "ruleset": "ADDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 94,
+      "ruleset_index": 241,
+      "ruleset": "ADDAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 95,
+      "ruleset_index": 245,
+      "ruleset": "ADDBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 80,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 96,
+      "ruleset_index": 249,
+      "ruleset": "ADDCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 97,
+      "current_upper": 97
+    },
+    {
+      "task_index": 97,
+      "ruleset_index": 250,
+      "ruleset": "ADDCC",
+      "counts": [
+        0,
+        5,
+        6,
+        6,
+        3
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 98,
+      "ruleset_index": 250,
+      "ruleset": "ADDCC",
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 99,
+      "ruleset_index": 253,
+      "ruleset": "ADDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 100,
+      "ruleset_index": 254,
+      "ruleset": "ADDDC",
+      "counts": [
+        0,
+        5,
+        6,
+        6,
+        3
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 101,
+      "ruleset_index": 254,
+      "ruleset": "ADDDC",
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 102,
+      "ruleset_index": 255,
+      "ruleset": "ADDDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 103,
+      "ruleset_index": 257,
+      "ruleset": "BAAAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 104,
+      "ruleset_index": 261,
+      "ruleset": "BAABB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 105,
+      "ruleset_index": 261,
+      "ruleset": "BAABB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 106,
+      "ruleset_index": 261,
+      "ruleset": "BAABB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 107,
+      "ruleset_index": 261,
+      "ruleset": "BAABB",
+      "counts": [
+        6,
+        4,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 108,
+      "ruleset_index": 261,
+      "ruleset": "BAABB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 109,
+      "ruleset_index": 265,
+      "ruleset": "BAACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 110,
+      "ruleset_index": 269,
+      "ruleset": "BAADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 111,
+      "ruleset_index": 273,
+      "ruleset": "BABAB",
+      "counts": [
+        3,
+        4,
+        5,
+        2,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 112,
+      "ruleset_index": 277,
+      "ruleset": "BABBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 113,
+      "ruleset_index": 281,
+      "ruleset": "BABCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 114,
+      "ruleset_index": 281,
+      "ruleset": "BABCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 115,
+      "ruleset_index": 285,
+      "ruleset": "BABDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 116,
+      "ruleset_index": 285,
+      "ruleset": "BABDB",
+      "counts": [
+        6,
+        4,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 117,
+      "ruleset_index": 289,
+      "ruleset": "BACAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 118,
+      "ruleset_index": 293,
+      "ruleset": "BACBB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 119,
+      "ruleset_index": 293,
+      "ruleset": "BACBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 120,
+      "ruleset_index": 293,
+      "ruleset": "BACBB",
+      "counts": [
+        3,
+        3,
+        3,
+        5,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 121,
+      "ruleset_index": 293,
+      "ruleset": "BACBB",
+      "counts": [
+        3,
+        4,
+        3,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 122,
+      "ruleset_index": 293,
+      "ruleset": "BACBB",
+      "counts": [
+        6,
+        4,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 123,
+      "ruleset_index": 293,
+      "ruleset": "BACBB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 124,
+      "ruleset_index": 297,
+      "ruleset": "BACCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 125,
+      "ruleset_index": 301,
+      "ruleset": "BACDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 126,
+      "ruleset_index": 305,
+      "ruleset": "BADAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 127,
+      "ruleset_index": 309,
+      "ruleset": "BADBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 128,
+      "ruleset_index": 313,
+      "ruleset": "BADCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 129,
+      "ruleset_index": 315,
+      "ruleset": "BADCD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 130,
+      "ruleset_index": 316,
+      "ruleset": "BADDA",
+      "counts": [
+        3,
+        1,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 131,
+      "ruleset_index": 317,
+      "ruleset": "BADDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 132,
+      "ruleset_index": 319,
+      "ruleset": "BADDD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 133,
+      "ruleset_index": 321,
+      "ruleset": "BBAAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 134,
+      "ruleset_index": 325,
+      "ruleset": "BBABB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 135,
+      "ruleset_index": 325,
+      "ruleset": "BBABB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 136,
+      "ruleset_index": 325,
+      "ruleset": "BBABB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 137,
+      "ruleset_index": 325,
+      "ruleset": "BBABB",
+      "counts": [
+        6,
+        4,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 138,
+      "ruleset_index": 325,
+      "ruleset": "BBABB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 139,
+      "ruleset_index": 329,
+      "ruleset": "BBACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 140,
+      "ruleset_index": 333,
+      "ruleset": "BBADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 141,
+      "ruleset_index": 337,
+      "ruleset": "BBBAB",
+      "counts": [
+        3,
+        4,
+        5,
+        2,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 142,
+      "ruleset_index": 341,
+      "ruleset": "BBBBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 143,
+      "ruleset_index": 345,
+      "ruleset": "BBBCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 144,
+      "ruleset_index": 345,
+      "ruleset": "BBBCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 145,
+      "ruleset_index": 349,
+      "ruleset": "BBBDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 146,
+      "ruleset_index": 349,
+      "ruleset": "BBBDB",
+      "counts": [
+        6,
+        4,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 147,
+      "ruleset_index": 353,
+      "ruleset": "BBCAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 148,
+      "ruleset_index": 357,
+      "ruleset": "BBCBB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 149,
+      "ruleset_index": 357,
+      "ruleset": "BBCBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 150,
+      "ruleset_index": 357,
+      "ruleset": "BBCBB",
+      "counts": [
+        3,
+        3,
+        3,
+        5,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 151,
+      "ruleset_index": 357,
+      "ruleset": "BBCBB",
+      "counts": [
+        3,
+        4,
+        3,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 152,
+      "ruleset_index": 357,
+      "ruleset": "BBCBB",
+      "counts": [
+        6,
+        4,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 153,
+      "ruleset_index": 357,
+      "ruleset": "BBCBB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 154,
+      "ruleset_index": 361,
+      "ruleset": "BBCCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 155,
+      "ruleset_index": 365,
+      "ruleset": "BBCDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 156,
+      "ruleset_index": 369,
+      "ruleset": "BBDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 157,
+      "ruleset_index": 373,
+      "ruleset": "BBDBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 158,
+      "ruleset_index": 377,
+      "ruleset": "BBDCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 159,
+      "ruleset_index": 379,
+      "ruleset": "BBDCD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 160,
+      "ruleset_index": 380,
+      "ruleset": "BBDDA",
+      "counts": [
+        3,
+        1,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 161,
+      "ruleset_index": 381,
+      "ruleset": "BBDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 162,
+      "ruleset_index": 383,
+      "ruleset": "BBDDD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 163,
+      "ruleset_index": 389,
+      "ruleset": "BCABB",
+      "counts": [
+        6,
+        0,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 164,
+      "ruleset_index": 393,
+      "ruleset": "BCACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 165,
+      "ruleset_index": 393,
+      "ruleset": "BCACB",
+      "counts": [
+        3,
+        0,
+        5,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 166,
+      "ruleset_index": 393,
+      "ruleset": "BCACB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 167,
+      "ruleset_index": 397,
+      "ruleset": "BCADB",
+      "counts": [
+        6,
+        0,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 168,
+      "ruleset_index": 409,
+      "ruleset": "BCBCB",
+      "counts": [
+        3,
+        0,
+        5,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 169,
+      "ruleset_index": 413,
+      "ruleset": "BCBDB",
+      "counts": [
+        3,
+        0,
+        5,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 170,
+      "ruleset_index": 421,
+      "ruleset": "BCCBB",
+      "counts": [
+        6,
+        0,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 171,
+      "ruleset_index": 425,
+      "ruleset": "BCCCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 172,
+      "ruleset_index": 425,
+      "ruleset": "BCCCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 173,
+      "ruleset_index": 429,
+      "ruleset": "BCCDB",
+      "counts": [
+        6,
+        0,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 174,
+      "ruleset_index": 433,
+      "ruleset": "BCDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 89,
+      "current_upper": 89
+    },
+    {
+      "task_index": 175,
+      "ruleset_index": 433,
+      "ruleset": "BCDAB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 89,
+      "current_upper": 89
+    },
+    {
+      "task_index": 176,
+      "ruleset_index": 433,
+      "ruleset": "BCDAB",
+      "counts": [
+        6,
+        0,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 89,
+      "current_upper": 89
+    },
+    {
+      "task_index": 177,
+      "ruleset_index": 437,
+      "ruleset": "BCDBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 178,
+      "ruleset_index": 437,
+      "ruleset": "BCDBB",
+      "counts": [
+        3,
+        0,
+        6,
+        5,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 179,
+      "ruleset_index": 437,
+      "ruleset": "BCDBB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 180,
+      "ruleset_index": 437,
+      "ruleset": "BCDBB",
+      "counts": [
+        6,
+        0,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 181,
+      "ruleset_index": 441,
+      "ruleset": "BCDCB",
+      "counts": [
+        3,
+        0,
+        6,
+        6,
+        5
+      ],
+      "incumbent": 84,
+      "analytical_upper": 96,
+      "current_upper": 96
+    },
+    {
+      "task_index": 182,
+      "ruleset_index": 443,
+      "ruleset": "BCDCD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 183,
+      "ruleset_index": 444,
+      "ruleset": "BCDDA",
+      "counts": [
+        3,
+        1,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 184,
+      "ruleset_index": 445,
+      "ruleset": "BCDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 96,
+      "current_upper": 96
+    },
+    {
+      "task_index": 185,
+      "ruleset_index": 445,
+      "ruleset": "BCDDB",
+      "counts": [
+        3,
+        0,
+        6,
+        6,
+        5
+      ],
+      "incumbent": 84,
+      "analytical_upper": 96,
+      "current_upper": 96
+    },
+    {
+      "task_index": 186,
+      "ruleset_index": 445,
+      "ruleset": "BCDDB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 96,
+      "current_upper": 96
+    },
+    {
+      "task_index": 187,
+      "ruleset_index": 445,
+      "ruleset": "BCDDB",
+      "counts": [
+        6,
+        0,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 96,
+      "current_upper": 96
+    },
+    {
+      "task_index": 188,
+      "ruleset_index": 447,
+      "ruleset": "BCDDD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 189,
+      "ruleset_index": 449,
+      "ruleset": "BDAAB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 190,
+      "ruleset_index": 449,
+      "ruleset": "BDAAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 191,
+      "ruleset_index": 453,
+      "ruleset": "BDABB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 192,
+      "ruleset_index": 457,
+      "ruleset": "BDACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 193,
+      "ruleset_index": 461,
+      "ruleset": "BDADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 194,
+      "ruleset_index": 461,
+      "ruleset": "BDADB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 195,
+      "ruleset_index": 465,
+      "ruleset": "BDBAB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 196,
+      "ruleset_index": 465,
+      "ruleset": "BDBAB",
+      "counts": [
+        3,
+        4,
+        5,
+        2,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 197,
+      "ruleset_index": 465,
+      "ruleset": "BDBAB",
+      "counts": [
+        3,
+        6,
+        5,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 198,
+      "ruleset_index": 469,
+      "ruleset": "BDBBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 199,
+      "ruleset_index": 469,
+      "ruleset": "BDBBB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 200,
+      "ruleset_index": 473,
+      "ruleset": "BDBCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 201,
+      "ruleset_index": 473,
+      "ruleset": "BDBCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 202,
+      "ruleset_index": 473,
+      "ruleset": "BDBCB",
+      "counts": [
+        3,
+        0,
+        5,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 203,
+      "ruleset_index": 477,
+      "ruleset": "BDBDB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 204,
+      "ruleset_index": 481,
+      "ruleset": "BDCAB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 205,
+      "ruleset_index": 481,
+      "ruleset": "BDCAB",
+      "counts": [
+        3,
+        5,
+        3,
+        3,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 206,
+      "ruleset_index": 481,
+      "ruleset": "BDCAB",
+      "counts": [
+        6,
+        4,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 207,
+      "ruleset_index": 485,
+      "ruleset": "BDCBB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 208,
+      "ruleset_index": 485,
+      "ruleset": "BDCBB",
+      "counts": [
+        3,
+        5,
+        3,
+        3,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 209,
+      "ruleset_index": 489,
+      "ruleset": "BDCCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 210,
+      "ruleset_index": 493,
+      "ruleset": "BDCDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 211,
+      "ruleset_index": 493,
+      "ruleset": "BDCDB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 212,
+      "ruleset_index": 497,
+      "ruleset": "BDDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 213,
+      "ruleset_index": 501,
+      "ruleset": "BDDBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 214,
+      "ruleset_index": 505,
+      "ruleset": "BDDCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 97,
+      "current_upper": 97
+    },
+    {
+      "task_index": 215,
+      "ruleset_index": 506,
+      "ruleset": "BDDCC",
+      "counts": [
+        0,
+        5,
+        6,
+        6,
+        3
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 216,
+      "ruleset_index": 506,
+      "ruleset": "BDDCC",
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 217,
+      "ruleset_index": 507,
+      "ruleset": "BDDCD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 218,
+      "ruleset_index": 508,
+      "ruleset": "BDDDA",
+      "counts": [
+        3,
+        1,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 219,
+      "ruleset_index": 509,
+      "ruleset": "BDDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 220,
+      "ruleset_index": 510,
+      "ruleset": "BDDDC",
+      "counts": [
+        0,
+        5,
+        6,
+        6,
+        3
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 221,
+      "ruleset_index": 510,
+      "ruleset": "BDDDC",
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 222,
+      "ruleset_index": 511,
+      "ruleset": "BDDDD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 223,
+      "ruleset_index": 513,
+      "ruleset": "CAAAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 224,
+      "ruleset_index": 517,
+      "ruleset": "CAABB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 225,
+      "ruleset_index": 517,
+      "ruleset": "CAABB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 226,
+      "ruleset_index": 517,
+      "ruleset": "CAABB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 227,
+      "ruleset_index": 521,
+      "ruleset": "CAACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 228,
+      "ruleset_index": 525,
+      "ruleset": "CAADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 229,
+      "ruleset_index": 529,
+      "ruleset": "CABAB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 230,
+      "ruleset_index": 533,
+      "ruleset": "CABBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 231,
+      "ruleset_index": 537,
+      "ruleset": "CABCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 232,
+      "ruleset_index": 537,
+      "ruleset": "CABCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 233,
+      "ruleset_index": 541,
+      "ruleset": "CABDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 234,
+      "ruleset_index": 545,
+      "ruleset": "CACAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 235,
+      "ruleset_index": 549,
+      "ruleset": "CACBB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 236,
+      "ruleset_index": 549,
+      "ruleset": "CACBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 237,
+      "ruleset_index": 553,
+      "ruleset": "CACCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 238,
+      "ruleset_index": 557,
+      "ruleset": "CACDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 239,
+      "ruleset_index": 561,
+      "ruleset": "CADAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 240,
+      "ruleset_index": 565,
+      "ruleset": "CADBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 241,
+      "ruleset_index": 569,
+      "ruleset": "CADCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 242,
+      "ruleset_index": 571,
+      "ruleset": "CADCD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 243,
+      "ruleset_index": 573,
+      "ruleset": "CADDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 244,
+      "ruleset_index": 575,
+      "ruleset": "CADDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 245,
+      "ruleset_index": 575,
+      "ruleset": "CADDD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 246,
+      "ruleset_index": 577,
+      "ruleset": "CBAAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 247,
+      "ruleset_index": 581,
+      "ruleset": "CBABB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 248,
+      "ruleset_index": 581,
+      "ruleset": "CBABB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 249,
+      "ruleset_index": 581,
+      "ruleset": "CBABB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 250,
+      "ruleset_index": 585,
+      "ruleset": "CBACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 251,
+      "ruleset_index": 589,
+      "ruleset": "CBADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 252,
+      "ruleset_index": 593,
+      "ruleset": "CBBAB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 253,
+      "ruleset_index": 597,
+      "ruleset": "CBBBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 254,
+      "ruleset_index": 601,
+      "ruleset": "CBBCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 255,
+      "ruleset_index": 601,
+      "ruleset": "CBBCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 256,
+      "ruleset_index": 605,
+      "ruleset": "CBBDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 257,
+      "ruleset_index": 609,
+      "ruleset": "CBCAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 258,
+      "ruleset_index": 613,
+      "ruleset": "CBCBB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 259,
+      "ruleset_index": 613,
+      "ruleset": "CBCBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 260,
+      "ruleset_index": 617,
+      "ruleset": "CBCCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 261,
+      "ruleset_index": 621,
+      "ruleset": "CBCDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 262,
+      "ruleset_index": 625,
+      "ruleset": "CBDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 263,
+      "ruleset_index": 629,
+      "ruleset": "CBDBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 264,
+      "ruleset_index": 633,
+      "ruleset": "CBDCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 265,
+      "ruleset_index": 635,
+      "ruleset": "CBDCD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 266,
+      "ruleset_index": 637,
+      "ruleset": "CBDDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 267,
+      "ruleset_index": 639,
+      "ruleset": "CBDDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 268,
+      "ruleset_index": 639,
+      "ruleset": "CBDDD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 269,
+      "ruleset_index": 649,
+      "ruleset": "CCACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 270,
+      "ruleset_index": 649,
+      "ruleset": "CCACB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 271,
+      "ruleset_index": 653,
+      "ruleset": "CCADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 272,
+      "ruleset_index": 653,
+      "ruleset": "CCADB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 273,
+      "ruleset_index": 665,
+      "ruleset": "CCBCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 274,
+      "ruleset_index": 665,
+      "ruleset": "CCBCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 275,
+      "ruleset_index": 665,
+      "ruleset": "CCBCB",
+      "counts": [
+        3,
+        0,
+        5,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 276,
+      "ruleset_index": 665,
+      "ruleset": "CCBCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 277,
+      "ruleset_index": 665,
+      "ruleset": "CCBCB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 278,
+      "ruleset_index": 669,
+      "ruleset": "CCBDB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 279,
+      "ruleset_index": 681,
+      "ruleset": "CCCCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 280,
+      "ruleset_index": 681,
+      "ruleset": "CCCCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 281,
+      "ruleset_index": 685,
+      "ruleset": "CCCDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 282,
+      "ruleset_index": 685,
+      "ruleset": "CCCDB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 283,
+      "ruleset_index": 689,
+      "ruleset": "CCDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 89,
+      "current_upper": 89
+    },
+    {
+      "task_index": 284,
+      "ruleset_index": 689,
+      "ruleset": "CCDAB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 89,
+      "current_upper": 89
+    },
+    {
+      "task_index": 285,
+      "ruleset_index": 693,
+      "ruleset": "CCDBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 286,
+      "ruleset_index": 693,
+      "ruleset": "CCDBB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 90,
+      "current_upper": 90
+    },
+    {
+      "task_index": 287,
+      "ruleset_index": 697,
+      "ruleset": "CCDCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 288,
+      "ruleset_index": 697,
+      "ruleset": "CCDCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 289,
+      "ruleset_index": 701,
+      "ruleset": "CCDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 96,
+      "current_upper": 96
+    },
+    {
+      "task_index": 290,
+      "ruleset_index": 701,
+      "ruleset": "CCDDB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 96,
+      "current_upper": 96
+    },
+    {
+      "task_index": 291,
+      "ruleset_index": 703,
+      "ruleset": "CCDDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 292,
+      "ruleset_index": 705,
+      "ruleset": "CDAAB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 293,
+      "ruleset_index": 709,
+      "ruleset": "CDABB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 294,
+      "ruleset_index": 713,
+      "ruleset": "CDACB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 295,
+      "ruleset_index": 717,
+      "ruleset": "CDADB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 296,
+      "ruleset_index": 717,
+      "ruleset": "CDADB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 297,
+      "ruleset_index": 721,
+      "ruleset": "CDBAB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 298,
+      "ruleset_index": 725,
+      "ruleset": "CDBBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 299,
+      "ruleset_index": 725,
+      "ruleset": "CDBBB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 300,
+      "ruleset_index": 729,
+      "ruleset": "CDBCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 301,
+      "ruleset_index": 729,
+      "ruleset": "CDBCB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 302,
+      "ruleset_index": 733,
+      "ruleset": "CDBDB",
+      "counts": [
+        0,
+        5,
+        5,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 303,
+      "ruleset_index": 737,
+      "ruleset": "CDCAB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 304,
+      "ruleset_index": 741,
+      "ruleset": "CDCBB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 305,
+      "ruleset_index": 745,
+      "ruleset": "CDCCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 306,
+      "ruleset_index": 749,
+      "ruleset": "CDCDB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 307,
+      "ruleset_index": 749,
+      "ruleset": "CDCDB",
+      "counts": [
+        0,
+        6,
+        4,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 308,
+      "ruleset_index": 753,
+      "ruleset": "CDDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 91,
+      "current_upper": 91
+    },
+    {
+      "task_index": 309,
+      "ruleset_index": 757,
+      "ruleset": "CDDBB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 310,
+      "ruleset_index": 761,
+      "ruleset": "CDDCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 97,
+      "current_upper": 97
+    },
+    {
+      "task_index": 311,
+      "ruleset_index": 762,
+      "ruleset": "CDDCC",
+      "counts": [
+        0,
+        5,
+        6,
+        6,
+        3
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 312,
+      "ruleset_index": 762,
+      "ruleset": "CDDCC",
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 313,
+      "ruleset_index": 763,
+      "ruleset": "CDDCD",
+      "counts": [
+        2,
+        2,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 314,
+      "ruleset_index": 763,
+      "ruleset": "CDDCD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 315,
+      "ruleset_index": 763,
+      "ruleset": "CDDCD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 316,
+      "ruleset_index": 765,
+      "ruleset": "CDDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 317,
+      "ruleset_index": 766,
+      "ruleset": "CDDDC",
+      "counts": [
+        0,
+        5,
+        6,
+        6,
+        3
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 318,
+      "ruleset_index": 766,
+      "ruleset": "CDDDC",
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "incumbent": 76,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 319,
+      "ruleset_index": 767,
+      "ruleset": "CDDDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 320,
+      "ruleset_index": 769,
+      "ruleset": "DAAAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 321,
+      "ruleset_index": 773,
+      "ruleset": "DAABB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 322,
+      "ruleset_index": 773,
+      "ruleset": "DAABB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 323,
+      "ruleset_index": 777,
+      "ruleset": "DAACB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 324,
+      "ruleset_index": 781,
+      "ruleset": "DAADB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 325,
+      "ruleset_index": 785,
+      "ruleset": "DABAB",
+      "counts": [
+        4,
+        4,
+        5,
+        1,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 326,
+      "ruleset_index": 785,
+      "ruleset": "DABAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 327,
+      "ruleset_index": 785,
+      "ruleset": "DABAB",
+      "counts": [
+        4,
+        5,
+        5,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 328,
+      "ruleset_index": 789,
+      "ruleset": "DABBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 329,
+      "ruleset_index": 789,
+      "ruleset": "DABBB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 330,
+      "ruleset_index": 789,
+      "ruleset": "DABBB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 331,
+      "ruleset_index": 793,
+      "ruleset": "DABCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 332,
+      "ruleset_index": 797,
+      "ruleset": "DABDB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 333,
+      "ruleset_index": 801,
+      "ruleset": "DACAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 334,
+      "ruleset_index": 805,
+      "ruleset": "DACBB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 335,
+      "ruleset_index": 805,
+      "ruleset": "DACBB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 336,
+      "ruleset_index": 809,
+      "ruleset": "DACCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 337,
+      "ruleset_index": 813,
+      "ruleset": "DACDB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 83,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 338,
+      "ruleset_index": 817,
+      "ruleset": "DADAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 339,
+      "ruleset_index": 817,
+      "ruleset": "DADAB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 340,
+      "ruleset_index": 821,
+      "ruleset": "DADBB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 341,
+      "ruleset_index": 825,
+      "ruleset": "DADCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 342,
+      "ruleset_index": 825,
+      "ruleset": "DADCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 343,
+      "ruleset_index": 827,
+      "ruleset": "DADCD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 344,
+      "ruleset_index": 829,
+      "ruleset": "DADDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 345,
+      "ruleset_index": 829,
+      "ruleset": "DADDB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 346,
+      "ruleset_index": 831,
+      "ruleset": "DADDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 347,
+      "ruleset_index": 831,
+      "ruleset": "DADDD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 348,
+      "ruleset_index": 833,
+      "ruleset": "DBAAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 349,
+      "ruleset_index": 837,
+      "ruleset": "DBABB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 350,
+      "ruleset_index": 837,
+      "ruleset": "DBABB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 351,
+      "ruleset_index": 841,
+      "ruleset": "DBACB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 352,
+      "ruleset_index": 845,
+      "ruleset": "DBADB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 353,
+      "ruleset_index": 849,
+      "ruleset": "DBBAB",
+      "counts": [
+        4,
+        4,
+        5,
+        1,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 354,
+      "ruleset_index": 849,
+      "ruleset": "DBBAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 355,
+      "ruleset_index": 849,
+      "ruleset": "DBBAB",
+      "counts": [
+        4,
+        5,
+        5,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 356,
+      "ruleset_index": 853,
+      "ruleset": "DBBBB",
+      "counts": [
+        0,
+        4,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 357,
+      "ruleset_index": 853,
+      "ruleset": "DBBBB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 358,
+      "ruleset_index": 853,
+      "ruleset": "DBBBB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 359,
+      "ruleset_index": 857,
+      "ruleset": "DBBCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 360,
+      "ruleset_index": 861,
+      "ruleset": "DBBDB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 361,
+      "ruleset_index": 865,
+      "ruleset": "DBCAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 362,
+      "ruleset_index": 869,
+      "ruleset": "DBCBB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 363,
+      "ruleset_index": 869,
+      "ruleset": "DBCBB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 364,
+      "ruleset_index": 873,
+      "ruleset": "DBCCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 365,
+      "ruleset_index": 877,
+      "ruleset": "DBCDB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 95,
+      "current_upper": 95
+    },
+    {
+      "task_index": 366,
+      "ruleset_index": 881,
+      "ruleset": "DBDAB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 367,
+      "ruleset_index": 881,
+      "ruleset": "DBDAB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 368,
+      "ruleset_index": 885,
+      "ruleset": "DBDBB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 369,
+      "ruleset_index": 889,
+      "ruleset": "DBDCB",
+      "counts": [
+        0,
+        4,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 370,
+      "ruleset_index": 889,
+      "ruleset": "DBDCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 371,
+      "ruleset_index": 891,
+      "ruleset": "DBDCD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 372,
+      "ruleset_index": 893,
+      "ruleset": "DBDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 373,
+      "ruleset_index": 893,
+      "ruleset": "DBDDB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 374,
+      "ruleset_index": 895,
+      "ruleset": "DBDDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 375,
+      "ruleset_index": 895,
+      "ruleset": "DBDDD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 376,
+      "ruleset_index": 897,
+      "ruleset": "DCAAB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 377,
+      "ruleset_index": 901,
+      "ruleset": "DCABB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 378,
+      "ruleset_index": 901,
+      "ruleset": "DCABB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 379,
+      "ruleset_index": 901,
+      "ruleset": "DCABB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 380,
+      "ruleset_index": 905,
+      "ruleset": "DCACB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 381,
+      "ruleset_index": 909,
+      "ruleset": "DCADB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 382,
+      "ruleset_index": 913,
+      "ruleset": "DCBAB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 383,
+      "ruleset_index": 913,
+      "ruleset": "DCBAB",
+      "counts": [
+        4,
+        5,
+        5,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 384,
+      "ruleset_index": 917,
+      "ruleset": "DCBBB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 385,
+      "ruleset_index": 921,
+      "ruleset": "DCBCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 386,
+      "ruleset_index": 921,
+      "ruleset": "DCBCB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 387,
+      "ruleset_index": 925,
+      "ruleset": "DCBDB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 388,
+      "ruleset_index": 929,
+      "ruleset": "DCCAB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 389,
+      "ruleset_index": 933,
+      "ruleset": "DCCBB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 390,
+      "ruleset_index": 933,
+      "ruleset": "DCCBB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 87,
+      "current_upper": 87
+    },
+    {
+      "task_index": 391,
+      "ruleset_index": 937,
+      "ruleset": "DCCCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 392,
+      "ruleset_index": 941,
+      "ruleset": "DCCDB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 393,
+      "ruleset_index": 945,
+      "ruleset": "DCDAB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 92,
+      "current_upper": 92
+    },
+    {
+      "task_index": 394,
+      "ruleset_index": 949,
+      "ruleset": "DCDBB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 395,
+      "ruleset_index": 953,
+      "ruleset": "DCDCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 396,
+      "ruleset_index": 957,
+      "ruleset": "DCDDB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "current_upper": 99
+    },
+    {
+      "task_index": 397,
+      "ruleset_index": 959,
+      "ruleset": "DCDDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 398,
+      "ruleset_index": 961,
+      "ruleset": "DDAAB",
+      "counts": [
+        4,
+        6,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 399,
+      "ruleset_index": 965,
+      "ruleset": "DDABB",
+      "counts": [
+        4,
+        6,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 400,
+      "ruleset_index": 965,
+      "ruleset": "DDABB",
+      "counts": [
+        4,
+        6,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 401,
+      "ruleset_index": 969,
+      "ruleset": "DDACB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 402,
+      "ruleset_index": 969,
+      "ruleset": "DDACB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 403,
+      "ruleset_index": 973,
+      "ruleset": "DDADB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 404,
+      "ruleset_index": 973,
+      "ruleset": "DDADB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 405,
+      "ruleset_index": 973,
+      "ruleset": "DDADB",
+      "counts": [
+        4,
+        6,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 406,
+      "ruleset_index": 977,
+      "ruleset": "DDBAB",
+      "counts": [
+        4,
+        5,
+        5,
+        0,
+        6
+      ],
+      "incumbent": 75,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 407,
+      "ruleset_index": 981,
+      "ruleset": "DDBBB",
+      "counts": [
+        4,
+        0,
+        5,
+        5,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 408,
+      "ruleset_index": 981,
+      "ruleset": "DDBBB",
+      "counts": [
+        4,
+        5,
+        5,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 409,
+      "ruleset_index": 981,
+      "ruleset": "DDBBB",
+      "counts": [
+        4,
+        6,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 410,
+      "ruleset_index": 985,
+      "ruleset": "DDBCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 411,
+      "ruleset_index": 989,
+      "ruleset": "DDBDB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 412,
+      "ruleset_index": 989,
+      "ruleset": "DDBDB",
+      "counts": [
+        4,
+        6,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 413,
+      "ruleset_index": 993,
+      "ruleset": "DDCAB",
+      "counts": [
+        4,
+        6,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 76,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 414,
+      "ruleset_index": 997,
+      "ruleset": "DDCBB",
+      "counts": [
+        4,
+        6,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 415,
+      "ruleset_index": 997,
+      "ruleset": "DDCBB",
+      "counts": [
+        4,
+        6,
+        4,
+        0,
+        6
+      ],
+      "incumbent": 78,
+      "analytical_upper": 88,
+      "current_upper": 88
+    },
+    {
+      "task_index": 416,
+      "ruleset_index": 1001,
+      "ruleset": "DDCCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 417,
+      "ruleset_index": 1001,
+      "ruleset": "DDCCB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 85,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 418,
+      "ruleset_index": 1005,
+      "ruleset": "DDCDB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 419,
+      "ruleset_index": 1005,
+      "ruleset": "DDCDB",
+      "counts": [
+        4,
+        4,
+        0,
+        6,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 420,
+      "ruleset_index": 1005,
+      "ruleset": "DDCDB",
+      "counts": [
+        4,
+        6,
+        0,
+        4,
+        6
+      ],
+      "incumbent": 82,
+      "analytical_upper": 94,
+      "current_upper": 94
+    },
+    {
+      "task_index": 421,
+      "ruleset_index": 1009,
+      "ruleset": "DDDAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 422,
+      "ruleset_index": 1013,
+      "ruleset": "DDDBB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 423,
+      "ruleset_index": 1013,
+      "ruleset": "DDDBB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 93,
+      "current_upper": 93
+    },
+    {
+      "task_index": 424,
+      "ruleset_index": 1017,
+      "ruleset": "DDDCB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 425,
+      "ruleset_index": 1018,
+      "ruleset": "DDDCC",
+      "counts": [
+        0,
+        5,
+        6,
+        6,
+        3
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 426,
+      "ruleset_index": 1018,
+      "ruleset": "DDDCC",
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "incumbent": 78,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 427,
+      "ruleset_index": 1019,
+      "ruleset": "DDDCD",
+      "counts": [
+        2,
+        2,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 428,
+      "ruleset_index": 1019,
+      "ruleset": "DDDCD",
+      "counts": [
+        2,
+        3,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 429,
+      "ruleset_index": 1019,
+      "ruleset": "DDDCD",
+      "counts": [
+        3,
+        2,
+        3,
+        6,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 430,
+      "ruleset_index": 1021,
+      "ruleset": "DDDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 431,
+      "ruleset_index": 1021,
+      "ruleset": "DDDDB",
+      "counts": [
+        4,
+        0,
+        4,
+        6,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 98,
+      "current_upper": 98
+    },
+    {
+      "task_index": 432,
+      "ruleset_index": 1022,
+      "ruleset": "DDDDC",
+      "counts": [
+        0,
+        5,
+        6,
+        6,
+        3
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 433,
+      "ruleset_index": 1022,
+      "ruleset": "DDDDC",
+      "counts": [
+        0,
+        6,
+        6,
+        6,
+        2
+      ],
+      "incumbent": 77,
+      "analytical_upper": 86,
+      "current_upper": 86
+    },
+    {
+      "task_index": 434,
+      "ruleset_index": 1023,
+      "ruleset": "DDDDD",
+      "counts": [
+        2,
+        2,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 79,
+      "analytical_upper": 87,
+      "current_upper": 87
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "schema": "all-wildlife-bound-probe-pilot-evidence-v1",
+  "date": "2026-07-23",
+  "verdict": "BROAD_SCALE",
+  "base_catalog": {
+    "path": "docs/v3/evidence/all_wildlife_catalog_augmented_six_to_ten_branch43_2026-07-23.json",
+    "sha256": "3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb"
+  },
+  "taskset": {
+    "path": "cascadiav3/fleet/all_wildlife_bound_probe_pilot8_taskset_20260723.json",
+    "sha256": "d605047697ffc7ffdd89216f61ee36f12c2dd545ae1c19b4c417d512c99c0a8b"
+  },
+  "configuration": {
+    "hosts": ["john1", "john2", "john3", "john4"],
+    "tasks_per_host": 2,
+    "time_limit_seconds_per_task": 300,
+    "total_time_limit_seconds_per_task": 330,
+    "solver_workers": 8,
+    "connectivity_required": true
+  },
+  "source_sha256": {
+    "probe": "4c5047c99370d9a433f0b448fe31db5a1dda85fa4b4519aa52498990b788fe31",
+    "exact": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+    "exact_support": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+    "rules": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+    "worker": "c7dcc31a7bd7d55016d470ebb04112341766cb050a39811d0f8c40aa777008e4"
+  },
+  "terminal_utc": "2026-07-23T22:36:07Z",
+  "task_results": [
+    {
+      "task": 0,
+      "ruleset": "DCACC",
+      "counts": [4, 0, 6, 6, 4],
+      "incumbent": 77,
+      "analytical_upper": 78,
+      "refined_count_upper": 78,
+      "ruleset_upper_before": 78,
+      "ruleset_upper_after": 78,
+      "status": "UNKNOWN",
+      "elapsed_seconds": 300.09597570821643,
+      "branches": 2644397,
+      "conflicts": 435117,
+      "sha256": "7f967d390c3bc4cff58ba0c8321a1ba498898204ab12934221b5a217e289b26b"
+    },
+    {
+      "task": 1,
+      "ruleset": "BABCC",
+      "counts": [6, 4, 0, 6, 4],
+      "incumbent": 77,
+      "analytical_upper": 78,
+      "refined_count_upper": 78,
+      "ruleset_upper_before": 78,
+      "ruleset_upper_after": 78,
+      "status": "UNKNOWN",
+      "elapsed_seconds": 300.09233354078606,
+      "branches": 2810627,
+      "conflicts": 465049,
+      "sha256": "7f6ee713d25c0003c157bd6cad00773182ce59255efbb74e32685a9cbb5d7b13"
+    },
+    {
+      "task": 2,
+      "ruleset": "BBBCC",
+      "counts": [6, 4, 0, 6, 4],
+      "incumbent": 77,
+      "analytical_upper": 78,
+      "refined_count_upper": 78,
+      "ruleset_upper_before": 78,
+      "ruleset_upper_after": 78,
+      "status": "UNKNOWN",
+      "elapsed_seconds": 300.1191954589449,
+      "branches": 3140490,
+      "conflicts": 485770,
+      "sha256": "d6d0627435801bbd3eadb981af2e272b23e53edfa2659d7e9171cb3cfc20f42c"
+    },
+    {
+      "task": 3,
+      "ruleset": "DDBCC",
+      "counts": [4, 6, 0, 6, 4],
+      "incumbent": 78,
+      "analytical_upper": 79,
+      "refined_count_upper": 79,
+      "ruleset_upper_before": 79,
+      "ruleset_upper_after": 79,
+      "status": "UNKNOWN",
+      "elapsed_seconds": 300.09745379164815,
+      "branches": 2165665,
+      "conflicts": 78908,
+      "sha256": "14927eb200f5185c82fd2e7334dc9973eeec8db73e66034f29513886e311b16e"
+    },
+    {
+      "task": 4,
+      "ruleset": "CBDDB",
+      "counts": [0, 4, 6, 4, 6],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "refined_count_upper": 95,
+      "ruleset_upper_before": 99,
+      "ruleset_upper_after": 98,
+      "status": "UNKNOWN",
+      "elapsed_seconds": 300.07812954159454,
+      "branches": 2107426,
+      "conflicts": 603544,
+      "sha256": "8f769cb150f0c5e87455122f63bed0b111af854543ed0add7c686515a061238f"
+    },
+    {
+      "task": 5,
+      "ruleset": "DDDDB",
+      "counts": [4, 0, 6, 4, 6],
+      "incumbent": 84,
+      "analytical_upper": 99,
+      "refined_count_upper": 95,
+      "ruleset_upper_before": 99,
+      "ruleset_upper_after": 98,
+      "status": "UNKNOWN",
+      "elapsed_seconds": 300.0881128748879,
+      "branches": 1833115,
+      "conflicts": 828820,
+      "sha256": "df0527670d6467d0da0026690c8d2dbfaf0375992a39d12bea1f8243f936bc7b"
+    },
+    {
+      "task": 6,
+      "ruleset": "DBDAB",
+      "counts": [4, 4, 6, 0, 6],
+      "incumbent": 77,
+      "analytical_upper": 94,
+      "refined_count_upper": 90,
+      "ruleset_upper_before": 94,
+      "ruleset_upper_after": 92,
+      "status": "UNKNOWN",
+      "elapsed_seconds": 300.0551097919233,
+      "branches": 3672507,
+      "conflicts": 1411362,
+      "sha256": "a0154d058bce954dc5e25efa74abfce6a2493000ab3a5d5d823e73c58d869682"
+    },
+    {
+      "task": 7,
+      "ruleset": "DADAB",
+      "counts": [4, 4, 6, 0, 6],
+      "incumbent": 77,
+      "analytical_upper": 94,
+      "refined_count_upper": 90,
+      "ruleset_upper_before": 94,
+      "ruleset_upper_after": 92,
+      "status": "UNKNOWN",
+      "elapsed_seconds": 300.17725629080087,
+      "branches": 2791741,
+      "conflicts": 890320,
+      "sha256": "d964bf0e0c623d4d4b0b5d7b95fface0183a9578e158a62c78e3d3bae6d66012"
+    }
+  ],
+  "summary": {
+    "strict_count_upper_contractions": 4,
+    "strict_ruleset_upper_contractions": 4,
+    "new_witnesses": 0,
+    "exact_closures": 0,
+    "total_solver_seconds": 2400.803566998802,
+    "total_branches": 21165968,
+    "total_conflicts": 5198890,
+    "certified_rulesets": 80,
+    "holistic_interval": [85, 99]
+  },
+  "merged_catalog": {
+    "path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_pilot8_2026-07-23.json",
+    "sha256": "e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82",
+    "markdown_path": "docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_PILOT8.md",
+    "markdown_sha256": "d8c3712e2d41199f58cca495a1331b3b3a78139db1eea1f54f7f522744263348",
+    "production_response_sha256": "5f3b7b5dcc0fee92b766e59b3f99b5b1a25b8afd5f38431a0264b64809c251d4"
+  }
+}

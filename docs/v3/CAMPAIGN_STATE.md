@@ -1425,6 +1425,25 @@ The eight-case bound pilot launched at `2026-07-23T22:25:51Z` under revision
 `7c7ce831`; all four wrappers were active after pinned preflight. The hard
 terminal deadline is approximately `22:36Z`.
 
+All four bound-pilot wrappers were terminal zero at `22:36:07Z`; only then
+were the eight outputs opened. The four known one-point cases did not
+contract. All four high-ceiling cases did: CBDDB/DDDDB 99→98 and
+DBDAB/DADAB 94→92 at ruleset level. There were no new witnesses or exact
+closures. The frozen verdict is `BROAD_SCALE`. Independent validation and
+the all-1,024 production rescore preserve 80 certified rows and the holistic
+`[85,99]` interval; the upper remains 99 because eight other rows were not
+part of the pilot. Curated evidence:
+`docs/v3/evidence/all_wildlife_bound_probe_pilot8_2026-07-23.json`.
+
+The collector now persists aligned per-count certified uppers and inherited
+probe provenance; a two-generation regression prevents recursive merges from
+forgetting earlier contractions. The selected broad pass contains every
+current top-frontier count tie for every row above 85: 435 tasks across 280
+rulesets at taskset SHA
+`623cb660909c8e0d86e46c8a5776f4e567d9a573c760252505733508ab844759`.
+Round-robin fleet balance is 109/109/109/108 tasks, with a just-under-ten-hour
+hard wall. Outputs remain sealed until four terminal markers.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

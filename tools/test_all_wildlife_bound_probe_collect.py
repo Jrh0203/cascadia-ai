@@ -97,3 +97,98 @@ def test_collector_merges_sound_infeasible_bound(tmp_path: Path) -> None:
     assert result["results"][0]["proof_complete"]
     assert result["results"][0]["sound_upper"] == incumbent
     assert result["holistic_sound_upper"] >= result["incumbent_holistic_maximum"]
+
+
+def _probe(
+    *,
+    row: dict[str, object],
+    counts: tuple[int, ...],
+    base_sha: str,
+    refined_upper: int,
+) -> dict[str, object]:
+    ruleset = str(row["ruleset"])
+    return {
+        "schema": SCHEMA,
+        "identity": {
+            "ruleset_index": int(row["index"]),
+            "ruleset": ruleset,
+            "base_catalog_sha256": base_sha,
+            "probe_source_sha256": hashlib.sha256(
+                Path("tools/all_wildlife_bound_probe.py").read_bytes()
+            ).hexdigest(),
+            "exact_source_sha256": hashlib.sha256(
+                Path("tools/all_wildlife_exact.py").read_bytes()
+            ).hexdigest(),
+            "exact_support_source_sha256": hashlib.sha256(
+                Path("tools/cbddb_wildlife_exact.py").read_bytes()
+            ).hexdigest(),
+            "rules_source_sha256": hashlib.sha256(
+                Path("tools/all_wildlife_rules.py").read_bytes()
+            ).hexdigest(),
+            "connectivity_required": True,
+        },
+        "selected_counts": [list(counts)],
+        "attempts": [
+            {
+                "counts": list(counts),
+                "minimum_score": int(row["optimum"]) + 1,
+                "analytical_upper": rules.count_upper(counts, ruleset),
+                "status": "UNKNOWN",
+                "model_objective": None,
+                "best_bound": refined_upper,
+                "refined_upper": refined_upper,
+                "witness_score": None,
+                "score_breakdown": None,
+                "tokens": None,
+            }
+        ],
+    }
+
+
+def test_collector_preserves_prior_count_bounds_and_provenance(
+    tmp_path: Path,
+) -> None:
+    base_path = tmp_path / "base.json"
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    row, counts, base_sha = _base(base_path)
+    analytical = rules.count_upper(counts, "AAAAA")
+    first_upper = analytical - 1
+    assert first_upper > int(row["optimum"])
+    first_path = first_dir / "task_0.json"
+    first_path.write_text(
+        json.dumps(
+            _probe(
+                row=row,
+                counts=counts,
+                base_sha=base_sha,
+                refined_upper=first_upper,
+            )
+        )
+    )
+    first = collect(base_path, [first_dir], oracle=None)
+    first_catalog = tmp_path / "first_catalog.json"
+    first_catalog.write_text(json.dumps(first))
+
+    second_row = first["results"][0]
+    second_sha = hashlib.sha256(first_catalog.read_bytes()).hexdigest()
+    second_path = second_dir / "task_1.json"
+    second_path.write_text(
+        json.dumps(
+            _probe(
+                row=second_row,
+                counts=counts,
+                base_sha=second_sha,
+                refined_upper=first_upper,
+            )
+        )
+    )
+    second = collect(first_catalog, [second_dir], oracle=None)
+
+    merged_row = second["results"][0]
+    assert merged_row["unresolved_count_upper_bounds"] == [first_upper]
+    assert merged_row["sound_upper"] == first_upper
+    assert merged_row["bound_probe_paths"] == [str(first_path), str(second_path)]
+    assert set(second["bound_probe_sha256"]) == {str(first_path), str(second_path)}
