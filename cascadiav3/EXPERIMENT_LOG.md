@@ -8870,3 +8870,11 @@ Ruff and both tests pass. Re-run the retained 15-case maximum-salmon branch
 and the 98 joint split cases with one worker and 30 seconds per case. Select
 only if all 113 submodels are exact and the combined relaxed upper is at most
 61; otherwise no proof.
+
+**Diagnostic result — SELECTED FOR FORMAL CERTIFICATION.** The 15
+maximum-salmon submodels returned upper 61 in 42.619225 solver-seconds. All 98
+joint pair-plus-singleton submodels returned upper 61 in 367.893904
+solver-seconds. No case was `UNKNOWN`; combined elapsed 412.321246 seconds.
+Decision: add fail-closed certificate serialization and incumbent validation,
+then run one frozen reproduction. Diagnostic output alone does not promote the
+row.
