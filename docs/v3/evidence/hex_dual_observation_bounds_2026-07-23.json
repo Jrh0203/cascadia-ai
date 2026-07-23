@@ -1,0 +1,3303 @@
+{
+  "schema": "hex-dual-observation-bound-derivation-v1",
+  "proof_complete": true,
+  "cap": 6,
+  "connected_component_maximum": [
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        0
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        4,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        4,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        4,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        4,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ]
+    ]
+  ],
+  "global_maximum": [
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      [
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        4,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        4,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      [
+        0,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ]
+    ],
+    [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        4,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        4,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      [
+        0,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ]
+    ]
+  ],
+  "shard_sha256": {
+    "cascadiav3/fleet/collected_fox_a_dual_observation_bound_20260723/shard_john1.json": "149d071647c368b0ec475b7e950d9601fb7c6a26f35a4d2ea9bb20cd10ccf1b6",
+    "cascadiav3/fleet/collected_fox_a_dual_observation_bound_20260723/shard_john2.json": "122a1c3f36a565ea9377877468222b28d3b99e1b836f251d568eeaa3d810c7ea",
+    "cascadiav3/fleet/collected_fox_a_dual_observation_bound_20260723/shard_john3.json": "6cc4ac1ad17e225ad9132bb06a01791bcd07f5bb4f3a9253512f7ab0547fa883",
+    "cascadiav3/fleet/collected_fox_a_dual_observation_bound_20260723/shard_john4.json": "b0eeced3e0f56f9932b706d78d5df43e653397e47c07a4bac0edef85e7314a51"
+  },
+  "proofs": [
+    {
+      "foxes": 1,
+      "first_targets": 1,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.005597666371613741,
+      "branches": 106,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 1,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.006120250094681978,
+      "branches": 194,
+      "conflicts": 1
+    },
+    {
+      "foxes": 1,
+      "first_targets": 1,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.00820812489837408,
+      "branches": 263,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 1,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.010460957884788513,
+      "branches": 255,
+      "conflicts": 1
+    },
+    {
+      "foxes": 1,
+      "first_targets": 1,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.009128957986831665,
+      "branches": 86,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 1,
+      "second_targets": 6,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0005258750170469284,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 2,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.005679207853972912,
+      "branches": 190,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 2,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.008498374838382006,
+      "branches": 310,
+      "conflicts": 1
+    },
+    {
+      "foxes": 1,
+      "first_targets": 2,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.012549624778330326,
+      "branches": 395,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 2,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.015922249760478735,
+      "branches": 260,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 2,
+      "second_targets": 5,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0017764577642083168,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 2,
+      "second_targets": 6,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.000457709189504385,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 3,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.007878208067268133,
+      "branches": 260,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 3,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.012556499801576138,
+      "branches": 394,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 3,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.016387625131756067,
+      "branches": 370,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 3,
+      "second_targets": 4,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0016592089086771011,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 3,
+      "second_targets": 5,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.00193491717800498,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 3,
+      "second_targets": 6,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0002731252461671829,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 4,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.010509958025068045,
+      "branches": 255,
+      "conflicts": 1
+    },
+    {
+      "foxes": 1,
+      "first_targets": 4,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.015401375014334917,
+      "branches": 246,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 4,
+      "second_targets": 3,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.001773207914084196,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 4,
+      "second_targets": 4,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.001855416689068079,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 4,
+      "second_targets": 5,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0002699997276067734,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 4,
+      "second_targets": 6,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0003165830858051777,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 5,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 1,
+      "best_bound": 1,
+      "elapsed_seconds": 0.008884500246495008,
+      "branches": 89,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 5,
+      "second_targets": 2,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0017257500439882278,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 5,
+      "second_targets": 3,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.001890375278890133,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 5,
+      "second_targets": 4,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.00027408311143517494,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 5,
+      "second_targets": 5,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.00030562514439225197,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 5,
+      "second_targets": 6,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.000350958202034235,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 6,
+      "second_targets": 1,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0004999167285859585,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 6,
+      "second_targets": 2,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.00043633393943309784,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 6,
+      "second_targets": 3,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0002665421925485134,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 6,
+      "second_targets": 4,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.00031241634860634804,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 6,
+      "second_targets": 5,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0003477497957646847,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 1,
+      "first_targets": 6,
+      "second_targets": 6,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.0004224581643939018,
+      "branches": 0,
+      "conflicts": 0
+    },
+    {
+      "foxes": 2,
+      "first_targets": 1,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.005715333856642246,
+      "branches": 239,
+      "conflicts": 3
+    },
+    {
+      "foxes": 2,
+      "first_targets": 1,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.007989707868546247,
+      "branches": 422,
+      "conflicts": 4
+    },
+    {
+      "foxes": 2,
+      "first_targets": 1,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.01110516581684351,
+      "branches": 622,
+      "conflicts": 7
+    },
+    {
+      "foxes": 2,
+      "first_targets": 1,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.015221208799630404,
+      "branches": 802,
+      "conflicts": 2
+    },
+    {
+      "foxes": 2,
+      "first_targets": 1,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.020370833110064268,
+      "branches": 1055,
+      "conflicts": 6
+    },
+    {
+      "foxes": 2,
+      "first_targets": 1,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.027543583884835243,
+      "branches": 1333,
+      "conflicts": 6
+    },
+    {
+      "foxes": 2,
+      "first_targets": 2,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.007937833666801453,
+      "branches": 400,
+      "conflicts": 4
+    },
+    {
+      "foxes": 2,
+      "first_targets": 2,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.011020459234714508,
+      "branches": 611,
+      "conflicts": 9
+    },
+    {
+      "foxes": 2,
+      "first_targets": 2,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.015218541026115417,
+      "branches": 830,
+      "conflicts": 2
+    },
+    {
+      "foxes": 2,
+      "first_targets": 2,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.02019433304667473,
+      "branches": 1096,
+      "conflicts": 6
+    },
+    {
+      "foxes": 2,
+      "first_targets": 2,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.026928209234029055,
+      "branches": 1395,
+      "conflicts": 6
+    },
+    {
+      "foxes": 2,
+      "first_targets": 2,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.036368667148053646,
+      "branches": 1713,
+      "conflicts": 7
+    },
+    {
+      "foxes": 2,
+      "first_targets": 3,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.01119991671293974,
+      "branches": 587,
+      "conflicts": 3
+    },
+    {
+      "foxes": 2,
+      "first_targets": 3,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.015282500069588423,
+      "branches": 849,
+      "conflicts": 9
+    },
+    {
+      "foxes": 2,
+      "first_targets": 3,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.020313209388405085,
+      "branches": 1128,
+      "conflicts": 5
+    },
+    {
+      "foxes": 2,
+      "first_targets": 3,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.026525875087827444,
+      "branches": 1409,
+      "conflicts": 7
+    },
+    {
+      "foxes": 2,
+      "first_targets": 3,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.035976209212094545,
+      "branches": 1754,
+      "conflicts": 10
+    },
+    {
+      "foxes": 2,
+      "first_targets": 3,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.04949699994176626,
+      "branches": 2113,
+      "conflicts": 16
+    },
+    {
+      "foxes": 2,
+      "first_targets": 4,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.017236375249922276,
+      "branches": 815,
+      "conflicts": 5
+    },
+    {
+      "foxes": 2,
+      "first_targets": 4,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.020453750155866146,
+      "branches": 1093,
+      "conflicts": 10
+    },
+    {
+      "foxes": 2,
+      "first_targets": 4,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.02668420784175396,
+      "branches": 1412,
+      "conflicts": 15
+    },
+    {
+      "foxes": 2,
+      "first_targets": 4,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.03772183274850249,
+      "branches": 1770,
+      "conflicts": 11
+    },
+    {
+      "foxes": 2,
+      "first_targets": 4,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.046013500075787306,
+      "branches": 2153,
+      "conflicts": 17
+    },
+    {
+      "foxes": 2,
+      "first_targets": 4,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.06803879188373685,
+      "branches": 2548,
+      "conflicts": 21
+    },
+    {
+      "foxes": 2,
+      "first_targets": 5,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.020889125298708677,
+      "branches": 1068,
+      "conflicts": 21
+    },
+    {
+      "foxes": 2,
+      "first_targets": 5,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.027297666762024164,
+      "branches": 1395,
+      "conflicts": 10
+    },
+    {
+      "foxes": 2,
+      "first_targets": 5,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.036674958653748035,
+      "branches": 1748,
+      "conflicts": 10
+    },
+    {
+      "foxes": 2,
+      "first_targets": 5,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.04832074977457523,
+      "branches": 2150,
+      "conflicts": 13
+    },
+    {
+      "foxes": 2,
+      "first_targets": 5,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.06658599991351366,
+      "branches": 2574,
+      "conflicts": 26
+    },
+    {
+      "foxes": 2,
+      "first_targets": 5,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.07678170781582594,
+      "branches": 3006,
+      "conflicts": 27
+    },
+    {
+      "foxes": 2,
+      "first_targets": 6,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.02797529101371765,
+      "branches": 1355,
+      "conflicts": 33
+    },
+    {
+      "foxes": 2,
+      "first_targets": 6,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.03505591629073024,
+      "branches": 1733,
+      "conflicts": 18
+    },
+    {
+      "foxes": 2,
+      "first_targets": 6,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.05050045903772116,
+      "branches": 2138,
+      "conflicts": 31
+    },
+    {
+      "foxes": 2,
+      "first_targets": 6,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.06720604235306382,
+      "branches": 2565,
+      "conflicts": 25
+    },
+    {
+      "foxes": 2,
+      "first_targets": 6,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.0876602497883141,
+      "branches": 3036,
+      "conflicts": 42
+    },
+    {
+      "foxes": 2,
+      "first_targets": 6,
+      "second_targets": 6,
+      "status": "INFEASIBLE",
+      "maximum": null,
+      "best_bound": 0,
+      "elapsed_seconds": 0.28235691599547863,
+      "branches": 7023,
+      "conflicts": 1794
+    },
+    {
+      "foxes": 3,
+      "first_targets": 1,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.010461000259965658,
+      "branches": 88,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 1,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.011241916101425886,
+      "branches": 152,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 1,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.01575325010344386,
+      "branches": 196,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 1,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.021329167298972607,
+      "branches": 256,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 1,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.027745708357542753,
+      "branches": 274,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 1,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.03685220889747143,
+      "branches": 336,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 2,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.011149750091135502,
+      "branches": 146,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 2,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.01516216667369008,
+      "branches": 178,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 2,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.020311000291258097,
+      "branches": 1185,
+      "conflicts": 5
+    },
+    {
+      "foxes": 3,
+      "first_targets": 2,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.027910542208701372,
+      "branches": 302,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 2,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.03658716706559062,
+      "branches": 422,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 2,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.057612041011452675,
+      "branches": 2245,
+      "conflicts": 51
+    },
+    {
+      "foxes": 3,
+      "first_targets": 3,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.01573041593655944,
+      "branches": 180,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 3,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.02041374985128641,
+      "branches": 244,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 3,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.02817958267405629,
+      "branches": 324,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 3,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.03831241698935628,
+      "branches": 2119,
+      "conflicts": 36
+    },
+    {
+      "foxes": 3,
+      "first_targets": 3,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.051310000009834766,
+      "branches": 2428,
+      "conflicts": 57
+    },
+    {
+      "foxes": 3,
+      "first_targets": 3,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.06241083284839988,
+      "branches": 2877,
+      "conflicts": 89
+    },
+    {
+      "foxes": 3,
+      "first_targets": 4,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.02104083262383938,
+      "branches": 236,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 4,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.028086792211979628,
+      "branches": 312,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 4,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.03642566595226526,
+      "branches": 2114,
+      "conflicts": 64
+    },
+    {
+      "foxes": 3,
+      "first_targets": 4,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.06780020799487829,
+      "branches": 946,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 4,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.06648429110646248,
+      "branches": 2866,
+      "conflicts": 34
+    },
+    {
+      "foxes": 3,
+      "first_targets": 4,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.07815204095095396,
+      "branches": 3692,
+      "conflicts": 127
+    },
+    {
+      "foxes": 3,
+      "first_targets": 5,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.02840620931237936,
+      "branches": 300,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 5,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.03573879227042198,
+      "branches": 1892,
+      "conflicts": 27
+    },
+    {
+      "foxes": 3,
+      "first_targets": 5,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.04833112517371774,
+      "branches": 2235,
+      "conflicts": 11
+    },
+    {
+      "foxes": 3,
+      "first_targets": 5,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.06745154177770019,
+      "branches": 3144,
+      "conflicts": 60
+    },
+    {
+      "foxes": 3,
+      "first_targets": 5,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.07540212478488684,
+      "branches": 3663,
+      "conflicts": 65
+    },
+    {
+      "foxes": 3,
+      "first_targets": 5,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.09382324991747737,
+      "branches": 4031,
+      "conflicts": 103
+    },
+    {
+      "foxes": 3,
+      "first_targets": 6,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.03720958298072219,
+      "branches": 1805,
+      "conflicts": 41
+    },
+    {
+      "foxes": 3,
+      "first_targets": 6,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.05490899970754981,
+      "branches": 836,
+      "conflicts": 0
+    },
+    {
+      "foxes": 3,
+      "first_targets": 6,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.05784874968230724,
+      "branches": 2653,
+      "conflicts": 16
+    },
+    {
+      "foxes": 3,
+      "first_targets": 6,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.09224379202350974,
+      "branches": 5644,
+      "conflicts": 203
+    },
+    {
+      "foxes": 3,
+      "first_targets": 6,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.08941341564059258,
+      "branches": 3633,
+      "conflicts": 16
+    },
+    {
+      "foxes": 3,
+      "first_targets": 6,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 3,
+      "best_bound": 3,
+      "elapsed_seconds": 0.11563349980860949,
+      "branches": 4248,
+      "conflicts": 40
+    },
+    {
+      "foxes": 4,
+      "first_targets": 1,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.018875707872211933,
+      "branches": 166,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 1,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.01535516744479537,
+      "branches": 194,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 1,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.020275541115552187,
+      "branches": 244,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 1,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.027307874988764524,
+      "branches": 304,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 1,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.03602008381858468,
+      "branches": 1881,
+      "conflicts": 23
+    },
+    {
+      "foxes": 4,
+      "first_targets": 1,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.05839825002476573,
+      "branches": 2329,
+      "conflicts": 50
+    },
+    {
+      "foxes": 4,
+      "first_targets": 2,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.015975208953022957,
+      "branches": 232,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 2,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.020241000223904848,
+      "branches": 254,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 2,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.02868779096752405,
+      "branches": 314,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 2,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.03964487509801984,
+      "branches": 458,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 2,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.0558740827254951,
+      "branches": 2478,
+      "conflicts": 81
+    },
+    {
+      "foxes": 4,
+      "first_targets": 2,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.09460216714069247,
+      "branches": 7461,
+      "conflicts": 48
+    },
+    {
+      "foxes": 4,
+      "first_targets": 3,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.02042058389633894,
+      "branches": 244,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 3,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.02842370793223381,
+      "branches": 410,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 3,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.03992420807480812,
+      "branches": 440,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 3,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.05905712489038706,
+      "branches": 2953,
+      "conflicts": 115
+    },
+    {
+      "foxes": 4,
+      "first_targets": 3,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.06656487518921494,
+      "branches": 2901,
+      "conflicts": 87
+    },
+    {
+      "foxes": 4,
+      "first_targets": 3,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.09140433417633176,
+      "branches": 3878,
+      "conflicts": 247
+    },
+    {
+      "foxes": 4,
+      "first_targets": 4,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.02792225033044815,
+      "branches": 350,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 4,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.039146124850958586,
+      "branches": 444,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 4,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.05238758400082588,
+      "branches": 2594,
+      "conflicts": 55
+    },
+    {
+      "foxes": 4,
+      "first_targets": 4,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.06354274973273277,
+      "branches": 3165,
+      "conflicts": 56
+    },
+    {
+      "foxes": 4,
+      "first_targets": 4,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.09114141715690494,
+      "branches": 3857,
+      "conflicts": 79
+    },
+    {
+      "foxes": 4,
+      "first_targets": 4,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.11844091583043337,
+      "branches": 5156,
+      "conflicts": 651
+    },
+    {
+      "foxes": 4,
+      "first_targets": 5,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.03693329216912389,
+      "branches": 380,
+      "conflicts": 0
+    },
+    {
+      "foxes": 4,
+      "first_targets": 5,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.06890083383768797,
+      "branches": 6361,
+      "conflicts": 58
+    },
+    {
+      "foxes": 4,
+      "first_targets": 5,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.07627520896494389,
+      "branches": 3225,
+      "conflicts": 127
+    },
+    {
+      "foxes": 4,
+      "first_targets": 5,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.08432250004261732,
+      "branches": 4229,
+      "conflicts": 156
+    },
+    {
+      "foxes": 4,
+      "first_targets": 5,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.10626512486487627,
+      "branches": 4200,
+      "conflicts": 104
+    },
+    {
+      "foxes": 4,
+      "first_targets": 5,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.1748931249603629,
+      "branches": 6526,
+      "conflicts": 953
+    },
+    {
+      "foxes": 4,
+      "first_targets": 6,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.05503112496808171,
+      "branches": 2564,
+      "conflicts": 91
+    },
+    {
+      "foxes": 4,
+      "first_targets": 6,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.07414725003764033,
+      "branches": 2874,
+      "conflicts": 59
+    },
+    {
+      "foxes": 4,
+      "first_targets": 6,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.0919796247035265,
+      "branches": 3882,
+      "conflicts": 115
+    },
+    {
+      "foxes": 4,
+      "first_targets": 6,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.11293870769441128,
+      "branches": 4510,
+      "conflicts": 290
+    },
+    {
+      "foxes": 4,
+      "first_targets": 6,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.11513608414679766,
+      "branches": 4601,
+      "conflicts": 111
+    },
+    {
+      "foxes": 4,
+      "first_targets": 6,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.16232879227027297,
+      "branches": 5902,
+      "conflicts": 253
+    },
+    {
+      "foxes": 5,
+      "first_targets": 1,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.028397375252097845,
+      "branches": 224,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 1,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.02794225001707673,
+      "branches": 1102,
+      "conflicts": 5
+    },
+    {
+      "foxes": 5,
+      "first_targets": 1,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.028007666114717722,
+      "branches": 366,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 1,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.03722862480208278,
+      "branches": 378,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 1,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.06604212475940585,
+      "branches": 2150,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 1,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.07061929209157825,
+      "branches": 3103,
+      "conflicts": 91
+    },
+    {
+      "foxes": 5,
+      "first_targets": 2,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.03401679126545787,
+      "branches": 1112,
+      "conflicts": 7
+    },
+    {
+      "foxes": 5,
+      "first_targets": 2,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.026820334140211344,
+      "branches": 416,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 2,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.04097762471064925,
+      "branches": 384,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 2,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.05315924994647503,
+      "branches": 1552,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 2,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.06919662514701486,
+      "branches": 2707,
+      "conflicts": 35
+    },
+    {
+      "foxes": 5,
+      "first_targets": 2,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.09103729203343391,
+      "branches": 3605,
+      "conflicts": 49
+    },
+    {
+      "foxes": 5,
+      "first_targets": 3,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.029097999911755323,
+      "branches": 346,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 3,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.04446658305823803,
+      "branches": 448,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 3,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.055597666185349226,
+      "branches": 958,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 3,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.07885229075327516,
+      "branches": 2775,
+      "conflicts": 41
+    },
+    {
+      "foxes": 5,
+      "first_targets": 3,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.07733791694045067,
+      "branches": 3464,
+      "conflicts": 65
+    },
+    {
+      "foxes": 5,
+      "first_targets": 3,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.09438050026074052,
+      "branches": 4055,
+      "conflicts": 68
+    },
+    {
+      "foxes": 5,
+      "first_targets": 4,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.04201095784083009,
+      "branches": 342,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 4,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.05554491700604558,
+      "branches": 1602,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 4,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.07393054198473692,
+      "branches": 2732,
+      "conflicts": 36
+    },
+    {
+      "foxes": 5,
+      "first_targets": 4,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.07634383300319314,
+      "branches": 3459,
+      "conflicts": 47
+    },
+    {
+      "foxes": 5,
+      "first_targets": 4,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.08987445803359151,
+      "branches": 3949,
+      "conflicts": 35
+    },
+    {
+      "foxes": 5,
+      "first_targets": 4,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.1387913329526782,
+      "branches": 5862,
+      "conflicts": 312
+    },
+    {
+      "foxes": 5,
+      "first_targets": 5,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.049533499870449305,
+      "branches": 860,
+      "conflicts": 0
+    },
+    {
+      "foxes": 5,
+      "first_targets": 5,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.07242929190397263,
+      "branches": 2691,
+      "conflicts": 22
+    },
+    {
+      "foxes": 5,
+      "first_targets": 5,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.08015279192477465,
+      "branches": 4169,
+      "conflicts": 193
+    },
+    {
+      "foxes": 5,
+      "first_targets": 5,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.10898629110306501,
+      "branches": 4468,
+      "conflicts": 159
+    },
+    {
+      "foxes": 5,
+      "first_targets": 5,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.17175674997270107,
+      "branches": 16591,
+      "conflicts": 169
+    },
+    {
+      "foxes": 5,
+      "first_targets": 5,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.20182266691699624,
+      "branches": 7817,
+      "conflicts": 842
+    },
+    {
+      "foxes": 5,
+      "first_targets": 6,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.06815837509930134,
+      "branches": 2602,
+      "conflicts": 10
+    },
+    {
+      "foxes": 5,
+      "first_targets": 6,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.11332358419895172,
+      "branches": 9302,
+      "conflicts": 58
+    },
+    {
+      "foxes": 5,
+      "first_targets": 6,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.10650908295065165,
+      "branches": 4366,
+      "conflicts": 149
+    },
+    {
+      "foxes": 5,
+      "first_targets": 6,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.13766591576859355,
+      "branches": 5571,
+      "conflicts": 160
+    },
+    {
+      "foxes": 5,
+      "first_targets": 6,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.20859370799735188,
+      "branches": 18765,
+      "conflicts": 146
+    },
+    {
+      "foxes": 5,
+      "first_targets": 6,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 5,
+      "best_bound": 5,
+      "elapsed_seconds": 0.2766732079908252,
+      "branches": 11223,
+      "conflicts": 1063
+    },
+    {
+      "foxes": 6,
+      "first_targets": 1,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 2,
+      "best_bound": 2,
+      "elapsed_seconds": 0.047342333011329174,
+      "branches": 358,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 1,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.06627516727894545,
+      "branches": 400,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 1,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.03623295808210969,
+      "branches": 2125,
+      "conflicts": 92
+    },
+    {
+      "foxes": 6,
+      "first_targets": 1,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.04831358324736357,
+      "branches": 1578,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 1,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.06526737520471215,
+      "branches": 3027,
+      "conflicts": 69
+    },
+    {
+      "foxes": 6,
+      "first_targets": 1,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.09102245792746544,
+      "branches": 3135,
+      "conflicts": 46
+    },
+    {
+      "foxes": 6,
+      "first_targets": 2,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 4,
+      "best_bound": 4,
+      "elapsed_seconds": 0.0651489170268178,
+      "branches": 408,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 2,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.04481437522917986,
+      "branches": 2579,
+      "conflicts": 164
+    },
+    {
+      "foxes": 6,
+      "first_targets": 2,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.06174566689878702,
+      "branches": 1256,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 2,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.08308583358302712,
+      "branches": 3563,
+      "conflicts": 521
+    },
+    {
+      "foxes": 6,
+      "first_targets": 2,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.10392495896667242,
+      "branches": 2860,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 2,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.09220208274200559,
+      "branches": 3816,
+      "conflicts": 36
+    },
+    {
+      "foxes": 6,
+      "first_targets": 3,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.03948629181832075,
+      "branches": 2082,
+      "conflicts": 64
+    },
+    {
+      "foxes": 6,
+      "first_targets": 3,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.06787754129618406,
+      "branches": 844,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 3,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.07234233291819692,
+      "branches": 2706,
+      "conflicts": 40
+    },
+    {
+      "foxes": 6,
+      "first_targets": 3,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.08359854202717543,
+      "branches": 3120,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 3,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.1300796247087419,
+      "branches": 3832,
+      "conflicts": 51
+    },
+    {
+      "foxes": 6,
+      "first_targets": 3,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.13261279091238976,
+      "branches": 6666,
+      "conflicts": 335
+    },
+    {
+      "foxes": 6,
+      "first_targets": 4,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.051021500024944544,
+      "branches": 1494,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 4,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.06796425022184849,
+      "branches": 3066,
+      "conflicts": 56
+    },
+    {
+      "foxes": 6,
+      "first_targets": 4,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.08397816680371761,
+      "branches": 3000,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 4,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.11803816724568605,
+      "branches": 5287,
+      "conflicts": 309
+    },
+    {
+      "foxes": 6,
+      "first_targets": 4,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.14658462535589933,
+      "branches": 14938,
+      "conflicts": 66
+    },
+    {
+      "foxes": 6,
+      "first_targets": 4,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.1553850406780839,
+      "branches": 7113,
+      "conflicts": 175
+    },
+    {
+      "foxes": 6,
+      "first_targets": 5,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.06649037497118115,
+      "branches": 3004,
+      "conflicts": 98
+    },
+    {
+      "foxes": 6,
+      "first_targets": 5,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.09444362530484796,
+      "branches": 3096,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 5,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.12238537520170212,
+      "branches": 4645,
+      "conflicts": 210
+    },
+    {
+      "foxes": 6,
+      "first_targets": 5,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.119849166367203,
+      "branches": 8449,
+      "conflicts": 175
+    },
+    {
+      "foxes": 6,
+      "first_targets": 5,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.14937424985691905,
+      "branches": 5995,
+      "conflicts": 264
+    },
+    {
+      "foxes": 6,
+      "first_targets": 5,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.1992721245624125,
+      "branches": 10399,
+      "conflicts": 502
+    },
+    {
+      "foxes": 6,
+      "first_targets": 6,
+      "second_targets": 1,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.0789925828576088,
+      "branches": 2662,
+      "conflicts": 0
+    },
+    {
+      "foxes": 6,
+      "first_targets": 6,
+      "second_targets": 2,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.11850604228675365,
+      "branches": 5314,
+      "conflicts": 341
+    },
+    {
+      "foxes": 6,
+      "first_targets": 6,
+      "second_targets": 3,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.12051458423957229,
+      "branches": 4711,
+      "conflicts": 79
+    },
+    {
+      "foxes": 6,
+      "first_targets": 6,
+      "second_targets": 4,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.162837834097445,
+      "branches": 6352,
+      "conflicts": 344
+    },
+    {
+      "foxes": 6,
+      "first_targets": 6,
+      "second_targets": 5,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.2701342501677573,
+      "branches": 16333,
+      "conflicts": 62
+    },
+    {
+      "foxes": 6,
+      "first_targets": 6,
+      "second_targets": 6,
+      "status": "OPTIMAL",
+      "maximum": 6,
+      "best_bound": 6,
+      "elapsed_seconds": 0.31586733320727944,
+      "branches": 23698,
+      "conflicts": 152
+    }
+  ]
+}

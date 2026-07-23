@@ -1,6 +1,6 @@
 {
   "schema": "hex-dual-observation-bound-fleet-v1",
-  "state": "running",
+  "state": "complete",
   "tag": "fox_a_dual_observation_bound_20260723",
   "source_revision": "b757bc85def7f7be5faec0359ff996e125f85c7a",
   "source_sha256": "24d88c9c4dafacaf7a540960e2a2f396d9643b58c94f87be906a40dd8a74fe52",
@@ -17,5 +17,31 @@
     {"host": "john2", "start_index": 54, "end_index": 108, "wrapper_pid": 44138},
     {"host": "john3", "start_index": 108, "end_index": 162, "wrapper_pid": 10298},
     {"host": "john4", "start_index": 162, "end_index": 216, "wrapper_pid": 33244}
-  ]
+  ],
+  "terminal_utc": {
+    "john1": "2026-07-23T18:08:34Z",
+    "john2": "2026-07-23T18:08:34Z",
+    "john3": "2026-07-23T18:08:34Z",
+    "john4": "2026-07-23T18:08:35Z"
+  },
+  "worker_exit_codes": {"john1": 2, "john2": 2, "john3": 0, "john4": 0},
+  "worker_exit_note": "exit 2 reflected the pre-collection component-absence bookkeeping bug; all 216 component statuses were exact and the corrected collector accepted them",
+  "shard_sha256": {
+    "john1": "149d071647c368b0ec475b7e950d9601fb7c6a26f35a4d2ea9bb20cd10ccf1b6",
+    "john2": "122a1c3f36a565ea9377877468222b28d3b99e1b836f251d568eeaa3d810c7ea",
+    "john3": "6cc4ac1ad17e225ad9132bb06a01791bcd07f5bb4f3a9253512f7ab0547fa883",
+    "john4": "b0eeced3e0f56f9932b706d78d5df43e653397e47c07a4bac0edef85e7314a51"
+  },
+  "derivation_sha256": "2205a311197563b3ece3c9487791df7d1c52a98a19ae95ddd5603a6f19256931",
+  "result": {
+    "resolved_components": 216,
+    "optimal_component_types": 194,
+    "infeasible_component_types": 22,
+    "solver_seconds": 12.269271084107459,
+    "branches": 521203,
+    "conflicts": 15112,
+    "entries_stricter_than_existing_bound": 0,
+    "frontier_reduction_percent": 0
+  },
+  "decision": "not selected: exact table equals min(foxes, 2ab) in all 343 cap-six entries"
 }

@@ -10174,3 +10174,18 @@ SHA-256
 five-test SHA-256
 `8764b189a85437ae53bedc9aea6eb54b5f71efab39e823004bba94b71d571035`.
 Re-collect the immutable shards; do not rerun a solver.
+
+**14:10 terminal verdict — exact but not selected.** The corrected collector
+accepted all 216 resolved component types (194 `OPTIMAL`, 22 exact
+`INFEASIBLE`), target-class symmetry, and every available objective/bound.
+Aggregate work was 12.269 seconds, 521,203 branches, and 15,112 conflicts.
+Derivation SHA-256
+`2205a311197563b3ece3c9487791df7d1c52a98a19ae95ddd5603a6f19256931`;
+shard hashes are frozen in the completed ledger.
+
+The global 7×7×7 result equals `min(foxes, 2ab)` in **all 343 entries**.
+Thus the existing Fox-A pair common-neighbor capacity was already exact;
+frontier reduction is zero and neither selection threshold passes. Do not
+integrate a redundant table. This closes two-species Fox-A capacity as a
+source of further improvement; any stronger Fox-A relaxation must couple
+three or four target species or couple Fox A to another animal card.

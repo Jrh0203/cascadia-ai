@@ -165,6 +165,10 @@ and batch-compares every board with the production Rust scorer.
   by 9.66%, ADCCB 94→71 branches, and CBDDB 309→283. Its 36 component proofs
   are retained at
   `docs/v3/evidence/hex_fox_qualification_bounds_2026-07-23.json`.
+- A 216-component exact Fox-A two-target-species derivation matched the
+  existing `min(foxes,2ab)` capacity in every entry, giving 0% reduction. It
+  is a documented negative, not an additional production table:
+  `docs/v3/evidence/hex_dual_observation_bounds_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

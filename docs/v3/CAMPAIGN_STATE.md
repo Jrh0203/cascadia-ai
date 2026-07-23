@@ -1143,3 +1143,9 @@ impossible connected component types, zero unknown). Collection paused before
 publication to correct the wrapper's component-absence semantics; immutable
 proofs will be re-collected with exact infeasibility represented as no DP
 transition.
+
+The corrected Fox-A collector accepted all 216 exact component resolutions,
+but the 343-entry global table equals the existing `min(foxes,2ab)` capacity
+everywhere. The preregistered improvement gate fails at 0%; the table is not
+integrated. Two-species Fox-A capacity is now closed as an optimization
+direction.
