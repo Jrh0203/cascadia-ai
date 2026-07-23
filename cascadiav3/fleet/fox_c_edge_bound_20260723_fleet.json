@@ -1,0 +1,21 @@
+{
+  "schema": "hex-bipartite-bound-fleet-v1",
+  "state": "preregistered",
+  "tag": "fox_c_edge_bound_20260723",
+  "source_revision": "cd54529d82a82202ebe4b37a36af85d74f9b56ae",
+  "source_sha256": "3a6ea9eedfaecdae464b3016916a09a0ffe189ce47cf32c7fa266ca0cfe426aa",
+  "dependency_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "worker_sha256": "3be5b67e38ce0fc8d915e58bd08cd1ce366441f83c9a16283fd7d959412ba8af",
+  "configuration": {
+    "seconds_per_component": 120,
+    "solver_workers": 8,
+    "random_seed": 20260723,
+    "ortools_version": "9.15.6755"
+  },
+  "shards": [
+    {"host": "john1", "start_index": 0, "end_index": 9},
+    {"host": "john2", "start_index": 9, "end_index": 18},
+    {"host": "john3", "start_index": 18, "end_index": 27},
+    {"host": "john4", "start_index": 27, "end_index": 36}
+  ]
+}
