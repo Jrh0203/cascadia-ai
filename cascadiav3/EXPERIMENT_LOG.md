@@ -9079,3 +9079,47 @@ and remote-pair submodel is `OPTIMAL` and the union upper is below its fixed
 target. `UNKNOWN` or an upper at/above target proves nothing. Even four passed
 branches do not yet certify rows: the split two-singleton salmon branches must
 be closed separately before certificate serialization and catalog merge.
+
+**Result — ALL FOUR MAXIMUM-SALMON BRANCHES PASSED.** Every submodel was
+`OPTIMAL`; elapsed 1153.227437 seconds. Registered target / combined upper /
+explicit-ring upper / remote-pair upper were respectively: `(4,5,2,3,6)`
+67/66/66/65 over 1+145 submodels; `(5,5,2,2,6)` 64/63/63/62 over 1+145;
+`(3,5,2,4,6)` 63/62/62/62 over 1+145; and `(3,6,2,3,6)` 63/61/61/61 over
+2+290. Artifact SHA-256
+`9aefbb263bdd121c05823ef60436005a542694c556328bc8f2735d0506675fa1`;
+log SHA-256
+`e0e3092421a7ab86a1a3be9b08e729a0dbd14295fe841b4129b1e312d00a2a7d`.
+Decision: retain all four exact branch exclusions and proceed to the separately
+registered split-salmon screen. No row is promoted yet.
+
+## 2026-07-23 08:25 — AAAAA split-salmon feasibility screen preregistration
+
+Close the complementary branch in which the two salmon are nonadjacent
+singletons and score four. At each target, the maximum Elk-A partition needs
+29 Fox-A points and permits at most one salmon-missing fox; the one-point-lower
+Elk-A partition needs all 30 fox observations and permits none. Lower Elk-A
+scores cannot reach the target. Exhaust all 19 symmetry-reduced singleton
+separations (distance two through seven plus the proven factorized far case),
+both eligible Elk scores, and zero/one missing-fox branches.
+
+Use a threshold satisfiability model rather than asking CP-SAT to prove a
+maximum: exact non-overlap and positive Bear/Elk/Hawk/self observations are
+retained, along with the fixed singleton salmon cells and explicit outer-ring
+missing fox. Maximum Bear/Hawk motifs are packed; their isolation and board
+connectivity are dropped. Thus `INFEASIBLE` remains a sound upper-bound result,
+while a relaxation witness rejects the branch immediately. Expected submodel
+counts are 57 for each five-elk allocation and 95 for the six-elk allocation.
+
+Feasibility source SHA-256
+`fa212369498931a198b394fdaeb86800ca04f58fb28da62ed1d1b28d167b01cc`;
+runner SHA-256
+`2033b501c0b1dc162847f628d788614288bbfc4cdc51991efb55408e70a29ec1`;
+tests SHA-256
+`d8adaf3adbd15c0b66ab42322959f226b66862b9fb8914773ad6330d19ccfed4`.
+Ruff and two structural tests pass. Run sequentially with one worker and 30
+seconds per submodel. Durable output:
+`docs/v3/evidence/aaaaa_split_salmon_feasibility_screen_2026-07-23.json`;
+log: `cascadiav3/logs/aaaaa_split_salmon_feasibility_screen_2026-07-23.log`.
+Select a row for formal certificate reproduction only if every split submodel
+is exactly `INFEASIBLE` and its maximum-salmon branch passed above. Any
+`UNKNOWN` or threshold witness proves nothing for that row.
