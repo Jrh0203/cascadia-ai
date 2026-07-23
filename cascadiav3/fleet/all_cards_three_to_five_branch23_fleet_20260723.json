@@ -1,0 +1,81 @@
+{
+  "schema": "all-wildlife-three-to-five-branch-fleet-v1",
+  "state": "active",
+  "tag": "all_cards_three_to_five_branch23_fleet_20260723",
+  "source_revision": "b1fb514daf8490a4fb9a9bb00c379865175f2fbe",
+  "taskset_sha256": "5dfa433a83fba599322a100c045f04738b25c46ae65cb98721d681c731b92340",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "comparison_candidate_sha256": "96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9",
+  "proof_source_sha256": "fe71485120e078cf419cf1bdc482b898b39bdf3ac2bdb493be094a67b8a03a05",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "5b5e6fa0112c75e5194d9df70e00fdb8e2632f31e625615b15ee2654f2a93d9e",
+  "taskset_builder_sha256": "fca92937988eed0e62335ad152d1ce152d64adba6649670cbfe1f3ffa21ca7ab",
+  "configuration": {
+    "time_limit_seconds_per_count": 300,
+    "total_time_limit_seconds_per_ruleset": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "heartbeat_interval_seconds": 5,
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "assignments": [
+    {
+      "host": "john1",
+      "indices": [
+        214,
+        482,
+        742,
+        470,
+        658,
+        982
+      ],
+      "count_queries": 25,
+      "local_screen": "wildlife_three_to_five_john1",
+      "wrapper_pid": 18471
+    },
+    {
+      "host": "john2",
+      "indices": [
+        363,
+        646,
+        906,
+        998,
+        706
+      ],
+      "count_queries": 22,
+      "wrapper_pid": 67908
+    },
+    {
+      "host": "john3",
+      "indices": [
+        398,
+        730,
+        130,
+        386,
+        146,
+        726
+      ],
+      "count_queries": 24,
+      "wrapper_pid": 28011
+    },
+    {
+      "host": "john4",
+      "indices": [
+        410,
+        734,
+        138,
+        454,
+        650,
+        914
+      ],
+      "count_queries": 24,
+      "wrapper_pid": 34659
+    }
+  ],
+  "preflight_note": "An initial read-only local process check self-matched its own zsh command and stopped before staging or launch. The corrected comm-filtered Python solver check and every source/candidate/runtime/collision check passed on all four hosts.",
+  "launched_at": "2026-07-23T21:29:48Z",
+  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all 23 rulesets become proof_complete, advance the integrated catalog from 22 to 45 exact rows. UNKNOWN or timeout remains unresolved."
+}

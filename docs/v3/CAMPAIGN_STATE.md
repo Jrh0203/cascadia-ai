@@ -1387,6 +1387,10 @@ Assignments are balanced at 25/22/24/24 branches across john1–john4. The
 unchanged 330-second ruleset cap gives a 33-minute per-host hard wall;
 results will remain sealed until four terminal markers.
 
+The 3–5-branch batch launched at `2026-07-23T21:29:48Z` under revision
+`b1fb514d`; all four wrappers were active after pinned preflight. Results
+remain sealed until every shard is terminal.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

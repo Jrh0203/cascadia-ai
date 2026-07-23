@@ -11201,3 +11201,11 @@ validated five-second heartbeat/handoff interval. The per-host hard wall is
 at most 33 minutes. Do not inspect results until every shard is terminal.
 Retain exact exclusions and validated connected witnesses; timeout/`UNKNOWN`
 remain unresolved. If all 23 close, advance 22→45 exact.
+
+**17:29:48 EDT launch.** The first read-only local process check self-matched
+its own zsh command and stopped before any staging or worker launch. The
+corrected process-comm filter and every pinned source, candidate, runtime,
+collision, and idle check then passed on all hosts. Revision `b1fb514d`;
+wrapper PIDs 18471/67908/28011/34659 on john1/john2/john3/john4. Ledger:
+`cascadiav3/fleet/all_cards_three_to_five_branch23_fleet_20260723.json`.
+All results remain sealed until four terminal markers.
