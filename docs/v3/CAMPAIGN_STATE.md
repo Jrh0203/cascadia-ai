@@ -1342,6 +1342,11 @@ improvements are rebased; 119,139 count branches remain across 1,017
 incomplete rulesets. The score-85 leader on eight rulesets remains an
 incumbent, not a holistic optimum.
 
+Next proof batch: seven rulesets have exactly one remaining count each.
+Their frozen connected exact jobs are assigned 2/2/2/1 across john1–john4 at
+300 seconds/count. Results stay sealed until four terminal markers; a clean
+pass would advance the integrated catalog 7→14.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

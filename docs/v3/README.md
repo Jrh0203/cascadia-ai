@@ -92,6 +92,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   exact after adding AAAAA 68, with all boards production-rescored and
   119,139 count branches remaining. The score-85 leader is still an
   incumbent, not a proved holistic maximum.
+  Seven one-branch rulesets are now frozen as a 2/2/2/1 connected exact fleet
+  batch across john1–john4; a clean pass would advance the catalog to 14
+  completed rows.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

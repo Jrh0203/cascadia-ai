@@ -1,0 +1,52 @@
+{
+  "schema": "all-wildlife-near-complete-fleet-v1",
+  "state": "planned",
+  "tag": "all_cards_near_complete7_fleet_20260723",
+  "source_revision": "8c47e3d2",
+  "taskset_sha256": "a181069b68dc930ad4cbad6a90b4f41077f9e2cf84a3605a5234dca9768325ce",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "proof_source_sha256": "fe71485120e078cf419cf1bdc482b898b39bdf3ac2bdb493be094a67b8a03a05",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "03480072ff67259679df9fb110f0eb0dc2c3d1551ea691bbb5644d8911950277",
+  "configuration": {
+    "time_limit_seconds_per_count": 300,
+    "total_time_limit_seconds_per_ruleset": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "assignments": [
+    {
+      "host": "john1",
+      "indices": [
+        194,
+        202
+      ],
+      "local_screen": "wildlife_near_complete7_john1"
+    },
+    {
+      "host": "john2",
+      "indices": [
+        450,
+        458
+      ]
+    },
+    {
+      "host": "john3",
+      "indices": [
+        466,
+        714
+      ]
+    },
+    {
+      "host": "john4",
+      "indices": [
+        970
+      ]
+    }
+  ],
+  "selection_rule": "Keep every exact INFEASIBLE one-count exclusion and every independently validated connected witness. If all seven rulesets become proof_complete, merge them with the six-row legacy-validated base and AAAAA certificate to advance the integrated catalog from 7 to 14 exact rows. UNKNOWN or timeout remains unresolved."
+}

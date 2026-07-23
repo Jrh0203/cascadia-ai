@@ -11052,3 +11052,27 @@ Production response SHA-256
 `e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca`.
 Curated evidence:
 `docs/v3/evidence/all_wildlife_catalog_augmentation_2026-07-23.json`.
+
+## 2026-07-23 17:10 EDT — seven near-complete rulesets fleet preregistration
+
+The corrected catalog has seven incomplete rulesets with exactly one
+sound-bound count branch each: ADAAC 72, ADACC 80, BDAAC 73, BDACC 80,
+BDBAC 73, CDACC 80, DDACC 80. Freeze indices
+194/202/450/458/466/714/970 and their sole count/threshold in taskset SHA
+`a181069b68dc930ad4cbad6a90b4f41077f9e2cf84a3605a5234dca9768325ce`.
+All seven boards are byte-identical between the SHA-72c and deep candidate
+catalogs, so run against SHA-72c to permit direct union with every frozen
+historical proof.
+
+Assign 194/202 to local john1, 450/458 to john2, 466/714 to john3, and 970 to
+john4. Each ruleset has one count, 300 seconds/count, 330 seconds/ruleset,
+eight OR-Tools workers, connected exact model. Python 3.12.13 and OR-Tools
+9.15.6755 pass on all hosts; read-only preflight found no exact wildlife
+worker. Source revision `8c47e3d2`; proof/exact/support/rules/worker hashes
+are recorded in
+`cascadiav3/fleet/all_cards_near_complete7_fleet_20260723.json`.
+
+Do not inspect any result until all four terminal markers exist. Retain every
+exact exclusion or independently valid connected witness. If all seven close,
+the integrated catalog advances 7→14; otherwise every unknown remains
+unproven.
