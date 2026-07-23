@@ -9248,3 +9248,27 @@ Python 3.12.13 exactly in launcher and worker, use the repo venv for local
 ledger transitions, and create a fresh isolated `wildlife-venv-py312` from
 the known fleet interpreter. A third run may be preregistered only after all
 hosts pass exact Python, OR-Tools, and identical-freeze checks.
+
+**09:28 Python 3.12 provisioning passed; third launch preregistered.**
+Revision `53003c52` makes Python `3.12.13` an exact launcher/worker/ledger
+requirement, changes the isolated default to `wildlife-venv-py312`, and uses
+the repo venv for local ledger transitions. Shell syntax, all 10
+catalog/sharding unit tests, and `git diff --check` pass.
+
+Each host's new environment was created from
+`~/cascadia/venv/bin/python` and independently verified as Python `3.12.13`
+plus OR-Tools `9.15.6755`. Sorted `pip freeze` is identical on john2–john4,
+SHA-256
+`feb90716f10168387d934d9639c586c0e8fcb8b24e948fd419de84296ad7ee53`.
+Provision logs for john2/john3/john4 have SHA-256
+`7e2fe9dd62f0225148e171f32ce473d92a72070504ffb118d6e457804f1c8ebc`,
+`3193e1b9c4bf91ec451a292058e91e664b34927a2c6ab80cfb4be64891d6b053`,
+and `ae676899296c74608f252828c62aafdde73da29880a8ab2052973bb8d78b0a21`
+respectively.
+
+Use fresh tag `aaaaa_exact_tail_fleet3_20260723` from the commit containing
+this entry. Retain the frozen 115-vector taskset and 711-proof imported
+snapshot, deep candidates, 39/38/38 assignment, three hosts, 2 jobs × 4
+workers, 60/120-second limits, seed, and exact fail-closed decision rule from
+09:15. Both prior failed tags remain immutable evidence. Launch only if the
+new exact runtime preflight and collision checks pass on all hosts.
