@@ -81,6 +81,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   ruleset row is called optimal before its exact certificate completes.
   Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
+  A frozen catalog augmentation is also rebasing the validated deep boards
+  onto all inherited exclusions and importing the existing complete AAAAA
+  global certificate; acceptance requires independent and production scoring
+  of all 1,024 selected boards.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

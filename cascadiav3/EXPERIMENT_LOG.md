@@ -10940,3 +10940,28 @@ PREREGISTERED LADDER RULE (autonomy grant): let S_k = round-k screen.
   on the best round, then bring results + options to John.
 - S_1 <= 99.4675 -> stronger-teacher shape failed too: STOP, report
   to John (strategy crossroads, his call).
+
+## 2026-07-23 16:59 EDT — all-rules catalog augmentation preregistration
+
+The generic proof catalog still pins the pre-recovery candidate SHA and does
+not import the already-complete AAAAA global certificate. Freeze a monotone
+augmentation at revision `0f798dd0df6c8d0b2694db9df706764d0a4dd02f`:
+base catalog/deep candidates/AAAAA certificate hashes are respectively
+`ad3fd9aac73dfee1fa2d1a9ca370149252b3989fb3566f0a36f2318da770dfe1`,
+`96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9`,
+and
+`163c338643fd7c14d45eb00fa1b833b4043260cef47effe14816787e124e3828`.
+Augmenter/oracle hashes are
+`7894aa3ba6436e460381f5d72e1f7ac3638a9f9c4c261b44dc9f0e27fd43205d`
+and
+`cccc01f69a7739c11792fb67e39c9bceb8e5d8fd8217aa09e41e517974153b3a`.
+
+Accept only after all 1,024 rows validate independently and in production,
+stronger boards monotonically filter inherited exact-proof tails, and the
+AAAAA adapter verifies all 128 expected infeasible threshold-69 allocations.
+Expected completed rows are at least seven, including AAAAA. The preceding
+test command passed all ten correctness tests but took 1,187.31 seconds
+because a synthetic fixture regenerated the entire count-bound matrix; the
+fixture was reduced to canonical inherited tails and now passes in 0.49
+seconds. Durable run ledger:
+`cascadiav3/fleet/all_wildlife_catalog_augment_deep_20260723.json`.

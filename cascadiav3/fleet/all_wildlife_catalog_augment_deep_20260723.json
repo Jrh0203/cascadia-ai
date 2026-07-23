@@ -1,0 +1,19 @@
+{
+  "schema": "all-wildlife-catalog-augmentation-run-v1",
+  "state": "planned",
+  "tag": "all_wildlife_catalog_augment_deep_20260723",
+  "source_revision": "0f798dd0df6c8d0b2694db9df706764d0a4dd02f",
+  "augment_source_sha256": "7894aa3ba6436e460381f5d72e1f7ac3638a9f9c4c261b44dc9f0e27fd43205d",
+  "oracle_sha256": "cccc01f69a7739c11792fb67e39c9bceb8e5d8fd8217aa09e41e517974153b3a",
+  "inputs": {
+    "base_catalog": "cascadiav3/fleet/all_cards_disconnected_prescreen_union_20260723.json",
+    "base_catalog_sha256": "ad3fd9aac73dfee1fa2d1a9ca370149252b3989fb3566f0a36f2318da770dfe1",
+    "deep_candidates": "docs/v3/evidence/all_wildlife_candidates_merged_deep_2026-07-23.json",
+    "deep_candidates_sha256": "96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9",
+    "aaaaa_global_certificate": "docs/v3/evidence/aaaaa_wildlife_optimum_2026-07-22.json",
+    "aaaaa_global_certificate_sha256": "163c338643fd7c14d45eb00fa1b833b4043260cef47effe14816787e124e3828"
+  },
+  "output": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_2026-07-23.json",
+  "markdown": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_DEEP.md",
+  "acceptance_rule": "Accept only if all 1,024 base and candidate boards validate independently, every inherited unresolved set is canonical, stronger candidates only monotonically remove unresolved branches, the AAAAA certificate has all 128 expected exact INFEASIBLE exclusions at threshold 69, and all 1,024 selected boards match the production Rust scorer. Expected minimum completed rulesets: 7, including AAAAA."
+}

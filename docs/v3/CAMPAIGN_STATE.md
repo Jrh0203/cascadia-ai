@@ -1305,6 +1305,13 @@ array. The retry reproduced all exact 57/57/57/95 exclusions in
 28.16× versus the frozen sequential screen and clears the 20× gate. The
 species-ordered cached bitset engine is selected for generalization.
 
+Catalog-accounting transition: a fail-closed monotone augmenter now rebases
+the existing exact exclusions onto the validated deep candidates and imports
+the already-complete global AAAAA certificate. Its frozen production run must
+validate every board through both scorers and all 128 AAAAA threshold-69
+exclusions; if accepted it raises the integrated completed-ruleset count from
+six to at least seven without rerunning solved proof work.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
