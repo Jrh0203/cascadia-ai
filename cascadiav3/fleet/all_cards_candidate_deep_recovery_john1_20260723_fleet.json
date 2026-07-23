@@ -1,8 +1,10 @@
 {
   "schema": "all-wildlife-targeted-candidate-recovery-v1",
-  "state": "running",
+  "state": "terminal_collecting",
   "tag": "all_cards_candidate_deep_recovery_john1_20260723",
   "launch_utc": "2026-07-23T19:42:18Z",
+  "terminal_utc": "2026-07-23T19:59:49Z",
+  "terminal_exit_code": 0,
   "screen_pid": 28668,
   "wrapper_pid": 28671,
   "solver_pid_at_launch": 28686,

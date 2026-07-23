@@ -1295,3 +1295,8 @@ The hash/collision/idle preflight passed and recovery launched at
 `2026-07-23T19:42:18Z` in detached screen
 `wildlife_candidate_deep_recovery_john1` (wrapper PID `28671`), initially on
 AAAAA index 0. Do not inspect any candidate output before its terminal marker.
+
+The candidate recovery exited zero at `2026-07-23T19:59:49Z`, satisfying the
+all-six unseal condition. Six files are durably collected; board validation
+and all-1,024 cross-scoring are in progress, so no new incumbent is accepted
+yet.

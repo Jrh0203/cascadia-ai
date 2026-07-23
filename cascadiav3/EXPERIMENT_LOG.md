@@ -10766,3 +10766,11 @@ case-specific heartbeats. john1 uses detached screen
 `wildlife_split_salmon_bitset_john1`; its single-core branch coexists with,
 and does not alter, the separately authorized eight-thread candidate recovery.
 All four result shards remain sealed until terminal.
+
+**19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
+zero after completing indices 0 and 562. This satisfies the authorized
+recovery condition, so all six parent/recovery files were unsealed and copied
+to durable local collection. Their original 96×500,000/seed configuration is
+consistent and all rows stayed within 48 million evaluated states. Direct
+scores are not yet accepted: independent/production validation and full
+1,024-way cross-scoring are in progress.

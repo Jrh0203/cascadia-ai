@@ -53,5 +53,8 @@
   "result_files_read": false,
   "sealed_reason": "the preregistered all-four-terminal-marker condition cannot be met because john1 died without a terminal marker; remote exit-0 outputs remain unread",
   "resume_requirement": "explicit user permission to retry john1 indices 0,562 in a detached screen session under a fresh single-use tag, followed by terminal collection of the complete frozen six-row calibration",
+  "authorized_recovery_tag": "all_cards_candidate_deep_recovery_john1_20260723",
+  "authorized_recovery_terminal_utc": "2026-07-23T19:59:49Z",
+  "result_files_unsealed_after_recovery": true,
   "selection_rule": "after every shard is terminal, independently validate connectivity, cap six, and Python/production score agreement; retain every strict incumbent improvement and otherwise retain the frozen merged candidate; heuristic equality never certifies optimality"
 }
