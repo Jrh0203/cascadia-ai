@@ -1,0 +1,25 @@
+{
+  "schema": "all-wildlife-targeted-candidate-recovery-v1",
+  "state": "planned",
+  "tag": "all_cards_candidate_deep_recovery_john1_20260723",
+  "parent_tag": "all_cards_candidate_deep_calibration_20260723",
+  "authorization": "John explicitly approved the requested recovery on 2026-07-23",
+  "source_revision": "f00fcd8efbf76ee7fec946c95c7c089145cf722d",
+  "candidate_source_sha256": "8510a450caab1db02f2c4d1541716367e8e3cdeb185fbe12b98b79960dec99ef",
+  "support_source_sha256": "e094671b33c4f525a189acce590416bfe1cc17856edbda0360770db540468ee0",
+  "worker_sha256": "455a7aef327096f4b7b5ce6501e184c76b44a1a08622b640d3997c0bacc17f03",
+  "binary_sha256": "4da4fcf77ab337aacde5768bf590ec7520a3380a0adb471de5ae61a05dddb60e",
+  "configuration": {
+    "host": "john1",
+    "indices": [0, 562],
+    "rulesets": ["AAAAA", "CADAC"],
+    "threads": 8,
+    "restarts_per_ruleset": 96,
+    "iterations_per_restart": 500000,
+    "maximum_states_per_ruleset": 48000000,
+    "base_seed": 2026072302,
+    "launch_mode": "detached screen",
+    "screen_name": "wildlife_candidate_deep_recovery_john1"
+  },
+  "selection_rule": "after the recovery shard is terminal, combine it with the still-sealed terminal john2-john4 parent shards; independently validate all six boards for connectivity, cap six, and independent/production score agreement; retain every strict improvement and otherwise retain the frozen merged candidate; heuristic equality never certifies optimality"
+}

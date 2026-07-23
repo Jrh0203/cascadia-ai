@@ -10683,3 +10683,21 @@ fleet-ledger SHA-256
 The next ranked exact representation remains canonical enumeration of
 complete interacting fox/motif components with proved far-component
 factorization and local cell-set packing.
+
+## 2026-07-23 19:41Z — AUTHORIZED RECOVERY: deep hard-row incumbents
+
+John explicitly approved the recovery required by the sealed 14:50 deep
+candidate calibration. Rerun only the missing john1 indices `0,562`
+(AAAAA/CADAC) under fresh single-use tag
+`all_cards_candidate_deep_recovery_john1_20260723`, using the original frozen
+96×500,000 search, eight threads, seed `2026072302`, source/support/worker
+hashes, and john1 release-binary hash. The local wrapper must run in detached
+screen `wildlife_candidate_deep_recovery_john1`.
+
+Do not open the new output or the terminal john2–john4 parent outputs until
+the recovery exit marker exists. Then validate all six connected cap-six
+boards with both scorers and retain strict incumbent improvements only.
+This remains heuristic warm-start generation and cannot certify a score
+unless a separate sound bound or exclusion proof does so. Frozen recovery
+ledger:
+`cascadiav3/fleet/all_cards_candidate_deep_recovery_john1_20260723_fleet.json`.

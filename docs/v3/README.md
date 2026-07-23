@@ -52,11 +52,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   (0.30%), failing the frozen 20% selection gate. Both direct coordinate
   shapes are rejected; no full 1,024-row proof launch occurred. Six rows are
   now certified: two by coordinate proof and four because their boards meet
-  the sound all-count bound. A 40× deep incumbent calibration is running on
-  the six hard strata across john1–john4; john1's local `nohup` shard died
-  without a terminal marker and will not be restarted without permission.
-  The three remote shards are exit-0 but sealed unread; nothing from this
-  failed heuristic calibration enters the catalog. A complete
+  the sound all-count bound. The first 40× deep-incumbent calibration failed
+  sealed when john1's local `nohup` shard died; John has now authorized a
+  fresh detached-screen recovery of its missing AAAAA/CADAC rows. The three
+  terminal remote shards remain sealed until that recovery exits. A complete
   shared-edge/degree relaxation passed 846,848 containment
   checks but tightened zero cells, so it is closed and not integrated. A
   twelve-way fox-anchor symmetry break also failed its runtime gate and was

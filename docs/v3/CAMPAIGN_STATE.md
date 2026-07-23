@@ -1269,3 +1269,9 @@ launched at `2026-07-23T19:35:12Z` and all four shards exited zero by
 5/37 profiles were infeasible and 32 remained unknown (AAAAA known 1/2,
 AAAAA hard 4/6, CADAC 0/29). Both frozen selection conditions fail, so
 external score-profile sharding is closed; its five exclusions remain reusable.
+
+John has now explicitly authorized the failed-sealed deep-incumbent recovery.
+Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
+`all_cards_candidate_deep_recovery_john1_20260723` in the required detached
+screen. The terminal john2–john4 parent outputs and new local output remain
+sealed until the recovery terminal marker exists.
