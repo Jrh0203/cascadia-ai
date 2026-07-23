@@ -56,6 +56,32 @@ def test_collect_without_proofs_emits_valid_incomplete_catalog(tmp_path) -> None
     assert "(unproven incumbent)" in render_markdown(catalog)
 
 
+def test_collect_certifies_bound_matched_candidate_without_proof(
+    tmp_path, monkeypatch
+) -> None:
+    payload = _candidate_catalog()
+    candidate = payload["candidates"][0]  # type: ignore[index]
+    score = candidate["score"]
+    original_count_upper = rules.count_upper
+
+    def count_upper(counts, ruleset):
+        if ruleset == "AAAAA":
+            return score
+        return original_count_upper(counts, ruleset)
+
+    monkeypatch.setattr(rules, "count_upper", count_upper)
+    candidates = tmp_path / "candidates.json"
+    candidates.write_text(json.dumps(payload))
+    proofs = tmp_path / "proofs"
+    proofs.mkdir()
+
+    catalog = collect(candidates, [proofs])
+
+    assert catalog["completed_rulesets"] == 1
+    assert catalog["results"][0]["proof_complete"]
+    assert catalog["results"][0]["unresolved_counts"] == []
+
+
 def test_collect_rejects_candidate_identity_mismatch(tmp_path) -> None:
     payload = _candidate_catalog()
     payload["candidates"][0]["ruleset"] = "AAAAB"  # type: ignore[index]

@@ -79,20 +79,21 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
             if candidate["index"] != index or candidate["ruleset"] != ruleset:
                 raise ValueError(f"{ruleset}: candidate identity mismatch")
             _validate_board(candidate, ruleset)
+            unresolved = [
+                list(counts)
+                for counts in rules.count_vectors()
+                if rules.count_upper(counts, ruleset) > candidate["score"]
+            ]
             rows.append(
                 {
                     "index": index,
                     "ruleset": ruleset,
-                    "proof_complete": False,
+                    "proof_complete": not unresolved,
                     "optimum": candidate["score"],
                     "score_breakdown": candidate["score_breakdown"],
                     "counts": candidate["counts"],
                     "tokens": candidate["tokens"],
-                    "unresolved_counts": [
-                        list(counts)
-                        for counts in rules.count_vectors()
-                        if rules.count_upper(counts, ruleset) > candidate["score"]
-                    ],
+                    "unresolved_counts": unresolved,
                     "proof_paths": [],
                 }
             )

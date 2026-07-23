@@ -1180,3 +1180,10 @@ preregistered gates, so the disconnected prescreen is rejected and no full
 1,024-row run follows. All exclusions remain frozen evidence; the next
 architecture must strengthen card interactions or replace the coordinate
 proof formulation rather than merely remove connectivity.
+
+Collector review then corrected an underclaim: a proof-less row whose board
+meets the sound global count bound is already certified. DCAAC 69, DCCAC 69,
+DDAAC 72, and DDCAC 72 pass that condition. With the frozen ACACA 76 and
+ADACA 77 coordinate proofs, 6/1,024 rulesets are currently certified. This
+bookkeeping fix does not change any score, unresolved hard-row frontier, or
+the disconnected-prescreen rejection.

@@ -50,9 +50,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   remained 2/8 complete. A disconnected-relaxation prescreen then completed
   no additional row and reduced its six-row union frontier only 997→994
   (0.30%), failing the frozen 20% selection gate. Both direct coordinate
-  shapes are rejected; no full 1,024-row proof launch occurred. No
-  arbitrary-ruleset row is called optimal before its exact certificate
-  completes. Methodology:
+  shapes are rejected; no full 1,024-row proof launch occurred. Six rows are
+  now certified: two by coordinate proof and four because their boards meet
+  the sound all-count bound. No other arbitrary-ruleset row is called optimal
+  before its exact certificate completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed

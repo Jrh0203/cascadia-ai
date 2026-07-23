@@ -179,6 +179,10 @@ and batch-compares every board with the production Rust scorer.
   below its preregistered 20% selection gate. Both generic coordinate shapes
   are rejected for full production, while every exact exclusion remains
   reusable.
+- Six rulesets are currently certified: ACACA 76 and ADACA 77 by coordinate
+  exclusion, plus bound-matched DCAAC 69, DCCAC 69, DDAAC 72, and DDCAC 72.
+  Proof-less bound matches are now recognized directly by the collector and
+  covered by a regression test.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

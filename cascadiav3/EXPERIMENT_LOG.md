@@ -10331,5 +10331,19 @@ selection conditions, so the two-stage disconnected architecture is rejected
 and no full pass launches. The six disconnected proof hashes are frozen in
 `cascadiav3/fleet/all_cards_disconnected_prescreen_20260723_fleet.json`;
 union-catalog SHA-256
-`c7e36d225dcd6d28886594ea77e4a8721de3de99ee544c2e43d3919e33916811`.
+`ad3fd9aac73dfee1fa2d1a9ca370149252b3989fb3566f0a36f2318da770dfe1`.
 All exact exclusions are preserved as reusable evidence.
+
+**14:45 collector completeness correction.** Review of the merged output
+found that rows with no coordinate-proof file were always marked incomplete,
+even when the candidate exactly met the sound all-count upper bound. This
+underreported existing certificates; it did not admit a false optimum or
+affect the disconnected selection statistic. The collector now computes the
+unresolved count set for proof-less rows and marks an empty set complete. A
+regression test pins this path; all five collector tests and Ruff pass.
+
+Recollection certifies four directly bound-matched rows without a coordinate
+solve: DCAAC 69, DCCAC 69, DDAAC 72, and DDCAC 72. Together with the frozen
+ACACA 76 and ADACA 77 coordinate proofs, the current all-card catalog has six
+certified rulesets. The disconnected six-row union and its 997→994 rejection
+are unchanged.
