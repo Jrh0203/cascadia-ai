@@ -17,6 +17,13 @@ class AaaaaWildlifeHawkPackingBoundTests(unittest.TestCase):
     def test_single_salmon_cases_are_retained(self) -> None:
         self.assertEqual(sum(counts[2] == 1 for counts, _ in SCREEN_CASES), 4)
 
+    def test_one_loss_cases_are_the_four_salmon_tail(self) -> None:
+        one_loss = [(counts, target) for counts, target in SCREEN_CASES if counts[2] == 4]
+        self.assertEqual(
+            one_loss,
+            [((4, 6, 4, 2, 4), 65), ((3, 5, 4, 3, 5), 63)],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

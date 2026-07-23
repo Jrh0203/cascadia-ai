@@ -53,17 +53,34 @@ def solve_shape_bound(
     elk_partition: tuple[int, ...],
     workers: int,
     time_limit: float,
+    *,
+    explicit_missing_foxes: bool = False,
 ) -> ShapeBound:
     bear_count, _, salmon_count, hawk_count, fox_count = counts
     if hawk_count <= 0 or len(salmon) != salmon_count:
         raise ValueError("hawk shape bound received incompatible counts")
     model = cp_model.CpModel()
-    possible_foxes = set(boundary(salmon))
+    salmon_neighbors = set(boundary(salmon))
+    if explicit_missing_foxes:
+        outer_foxes = {
+            (q + dq, r + dr)
+            for q, r in salmon_neighbors
+            for dq, dr in zero.DIRECTIONS
+            if (q + dq, r + dr) not in salmon and (q + dq, r + dr) not in salmon_neighbors
+        }
+        possible_foxes = salmon_neighbors | outer_foxes
+    else:
+        outer_foxes = set()
+        possible_foxes = salmon_neighbors
     fox_at = {
         cell: model.new_bool_var(f"fox_{index}")
         for index, cell in enumerate(sorted(possible_foxes))
     }
-    model.add(sum(fox_at.values()) == local_fox_count)
+    model.add(sum(fox_at[cell] for cell in salmon_neighbors) == local_fox_count)
+    if explicit_missing_foxes:
+        model.add(sum(fox_at[cell] for cell in outer_foxes) == fox_count - local_fox_count)
+    else:
+        model.add(sum(fox_at.values()) == local_fox_count)
 
     _, bear_pairs, bear_singles = zero.maximum_bear_structure(bear_count)
     bear_pair_shapes = zero.pair_placements(possible_foxes, salmon)
@@ -139,11 +156,15 @@ def solve_shape_bound(
         )
         self_coverage.append(sees_fox)
 
-    abstract_foxes = fox_count - local_fox_count
+    abstract_foxes = 0 if explicit_missing_foxes else fox_count - local_fox_count
     local_species_coverage = sum(
         variable for values in coverages.values() for variable in values
     )
-    if abstract_foxes:
+    if explicit_missing_foxes:
+        local_expression = local_species_coverage + sum(self_coverage)
+        fixed_fox_score = local_fox_count
+        local_upper = 4 * fox_count
+    elif abstract_foxes:
         local_expression = local_species_coverage
         fixed_fox_score = local_fox_count + fox_count + 3 * abstract_foxes
         local_upper = 3 * local_fox_count
@@ -197,6 +218,7 @@ def relaxed_upper_bound(
     *,
     workers: int = 1,
     per_shape_time_limit: float = 30.0,
+    explicit_missing_foxes: bool = False,
 ) -> dict[str, Any]:
     bear, elk, salmon, hawk, fox = counts
     if hawk <= 0:
@@ -236,6 +258,7 @@ def relaxed_upper_bound(
                         partition,
                         workers,
                         per_shape_time_limit,
+                        explicit_missing_foxes=explicit_missing_foxes,
                     )
                     cases += 1
                     total_wall += result.wall_seconds
@@ -267,4 +290,5 @@ def relaxed_upper_bound(
         "cases": cases,
         "best_case": best_case,
         "aggregate_solver_wall_seconds": total_wall,
+        "explicit_missing_foxes": explicit_missing_foxes,
     }
