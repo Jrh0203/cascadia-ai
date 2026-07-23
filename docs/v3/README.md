@@ -396,7 +396,7 @@ timestamped snapshot, weaker than current `main`).
 - [Bridge Throughput](BRIDGE_THROUGHPUT.md): R2.4 serving-path
   investigation — request lifecycle, the serial-pipeline bound, ranked
   levers, and the staged GPU probe.
-- Latest handoff: [handoff-2026-07-16.md](../handoffs/handoff-2026-07-16.md).
+- Latest handoff: [handoff-2026-07-23.md](../handoffs/handoff-2026-07-23.md).
 
 The implementation package lives in
 [cascadiav3/README.md](../../cascadiav3/README.md).
