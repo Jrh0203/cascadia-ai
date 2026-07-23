@@ -10348,7 +10348,7 @@ ACACA 76 and ADACA 77 coordinate proofs, the current all-card catalog has six
 certified rulesets. The disconnected six-row union and its 997→994 rejection
 are unchanged.
 
-## 2026-07-23 15:05 — PREREGISTRATION: deep hard-row incumbent calibration
+## 2026-07-23 14:50 — PREREGISTRATION: deep hard-row incumbent calibration
 
 Before building another exact bound, measure whether the original 1.2-million-
 state warm starts materially undersearched the six frozen hard strata. Run
@@ -10376,3 +10376,10 @@ strict improvement in a new merged warm start. Otherwise keep the frozen
 candidate. This is heuristic incumbent generation only; no score is certified
 unless it separately meets a sound bound or completes exact exclusions. Do
 not read partial outputs.
+
+**14:50 launch.** All four hosts passed idle, collision, source, support,
+worker, and host-specific binary preflights. The shards launched at
+`18:50:56–57Z`; self-recorded wrapper PIDs are
+82739/49454/14271/33835 and every heartbeat identifies its first live index.
+The fleet ledger is now `running`; do not inspect result files until all four
+terminal markers exist.

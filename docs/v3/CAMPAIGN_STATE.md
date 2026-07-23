@@ -1192,4 +1192,5 @@ A 40× deep incumbent calibration is now preregistered on the same six hard
 rows (48 million states maximum each, john1–john4). It is a measured warm-
 start intervention, not a proof: only independently rescored strict
 improvements will be merged, and heuristic equality alone never certifies a
-row.
+row. All four shards launched at 14:50 with pinned sources/binaries, fresh
+self-recorded PIDs, and live first-index heartbeats.

@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-targeted-candidate-fleet-v1",
-  "state": "planned",
+  "state": "running",
   "tag": "all_cards_candidate_deep_calibration_20260723",
   "source_revision": "f00fcd8efbf76ee7fec946c95c7c089145cf722d",
   "candidate_source_sha256": "8510a450caab1db02f2c4d1541716367e8e3cdeb185fbe12b98b79960dec99ef",
@@ -27,11 +27,12 @@
     {"index": 637, "ruleset": "CBDDB", "score": 84},
     {"index": 1023, "ruleset": "DDDDD", "score": 78}
   ],
+  "launch_utc": "2026-07-23T18:50:56Z",
   "shards": [
-    {"host": "john1", "indices": [0, 562]},
-    {"host": "john2", "indices": [233, 572]},
-    {"host": "john3", "indices": [637]},
-    {"host": "john4", "indices": [1023]}
+    {"host": "john1", "indices": [0, 562], "wrapper_pid": 82739},
+    {"host": "john2", "indices": [233, 572], "wrapper_pid": 49454},
+    {"host": "john3", "indices": [637], "wrapper_pid": 14271},
+    {"host": "john4", "indices": [1023], "wrapper_pid": 33835}
   ],
   "selection_rule": "after every shard is terminal, independently validate connectivity, cap six, and Python/production score agreement; retain every strict incumbent improvement and otherwise retain the frozen merged candidate; heuristic equality never certifies optimality"
 }
