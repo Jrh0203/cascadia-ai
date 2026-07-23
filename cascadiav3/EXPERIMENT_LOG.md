@@ -9162,3 +9162,50 @@ installed and no scientific computation ran. Durable per-host logs:
 Decision: inspect the hosts for their already-supported installer and install
 the same exact OR-Tools pin into the existing venv; do not bootstrap an
 unreviewed dependency path.
+
+**09:12 provisioning passed with dependency isolation.** Revision `089680b2`
+changes the fleet worker to use a dedicated
+`~/cascadia/wildlife-venv` (ledger-pinned as `wildlife_venv`) so installing
+the CPU solver cannot perturb the Torch/MPS generation environment. Shell
+syntax, all 10 catalog/sharding unit tests, and `git diff --check` pass. A
+fresh Python 3.12 environment was created independently on john2–john4 and
+`ortools==9.15.6755` installed successfully on every host. Sorted `pip freeze`
+is identical on all three, SHA-256
+`36c88ffd2e0d1210a4148f3d523e0f5b635dbfe7d71243d1d0be2bf55f4a3661`.
+Provision logs for john2/john3/john4 have SHA-256
+`dd44108f636767f7ab98ab79670d67e224d0a6a78c3913f95f5dabf2470d2179`,
+`ba8e39f56d24fba831399d170702c99e4f93d89152f35662293b3b43f7f3328a`,
+and `0f542814e6a188201626ba5c6381de590fb5303626e82ce7ce10cba5a894fdcf`
+respectively. Decision: all three hosts are eligible for the hash-pinned AAAAA
+exact-tail launch.
+
+## 2026-07-23 09:15 — AAAAA exact-tail mini-fleet launch preregistration
+
+Freeze a read-only snapshot of the active local AAAAA catalog; do not stop,
+restart, or write through its PID `90993`. The validated snapshot contains
+711 embedded complete proofs and has SHA-256
+`2b74a5a3d10dba6225d191d5b094e17a4f0f945da3b854ef066f63b5c965541e`.
+The deterministic `wildlife-catalog-taskset-v1` complement contains 115/826
+canonical count vectors, SHA-256
+`8cdec4eec69e84ebaf181419a01a1339bc1fa0443ad5554cd0a4360083ee54d3`.
+Use the independently validated 826-row deep candidate file, SHA-256
+`d8c4f1ce9d9b7decac3156c6500b9e35407d70c74573877529666ba02ff496ae`.
+
+Launch tag `aaaaa_exact_tail_fleet1_20260723` from the commit containing this
+preregistration (the exact revision is recorded in the launch ledger).
+Round-robin shard the frozen taskset over john2/john3/john4 as 39/38/38
+vectors. Each host runs two independent catalog processes with four CP-SAT
+workers apiece, OR-Tools `9.15.6755`, relaxation limit 60 seconds, connected
+limit 120 seconds, and base seed `20260725`. The imported snapshot, candidate
+file, taskset, source files, dependency version, source revision, worker PIDs,
+and every returned artifact are hash/configuration pinned. john1 and john0 are
+excluded.
+
+Decision rule: accept a count vector only when its catalog row is
+`proof_complete` under the registered exact method and its witness passes the
+collector's independent count/connectivity/scoring validation. `UNKNOWN`,
+timeout, worker failure, missing coverage, duplicates, hash mismatch, or a
+partial fleet remains incomplete and fails closed. Collection waits for all
+three terminal shards and cannot mutate the active local catalog. The fleet
+run is an exact finite puzzle computation, not a gameplay gate or strength
+claim.
