@@ -1,0 +1,61 @@
+{
+  "schema": "all-wildlife-anchor-centroid-calibration-v1",
+  "date": "2026-07-23",
+  "implementation_revision": "eb1e64462135bfe9e396f15c7b32102754d5e8ec",
+  "experimental_source_sha256": "faafb6492131f89dc116b420a192a4a86307f5ddada0e78c8d8a657f1a8493ce",
+  "experimental_test_sha256": "b4b7c44fedc1da021568315bffbf26593be7dc4df4c03fb62d0c1f975775fb24",
+  "configuration": {
+    "time_limit_seconds": 30,
+    "workers": 1,
+    "connectivity_required": true,
+    "seed": 20260723
+  },
+  "correctness": {
+    "fixed_board_exact_cases": 1024,
+    "fixed_board_failures": 0,
+    "fixed_board_sha256": "005153bf58a77d32feca858fc225e04db3101d7008b295eabde9fedecb878f2f"
+  },
+  "rows": [
+    {
+      "ruleset": "AAAAA",
+      "counts": [6, 1, 6, 2, 5],
+      "threshold": 69,
+      "baseline": {
+        "status": "INFEASIBLE",
+        "elapsed_seconds": 20.894606832880527,
+        "branches": 351372,
+        "conflicts": 96783
+      },
+      "anchor_centroid": {
+        "status": "UNKNOWN",
+        "elapsed_seconds": 30.014179916586727,
+        "branches": 455239,
+        "conflicts": 112710
+      }
+    },
+    {
+      "ruleset": "AAAAA",
+      "counts": [4, 2, 6, 2, 6],
+      "threshold": 69,
+      "baseline_status": "UNKNOWN",
+      "anchor_centroid_status": "UNKNOWN"
+    },
+    {
+      "ruleset": "CADAC",
+      "counts": [0, 2, 6, 6, 6],
+      "threshold": 67,
+      "baseline_status": "UNKNOWN",
+      "anchor_centroid_status": "UNKNOWN"
+    },
+    {
+      "ruleset": "CBDDB",
+      "counts": [0, 2, 6, 6, 6],
+      "threshold": 85,
+      "baseline_status": "UNKNOWN",
+      "anchor_centroid_status": "UNKNOWN"
+    }
+  ],
+  "elapsed_seconds": 231.11370191676542,
+  "selected": false,
+  "decision": "rejected: the known exact exclusion regressed to UNKNOWN and no hard case resolved; implementation is recoverable at the pinned revision and removed from the production source"
+}

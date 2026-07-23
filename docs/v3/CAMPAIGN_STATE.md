@@ -1236,3 +1236,8 @@ preserving every other within-species order. It must pass the same correctness
 and paired runtime gate before any production selection. The reproducible
 default-off implementation and all correctness gates have now landed; the
 paired runtime gate is next.
+
+Anchor-centroid also regressed the known proof to `UNKNOWN` at 30 seconds and
+resolved no hard case. It is rejected and removed; its source remains
+recoverable at revision `eb1e6446`. Simple geometric value-symmetry breaks
+that give back any current fox ordering are now closed.

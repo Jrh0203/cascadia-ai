@@ -192,6 +192,9 @@ and batch-compares every board with the production Rust scorer.
   exclusion from 20.55 seconds to `UNKNOWN` at 30 seconds and resolved no
   hard case. It was removed and the prior exact source restored:
   `docs/v3/evidence/all_wildlife_dihedral_calibration_2026-07-23.json`.
+- A reproducible anchor-centroid variant preserving all but one fox ordering
+  also regressed the known proof and resolved no hard case. It was removed:
+  `docs/v3/evidence/all_wildlife_anchor_centroid_calibration_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

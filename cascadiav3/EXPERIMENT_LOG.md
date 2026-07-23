@@ -10530,3 +10530,18 @@ Ten unit tests and Ruff pass. The 1,024 fixed-board gate has zero failures and
 retains canonical SHA-256
 `005153bf58a77d32feca858fc225e04db3101d7008b295eabde9fedecb878f2f`.
 Proceed to the frozen paired runtime gate; production remains default-off.
+
+**15:22 verdict — rejected and removed.** The baseline again proved AAAAA
+`(6,1,6,2,5) >= 69` infeasible, in 20.895 seconds and 351,372 branches.
+Anchor-centroid remained `UNKNOWN` at 30.014 seconds and 455,239 branches.
+Both modes left the three hard cases `UNKNOWN`; neither selection condition
+passes. Even one arbitrary anchor label costs more than the centroid wedge
+saves in this model.
+
+The complete experimental source remains recoverable at revision
+`eb1e64462135bfe9e396f15c7b32102754d5e8ec`. The feature is now removed and
+the exact source restored to its pre-experiment SHA-256
+`4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e`.
+This closes simple value-symmetry breaks that sacrifice the current
+within-species ordering. Evidence:
+`docs/v3/evidence/all_wildlife_anchor_centroid_calibration_2026-07-23.json`.
