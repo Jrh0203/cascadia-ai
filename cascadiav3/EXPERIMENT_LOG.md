@@ -10801,6 +10801,14 @@ after committing this source; select generalized use only if projected
 four-host critical path is at most 149.739 seconds (≥20× versus the frozen
 2,994.788-second sequential CP-SAT screen).
 
+**16:11 EDT performance rerun frozen.** Revision
+`3e7db21a4f7292ca9d06558bacecb94198302a2b`; run the four unchanged cases as
+four concurrent john1 processes, one process/case, under durable tag
+`aaaaa_split_salmon_bitset_perf2_20260723`. Every output must retain exact
+infeasibility and 57/57/57/95 submodels. Selection requires maximum case wall
+≤149.739406 seconds, the exact ≥20× projected four-host boundary. Outputs are
+performance/correctness reproduction, not new proof evidence.
+
 **19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
 zero after completing indices 0 and 562. This satisfies the authorized
 recovery condition, so all six parent/recovery files were unsealed and copied
