@@ -8878,3 +8878,17 @@ solver-seconds. No case was `UNKNOWN`; combined elapsed 412.321246 seconds.
 Decision: add fail-closed certificate serialization and incumbent validation,
 then run one frozen reproduction. Diagnostic output alone does not promote the
 row.
+
+## 2026-07-23 08:12 — AAAAA joint salmon certificate preregistration
+
+Frozen certificate source SHA-256
+`43e4893520e45a80cb6f00c46546813158e31ef305ce466ad3eef1266bf897e5`;
+tests SHA-256
+`555caf7705a08194f749179667f7e00c23c767ddf1152ae2ccc1e23dfe189367`.
+Ruff and both tests pass. Run one worker, 30 seconds per subcase; durable
+output:
+`docs/v3/evidence/aaaaa_gap_one_joint_salmon_certificate_2026-07-23.json`.
+Accept only if all 15 maximum-salmon and 98 joint split-salmon submodels are
+exact, both branch uppers and the combined upper equal 61, and the retained
+`(3,6,3,3,5)` connected board independently scores 61. Any deviation fails
+closed. Keep passed evidence separate until the active catalog writer exits.
