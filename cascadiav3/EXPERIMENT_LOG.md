@@ -8288,3 +8288,37 @@ upper bound. Candidate artifact SHA-256:
 `82340dcc952d187731650e146c9de9bf0d5b0bf9557d28ccee3ad84b9f6a6842`.
 Decision: launch the preregistered exact catalog pass; no candidate result was
 used to change its proof thresholds or configuration.
+
+## 2026-07-23 04:20 — CBDDB all-compositions exact-solver development and bounded diagnostic
+
+John extended the pure-wildlife catalog request: after the max-six AAAAA
+catalog is complete, produce the same one-optimum-per-count catalog for CBDDB
+(Bear C, Elk B, Salmon D, Hawk D, Fox B), retain all 826 configurations, and
+report the holistic highest scoring board. This remains local CPU side
+analysis and does not touch the live john0/fleet campaign.
+
+Implemented an independent Python CBDDB scorer and labeled-token CP-SAT model,
+plus a Rust annealing candidate generator/custom scorer and production
+`score_board(..., ScoringCards::CBDDB)` verifier. The exact model represents
+Bear-C full components and set bonus, Elk-B disjoint singles/pairs/triangles/
+strict rhombi, Salmon-D valid runs and distinct adjacent non-salmon tokens,
+Hawk-D line-of-sight maximum-weight matching, and Fox-B species appearing at
+least twice around each fox. Python model-vs-oracle tests pass on the card edge
+cases and varied fixed 20-token boards. Rust custom-vs-production checks pass
+on varied connected boards and the count space is pinned at 826.
+
+A bounded, explicitly non-verdict diagnostic ran the highest count-only
+relaxation `(0,2,6,6,6)` for 10 seconds with two CP-SAT workers and seed
+20260723. It returned `FEASIBLE`, model/independent score 39 with breakdown
+0/5/16/12/6, while the deliberately loose count bound remained 100. No
+optimality conclusion follows. Decision: the production sequence remains
+AAAAA completion first; then generate strong Rust CBDDB incumbents before any
+exact catalog launch. Timeout or `UNKNOWN` will never be accepted as proof.
+Development source SHA-256: Python exact model
+`362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329`,
+Python catalog runner
+`214851ec97f1c0309c77254698e77147a87db19ba61c58d970832ec8c80f5f36`,
+Rust candidate/verifier
+`94e1f1624ae230a54348f320ea4ed5dfa7802684a60cc3eb2b6d0b6ff757f390`,
+and shared Rust support
+`d07048119780093155fec5d416455cf597f1112e84efdc2c84c3c38768f18763`.
