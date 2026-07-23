@@ -118,10 +118,33 @@ The only accepted per-vector certificates are:
 - `witness_matches_count_relaxation`;
 - `witness_matches_global_upper_bound` (AAAAA only);
 - `disconnected_relaxation_infeasible`;
-- `connected_model_infeasible`.
+- `connected_model_infeasible`;
+- `standalone_maximum_motif_incompatibility`;
+- `zero_hawk_relaxed_local_packing_infeasible`;
+- `hawk_one_loss_relaxed_local_packing_infeasible`;
+- `gap_one_joint_salmon_local_packing_infeasible`.
 
 `UNKNOWN`, timeout, an incomplete ledger, or a good heuristic score is never
 an optimality certificate.
+
+### 3. Exact tail certificates
+
+The coordinate model's hardest cases miss their elementary upper bound by
+only one or two points. For those cases, the score target forces specific
+maximum card motifs. Separate deterministic certificates enumerate free
+unbranched salmon polyhexes, straight elk group partitions, Bear-A pairs,
+Fox-A species observations, and—where present—Hawk-A coverage. They then solve
+a smaller cell-set-packing problem around the forced salmon/fox neighborhoods.
+
+These are upper-bound proofs, not heuristic shortcuts. Each deliberately drops
+constraints such as whole-board connectivity, Bear/Hawk isolation, or remote
+noncovering motifs, creating a strict superset of legal boards. If even that
+superset cannot beat the incumbent, the legal board cannot. Disconnected
+salmon scoring components are enumerated through every relative separation at
+which a length-four elk line or shorter motif can interact; all farther
+translations share a factorized representative. Every certificate is
+source-hashed, rerunnable, independently checks its incumbent, and remains
+separate from the live catalog until the catalog writer exits.
 
 ## Independent validation
 
