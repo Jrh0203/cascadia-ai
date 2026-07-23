@@ -8413,3 +8413,12 @@ imported scoring/coordinate model SHA-256
 `55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8`.
 Durable output:
 `docs/v3/evidence/aaaaa_distance_connectivity_calibration_2026-07-23.json`.
+
+**Calibration result — NOT SELECTED.** The deterministic-connectivity variant
+returned `UNKNOWN` after 60.055958 seconds, with no witness, 271,183 branches,
+and 55,246 conflicts. It therefore failed the preregistered promising gate;
+the sound formulation remains tested code but is not used as proof evidence
+or substituted into the active catalog. Artifact SHA-256
+`fb171f2c486d1abd42c0503d0de908285f259ae5aeb29bea2841465a8f90039c`.
+Decision: connectivity-tree symmetry alone is not the tail's root cause; the
+next optimization must expose high-fox adjacency/coverage structure directly.

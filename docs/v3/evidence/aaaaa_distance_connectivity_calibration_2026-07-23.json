@@ -1,0 +1,35 @@
+{
+  "schema": "aaaaa-distance-connectivity-calibration-v1",
+  "source_sha256": {
+    "tools/aaaaa_wildlife_distance_exact.py": "0c65743887a046c56c63d91428a4d86d6b5bc76a6878c9a15e2234ec803915d0",
+    "tools/aaaaa_wildlife_exact.py": "55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8"
+  },
+  "result": {
+    "counts": [
+      3,
+      6,
+      6,
+      0,
+      5
+    ],
+    "count_relaxation": 62,
+    "model_status": "UNKNOWN",
+    "objective": null,
+    "model_score": null,
+    "score_breakdown": null,
+    "best_bound": 0.0,
+    "wall_seconds": 60.055958000000004,
+    "branches": 271183,
+    "conflicts": 55246,
+    "solver_parameters": {
+      "time_limit_seconds": 60,
+      "workers": 2,
+      "random_seed": 20260723,
+      "maximize": false,
+      "maximum_score": 62,
+      "enforce_connectivity": true,
+      "connectivity_formulation": "shortest_path_min_equality_v1"
+    },
+    "tokens": []
+  }
+}
