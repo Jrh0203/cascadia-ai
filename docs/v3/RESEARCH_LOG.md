@@ -1738,6 +1738,15 @@ across 980 rows. This locates the start of the timeout tail and demonstrates
 why the full exact ETA cannot be extrapolated from median rows:
 `docs/v3/evidence/all_wildlife_three_to_five_branch23_2026-07-23.json`.
 
+The complete 6–10-branch slice certified 36/43 rulesets. It retained 301
+exact exclusions, seven feasible witnesses, and 35 unresolved branches
+across seven partial rows; five incumbents improved. Independent and
+production rescoring advances the catalog 44→80/1,024 exact with 118,704
+branches across 944 rows. The increasing 5-minute timeout rate confirms the
+heavy tail, while the exact witness path continues to improve stored sample
+boards:
+`docs/v3/evidence/all_wildlife_six_to_ten_branch43_2026-07-23.json`.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from

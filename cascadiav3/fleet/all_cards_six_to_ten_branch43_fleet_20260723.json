@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-six-to-ten-branch-fleet-v1",
-  "state": "active",
+  "state": "completed",
   "tag": "all_cards_six_to_ten_branch43_fleet_20260723",
   "source_revision": "f349a8cfbd61451f7e92a8015a3a657847385416",
   "taskset_sha256": "d4c159c5f4b4990baf6696bc156c8ff1a8085bfd39b07e0c698d39c7da25736a",
@@ -95,5 +95,19 @@
     }
   ],
   "launched_at": "2026-07-23T21:40:31Z",
-  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all 43 rulesets become proof_complete, advance the integrated catalog from 44 to 87 exact rows. UNKNOWN or timeout remains unresolved."
+  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all 43 rulesets become proof_complete, advance the integrated catalog from 44 to 87 exact rows. UNKNOWN or timeout remains unresolved.",
+  "completed_at": "2026-07-23T22:05:28Z",
+  "result_summary": {
+    "requested_rulesets": 43,
+    "completed_rulesets": 36,
+    "partially_proved_rulesets": 7,
+    "exact_infeasible_exclusions": 301,
+    "feasible_witness_attempts": 7,
+    "unknown_or_timeout": 7,
+    "remaining_branches_in_selected_rows": 35,
+    "output_manifest_sha256": "bf4aafbc22f407d73beea919f8452cd127f92caade064cb19cb568168ebd6940",
+    "proof_catalog_sha256": "77f6299392610ed5839a9ae3374537eb65b351c95c3f678ecd814ef8a605a12f",
+    "augmented_catalog_sha256": "3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb",
+    "verdict": "SELECT_PARTIAL"
+  }
 }

@@ -218,6 +218,12 @@ and batch-compares every board with the production Rust scorer.
   This is the first measured transition from seconds-scale rows into the
   timeout tail:
   `docs/v3/evidence/all_wildlife_three_to_five_branch23_2026-07-23.json`.
+- The complete 6–10-branch slice certified 36/43 rows, retained 301 exact
+  exclusions and seven feasible witnesses, and left 35 branches across seven
+  partial rows. Five stored boards improved. After full independent and
+  production rescoring, the catalog is 80/1,024 exact with 118,704 branches
+  across 944 rows:
+  `docs/v3/evidence/all_wildlife_six_to_ten_branch43_2026-07-23.json`.
 - A coupled same/cross-edge and degree-six relaxation passed all 846,848
   count/ruleset containment comparisons but equaled the existing bound in
   every cell. It is not selected; pair-edge resource coupling without richer

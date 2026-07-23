@@ -11252,3 +11252,22 @@ runtime, collision, and idle checks under revision `f349a8cf`. Wrapper PIDs
 are 28706/69743/29167/35080 on john1/john2/john3/john4. Ledger:
 `cascadiav3/fleet/all_cards_six_to_ten_branch43_fleet_20260723.json`.
 Results remain sealed until all four terminal markers.
+
+**18:17 EDT verdict — SELECT_PARTIAL.** All four wrappers exited zero by
+`22:05:28Z`. The complete 6–10-branch slice certified 36/43 rulesets. It
+retains 301 exact `INFEASIBLE` exclusions, seven feasible witness attempts,
+and seven `UNKNOWN` attempts; 35 branches remain across seven partial rows.
+Five incumbents improved: ACBDC/CCADC to 76 and ADADC/BCBCD/CDADC to 79.
+
+The proof-union SHA-256 is
+`77f6299392610ed5839a9ae3374537eb65b351c95c3f678ecd814ef8a605a12f`.
+The independent and production-scored catalog/Markdown SHA-256 values are
+`3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb`
+and
+`880d0bd6e37fc08e3667eb313777f21420de82478c72c693f9b6290b3564673a`.
+The integrated catalog advances 44→80/1,024 exact with 118,704 branches
+across 944 unresolved rows. The holistic incumbent remains 85; production
+response SHA-256 is now
+`5f3b7b5dcc0fee92b766e59b3f99b5b1a25b8afd5f38431a0264b64809c251d4`.
+Curated evidence:
+`docs/v3/evidence/all_wildlife_six_to_ten_branch43_2026-07-23.json`.

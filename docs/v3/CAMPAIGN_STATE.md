@@ -1402,8 +1402,12 @@ john1–john4. The 330-second row cap gives a 60m30s hard wall per host.
 DCACC's two residual branches remain separate; no unknown is discarded.
 
 The 6–10-branch batch launched at `2026-07-23T21:40:31Z` under revision
-`f349a8cf`; all four wrappers were active after pinned preflight. Results
-remain sealed until every shard is terminal.
+`f349a8cf`; all four wrappers exited zero by `22:05:28Z`. The pass certified
+36/43 rows, retained 301 exact exclusions and seven feasible witnesses, and
+left 35 branches across seven partial rows. Five incumbents improved.
+Independent and production rescoring advances the catalog 44→80 exact,
+leaving 118,704 branches across 944 rows. Curated evidence:
+`docs/v3/evidence/all_wildlife_six_to_ten_branch43_2026-07-23.json`.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

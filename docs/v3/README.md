@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-23 17:18 EDT)
+## Status at a glance (updated 2026-07-23 18:17 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, in progress):** AAAAA has
   one certified optimal board for 732/826 count vectors after unioning the
@@ -107,7 +107,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   6m34s fleet wall. DCACC retains two explicit unknowns; the integrated
   catalog is now **44/1,024 exact** with 119,023 branches across 980 rows.
   The next complete slice—43 rows with 6–10 branches, 354 queries—is frozen
-  as a balanced 90/90/90/84-query fleet batch.
+  as a balanced 90/90/90/84-query fleet batch. It certified 36/43 rows,
+  retained exact partial work in seven, and found five improved incumbents.
+  The integrated catalog is now **80/1,024 exact**, with 118,704 branches
+  across 944 unresolved rows. The holistic incumbent remains 85.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

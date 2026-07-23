@@ -1,0 +1,73 @@
+{
+  "schema": "all-wildlife-six-to-ten-branch43-evidence-v1",
+  "completed_at": "2026-07-23T22:17:12Z",
+  "source_revision": "f349a8cfbd61451f7e92a8015a3a657847385416",
+  "taskset_sha256": "d4c159c5f4b4990baf6696bc156c8ff1a8085bfd39b07e0c698d39c7da25736a",
+  "configuration": {
+    "count_cap": 6,
+    "token_count": 20,
+    "connectivity_required": true,
+    "time_limit_seconds_per_count": 300,
+    "total_time_limit_seconds_per_ruleset": 330,
+    "solver_workers": 8,
+    "heartbeat_interval_seconds": 5,
+    "hosts": [
+      "john1",
+      "john2",
+      "john3",
+      "john4"
+    ]
+  },
+  "summary": {
+    "requested_rulesets": 43,
+    "requested_count_queries": 354,
+    "completed_rulesets": 36,
+    "partially_proved_rulesets": 7,
+    "exact_infeasible_exclusions": 301,
+    "feasible_witness_attempts": 7,
+    "unknown_or_timeout": 7,
+    "remaining_branches_in_selected_rows": 35,
+    "longest_completed_exact_query_seconds": 122.36818295810372,
+    "output_manifest_sha256": "bf4aafbc22f407d73beea919f8452cd127f92caade064cb19cb568168ebd6940"
+  },
+  "improved_incumbents": {
+    "ACBDC": 76,
+    "ADADC": 79,
+    "BCBCD": 79,
+    "CCADC": 76,
+    "CDADC": 79
+  },
+  "incomplete_rulesets": {
+    "AAACC": 8,
+    "ABACC": 8,
+    "BAACC": 6,
+    "BABCC": 2,
+    "BBACC": 6,
+    "BBBCC": 2,
+    "DDBCC": 3
+  },
+  "catalog": {
+    "proof_union_sha256": "77f6299392610ed5839a9ae3374537eb65b351c95c3f678ecd814ef8a605a12f",
+    "augmented_catalog_path": "docs/v3/evidence/all_wildlife_catalog_augmented_six_to_ten_branch43_2026-07-23.json",
+    "augmented_catalog_sha256": "3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb",
+    "markdown_path": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_SIX_TO_TEN_BRANCH43.md",
+    "markdown_sha256": "880d0bd6e37fc08e3667eb313777f21420de82478c72c693f9b6290b3564673a",
+    "completed_rulesets": 80,
+    "unresolved_rulesets": 944,
+    "unresolved_count_branches": 118704,
+    "incumbent_holistic_maximum": 85,
+    "incumbent_holistic_rulesets": [
+      "ADCCB",
+      "BABCB",
+      "BBBCB",
+      "BCBCB",
+      "BDBCB",
+      "BDCCB",
+      "CDCCB",
+      "DDCCB"
+    ],
+    "holistic_optimum": null,
+    "production_response_sha256": "5f3b7b5dcc0fee92b766e59b3f99b5b1a25b8afd5f38431a0264b64809c251d4"
+  },
+  "verdict": "SELECT_PARTIAL"
+}
