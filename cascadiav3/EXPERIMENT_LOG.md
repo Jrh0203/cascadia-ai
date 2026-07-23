@@ -8780,3 +8780,11 @@ Ruff and four tests pass. Screen only `(4,6,4,2,4)>=65` and
 `(3,5,4,3,5)>=63`, one worker, 30 seconds per shape. Select for formal
 certification only on exact exhaustion with a relaxed upper below threshold;
 `UNKNOWN` or threshold feasibility remains no proof.
+
+**Diagnostic result — BOTH SELECTED FOR FORMAL CERTIFICATION.** Exact
+exhaustion returned `(4,6,4,2,4)` relaxed upper 64 over 20 subcases in
+29.915816 seconds and `(3,5,4,3,5)` relaxed upper 62 over 12 subcases in
+48.939456 seconds. Both are one below their registered thresholds and match
+their retained incumbents. Decision: add fail-closed two-row serialization,
+independent incumbent validation, and source hashes; diagnostic output alone
+does not yet promote either row.
