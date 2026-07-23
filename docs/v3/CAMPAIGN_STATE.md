@@ -1081,3 +1081,8 @@ per ruleset). All four shards completed naturally by 13:28. Cross-scoring
 passed independent and production scoring. Scores span 65–85, with eight
 85-point leaders, but none reaches its sound bound. The merged artifact is now
 the frozen exact warm start; stratified proof-runtime calibration is next.
+
+The eight-rule stratified exact calibration is preregistered at 13:31:
+30 seconds/count, five minutes/ruleset, one eight-worker ruleset at a time on
+each mini, with easy/reference/median/leader/max-tail strata. No full exact
+launch occurs until its frozen completion band is applied.

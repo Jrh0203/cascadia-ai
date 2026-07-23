@@ -9885,3 +9885,34 @@ independent bounds
 `48cfe51e750cdbc755a1770d6b161d2551c066c14ca0fd0e70126db4f022d2d8`;
 future candidate engine
 `8510a450caab1db02f2c4d1541716367e8e3cdeb185fbe12b98b79960dec99ef`.
+
+## 2026-07-23 13:31 — PREREGISTRATION: stratified all-card proof calibration
+
+Before launching 1,024 exact ruleset proofs, calibrate the committed resumable
+runner on eight frozen objectives spanning the current proof frontier:
+
+- john1: ADACA/index 200 (gap 1, 6 count branches), then AAAAA/index 0
+  (known exact reference, 108 branches under the new bound);
+- john2: ACACA/136 (gap 2, 8 branches), then CADDA/572 (median 125);
+- john3: ADCCB/233 (85-point leader, 94 branches), then DDDDD/1023 (141);
+- john4: CADAC/562 (maximum 612), then CBDDB/637 (309).
+
+Each ruleset gets at most 300 seconds total, 30 seconds per fixed-count
+feasibility attempt, eight CP-SAT workers, connected boards required, and the
+merged catalog as its starting witness. One ruleset runs at a time per host.
+Source revision `4f4e59c6dd1a5c5489483889c2b404a15ed49075`;
+merged candidate SHA-256
+`72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c`;
+proof runner
+`3c7ca3d9d840eed0505bfd8aa2c8a0d03d36c164058cb2d61db344c4d6ed63d7`;
+exact model
+`4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e`;
+worker
+`6a6bb7e6acfca8963b1c2f420aa251a392601bb0b4794f483a0032f3d9744a1b`.
+
+Decision rule: 6–8 complete exact rulesets validates the five-minute
+production shape; 3–5 requires one measured optimization/recalibration pass;
+0–2 rejects the generic production shape in favor of additional specialized
+filters. Regardless of the band, preserve every exact count exclusion and
+connected witness; `UNKNOWN` remains unresolved. Do not read partial scores
+while a host's two-rule calibration shard is live.
