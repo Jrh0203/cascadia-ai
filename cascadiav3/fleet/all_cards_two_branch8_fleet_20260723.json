@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-two-branch-fleet-v1",
-  "state": "active",
+  "state": "completed",
   "tag": "all_cards_two_branch8_fleet_20260723",
   "source_revision": "e964665b2df042fd0e11334fa4b2bdfa55c06ee5",
   "taskset_sha256": "87885d0ac0325fe70e84a133d9d5eb11ffeab17b4eecd252ff339a2c416b9f86",
@@ -55,5 +55,97 @@
   ],
   "preflight_note": "The first local-only runtime check used the remote venv name and exited before any worker launch. The corrected local .venv and all three remote wildlife-venv-py312 runtimes are Python 3.12.13 with OR-Tools 9.15.6755; every hash, collision, and idle check passed before launch.",
   "launched_at": "2026-07-23T21:22:54Z",
-  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all eight rulesets become proof_complete, advance the integrated catalog from 14 to 22 exact rows. UNKNOWN or timeout remains unresolved."
+  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all eight rulesets become proof_complete, advance the integrated catalog from 14 to 22 exact rows. UNKNOWN or timeout remains unresolved.",
+  "completed_at": "2026-07-23T21:23:27Z",
+  "results": [
+    {
+      "host": "john1",
+      "index": 198,
+      "ruleset": "ADABC",
+      "optimum": 73,
+      "attempts": 2,
+      "solver_seconds": 3.452865459024906,
+      "proof_complete": true,
+      "output_sha256": "1662f33258c08112cc9b64d2351661f461729d34a1e8eebd1b9ad75a0e4bd26b"
+    },
+    {
+      "host": "john1",
+      "index": 210,
+      "ruleset": "ADBAC",
+      "optimum": 72,
+      "attempts": 2,
+      "solver_seconds": 3.459978667087853,
+      "proof_complete": true,
+      "output_sha256": "cb17414b7851d853832c1dbb7feab880c4681872bf000555b4e71bc63c6d6e9b"
+    },
+    {
+      "host": "john2",
+      "index": 402,
+      "ruleset": "BCBAC",
+      "optimum": 70,
+      "attempts": 2,
+      "solver_seconds": 3.8535224585793912,
+      "proof_complete": true,
+      "output_sha256": "4862048752042bbcf608f0e06ad77de60dd0f8b7ed8374932e77af4b7bd8e447"
+    },
+    {
+      "host": "john2",
+      "index": 710,
+      "ruleset": "CDABC",
+      "optimum": 73,
+      "attempts": 2,
+      "solver_seconds": 3.602487249765545,
+      "proof_complete": true,
+      "output_sha256": "b8113eab25d75137af3e7a86af47b7387fcd93442b39a8baa567ca7c208e626c"
+    },
+    {
+      "host": "john3",
+      "index": 722,
+      "ruleset": "CDBAC",
+      "optimum": 71,
+      "attempts": 2,
+      "solver_seconds": 5.308264458552003,
+      "proof_complete": true,
+      "output_sha256": "235adda5088345d7f03a6cf5100693d6d2a6141d03e4606930598ca93f0a41be"
+    },
+    {
+      "host": "john3",
+      "index": 770,
+      "ruleset": "DAAAC",
+      "optimum": 69,
+      "attempts": 2,
+      "solver_seconds": 1.6169208739884198,
+      "proof_complete": true,
+      "output_sha256": "0791aa06de75137cfdd009ee2e4541384d7261369370781f0774dbca819e0aee"
+    },
+    {
+      "host": "john4",
+      "index": 966,
+      "ruleset": "DDABC",
+      "optimum": 73,
+      "attempts": 2,
+      "solver_seconds": 3.363054000772536,
+      "proof_complete": true,
+      "output_sha256": "4dcb85efc7a1614d18fa8d82529d13916206a0ecbd06f61f0b6d9d6c816c398b"
+    },
+    {
+      "host": "john4",
+      "index": 978,
+      "ruleset": "DDBAC",
+      "optimum": 71,
+      "attempts": 2,
+      "solver_seconds": 4.583629332948476,
+      "proof_complete": true,
+      "output_sha256": "fd76af03e510576bce8e1dbbe9761a5f98cbb58dc822078f3bad0aa582465491"
+    }
+  ],
+  "result_summary": {
+    "requested_rulesets": 8,
+    "completed_rulesets": 8,
+    "exact_infeasible_exclusions": 16,
+    "unknown_or_timeout": 0,
+    "proof_catalog_sha256": "29acdb7df9756790eccaf0fed13ad3b4f2d7ca661dd1886e924527977c232073",
+    "augmented_catalog_sha256": "0721f3a793b19c5fd7d91d8b2d007ada6488f605dc520373c6e0c994122f8c38",
+    "verdict": "SELECT"
+  }
 }

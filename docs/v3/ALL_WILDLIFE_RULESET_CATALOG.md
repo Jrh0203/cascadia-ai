@@ -204,6 +204,13 @@ and batch-compares every board with the production Rust scorer.
   119,132 branches across 1,010 unresolved rulesets. The score-85 leader on
   eight rows is still the holistic incumbent, not a proof:
   `docs/v3/evidence/all_wildlife_near_complete7_2026-07-23.json`.
+- The next eight rulesets had exactly two remaining branches each. All 16
+  connected exact threshold queries returned `INFEASIBLE` in 0.77–3.39
+  seconds, with no timeout/unknown. Independent and production rescoring
+  advanced the integrated catalog 14→22/1,024 exact; 119,116 branches remain
+  across 1,002 rows. This is strong near-tail throughput evidence, not a
+  whole-frontier extrapolation:
+  `docs/v3/evidence/all_wildlife_two_branch8_2026-07-23.json`.
 - A coupled same/cross-edge and degree-six relaxation passed all 846,848
   count/ruleset containment comparisons but equaled the existing bound in
   every cell. It is not selected; pair-edge resource coupling without richer

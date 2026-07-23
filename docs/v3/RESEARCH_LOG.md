@@ -1720,6 +1720,15 @@ and production scoring of every selected board then advanced the catalog to
 eight score-85 rows remain incumbents, not holistic optima. Curated evidence:
 `docs/v3/evidence/all_wildlife_near_complete7_2026-07-23.json`.
 
+The next exact fleet tranche covered all eight rows with two remaining
+branches. All 16 threshold queries returned exact `INFEASIBLE` in
+0.77–3.39 seconds each; zero queries timed out or remained unknown.
+Independent and production rescoring advanced the catalog 14→22/1,024 exact
+and left 119,116 count branches across 1,002 rows. This confirms the
+one/two-branch near tail is seconds-scale but does not estimate the much
+larger hard tail. Curated evidence:
+`docs/v3/evidence/all_wildlife_two_branch8_2026-07-23.json`.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from

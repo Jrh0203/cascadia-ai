@@ -1372,8 +1372,12 @@ pass would advance 14→22 exact.
 
 The two-branch batch launched at `2026-07-23T21:22:54Z` under revision
 `e964665b`; all four wrappers passed pinned source/candidate/runtime/collision
-checks and were active after launch. Results remain sealed until all four
-terminal markers exist.
+checks. All four were terminal zero by `21:23:27Z`. Every one of the 16
+threshold queries returned exact `INFEASIBLE` in 0.77–3.39 seconds, with no
+timeout/unknown. Independent and production scoring of all 1,024 boards
+advances the catalog 14→22 exact, leaving 119,116 branches across 1,002
+unresolved rows. The score-85 leader remains an incumbent. Curated evidence:
+`docs/v3/evidence/all_wildlife_two_branch8_2026-07-23.json`.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

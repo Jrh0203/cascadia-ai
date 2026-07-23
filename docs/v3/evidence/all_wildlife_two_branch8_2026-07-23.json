@@ -1,0 +1,110 @@
+{
+  "schema": "all-wildlife-two-branch8-evidence-v1",
+  "completed_at": "2026-07-23T21:24:53Z",
+  "source_revision": "e964665b2df042fd0e11334fa4b2bdfa55c06ee5",
+  "taskset_sha256": "87885d0ac0325fe70e84a133d9d5eb11ffeab17b4eecd252ff339a2c416b9f86",
+  "configuration": {
+    "count_cap": 6,
+    "token_count": 20,
+    "connectivity_required": true,
+    "time_limit_seconds_per_count": 300,
+    "total_time_limit_seconds_per_ruleset": 330,
+    "solver_workers": 8,
+    "hosts": [
+      "john1",
+      "john2",
+      "john3",
+      "john4"
+    ]
+  },
+  "results": [
+    {
+      "index": 198,
+      "ruleset": "ADABC",
+      "optimum": 73,
+      "attempts": 2,
+      "solver_seconds": 3.452865459024906,
+      "output_sha256": "1662f33258c08112cc9b64d2351661f461729d34a1e8eebd1b9ad75a0e4bd26b"
+    },
+    {
+      "index": 210,
+      "ruleset": "ADBAC",
+      "optimum": 72,
+      "attempts": 2,
+      "solver_seconds": 3.459978667087853,
+      "output_sha256": "cb17414b7851d853832c1dbb7feab880c4681872bf000555b4e71bc63c6d6e9b"
+    },
+    {
+      "index": 402,
+      "ruleset": "BCBAC",
+      "optimum": 70,
+      "attempts": 2,
+      "solver_seconds": 3.8535224585793912,
+      "output_sha256": "4862048752042bbcf608f0e06ad77de60dd0f8b7ed8374932e77af4b7bd8e447"
+    },
+    {
+      "index": 710,
+      "ruleset": "CDABC",
+      "optimum": 73,
+      "attempts": 2,
+      "solver_seconds": 3.602487249765545,
+      "output_sha256": "b8113eab25d75137af3e7a86af47b7387fcd93442b39a8baa567ca7c208e626c"
+    },
+    {
+      "index": 722,
+      "ruleset": "CDBAC",
+      "optimum": 71,
+      "attempts": 2,
+      "solver_seconds": 5.308264458552003,
+      "output_sha256": "235adda5088345d7f03a6cf5100693d6d2a6141d03e4606930598ca93f0a41be"
+    },
+    {
+      "index": 770,
+      "ruleset": "DAAAC",
+      "optimum": 69,
+      "attempts": 2,
+      "solver_seconds": 1.6169208739884198,
+      "output_sha256": "0791aa06de75137cfdd009ee2e4541384d7261369370781f0774dbca819e0aee"
+    },
+    {
+      "index": 966,
+      "ruleset": "DDABC",
+      "optimum": 73,
+      "attempts": 2,
+      "solver_seconds": 3.363054000772536,
+      "output_sha256": "4dcb85efc7a1614d18fa8d82529d13916206a0ecbd06f61f0b6d9d6c816c398b"
+    },
+    {
+      "index": 978,
+      "ruleset": "DDBAC",
+      "optimum": 71,
+      "attempts": 2,
+      "solver_seconds": 4.583629332948476,
+      "output_sha256": "fd76af03e510576bce8e1dbbe9761a5f98cbb58dc822078f3bad0aa582465491"
+    }
+  ],
+  "catalog": {
+    "proof_union_sha256": "29acdb7df9756790eccaf0fed13ad3b4f2d7ca661dd1886e924527977c232073",
+    "augmented_catalog_path": "docs/v3/evidence/all_wildlife_catalog_augmented_two_branch8_2026-07-23.json",
+    "augmented_catalog_sha256": "0721f3a793b19c5fd7d91d8b2d007ada6488f605dc520373c6e0c994122f8c38",
+    "markdown_path": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_TWO_BRANCH8.md",
+    "markdown_sha256": "41c57a7a61bf88e96d640dab695b25871e744791666d69b781dbfa4cd1b4dd23",
+    "completed_rulesets": 22,
+    "unresolved_rulesets": 1002,
+    "unresolved_count_branches": 119116,
+    "incumbent_holistic_maximum": 85,
+    "incumbent_holistic_rulesets": [
+      "ADCCB",
+      "BABCB",
+      "BBBCB",
+      "BCBCB",
+      "BDBCB",
+      "BDCCB",
+      "CDCCB",
+      "DDCCB"
+    ],
+    "holistic_optimum": null,
+    "production_response_sha256": "e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca"
+  },
+  "verdict": "SELECT"
+}

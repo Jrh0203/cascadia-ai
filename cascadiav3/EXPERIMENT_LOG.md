@@ -11150,3 +11150,21 @@ check passed. The batch launched under revision
 7173/67085/27393/34550 on john1/john2/john3/john4. Ledger:
 `cascadiav3/fleet/all_cards_two_branch8_fleet_20260723.json`. Results remain
 sealed until four terminal markers.
+
+**17:24 EDT verdict — SELECT.** All four terminal markers existed before
+inspection and every wrapper exited zero by `21:23:27Z`. All 16 frozen
+threshold queries returned exact `INFEASIBLE`; individual solves took
+0.77–3.39 seconds, with no timeout/unknown. ADABC 73, ADBAC 72, BCBAC 70,
+CDABC 73, CDBAC 71, DAAAC 69, DDABC 73, and DDBAC 71 are certified.
+
+The proof-union SHA-256 is
+`29acdb7df9756790eccaf0fed13ad3b4f2d7ca661dd1886e924527977c232073`.
+The independent and production-scored catalog/Markdown SHA-256 values are
+`0721f3a793b19c5fd7d91d8b2d007ada6488f605dc520373c6e0c994122f8c38`
+and
+`41c57a7a61bf88e96d640dab695b25871e744791666d69b781dbfa4cd1b4dd23`.
+The integrated catalog advances 14→22/1,024 exact, leaving 119,116 count
+branches across 1,002 incomplete rulesets. The score-85 holistic incumbent
+and production response SHA remain unchanged; neither is a global proof.
+Curated evidence:
+`docs/v3/evidence/all_wildlife_two_branch8_2026-07-23.json`.
