@@ -1,0 +1,26 @@
+{
+  "schema": "aaaaa-split-salmon-bitset-performance-probe-v1",
+  "state": "planned",
+  "tag": "aaaaa_split_salmon_bitset_perf3_probe_20260723",
+  "source_revision": "33bc7403c1e24c5454f769ff35779373a8064e0b",
+  "runner_sha256": "aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50",
+  "engine_sha256": "f7f3c84b5a6aca2dae816140d5e7689dbbbb4e78575fc5154f5ea6aa0b7e9876",
+  "configuration": {
+    "host": "john1",
+    "case_index": 1,
+    "counts": [
+      5,
+      5,
+      2,
+      2,
+      6
+    ],
+    "target": 64,
+    "python": "3.12.13",
+    "ortools": "9.15.6755",
+    "expected_status": "INFEASIBLE",
+    "expected_case_count": 57,
+    "maximum_selected_wall_seconds": 149.739406183362
+  },
+  "selection_rule": "advance to the frozen four-case performance reproduction only if case 1 exits zero, reproduces exact INFEASIBLE status across all 57 submodels, and completes in at most 149.739406183362 seconds. This diagnostic is performance/correctness reproduction, not new proof evidence."
+}

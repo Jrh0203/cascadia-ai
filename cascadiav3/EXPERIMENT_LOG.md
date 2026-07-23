@@ -10831,6 +10831,23 @@ and
 Next optimization target: fuse cover generation with set packing so rejected
 cover assignments are pruned before materialization.
 
+**16:27 EDT performance-probe preregistration.** Source revision
+`33bc7403c1e24c5454f769ff35779373a8064e0b`; engine/runner SHA-256
+`f7f3c84b5a6aca2dae816140d5e7689dbbbb4e78575fc5154f5ea6aa0b7e9876`
+and
+`aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50`.
+The exact model now orders species by candidate volume and caches identical
+per-layout cover queries across deficit branches. Sixteen exactness tests and
+Ruff pass. A read-only representative subcase measured Hawk-first rejection
+at 0.489 seconds versus 23.957 seconds for the former Bear-first path; this is
+diagnostic only.
+
+Run only unchanged hard case 1 `(5,5,2,2,6)>=64` on john1. Advance to a
+hash-frozen four-case performance reproduction only if all 57 submodels remain
+exactly infeasible and wall time is at most 149.739406 seconds. The probe is
+not new proof evidence. Durable ledger:
+`cascadiav3/fleet/aaaaa_split_salmon_bitset_perf3_probe_20260723.json`.
+
 **19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
 zero after completing indices 0 and 562. This satisfies the authorized
 recovery condition, so all six parent/recovery files were unsealed and copied
