@@ -1260,3 +1260,7 @@ The external calibration is preregistered as 37 independent connected
 single-worker branches over john1–john4, 30 seconds/profile. It selects only
 on a 2× parallel known-proof win or complete exact resolution of all profiles
 for one hard case; all shard outputs remain closed until four terminal markers.
+
+The fixed-profile runner and deterministic 37-task set are now frozen and
+smoke-validated, with round-robin 10/9/9/9 assignments. Deployment/preflight
+is next; no result-bearing branch has launched yet.

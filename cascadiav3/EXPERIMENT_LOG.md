@@ -10625,3 +10625,25 @@ case reaches an exact status within 30 seconds. A feasible hard branch counts
 as exact status only after its connected witness independently scores at least
 the threshold. Otherwise retain the artifacts as branch-level evidence and do
 not scale. CBDDB's 886-profile case is explicitly outside this calibration.
+
+**15:46 implementation/task freeze.** Fixed-profile exact constraints,
+atomic concurrent runner, deterministic taskset generator, and fleet worker
+landed at revision `c3113d0f`. The frozen 3-case/37-task taskset has SHA-256
+`285eef17ef60f0aa74e949ccafa6c8fe88607e679693a9d3125904104e77826b`.
+Rules/profile source
+`c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790`;
+exact
+`c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9`;
+support
+`362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329`;
+runner
+`ee2d3d988f02ae051b66452abfbc911e2a15e8f486e548a81e240ba69b64cdc6`;
+worker
+`bd4880af29b863eb58bd50221ef550f21241daf5224064e788dca8d606d223d3`.
+
+All 13 focused exact/taskset tests pass; Ruff and shell syntax pass. A
+0.1-second spawned-runner smoke returned one well-formed `UNKNOWN` with every
+identity hash correct. Round-robin assignments are frozen as 10/9/9/9 tasks
+on john1–john4 in
+`cascadiav3/fleet/all_cards_profile_shard_calibration_20260723_fleet.json`.
+Proceed to deploy/preflight; no result-bearing branch has launched.

@@ -1,0 +1,36 @@
+{
+  "schema": "all-wildlife-score-profile-fleet-v1",
+  "state": "planned",
+  "tag": "all_cards_profile_shard_calibration_20260723",
+  "source_revision": "c3113d0f",
+  "taskset_sha256": "285eef17ef60f0aa74e949ccafa6c8fe88607e679693a9d3125904104e77826b",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "taskset_source_sha256": "372d4483100b57abd28ebe5fb9c616954f435ba054074a9c91b8e9760ff0ef30",
+  "runner_source_sha256": "ee2d3d988f02ae051b66452abfbc911e2a15e8f486e548a81e240ba69b64cdc6",
+  "worker_sha256": "bd4880af29b863eb58bd50221ef550f21241daf5224064e788dca8d606d223d3",
+  "runtime": {
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "configuration": {
+    "seconds_per_profile": 30,
+    "jobs_per_host": 8,
+    "solver_workers": 1,
+    "connectivity_required": true,
+    "seed": 20260723
+  },
+  "cases": [
+    {"case_index": 0, "ruleset": "AAAAA", "counts": [6, 1, 6, 2, 5], "threshold": 69, "profiles": 2},
+    {"case_index": 1, "ruleset": "AAAAA", "counts": [4, 2, 6, 2, 6], "threshold": 69, "profiles": 6},
+    {"case_index": 2, "ruleset": "CADAC", "counts": [0, 2, 6, 6, 6], "threshold": 67, "profiles": 29}
+  ],
+  "shards": [
+    {"host": "john1", "task_indices": [0, 4, 8, 12, 16, 20, 24, 28, 32, 36]},
+    {"host": "john2", "task_indices": [1, 5, 9, 13, 17, 21, 25, 29, 33]},
+    {"host": "john3", "task_indices": [2, 6, 10, 14, 18, 22, 26, 30, 34]},
+    {"host": "john4", "task_indices": [3, 7, 11, 15, 19, 23, 27, 31, 35]}
+  ],
+  "selection_rule": "select if both known profiles are exact INFEASIBLE with maximum branch elapsed <=10.388 seconds, or if all profiles for hard AAAAA or CADAC have exact status (a feasible witness must independently score at least threshold); otherwise do not scale"
+}
