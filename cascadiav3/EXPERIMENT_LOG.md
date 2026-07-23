@@ -8559,3 +8559,24 @@ Decision: retain the proven-safe constraint and tests, but do not use it as
 catalog proof evidence or alter the active retry. The tail requires stronger
 card-specific combinatorial bounds rather than another generic connectivity
 restriction.
+
+## 2026-07-23 06:16 — AAAAA dihedral lex-leader calibration preregistration
+
+The base model removes translation and same-species label symmetry but still
+admits rotations/reflections. A new exact wrapper retains only a representation
+whose permutation-invariant species moment is minimal among every one of the
+twelve hex-lattice dihedral transforms for which the same anchor remains the
+lexicographically first token of its species. Identity is always eligible, so
+the finite orbit always has a minimum and no physical board is excluded.
+All twelve transforms are distinct and at least one transformed copy of the
+known 68-point board passes the fixed-coordinate model. Wrapper SHA-256
+`d2f5681852f58475a6a4a9963c8e229408b72dbcb5856923c5000dd6db4fa2ad`;
+test SHA-256
+`6e5a1ed88c202e811f542f485627c0f35a05b2b82ab3f5eb406c1dc777a64b4d`.
+
+Before output, calibrate the same `(3,6,6,0,5)` threshold-62 connected case,
+retained 61-point hint, two idle workers, 60 seconds, seed 20260723. Durable
+output: `docs/v3/evidence/aaaaa_dihedral_calibration_2026-07-23.json`.
+Selection rule: exact `INFEASIBLE` within 60 seconds selects the wrapper;
+otherwise `UNKNOWN` rejects it. Any feasible independently valid witness is
+retained but does not alone select a proof formulation.
