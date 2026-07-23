@@ -1,0 +1,25 @@
+{
+  "schema": "all-wildlife-proof-fleet-v1",
+  "state": "preregistered",
+  "tag": "all_cards_disconnected_prescreen_20260723",
+  "source_revision": "b11a982d6ef27bbab2c99ffb6b987ee2bf25cd9e",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "proof_source_sha256": "fe71485120e078cf419cf1bdc482b898b39bdf3ac2bdb493be094a67b8a03a05",
+  "exact_source_sha256": "4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e",
+  "exact_support_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "d8c78ea6ae37cee14c072b7a0fa55919a940e85854bdf66b990721b4d86fa820",
+  "worker_sha256": "03480072ff67259679df9fb110f0eb0dc2c3d1551ea691bbb5644d8911950277",
+  "configuration": {
+    "time_limit_seconds_per_count": 30,
+    "total_time_limit_seconds_per_ruleset": 300,
+    "solver_workers": 8,
+    "connectivity_required": false
+  },
+  "connected_baseline_unresolved": 997,
+  "shards": [
+    {"host": "john1", "indices": [0, 562]},
+    {"host": "john2", "indices": [233, 572]},
+    {"host": "john3", "indices": [637]},
+    {"host": "john4", "indices": [1023]}
+  ]
+}
