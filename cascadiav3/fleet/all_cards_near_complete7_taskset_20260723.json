@@ -1,0 +1,101 @@
+{
+  "schema": "all-wildlife-near-complete-taskset-v1",
+  "source_catalog": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_retry4_2026-07-23.json",
+  "source_catalog_sha256": "144dae03056ee46aa5e79961dc0682ae0c2a22c85bc06f0ab808e3243dd43338",
+  "candidate_catalog": "docs/v3/evidence/all_wildlife_candidates_merged_2026-07-23.json",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "selection_rule": "Every selected ruleset is incomplete and has exactly one current sound-bound count branch above its validated incumbent.",
+  "tasks": [
+    {
+      "index": 194,
+      "ruleset": "ADAAC",
+      "incumbent": 72,
+      "threshold": 73,
+      "counts": [
+        6,
+        6,
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "index": 202,
+      "ruleset": "ADACC",
+      "incumbent": 80,
+      "threshold": 81,
+      "counts": [
+        0,
+        6,
+        5,
+        6,
+        3
+      ]
+    },
+    {
+      "index": 450,
+      "ruleset": "BDAAC",
+      "incumbent": 73,
+      "threshold": 74,
+      "counts": [
+        6,
+        6,
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "index": 458,
+      "ruleset": "BDACC",
+      "incumbent": 80,
+      "threshold": 81,
+      "counts": [
+        0,
+        6,
+        5,
+        6,
+        3
+      ]
+    },
+    {
+      "index": 466,
+      "ruleset": "BDBAC",
+      "incumbent": 73,
+      "threshold": 74,
+      "counts": [
+        6,
+        6,
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "index": 714,
+      "ruleset": "CDACC",
+      "incumbent": 80,
+      "threshold": 81,
+      "counts": [
+        0,
+        6,
+        5,
+        6,
+        3
+      ]
+    },
+    {
+      "index": 970,
+      "ruleset": "DDACC",
+      "incumbent": 80,
+      "threshold": 81,
+      "counts": [
+        0,
+        6,
+        5,
+        6,
+        3
+      ]
+    }
+  ]
+}
