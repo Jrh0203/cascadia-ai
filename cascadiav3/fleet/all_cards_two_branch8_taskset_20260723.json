@@ -1,0 +1,186 @@
+{
+  "schema": "all-wildlife-near-complete-taskset-v1",
+  "source_catalog": "docs/v3/evidence/all_wildlife_catalog_augmented_near_complete7_2026-07-23.json",
+  "source_catalog_sha256": "b123c792d33e0ac5c97958df1c0d75a26df7dfe05b756091bb9a7ba6bbf134ed",
+  "candidate_catalog": "docs/v3/evidence/all_wildlife_candidates_merged_2026-07-23.json",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "selection_rule": "Every selected ruleset is incomplete and has exactly two current sound-bound count branches above its validated incumbent; selected boards are byte-identical between the frozen original and deep candidate catalogs.",
+  "tasks": [
+    {
+      "index": 198,
+      "ruleset": "ADABC",
+      "incumbent": 73,
+      "threshold": 74,
+      "counts": [
+        [
+          0,
+          6,
+          5,
+          6,
+          3
+        ],
+        [
+          0,
+          6,
+          6,
+          5,
+          3
+        ]
+      ]
+    },
+    {
+      "index": 210,
+      "ruleset": "ADBAC",
+      "incumbent": 72,
+      "threshold": 73,
+      "counts": [
+        [
+          0,
+          6,
+          5,
+          6,
+          3
+        ],
+        [
+          6,
+          6,
+          5,
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "index": 402,
+      "ruleset": "BCBAC",
+      "incumbent": 70,
+      "threshold": 71,
+      "counts": [
+        [
+          6,
+          0,
+          5,
+          6,
+          3
+        ],
+        [
+          6,
+          6,
+          5,
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "index": 710,
+      "ruleset": "CDABC",
+      "incumbent": 73,
+      "threshold": 74,
+      "counts": [
+        [
+          0,
+          6,
+          5,
+          6,
+          3
+        ],
+        [
+          0,
+          6,
+          6,
+          5,
+          3
+        ]
+      ]
+    },
+    {
+      "index": 722,
+      "ruleset": "CDBAC",
+      "incumbent": 71,
+      "threshold": 72,
+      "counts": [
+        [
+          0,
+          6,
+          5,
+          6,
+          3
+        ],
+        [
+          6,
+          6,
+          5,
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "index": 770,
+      "ruleset": "DAAAC",
+      "incumbent": 69,
+      "threshold": 70,
+      "counts": [
+        [
+          0,
+          5,
+          6,
+          6,
+          3
+        ],
+        [
+          6,
+          5,
+          6,
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "index": 966,
+      "ruleset": "DDABC",
+      "incumbent": 73,
+      "threshold": 74,
+      "counts": [
+        [
+          0,
+          6,
+          5,
+          6,
+          3
+        ],
+        [
+          0,
+          6,
+          6,
+          5,
+          3
+        ]
+      ]
+    },
+    {
+      "index": 978,
+      "ruleset": "DDBAC",
+      "incumbent": 71,
+      "threshold": 72,
+      "counts": [
+        [
+          0,
+          6,
+          5,
+          6,
+          3
+        ],
+        [
+          6,
+          6,
+          5,
+          0,
+          3
+        ]
+      ]
+    }
+  ]
+}

@@ -11118,3 +11118,25 @@ incumbent, not a proved global maximum. Production response SHA-256 remains
 `e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca`.
 Curated evidence:
 `docs/v3/evidence/all_wildlife_near_complete7_2026-07-23.json`.
+
+## 2026-07-23 17:21 EDT — eight two-branch rulesets fleet preregistration
+
+The independently and production-rescored 14-row catalog has exactly eight
+incomplete rulesets with two sound-bound count branches each: ADABC 73,
+ADBAC 72, BCBAC 70, CDABC 73, CDBAC 71, DAAAC 69, DDABC 73, and DDBAC
+71. Freeze those 16 count/threshold queries in taskset SHA-256
+`87885d0ac0325fe70e84a133d9d5eb11ffeab17b4eecd252ff339a2c416b9f86`.
+Every selected board is byte-identical between candidate SHA-72c and the deep
+catalog, so the run remains directly unionable with the inherited proof
+ledger.
+
+Assign indices 198/210 to john1, 402/710 to john2, 722/770 to john3, and
+966/978 to john4. Retain the prior connected exact configuration: 300
+seconds/count, 330 seconds/ruleset, eight OR-Tools workers, Python 3.12.13,
+OR-Tools 9.15.6755. This is a tail-throughput calibration as well as exact
+work: the hard cap is about 11 minutes per host. Do not inspect results until
+all four terminal markers exist. Keep every exact `INFEASIBLE` exclusion and
+every independently validated connected witness; `UNKNOWN` and timeout
+remain unresolved. If all eight rows close, advance the integrated catalog
+14→22 exact. Source/proof/exact/support/rules/worker hashes are frozen in the
+launch ledger before execution.

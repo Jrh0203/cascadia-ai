@@ -97,7 +97,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   The independently and production-rescored catalog is now **14/1,024**
   exact with 119,132 count branches across the remaining 1,010 rulesets.
   The score-85 leader on eight rulesets is still only the holistic incumbent;
-  no unresolved row is called optimal.
+  no unresolved row is called optimal. The next eight rows, each with exactly
+  two remaining branches, are frozen for the same 2/2/2/2 four-mini exact
+  treatment.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

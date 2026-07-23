@@ -1362,6 +1362,14 @@ branches across 1,010 incomplete rulesets. The score-85 leader on eight
 rulesets remains an incumbent, not a holistic proof. Curated evidence:
 `docs/v3/evidence/all_wildlife_near_complete7_2026-07-23.json`.
 
+Next exact batch: the eight rulesets with exactly two remaining branches are
+frozen under taskset SHA
+`87885d0ac0325fe70e84a133d9d5eb11ffeab17b4eecd252ff339a2c416b9f86`
+for a 2/2/2/2 john1–john4 pass. The unchanged 300 seconds/count and 330
+seconds/ruleset limits give an approximately 11-minute hard wall cap per
+host. Results remain sealed until all four terminal markers exist; a clean
+pass would advance 14→22 exact.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
