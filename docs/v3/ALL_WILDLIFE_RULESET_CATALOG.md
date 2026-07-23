@@ -121,9 +121,9 @@ longest-processing-time balancing, using the number of count branches still
 above each incumbent as weight. Production artifacts are sharded over
 john1–john4 with atomic checkpoints, heartbeats, single-use tags, and exact
 source/input hashes.
-The proof identity separately pins the coordinate model, global runner, and
-sound bound/scorer source; changing a filter cannot silently resume an older
-identity.
+The proof identity separately pins the coordinate model, its shared exact
+support module, the global runner, and the sound bound/scorer source; changing
+any one cannot silently resume an older identity.
 Returned boards and ledgers are collected only after every shard is terminal,
 then rescored and revalidated on john1 before catalog publication.
 `tools/all_wildlife_proof_catalog.py` refuses duplicate ruleset proofs,

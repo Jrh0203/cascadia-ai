@@ -10218,3 +10218,18 @@ validates the five-minute production shape; 3–5 requires another measured
 optimization; 0–2 rejects it. Preserve every exact exclusion and witness;
 do not inspect partial scores. No full 1,024-row launch occurs before all six
 rerun shards are terminal and the band is applied.
+
+**Prelaunch provenance hardening.** The generalized exact source imports its
+coordinate/component primitives from `tools/cbddb_wildlife_exact.py`.
+Preflight review found that dependency was deployed but not separately
+identity-pinned. No recalibration worker had launched. The proof identity,
+fleet preflight, and final collector now pin it explicitly. Exact-support
+SHA-256
+`362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329`;
+updated proof runner
+`9a6565e916157329b523fa2553ee9da63e7a5ac533f27e4c90e67b6e434f784c`;
+worker
+`47e5458ca99a5bc29f31e1f5ad85f48f50614a9de653a01f3ff83f233d694170`;
+collector
+`2b7298fa1a1e83c1fd320cd086eae0465af8bca3281cf283d4ee0239ee710cf9`.
+The frozen cases, limits, and decision band are unchanged.

@@ -63,6 +63,9 @@ def run(args: argparse.Namespace) -> int:
     exact_sha = hashlib.sha256(
         Path("tools/all_wildlife_exact.py").read_bytes()
     ).hexdigest()
+    exact_support_sha = hashlib.sha256(
+        Path("tools/cbddb_wildlife_exact.py").read_bytes()
+    ).hexdigest()
     rules_sha = hashlib.sha256(
         Path("tools/all_wildlife_rules.py").read_bytes()
     ).hexdigest()
@@ -86,6 +89,7 @@ def run(args: argparse.Namespace) -> int:
             "candidate_sha256": candidate_sha,
             "proof_source_sha256": source_sha,
             "exact_source_sha256": exact_sha,
+            "exact_support_source_sha256": exact_support_sha,
             "rules_source_sha256": rules_sha,
         }
         if identity != expected_identity:
@@ -117,6 +121,7 @@ def run(args: argparse.Namespace) -> int:
                 "candidate_sha256": candidate_sha,
                 "proof_source_sha256": source_sha,
                 "exact_source_sha256": exact_sha,
+                "exact_support_source_sha256": exact_support_sha,
                 "rules_source_sha256": rules_sha,
             },
             "configuration": {
