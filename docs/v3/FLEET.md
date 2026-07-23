@@ -132,6 +132,12 @@ not be stopped or restarted.
    and writes `collection_manifest.json`. It does not mutate a live local
    catalog—the verified shard ledgers are imported only after its writer exits.
 
+The arbitrary-card proof worker uses a validated five-second child poll by
+default (`HEARTBEAT_INTERVAL`, allowed range 1–60 seconds). This is both its
+heartbeat cadence and its maximum inter-row handoff latency. The earlier
+30-second fixed poll dominated wall time once the near-tail exact queries
+fell below four seconds.
+
 ## Throughput (measured 2026-07-22, model-S incumbent, n128/d2)
 
 - **~300 s/seed per host**, flat in session count (6/9/12 all within

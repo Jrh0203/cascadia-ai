@@ -11168,3 +11168,14 @@ branches across 1,002 incomplete rulesets. The score-85 holistic incumbent
 and production response SHA remain unchanged; neither is a global proof.
 Curated evidence:
 `docs/v3/evidence/all_wildlife_two_branch8_2026-07-23.json`.
+
+**17:26 EDT fleet handoff optimization — SELECT.** The two-branch exact
+queries took only 0.77–3.39 seconds, but the worker's fixed 30-second child
+poll delayed each next ruleset. The proof process and every certificate were
+already durable before this wrapper wait. Replace the fixed poll with a
+validated `HEARTBEAT_INTERVAL` (default 5 seconds, allowed integer range
+1–60), cutting maximum inter-row idle latency by 6× without changing the
+proof model, source identities, or result schema. Local and john2–john4 all
+run Bash 3.2.57; syntax and identical deployed SHA-256
+`5b5e6fa0112c75e5194d9df70e00fdb8e2632f31e625615b15ee2654f2a93d9e`
+pass on all four. Boundary checks 0 and 61 both fail closed with exit 64.

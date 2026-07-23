@@ -15,6 +15,7 @@ TIME_LIMIT="${TIME_LIMIT:-30}"
 TOTAL_TIME_LIMIT="${TOTAL_TIME_LIMIT:-300}"
 SOLVER_WORKERS="${SOLVER_WORKERS:-4}"
 CONNECTIVITY_REQUIRED="${CONNECTIVITY_REQUIRED:-1}"
+HEARTBEAT_INTERVAL="${HEARTBEAT_INTERVAL:-5}"
 
 case "$FLEET_TAG:$SHARD_HOST" in
   *[!A-Za-z0-9._:-]*)
@@ -22,12 +23,16 @@ case "$FLEET_TAG:$SHARD_HOST" in
     exit 64
     ;;
 esac
-case "$INDICES:$TIME_LIMIT:$TOTAL_TIME_LIMIT:$SOLVER_WORKERS" in
+case "$INDICES:$TIME_LIMIT:$TOTAL_TIME_LIMIT:$SOLVER_WORKERS:$HEARTBEAT_INTERVAL" in
   *[!0-9,.:]*)
     echo "indices and solver settings contain invalid characters" >&2
     exit 64
     ;;
 esac
+if [ "$HEARTBEAT_INTERVAL" -lt 1 ] || [ "$HEARTBEAT_INTERVAL" -gt 60 ]; then
+  echo "HEARTBEAT_INTERVAL must be an integer from 1 to 60" >&2
+  exit 64
+fi
 case "$WILDLIFE_VENV" in
   ""|/*|*".."*|*[!A-Za-z0-9._/-]*)
     echo "WILDLIFE_VENV must be a safe relative path" >&2
@@ -96,7 +101,7 @@ for index in "${index_array[@]}"; do
       "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$solver_pid" "$index" \
       > "${HEARTBEAT}.tmp"
     mv "${HEARTBEAT}.tmp" "$HEARTBEAT"
-    sleep 30
+    sleep "$HEARTBEAT_INTERVAL"
   done
   wait "$solver_pid"
   status=$?
