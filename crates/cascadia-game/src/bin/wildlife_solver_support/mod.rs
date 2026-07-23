@@ -234,7 +234,25 @@ fn random_layout(counts: [u8; SPECIES_COUNT], rng: &mut Rng) -> Layout {
     }
 }
 
-fn mutate_fixed_counts(layout: &mut Layout, rng: &mut Rng) -> bool {
+enum Undo {
+    SwapWildlife { left: usize, right: usize },
+    MoveToken { index: usize, prior: HexCoord },
+}
+
+impl Undo {
+    fn apply(self, layout: &mut Layout) {
+        match self {
+            Self::SwapWildlife { left, right } => {
+                let prior = layout.tokens[left].wildlife;
+                layout.tokens[left].wildlife = layout.tokens[right].wildlife;
+                layout.tokens[right].wildlife = prior;
+            }
+            Self::MoveToken { index, prior } => layout.tokens[index].coord = prior,
+        }
+    }
+}
+
+fn mutate_fixed_counts(layout: &mut Layout, rng: &mut Rng) -> Option<Undo> {
     match rng.usize(10) {
         0..=6 => {
             let left = rng.usize(TOKEN_COUNT);
@@ -242,26 +260,24 @@ fn mutate_fixed_counts(layout: &mut Layout, rng: &mut Rng) -> bool {
             if right >= left {
                 right += 1;
             }
-            layout.tokens.swap(left, right);
-            let left_coord = layout.tokens[left].coord;
-            let right_coord = layout.tokens[right].coord;
-            layout.tokens[left].coord = right_coord;
-            layout.tokens[right].coord = left_coord;
-            true
+            let prior = layout.tokens[left].wildlife;
+            layout.tokens[left].wildlife = layout.tokens[right].wildlife;
+            layout.tokens[right].wildlife = prior;
+            Some(Undo::SwapWildlife { left, right })
         }
         _ => {
             let frontier = layout.frontier();
             if frontier.is_empty() {
-                return false;
+                return None;
             }
             let index = rng.usize(TOKEN_COUNT);
             let prior = layout.tokens[index].coord;
             layout.tokens[index].coord = frontier[rng.usize(frontier.len())];
             if layout.is_connected() {
-                true
+                Some(Undo::MoveToken { index, prior })
             } else {
                 layout.tokens[index].coord = prior;
-                false
+                None
             }
         }
     }
@@ -285,10 +301,9 @@ pub fn anneal_fixed_counts(
         let mut current_score = score_layout(&current);
         evaluated += 1;
         for iteration in 0..iterations {
-            let prior = current.clone();
-            if !mutate_fixed_counts(&mut current, &mut rng) {
+            let Some(undo) = mutate_fixed_counts(&mut current, &mut rng) else {
                 continue;
-            }
+            };
             let candidate_score = score_layout(&current);
             evaluated += 1;
             let fraction = iteration as f64 / iterations.max(1) as f64;
@@ -304,7 +319,7 @@ pub fn anneal_fixed_counts(
                     }
                 }
             } else {
-                current = prior;
+                undo.apply(&mut current);
             }
         }
         if global_score.total() == count_relaxation(counts) {
