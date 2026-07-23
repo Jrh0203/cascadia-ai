@@ -40,6 +40,93 @@ COUNT_CAP = rules.COUNT_CAP
 DIRECTIONS = rules.DIRECTIONS
 
 
+def _dihedral_axial(
+    coord: tuple[int, int],
+    transform: int,
+) -> tuple[int, int]:
+    q, r = coord
+    rotations = (
+        (q, r),
+        (-r, q + r),
+        (-q - r, q),
+        (-q, -r),
+        (r, -q - r),
+        (q + r, -q),
+    )
+    rotated_q, rotated_r = rotations[transform % 6]
+    if transform >= 6:
+        return rotated_r, rotated_q
+    return rotated_q, rotated_r
+
+
+def _in_centroid_wedge(coord: tuple[int, int]) -> bool:
+    q, r = coord
+    return q >= r >= 0
+
+
+def _anchor_centroid_initial_coordinates(
+    initial_tokens: list[dict[str, Any]],
+    species_by_token: list[int],
+) -> list[tuple[int, int]]:
+    by_species = {
+        species: sorted(
+            (
+                (int(row["q"]), int(row["r"]))
+                for row in initial_tokens
+                if str(row["wildlife"]) == SPECIES[species]
+            ),
+        )
+        for species in range(len(SPECIES))
+    }
+    expected = [species_by_token.count(species) for species in range(len(SPECIES))]
+    if any(len(by_species[species]) != expected[species] for species in range(len(SPECIES))):
+        raise ValueError("initial token counts do not match model counts")
+    fox_species = SPECIES_CODE["fox"]
+    if not by_species[fox_species]:
+        raise ValueError("anchor-centroid symmetry requires at least one fox")
+
+    candidates = []
+    for anchor in by_species[fox_species]:
+        for transform in range(12):
+            transformed = {
+                species: [
+                    _dihedral_axial(
+                        (coord[0] - anchor[0], coord[1] - anchor[1]),
+                        transform,
+                    )
+                    for coord in coords
+                ]
+                for species, coords in by_species.items()
+            }
+            centroid = (
+                sum(q for coords in transformed.values() for q, _ in coords),
+                sum(r for coords in transformed.values() for _, r in coords),
+            )
+            if not _in_centroid_wedge(centroid):
+                continue
+            ordered_by_species = {
+                species: sorted(coords)
+                for species, coords in transformed.items()
+            }
+            ordered_by_species[fox_species] = [
+                (0, 0),
+                *sorted(coord for coord in transformed[fox_species] if coord != (0, 0)),
+            ]
+            offsets = [0] * len(SPECIES)
+            ordered = []
+            for species in species_by_token:
+                ordered.append(ordered_by_species[species][offsets[species]])
+                offsets[species] += 1
+            if all(
+                max(abs(q), abs(r), abs(q + r)) <= GLOBAL_RADIUS
+                for q, r in ordered
+            ):
+                candidates.append(ordered)
+    if not candidates:
+        raise AssertionError("no anchor-centroid canonical image for initial board")
+    return min(candidates)
+
+
 def _component_score(
     model: cp_model.CpModel,
     adjacency: dict[tuple[int, int], cp_model.IntVar],
@@ -605,6 +692,7 @@ def build_model(
     enforce_connectivity: bool = True,
     initial_tokens: list[dict[str, Any]] | None = None,
     fix_initial_tokens: bool = False,
+    break_anchor_centroid_symmetry: bool = False,
 ) -> tuple[cp_model.CpModel, ExactVariables]:
     cards = rules.parse_ruleset(ruleset)
     if counts not in rules.count_vectors():
@@ -635,10 +723,29 @@ def build_model(
         species: [index for index, value in enumerate(species_by_token) if value == species]
         for species in range(len(SPECIES))
     }
-    for indices in by_species.values():
+    use_anchor_centroid_symmetry = (
+        break_anchor_centroid_symmetry
+        and not fix_initial_tokens
+        and bool(by_species[SPECIES_CODE["fox"]])
+    )
+    for species, indices in by_species.items():
+        if use_anchor_centroid_symmetry and species == SPECIES_CODE["fox"]:
+            indices = indices[1:]
         for left, right in itertools.pairwise(indices):
             model.add(coordinate_id[left] < coordinate_id[right])
+    if use_anchor_centroid_symmetry:
+        model.add(sum(q) >= sum(r))
+        model.add(sum(r) >= 0)
 
+    if initial_tokens is not None and use_anchor_centroid_symmetry:
+        initial_coordinates = _anchor_centroid_initial_coordinates(
+            initial_tokens,
+            species_by_token,
+        )
+        for token, (initial_q, initial_r) in enumerate(initial_coordinates):
+            model.add_hint(q[token], initial_q)
+            model.add_hint(r[token], initial_r)
+        initial_tokens = None
     if initial_tokens is not None:
         rows_by_species = {
             species: sorted(
@@ -736,6 +843,7 @@ def solve_counts(
     fix_initial_tokens: bool = False,
     enforce_connectivity: bool = True,
     maximize: bool = True,
+    break_anchor_centroid_symmetry: bool = False,
 ) -> SolveResult:
     started = time.monotonic()
     model, variables = build_model(
@@ -746,6 +854,7 @@ def solve_counts(
         fix_initial_tokens=fix_initial_tokens,
         enforce_connectivity=enforce_connectivity,
         maximize=maximize,
+        break_anchor_centroid_symmetry=break_anchor_centroid_symmetry,
     )
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_seconds

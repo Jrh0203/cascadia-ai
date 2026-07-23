@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 
 from tools import all_wildlife_rules
-from tools.all_wildlife_exact import solve_counts
+from tools.all_wildlife_exact import (
+    _anchor_centroid_initial_coordinates,
+    _dihedral_axial,
+    _in_centroid_wedge,
+    solve_counts,
+    species_tokens,
+)
 from tools.test_all_wildlife_rules import random_connected_board
 
 
@@ -67,3 +73,41 @@ def test_fixed_board_feasibility_mode_returns_real_certificate_score() -> None:
     assert result.objective is not None and result.objective >= 20
     assert result.score_breakdown is not None
     assert sum(result.score_breakdown) >= result.objective
+
+
+def test_every_radius_six_vector_has_a_centroid_wedge_image() -> None:
+    for q in range(-6, 7):
+        for r in range(-6, 7):
+            if max(abs(q), abs(r), abs(q + r)) > 6:
+                continue
+            assert any(
+                _in_centroid_wedge(_dihedral_axial((q, r), transform))
+                for transform in range(12)
+            )
+
+
+def test_anchor_centroid_hint_preserves_every_card_score() -> None:
+    board = random_connected_board(808)
+    counts = (4, 4, 4, 4, 4)
+    ordered_species = species_tokens(counts)
+    coordinates = _anchor_centroid_initial_coordinates(board, ordered_species)
+    canonical = [
+        {
+            "q": q,
+            "r": r,
+            "wildlife": all_wildlife_rules.SPECIES[species],
+        }
+        for (q, r), species in zip(coordinates, ordered_species, strict=True)
+    ]
+    centroid = (
+        sum(q for q, _ in coordinates),
+        sum(r for _, r in coordinates),
+    )
+
+    assert coordinates[0] == (0, 0)
+    assert _in_centroid_wedge(centroid)
+    assert coordinates[1:4] == sorted(coordinates[1:4])
+    for ruleset in all_wildlife_rules.rulesets():
+        assert all_wildlife_rules.score_tokens(canonical, ruleset) == (
+            all_wildlife_rules.score_tokens(board, ruleset)
+        )
