@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-near-complete-fleet-v1",
-  "state": "active",
+  "state": "completed",
   "tag": "all_cards_near_complete7_fleet_retry1_20260723",
   "source_revision": "51791ef265c108e32ddc9b15137feab86f9dc848",
   "taskset_sha256": "a181069b68dc930ad4cbad6a90b4f41077f9e2cf84a3605a5234dca9768325ce",
@@ -54,5 +54,87 @@
   ],
   "wrapper_change": "Use an always-populated proof_args array; append --no-connectivity only for disconnected mode. Bash -n and connected-mode expansion pass on all four hosts.",
   "launched_at": "2026-07-23T21:14:45Z",
-  "selection_rule": "Unchanged: keep every exact INFEASIBLE one-count exclusion and every independently validated connected witness. If all seven rulesets become proof_complete, advance the integrated catalog from 7 to 14 exact rows. UNKNOWN or timeout remains unresolved."
+  "selection_rule": "Unchanged: keep every exact INFEASIBLE one-count exclusion and every independently validated connected witness. If all seven rulesets become proof_complete, advance the integrated catalog from 7 to 14 exact rows. UNKNOWN or timeout remains unresolved.",
+  "completed_at": "2026-07-23T21:15:25Z",
+  "results": [
+    {
+      "host": "john1",
+      "index": 194,
+      "ruleset": "ADAAC",
+      "optimum": 72,
+      "status": "INFEASIBLE",
+      "elapsed_seconds": 1.2902016248553991,
+      "proof_complete": true,
+      "output_sha256": "013ad05a765ff42710d692bf6c7825ba37a2cf7e34e1530ac9c793b800da5a34"
+    },
+    {
+      "host": "john1",
+      "index": 202,
+      "ruleset": "ADACC",
+      "optimum": 80,
+      "status": "INFEASIBLE",
+      "elapsed_seconds": 8.93159691710025,
+      "proof_complete": true,
+      "output_sha256": "7e7875db3d3771eba5221b004fd9d69f22ff256bfd08233db8c92f605e027707"
+    },
+    {
+      "host": "john2",
+      "index": 450,
+      "ruleset": "BDAAC",
+      "optimum": 73,
+      "status": "INFEASIBLE",
+      "elapsed_seconds": 1.551476000342518,
+      "proof_complete": true,
+      "output_sha256": "9328bce3d2183edb2f1feca9c2d3754aa2ebb5cf905e741812c2bb2ea19977bd"
+    },
+    {
+      "host": "john2",
+      "index": 458,
+      "ruleset": "BDACC",
+      "optimum": 80,
+      "status": "INFEASIBLE",
+      "elapsed_seconds": 9.400533332955092,
+      "proof_complete": true,
+      "output_sha256": "3b48c2bb1f140403ace57051e50a53cd39545c20e86632cc7d4feeaeaf16512d"
+    },
+    {
+      "host": "john3",
+      "index": 466,
+      "ruleset": "BDBAC",
+      "optimum": 73,
+      "status": "INFEASIBLE",
+      "elapsed_seconds": 3.1502860421314836,
+      "proof_complete": true,
+      "output_sha256": "01cebda08d80d4fed52ae008a9484c2e186e1b8ab73da32dc52baf8694ed037c"
+    },
+    {
+      "host": "john3",
+      "index": 714,
+      "ruleset": "CDACC",
+      "optimum": 80,
+      "status": "INFEASIBLE",
+      "elapsed_seconds": 8.136353958863765,
+      "proof_complete": true,
+      "output_sha256": "0f1f1b83a012b8599dc09fb8d073cbf4410ff5a89a81135a1b29df1055307049"
+    },
+    {
+      "host": "john4",
+      "index": 970,
+      "ruleset": "DDACC",
+      "optimum": 80,
+      "status": "INFEASIBLE",
+      "elapsed_seconds": 8.927709915675223,
+      "proof_complete": true,
+      "output_sha256": "eb41dfb7e88c5938e9e58f338b02a7ad4ce7b69fdb2a04010b46b90295249f4b"
+    }
+  ],
+  "result_summary": {
+    "requested_rulesets": 7,
+    "completed_rulesets": 7,
+    "exact_infeasible_exclusions": 7,
+    "unknown_or_timeout": 0,
+    "proof_catalog_sha256": "c589d7b1af82f47780ab4c83a28d00a8c06b190fd39f14d23eeedf4aba75ffbd",
+    "augmented_catalog_sha256": "b123c792d33e0ac5c97958df1c0d75a26df7dfe05b756091bb9a7ba6bbf134ed",
+    "verdict": "SELECT"
+  }
 }

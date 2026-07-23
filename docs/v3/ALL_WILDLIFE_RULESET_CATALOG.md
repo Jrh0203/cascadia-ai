@@ -194,9 +194,16 @@ and batch-compares every board with the production Rust scorer.
 - The fail-closed catalog augmenter recovered both legacy complete coordinate
   shards from their hash-pinned fleet ledger, rebased all 17 deep incumbent
   improvements, imported AAAAA, and production-rescored all 1,024 boards.
-  The current catalog has 7 complete rulesets and 119,139 unresolved count
-  branches. Curated evidence:
+  That first integrated catalog had 7 complete rulesets and 119,139
+  unresolved count branches. Curated evidence:
   `docs/v3/evidence/all_wildlife_catalog_augmentation_2026-07-23.json`.
+- The seven rulesets with one remaining branch each were frozen and run as a
+  connected exact 2/2/2/1 fleet pass. All seven threshold queries returned
+  `INFEASIBLE` in 1.29–9.40 seconds, with no timeout or unknown. The
+  independently and production-rescored catalog is now 14/1,024 exact with
+  119,132 branches across 1,010 unresolved rulesets. The score-85 leader on
+  eight rows is still the holistic incumbent, not a proof:
+  `docs/v3/evidence/all_wildlife_near_complete7_2026-07-23.json`.
 - A coupled same/cross-edge and degree-six relaxation passed all 846,848
   count/ruleset containment comparisons but equaled the existing bound in
   every cell. It is not selected; pair-edge resource coupling without richer

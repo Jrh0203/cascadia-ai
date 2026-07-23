@@ -11095,3 +11095,26 @@ fresh tag/ledger
 passed on john1–john4. Wrappers are 98894/66050/26537/34426; first solver
 PIDs are 98921/66069/26556/34445 on indices 194/450/466/970. Heartbeats are
 fresh. Results remain sealed until four terminal markers.
+
+**17:18 EDT retry verdict — SELECT.** All four terminal markers existed
+before inspection; every wrapper exited zero. The seven sole remaining
+threshold queries returned exact `INFEASIBLE`, with no timeout/unknown:
+ADAAC 72 (1.290s), ADACC 80 (8.932s), BDAAC 73 (1.551s), BDACC 80
+(9.401s), BDBAC 73 (3.150s), CDACC 80 (8.136s), and DDACC 80 (8.928s).
+Their result SHA-256 values are recorded in the completed fleet ledger and
+curated evidence.
+
+The exact proof union SHA-256 is
+`c589d7b1af82f47780ab4c83a28d00a8c06b190fd39f14d23eeedf4aba75ffbd`.
+The unchanged augmenter then independently and production-rescored every one
+of the 1,024 selected boards. Its catalog/Markdown SHA-256 values are
+`b123c792d33e0ac5c97958df1c0d75a26df7dfe05b756091bb9a7ba6bbf134ed`
+and
+`4aa259066ea4f32ec1982c595d166c07553035b573ac7b2ed2bbe70fa5040be2`.
+The integrated catalog advances **7→14/1,024 exact**; 119,132 count branches
+remain across 1,010 incomplete rulesets. The score-85 leader on ADCCB,
+BABCB, BBBCB, BCBCB, BDBCB, BDCCB, CDCCB, and DDCCB remains the holistic
+incumbent, not a proved global maximum. Production response SHA-256 remains
+`e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca`.
+Curated evidence:
+`docs/v3/evidence/all_wildlife_near_complete7_2026-07-23.json`.

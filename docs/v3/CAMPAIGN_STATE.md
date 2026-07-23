@@ -1352,9 +1352,15 @@ treated an empty connected-mode argument array as unbound under `set -u`.
 There are zero result files. The fixed worker passes all-host shell checks and
 the identical batch is frozen under a fresh retry tag.
 
-The retry launched at `2026-07-23T21:14:45Z`; all four first-index solvers
-have fresh heartbeats. Do not read result files before every shard is
-terminal.
+The retry launched at `2026-07-23T21:14:45Z`; all four shards were terminal
+by `21:15:25Z`. Every one-count threshold query returned exact
+`INFEASIBLE`, with zero timeout/unknown. ADAAC 72, ADACC 80, BDAAC 73,
+BDACC 80, BDBAC 73, CDACC 80, and DDACC 80 are now certified. The
+independent and production scorer gates passed over all 1,024 selected
+boards; the integrated catalog advances 7→14 exact with 119,132 count
+branches across 1,010 incomplete rulesets. The score-85 leader on eight
+rulesets remains an incumbent, not a holistic proof. Curated evidence:
+`docs/v3/evidence/all_wildlife_near_complete7_2026-07-23.json`.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

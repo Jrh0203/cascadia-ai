@@ -1712,6 +1712,14 @@ integrated catalog advances 6→7/1,024 exact with 119,139 count branches
 remaining. This is an evidence-integration gain, not a new solver proof; the
 selected component-local generalization remains the active proof direction.
 
+The next seven rulesets each had exactly one remaining count branch. A
+2/2/2/1 connected exact fleet pass across john1–john4 excluded all seven
+thresholds in 1.29–9.40 seconds each, with no timeout/unknown. Independent
+and production scoring of every selected board then advanced the catalog to
+14/1,024 exact and 119,132 unresolved count branches across 1,010 rows. The
+eight score-85 rows remain incumbents, not holistic optima. Curated evidence:
+`docs/v3/evidence/all_wildlife_near_complete7_2026-07-23.json`.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from
