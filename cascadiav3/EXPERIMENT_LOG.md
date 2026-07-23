@@ -8450,3 +8450,21 @@ the preregistered selection rule. Artifact SHA-256
 `e71687f5888596866ee2326c6c95703f5e672ad3db24783f024224b04a164a97`.
 Decision: preserve the tested sound wrapper, but do not use it as catalog
 evidence; direct fox-layout structure remains necessary.
+
+## 2026-07-23 06:10 — AAAAA realizable fox-graph calibration preregistration
+
+Enumerated every connected polyhex adjacency graph through six foxes (counts
+by size 2..6: 1, 2, 4, 8, 22 graph types). A labeled fox adjacency graph is
+admitted iff every connected component is one of those exact unit-hex graph
+types; components may remain arbitrarily separated, so the table excludes no
+legal layout. The score threshold also gives a sound minimum number of
+nonisolated foxes. For the fixed `(3,6,6,0,5)` threshold-62 case, all five
+foxes must be nonisolated and the table admits 475 of 1,024 labeled graphs.
+Known-board and count-bound tests pass. Source SHA-256
+`2559cff7099ee2661d40def8f32a17ba1dfe17ece7a7d10597c158df32fd6ef7`.
+
+Before output: repeat the same connected case/hint with two idle workers,
+60 seconds, seed 20260723. Select only on exact `INFEASIBLE` or material
+search progress versus both rejected variants; `UNKNOWN` is not proof.
+Durable output:
+`docs/v3/evidence/aaaaa_fox_graph_calibration_2026-07-23.json`.
