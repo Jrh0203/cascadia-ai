@@ -25,6 +25,7 @@ from tools.cbddb_wildlife_exact import (
     score_tokens,
     solve_counts,
 )
+from tools.wildlife_catalog_sharding import load_taskset, select_shard
 
 SCHEMA = "cbddb-wildlife-optimal-catalog-v1"
 
@@ -235,7 +236,11 @@ def payload_for(
             "relaxation_time_limit_seconds": args.relaxation_time_limit,
             "connected_time_limit_seconds": args.connected_time_limit,
             "base_seed": args.seed,
+            "taskset": getattr(args, "taskset_record", None),
+            "shard_index": args.shard_index,
+            "shard_count": args.shard_count,
         },
+        "imported_ledgers": getattr(args, "imported_ledger_records", []),
         "candidates_sha256": candidates_sha256,
         "catalog_source_sha256": file_sha256(source),
         "exact_model_source_sha256": file_sha256(exact_source),
@@ -320,7 +325,61 @@ def run(args: argparse.Namespace) -> int:
     candidates_sha256 = file_sha256(candidate_path)
     candidates = load_candidates(candidate_path)
     canonical_counts = [counts for counts, _ in count_vectors()]
+    selected_counts = set(canonical_counts)
+    args.taskset_record = None
+    if args.counts_file:
+        selected_counts, args.taskset_record = load_taskset(
+            Path(args.counts_file),
+            scoring_cards="CBDDB",
+            canonical_counts=canonical_counts,
+        )
+    candidate_by_counts = {
+        counts: candidate for counts, candidate in zip(canonical_counts, candidates, strict=True)
+    }
     results: dict[tuple[int, ...], dict[str, Any]] = {}
+    args.imported_ledger_records = []
+
+    for imported_path_string in args.import_ledger:
+        imported_path = Path(imported_path_string)
+        imported_sha256 = file_sha256(imported_path)
+        prior = json.loads(imported_path.read_text(encoding="utf-8"))
+        if prior.get("schema") != SCHEMA:
+            raise SystemExit(f"unsupported imported ledger schema: {imported_path}")
+        if int(prior.get("allocation_count", -1)) != len(canonical_counts):
+            raise SystemExit(f"imported ledger count mismatch: {imported_path}")
+        ledger_record = {
+            "path": str(imported_path),
+            "sha256": imported_sha256,
+            "schema": prior["schema"],
+            "catalog_source_sha256": prior.get("catalog_source_sha256"),
+            "exact_model_source_sha256": prior.get("exact_model_source_sha256"),
+            "candidate_generator_source_sha256": prior.get(
+                "candidate_generator_source_sha256"
+            ),
+            "candidate_support_source_sha256": prior.get(
+                "candidate_support_source_sha256"
+            ),
+            "candidates_sha256": prior.get("candidates_sha256"),
+            "configuration": prior.get("configuration"),
+        }
+        args.imported_ledger_records.append(ledger_record)
+        for result in prior.get("results", []):
+            counts = tuple(int(value) for value in result["counts"])
+            if counts not in candidate_by_counts:
+                raise SystemExit(f"imported ledger has unexpected counts {counts}")
+            tokens, breakdown = validate_witness(counts, result["tokens"])
+            if sum(breakdown) != int(result["optimum"]):
+                raise SystemExit(f"imported ledger witness mismatch for {counts}")
+            if result.get("proof_complete"):
+                imported_result = dict(result)
+                imported_result["tokens"] = tokens
+                imported_result["score_breakdown"] = breakdown
+                imported_result.setdefault("proof_provenance", ledger_record)
+                results[counts] = imported_result
+            elif sum(breakdown) > int(candidate_by_counts[counts]["score"]):
+                candidate_by_counts[counts]["tokens"] = tokens
+                candidate_by_counts[counts]["score"] = sum(breakdown)
+                candidate_by_counts[counts]["score_breakdown"] = breakdown
 
     if args.resume and output.exists():
         prior = json.loads(output.read_text(encoding="utf-8"))
@@ -335,14 +394,21 @@ def run(args: argparse.Namespace) -> int:
         ):
             if prior.get(field) != current_provenance[field]:
                 raise SystemExit(f"resume ledger {field} mismatch")
+        if prior.get("configuration") != current_provenance["configuration"]:
+            raise SystemExit("resume ledger configuration mismatch")
+        if not args.imported_ledger_records:
+            args.imported_ledger_records = list(prior.get("imported_ledgers", []))
         for result in prior.get("results", []):
             if result.get("proof_complete"):
                 results[tuple(int(value) for value in result["counts"])] = result
 
-    tasks = []
+    pending = []
     for index, (counts, candidate) in enumerate(zip(canonical_counts, candidates, strict=True)):
         if counts in results:
             continue
+        if counts not in selected_counts:
+            continue
+        candidate = candidate_by_counts[counts]
         task = {
             "counts": list(counts),
             "tokens": candidate["tokens"],
@@ -352,19 +418,29 @@ def run(args: argparse.Namespace) -> int:
             "seed": args.seed + index * 1000,
             "candidate_gap": count_relaxation(counts) - int(candidate["score"]),
         }
+        pending.append(task)
+    pending.sort(key=lambda task: (task["candidate_gap"], task["counts"]))
+    pending = select_shard(
+        pending,
+        shard_index=args.shard_index,
+        shard_count=args.shard_count,
+    )
+    if args.limit is not None:
+        pending = pending[: args.limit]
+    tasks = []
+    for task in pending:
+        counts = tuple(int(value) for value in task["counts"])
         if task["candidate_gap"] == 0:
             results[counts] = solve_one(task)
         else:
             tasks.append(task)
-    tasks.sort(key=lambda task: (task["candidate_gap"], task["counts"]))
-    if args.limit is not None:
-        tasks = tasks[: args.limit]
 
     payload = payload_for(args, candidates_sha256, results)
     atomic_json(output, payload)
     print(
         f"precertified={payload['completed_count']}/{payload['allocation_count']} "
-        f"queued={len(tasks)}",
+        f"selected={len(selected_counts)} shard={args.shard_index}/{args.shard_count} "
+        f"assigned={len(pending)} queued={len(tasks)}",
         flush=True,
     )
     with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
@@ -405,11 +481,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--relaxation-time-limit", type=float, default=60.0)
     parser.add_argument("--connected-time-limit", type=float, default=300.0)
     parser.add_argument("--seed", type=int, default=20260723)
+    parser.add_argument(
+        "--counts-file",
+        help="JSON taskset restricting newly attempted count vectors",
+    )
+    parser.add_argument("--shard-index", type=int, default=0)
+    parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--import-ledger",
+        action="append",
+        default=[],
+        help="import completed proofs and stronger incomplete incumbents from a prior ledger",
+    )
     parser.add_argument("--limit", type=int)
     args = parser.parse_args()
     if args.jobs < 1 or args.solver_workers < 1:
         parser.error("--jobs and --solver-workers must be positive")
+    if args.shard_count < 1 or not 0 <= args.shard_index < args.shard_count:
+        parser.error("--shard-index must be in [0, --shard-count)")
     return args
 
 

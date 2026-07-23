@@ -1,9 +1,10 @@
 # Mac mini fleet (john1–john4): job distribution
 
-Status: operational since 2026-07-22 (CBDDB era). Successor of the
+Status: operational since 2026-07-22 (CBDDB era); exact wildlife-catalog
+sharding added 2026-07-23. Successor of the
 hand-edited fleet3/4/5 workflow from the AAAAA campaign
 (`INFRASTRUCTURE.md` §Fleet operations). This is the current reference
-for distributing self-play generation across the minis.
+for distributing CPU-safe independent work across the minis.
 
 ## Hosts and access
 
@@ -20,11 +21,10 @@ NOT a git repo), exporter built natively
 (`~/cascadia/cascadiav3/real-root-exporter/target/release/...`), and a
 torch venv at `~/cascadia/venv` with MPS working (torch 2.12.1).
 
-## The three scripts (`cascadiav3/scripts/`)
+## Self-play generation scripts (`cascadiav3/scripts/`)
 
-All jobs are **seed-sharded self-play generation**: each host gets a
-contiguous seed range and produces one tensor shard. There is no other
-fleet job type today.
+Self-play jobs are **seed-sharded generation**: each host gets a contiguous
+seed range and produces one tensor shard.
 
 1. **`fleet_cbddb_launch.sh`** — run on the Mac. Allocates contiguous
    seed ranges across hosts, rsyncs the incumbent checkpoint
@@ -60,6 +60,58 @@ fleet job type today.
    multi-shard input natively (`--train a.npz,b.npz,c.npz`) — there is
    no merge step.
 
+## Exact wildlife-catalog scripts
+
+Pure-wildlife catalog proofs are independent by animal-count vector and use
+CPU-only OR-Tools. John authorized distributing this computation on
+2026-07-23. This is not gameplay evaluation, training-data generation, or
+promotion evidence; each returned witness and proof ledger is validated again
+on the orchestrator before import.
+
+The minis must have the orchestrator's pinned OR-Tools version in
+`~/cascadia/venv` (currently `9.15.6755`). Only john2–john4 are used; john1
+remains reserved for the web UI.
+
+1. **`tools/wildlife_catalog_taskset.py`** freezes the currently unresolved
+   canonical count vectors from a validated catalog snapshot:
+
+   ```bash
+   .venv/bin/python -m tools.wildlife_catalog_taskset \
+     --scoring-cards AAAAA \
+     --catalog <frozen-catalog-snapshot.json> \
+     --output <taskset.json>
+   ```
+
+2. **`fleet_wildlife_exact_launch.sh`** validates the full candidate file,
+   taskset, optional imported proof ledger, host idleness, dependency version,
+   and source revision before writing a durable launch ledger. It snapshots
+   every input, deploys hash-pinned sources, then launches disjoint
+   round-robin count shards with a heartbeat and terminal exit file:
+
+   ```bash
+   RULESET=aaaaa \
+   FLEET_TAG=aaaaa_exact_tail_fleet1_20260723 \
+   CANDIDATES=docs/v3/evidence/aaaaa_wildlife_candidates_deep_2026-07-23.json \
+   COUNTS_FILE=cascadiav3/fleet/<taskset.json> \
+   IMPORT_LEDGER=cascadiav3/fleet/<catalog-snapshot.json> \
+   SOURCE_REVISION="$(git rev-parse HEAD)" \
+   HOSTS="john2 john3 john4" \
+   JOBS=2 SOLVER_WORKERS=4 \
+   bash cascadiav3/scripts/fleet_wildlife_exact_launch.sh
+   ```
+
+   A tag is single-use. Existing local input state, a ledger, remote output,
+   PID file, dependency mismatch, source mismatch, or non-idle host fails the
+   launch closed. No process is stopped or replaced.
+
+3. **`fleet_wildlife_exact_collect.sh <tag> status|collect`** reports remote
+   PID, heartbeat age, terminal state, and durable-ledger progress. Collection
+   is refused until every shard is terminal. It then verifies source,
+   candidate, and taskset hashes; shard indices; worker exit codes; every
+   board's count vector, connectivity, independent score, and task coverage;
+   and writes `collection_manifest.json`. It does not mutate a live local
+   catalog—the verified shard ledgers are imported only after its writer exits.
+
 ## Throughput (measured 2026-07-22, model-S incumbent, n128/d2)
 
 - **~300 s/seed per host**, flat in session count (6/9/12 all within
@@ -81,7 +133,10 @@ fleet job type today.
   are RESERVED for >105 certification — never touch.
 - **Evals never run on the fleet.** MPS vs CUDA float differences make
   cross-hardware numbers incomparable with the john0 eval history.
-  Corpus generation is fine (fleet3/4/5 precedent).
+  Corpus generation is fine (fleet3/4/5 precedent). CPU-only exact
+  pure-wildlife count-vector proofs are also allowed under the 2026-07-23
+  authorization above; they do not use MPS scores and are independently
+  validated before import.
 - **Provisioning refresh** (after any Rust/feature change): rsync
   source and rebuild —
   ```bash

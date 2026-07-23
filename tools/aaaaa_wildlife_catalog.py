@@ -23,6 +23,7 @@ from tools.aaaaa_wildlife_exact import (
     score_tokens,
     solve_counts,
 )
+from tools.wildlife_catalog_sharding import load_taskset, select_shard
 
 SCHEMA = "aaaaa-wildlife-optimal-catalog-v2"
 LEGACY_SCHEMA = "aaaaa-wildlife-optimal-catalog-v1"
@@ -263,6 +264,9 @@ def payload_for(
             "relaxation_time_limit_seconds": args.relaxation_time_limit,
             "connected_time_limit_seconds": args.connected_time_limit,
             "base_seed": args.seed,
+            "taskset": getattr(args, "taskset_record", None),
+            "shard_index": args.shard_index,
+            "shard_count": args.shard_count,
         },
         "global_upper_bound": {
             "score": GLOBAL_EXACT_UPPER_BOUND,
@@ -340,6 +344,14 @@ def run(args: argparse.Namespace) -> int:
     candidates_sha256 = file_sha256(candidate_path)
     candidates = load_candidates(candidate_path)
     canonical_counts = [counts for counts, _ in count_vectors()]
+    selected_counts = set(canonical_counts)
+    args.taskset_record = None
+    if args.counts_file:
+        selected_counts, args.taskset_record = load_taskset(
+            Path(args.counts_file),
+            scoring_cards="AAAAA",
+            canonical_counts=canonical_counts,
+        )
     candidate_by_counts = {
         counts: candidate for counts, candidate in zip(canonical_counts, candidates, strict=True)
     }
@@ -395,6 +407,8 @@ def run(args: argparse.Namespace) -> int:
         ):
             if prior.get(field) != current_provenance[field]:
                 raise SystemExit(f"resume ledger {field} mismatch")
+        if prior.get("configuration") != current_provenance["configuration"]:
+            raise SystemExit("resume ledger configuration mismatch")
         if not args.imported_ledger_records:
             args.imported_ledger_records = list(prior.get("imported_ledgers", []))
         for result in prior.get("results", []):
@@ -412,10 +426,13 @@ def run(args: argparse.Namespace) -> int:
         "configuration": current_payload["configuration"],
     }
 
-    tasks = []
+    pending = []
     for index, (counts, candidate) in enumerate(zip(canonical_counts, candidates, strict=True)):
         if counts in results:
             continue
+        if counts not in selected_counts:
+            continue
+        candidate = candidate_by_counts[counts]
         task = {
             "counts": list(counts),
             "tokens": candidate["tokens"],
@@ -427,19 +444,29 @@ def run(args: argparse.Namespace) -> int:
             - int(candidate["score"]),
             "proof_provenance": current_proof_provenance,
         }
+        pending.append(task)
+    pending.sort(key=lambda task: (task["candidate_gap"], task["counts"]))
+    pending = select_shard(
+        pending,
+        shard_index=args.shard_index,
+        shard_count=args.shard_count,
+    )
+    if args.limit is not None:
+        pending = pending[: args.limit]
+    tasks = []
+    for task in pending:
+        counts = tuple(int(value) for value in task["counts"])
         if task["candidate_gap"] == 0:
             results[counts] = solve_one(task)
         else:
             tasks.append(task)
-    tasks.sort(key=lambda task: (task["candidate_gap"], task["counts"]))
-    if args.limit is not None:
-        tasks = tasks[: args.limit]
 
     payload = payload_for(args, candidates_sha256, results)
     atomic_json(output, payload)
     print(
         f"precertified={payload['completed_count']}/{payload['allocation_count']} "
-        f"queued={len(tasks)}",
+        f"selected={len(selected_counts)} shard={args.shard_index}/{args.shard_count} "
+        f"assigned={len(pending)} queued={len(tasks)}",
         flush=True,
     )
     with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as executor:
@@ -480,6 +507,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--relaxation-time-limit", type=float, default=60.0)
     parser.add_argument("--connected-time-limit", type=float, default=300.0)
     parser.add_argument("--seed", type=int, default=20260722)
+    parser.add_argument(
+        "--counts-file",
+        help="JSON taskset restricting newly attempted count vectors",
+    )
+    parser.add_argument("--shard-index", type=int, default=0)
+    parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
         "--import-ledger",
@@ -491,6 +524,8 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.jobs < 1 or args.solver_workers < 1:
         parser.error("--jobs and --solver-workers must be positive")
+    if args.shard_count < 1 or not 0 <= args.shard_index < args.shard_count:
+        parser.error("--shard-index must be in [0, --shard-count)")
     return args
 
 

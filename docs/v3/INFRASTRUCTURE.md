@@ -227,6 +227,8 @@ Stage 1 retrain slate twice). Never export it in a script that launches
 
 Repo at `~/cascadia`, checkpoints under
 `cascadiav3/checkpoints/<name>/` (rsync manifest + weights.pt only).
+The current fleet operator reference, including the 2026-07-23 CPU-only exact
+wildlife-catalog shard workflow, is [FLEET.md](FLEET.md).
 Generation pattern: `~/cascadia/fleet5_gen.sh` (n256/d4, w0.75, 3 model
 sessions, ~150 seeds/host, `--gumbel-selfplay-tensor-corpus`). Launch
 detached with pid file like john0. Shards land at
