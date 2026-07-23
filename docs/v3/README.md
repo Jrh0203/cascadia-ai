@@ -64,7 +64,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   branch reduction triggered external profile sharding. The frozen 37-branch
   AAAAA/CADAC calibration completed across john1–john4 with only 5 exact
   profiles and 32 timeouts, missing both selection conditions; external
-  profile sharding is closed and its five exclusions are retained. No other
+  profile sharding is closed and its five exclusions are retained. The next
+  component-local step now has an exact bitset set-packing implementation:
+  its first split-Salmon diagnostic closed 57 formerly timed-out submodels in
+  92.6 seconds (6.5× serial), with a four-host formal reproduction next. No other
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).

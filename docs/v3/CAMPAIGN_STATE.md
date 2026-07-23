@@ -1270,6 +1270,12 @@ launched at `2026-07-23T19:35:12Z` and all four shards exited zero by
 AAAAA hard 4/6, CADAC 0/29). Both frozen selection conditions fail, so
 external score-profile sharding is closed; its five exclusions remain reusable.
 
+The first component-local replacement is implemented for the four AAAAA
+split-Salmon branches: exact canonical fox-layout enumeration plus bitset
+Bear/Elk/Hawk set packing. An unregistered first-case diagnostic closed all
+57 prior timeouts in 92.606 seconds (6.50× serial); it is not proof evidence.
+A hash-frozen four-host formal reproduction is next.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

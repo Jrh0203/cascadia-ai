@@ -10708,3 +10708,29 @@ worker, and release-binary hashes all matched the frozen ledger. Detached
 screen `wildlife_candidate_deep_recovery_john1` launched with screen PID
 `28668`, wrapper PID `28671`, and first solver PID `28686`; its fresh
 heartbeat identifies index `0`. Parent and recovery outputs remain sealed.
+
+## 2026-07-23 19:47Z — AAAAA split-Salmon bitset engine diagnostic
+
+Replace the 57/57/57/95 finite split-Salmon CP-SAT submodels with a direct
+exact set-packing engine. It enumerates six-fox layouts, branches the at-most-
+one permitted Fox-A observation loss, constructs inclusion-minimal Bear/Elk/
+Hawk covers, and packs their cell bitsets disjointly. Unselected scoring
+groups remain abstract and Bear/Hawk isolation plus board connectivity remain
+dropped exactly as in the prior sound relaxation; therefore an exhaustive
+infeasible result is still an upper-bound certificate.
+
+Five bitset/property tests, the prior five structural tests, and the frozen
+screen-definition test pass; Ruff and worker shell syntax pass. Engine
+SHA-256
+`14b65c0dc6069ce9f106059e70f459fe530c323707b403fa97db892d7ace4da9`;
+screen runner
+`aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50`;
+worker
+`b177903767016cec975bba83f04d82f2245ad11dbce9de7e3862a7ccd526eb5b`.
+
+One unregistered performance diagnostic on `(4,5,2,3,6)>=67` exhausted all
+57 branches as infeasible in 92.606 seconds, versus 601.998 aggregate solver
+seconds in the frozen CP-SAT screen (6.50× serial). It is diagnostic only and
+does not enter a certificate. The four-case formal reproduction must be
+preregistered and run from frozen hashes; four-way fleet wall parallelism is
+expected to exceed the requested 20× end-to-end speedup.
