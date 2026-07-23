@@ -11463,3 +11463,45 @@ layer/budget selector regressions.
 Queue ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier224_queue_20260723.json`.
 No predecessor task JSON was read.
+
+## 2026-07-23 20:00 — X1 FAILED: 98.84 < 99.4675. Distill ladder STOPPED per prereg (strategy crossroads)
+
+X1 screen verified (status pass, CBDDB ruleset, cbddb_x1_distill
+manifest, 100 games): mean 98.84, P50 99, P90 104. Below the zero-shot
+bar. The full battery correctly did not fire (98.84 < 100.5) — no kill
+needed. Prereg rule "S_1 <= 99.4675 -> STOP, report to John" executes:
+NO further rounds launched.
+
+THE PATTERN, now unmistakable — every warm-start fine-tune of the
+champion lands in a ~98.7-98.9 band regardless of label recipe:
+  naive same-budget selfplay      98.75
+  value-anchor same-budget        98.75
+  full-anchor same-budget         98.75
+  anchored n512/d8 STRONG teacher 98.84   <- X1
+while the untouched champion zero-shots 99.4675 on the same block.
+Interpretation: a FINE-TUNE TAX of ~0.6-0.7 pts that no 24-32k-row
+corpus overcomes. X1's distill tracked its teacher beautifully in
+training space (locked_val_final_q_regret 0.689, campaign best) yet
+still lost play strength — weight movement on small corpora degrades
+the net/search coupling more than the labels teach. The teacher-gap
+premise was necessary but NOT sufficient; data volume (champion was
+trained on orders more) is the remaining untested variable on this
+axis.
+
+Budget: CBDDB spend ~4.5 GPU-days total (X1 ~1.35: gen 209 s/seed at
+the new JOBS=24 — the concurrency doubling DID work).
+
+OPTIONS FOR JOHN (per prereg this is his call):
+A. Big-data distill: 1500+ seed n512/d8 teacher corpus (~3.6 GPU-days
+   gen) — tests the data-volume hypothesis. Expensive; prior is 4
+   straight ~98.8s.
+B. Search-side CBDDB tuning on the UNTOUCHED zero-shot champion
+   (cheap, eval-only, ~2-5h each): --gumbel-exact-endgame-turns 1-2
+   (Salmon-D/Hawk-D rescoring makes exact endgame unusually valuable
+   under CBDDB and it is currently 0), blend-weight sweep, budget
+   scaling beyond n1024/d16. Never explored under CBDDB; the 101.2 /
+   P90-106 full-battery numbers suggest headroom near the mean.
+C. Stop CBDDB GPU spend; write up; reassess whether >105 is reachable.
+Recommendation: B first (cheap, orthogonal, absolute-strength gains
+compose with any later training win); A only as a deliberate big
+swing with an explicit budget extension.
