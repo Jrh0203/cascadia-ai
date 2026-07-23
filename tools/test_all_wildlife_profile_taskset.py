@@ -2,7 +2,6 @@ import pytest
 
 from tools.all_wildlife_profile_taskset import build_taskset, parse_case
 
-
 CASES = [
     "AAAAA:6,1,6,2,5:69",
     "AAAAA:4,2,6,2,6:69",
