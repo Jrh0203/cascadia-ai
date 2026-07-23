@@ -8468,3 +8468,12 @@ Before output: repeat the same connected case/hint with two idle workers,
 search progress versus both rejected variants; `UNKNOWN` is not proof.
 Durable output:
 `docs/v3/evidence/aaaaa_fox_graph_calibration_2026-07-23.json`.
+
+**Calibration result — NOT SELECTED.** The realizable-graph model returned
+`UNKNOWN` after 60.010195 seconds, with no witness, 337,376 branches, and
+67,040 conflicts. The 475-row table is valid but did not make exact progress
+on the fixed case, so it fails the selection gate. Artifact SHA-256
+`e4daac01eede7f9365e3677b3e5f233c580ff969652e5b6a6880466c0b55a33d`.
+Decision: retain the tested table implementation but do not mix it into
+catalog evidence; fox adjacency must be coupled to per-species coverage and
+non-fox scoring motifs to tighten this tail materially.

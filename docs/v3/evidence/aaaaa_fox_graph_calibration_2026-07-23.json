@@ -1,0 +1,12 @@
+{
+  "schema": "aaaaa-fox-graph-calibration-v1",
+  "source_sha256": "2559cff7099ee2661d40def8f32a17ba1dfe17ece7a7d10597c158df32fd6ef7",
+  "result": {
+    "model_status": "UNKNOWN",
+    "wall_seconds": 60.010195,
+    "best_bound": 0.0,
+    "branches": 337376,
+    "conflicts": 67040,
+    "allowed_fox_graph_rows": 475
+  }
+}
