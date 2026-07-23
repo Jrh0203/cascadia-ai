@@ -8588,3 +8588,25 @@ retained but does not alone select a proof formulation.
 It fails the preregistered exact-result gate. Decision: retain the sound
 symmetry implementation and tests, but do not substitute it into the catalog;
 generic orbit reduction is too small relative to the high-fox score search.
+
+## 2026-07-23 06:20 — AAAAA motif incompatibility exploratory diagnostic
+
+**UNPREREGISTERED DIAGNOSTIC — NOT PROOF EVIDENCE.** To identify the missing
+card-specific cut after four generic variants failed, a disposable exhaustive
+prototype examined the unique unresolved raw one-point-gap vector
+`(3,6,6,0,5)`. A score of 62 equals its standalone count relaxation and hence
+would require: one isolated Bear-A pair; an Elk-A 4+2 or 3+3 line packing; one
+six-salmon unbranched component; every fox adjacent to another fox; and every
+fox adjacent to bear, elk, and salmon.
+
+The prototype enumerated 25 unbranched free six-hex salmon shapes and 4,623
+five-fox boundary sets with no isolated fox. It then allowed bear/elk scoring
+groups that do not cover a fox to live abstractly outside the local region—a
+strict relaxation of the real board—and found 2,342 cases independently able
+to attain both bear and elk coverage, but zero with non-overlapping local bear
+and elk cells. Runtime was 10.7 seconds. Because this output was viewed before
+a formal entry and came from disposable code, it is used only to choose the
+next engineering direction and does not close the vector. Decision: build a
+reviewable deterministic certificate generator with explicit superset proof,
+unit tests, source hash, and durable output; preregister that run before
+accepting its conclusion.
