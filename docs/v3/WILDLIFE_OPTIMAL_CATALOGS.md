@@ -207,7 +207,13 @@ As of 2026-07-23 10:21 EDT, AAAAA has 728/826 formally certified vectors.
 The first exact fleet pass returned all 115 requested tail rows and added 13
 coordinate-model proofs at 60/120-second limits; 102 rows timed out. Three new
 proofs overlap the seven frozen specialized certificates, leaving 98 unique
-vectors unresolved after union. A timeout remains an incumbent only.
+vectors unresolved after union. Of those, 19 are soundly bounded within two
+points of their incumbent; the remaining sound gaps are 3 (30 rows), 4 (31),
+5 (15), and 6 (3). Empirically, the deep candidate was never more than one
+point low across all 728 certified rows—including 126 certified rows whose
+original relaxation gap was at least three—but the unresolved tail is
+selection-biased toward the hardest proofs. A timeout remains an incumbent
+only, not an optimum claim.
 
 CBDDB heuristic staging completed all 826 vectors in 224.244154 seconds with
 zero independent-score or connectivity failures; the current 84-point leader

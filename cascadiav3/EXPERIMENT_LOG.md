@@ -9373,3 +9373,34 @@ blocks CBDDB launch. The collected incomplete rows are valid incumbents but
 not optimum claims. A stronger pass or additional finite specialized
 certificates must close the 98-vector tail; do not represent a longer timeout
 as guaranteed completion.
+
+## 2026-07-23 — AAAAA remaining-gap confidence audit
+
+Combine the frozen 711-proof snapshot, the independently collected fleet
+shards, the seven specialized certificates, the deep 826-row candidate file,
+the global 68 proof, and the per-count relaxation. For each of the 98 unique
+unresolved vectors, take the best validated incumbent and the minimum sound
+upper bound. Gap distribution:
+
+```text
+upper - incumbent: 1:4, 2:15, 3:30, 4:31, 5:15, 6:3
+```
+
+Thus 19/98 are already mathematically guaranteed within two; 79/98 are not
+yet bounded that tightly. Empirical calibration is substantially stronger
+than the raw relaxations:
+
+- across all 728 certified vectors, the deep candidate is exact for 703 and
+  one point low for 25; none is two or more low;
+- among the 126 certified vectors whose original relaxation gap was at least
+  three, it is exact for 117 and one point low for nine; none is two or more
+  low;
+- among the 10 non-overlapping new hard-tail coordinate proofs from the fleet,
+  it is exact for nine and one point low for one.
+
+The deeper annealing pass improved 60/98 remaining incumbents relative to the
+initial pass (55 by one point, five by two), so the tail is appropriately
+treated as selected hard cases rather than an exchangeable random sample.
+Verdict: **high empirical confidence** that the remaining stored boards are
+within two, but no defensible guarantee that all 98 are. The exact catalog
+must continue to label 79 rows unproven until their sound gaps close.
