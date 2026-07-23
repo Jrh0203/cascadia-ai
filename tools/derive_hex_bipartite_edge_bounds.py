@@ -37,7 +37,7 @@ def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
-def _adjacency_variables(
+def adjacency_variables(
     model: cp_model.CpModel,
     q: list[cp_model.IntVar],
     r: list[cp_model.IntVar],
@@ -92,7 +92,7 @@ def connected_component_maximum(
         for first, second in zip(indices, list(indices)[1:], strict=False):
             model.add(coordinate_id[first] < coordinate_id[second])
 
-    adjacency = _adjacency_variables(model, q, r, radius)
+    adjacency = adjacency_variables(model, q, r, radius)
     cross_edges = [
         adjacent(adjacency, left, right)
         for left in range(left_count)

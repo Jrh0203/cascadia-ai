@@ -10120,3 +10120,32 @@ source SHA-256
 `d8c78ea6ae37cee14c072b7a0fa55919a940e85854bdf66b990721b4d86fa820`;
 test SHA-256
 `d71f8eed9a73db8586906a2fcdb3594df0944fbc202367c34e2e5379f2df758e`.
+
+## 2026-07-23 14:10 — PREREGISTRATION: exact Fox-A dual-observation bound
+
+Strengthen Fox A's common-neighbor mask relaxation. For each cap-six triple
+`(foxes, first-target count, second-target count)`, exactly maximize foxes
+adjacent to at least one token of both target species inside one connected
+cross-edge component. A complete three-dimensional component DP covers
+disconnected support and isolates. The resulting capacity replaces the loose
+`min(foxes, 2ab)` bound for every two-species subset; the existing sound
+three/four-species tuple capacities remain.
+
+There are 216 ordered triples. Freeze ranges `[0,54)`, `[54,108)`,
+`[108,162)`, `[162,216)` on john1–john4; 120 seconds/component, eight
+workers, seed `20260723`, OR-Tools `9.15.6755`. Collection requires exact
+ordered coverage, `OPTIMAL` plus objective-equals-bound for all 216, and
+independently solved symmetry under exchange of the two target classes.
+Derivation SHA-256
+`24d88c9c4dafacaf7a540960e2a2f396d9643b58c94f87be906a40dd8a74fe52`;
+shared lattice-support SHA-256
+`2e0485daecc81d8000efae94155155f4bfbeb8549aee1f80c1ee79cb7d85e3d7`;
+three-test SHA-256
+`08e50f6b29caae40224dc77f1a77471a4fef8557319e2bcf14b69c68c0bc9667`;
+worker SHA-256
+`8faceb2a35adeb71e217e460bd66fc55f2f67150da0bc181997a7bb26cf2a3d9`.
+
+Selection rule fixed before output: everywhere no weaker than
+`min(foxes,2ab)`, and either ≥5% reduction in the frozen 256-rule Fox-A
+frontier or ≥10% reduction for AAAAA or CADDA. Otherwise retain as a proved
+negative. No incumbent score changes.

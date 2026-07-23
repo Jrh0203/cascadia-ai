@@ -1130,3 +1130,9 @@ The corrected collector accepted all 36/36 exact Fox-B component proofs.
 The selected table cuts the frozen Fox-B frontier 65,519→59,188 (−9.66%),
 ADCCB 94→71, and CBDDB 309→283. Together the Fox-C/B tables remove 42,632
 of the original 162,591 all-rule count branches (−26.22%).
+
+The third preregistered specialized pass targets Fox A. It proves all 216
+cap-six `(foxes, target-A, target-B)` maxima for foxes observing both species,
+then combines components in a complete 3-D DP. It replaces the loose `2ab`
+pair capacity only if exact coverage/symmetry and the frozen ≥5% Fox-A or
+≥10% AAAAA/CADDA reduction gate pass.
