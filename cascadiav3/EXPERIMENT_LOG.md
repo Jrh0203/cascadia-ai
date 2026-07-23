@@ -8229,3 +8229,62 @@ Success = screen > 99.4675 (beats zero-shot); real target = full
 n1024/d16 > 101.2. GPU budget note: CBDDB spend ~3.1 GPU-days through
 fs_c2; X1 adds ~1.2-1.4 — within the "few-GPU-day" pivot envelope
 John acknowledged when approving the stronger-teacher direction.
+
+## 2026-07-22 19:36 — AAAAA all-compositions optimization verdict and production preregistration
+
+The performance pass completed before the 826-vector exact launch. Candidate
+1 (compact reified adjacency tables + rooted arborescence) preserved the
+frozen answers but reduced the four-case panel only from 112.285807 s to
+107.762945 s = 1.042x. Candidate 2 (12-way dihedral anchor, exact depth steps,
+coordinate-depth propagation, explicit degree bounds) regressed to 258.725970
+s = 0.434x and was removed. Token-level common-neighbor cuts also regressed
+the hard disconnected proof from 24.340998 s to 28.206209 s and were removed.
+No rejected formulation remains in production source.
+
+Selected exact changes: two compact reified tables make every pair adjacency
+exact; elk line witnesses use coordinate-ordered combinations rather than up
+to 24 equivalent permutations; aggregate fox overlap cuts expose the lattice
+facts that two distinct target hexes have at most two common neighbors and
+three or more have at most one; a disconnected relaxation is attempted before
+the connected proof; and exact optimization is replaced with successive
+incumbent+1 feasibility questions. The top `(6,1,6,1,6)` count vector's >=68
+disconnected impossibility proof fell from 43.544487 s without fox overlap
+cuts to 24.340998 s with them. End-to-end from a 65-point Rust incumbent, that
+composition was improved and certified at 67 in 39.610 s. Ten one-point-gap
+compositions certified in 38.70 s total (3.87 s/vector).
+
+The requested aspirational 20x gate was not reached on the frozen worst-case
+panel; the hard top case is 1.13x faster end-to-end than its old 44.6858 s
+direct maximization. The catalog throughput design nevertheless removes exact
+search entirely where possible: an 8-thread, 8-restart x 20,000-iteration
+Rust calibration searched all 826 counts in 35.318636 s, independently
+production-scored every connected board, and matched the elementary count
+upper bound for 271 vectors. Those 271 receive immediate exact certificates;
+the remaining queue is ordered by incumbent gap and uses one 8-worker solver,
+which beat two contending 4-worker solver processes on this 10-core Mac. A
+10-worker hard proof took 30.654988 s versus 24.340998 s at 8 workers, so 8 is
+frozen.
+
+Preregistered production run: release Rust candidate generator, 8 threads,
+8 restarts/count, 20,000 iterations/restart, seed 20260722; exact catalog
+runner jobs=1, CP-SAT workers=8, disconnected-relaxation limit=60 s,
+connected limit=120 s, base seed=20260722. An `UNKNOWN` is recorded incomplete
+and is never evidence; after the first pass, incomplete vectors are resumed
+unchanged with longer limits. Completion requires all 826 results marked
+proof-complete, independent Python rescoring, connected/count checks, and all
+826 boards passing the production Rust AAAAA scorer. Durable artifacts:
+`docs/v3/evidence/aaaaa_wildlife_candidates_2026-07-22.json`,
+`docs/v3/evidence/aaaaa_wildlife_catalog_2026-07-22.json`, and
+`docs/v3/AAAAA_WILDLIFE_CATALOG.md`. Frozen pre-launch source SHA-256:
+exact model `594d52ec6c82f9aa644eb0aadbf35654c541ac8a5a5c5cab53cb89b90858688b`;
+catalog runner `54d2eb2ba60e8fb0494d2b9d658fc533ec3a3dcb24efa30c098631163a688cc4`;
+Rust candidate/production verifier
+`c4991663cd34b9ba7fed34e04e9c2f62d3cadf1eae1e38c2af420d0065ea84d3`.
+
+**19:38 production candidate stage complete.** All 826 connected boards were
+generated in 34.643270 s and independently checked by both the Rust reference
+scorer and production `score_board` path. Exactly 271 match the count-only
+upper bound. Candidate artifact SHA-256:
+`82340dcc952d187731650e146c9de9bf0d5b0bf9557d28ccee3ad84b9f6a6842`.
+Decision: launch the preregistered exact catalog pass; no candidate result was
+used to change its proof thresholds or configuration.

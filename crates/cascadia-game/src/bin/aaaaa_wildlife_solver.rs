@@ -8,12 +8,17 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::env;
 use std::fmt::Write as _;
+use std::fs;
+use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use cascadia_game::{
     Board, HexCoord, Rotation, ScoringCards, Terrain, Tile, TileId, Wildlife, WildlifeMask,
     score_board,
 };
+use serde::{Deserialize, Serialize};
 
 const TOKEN_COUNT: usize = 20;
 const SPECIES_COUNT: usize = 5;
@@ -446,6 +451,39 @@ fn mutate(layout: &mut Layout, rng: &mut Rng) -> bool {
     }
 }
 
+fn mutate_fixed_counts(layout: &mut Layout, rng: &mut Rng) -> bool {
+    match rng.usize(10) {
+        0..=6 => {
+            let left = rng.usize(TOKEN_COUNT);
+            let mut right = rng.usize(TOKEN_COUNT - 1);
+            if right >= left {
+                right += 1;
+            }
+            layout.tokens.swap(left, right);
+            let left_coord = layout.tokens[left].coord;
+            let right_coord = layout.tokens[right].coord;
+            layout.tokens[left].coord = right_coord;
+            layout.tokens[right].coord = left_coord;
+            true
+        }
+        _ => {
+            let frontier = layout.frontier();
+            if frontier.is_empty() {
+                return false;
+            }
+            let index = rng.usize(TOKEN_COUNT);
+            let prior = layout.tokens[index].coord;
+            layout.tokens[index].coord = frontier[rng.usize(frontier.len())];
+            if layout.is_connected() {
+                true
+            } else {
+                layout.tokens[index].coord = prior;
+                false
+            }
+        }
+    }
+}
+
 fn anneal(
     restarts: usize,
     iterations: usize,
@@ -529,6 +567,277 @@ fn anneal(
 
     global_layout.normalize();
     (global_layout, global_score, evaluated)
+}
+
+fn anneal_fixed_counts(
+    counts: [u8; SPECIES_COUNT],
+    restarts: usize,
+    iterations: usize,
+    seed: u64,
+) -> (Layout, WildlifeScore, u64) {
+    let mut rng = Rng(seed.max(1));
+    let mut global_layout = random_layout(counts, &mut rng);
+    let mut global_score = score_layout(&global_layout);
+    let mut evaluated = 1u64;
+
+    for _ in 0..restarts {
+        let mut current = random_layout(counts, &mut rng);
+        let mut current_score = score_layout(&current);
+        evaluated += 1;
+        for iteration in 0..iterations {
+            let prior = current.clone();
+            if !mutate_fixed_counts(&mut current, &mut rng) {
+                continue;
+            }
+            let candidate_score = score_layout(&current);
+            evaluated += 1;
+            let fraction = iteration as f64 / iterations.max(1) as f64;
+            let temperature = 3.0 * (0.025f64 / 3.0).powf(fraction);
+            let delta = f64::from(candidate_score.total()) - f64::from(current_score.total());
+            if delta >= 0.0 || rng.unit() < (delta / temperature).exp() {
+                current_score = candidate_score;
+                if current_score.total() > global_score.total() {
+                    global_layout = current.clone();
+                    global_score = current_score;
+                    if global_score.total() == count_relaxation(counts) {
+                        break;
+                    }
+                }
+            } else {
+                current = prior;
+            }
+        }
+        if global_score.total() == count_relaxation(counts) {
+            break;
+        }
+    }
+
+    global_layout.normalize();
+    (global_layout, global_score, evaluated)
+}
+
+#[derive(Debug, Serialize)]
+struct CatalogToken {
+    q: i8,
+    r: i8,
+    wildlife: &'static str,
+}
+
+#[derive(Debug, Serialize)]
+struct CatalogCandidate {
+    counts: [u8; SPECIES_COUNT],
+    count_relaxation: u16,
+    score: u16,
+    score_breakdown: [u16; SPECIES_COUNT],
+    upper_bound_matched: bool,
+    states_evaluated: u64,
+    tokens: Vec<CatalogToken>,
+}
+
+#[derive(Debug, Serialize)]
+struct CatalogCandidateFile {
+    schema: &'static str,
+    token_count: usize,
+    count_cap: u8,
+    seed: u64,
+    threads: usize,
+    restarts_per_count: usize,
+    iterations_per_restart: usize,
+    elapsed_seconds: f64,
+    candidates: Vec<CatalogCandidate>,
+}
+
+fn wildlife_name(wildlife: Wildlife) -> &'static str {
+    match wildlife {
+        Wildlife::Bear => "bear",
+        Wildlife::Elk => "elk",
+        Wildlife::Salmon => "salmon",
+        Wildlife::Hawk => "hawk",
+        Wildlife::Fox => "fox",
+    }
+}
+
+fn parse_wildlife(name: &str) -> Wildlife {
+    match name {
+        "bear" => Wildlife::Bear,
+        "elk" => Wildlife::Elk,
+        "salmon" => Wildlife::Salmon,
+        "hawk" => Wildlife::Hawk,
+        "fox" => Wildlife::Fox,
+        _ => panic!("unknown wildlife in catalog: {name}"),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct VerificationToken {
+    q: i8,
+    r: i8,
+    wildlife: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct VerificationResult {
+    counts: [u8; SPECIES_COUNT],
+    optimum: u16,
+    score_breakdown: [u16; SPECIES_COUNT],
+    proof_complete: bool,
+    tokens: Vec<VerificationToken>,
+}
+
+#[derive(Debug, Deserialize)]
+struct VerificationCatalog {
+    proof_complete: bool,
+    allocation_count: usize,
+    results: Vec<VerificationResult>,
+}
+
+fn verify_catalog(path: &Path) {
+    let encoded = fs::read_to_string(path).expect("read exact catalog");
+    let catalog: VerificationCatalog =
+        serde_json::from_str(&encoded).expect("parse exact catalog JSON");
+    assert!(
+        catalog.proof_complete,
+        "catalog does not claim a complete proof"
+    );
+    let vectors = enumerate_count_vectors();
+    assert_eq!(catalog.allocation_count, vectors.len());
+    assert_eq!(catalog.results.len(), vectors.len());
+
+    for (index, (result, (expected_counts, _))) in
+        catalog.results.iter().zip(vectors.iter()).enumerate()
+    {
+        assert!(result.proof_complete, "result {index} proof is incomplete");
+        assert_eq!(
+            &result.counts, expected_counts,
+            "result {index} count order"
+        );
+        assert_eq!(
+            result.tokens.len(),
+            TOKEN_COUNT,
+            "result {index} token count"
+        );
+        let layout = Layout {
+            tokens: result
+                .tokens
+                .iter()
+                .map(|token| Token {
+                    coord: HexCoord::new(token.q, token.r),
+                    wildlife: parse_wildlife(&token.wildlife),
+                })
+                .collect(),
+        };
+        let unique: BTreeMap<_, _> = layout
+            .tokens
+            .iter()
+            .map(|token| (token.coord, token.wildlife))
+            .collect();
+        assert_eq!(unique.len(), TOKEN_COUNT, "result {index} overlaps");
+        assert!(layout.is_connected(), "result {index} is disconnected");
+        assert_eq!(layout.counts(), result.counts, "result {index} counts");
+        let custom = score_layout(&layout);
+        assert_eq!(
+            custom.by_species, result.score_breakdown,
+            "result {index} custom score"
+        );
+        assert_eq!(custom.total(), result.optimum, "result {index} optimum");
+        assert_eq!(
+            production_score(&layout),
+            result.score_breakdown,
+            "result {index} production score"
+        );
+    }
+    println!(
+        "verified {} exact AAAAA catalog boards with the production scorer",
+        catalog.results.len()
+    );
+}
+
+fn catalog_candidates(
+    output: &Path,
+    threads: usize,
+    restarts: usize,
+    iterations: usize,
+    seed: u64,
+) {
+    let started = Instant::now();
+    let vectors = Arc::new(enumerate_count_vectors());
+    let next = AtomicUsize::new(0);
+    let results: Mutex<Vec<Option<CatalogCandidate>>> =
+        Mutex::new((0..vectors.len()).map(|_| None).collect());
+    let thread_count = threads.max(1).min(vectors.len());
+
+    std::thread::scope(|scope| {
+        for _ in 0..thread_count {
+            let vectors = Arc::clone(&vectors);
+            let next = &next;
+            let results = &results;
+            scope.spawn(move || {
+                loop {
+                    let index = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(&(counts, bound)) = vectors.get(index) else {
+                        break;
+                    };
+                    let count_seed = seed ^ (index as u64 + 1).wrapping_mul(0x9e37_79b9_7f4a_7c15);
+                    let (layout, score, states_evaluated) =
+                        anneal_fixed_counts(counts, restarts, iterations, count_seed);
+                    assert_eq!(layout.counts(), counts);
+                    assert!(layout.is_connected());
+                    assert_eq!(production_score(&layout), score.by_species);
+                    let candidate = CatalogCandidate {
+                        counts,
+                        count_relaxation: bound,
+                        score: score.total(),
+                        score_breakdown: score.by_species,
+                        upper_bound_matched: score.total() == bound,
+                        states_evaluated,
+                        tokens: layout
+                            .tokens
+                            .iter()
+                            .map(|token| CatalogToken {
+                                q: token.coord.q,
+                                r: token.coord.r,
+                                wildlife: wildlife_name(token.wildlife),
+                            })
+                            .collect(),
+                    };
+                    results.lock().expect("catalog result lock")[index] = Some(candidate);
+                    eprintln!(
+                        "candidate {}/{} counts={counts:?} score={}/{}",
+                        index + 1,
+                        vectors.len(),
+                        score.total(),
+                        bound
+                    );
+                }
+            });
+        }
+    });
+
+    let candidates = results
+        .into_inner()
+        .expect("catalog result lock")
+        .into_iter()
+        .map(|candidate| candidate.expect("every catalog task completed"))
+        .collect();
+    let payload = CatalogCandidateFile {
+        schema: "aaaaa-wildlife-candidates-v1",
+        token_count: TOKEN_COUNT,
+        count_cap: COUNT_CAP,
+        seed,
+        threads: thread_count,
+        restarts_per_count: restarts,
+        iterations_per_restart: iterations,
+        elapsed_seconds: started.elapsed().as_secs_f64(),
+        candidates,
+    };
+    let encoded = serde_json::to_string_pretty(&payload).expect("catalog JSON serializes") + "\n";
+    let temporary_extension = output.extension().map_or_else(
+        || "tmp".to_owned(),
+        |extension| format!("{}.tmp", extension.to_string_lossy()),
+    );
+    let temporary = output.with_extension(temporary_extension);
+    fs::write(&temporary, encoded).expect("write candidate catalog");
+    fs::rename(&temporary, output).expect("publish candidate catalog atomically");
 }
 
 fn production_score(layout: &Layout) -> [u16; SPECIES_COUNT] {
@@ -688,6 +997,27 @@ fn parse_u64(args: &[String], name: &str, default: u64) -> u64 {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+    if let Some(input) = args
+        .windows(2)
+        .find_map(|pair| (pair[0] == "--verify-catalog").then(|| Path::new(&pair[1]).to_path_buf()))
+    {
+        verify_catalog(&input);
+        return;
+    }
+    if let Some(output) = args.windows(2).find_map(|pair| {
+        (pair[0] == "--catalog-candidates").then(|| Path::new(&pair[1]).to_path_buf())
+    }) {
+        let threads = parse_usize(
+            &args,
+            "--threads",
+            std::thread::available_parallelism().map_or(1, usize::from),
+        );
+        let restarts = parse_usize(&args, "--restarts-per-count", 8);
+        let iterations = parse_usize(&args, "--iterations-per-restart", 20_000);
+        let seed = parse_u64(&args, "--seed", 0x5eed_a5a5_2026_0722);
+        catalog_candidates(&output, threads, restarts, iterations, seed);
+        return;
+    }
     if args.iter().any(|arg| arg == "--show-optimum") {
         let layout = known_optimal_layout();
         let score = score_layout(&layout);

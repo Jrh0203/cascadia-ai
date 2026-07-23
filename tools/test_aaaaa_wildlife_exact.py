@@ -34,6 +34,11 @@ class AaaaaWildlifeExactTests(unittest.TestCase):
         model, _ = build_model(counts, 69)
         self.assertEqual("", model.validate())
 
+        fox_free = (6, 6, 6, 2, 0)
+        self.assertEqual([0] * 6, species_tokens(fox_free)[:6])
+        fox_free_model, _ = build_model(fox_free, 0)
+        self.assertEqual("", fox_free_model.validate())
+
     def test_exact_model_accepts_the_production_witness(self) -> None:
         model, variables = build_model((6, 4, 6, 0, 4), 68)
         foxes = [

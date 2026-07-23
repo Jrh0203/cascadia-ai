@@ -3,7 +3,7 @@
 
 Unlike a cell-indexed board model, this formulation has exactly twenty token
 positions. Pairwise adjacency is derived from their axial coordinates, so the
-model is globally complete inside radius 19 around a canonical fox at the
+model is globally complete inside radius 19 around a canonical token at the
 origin. Count allocations are solved independently; every allocation whose
 standalone relaxation can beat the incumbent must be proven infeasible before
 the incumbent is declared optimal.
@@ -191,7 +191,7 @@ def add_provenance(payload: dict[str, object]) -> None:
         / "bin"
         / "aaaaa_wildlife_solver.rs"
     )
-    payload["model"] = "labeled-token-cp-sat-v1"
+    payload["model"] = "labeled-token-cp-sat-v2"
     payload["ortools_version"] = ORTOOLS_VERSION
     payload["model_source_sha256"] = hashlib.sha256(model_source.read_bytes()).hexdigest()
     payload["production_verifier_sha256"] = hashlib.sha256(
@@ -215,8 +215,9 @@ class ExactVariables:
 
 
 def species_tokens(counts: tuple[int, int, int, int, int]) -> list[int]:
-    # Fox first: every count vector capable of beating 68 has >=3 foxes. The
-    # lexicographically first fox is translated to the origin.
+    # Prefer fox as the anchor because it dominates the high-score proof. For
+    # fox-free allocations, the first present species becomes the anchor.
+    # The lexicographically first token of that species is translated to zero.
     order = (
         SPECIES_CODE["fox"],
         SPECIES_CODE["bear"],
@@ -232,6 +233,7 @@ def adjacency_variables(
     q: list[cp_model.IntVar],
     r: list[cp_model.IntVar],
 ) -> dict[tuple[int, int], cp_model.IntVar]:
+    """Create exact adjacency variables using compact coordinate tables."""
     adjacency: dict[tuple[int, int], cp_model.IntVar] = {}
     for left in range(TOKEN_COUNT):
         for right in range(left + 1, TOKEN_COUNT):
@@ -239,21 +241,11 @@ def adjacency_variables(
             dr = model.new_int_var(-2 * GLOBAL_RADIUS, 2 * GLOBAL_RADIUS, f"dr_{left}_{right}")
             model.add(dq == q[right] - q[left])
             model.add(dr == r[right] - r[left])
-            directions = []
-            for direction_index, (want_q, want_r) in enumerate(DIRECTIONS):
-                q_equal = model.new_bool_var(f"aq_{left}_{right}_{direction_index}")
-                r_equal = model.new_bool_var(f"ar_{left}_{right}_{direction_index}")
-                direction = model.new_bool_var(f"ad_{left}_{right}_{direction_index}")
-                model.add(dq == want_q).only_enforce_if(q_equal)
-                model.add(dq != want_q).only_enforce_if(q_equal.negated())
-                model.add(dr == want_r).only_enforce_if(r_equal)
-                model.add(dr != want_r).only_enforce_if(r_equal.negated())
-                model.add(direction <= q_equal)
-                model.add(direction <= r_equal)
-                model.add(direction >= q_equal + r_equal - 1)
-                directions.append(direction)
             adjacent = model.new_bool_var(f"adj_{left}_{right}")
-            model.add(adjacent == sum(directions))
+            model.add_allowed_assignments([dq, dr], DIRECTIONS).only_enforce_if(adjacent)
+            model.add_forbidden_assignments([dq, dr], DIRECTIONS).only_enforce_if(
+                adjacent.negated()
+            )
             adjacency[(left, right)] = adjacent
     return adjacency
 
@@ -265,12 +257,15 @@ def adjacent(
 
 
 def build_model(
-    counts: tuple[int, int, int, int, int], minimum_score: int
+    counts: tuple[int, int, int, int, int],
+    minimum_score: int,
+    *,
+    maximize: bool = True,
+    maximum_score: int | None = None,
+    enforce_connectivity: bool = True,
 ) -> tuple[cp_model.CpModel, ExactVariables]:
     if sum(counts) != TOKEN_COUNT or any(count < 0 or count > COUNT_CAP for count in counts):
         raise ValueError(f"invalid counts: {counts}")
-    if counts[SPECIES_CODE["fox"]] == 0:
-        raise ValueError("proof allocations above 68 always contain foxes")
     if count_relaxation(counts) < minimum_score:
         raise ValueError(f"count relaxation cannot reach {minimum_score}: {counts}")
 
@@ -300,8 +295,8 @@ def build_model(
     model.add(r[0] == 0)
 
     # Permuting tokens of one species changes nothing. Token 0 is the
-    # lexicographically first fox before translation; every other same-species
-    # group is likewise sorted by coordinate id.
+    # lexicographically first token of the anchor species before translation;
+    # every other same-species group is likewise sorted by coordinate id.
     by_species = {
         species: [index for index, value in enumerate(species_by_token) if value == species]
         for species in range(len(SPECIES))
@@ -312,22 +307,23 @@ def build_model(
 
     adjacency = adjacency_variables(model, q, r)
 
-    # Connected board via one unit of flow from fox token 0 to every token.
-    flow: dict[tuple[int, int], cp_model.IntVar] = {}
-    for left in range(TOKEN_COUNT):
-        for right in range(TOKEN_COUNT):
-            if left == right:
-                continue
-            value = model.new_int_var(0, TOKEN_COUNT - 1, f"flow_{left}_{right}")
-            model.add(value <= (TOKEN_COUNT - 1) * adjacent(adjacency, left, right))
-            flow[(left, right)] = value
-    for token in range(TOKEN_COUNT):
-        inbound = sum(flow[(other, token)] for other in range(TOKEN_COUNT) if other != token)
-        outbound = sum(flow[(token, other)] for other in range(TOKEN_COUNT) if other != token)
-        if token == 0:
-            model.add(outbound - inbound == TOKEN_COUNT - 1)
-        else:
-            model.add(inbound - outbound == 1)
+    if enforce_connectivity:
+        # A rooted arborescence certifies connectivity without the many
+        # equivalent integer-flow assignments of the original formulation.
+        depth = [
+            model.new_int_var(0, TOKEN_COUNT - 1, f"depth_{token}") for token in range(TOKEN_COUNT)
+        ]
+        model.add(depth[0] == 0)
+        for child in range(1, TOKEN_COUNT):
+            parents = []
+            for parent in range(TOKEN_COUNT):
+                if child == parent:
+                    continue
+                chosen = model.new_bool_var(f"parent_{child}_{parent}")
+                model.add(chosen <= adjacent(adjacency, child, parent))
+                model.add(depth[child] > depth[parent]).only_enforce_if(chosen)
+                parents.append(chosen)
+            model.add_exactly_one(parents)
 
     # Bear A isolated pairs.
     bears = by_species[SPECIES_CODE["bear"]]
@@ -349,15 +345,18 @@ def build_model(
         [[count, BEAR_SCORES[min(count, 3)]] for count in range(len(bears) // 2 + 1)],
     )
 
-    # Elk A disjoint straight-line group packing. Each ordered witness is one
-    # possible consecutive realization; token packing prevents duplicates.
+    # Elk A disjoint straight-line group packing. Elk labels are ordered by
+    # coordinate id, so a combination has exactly one possible order along
+    # each of the three positive-id line directions. The old permutation
+    # encoding represented the same physical line up to 24 times.
     elk = by_species[SPECIES_CODE["elk"]]
     elk_groups: list[tuple[tuple[int, ...], int, cp_model.IntVar]] = []
     for token in elk:
         elk_groups.append(((token,), 2, model.new_bool_var(f"elk_single_{token}")))
+    positive_id_directions = ((1, 0), (1, -1), (0, 1))
     for length, score in ((2, 5), (3, 9), (4, 13)):
-        for ordered in itertools.permutations(elk, length):
-            for direction_index, (dq, dr) in enumerate(DIRECTIONS[:3]):
+        for ordered in itertools.combinations(elk, length):
+            for direction_index, (dq, dr) in enumerate(positive_id_directions):
                 group = model.new_bool_var(
                     f"elk_line_{length}_{'_'.join(map(str, ordered))}_{direction_index}"
                 )
@@ -426,7 +425,7 @@ def build_model(
 
     # Fox A distinct adjacent species.
     foxes = by_species[SPECIES_CODE["fox"]]
-    fox_distinct = []
+    fox_distinct: dict[tuple[int, int], cp_model.IntVar] = {}
     for fox in foxes:
         for species in range(len(SPECIES)):
             distinct = model.new_bool_var(f"fox_distinct_{fox}_{species}")
@@ -435,14 +434,46 @@ def build_model(
                 distinct
                 <= sum(adjacent(adjacency, fox, target) for target in targets if target != fox)
             )
-            fox_distinct.append(distinct)
+            fox_distinct[(fox, species)] = distinct
+
+    # Two distinct hexes have at most two common neighbors; three or more
+    # distinct hexes have at most one. Assigning each fox that sees a set of
+    # non-fox species to one target tuple gives these aggregate overlap cuts.
+    # They are redundant consequences of the coordinate model, but expose the
+    # most important high-fox-score geometry directly to the SAT relaxation.
+    present_non_fox = [species for species in range(4) if counts[species] > 0]
+    for size in range(2, len(present_non_fox) + 1):
+        for species_group in itertools.combinations(present_non_fox, size):
+            target_tuples = 1
+            for species in species_group:
+                target_tuples *= counts[species]
+            capacity = min(len(foxes), (2 if size == 2 else 1) * target_tuples)
+            if capacity == len(foxes):
+                continue
+            overlaps = []
+            for fox in foxes:
+                overlap = model.new_bool_var(
+                    f"fox_overlap_{fox}_{'_'.join(map(str, species_group))}"
+                )
+                members = [fox_distinct[(fox, species)] for species in species_group]
+                for member in members:
+                    model.add(overlap <= member)
+                model.add(overlap >= sum(members) - len(members) + 1)
+                overlaps.append(overlap)
+            model.add(sum(overlaps) <= capacity)
+
     fox_score = model.new_int_var(0, len(foxes) * len(SPECIES), "fox_score")
-    model.add(fox_score == sum(fox_distinct))
+    model.add(fox_score == sum(fox_distinct.values()))
 
     upper = count_relaxation(counts)
+    if maximum_score is not None:
+        upper = min(upper, maximum_score)
+    if minimum_score > upper:
+        raise ValueError(f"score interval is empty: [{minimum_score}, {upper}]")
     total_score = model.new_int_var(minimum_score, upper, "total_score")
     model.add(total_score == bear_score + elk_score + salmon_score + hawk_score + fox_score)
-    model.maximize(total_score)
+    if maximize:
+        model.maximize(total_score)
     return model, ExactVariables(
         q=q, r=r, total_score=total_score, species_by_token=species_by_token
     )
@@ -473,21 +504,35 @@ def solve_counts(
     workers: int,
     seed: int,
     log_search: bool,
+    *,
+    maximize: bool = True,
+    maximum_score: int | None = None,
+    enforce_connectivity: bool = True,
 ) -> dict[str, object]:
     started = time.monotonic()
-    model, variables = build_model(counts, minimum_score)
+    model, variables = build_model(
+        counts,
+        minimum_score,
+        maximize=maximize,
+        maximum_score=maximum_score,
+        enforce_connectivity=enforce_connectivity,
+    )
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit
     solver.parameters.num_search_workers = workers
     solver.parameters.random_seed = seed
     solver.parameters.log_search_progress = log_search
-    callback = Progress(variables.total_score, started)
-    status = solver.solve(model, callback)
+    if maximize:
+        callback = Progress(variables.total_score, started)
+        status = solver.solve(model, callback)
+    else:
+        status = solver.solve(model)
     tokens: list[dict[str, int | str]] = []
     objective: int | None = None
+    model_score: int | None = None
     score_breakdown: list[int] | None = None
     if status in (cp_model.FEASIBLE, cp_model.OPTIMAL):
-        objective = int(solver.value(variables.total_score))
+        model_score = int(solver.value(variables.total_score))
         for token, species in enumerate(variables.species_by_token):
             tokens.append(
                 {
@@ -498,18 +543,22 @@ def solve_counts(
             )
         tokens.sort(key=lambda row: (int(row["r"]), int(row["q"]), str(row["wildlife"])))
         score_breakdown = list(score_tokens(tokens))
-        if sum(score_breakdown) != objective:
+        objective = sum(score_breakdown)
+        if maximize and objective != model_score:
             raise RuntimeError(
-                f"model witness scored {score_breakdown}, not claimed objective {objective}"
+                f"model witness scored {score_breakdown}, not claimed objective {model_score}"
             )
+        if not maximize and objective < minimum_score:
+            raise RuntimeError(f"feasibility witness scored {objective}, below {minimum_score}")
         occupied = {(int(token["q"]), int(token["r"])) for token in tokens}
-        if len(components(occupied)) != 1:
+        if enforce_connectivity and len(components(occupied)) != 1:
             raise RuntimeError("model witness is disconnected")
     return {
         "counts": list(counts),
         "count_relaxation": count_relaxation(counts),
         "model_status": solver.status_name(status),
         "objective": objective,
+        "model_score": model_score,
         "score_breakdown": score_breakdown,
         "best_bound": solver.best_objective_bound,
         "wall_seconds": solver.wall_time,
@@ -519,6 +568,9 @@ def solve_counts(
             "time_limit_seconds": time_limit,
             "workers": workers,
             "random_seed": seed,
+            "maximize": maximize,
+            "maximum_score": maximum_score,
+            "enforce_connectivity": enforce_connectivity,
         },
         "tokens": tokens,
     }
