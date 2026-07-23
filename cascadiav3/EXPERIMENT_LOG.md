@@ -9145,3 +9145,11 @@ Provision only `ortools==9.15.6755`, matching the orchestrator, into the
 existing `~/cascadia/venv` on john2–john4. Run installations independently in
 parallel, then require all three to import that exact version. Any host failure
 blocks fleet launch; no fallback version is permitted.
+
+**09:06 provisioning wrapper failure.** The first local parallel wrapper
+exited before starting an installation because it assigned to zsh's reserved
+read-only `status` parameter. Read-only follow-up confirmed that john2–john4
+had no `~/cascadia-aaaaa-exact` directory, no OR-Tools import, and no pip
+installation process. No remote state changed and no scientific computation
+ran. Decision: correct only the local orchestration variable/shell, retain the
+same pinned dependency and hosts, and retry provisioning.
