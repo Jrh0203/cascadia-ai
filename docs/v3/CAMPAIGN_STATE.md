@@ -1100,3 +1100,9 @@ cross-adjacency table for Fox C. Its 36 connected-component subproofs are
 sharded 9/9/9/9 over john1–john4, then combined by a complete disconnected
 component DP. It must pass exact status/bound, coverage, symmetry, and frozen
 frontier-reduction gates before selection.
+
+The 13:53 first launch failed before its first solve because a reused
+adjacency helper assumed 20 tokens; no result artifact exists. The corrected
+v2 uses a size-generic adjacency model, has a live one-by-one regression test,
+and makes the worker self-record its PID. Its identical frozen rerun is
+preregistered under a new single-use tag.

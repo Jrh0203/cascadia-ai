@@ -1,6 +1,6 @@
 {
   "schema": "hex-bipartite-bound-fleet-v1",
-  "state": "preregistered",
+  "state": "failed",
   "tag": "fox_c_edge_bound_20260723",
   "source_revision": "cd54529d82a82202ebe4b37a36af85d74f9b56ae",
   "source_sha256": "3a6ea9eedfaecdae464b3016916a09a0ffe189ce47cf32c7fa266ca0cfe426aa",
@@ -17,5 +17,8 @@
     {"host": "john2", "start_index": 9, "end_index": 18},
     {"host": "john3", "start_index": 18, "end_index": 27},
     {"host": "john4", "start_index": 27, "end_index": 36}
-  ]
+  ],
+  "terminal_utc": "2026-07-23T17:53:35Z",
+  "exit_codes": {"john1": 1, "john2": 1, "john3": 1, "john4": 1},
+  "failure": "adjacency helper was fixed at 20 tokens and indexed beyond the smaller component model; no shard result was written"
 }

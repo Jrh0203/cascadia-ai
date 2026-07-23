@@ -6,6 +6,7 @@ from tools.derive_hex_bipartite_edge_bounds import (
     CAP,
     collect_shards,
     combine_components,
+    connected_component_maximum,
 )
 
 
@@ -21,6 +22,13 @@ def test_component_dp_supports_disconnected_cross_edge_graphs() -> None:
     assert combined[1][2] == 2
     assert combined[2][2] == 3
     assert combined[4][4] == 6
+
+
+def test_one_by_one_component_has_one_edge() -> None:
+    proof = connected_component_maximum(1, 1, seconds=2, workers=1)
+    assert proof["status"] == "OPTIMAL"
+    assert proof["maximum"] == 1
+    assert proof["best_bound"] == 1
 
 
 def test_collector_requires_exact_disjoint_symmetric_coverage(tmp_path) -> None:

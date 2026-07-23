@@ -22,9 +22,10 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
-from tools.cbddb_wildlife_exact import adjacency_variables, adjacent
+from tools.cbddb_wildlife_exact import adjacent
 
 CAP = 6
+HEX_DIRECTIONS = ((1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1))
 
 
 def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
@@ -34,6 +35,28 @@ def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
         handle.write("\n")
         temporary = handle.name
     os.replace(temporary, path)
+
+
+def _adjacency_variables(
+    model: cp_model.CpModel,
+    q: list[cp_model.IntVar],
+    r: list[cp_model.IntVar],
+    radius: int,
+) -> dict[tuple[int, int], cp_model.IntVar]:
+    adjacency: dict[tuple[int, int], cp_model.IntVar] = {}
+    for left in range(len(q)):
+        for right in range(left + 1, len(q)):
+            dq = model.new_int_var(-2 * radius, 2 * radius, f"dq_{left}_{right}")
+            dr = model.new_int_var(-2 * radius, 2 * radius, f"dr_{left}_{right}")
+            model.add(dq == q[right] - q[left])
+            model.add(dr == r[right] - r[left])
+            edge = model.new_bool_var(f"adj_{left}_{right}")
+            model.add_allowed_assignments([dq, dr], HEX_DIRECTIONS).only_enforce_if(edge)
+            model.add_forbidden_assignments([dq, dr], HEX_DIRECTIONS).only_enforce_if(
+                edge.negated()
+            )
+            adjacency[(left, right)] = edge
+    return adjacency
 
 
 def connected_component_maximum(
@@ -68,7 +91,7 @@ def connected_component_maximum(
         for first, second in zip(indices, list(indices)[1:], strict=False):
             model.add(coordinate_id[first] < coordinate_id[second])
 
-    adjacency = adjacency_variables(model, q, r)
+    adjacency = _adjacency_variables(model, q, r, radius)
     cross_edges = [
         adjacent(adjacency, left, right)
         for left in range(left_count)

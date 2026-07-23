@@ -9977,3 +9977,24 @@ bound, with either a ≥5% reduction in the frozen Fox-C count frontier or a
 ≥10% reduction for frozen hard case CADAC. Otherwise record it as a valid but
 operationally immaterial negative and continue to the next specialized card
 interaction. This derivation does not inspect or change any incumbent score.
+
+**13:53 first launch failed before solving — no result.** All four nine-pair
+shards exited 1 at the first component. The derivation had reused the
+production 20-token adjacency helper, whose loop indexed tokens 2..19 beyond
+the smaller component coordinate arrays. No shard JSON was written and no
+bound value was observed or accepted. The manual detached-launch command also
+mis-escaped its auxiliary wrapper-PID text; solver PID/heartbeat/terminal
+files remained correct. The root fixes are a token-count-generic local
+adjacency constructor, a one-by-one live solver regression test, and having
+the durable worker atomically record its own `$$` rather than relying on the
+outer launch shell.
+
+**13:56 v2 preregistration.** Repeat the identical frozen ranges,
+configuration, correctness gate, and selection rule under single-use tag
+`fox_c_edge_bound_v2_20260723`. Corrected derivation SHA-256
+`4f5ad319e8dc890337c07c2b95a206cdbec3308efd1af5762de8320f4f84ed38`;
+three-test SHA-256
+`c5a804719ef9ea41bc1f319aeb52e5dfaee2169a8fdec2c8ef89238da40f2ec3`;
+self-recording worker SHA-256
+`e8d24582e61df3e75dae6d35510ed77a02cceded17343c3f3e042b037f9e4753`.
+The failed tag remains immutable.

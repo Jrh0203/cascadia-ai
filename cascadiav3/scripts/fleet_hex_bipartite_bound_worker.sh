@@ -38,14 +38,18 @@ OUTPUT="${OUTPUT_DIR}/shard_${SHARD_HOST}.json"
 HEARTBEAT="${LOG_DIR}/hex_bound_${FLEET_TAG}_${SHARD_HOST}.heartbeat"
 EXIT_FILE="${LOG_DIR}/hex_bound_${FLEET_TAG}_${SHARD_HOST}.exit"
 CHILD_PID_FILE="${LOG_DIR}/hex_bound_${FLEET_TAG}_${SHARD_HOST}.solver.pid"
+WRAPPER_PID_FILE="${LOG_DIR}/hex_bound_${FLEET_TAG}_${SHARD_HOST}.pid"
 
 cd "$ROOT"
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR"
 test -x "$PYTHON"
 test ! -e "$OUTPUT"
 test ! -e "$EXIT_FILE"
+test ! -e "$WRAPPER_PID_FILE"
 observed_source="$(shasum -a 256 "$SOURCE" | awk '{print $1}')"
 [ "$observed_source" = "$SOURCE_SHA256" ]
+printf '%s\n' "$$" > "${WRAPPER_PID_FILE}.tmp"
+mv "${WRAPPER_PID_FILE}.tmp" "$WRAPPER_PID_FILE"
 
 set +e
 PYTHONDONTWRITEBYTECODE=1 "$PYTHON" -u -m tools.derive_hex_bipartite_edge_bounds \
