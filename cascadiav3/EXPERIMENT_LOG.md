@@ -11031,3 +11031,24 @@ and collector SHA
 Two focused legacy tests and Ruff pass. All inputs and the six-base/seven-final
 decision rule remain unchanged. Ledger:
 `cascadiav3/fleet/all_wildlife_catalog_augment_deep_retry4_20260723.json`.
+
+**17:06 EDT retry 4 verdict — SELECT.** The legacy-validated base union
+recovered exactly ACACA/ADACA/DCAAC/DCCAC/DDAAC/DDCAC. Its SHA-256 is
+`cf33378214f9f3ce104f762904eeeeb6b2a7bc6a8cab30776ecba8fcdbb6c29b`
+and it records the initial fleet ledger in provenance. The unchanged
+augmentation then validated all 1,024 boards independently and through the
+production Rust oracle, imported the complete 128-allocation AAAAA
+certificate, and preserved all 17 deep-candidate improvements.
+
+The integrated exact catalog now has **7/1,024** completed rulesets:
+AAAAA 68, ACACA 76, ADACA 77, DCAAC 69, DCCAC 69, DDAAC 72, DDCAC 72.
+It retains 119,139 unresolved count branches across 1,017 rulesets. The
+holistic incumbent remains 85 on eight rulesets; it is not an exact holistic
+maximum while any row remains incomplete. Catalog/Markdown SHA-256:
+`144dae03056ee46aa5e79961dc0682ae0c2a22c85bc06f0ab808e3243dd43338`
+and
+`4363549d12382fa66d3b46c4c0321080f4ac4dfd530de1086b0051792cce7174`.
+Production response SHA-256
+`e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca`.
+Curated evidence:
+`docs/v3/evidence/all_wildlife_catalog_augmentation_2026-07-23.json`.

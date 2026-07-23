@@ -1,0 +1,53 @@
+{
+  "schema": "all-wildlife-catalog-augmentation-evidence-v1",
+  "completed_at": "2026-07-23T21:06:58Z",
+  "source_revision": "9acc4190a33852d39fb69beeff631cdccb5de80c",
+  "input_sha256": {
+    "original_candidates": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+    "deep_candidates": "96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9",
+    "aaaaa_global_certificate": "163c338643fd7c14d45eb00fa1b833b4043260cef47effe14816787e124e3828",
+    "legacy_initial_fleet_ledger": "ff345809a2e1012d975a36533c29ccd6b07ed07591d20bb985abf419aaa6969a"
+  },
+  "base_catalog": {
+    "sha256": "cf33378214f9f3ce104f762904eeeeb6b2a7bc6a8cab30776ecba8fcdbb6c29b",
+    "completed_rulesets": [
+      "ACACA",
+      "ADACA",
+      "DCAAC",
+      "DCCAC",
+      "DDAAC",
+      "DDCAC"
+    ]
+  },
+  "augmented_catalog": {
+    "path": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_retry4_2026-07-23.json",
+    "sha256": "144dae03056ee46aa5e79961dc0682ae0c2a22c85bc06f0ab808e3243dd43338",
+    "markdown_path": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_DEEP_RETRY4.md",
+    "markdown_sha256": "4363549d12382fa66d3b46c4c0321080f4ac4dfd530de1086b0051792cce7174",
+    "completed_rulesets": {
+      "AAAAA": 68,
+      "ACACA": 76,
+      "ADACA": 77,
+      "DCAAC": 69,
+      "DCCAC": 69,
+      "DDAAC": 72,
+      "DDCAC": 72
+    },
+    "unresolved_rulesets": 1017,
+    "unresolved_count_branches": 119139,
+    "rebased_improved_rulesets": 17,
+    "incumbent_holistic_maximum": 85,
+    "incumbent_holistic_rulesets": [
+      "ADCCB",
+      "BABCB",
+      "BBBCB",
+      "BCBCB",
+      "BDBCB",
+      "BDCCB",
+      "CDCCB",
+      "DDCCB"
+    ],
+    "production_response_sha256": "e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca"
+  },
+  "verdict": "SELECT"
+}

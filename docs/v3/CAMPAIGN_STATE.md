@@ -1184,7 +1184,8 @@ proof formulation rather than merely remove connectivity.
 Collector review then corrected an underclaim: a proof-less row whose board
 meets the sound global count bound is already certified. DCAAC 69, DCCAC 69,
 DDAAC 72, and DDCAC 72 pass that condition. With the frozen ACACA 76 and
-ADACA 77 coordinate proofs, 6/1,024 rulesets are currently certified. This
+ADACA 77 coordinate proofs, 6/1,024 rulesets were certified at that
+transition. This
 bookkeeping fix does not change any score, unresolved hard-row frontier, or
 the disconnected-prescreen rejection.
 
@@ -1333,6 +1334,13 @@ Retry 3 then failed before output because current tighter bounds shortened an
 incomplete legacy unresolved list. Retry 4 validates that historical list's
 summary against the hash-matched fleet ledger, retains its exact exclusions,
 and recomputes only the final union under current bounds.
+
+Retry 4 passed. The integrated all-rules catalog is now 7/1,024 exact:
+AAAAA 68, ACACA 76, ADACA 77, DCAAC/DCCAC 69, DDAAC/DDCAC 72. All
+1,024 selected boards pass independent and production scoring; 17 deep
+improvements are rebased; 119,139 count branches remain across 1,017
+incomplete rulesets. The score-85 leader on eight rulesets remains an
+incumbent, not a holistic optimum.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

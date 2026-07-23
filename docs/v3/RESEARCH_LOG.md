@@ -1703,6 +1703,15 @@ That is 28.16× versus the frozen sequential CP-SAT screen and passes the
 preregistered 20× gate. The component-local bitset direction is
 **OPEN/SELECTED** for generalization beyond these branches.
 
+Catalog provenance/accounting is now repaired. A strict legacy adapter
+reconstructed omitted support/rules hashes from the initial proof fleet's
+pinned git revision, required every per-index output SHA and historical
+summary, and then recomputed the proof union under current bounds. After
+deep-candidate rebasing and import of the complete AAAAA certificate, the
+integrated catalog advances 6→7/1,024 exact with 119,139 count branches
+remaining. This is an evidence-integration gain, not a new solver proof; the
+selected component-local generalization remains the active proof direction.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from

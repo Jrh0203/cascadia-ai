@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-catalog-augmentation-run-v1",
-  "state": "planned",
+  "state": "completed",
   "tag": "all_wildlife_catalog_augment_deep_retry4_20260723",
   "source_revision": "9acc4190a33852d39fb69beeff631cdccb5de80c",
   "collector_source_sha256": "e5727f834409c355cee3ba89200e9d5493f5349aa708799bc4b8f449449064af",
@@ -17,5 +17,33 @@
   "corrected_base_output": "docs/v3/evidence/all_wildlife_catalog_proof_union_legacy_validated_retry4_2026-07-23.json",
   "output": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_retry4_2026-07-23.json",
   "markdown": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_DEEP_RETRY4.md",
-  "acceptance_rule": "Require exactly six complete base rows: ACACA, ADACA, DCAAC, DCCAC, DDAAC, DDCAC, with legacy ledger provenance. Then require exactly seven completed rows after importing AAAAA, 17 rebased incumbent improvements, all 1,024 independent and production score validations, and holistic incumbent maximum 85."
+  "acceptance_rule": "Require exactly six complete base rows: ACACA, ADACA, DCAAC, DCCAC, DDAAC, DDCAC, with legacy ledger provenance. Then require exactly seven completed rows after importing AAAAA, 17 rebased incumbent improvements, all 1,024 independent and production score validations, and holistic incumbent maximum 85.",
+  "results": {
+    "completed_at": "2026-07-23T21:06:58Z",
+    "base_completed_rulesets": [
+      "ACACA",
+      "ADACA",
+      "DCAAC",
+      "DCCAC",
+      "DDAAC",
+      "DDCAC"
+    ],
+    "base_output_sha256": "cf33378214f9f3ce104f762904eeeeb6b2a7bc6a8cab30776ecba8fcdbb6c29b",
+    "completed_rulesets": [
+      "AAAAA",
+      "ACACA",
+      "ADACA",
+      "DCAAC",
+      "DCCAC",
+      "DDAAC",
+      "DDCAC"
+    ],
+    "rebased_improved_rulesets": 17,
+    "unresolved_count_branches": 119139,
+    "incumbent_holistic_maximum": 85,
+    "production_response_sha256": "e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca",
+    "output_sha256": "144dae03056ee46aa5e79961dc0682ae0c2a22c85bc06f0ab808e3243dd43338",
+    "markdown_sha256": "4363549d12382fa66d3b46c4c0321080f4ac4dfd530de1086b0051792cce7174",
+    "verdict": "SELECT"
+  }
 }

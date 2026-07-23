@@ -88,6 +88,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   Its first output was rejected because the selected base artifact omitted
   ACACA/ADACA's earlier complete shards; the fresh retry unions all three
   frozen proof directories before augmentation.
+  The legacy-validated retry passed: the integrated catalog is now 7/1,024
+  exact after adding AAAAA 68, with all boards production-rescored and
+  119,139 count branches remaining. The score-85 leader is still an
+  incumbent, not a proved holistic maximum.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

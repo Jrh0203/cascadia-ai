@@ -179,8 +179,10 @@ and batch-compares every board with the production Rust scorer.
   below its preregistered 20% selection gate. Both generic coordinate shapes
   are rejected for full production, while every exact exclusion remains
   reusable.
-- Six rulesets are currently certified: ACACA 76 and ADACA 77 by coordinate
-  exclusion, plus bound-matched DCAAC 69, DCCAC 69, DDAAC 72, and DDCAC 72.
+- Seven rulesets are currently integrated as certified: AAAAA 68 through its
+  complete 128-allocation global certificate; ACACA 76 and ADACA 77 by
+  coordinate exclusion; plus bound-matched DCAAC 69, DCCAC 69, DDAAC 72, and
+  DDCAC 72.
   Proof-less bound matches are now recognized directly by the collector and
   covered by a regression test.
 - The recovered 40× hard-row candidate calibration passed all independent and
@@ -189,6 +191,12 @@ and batch-compares every board with the production Rust scorer.
   falls 119,959→119,273. The holistic candidate remains 85 on the same eight
   rulesets. These are stronger warm starts, not optimum claims:
   `docs/v3/evidence/all_wildlife_candidate_deep_recovery_2026-07-23.json`.
+- The fail-closed catalog augmenter recovered both legacy complete coordinate
+  shards from their hash-pinned fleet ledger, rebased all 17 deep incumbent
+  improvements, imported AAAAA, and production-rescored all 1,024 boards.
+  The current catalog has 7 complete rulesets and 119,139 unresolved count
+  branches. Curated evidence:
+  `docs/v3/evidence/all_wildlife_catalog_augmentation_2026-07-23.json`.
 - A coupled same/cross-edge and degree-six relaxation passed all 846,848
   count/ruleset containment comparisons but equaled the existing bound in
   every cell. It is not selected; pair-edge resource coupling without richer
