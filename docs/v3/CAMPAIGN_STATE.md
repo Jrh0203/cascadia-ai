@@ -1073,3 +1073,8 @@ to 275.5 branches; a known AAAAA exclusion reproved in 12.4 seconds while a
 hard CBDDB exclusion remained unknown at 60 seconds. Candidate staging and
 tail-proof optimization are therefore active; no arbitrary-ruleset score has
 yet been accepted as optimal and no production proof shard has launched.
+
+Full all-card incumbent staging is preregistered at 13:16 over four disjoint
+256-ruleset john1–john4 shards (revision `9de711ec`, 12×100k annealing states
+per ruleset). This is heuristic warm-start generation only; exact proof work
+remains gated on its collection and proof-frontier calibration.

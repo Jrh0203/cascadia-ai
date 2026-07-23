@@ -9797,3 +9797,23 @@ scorer tests
 `d6e8d972d52a242758f792637f34fa97ac65020164592d4877133878fc7b698e`;
 Rust candidate/bound engine
 `df5888c5baf3e6ccc80ad5ec7b62d5182275b3fc92dc700c9b2377c3e71ecede`.
+
+## 2026-07-23 13:16 — PREREGISTRATION: full all-card incumbent staging
+
+The scorer and exact fixed-board gates have passed, so launch a heuristic-only
+incumbent staging pass across john1–john4. This run can improve warm starts but
+cannot prove or publish an optimum. Source revision
+`9de711ec2dca221dd1a73ffbd9e1f1b494eb1a40`; candidate source SHA-256
+`df5888c5baf3e6ccc80ad5ec7b62d5182275b3fc92dc700c9b2377c3e71ecede`;
+durable worker SHA-256
+`cd252332a8e3910afa315ab8121dfa28d6e523299068ac71ae4e05dabad80394`.
+
+Frozen configuration: lexicographic ranges `[0,256)`, `[256,512)`,
+`[512,768)`, `[768,1024)` assigned to john1, john2, john3, john4
+respectively; eight threads per host; twelve restarts per ruleset; 100,000
+iterations per restart; base seed `20260723`; release Rust build. Each shard
+writes an atomic JSON catalog, PID, 30-second heartbeat, terminal exit file,
+and log. Preflight must find no existing tag artifact and no wildlife worker.
+Collection requires exact disjoint coverage of all 1,024 indices, schema and
+configuration agreement, cap/connectivity validation, and independent plus
+production rescoring of every board. No exact proof job is displaced.

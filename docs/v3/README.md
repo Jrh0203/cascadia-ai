@@ -38,7 +38,8 @@ over packed expert tensors with Gumbel search-supervised action values.
   combinations is preregistered and in implementation. Its 4,096-case
   independent/production scorer gate and all-1,024 fixed-board exact-model gate
   passed. Tight Hawk-C/Fox-C filters cut the pilot proof frontier materially;
-  candidate staging and exact-tail performance work are current. No
+  a full four-mini incumbent-staging pass is preregistered, and exact-tail
+  performance work is current. No
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
