@@ -8,6 +8,7 @@ SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION}"
 CANDIDATE_SHA256="${CANDIDATE_SHA256:?set CANDIDATE_SHA256}"
 PROOF_SOURCE_SHA256="${PROOF_SOURCE_SHA256:?set PROOF_SOURCE_SHA256}"
 EXACT_SOURCE_SHA256="${EXACT_SOURCE_SHA256:?set EXACT_SOURCE_SHA256}"
+RULES_SOURCE_SHA256="${RULES_SOURCE_SHA256:?set RULES_SOURCE_SHA256}"
 WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv-py312}"
 TIME_LIMIT="${TIME_LIMIT:-30}"
 TOTAL_TIME_LIMIT="${TOTAL_TIME_LIMIT:-300}"
@@ -49,9 +50,11 @@ test ! -e "$EXIT_FILE"
 observed_candidate="$(shasum -a 256 "$INPUT" | awk '{print $1}')"
 observed_proof="$(shasum -a 256 tools/all_wildlife_global_proof.py | awk '{print $1}')"
 observed_exact="$(shasum -a 256 tools/all_wildlife_exact.py | awk '{print $1}')"
+observed_rules="$(shasum -a 256 tools/all_wildlife_rules.py | awk '{print $1}')"
 [ "$observed_candidate" = "$CANDIDATE_SHA256" ]
 [ "$observed_proof" = "$PROOF_SOURCE_SHA256" ]
 [ "$observed_exact" = "$EXACT_SOURCE_SHA256" ]
+[ "$observed_rules" = "$RULES_SOURCE_SHA256" ]
 
 IFS=',' read -r -a index_array <<< "$INDICES"
 for index in "${index_array[@]}"; do

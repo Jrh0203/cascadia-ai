@@ -93,8 +93,11 @@ Two important non-separable geometric filters are:
   see one another. Through six hawks the tight visible-edge maxima are
   `0,0,1,3,5,7,9`.
 - Fox C: assign every fox to the species whose adjacent count it scores.
-  Each assignment group and target species form a simple planar bipartite
-  subgraph with maximum degree six, giving an edge ceiling for that group.
+  Each assignment group and target species form a bipartite cross-edge graph.
+  All 36 cap-six connected-component size pairs were solved exactly on the
+  complete finite hex disk, then a component DP covered disconnected support.
+  The resulting 0..6 edge table has maximum 17 rather than the planar
+  relaxation's 20 at `(6,6)`.
 - Fox A: aggregate common-neighbor capacities over every subset of observed
   non-fox species. A target pair has at most two common hex neighbors; three
   or more distinct target cells have at most one.
@@ -115,6 +118,9 @@ longest-processing-time balancing, using the number of count branches still
 above each incumbent as weight. Production artifacts are sharded over
 john1–john4 with atomic checkpoints, heartbeats, single-use tags, and exact
 source/input hashes.
+The proof identity separately pins the coordinate model, global runner, and
+sound bound/scorer source; changing a filter cannot silently resume an older
+identity.
 Returned boards and ledgers are collected only after every shard is terminal,
 then rescored and revalidated on john1 before catalog publication.
 `tools/all_wildlife_proof_catalog.py` refuses duplicate ruleset proofs,
@@ -148,6 +154,10 @@ and batch-compares every board with the production Rust scorer.
   five minutes. ACACA 76 and ADACA 77 are certified; the other six remain
   incumbents. This triggered the preregistered rejection band, so the generic
   1,024-row proof shape was not launched.
+- The selected exact Fox-C lattice table cuts the frozen Fox-C frontier by
+  70.01% and the all-ruleset frontier by 22.33%; its 36/36 optimal component
+  derivation is retained at
+  `docs/v3/evidence/hex_bipartite_edge_bounds_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

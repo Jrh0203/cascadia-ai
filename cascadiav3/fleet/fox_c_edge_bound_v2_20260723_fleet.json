@@ -1,6 +1,6 @@
 {
   "schema": "hex-bipartite-bound-fleet-v1",
-  "state": "running",
+  "state": "complete",
   "tag": "fox_c_edge_bound_v2_20260723",
   "source_revision": "5f4c48fb2944f6b4aac49369884baae902e2a812",
   "source_sha256": "4f5ad319e8dc890337c07c2b95a206cdbec3308efd1af5762de8320f4f84ed38",
@@ -16,5 +16,28 @@
     {"host": "john2", "start_index": 9, "end_index": 18, "wrapper_pid": 42565},
     {"host": "john3", "start_index": 18, "end_index": 27, "wrapper_pid": 9032},
     {"host": "john4", "start_index": 27, "end_index": 36, "wrapper_pid": 33082}
-  ]
+  ],
+  "terminal_utc": "2026-07-23T17:56:03Z",
+  "exit_codes": {"john1": 0, "john2": 0, "john3": 0, "john4": 0},
+  "shard_sha256": {
+    "john1": "ca96cd48069cbd35a6dc36ec3f60414e5c77bd9d3a6b256658ce07e000d0e7dd",
+    "john2": "60a7ee5d40013522b69915f25698f083d676e3f006279da11bb4ab6f3b80c4e0",
+    "john3": "7e692d2790f2f40ed8b1951095a6952c738c6d2e36b430a2a196d661230ca28f",
+    "john4": "8eff09d83106e5a3250d5aa90ac9a3659e5d1edf142bfa745b141278bbdc5e9e"
+  },
+  "derivation_sha256": "f0825fe804f5a86bebce901e73cf91896180ca67a90581e09571feee88fa780b",
+  "result": {
+    "optimal_components": 36,
+    "components": 36,
+    "solver_seconds": 13.52549320505932,
+    "branches": 17481,
+    "conflicts": 17,
+    "fox_c_frontier_old": 51854,
+    "fox_c_frontier_new": 15553,
+    "fox_c_frontier_reduction_percent": 70.00617117290855,
+    "cadac_frontier_old": 612,
+    "cadac_frontier_new": 361,
+    "cadac_frontier_reduction_percent": 41.01307189542484
+  },
+  "decision": "selected: all correctness gates pass and both preregistered performance thresholds are exceeded"
 }

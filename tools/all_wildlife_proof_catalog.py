@@ -71,6 +71,7 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
     proof_hashes = {}
     proof_source_hashes: set[str] = set()
     exact_source_hashes: set[str] = set()
+    rules_source_hashes: set[str] = set()
     for index, ruleset in enumerate(rules.rulesets()):
         path = paths.get(index)
         if path is None:
@@ -111,6 +112,7 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
             raise ValueError(f"{path}: proof omitted the connectivity constraint")
         proof_source_hashes.add(identity["proof_source_sha256"])
         exact_source_hashes.add(identity["exact_source_sha256"])
+        rules_source_hashes.add(identity["rules_source_sha256"])
         incumbent = proof["incumbent"]
         _validate_board(incumbent, ruleset)
         exclusions: dict[tuple[int, ...], int] = {}
@@ -158,6 +160,7 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
         "proof_sha256": proof_hashes,
         "proof_source_sha256": sorted(proof_source_hashes),
         "exact_source_sha256": sorted(exact_source_hashes),
+        "rules_source_sha256": sorted(rules_source_hashes),
         "holistic_optimum": holistic,
         "holistic_rulesets": (
             [row["ruleset"] for row in rows if row["optimum"] == holistic]

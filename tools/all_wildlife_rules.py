@@ -481,12 +481,22 @@ def _standalone_salmon(count: int, variant: str, non_salmon: int) -> int:
     raise AssertionError(variant)
 
 
+_BIPARTITE_HEX_EDGE_MAXIMUM = (
+    (0, 0, 0, 0, 0, 0, 0),
+    (0, 1, 2, 3, 4, 5, 6),
+    (0, 2, 4, 5, 6, 7, 8),
+    (0, 3, 5, 7, 9, 10, 11),
+    (0, 4, 6, 9, 10, 12, 14),
+    (0, 5, 7, 10, 12, 14, 15),
+    (0, 6, 8, 11, 14, 15, 17),
+)
+
+
 def _bipartite_hex_edge_upper(left: int, right: int) -> int:
-    """Bound adjacency edges between two disjoint token classes."""
-    if not left or not right:
-        return 0
-    planar = 1 if left + right == 2 else 2 * (left + right) - 4
-    return min(left * right, 6 * left, 6 * right, planar)
+    """Exact cap-six adjacency maximum between two disjoint token classes."""
+    if not (0 <= left <= COUNT_CAP and 0 <= right <= COUNT_CAP):
+        raise ValueError("bipartite edge table is defined through the count cap")
+    return _BIPARTITE_HEX_EDGE_MAXIMUM[left][right]
 
 
 @cache

@@ -1107,3 +1107,9 @@ v2 uses a size-generic adjacency model, has a live one-by-one regression test,
 and makes the worker self-record its PID. Its identical frozen rerun is
 preregistered under a new single-use tag. All four corrected shards launched
 at 13:55 with valid self-written PIDs and fresh heartbeats.
+
+All four v2 shards exited 0 at 13:56. The collector proved all 36 lattice
+component maxima with exact solver bounds and symmetry. The selected table
+cuts the frozen 256-rule Fox-C frontier 51,854→15,553 (−70.01%) and CADAC
+612→361 (−41.01%), passing both preregistered thresholds. Across all rulesets
+it removes 36,301 count branches (−22.33%) without changing an incumbent.

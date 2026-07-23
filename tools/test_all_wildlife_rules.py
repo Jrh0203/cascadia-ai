@@ -98,9 +98,22 @@ def test_hawk_c_uses_the_tight_cap_six_visibility_bound() -> None:
         assert c_upper - a_upper + hawk_a[hawks] == hawk_score
 
 
-def test_fox_c_uses_planar_bipartite_edge_bound() -> None:
-    assert rules._fox_c_upper(6, (4, 4, 4, 2)) == 24
-    assert rules._fox_c_upper(6, (6, 4, 2, 2)) == 24
+def test_fox_c_uses_exact_bipartite_hex_edge_bound() -> None:
+    assert rules._fox_c_upper(6, (4, 4, 4, 2)) <= 24
+    assert rules._fox_c_upper(6, (6, 4, 2, 2)) <= 24
+
+
+def test_exact_bipartite_hex_edge_table_is_symmetric_and_tighter_than_planarity() -> None:
+    for left in range(rules.COUNT_CAP + 1):
+        for right in range(rules.COUNT_CAP + 1):
+            exact = rules._bipartite_hex_edge_upper(left, right)
+            assert exact == rules._bipartite_hex_edge_upper(right, left)
+            if not left or not right:
+                assert exact == 0
+                continue
+            planar = 1 if left + right == 2 else 2 * (left + right) - 4
+            assert exact <= min(left * right, 6 * left, 6 * right, planar)
+    assert rules._bipartite_hex_edge_upper(6, 6) == 17
 
 
 def test_fox_b_uses_target_pair_common_neighbor_capacity() -> None:

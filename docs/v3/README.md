@@ -42,8 +42,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   improved 444/1,024 rows. Its best score is 85 across eight rulesets, still
   heuristic. The first stratified exact calibration completed only 2/8 rows
   inside five minutes, triggering its preregistered rejection band; the
-  generic 1,024-row launch did not run. Specialized sound-filter work is
-  current. No
+  generic 1,024-row launch did not run. The first selected specialized filter
+  is a 36/36-certified exact Fox-C lattice edge table; it removes 70.01% of
+  Fox-C and 22.33% of all surviving count branches. Further specialized
+  sound-filter work is current. No
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).

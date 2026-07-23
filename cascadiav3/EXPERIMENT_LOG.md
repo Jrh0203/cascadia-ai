@@ -10005,3 +10005,41 @@ john1–john4 launched `[0,9)`, `[9,18)`, `[18,27)`, `[27,36)` at
 are valid and all four heartbeats name their live solver PID and exact range.
 Durable ledger:
 `cascadiav3/fleet/fox_c_edge_bound_v2_20260723_fleet.json`.
+
+**13:56 terminal/selection verdict.** All four shards exited 0 at
+`17:56:03Z`. The collector accepted exact disjoint 36/36 coverage, every
+component `OPTIMAL` with objective equal to best bound, and independently
+solved left/right symmetry. Aggregate solver work was 13.525 seconds,
+17,481 branches, and 17 conflicts. Collected derivation SHA-256
+`f0825fe804f5a86bebce901e73cf91896180ca67a90581e09571feee88fa780b`;
+shard hashes are frozen in the completed fleet ledger.
+
+The exact global cross-edge table for side sizes 0..6 is:
+
+```text
+0 0 0 0 0 0 0
+0 1 2 3 4 5 6
+0 2 4 5 6 7 8
+0 3 5 7 9 10 11
+0 4 6 9 10 12 14
+0 5 7 10 12 14 15
+0 6 8 11 14 15 17
+```
+
+Against the frozen merged incumbents, the 256 Fox-C rulesets' total surviving
+count frontier falls **51,854→15,553 (−70.01%)**. Hard calibration row CADAC
+falls **612→361 (−41.01%)**. Both preregistered selection thresholds pass by
+large margins, so the exact table replaces the planar relaxation. Across all
+1,024 rulesets this alone removes 36,301 of the former 162,591 count
+branches (−22.33%) without changing a score. Production bound source SHA-256
+`c86c278c8e6f4b9df41c127be2d37ea293a94c19489a8dd6eec69d366cd20376`;
+bound-test SHA-256
+`4335d8faf490ce6c8398959178a4815a13131884de9f179c3b94679aa7a5c645`.
+Because sound count filters now evolve independently of the coordinate model,
+the proof identity and fleet preflight also pin the bound/scorer source hash;
+the final collector records it. Updated proof runner SHA-256
+`7c265ad2f1a44fd3e035f9fc156b389cfba4a0d54f66c8c02c11184a7ba61e30`;
+collector
+`c09ebc6e1a4893db599fc681b3dd71e4bb27bb0fdf63d6727e81a8daf03c0f4b`;
+proof worker
+`12e72974fe0dc08789bf57456e8ea6971acd37008b96183c7bee82d5e0d9d93a`.
