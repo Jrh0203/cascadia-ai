@@ -11415,3 +11415,15 @@ counts strictly contract (25%) or any witness improves a ruleset incumbent;
 otherwise return the remaining frontier to the specialized exact-proof lane.
 `UNKNOWN` is never relabeled, and a higher solver bound can never erase an
 inherited lower bound.
+
+**22:46:21Z launch complete.** john1/john2 began tasks 0/1 at `22:44:57Z`;
+the first remote `nohup` SSH stayed attached to john2 even though all streams
+were redirected. Its worker and john1 were healthy, so neither was touched.
+john3/john4 were launched in detached named screens and began tasks 2/3 at
+`22:46:21Z`. All four then had current heartbeats and live wrapper PIDs
+63770/78279/36045/36561. The launcher attachment changes no task, hash, or
+result visibility and will eventually unwind against already-single-use
+collision guards; no scientific process was stopped or restarted. Ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_topfrontier435_fleet_20260723.json`.
+Hard terminal deadline: `2026-07-24T08:46:21Z`. Results remain sealed until
+all four terminal exit files exist.

@@ -1,0 +1,71 @@
+{
+  "schema": "all-wildlife-bound-probe-fleet-v1",
+  "state": "active",
+  "tag": "all_wildlife_bound_probe_topfrontier435_20260723",
+  "source_revision": "429e26469d31558b4a93e35e0fa04ef1d00aacba",
+  "taskset_path": "cascadiav3/fleet/all_wildlife_bound_probe_topfrontier_taskset_20260723.json",
+  "taskset_sha256": "623cb660909c8e0d86e46c8a5776f4e567d9a573c760252505733508ab844759",
+  "catalog_path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_pilot8_2026-07-23.json",
+  "catalog_sha256": "e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82",
+  "probe_source_sha256": "4c5047c99370d9a433f0b448fe31db5a1dda85fa4b4519aa52498990b788fe31",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "c7dcc31a7bd7d55016d470ebb04112341766cb050a39811d0f8c40aa777008e4",
+  "taskset_builder_sha256": "bb52d3f7f9b278ea8e09086c1c501507835fb5dbdc50da5a59d352dd85032334",
+  "collector_source_sha256": "6f3201f6c262d1be2e76c8db4b6a1e949448a0a04ccd7a7275302702e30249d7",
+  "configuration": {
+    "task_count": 435,
+    "ruleset_count": 280,
+    "selection": "all current ruleset-frontier count ties with current upper > 85",
+    "time_limit_seconds_per_task": 300,
+    "total_time_limit_seconds_per_task": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "heartbeat_interval_seconds": 5,
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "assignments": [
+    {
+      "host": "john1",
+      "task_index_modulo": 0,
+      "task_count": 109,
+      "launcher": "screen:wildlife_bound_topfrontier435_john1",
+      "wrapper_pid": 63770,
+      "started_utc": "2026-07-23T22:44:57Z"
+    },
+    {
+      "host": "john2",
+      "task_index_modulo": 1,
+      "task_count": 109,
+      "launcher": "nohup",
+      "wrapper_pid": 78279,
+      "started_utc": "2026-07-23T22:44:57Z"
+    },
+    {
+      "host": "john3",
+      "task_index_modulo": 2,
+      "task_count": 109,
+      "launcher": "screen:wildlife_bound_topfrontier435_john3",
+      "wrapper_pid": 36045,
+      "started_utc": "2026-07-23T22:46:21Z"
+    },
+    {
+      "host": "john4",
+      "task_index_modulo": 3,
+      "task_count": 108,
+      "launcher": "screen:wildlife_bound_topfrontier435_john4",
+      "wrapper_pid": 36561,
+      "started_utc": "2026-07-23T22:46:21Z"
+    }
+  ],
+  "all_hosts_active_utc": "2026-07-23T22:46:21Z",
+  "hard_terminal_deadline_utc": "2026-07-24T08:46:21Z",
+  "result_visibility": "sealed until all four terminal exit files exist",
+  "decision_rule": {
+    "repeat_top_frontier": "At least 109 of 435 selected counts strictly contract, or any verified witness improves a ruleset incumbent.",
+    "otherwise": "Return the residual frontier to the specialized exact-proof lane.",
+    "always": "Retain every validated contraction, exact closure, and witness; UNKNOWN never becomes optimal."
+  }
+}

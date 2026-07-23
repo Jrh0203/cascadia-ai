@@ -1444,6 +1444,14 @@ rulesets at taskset SHA
 Round-robin fleet balance is 109/109/109/108 tasks, with a just-under-ten-hour
 hard wall. Outputs remain sealed until four terminal markers.
 
+The top-frontier pass is live. john1/john2 began at `22:44:57Z` and
+john3/john4 at `22:46:21Z`; all four passed runtime, source, input-hash,
+collision, and idle checks and have fresh five-second heartbeats. Wrapper
+PIDs are 63770/78279/36045/36561. The hard terminal deadline is
+`2026-07-24T08:46:21Z`. Ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_topfrontier435_fleet_20260723.json`.
+Do not inspect task outputs before all four exit files exist.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

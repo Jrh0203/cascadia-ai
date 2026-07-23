@@ -120,6 +120,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   recursive passes cannot forget earlier contractions. The first complete
   top-frontier pass is frozen at 435 count ties across 280 rulesets whose
   current upper exceeds 85, balanced 109/109/109/108 across john1–john4.
+  All four shards launched by `22:46:21Z` with hash-pinned inputs and current
+  heartbeats; the hard terminal deadline is `2026-07-24T08:46:21Z`, and
+  outputs remain sealed until every host is terminal.
   The current holistic interval remains `[85,99]` because eight untouched
   rulesets still carry 99-point ceilings.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
