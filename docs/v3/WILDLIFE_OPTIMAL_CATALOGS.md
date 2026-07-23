@@ -203,12 +203,14 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 08:20 EDT, AAAAA has 718/826 formally certified vectors: 711
-are embedded in its live ledger and seven are frozen in separate exact motif
-and local-packing certificates pending a safe post-writer merge. Its hash-pinned hinted retry
-continues over the remaining tail. CBDDB heuristic staging completed all 826 vectors in
-224.244154 seconds with zero independent-score or connectivity failures; the
-current 84-point leader is only an incumbent. The CBDDB exact model,
-independent scorer, Rust candidate generator, and production verifier are
-implemented and tested; its exhaustive proof run starts only after the AAAAA
-catalog is complete.
+As of 2026-07-23 10:21 EDT, AAAAA has 728/826 formally certified vectors.
+The first exact fleet pass returned all 115 requested tail rows and added 13
+coordinate-model proofs at 60/120-second limits; 102 rows timed out. Three new
+proofs overlap the seven frozen specialized certificates, leaving 98 unique
+vectors unresolved after union. A timeout remains an incumbent only.
+
+CBDDB heuristic staging completed all 826 vectors in 224.244154 seconds with
+zero independent-score or connectivity failures; the current 84-point leader
+is only an incumbent. Its frozen full taskset is ready for four-host
+207/207/206/206 sharding on john1–john4, but the requested AAAAA-then-CBDDB
+ordering blocks launch until AAAAA is complete.

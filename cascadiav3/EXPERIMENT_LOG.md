@@ -9350,3 +9350,26 @@ post-command liveness check, revealing the option error without running a
 solver. Switching to detached `screen -dmS` passed both PID liveness and
 natural-exit checks. Shell syntax, the 10 catalog/sharding unit tests, and
 `git diff --check` pass.
+
+## 2026-07-23 10:15 — AAAAA exact-tail fleet pass terminal verdict
+
+All three registered shards terminated naturally with catalog exit 2 and full
+115/115 task coverage. The fail-closed collector independently validated every
+returned board, source/input hash, shard assignment, and terminal marker.
+Collection-manifest SHA-256:
+`65826a579e395751097cc0eb2d99701bc66823d728352b9e22f7a349a63cff62`.
+
+Result: 13/115 new exact coordinate-model certificates and 102 timeouts at the
+registered 60-second disconnected plus 120-second connected limits. Proof
+methods were 10 `connected_model_infeasible` and 3
+`disconnected_relaxation_infeasible`. Median per-vector wall time was about
+180 seconds; total solver wall was 20,163.2 seconds, completing in about one
+hour over six concurrent jobs. Three of the 13 overlap the seven already
+frozen specialized certificates, so the independently certified AAAAA union
+is now **728/826**, leaving **98** unresolved.
+
+Decision: AAAAA is not complete, and the user's requested ordering therefore
+blocks CBDDB launch. The collected incomplete rows are valid incumbents but
+not optimum claims. A stronger pass or additional finite specialized
+certificates must close the 98-vector tail; do not represent a longer timeout
+as guaranteed completion.

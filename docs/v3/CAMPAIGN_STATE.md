@@ -1026,19 +1026,18 @@ seeds ledger — spent: 2026794000-5249 (Stage A), 2027160000-99 (Gate 0),
 2027193000-3550 (bootstrap), 2027194000-4840 (fs_c1); reserved:
 2027195000+ (certification), 2027079000-99 (unused D1 gate block).
 
-## LOCAL PUZZLE EXPLORATION 2026-07-23 09:16 — LIVE
+## LOCAL PUZZLE EXPLORATION 2026-07-23 10:21 — LIVE
 
 This is independent local CPU work and does not displace or make claims about
 the john0 campaign above. The requested 20-token/cap-6 pure-wildlife catalog
-is sequenced AAAAA then CBDDB. AAAAA currently has 718/826 exact entries: 711
-in the live catalog plus seven separately frozen motif/local-packing
-certificates; its local hash-pinned retry continues. In parallel, the frozen
-115-vector exact tail is live on john2–john4 under
-`aaaaa_exact_tail_fleet3_20260723`, revision `c726df87`, with disjoint
-39/38/38 assignments and wrapper PIDs `1862`/`74966`/`21552`. The collector
-refuses partial coverage and independently validates returned boards. CBDDB's
+is sequenced AAAAA then CBDDB. AAAAA is now 728/826 exact after the terminal
+three-host fleet pass added 13 coordinate-model certificates, three
+overlapping the seven frozen specialized certificates. The collector
+validated 115/115 returned rows; 102 timed out and 98 unique vectors remain
+uncertified after the specialized-proof union. CBDDB's
 two-spare-core heuristic staging completed all 826 vectors in 224.244154
 seconds with zero independent scorer/connectivity failures. Its current
 84-point leader at counts `(6,0,3,6,5)` is only an exact-solver warm start.
+Its four-host exact taskset is staged but remains blocked on AAAAA completion.
 Durable methodology/status: `docs/v3/WILDLIFE_OPTIMAL_CATALOGS.md`; detailed
 provenance: `cascadiav3/EXPERIMENT_LOG.md`.
