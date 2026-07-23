@@ -938,6 +938,194 @@ def _coupled_count_upper(
     return best
 
 
+def _partition_score_domain(
+    token_count: int,
+    groups: tuple[tuple[int, int], ...],
+) -> frozenset[int]:
+    by_used = [set() for _ in range(token_count + 1)]
+    by_used[0].add(0)
+    for used in range(token_count + 1):
+        for score in tuple(by_used[used]):
+            for size, group_score in groups:
+                if used + size <= token_count:
+                    by_used[used + size].add(score + group_score)
+    return frozenset(score for scores in by_used for score in scores)
+
+
+@cache
+def _bear_score_domain(token_count: int, variant: str) -> frozenset[int]:
+    if variant == "A":
+        return frozenset(
+            (0, 4, 11, 19, 27)[min(pairs, 4)]
+            for pairs in range(token_count // 2 + 1)
+        )
+    if variant == "B":
+        return _partition_score_domain(token_count, ((3, 10),))
+    if variant == "C":
+        scores = set()
+        for singles in range(token_count + 1):
+            for pairs in range(token_count // 2 + 1):
+                for triples in range(token_count // 3 + 1):
+                    if singles + 2 * pairs + 3 * triples > token_count:
+                        continue
+                    base = 2 * singles + 5 * pairs + 8 * triples
+                    scores.add(base)
+                    if singles and pairs and triples:
+                        scores.add(base + 3)
+        return frozenset(scores)
+    if variant == "D":
+        return _partition_score_domain(
+            token_count,
+            ((2, 5), (3, 8), (4, 13)),
+        )
+    raise AssertionError(variant)
+
+
+@cache
+def _elk_score_domain(token_count: int, variant: str) -> frozenset[int]:
+    if variant in ("A", "B"):
+        groups = ((1, 2), (2, 5), (3, 9), (4, 13))
+    elif variant == "C":
+        groups = ((1, 2), (2, 4), (3, 7), (4, 10), (5, 14), (6, 18))
+    elif variant == "D":
+        groups = ((1, 2), (2, 5), (3, 8), (4, 12), (5, 16), (6, 21))
+    else:
+        raise AssertionError(variant)
+    return _partition_score_domain(token_count, groups)
+
+
+@cache
+def _salmon_score_domain(
+    token_count: int,
+    non_salmon: int,
+    variant: str,
+) -> frozenset[int]:
+    if variant == "A":
+        return _partition_score_domain(
+            token_count,
+            tuple(
+                (size, (0, 2, 5, 8, 12, 16, 20)[size])
+                for size in range(1, 7)
+            ),
+        )
+    if variant == "B":
+        return _partition_score_domain(
+            token_count,
+            tuple(
+                (size, (0, 2, 4, 9, 11, 17, 17)[size])
+                for size in range(1, 7)
+            ),
+        )
+    if variant == "C":
+        return _partition_score_domain(
+            token_count,
+            tuple(
+                (size, (0, 0, 0, 10, 12, 15, 15)[size])
+                for size in range(3, 7)
+            ),
+        )
+    if variant == "D":
+        states: list[set[tuple[int, int]]] = [set() for _ in range(token_count + 1)]
+        states[0].add((0, 0))
+        for used in range(token_count + 1):
+            for base, bonus_capacity in tuple(states[used]):
+                for size in range(3, token_count - used + 1):
+                    states[used + size].add(
+                        (
+                            base + size,
+                            bonus_capacity + min(non_salmon, 2 * size + 4),
+                        )
+                    )
+        return frozenset(
+            base + bonus
+            for values in states
+            for base, capacity in values
+            for bonus in range(capacity + 1)
+        )
+    raise AssertionError(variant)
+
+
+@cache
+def _hawk_score_domain(
+    hawks: int,
+    variant: str,
+    other_counts: tuple[int, int, int, int],
+) -> frozenset[int]:
+    if variant == "A":
+        table = (0, 2, 5, 8, 11, 14, 18)
+        return frozenset(table[count] for count in range(hawks + 1))
+    if variant == "B":
+        table = (0, 0, 5, 9, 12, 16, 20)
+        return frozenset(table[count] for count in range(hawks + 1))
+    if variant == "C":
+        return frozenset(
+            3 * lines for lines in range((0, 0, 1, 3, 5, 7, 9)[hawks] + 1)
+        )
+    distinct = min(3, sum(count > 0 for count in other_counts))
+    pair_scores = (0, *(0, 4, 7, 9)[1 : distinct + 1])
+    return _partition_score_domain(
+        hawks,
+        tuple((2, score) for score in pair_scores if score),
+    )
+
+
+@cache
+def _fox_score_domain(
+    foxes: int,
+    targets: tuple[int, int, int, int],
+    variant: str,
+) -> frozenset[int]:
+    if variant == "A":
+        return frozenset(range(_fox_a_upper(foxes, targets) + 1))
+    if variant == "B":
+        maximum_types = min(3, sum(target >= 2 for target in targets))
+        per_fox = (0, 3, 5, 7)[: maximum_types + 1]
+        scores = {0}
+        for _ in range(foxes):
+            scores = {prior + score for prior in scores for score in per_fox}
+        return frozenset(scores)
+    if variant == "C":
+        return frozenset(range(_fox_c_upper(foxes, targets) + 1))
+    maximum_types = sum(target >= 2 for target in targets)
+    pair_scores = (0, 5, 7, 9, 11)[: maximum_types + 1]
+    return _partition_score_domain(
+        foxes,
+        tuple((2, score) for score in pair_scores if score),
+    )
+
+
+@cache
+def count_score_domains(
+    counts: tuple[int, int, int, int, int],
+    ruleset: str,
+) -> tuple[frozenset[int], ...]:
+    if counts not in count_vectors():
+        raise ValueError(f"invalid counts: {counts}")
+    cards = parse_ruleset(ruleset)
+    bear, elk, salmon, hawk, fox = counts
+    return (
+        _bear_score_domain(bear, cards[0]),
+        _elk_score_domain(elk, cards[1]),
+        _salmon_score_domain(salmon, TOKEN_COUNT - salmon, cards[2]),
+        _hawk_score_domain(hawk, cards[3], (bear, elk, salmon, fox)),
+        _fox_score_domain(fox, counts[:4], cards[4]),
+    )
+
+
+@cache
+def count_score_profiles(
+    counts: tuple[int, int, int, int, int],
+    ruleset: str,
+    minimum_score: int,
+    maximum_score: int,
+) -> tuple[tuple[int, int, int, int, int], ...]:
+    return tuple(
+        profile
+        for profile in itertools.product(*count_score_domains(counts, ruleset))
+        if minimum_score <= sum(profile) <= maximum_score
+    )
+
+
 def count_upper(
     counts: tuple[int, int, int, int, int],
     ruleset: str,

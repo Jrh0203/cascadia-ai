@@ -177,3 +177,27 @@ def test_coupled_edge_flow_handles_zero_and_impossible_demands() -> None:
         0,
         25,
     )
+
+
+def test_score_domains_contain_mixed_count_board_components() -> None:
+    count_vectors = (
+        (0, 2, 6, 6, 6),
+        (2, 6, 6, 0, 6),
+        (4, 4, 4, 4, 4),
+        (6, 6, 6, 2, 0),
+    )
+    for seed, counts in enumerate(count_vectors, start=900):
+        board = random_connected_board_with_counts(seed, counts)
+        for ruleset in rules.rulesets():
+            score = rules.score_tokens(board, ruleset)
+            domains = rules.count_score_domains(counts, ruleset)
+            assert all(
+                component in domain
+                for component, domain in zip(score, domains, strict=True)
+            )
+            assert score in rules.count_score_profiles(
+                counts,
+                ruleset,
+                sum(score),
+                sum(score),
+            )

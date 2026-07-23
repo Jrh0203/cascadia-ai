@@ -605,6 +605,7 @@ def build_model(
     enforce_connectivity: bool = True,
     initial_tokens: list[dict[str, Any]] | None = None,
     fix_initial_tokens: bool = False,
+    use_score_profile_table: bool = False,
 ) -> tuple[cp_model.CpModel, ExactVariables]:
     cards = rules.parse_ruleset(ruleset)
     if counts not in rules.count_vectors():
@@ -706,6 +707,17 @@ def build_model(
         _hawk_score(model, q, r, adjacency, by_species, cards[3]),
         _fox_score(model, adjacency, by_species, cards[4]),
     ]
+    if use_score_profile_table:
+        profiles = rules.count_score_profiles(
+            counts,
+            ruleset,
+            minimum_score,
+            upper,
+        )
+        if profiles:
+            model.add_allowed_assignments(scores, profiles)
+        else:
+            model.add_bool_or([])
     total_score = model.new_int_var(minimum_score, upper, "total_score")
     model.add(total_score == sum(scores))
     if maximize:
@@ -736,6 +748,8 @@ def solve_counts(
     fix_initial_tokens: bool = False,
     enforce_connectivity: bool = True,
     maximize: bool = True,
+    use_score_profile_table: bool = False,
+    maximum_score: int | None = None,
 ) -> SolveResult:
     started = time.monotonic()
     model, variables = build_model(
@@ -746,6 +760,8 @@ def solve_counts(
         fix_initial_tokens=fix_initial_tokens,
         enforce_connectivity=enforce_connectivity,
         maximize=maximize,
+        use_score_profile_table=use_score_profile_table,
+        maximum_score=maximum_score,
     )
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_seconds

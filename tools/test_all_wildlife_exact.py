@@ -67,3 +67,21 @@ def test_fixed_board_feasibility_mode_returns_real_certificate_score() -> None:
     assert result.objective is not None and result.objective >= 20
     assert result.score_breakdown is not None
     assert sum(result.score_breakdown) >= result.objective
+
+
+def test_fixed_board_score_profile_table_preserves_exact_objective() -> None:
+    board = random_connected_board(303)
+    expected = all_wildlife_rules.score_tokens(board, "CBDDB")
+    result = solve_counts(
+        "CBDDB",
+        (4, 4, 4, 4, 4),
+        0,
+        time_limit_seconds=10,
+        workers=1,
+        initial_tokens=board,
+        fix_initial_tokens=True,
+        use_score_profile_table=True,
+    )
+    assert result.status == "OPTIMAL"
+    assert result.objective == sum(expected)
+    assert result.score_breakdown == expected

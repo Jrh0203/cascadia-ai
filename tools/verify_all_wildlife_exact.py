@@ -15,8 +15,10 @@ from tools.all_wildlife_exact import solve_counts
 from tools.test_all_wildlife_rules import random_connected_board
 
 
-def _check(task: tuple[str, list[dict[str, Any]]]) -> tuple[str, int, int, str]:
-    ruleset, board = task
+def _check(
+    task: tuple[str, list[dict[str, Any]], bool],
+) -> tuple[str, int, int, str]:
+    ruleset, board, use_score_profile_table = task
     counts = tuple(
         sum(row["wildlife"] == species for row in board)
         for species in all_wildlife_rules.SPECIES
@@ -25,11 +27,13 @@ def _check(task: tuple[str, list[dict[str, Any]]]) -> tuple[str, int, int, str]:
     result = solve_counts(
         ruleset,
         counts,  # type: ignore[arg-type]
-        0,
+        expected if use_score_profile_table else 0,
         time_limit_seconds=30,
         workers=1,
         initial_tokens=board,
         fix_initial_tokens=True,
+        use_score_profile_table=use_score_profile_table,
+        maximum_score=expected if use_score_profile_table else None,
     )
     return ruleset, result.objective or 0, expected, result.status
 
@@ -38,11 +42,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=202)
     parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--score-profile-table", action="store_true")
     args = parser.parse_args()
 
     started = time.monotonic()
     board = random_connected_board(args.seed)
-    tasks = [(ruleset, board) for ruleset in all_wildlife_rules.rulesets()]
+    tasks = [
+        (ruleset, board, args.score_profile_table)
+        for ruleset in all_wildlife_rules.rulesets()
+    ]
     context = multiprocessing.get_context("spawn")
     with context.Pool(args.workers) as pool:
         rows = list(pool.imap_unordered(_check, tasks, chunksize=1))
@@ -62,6 +70,7 @@ def main() -> int:
         "schema": "all-wildlife-exact-fixed-board-verification-v1",
         "seed": args.seed,
         "workers": args.workers,
+        "score_profile_table": args.score_profile_table,
         "cases": len(rows),
         "failures": failures,
         "elapsed_seconds": time.monotonic() - started,
