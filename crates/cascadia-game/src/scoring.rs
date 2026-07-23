@@ -985,6 +985,75 @@ mod tests {
     }
 
     #[test]
+    fn seventh_token_reference_patterns_match_a_and_cb_tables() {
+        let bear_a = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Bear),
+            (HexCoord::new(1, 0), Wildlife::Bear),
+            (HexCoord::new(4, 0), Wildlife::Bear),
+            (HexCoord::new(5, 0), Wildlife::Bear),
+            (HexCoord::new(8, 0), Wildlife::Bear),
+            (HexCoord::new(9, 0), Wildlife::Bear),
+            (HexCoord::new(12, 0), Wildlife::Bear),
+        ]);
+        assert_eq!(score_bears(&bear_a, ScoringVariant::A), 19);
+
+        let elk_a = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Elk),
+            (HexCoord::new(1, 0), Wildlife::Elk),
+            (HexCoord::new(2, 0), Wildlife::Elk),
+            (HexCoord::new(3, 0), Wildlife::Elk),
+            (HexCoord::new(0, 4), Wildlife::Elk),
+            (HexCoord::new(1, 4), Wildlife::Elk),
+            (HexCoord::new(2, 4), Wildlife::Elk),
+        ]);
+        assert_eq!(score_elk(&elk_a, ScoringVariant::A), 22);
+
+        let salmon_a = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Salmon),
+            (HexCoord::new(1, 0), Wildlife::Salmon),
+            (HexCoord::new(2, 0), Wildlife::Salmon),
+            (HexCoord::new(3, 0), Wildlife::Salmon),
+            (HexCoord::new(4, 0), Wildlife::Salmon),
+            (HexCoord::new(5, 0), Wildlife::Salmon),
+            (HexCoord::new(6, 0), Wildlife::Salmon),
+        ]);
+        assert_eq!(score_salmon(&salmon_a, ScoringVariant::A), 25);
+
+        let hawk_a = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Hawk),
+            (HexCoord::new(2, 0), Wildlife::Hawk),
+            (HexCoord::new(4, 0), Wildlife::Hawk),
+            (HexCoord::new(6, 0), Wildlife::Hawk),
+            (HexCoord::new(8, 0), Wildlife::Hawk),
+            (HexCoord::new(10, 0), Wildlife::Hawk),
+            (HexCoord::new(12, 0), Wildlife::Hawk),
+        ]);
+        assert_eq!(score_hawks(&hawk_a, ScoringVariant::A), 22);
+
+        let bear_c = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Bear),
+            (HexCoord::new(1, 0), Wildlife::Bear),
+            (HexCoord::new(0, 1), Wildlife::Bear),
+            (HexCoord::new(4, 0), Wildlife::Bear),
+            (HexCoord::new(5, 0), Wildlife::Bear),
+            (HexCoord::new(8, 0), Wildlife::Bear),
+            (HexCoord::new(12, 0), Wildlife::Bear),
+        ]);
+        assert_eq!(score_bears(&bear_c, ScoringVariant::C), 20);
+
+        let elk_b = board_with_wildlife(&[
+            (HexCoord::new(0, 0), Wildlife::Elk),
+            (HexCoord::new(1, 0), Wildlife::Elk),
+            (HexCoord::new(0, 1), Wildlife::Elk),
+            (HexCoord::new(1, 1), Wildlife::Elk),
+            (HexCoord::new(5, 0), Wildlife::Elk),
+            (HexCoord::new(6, 0), Wildlife::Elk),
+            (HexCoord::new(5, 1), Wildlife::Elk),
+        ]);
+        assert_eq!(score_elk(&elk_b, ScoringVariant::B), 22);
+    }
+
+    #[test]
     fn elk_a_scores_crossing_lines_with_no_double_counting() {
         let board = board_with_wildlife(&[
             (HexCoord::new(-2, 0), Wildlife::Elk),

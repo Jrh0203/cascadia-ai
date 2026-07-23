@@ -9619,3 +9619,51 @@ retry log SHA-256
 `205635c72aa2319203d3cf7252738fbab311b1533d1a535ccad1e200ba868f81`.
 The process was confirmed absent and every fleet host idle at the 11:08
 read-only status check; no process was killed or restarted.
+
+## 2026-07-23 11:35 — Cap-seven holistic wildlife-bound exploration
+
+John asked how the all-board AAAAA and CBDDB upper bounds change when one
+species may appear seven times among the same 20 tokens. This is deterministic
+rules analysis, not an exact-search verdict or a promotion experiment. An
+initial inline enumeration was used only to identify the formulas and candidate
+maxima; it is not retained as evidence.
+
+The durable calculation will be accepted only after a standalone enumerator
+is frozen and passes three checks: (1) exhaustive equality with both existing
+cap-six `count_relaxation` implementations over all 826 allocations, (2)
+direct seventh-token parity with the production Rust scoring tables/formulas,
+and (3) independent verification that the coefficient of
+`(1+x+...+x^7)^5` at `x^20` is 2,226 and every reported maximizing allocation
+sums to 20 with no count above seven. Report both the existing geometry-free
+count bound and any strictly stronger elementary incidence bound; do not call
+either the achievable optimum. The existing AAAAA 68 is a cap-six exact
+holistic certificate and must not be compared as though it were the same
+relaxation.
+
+**11:38 result.** The frozen enumerator exhaustively reproduced both existing
+cap-six relaxations on all 826 allocations, then enumerated all 2,226 cap-seven
+allocations. AAAAA's direct geometry-free maximum changes 73→75. Adding the
+universal hex-incidence fact that one token can neighbor at most six foxes
+tightens the cap-seven result to **74**, versus the same 73 at cap six.
+Cap-seven incidence-bound maximizers are `(2,2,7,2,7)`,
+`(2,3,7,1,7)`, and `(2,4,7,1,6)`. CBDDB's geometry-free maximum changes
+100→**102**, attained at `(0,3,6,4,7)` and `(0,4,3,6,7)`.
+
+These are sound all-board upper bounds, not realizability claims. Therefore
+the cap-seven AAAAA holistic optimum is currently in `[68,74]`: the existing
+68 board remains legal, but its exact certificate covers only cap six. CBDDB
+is currently in `[84,102]`, with 84 still only a validated heuristic witness.
+No cap-seven coordinate solve was launched.
+
+Enumerator SHA-256
+`55f37219a5fe5f5c60514113beb216a42823ffd385cf06d6b6907d2ee3a6b5ed`;
+test SHA-256
+`ed4108417a2afe8c36da3cdf7a007b731c63c7b49b932c7da39071f0f2f45b15`;
+evidence SHA-256
+`fc27221050f55238d0aa11476825bae9ec4c1c1f9e084146347eb50146beae09`.
+All four Python tests pass, including exhaustive cap-six parity and every
+cap-seven maximizing allocation. Production Rust regression
+`seventh_token_reference_patterns_match_a_and_cb_tables` passes for the
+seventh-token AAAAA and Bear-C/Elk-B values; the complete
+`cargo test -p cascadia-game` gate passes 124 tests. Durable interpretation:
+`docs/v3/WILDLIFE_CAP7_UPPER_BOUNDS.md`.

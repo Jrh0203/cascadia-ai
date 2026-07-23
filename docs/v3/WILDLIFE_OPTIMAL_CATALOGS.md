@@ -38,6 +38,17 @@ The number of vectors is the coefficient of `x^20` in
 C(24,4) - 5*C(17,4) + 10*C(10,4) = 826
 ```
 
+At cap seven, the analogous coefficient is:
+
+```text
+C(24,4) - 5*C(16,4) + 10*C(8,4) = 2,226
+```
+
+That is 1,400 additional vectors, or approximately 2.695 times the cap-six
+catalog. The cap-seven elementary all-board upper bounds are 74 for AAAAA
+after a fox-incidence refinement and 102 for CBDDB. Full derivation:
+[WILDLIFE_CAP7_UPPER_BOUNDS.md](WILDLIFE_CAP7_UPPER_BOUNDS.md).
+
 If the cap is raised to eight, the analogous coefficient is:
 
 ```text
@@ -209,6 +220,8 @@ created them.
 
 ## Artifacts
 
+- `docs/v3/evidence/wildlife_cap7_upper_bounds_2026-07-23.json`:
+  exhaustive cap-six/cap-seven upper-bound comparison for both rulesets.
 - `docs/v3/evidence/aaaaa_wildlife_catalog_2026-07-22.json`: machine-readable
   AAAAA catalog ledger.
 - `docs/v3/AAAAA_WILDLIFE_CATALOG.md`: human-readable AAAAA summary and all

@@ -1,0 +1,137 @@
+{
+  "schema": "wildlife-cap-upper-bounds-v1",
+  "source_sha256": "55f37219a5fe5f5c60514113beb216a42823ffd385cf06d6b6907d2ee3a6b5ed",
+  "analysis": [
+    {
+      "cap": 6,
+      "token_count": 20,
+      "allocation_count": 826,
+      "aaaaa_geometry_free": {
+        "maximum": 73,
+        "maximizing_counts": [
+          [
+            6,
+            1,
+            6,
+            1,
+            6
+          ]
+        ]
+      },
+      "aaaaa_incidence_aware": {
+        "maximum": 73,
+        "maximizing_counts": [
+          [
+            6,
+            1,
+            6,
+            1,
+            6
+          ]
+        ],
+        "extra_constraint": "one token can be adjacent to at most six foxes"
+      },
+      "cbddb_geometry_free": {
+        "maximum": 100,
+        "maximizing_counts": [
+          [
+            0,
+            2,
+            6,
+            6,
+            6
+          ],
+          [
+            2,
+            0,
+            6,
+            6,
+            6
+          ]
+        ]
+      }
+    },
+    {
+      "cap": 7,
+      "token_count": 20,
+      "allocation_count": 2226,
+      "aaaaa_geometry_free": {
+        "maximum": 75,
+        "maximizing_counts": [
+          [
+            1,
+            4,
+            7,
+            1,
+            7
+          ],
+          [
+            2,
+            3,
+            7,
+            1,
+            7
+          ],
+          [
+            4,
+            1,
+            7,
+            1,
+            7
+          ]
+        ]
+      },
+      "aaaaa_incidence_aware": {
+        "maximum": 74,
+        "maximizing_counts": [
+          [
+            2,
+            2,
+            7,
+            2,
+            7
+          ],
+          [
+            2,
+            3,
+            7,
+            1,
+            7
+          ],
+          [
+            2,
+            4,
+            7,
+            1,
+            6
+          ]
+        ],
+        "extra_constraint": "one token can be adjacent to at most six foxes"
+      },
+      "cbddb_geometry_free": {
+        "maximum": 102,
+        "maximizing_counts": [
+          [
+            0,
+            3,
+            6,
+            4,
+            7
+          ],
+          [
+            0,
+            4,
+            3,
+            6,
+            7
+          ]
+        ]
+      }
+    }
+  ],
+  "interpretation": {
+    "sound_upper_bounds": true,
+    "geometric_realizability_proven": false,
+    "optimal_board_score_proven": false
+  }
+}

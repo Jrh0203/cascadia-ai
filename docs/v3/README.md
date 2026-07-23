@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-23 11:08 EDT)
+## Status at a glance (updated 2026-07-23 11:38 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, in progress):** AAAAA has
   one certified optimal board for 728/826 count vectors after unioning the
@@ -30,6 +30,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   The base retry exited naturally at 11:07 with one proof beyond its imported
   ledger and 115 timeouts; that proof was already included in the union, so
   the 728/826 total is unchanged.
+  A separate exhaustive cap-seven bound analysis covers all 2,226 allocations:
+  AAAAA has a sound incidence-aware ceiling of 74 and CBDDB a geometry-free
+  ceiling of 102; neither is an achievability claim:
+  [WILDLIFE_CAP7_UPPER_BOUNDS.md](WILDLIFE_CAP7_UPPER_BOUNDS.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02
@@ -258,6 +262,9 @@ timestamped snapshot, weaker than current `main`).
 - [All-count pure-wildlife catalogs](WILDLIFE_OPTIMAL_CATALOGS.md): exactness
   contract, performance work, cap-6/cap-8 state-space counts, and live AAAAA
   then CBDDB catalog status.
+- [Cap-seven wildlife upper bounds](WILDLIFE_CAP7_UPPER_BOUNDS.md): exhaustive
+  2,226-allocation AAAAA/CBDDB count bounds and the AAAAA fox-incidence
+  refinement.
 - [July 16 research brief](../../research_questions_7_16.md) and
   [answers](../../research_answers_7_16.md): frozen external-research scope,
   primary-source synthesis, gated Q1–Q10 decisions, and the complete D1

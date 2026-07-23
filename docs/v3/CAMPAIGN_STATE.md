@@ -1054,3 +1054,9 @@ architecture is external canonical enumeration of complete interacting
 fox/motif components, arithmetic profile sharding, factorized far cases, and
 local cell-set packing. Review and implementation contract:
 `docs/v3/AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md`.
+
+Cap-seven side analysis (11:38) exhaustively enumerated all 2,226 count
+allocations without launching a coordinate search. The comparable elementary
+AAAAA bound changes 73→74 after the universal six-neighbor fox-incidence
+constraint; CBDDB changes 100→102. These are bounds, not achieved scores.
+Durable derivation: `docs/v3/WILDLIFE_CAP7_UPPER_BOUNDS.md`.

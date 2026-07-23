@@ -1674,3 +1674,16 @@ components, solves local cell packing, and refines relaxed witness families.
 Independent profile/component branches are the correct fleet shard unit.
 Full sources and implementation contract:
 `docs/v3/AAAAA_EXACT_TAIL_LITERATURE_REVIEW.md`.
+
+## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
+
+Exhaustive deterministic enumeration expands the 20-token count space from
+826 allocations at cap six to 2,226 at cap seven. The direct AAAAA
+geometry-free bound rises 73→75, but a singleton animal can neighbor at most
+six foxes; incorporating that incidence constraint gives the stronger sound
+cap-seven all-board bound **74**. CBDDB's geometry-free bound rises
+100→**102**. These are not optimal-score claims: current cap-seven brackets
+are `[68,74]` for AAAAA and `[84,102]` for CBDDB, with the AAAAA lower endpoint
+exact and the CBDDB lower endpoint heuristic. No cap-seven coordinate search
+was run. Derivation and reproducibility:
+`docs/v3/WILDLIFE_CAP7_UPPER_BOUNDS.md`.
