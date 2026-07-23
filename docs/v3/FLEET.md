@@ -153,6 +153,16 @@ heartbeat cadence and its maximum inter-row handoff latency. The earlier
 30-second fixed poll dominated wall time once the near-tail exact queries
 fell below four seconds.
 
+Bounded maximization uses
+`fleet_all_wildlife_bound_probe_worker.sh`. Its hash-pinned inputs are a
+validated all-rules catalog plus an explicit
+`all-wildlife-bound-probe-taskset-v1` file. Every task is one unresolved
+ruleset/count pair, and every output records the verified witness (if any),
+CP-SAT objective bound, refined analytical intersection, and resumable
+identity. Collection is performed by
+`tools/all_wildlife_bound_probe_collect.py`, which validates every bound and
+witness before production-rescoring all selected boards.
+
 ## Throughput (measured 2026-07-22, model-S incumbent, n128/d2)
 
 - **~300 s/seed per host**, flat in session count (6/9/12 all within

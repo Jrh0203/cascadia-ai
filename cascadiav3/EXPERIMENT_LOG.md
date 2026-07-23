@@ -11271,3 +11271,61 @@ response SHA-256 is now
 `5f3b7b5dcc0fee92b766e59b3f99b5b1a25b8afd5f38431a0264b64809c251d4`.
 Curated evidence:
 `docs/v3/evidence/all_wildlife_six_to_ten_branch43_2026-07-23.json`.
+
+## 2026-07-23 18:22 EDT — bounded-maximization sidecar engineering smoke
+
+John authorized building the optional five-minute maximization/bound lane.
+The default exact feasibility prover remains unchanged. New code provides a
+resumable per-count maximization probe, explicit fleet tasksets, a Bash-3
+worker, and a fail-closed catalog merger. The merger independently validates
+every witness, recomputes analytical bounds, hash-pins probe/exact/rules
+sources, and production-rescores all 1,024 selected boards.
+
+Seven focused tests, Ruff, local Bash syntax, and john2–john4 Bash syntax
+pass. Source SHA-256 values: probe
+`9dc86a51b13c2086c2307975c16c110ce3437dee697febebef97603e57bb53b7`,
+taskset
+`2521bba5f42b7fbbee5f9709b8c3cb0088a473680d04b907be160fdbac5f26c6`,
+collector
+`61eabaac960247f5cfecac6263967e09c57609cb512a29199968b31e9005ebe1`,
+worker
+`c7dcc31a7bd7d55016d470ebb04112341766cb050a39811d0f8c40aa777008e4`.
+
+Before the fleet pilot, run a one-second engineering smoke on DCACC 77 count
+`(4,0,6,6,4)`, analytical upper 78, against catalog SHA
+`3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb`.
+Acceptance: valid identity, a refined upper no greater than 78 and no lower
+than any verified witness, atomic resumable output, and ordinary incomplete
+exit 2 unless the count closes. This smoke is not a scientific bound verdict.
+
+**18:24 EDT smoke invalidated before selection.** The solver returned the
+expected DCACC interval `[77,78]`, but the JSON contract overwrote the
+`selected_counts` vector list with its numeric count during dictionary
+composition. The first shell validator also used zsh's read-only `status`
+name and then exposed a jq-precedence mistake; neither affects the solver
+artifact, but the schema defect makes that artifact inadmissible. Rename the
+summary fields to `selected_count_count` / `attempted_count_count`, extend the
+regression test to pin both fields, and rerun under a fresh output name and
+new probe hash. No fleet pilot launches from the invalid smoke.
+
+**18:25 EDT corrected smoke retry preregistration.** Seven tests and Ruff
+pass with the schema regression pinned. Corrected probe SHA-256 is
+`4c5047c99370d9a433f0b448fe31db5a1dda85fa4b4519aa52498990b788fe31`;
+all other source inputs and the one-second DCACC case/gate are unchanged.
+Write to fresh
+`cascadiav3/fleet/bound_probe_engineering_smoke_dcacc_retry1_20260723.json`.
+
+**18:26 EDT corrected smoke verdict — PASS_ENGINEERING.** The corrected
+probe returned the valid unchanged interval `[77,78]`: `UNKNOWN`, raw and
+refined upper 78, no witness, 1.072 seconds. Output SHA-256 is
+`6cdfd40993374ed9342c1885d7146f660145237518630207b4b90b71779c679d`.
+The collector then validated the probe, recomputed all 1,024 rule intervals,
+and production-rescored every board. It preserved 80 certified rows, the
+holistic `[85,99]` interval, and production response SHA
+`5f3b7b5dcc0fee92b766e59b3f99b5b1a25b8afd5f38431a0264b64809c251d4`.
+Merged catalog/Markdown SHA-256:
+`1c66f654cad0cedfd536867b677d005d544a67a629890550dbfb57c9123f12e0`
+and
+`d8c3712e2d41199f58cca495a1331b3b3a78139db1eea1f54f7f522744263348`.
+This proves the pipeline contract, not bound usefulness. Curated evidence:
+`docs/v3/evidence/all_wildlife_bound_probe_smoke_2026-07-23.json`.

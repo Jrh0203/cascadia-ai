@@ -1,0 +1,31 @@
+{
+  "schema": "all-wildlife-bound-probe-smoke-evidence-v1",
+  "completed_at": "2026-07-23T22:26:00Z",
+  "base_catalog_sha256": "3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb",
+  "probe_source_sha256": "4c5047c99370d9a433f0b448fe31db5a1dda85fa4b4519aa52498990b788fe31",
+  "taskset_source_sha256": "2521bba5f42b7fbbee5f9709b8c3cb0088a473680d04b907be160fdbac5f26c6",
+  "collector_source_sha256": "61eabaac960247f5cfecac6263967e09c57609cb512a29199968b31e9005ebe1",
+  "worker_sha256": "c7dcc31a7bd7d55016d470ebb04112341766cb050a39811d0f8c40aa777008e4",
+  "case": {
+    "ruleset": "DCACC",
+    "counts": [
+      4,
+      0,
+      6,
+      6,
+      4
+    ],
+    "incumbent": 77,
+    "analytical_upper": 78,
+    "solver_status": "UNKNOWN",
+    "solver_best_bound": 78,
+    "refined_upper": 78,
+    "witness_score": null,
+    "elapsed_seconds": 1.0716811660677195
+  },
+  "probe_output_sha256": "6cdfd40993374ed9342c1885d7146f660145237518630207b4b90b71779c679d",
+  "merged_catalog_sha256": "1c66f654cad0cedfd536867b677d005d544a67a629890550dbfb57c9123f12e0",
+  "merged_markdown_sha256": "d8c3712e2d41199f58cca495a1331b3b3a78139db1eea1f54f7f522744263348",
+  "production_response_sha256": "5f3b7b5dcc0fee92b766e59b3f99b5b1a25b8afd5f38431a0264b64809c251d4",
+  "verdict": "PASS_ENGINEERING"
+}

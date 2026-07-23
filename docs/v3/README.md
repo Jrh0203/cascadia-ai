@@ -111,6 +111,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   retained exact partial work in seven, and found five improved incumbents.
   The integrated catalog is now **80/1,024 exact**, with 118,704 branches
   across 944 unresolved rows. The holistic incumbent remains 85.
+  A separate bounded-maximization sidecar now passes its engineering smoke:
+  it stores sound CP-SAT upper bounds and concrete witnesses without changing
+  the default feasibility prover. The smoke preserved the current holistic
+  interval `[85,99]`; usefulness awaits the frozen multi-case fleet pilot.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

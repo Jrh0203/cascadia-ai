@@ -1409,6 +1409,12 @@ Independent and production rescoring advances the catalog 44→80 exact,
 leaving 118,704 branches across 944 rows. Curated evidence:
 `docs/v3/evidence/all_wildlife_six_to_ten_branch43_2026-07-23.json`.
 
+Bounded-maximization sidecar: implementation and corrected engineering smoke
+pass. The one-second DCACC case retained `[77,78]`, and the fail-closed
+collector production-rescored all 1,024 boards without changing their
+scores. This validates plumbing only; a preregistered representative fleet
+pilot must show useful bound contraction or a better witness before scaling.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

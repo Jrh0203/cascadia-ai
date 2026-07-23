@@ -254,3 +254,19 @@ and batch-compares every board with the production Rust scorer.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.
+
+## Bounded-maximization sidecar
+
+The exact feasibility lane remains the certification engine. A separate
+optional sidecar can maximize an unresolved fixed-count model for a bounded
+time and retain both sides of the interval:
+
+- the independently rescored witness board, when one is found;
+- `floor(best_objective_bound)`, intersected with the analytical count upper;
+- exact infeasibility at the current threshold, when proved;
+- the untouched analytical bound for every unattempted count.
+
+The collector merges bounds monotonically, never converts `UNKNOWN` into an
+optimum, and reruns the production scorer over all 1,024 selected boards.
+This lane is intended to improve stored boards and make timeout gaps
+quantitative; it does not replace the component-local exact architecture.
