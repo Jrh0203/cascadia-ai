@@ -1,0 +1,42 @@
+{
+  "schema": "all-wildlife-proof-fleet-v1",
+  "state": "running",
+  "tag": "all_cards_proof_calibration_20260723",
+  "source_revision": "4f4e59c6dd1a5c5489483889c2b404a15ed49075",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "proof_source_sha256": "3c7ca3d9d840eed0505bfd8aa2c8a0d03d36c164058cb2d61db344c4d6ed63d7",
+  "exact_source_sha256": "4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e",
+  "worker_sha256": "6a6bb7e6acfca8963b1c2f420aa251a392601bb0b4794f483a0032f3d9744a1b",
+  "configuration": {
+    "time_limit_seconds_per_count": 30,
+    "total_time_limit_seconds_per_ruleset": 300,
+    "solver_workers": 8,
+    "connectivity_required": true
+  },
+  "shards": [
+    {
+      "host": "john1",
+      "indices": [200, 0],
+      "wrapper_pid": 52972,
+      "launched_utc": "2026-07-23T17:32:41Z"
+    },
+    {
+      "host": "john2",
+      "indices": [136, 572],
+      "wrapper_pid": 39786,
+      "launched_utc": "2026-07-23T17:32:41Z"
+    },
+    {
+      "host": "john3",
+      "indices": [233, 1023],
+      "wrapper_pid": 6866,
+      "launched_utc": "2026-07-23T17:32:41Z"
+    },
+    {
+      "host": "john4",
+      "indices": [562, 637],
+      "wrapper_pid": 32718,
+      "launched_utc": "2026-07-23T17:32:42Z"
+    }
+  ]
+}

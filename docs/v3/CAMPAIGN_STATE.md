@@ -1086,3 +1086,6 @@ The eight-rule stratified exact calibration is preregistered at 13:31:
 30 seconds/count, five minutes/ruleset, one eight-worker ruleset at a time on
 each mini, with easy/reference/median/leader/max-tail strata. No full exact
 launch occurs until its frozen completion band is applied.
+
+All four calibration shards launched at 13:32 with fresh durable heartbeats;
+do not read their partial scores. Wrapper PIDs are pinned in the fleet ledger.

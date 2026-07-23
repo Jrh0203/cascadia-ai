@@ -9916,3 +9916,10 @@ production shape; 3–5 requires one measured optimization/recalibration pass;
 filters. Regardless of the band, preserve every exact count exclusion and
 connected witness; `UNKNOWN` remains unresolved. Do not read partial scores
 while a host's two-rule calibration shard is live.
+
+**13:32 launch.** All four candidate/source/runtime/hash preflights passed.
+john1–john4 launched their registered two-index sequences at
+`17:32:41–42Z`, wrapper PIDs 52972/39786/6866/32718. Each worker owns a
+durable per-ruleset ledger, PID, 30-second heartbeat, and terminal marker.
+Launch ledger:
+`cascadiav3/fleet/all_cards_proof_calibration_20260723_fleet.json`.
