@@ -10189,3 +10189,32 @@ frontier reduction is zero and neither selection threshold passes. Do not
 integrate a redundant table. This closes two-species Fox-A capacity as a
 source of further improvement; any stronger Fox-A relaxation must couple
 three or four target species or couple Fox A to another animal card.
+
+## 2026-07-23 14:15 — PREREGISTRATION: specialized-bound proof recalibration
+
+Re-run the six incomplete members of the frozen eight-row proof calibration
+after selecting the exact Fox-C and Fox-B tables. ACACA 76 and ADACA 77
+remain the two certified frozen rows; do not rerun or replace them. Fresh
+proof identities are mandatory because the bound/scorer source is now
+hash-pinned.
+
+Assignments: john1 AAAAA/0 then CADAC/562; john2 ADCCB/233 then CADDA/572;
+john3 CBDDB/637; john4 DDDDD/1023. Configuration remains exactly 30
+seconds/count, 300 seconds/ruleset, eight workers, connected boards, merged
+candidate SHA-256
+`72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c`.
+Source revision `12b4c8dc53d9618ce7478cf8bbafd9671713b88f`;
+proof runner SHA-256
+`7c265ad2f1a44fd3e035f9fc156b389cfba4a0d54f66c8c02c11184a7ba61e30`;
+exact model
+`4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e`;
+selected bounds
+`d8c78ea6ae37cee14c072b7a0fa55919a940e85854bdf66b990721b4d86fa820`;
+worker
+`12e72974fe0dc08789bf57456e8ea6971acd37008b96183c7bee82d5e0d9d93a`.
+
+Apply the original band to the combined frozen eight rows: 6–8 complete
+validates the five-minute production shape; 3–5 requires another measured
+optimization; 0–2 rejects it. Preserve every exact exclusion and witness;
+do not inspect partial scores. No full 1,024-row launch occurs before all six
+rerun shards are terminal and the band is applied.

@@ -1149,3 +1149,9 @@ but the 343-entry global table equals the existing `min(foxes,2ab)` capacity
 everywhere. The preregistered improvement gate fails at 0%; the table is not
 integrated. Two-species Fox-A capacity is now closed as an optimization
 direction.
+
+A specialized-bound recalibration is preregistered on the six formerly
+incomplete frozen rows, retaining certified ACACA/ADACA as the original
+eight-row baseline. It uses the same 30-second/count, five-minute/ruleset
+shape and applies the original combined completion band before any full
+launch.
