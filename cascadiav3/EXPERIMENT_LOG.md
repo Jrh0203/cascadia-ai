@@ -10347,3 +10347,32 @@ solve: DCAAC 69, DCCAC 69, DDAAC 72, and DDCAC 72. Together with the frozen
 ACACA 76 and ADACA 77 coordinate proofs, the current all-card catalog has six
 certified rulesets. The disconnected six-row union and its 997→994 rejection
 are unchanged.
+
+## 2026-07-23 15:05 — PREREGISTRATION: deep hard-row incumbent calibration
+
+Before building another exact bound, measure whether the original 1.2-million-
+state warm starts materially undersearched the six frozen hard strata. Run
+96 restarts × 500,000 iterations, at most 48 million evaluated states per
+ruleset, with eight threads and base seed `2026072302`. Assign john1
+AAAAA/0 then CADAC/562; john2 ADCCB/233 then CADDA/572; john3 CBDDB/637;
+john4 DDDDD/1023. This is 40× the original per-row search budget.
+
+The new targeted worker runs arbitrary indices sequentially, refuses output,
+PID, or tag collisions, records wrapper/child PIDs and heartbeats, and pins
+the candidate source, shared search/scoring support, worker, and each
+host-specific release binary. Source revision
+`f00fcd8efbf76ee7fec946c95c7c089145cf722d`; candidate source SHA-256
+`8510a450caab1db02f2c4d1541716367e8e3cdeb185fbe12b98b79960dec99ef`;
+support
+`e094671b33c4f525a189acce590416bfe1cc17856edbda0360770db540468ee0`;
+worker
+`455a7aef327096f4b7b5ce6501e184c76b44a1a08622b640d3997c0bacc17f03`.
+Per-host binary hashes are frozen in
+`cascadiav3/fleet/all_cards_candidate_deep_calibration_20260723_fleet.json`.
+
+Selection is fixed before output: wait for all four shards, independently
+validate connectedness, cap six, and both scorer results, then retain every
+strict improvement in a new merged warm start. Otherwise keep the frozen
+candidate. This is heuristic incumbent generation only; no score is certified
+unless it separately meets a sound bound or completes exact exclusions. Do
+not read partial outputs.

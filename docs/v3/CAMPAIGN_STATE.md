@@ -1187,3 +1187,9 @@ DDAAC 72, and DDCAC 72 pass that condition. With the frozen ACACA 76 and
 ADACA 77 coordinate proofs, 6/1,024 rulesets are currently certified. This
 bookkeeping fix does not change any score, unresolved hard-row frontier, or
 the disconnected-prescreen rejection.
+
+A 40× deep incumbent calibration is now preregistered on the same six hard
+rows (48 million states maximum each, john1–john4). It is a measured warm-
+start intervention, not a proof: only independently rescored strict
+improvements will be merged, and heuristic equality alone never certifies a
+row.

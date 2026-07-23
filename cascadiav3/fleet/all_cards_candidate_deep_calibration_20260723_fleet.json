@@ -1,0 +1,37 @@
+{
+  "schema": "all-wildlife-targeted-candidate-fleet-v1",
+  "state": "planned",
+  "tag": "all_cards_candidate_deep_calibration_20260723",
+  "source_revision": "f00fcd8efbf76ee7fec946c95c7c089145cf722d",
+  "candidate_source_sha256": "8510a450caab1db02f2c4d1541716367e8e3cdeb185fbe12b98b79960dec99ef",
+  "support_source_sha256": "e094671b33c4f525a189acce590416bfe1cc17856edbda0360770db540468ee0",
+  "worker_sha256": "455a7aef327096f4b7b5ce6501e184c76b44a1a08622b640d3997c0bacc17f03",
+  "binary_sha256": {
+    "john1": "4da4fcf77ab337aacde5768bf590ec7520a3380a0adb471de5ae61a05dddb60e",
+    "john2": "97bcb0622ccee9a70ca559ac4294a25ce28aee3a5ddbda9bba67c20859f80877",
+    "john3": "8295b16215401587f6347674365991af1354d8f55bb77a4ab0843dca6942956b",
+    "john4": "ddd110aa03f0543bbff4495da77f7ce1b4b789a9303627a40953c7872c8d4f8c"
+  },
+  "configuration": {
+    "threads": 8,
+    "restarts_per_ruleset": 96,
+    "iterations_per_restart": 500000,
+    "maximum_states_per_ruleset": 48000000,
+    "base_seed": 2026072302
+  },
+  "baseline": [
+    {"index": 0, "ruleset": "AAAAA", "score": 68},
+    {"index": 233, "ruleset": "ADCCB", "score": 85},
+    {"index": 562, "ruleset": "CADAC", "score": 66},
+    {"index": 572, "ruleset": "CADDA", "score": 78},
+    {"index": 637, "ruleset": "CBDDB", "score": 84},
+    {"index": 1023, "ruleset": "DDDDD", "score": 78}
+  ],
+  "shards": [
+    {"host": "john1", "indices": [0, 562]},
+    {"host": "john2", "indices": [233, 572]},
+    {"host": "john3", "indices": [637]},
+    {"host": "john4", "indices": [1023]}
+  ],
+  "selection_rule": "after every shard is terminal, independently validate connectivity, cap six, and Python/production score agreement; retain every strict incumbent improvement and otherwise retain the frozen merged candidate; heuristic equality never certifies optimality"
+}
