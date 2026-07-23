@@ -9290,3 +9290,13 @@ workers terminate naturally it runs the fail-closed collector and accepts
 completion only for 115/115 independently verified exact rows. It launches
 no follow-on computation; an incomplete exact tail exits nonzero for explicit
 analysis rather than silently advancing to CBDDB.
+
+**Collector-waiter launch correction.** PID `52984` did not survive the
+launching tool shell; it emitted neither a heartbeat nor an exit file and is
+not live. The three remote solver wrappers are unaffected and retain their
+own durable heartbeats, logs, outputs, and terminal markers. A terminal-only
+foreground monitor is active for this session; do not double-launch another
+collector while it remains active. If the session is interrupted, collection
+is reboot-reconstructible with
+`fleet_wildlife_exact_collect.sh aaaaa_exact_tail_fleet3_20260723 collect`,
+which still refuses any partial or invalid fleet state.
