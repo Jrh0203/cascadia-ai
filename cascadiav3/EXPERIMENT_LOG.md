@@ -10314,3 +10314,22 @@ connected/disconnected two-exclusion union test passes. Collector SHA-256
 `65096a1e2be39b395efe522a64eb374a0f3a88d4d7388f7317dfb813dc6b4a60`;
 four-test SHA-256
 `6067392486d14f8596b2e8571c4e192981887be8860c212ad7b2c66e7453fdec`.
+
+**14:40 terminal verdict — disconnected prescreen rejected.** All four
+workers exited naturally with code 0 at `18:34:27–18:39:57Z`. Collection
+waited for all shards, then validated the six disconnected proof identities,
+incumbents, scores, mode flags, and unresolved sets. None completed. The
+disconnected rows retained 26/61/361/125/283/141 unresolved counts for
+AAAAA/ADCCB/CADAC/CADDA/CBDDB/DDDDD.
+
+The mode-aware collector then validated both immutable ledgers per row and
+unioned only their exact infeasibility thresholds. The union retains
+23/61/361/125/283/141 unresolved counts, total **994 versus 997** for the
+connected baseline: three ADCCB branches removed, zero additional rulesets
+completed, and only **0.30%** total reduction. This misses both preregistered
+selection conditions, so the two-stage disconnected architecture is rejected
+and no full pass launches. The six disconnected proof hashes are frozen in
+`cascadiav3/fleet/all_cards_disconnected_prescreen_20260723_fleet.json`;
+union-catalog SHA-256
+`c7e36d225dcd6d28886594ea77e4a8721de3de99ee544c2e43d3919e33916811`.
+All exact exclusions are preserved as reusable evidence.

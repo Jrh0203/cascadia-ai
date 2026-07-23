@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-proof-fleet-v1",
-  "state": "running",
+  "state": "complete",
   "tag": "all_cards_disconnected_prescreen_20260723",
   "source_revision": "b11a982d6ef27bbab2c99ffb6b987ee2bf25cd9e",
   "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
@@ -21,5 +21,81 @@
     {"host": "john2", "indices": [233, 572], "wrapper_pid": 46781},
     {"host": "john3", "indices": [637], "wrapper_pid": 12276},
     {"host": "john4", "indices": [1023], "wrapper_pid": 33575}
-  ]
+  ],
+  "terminal_utc": {
+    "john1": "2026-07-23T18:39:57Z",
+    "john2": "2026-07-23T18:39:57Z",
+    "john3": "2026-07-23T18:34:27Z",
+    "john4": "2026-07-23T18:34:27Z"
+  },
+  "results": [
+    {
+      "index": 0,
+      "ruleset": "AAAAA",
+      "score": 68,
+      "proof_complete": false,
+      "attempts": 85,
+      "unresolved_counts": 26,
+      "sha256": "8df8cf670d980d30989b51bb12338435bf45eca4191a2ae03c0fd3e63be042a8"
+    },
+    {
+      "index": 233,
+      "ruleset": "ADCCB",
+      "score": 85,
+      "proof_complete": false,
+      "attempts": 17,
+      "unresolved_counts": 61,
+      "sha256": "859d7b2ec8384a9378d83199c6e3f9d43b5333eaac511d3f3ed2eb4c229e37b7"
+    },
+    {
+      "index": 562,
+      "ruleset": "CADAC",
+      "score": 66,
+      "proof_complete": false,
+      "attempts": 10,
+      "unresolved_counts": 361,
+      "sha256": "6c74f29a426364ad3d52a64965afac61068fe019df052a7020974964ab57a6a6"
+    },
+    {
+      "index": 572,
+      "ruleset": "CADDA",
+      "score": 78,
+      "proof_complete": false,
+      "attempts": 10,
+      "unresolved_counts": 125,
+      "sha256": "34918fed6f4af030a3c52f75d18f458cc397d51d2a2590de6b6e1969963d1cd9"
+    },
+    {
+      "index": 637,
+      "ruleset": "CBDDB",
+      "score": 84,
+      "proof_complete": false,
+      "attempts": 10,
+      "unresolved_counts": 283,
+      "sha256": "911dd5cf9d17a0d83a942b1ec7432718584156747fb257e9e433e91d6498c9ad"
+    },
+    {
+      "index": 1023,
+      "ruleset": "DDDDD",
+      "score": 78,
+      "proof_complete": false,
+      "attempts": 10,
+      "unresolved_counts": 141,
+      "sha256": "173f7f2000741e1476c87c45a22e98bf48fb6c2eca6e53544dffa35307dd0aa7"
+    }
+  ],
+  "union_catalog_sha256": "c7e36d225dcd6d28886594ea77e4a8721de3de99ee544c2e43d3919e33916811",
+  "union_unresolved_counts": {
+    "AAAAA": 23,
+    "ADCCB": 61,
+    "CADAC": 361,
+    "CADDA": 125,
+    "CBDDB": 283,
+    "DDDDD": 141
+  },
+  "union_unresolved_total": 994,
+  "union_reduction": 3,
+  "union_reduction_fraction": 0.003009027081243731,
+  "combined_completed_rulesets": 2,
+  "decision": "rejected: no additional calibration row completed and the exact-exclusion union reduced the six-row unresolved total only 997 to 994 (0.30%), below the preregistered 20% threshold"
 }

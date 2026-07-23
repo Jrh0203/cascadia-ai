@@ -173,6 +173,12 @@ and batch-compares every board with the production Rust scorer.
   existing `min(foxes,2ab)` capacity in every entry, giving 0% reduction. It
   is a documented negative, not an additional production table:
   `docs/v3/evidence/hex_dual_observation_bounds_2026-07-23.json`.
+- The same-budget specialized connected recalibration remained 2/8 complete.
+  A disconnected-relaxation prescreen completed no additional row; exact
+  exclusion union reduced the six-row unresolved total only 997→994 (0.30%),
+  below its preregistered 20% selection gate. Both generic coordinate shapes
+  are rejected for full production, while every exact exclusion remains
+  reusable.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

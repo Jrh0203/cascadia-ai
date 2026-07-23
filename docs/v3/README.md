@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-23 11:38 EDT)
+## Status at a glance (updated 2026-07-23 14:40 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, in progress):** AAAAA has
   one certified optimal board for 728/826 count vectors after unioning the
@@ -47,8 +47,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   Fox-C branches. A second 36/36 exact Fox-B qualification table removes
   9.66% of Fox-B branches. Together they remove 26.22% of the original
   all-rule count frontier. A same-budget connected recalibration nevertheless
-  remained 2/8 complete, so the direct production shape stays rejected and a
-  disconnected-relaxation prescreen is next. No
+  remained 2/8 complete. A disconnected-relaxation prescreen then completed
+  no additional row and reduced its six-row union frontier only 997→994
+  (0.30%), failing the frozen 20% selection gate. Both direct coordinate
+  shapes are rejected; no full 1,024-row proof launch occurred. No
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).

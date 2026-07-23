@@ -1171,3 +1171,12 @@ requires exact-exclusion union to complete another frozen row or reduce the
 six-row unresolved total by at least 20% from 997.
 All four disconnected prescreen shards launched at 14:28 with mode-pinned
 identities and fresh self-recorded heartbeats.
+
+The four shards exited cleanly by 14:40. No disconnected row completed.
+Unioning only exact disconnected infeasibilities with the frozen connected
+proofs reduced the six-row unresolved total just 997→994 (0.30%): AAAAA 23,
+ADCCB 61, CADAC 361, CADDA 125, CBDDB 283, DDDDD 141. This fails both
+preregistered gates, so the disconnected prescreen is rejected and no full
+1,024-row run follows. All exclusions remain frozen evidence; the next
+architecture must strengthen card interactions or replace the coordinate
+proof formulation rather than merely remove connectivity.
