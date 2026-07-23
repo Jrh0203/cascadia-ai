@@ -8390,3 +8390,26 @@ Markdown `docs/v3/AAAAA_WILDLIFE_CATALOG.md`; retry log
 only a witness hitting the effective upper bound or an exact `INFEASIBLE`
 answer closes a vector; every `UNKNOWN` remains incomplete for a later,
 separately logged longer pass.
+
+## 2026-07-23 05:50 — AAAAA deterministic-connectivity calibration preregistration
+
+The first six hinted retry cases (all one-point gaps) returned `UNKNOWN` after
+their fixed 60-second disconnected + 120-second connected attempts. This
+confirms incumbent search is no longer the limiting phase. A separate exact
+variant replaces the connected model's arbitrary rooted spanning tree with
+shortest-path fixed-point equations. Every connected graph has exactly its
+root-distance assignment; any disconnected component yields the contradiction
+`minimum_depth = minimum_depth + 1`. Fixed connected/disconnected board tests
+pass.
+
+Before calibration output: use the already-completed `(3,6,6,0,5)` case at
+threshold 62, the retained 61-point board as a coordinate hint, connected
+model only, two otherwise-idle workers, 60-second limit, seed 20260723. The
+active eight-worker retry remains untouched. Declare the variant promising
+only if it returns exact `INFEASIBLE` or materially reduces the unresolved
+bound within 60 seconds; `UNKNOWN` is no proof. Wrapper source SHA-256
+`0c65743887a046c56c63d91428a4d86d6b5bc76a6878c9a15e2234ec803915d0`;
+imported scoring/coordinate model SHA-256
+`55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8`.
+Durable output:
+`docs/v3/evidence/aaaaa_distance_connectivity_calibration_2026-07-23.json`.
