@@ -8700,3 +8700,25 @@ connected incumbent matches that upper. Require 50 / 20 / 30 exhausted
 subcases respectively. Any `UNKNOWN`, count mismatch, disconnected incumbent,
 or larger relaxed upper fails closed and promotes nothing. This evidence is
 kept separate until the active catalog writer exits naturally.
+
+## 2026-07-23 07:23 — AAAAA Hawk-aware packing diagnostic preregistration
+
+Six additional unresolved thresholds force Bear A, Salmon A, and Hawk A to
+their standalone maxima: `(6,4,1,3,6)>=68`, `(6,5,1,2,6)>=68`,
+`(4,4,1,5,6)>=66`, `(4,6,1,3,6)>=66`, `(4,6,4,2,4)>=65`, and
+`(3,5,4,3,5)>=63`. Extend the selected local set-packing relaxation with
+hawk singleton cells. Deliberately drop hawk-hawk isolation and let
+noncovering hawks live abstractly; this strictly enlarges the legal-board set.
+Preserve forced Bear/Elk/Hawk/Fox cell non-overlap around every maximum salmon
+shape. Source SHA-256
+`ef93ede65e967a0aa6d3223ec44d2b159271b9d6ef88f460bdde52ca73ed3682`;
+tests SHA-256
+`279761b2d6b962143839c799c58af4901c33bd4195347385416855568d90fac4`;
+Ruff and both tests pass.
+
+Run a one-worker, 30-second-per-shape diagnostic over the six cases only after
+the active three-vector certificate run releases its core. Select this
+extension for formal certification if at least one case exhausts with a
+relaxed upper below its registered threshold. `UNKNOWN`, a feasible
+relaxation, or an invalid premise promotes nothing for that case. Store no
+diagnostic result in the live catalog.
