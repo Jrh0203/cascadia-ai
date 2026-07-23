@@ -1213,3 +1213,8 @@ coupled bound was identically equal to the existing bound: zero cells reduced
 and 119,959→119,959 frontier branches. It is rejected and not integrated.
 Degree and pair-edge budgets without richer geometric/card interaction are
 now closed as a source of improvement.
+
+The next measured solver optimization is a sound twelve-way dihedral symmetry
+break around an arbitrary ordered fox pair. It has a frozen four-case,
+30-second paired gate and must either deliver ≥2× on the known exclusion or
+resolve a formerly unknown case without regression before selection.

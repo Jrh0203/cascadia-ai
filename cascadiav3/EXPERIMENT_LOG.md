@@ -10439,3 +10439,34 @@ wired into `count_upper`. Retain the tested derivation as a closed negative:
 species degree and pair-edge budgets alone add nothing beyond the selected
 card-specific tables. Evidence:
 `docs/v3/evidence/all_wildlife_coupled_edge_bound_2026-07-23.json`.
+
+## 2026-07-23 15:08 — PREREGISTRATION: fox-anchor dihedral symmetry break
+
+The generalized coordinate model orders interchangeable tokens and translates
+token 0 to the origin, but it leaves all twelve rotations/reflections of the
+hex lattice. For every branch with at least two foxes, make fox tokens 0 and 1
+the arbitrary anchor/orientation pair, constrain their displacement to the
+closed fundamental wedge `q >= r >= 0, q >= 1`, and sort the remaining foxes.
+Every distinct fox pair has a dihedral image in this wedge, so the constraint
+removes no unlabeled board. Fixed-board verification keeps its literal
+coordinate path; candidate hints are transformed into the same canonical
+frame.
+
+Correctness gates: enumerate all twelve transforms over a radius-six disk and
+prove every nonzero vector has a wedge image; preserve species/counts,
+connectedness, and all 1,024 scores on transformed random boards; rerun the
+1,024 fixed-board exact-model gate. Performance calibration is paired,
+single-worker, and connected on:
+
+- AAAAA `(6,1,6,2,5) >= 69`, a known exact exclusion;
+- AAAAA `(4,2,6,2,6) >= 69`;
+- CADAC `(0,2,6,6,6) >= 67`; and
+- CBDDB `(0,2,6,6,6) >= 85`.
+
+Run old/new modes at 30 seconds/case, seed `20260723`, on john1 after the
+candidate shard is confirmed dead. Select only if correctness is complete and
+the known exclusion is at least 2× faster with no status regression, or the
+new mode resolves at least one case the old mode leaves unknown. Otherwise
+retain the old formulation. These are solver-engineering measurements, not
+new optimum claims unless a complete exact exclusion is independently
+collected.
