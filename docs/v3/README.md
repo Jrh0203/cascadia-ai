@@ -54,9 +54,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   now certified: two by coordinate proof and four because their boards meet
   the sound all-count bound. A 40× deep incumbent calibration is running on
   the six hard strata across john1–john4; john1's local `nohup` shard died
-  without a terminal marker and will not be restarted without permission,
-  while the remote results remain closed. This is warm-start work, never
-  proof. A complete shared-edge/degree relaxation passed 846,848 containment
+  without a terminal marker and will not be restarted without permission.
+  The three remote shards are exit-0 but sealed unread; nothing from this
+  failed heuristic calibration enters the catalog. A complete
+  shared-edge/degree relaxation passed 846,848 containment
   checks but tightened zero cells, so it is closed and not integrated. A
   twelve-way fox-anchor symmetry break also failed its runtime gate and was
   removed. No other

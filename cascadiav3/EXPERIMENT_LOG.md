@@ -10394,6 +10394,15 @@ file from any shard has been read. Do not restart or reassign john1 without
 John's explicit permission. The ledger remains running/degraded until the
 undisturbed remote shards reach terminal state.
 
+**15:12 terminal remote state — calibration failed/sealed.** john2,
+john3, and john4 now have terminal exit-0 markers; john1 remains dead without
+one. The preregistered all-four-terminal condition is therefore impossible
+for this tag. No result file from any host was opened, and no candidate score
+is imported. The ledger state is `failed_sealed`. Recovery requires John's
+explicit permission for a fresh, detached-`screen` john1 retry of indices
+0/562, followed by complete terminal collection; do not infer anything from
+the sealed remote outputs.
+
 ## 2026-07-23 14:55 — PREREGISTRATION: coupled adjacency-resource bound
 
 The remaining count bounds maximize each animal independently even though

@@ -1202,6 +1202,11 @@ john2 remains live and john3/john4 are terminal, but every result file remains
 closed. No restart or reassignment is authorized; the exact-catalog work
 continues independently.
 
+john2 later reached terminal exit 0 as well. The calibration is now
+`failed_sealed`: all remote outputs remain unread because the frozen
+all-four-terminal-marker condition cannot be met. Nothing from this heuristic
+run enters the catalog. A fresh john1 `screen` retry needs explicit permission.
+
 In parallel, a coupled adjacency-resource bound is preregistered. It will
 charge Bear/Elk/Salmon motifs and Fox observations against shared exact
 lattice edge caps and degree-six budgets, including explicit sharing of
