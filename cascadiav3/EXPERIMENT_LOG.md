@@ -8610,3 +8610,26 @@ next engineering direction and does not close the vector. Decision: build a
 reviewable deterministic certificate generator with explicit superset proof,
 unit tests, source hash, and durable output; preregister that run before
 accepting its conclusion.
+
+## 2026-07-23 06:38 — AAAAA motif certificate preregistration
+
+The reviewed deterministic certificate generator is now frozen at source
+SHA-256
+`1d67cf1ee1b830b634f67ea8ba550e1ba305692a4ac3c2ea84c9799349ce078a`;
+its test source SHA-256 is
+`a404bb98b309d671c7276383cc0c7a2e16d1836e54ab89af31c837e5016d702b`.
+Ruff passes and four tests pass, including the public free-polyhex counts
+`1,1,3,7,22,82`, 25 valid six-salmon shapes, both optimal six-elk partitions,
+and full relaxed-superset exhaustion.
+
+Run once against the live AAAAA ledger's retained `(3,6,6,0,5)` incumbent and
+write
+`docs/v3/evidence/aaaaa_motif_certificate_3_6_6_0_5_2026-07-23.json`.
+Accept the certificate only if the incumbent independently scores 61 on 20
+distinct connected cells, the enumeration reproduces 82 free size-six
+polyhexes / 25 valid salmon shapes / 4,623 fox sets / 2,355 bear-feasible fox
+sets / 2,342 independently bear-and-elk-feasible fox sets, and finds exactly
+zero non-overlapping relaxed realizations. Under those fixed conditions the
+relaxed superset's infeasibility excludes 62, and the witness proves exact
+optimum 61. Any mismatch or nonzero realization fails the certificate and
+leaves the vector incomplete.
