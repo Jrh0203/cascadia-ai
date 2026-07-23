@@ -1094,3 +1094,9 @@ DDDDD retained 91/612/125/309/141. The generic five-minute production shape
 is rejected and no 1,024-rule exact launch occurred. All valid exclusions and
 witnesses are preserved in the collected calibration ledgers. A specialized
 sound-filter pass and frozen-row recalibration are now required.
+
+The first preregistered specialized pass derives an exact cap-six hex-lattice
+cross-adjacency table for Fox C. Its 36 connected-component subproofs are
+sharded 9/9/9/9 over john1–john4, then combined by a complete disconnected
+component DP. It must pass exact status/bound, coverage, symmetry, and frozen
+frontier-reduction gates before selection.

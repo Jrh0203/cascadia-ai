@@ -9947,3 +9947,30 @@ The eight proof SHA-256 values and exact per-row totals are frozen in the
 completed launch ledger. Decision: build a sound specialized bound/filter
 pass, measure it on these same frozen rows, and preregister a new calibration
 before any full launch.
+
+## 2026-07-23 13:55 — PREREGISTRATION: exact Fox-C cross-edge bound
+
+The first specialized filter replaces Fox C's generic planar bipartite
+edge ceiling with a cap-six lattice-exact table. For every left/right size
+in `1..6`, CP-SAT maximizes cross-adjacency inside a connected cross-edge
+component. Such a component has diameter at most `left+right-1`, making the
+finite anchored hex disk complete. A deterministic integer DP then combines
+connected components and isolated vertices, so the resulting global table
+does not assume the optimum itself is connected.
+
+Freeze 36 component proofs as four disjoint nine-pair shards:
+john1 `[0,9)`, john2 `[9,18)`, john3 `[18,27)`, john4 `[27,36)`;
+120 seconds/component, eight workers, seed `20260723`, OR-Tools `9.15.6755`.
+Collection requires exact disjoint coverage, `OPTIMAL` status and equal
+objective/bound for all 36 rows, plus left/right symmetry. Source
+`tools/derive_hex_bipartite_edge_bounds.py` SHA-256
+`3a6ea9eedfaecdae464b3016916a09a0ffe189ce47cf32c7fa266ca0cfe426aa`;
+test SHA-256
+`ed997ec0f55026489ddf518b6353cfb7a812d898781b326d365fa0d8c77911d8`.
+
+Decision rule, fixed before table output: select the new Fox-C bound only if
+all 36 proofs complete and it is everywhere no weaker than the current sound
+bound, with either a ≥5% reduction in the frozen Fox-C count frontier or a
+≥10% reduction for frozen hard case CADAC. Otherwise record it as a valid but
+operationally immaterial negative and continue to the next specialized card
+interaction. This derivation does not inspect or change any incumbent score.
