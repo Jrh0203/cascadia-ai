@@ -9123,3 +9123,25 @@ log: `cascadiav3/logs/aaaaa_split_salmon_feasibility_screen_2026-07-23.log`.
 Select a row for formal certificate reproduction only if every split submodel
 is exactly `INFEASIBLE` and its maximum-salmon branch passed above. Any
 `UNKNOWN` or threshold witness proves nothing for that row.
+
+## 2026-07-23 09:00 — Exact wildlife mini-fleet provisioning
+
+John explicitly requested parallelizing the pure-wildlife computation over
+the Mac mini fleet. `docs/v3/FLEET.md` was read before design. Read-only
+preflight found john2, john3, and john4 reachable, idle, with 10 cores and
+183/210/82 GiB free respectively. All have the existing Python 3.12.13 fleet
+venv but no OR-Tools. john1 remains excluded because it hosts the web UI and
+is not provisioned for CBDDB.
+
+Revision `bdf33f47` adds deterministic count-vector tasksets, disjoint
+round-robin sharding to both exact catalog runners, imported-ledger support for
+CBDDB, source/dependency/configuration pinning, per-host durable output,
+heartbeats, collision refusal, and a fail-closed collector that independently
+validates every returned board and exact task coverage. Ruff, 10 unit tests,
+three shell syntax checks, two single-vector end-to-end catalog smokes, and
+`git diff --check` pass. The scripts never stop or replace a process.
+
+Provision only `ortools==9.15.6755`, matching the orchestrator, into the
+existing `~/cascadia/venv` on john2–john4. Run installations independently in
+parallel, then require all three to import that exact version. Any host failure
+blocks fleet launch; no fallback version is permitted.
