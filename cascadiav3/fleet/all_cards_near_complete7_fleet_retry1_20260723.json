@@ -1,15 +1,15 @@
 {
   "schema": "all-wildlife-near-complete-fleet-v1",
-  "state": "invalidated",
-  "tag": "all_cards_near_complete7_fleet_20260723",
-  "source_revision": "8c47e3d2",
+  "state": "planned",
+  "tag": "all_cards_near_complete7_fleet_retry1_20260723",
+  "source_revision": "51791ef265c108e32ddc9b15137feab86f9dc848",
   "taskset_sha256": "a181069b68dc930ad4cbad6a90b4f41077f9e2cf84a3605a5234dca9768325ce",
   "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
   "proof_source_sha256": "fe71485120e078cf419cf1bdc482b898b39bdf3ac2bdb493be094a67b8a03a05",
   "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
   "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
   "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
-  "worker_sha256": "03480072ff67259679df9fb110f0eb0dc2c3d1551ea691bbb5644d8911950277",
+  "worker_sha256": "532319a4136d0cb05351ee533b619e1e81551e6222ca70a49411b1853c6ab73f",
   "configuration": {
     "time_limit_seconds_per_count": 300,
     "total_time_limit_seconds_per_ruleset": 330,
@@ -25,7 +25,7 @@
         194,
         202
       ],
-      "local_screen": "wildlife_near_complete7_john1"
+      "local_screen": "wildlife_near_complete7_retry1_john1"
     },
     {
       "host": "john2",
@@ -48,22 +48,6 @@
       ]
     }
   ],
-  "selection_rule": "Keep every exact INFEASIBLE one-count exclusion and every independently validated connected witness. If all seven rulesets become proof_complete, merge them with the six-row legacy-validated base and AAAAA certificate to advance the integrated catalog from 7 to 14 exact rows. UNKNOWN or timeout remains unresolved.",
-  "invalidation": {
-    "terminal_at": "2026-07-23T21:12:57Z",
-    "wrapper_pids": {
-      "john1": 95648,
-      "john2": 65796,
-      "john3": 26336,
-      "john4": 34342
-    },
-    "exit_codes": {
-      "john1": 1,
-      "john2": 1,
-      "john3": 1,
-      "john4": 1
-    },
-    "result_files": 0,
-    "reason": "The connected mode left connectivity_args empty; Bash 3 treats expansion of an empty array under set -u as an unbound variable. Every wrapper failed before invoking Python or creating a result."
-  }
+  "wrapper_change": "Use an always-populated proof_args array; append --no-connectivity only for disconnected mode. Bash -n and connected-mode expansion pass on all four hosts.",
+  "selection_rule": "Unchanged: keep every exact INFEASIBLE one-count exclusion and every independently validated connected witness. If all seven rulesets become proof_complete, advance the integrated catalog from 7 to 14 exact rows. UNKNOWN or timeout remains unresolved."
 }

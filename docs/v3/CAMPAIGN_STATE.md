@@ -1347,6 +1347,11 @@ Their frozen connected exact jobs are assigned 2/2/2/1 across john1–john4 at
 300 seconds/count. Results stay sealed until four terminal markers; a clean
 pass would advance the integrated catalog 7→14.
 
+The first wrapper attempt failed before Python on all hosts because Bash 3
+treated an empty connected-mode argument array as unbound under `set -u`.
+There are zero result files. The fixed worker passes all-host shell checks and
+the identical batch is frozen under a fresh retry tag.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

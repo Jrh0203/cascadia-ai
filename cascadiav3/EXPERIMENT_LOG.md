@@ -11076,3 +11076,17 @@ Do not inspect any result until all four terminal markers exist. Retain every
 exact exclusion or independently valid connected witness. If all seven close,
 the integrated catalog advances 7→14; otherwise every unknown remains
 unproven.
+
+**17:13 EDT first fleet launch invalidated; fresh retry preregistered.** All
+four wrappers wrote PIDs and then exited 1 before invoking Python. No result
+file exists. The connected worker expanded an empty `connectivity_args` array
+under Bash 3 `set -u`, producing `unbound variable` on every host. This is a
+wrapper failure, not a proof verdict.
+
+Revision `51791ef265c108e32ddc9b15137feab86f9dc848` replaces that optional
+empty array with an always-populated proof argument vector; Bash syntax and
+connected expansion pass locally and on john2–john4. Worker SHA-256
+`532319a4136d0cb05351ee533b619e1e81551e6222ca70a49411b1853c6ab73f`.
+Freeze the same taskset, assignments, solver limits, and decision rule under
+fresh tag/ledger
+`cascadiav3/fleet/all_cards_near_complete7_fleet_retry1_20260723.json`.
