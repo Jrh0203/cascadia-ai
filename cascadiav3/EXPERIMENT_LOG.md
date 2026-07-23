@@ -8919,3 +8919,14 @@ tests SHA-256
 Ruff and both tests pass. Use one worker, 30 seconds per subcase. Select each
 case independently for formal certification only if both salmon branches are
 exact and the combined relaxed upper is below its registered threshold.
+
+**Diagnostic result — NOT SELECTED.** All four maximum-salmon branches were
+exactly feasible at their registered thresholds, with the best case using the
+optimistic two-missing-fox abstraction. The separated-singleton branches then
+returned `FEASIBLE` rather than exact `OPTIMAL` at their 30-second boundary
+(case 20 / 3 / 20 / 20 respectively), so each full result failed closed as
+`UNKNOWN`. Elapsed by vector: 265.585994, 63.779285, 77.890045, and
+180.804709 seconds. No certificate and no catalog change. Decision: the next
+sound tightening must represent the two salmon-missing foxes as an explicit
+self-adjacent second fox component; do not spend more time on the already
+non-decisive separated-singleton branch first.
