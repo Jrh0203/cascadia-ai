@@ -217,6 +217,7 @@ def payload_for(
     candidate_source = (
         source.parents[1] / "crates" / "cascadia-game" / "src" / "bin" / "cbddb_wildlife_solver.rs"
     )
+    candidate_support = candidate_source.with_name("wildlife_solver_support") / "mod.rs"
     return {
         "schema": SCHEMA,
         "proof_complete": complete,
@@ -239,6 +240,7 @@ def payload_for(
         "catalog_source_sha256": file_sha256(source),
         "exact_model_source_sha256": file_sha256(exact_source),
         "candidate_generator_source_sha256": file_sha256(candidate_source),
+        "candidate_support_source_sha256": file_sha256(candidate_support),
         "results": ordered_results,
     }
 
@@ -329,6 +331,7 @@ def run(args: argparse.Namespace) -> int:
             "catalog_source_sha256",
             "exact_model_source_sha256",
             "candidate_generator_source_sha256",
+            "candidate_support_source_sha256",
         ):
             if prior.get(field) != current_provenance[field]:
                 raise SystemExit(f"resume ledger {field} mismatch")

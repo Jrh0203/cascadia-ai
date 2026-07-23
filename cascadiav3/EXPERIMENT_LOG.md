@@ -8317,7 +8317,7 @@ exact catalog launch. Timeout or `UNKNOWN` will never be accepted as proof.
 Development source SHA-256: Python exact model
 `362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329`,
 Python catalog runner
-`214851ec97f1c0309c77254698e77147a87db19ba61c58d970832ec8c80f5f36`,
+`7e93396d7e5d3efe551917fe5805b169b50b988f2e5f3ccd1a441414290c6cde`,
 Rust candidate/verifier
 `94e1f1624ae230a54348f320ea4ed5dfa7802684a60cc3eb2b6d0b6ff757f390`,
 and shared Rust support
