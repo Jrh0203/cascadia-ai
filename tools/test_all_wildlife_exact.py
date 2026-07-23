@@ -85,3 +85,23 @@ def test_fixed_board_score_profile_table_preserves_exact_objective() -> None:
     assert result.status == "OPTIMAL"
     assert result.objective == sum(expected)
     assert result.score_breakdown == expected
+
+
+def test_fixed_board_fixed_score_profile_preserves_exact_objective() -> None:
+    board = random_connected_board(404)
+    expected = all_wildlife_rules.score_tokens(board, "CADAC")
+    result = solve_counts(
+        "CADAC",
+        (4, 4, 4, 4, 4),
+        sum(expected),
+        time_limit_seconds=10,
+        workers=1,
+        initial_tokens=board,
+        fix_initial_tokens=True,
+        maximize=False,
+        maximum_score=sum(expected),
+        fixed_score_profile=expected,
+    )
+    assert result.status == "OPTIMAL"
+    assert result.objective == sum(expected)
+    assert result.score_breakdown == expected

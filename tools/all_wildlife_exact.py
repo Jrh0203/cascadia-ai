@@ -606,6 +606,7 @@ def build_model(
     initial_tokens: list[dict[str, Any]] | None = None,
     fix_initial_tokens: bool = False,
     use_score_profile_table: bool = False,
+    fixed_score_profile: tuple[int, int, int, int, int] | None = None,
 ) -> tuple[cp_model.CpModel, ExactVariables]:
     cards = rules.parse_ruleset(ruleset)
     if counts not in rules.count_vectors():
@@ -707,7 +708,19 @@ def build_model(
         _hawk_score(model, q, r, adjacency, by_species, cards[3]),
         _fox_score(model, adjacency, by_species, cards[4]),
     ]
+    if fixed_score_profile is not None:
+        if fixed_score_profile not in rules.count_score_profiles(
+            counts,
+            ruleset,
+            minimum_score,
+            upper,
+        ):
+            raise ValueError("fixed score profile is outside the score interval")
+        for score, value in zip(scores, fixed_score_profile, strict=True):
+            model.add(score == value)
     if use_score_profile_table:
+        if fixed_score_profile is not None:
+            raise ValueError("choose either a fixed score profile or the profile table")
         profiles = rules.count_score_profiles(
             counts,
             ruleset,
@@ -750,6 +763,7 @@ def solve_counts(
     maximize: bool = True,
     use_score_profile_table: bool = False,
     maximum_score: int | None = None,
+    fixed_score_profile: tuple[int, int, int, int, int] | None = None,
 ) -> SolveResult:
     started = time.monotonic()
     model, variables = build_model(
@@ -762,6 +776,7 @@ def solve_counts(
         maximize=maximize,
         use_score_profile_table=use_score_profile_table,
         maximum_score=maximum_score,
+        fixed_score_profile=fixed_score_profile,
     )
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_seconds
