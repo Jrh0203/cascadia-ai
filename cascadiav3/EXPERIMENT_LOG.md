@@ -8994,3 +8994,15 @@ Accept each case independently only when CP-SAT returns exact `INFEASIBLE`.
 incomplete. Either outcome changes no catalog row. A passed unresolved case
 still requires frozen incumbent validation and certificate serialization
 before merge.
+
+**Result — NO CASE SELECTED.** All eight cases exhausted their 30-second
+limit as `UNKNOWN`; none returned `INFEASIBLE` or a relaxation witness.
+Branches ranged from 283,731 to 390,101 and conflicts from 83,633 to 108,097.
+The complete batch took 240.185064 seconds. Artifact SHA-256
+`d666ab0d2915885e7d589baf76e90683ee9a695b605de0264812a06c9ae8bd89`;
+log SHA-256
+`233e7459621199c25efc56fb09cff2c4dcd2454a8fc0a576343d6b267a13a306`.
+No proof and no catalog change. Decision: retain the tested formulation as a
+sound diagnostic, but do not spend a longer batch on it. The next formulation
+must eliminate free-coordinate symmetry by anchoring explicit fox components
+and using finite local cell-set packing, matching the prior gap-two diagnosis.
