@@ -8365,3 +8365,28 @@ Frozen retry source SHA-256: exact model
 `55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8`;
 catalog runner
 `d291ff58b8a17af07bb47f83c67dbfdef34b68290ded7aa50d67cf064b3cbd6b`.
+
+**05:25 deep incumbent result and exact retry launch.** The 20x candidate pass
+completed all 826 vectors in 596.631632 seconds. Every board passed the
+independent Python scorer after the Rust generator had already asserted its
+custom and production scores. Relative to the original Rust pass, 550 scores
+were unchanged, 252 improved by one, and 24 improved by two. On the 116
+deferred vectors, the deep board beat the already-improved first-pass CP
+incumbent in only six cases; none reached its effective exact upper bound.
+Candidate artifact SHA-256
+`d8c4f1ce9d9b7decac3156c6500b9e35407d70c74573877529666ba02ff496ae`;
+log SHA-256
+`57daace7c00f2299701197e18760918a2bc97e6a48c0dec1e3c9ec57dbfd0e24`.
+
+Preregistered retry pass: import the frozen first-pass ledger, merge each
+incumbent by independent score, preserve its 710 completed proofs with
+per-result provenance, and submit only the 116 remaining vectors. One job,
+eight CP-SAT workers, disconnected limit 60 seconds, connected limit 120
+seconds, base seed 20260723, coordinate hints enabled, and the independently
+proved global score ceiling 68 imposed as an additional upper bound. Durable
+output remains `docs/v3/evidence/aaaaa_wildlife_catalog_2026-07-22.json` and
+Markdown `docs/v3/AAAAA_WILDLIFE_CATALOG.md`; retry log
+`cascadiav3/logs/aaaaa_wildlife_catalog_retry_2026-07-23.log`. Decision rule:
+only a witness hitting the effective upper bound or an exact `INFEASIBLE`
+answer closes a vector; every `UNKNOWN` remains incomplete for a later,
+separately logged longer pass.
