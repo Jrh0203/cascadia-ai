@@ -11209,3 +11209,22 @@ collision, and idle check then passed on all hosts. Revision `b1fb514d`;
 wrapper PIDs 18471/67908/28011/34659 on john1/john2/john3/john4. Ledger:
 `cascadiav3/fleet/all_cards_three_to_five_branch23_fleet_20260723.json`.
 All results remain sealed until four terminal markers.
+
+**17:36 EDT verdict — SELECT_PARTIAL.** All four terminal markers existed
+before inspection and every wrapper exited zero by `21:36:22Z`. Twenty-two
+of 23 rulesets closed exactly; 93/95 frozen threshold queries returned
+`INFEASIBLE`. Completed exact queries took at most 82.284 seconds. DCACC 77
+proved three of five branches, but counts `(4,0,6,6,4)` and
+`(6,0,5,6,3)` remain `UNKNOWN` after the 330-second row cap. They remain
+unproven and are not relabeled.
+
+The proof-union SHA-256 is
+`fa544f7a2b7245f7c3ae0b34e1cc0d141ddf21856835a2448f0fd49ea87d1454`.
+The independent and production-scored catalog/Markdown SHA-256 values are
+`d5936668802f72b8167be9cdc41bf1246274078f00636008add93a2c622d3526`
+and
+`dd32f4d13389383cc34527d8c528f992621af3676cf2d0e78a659c479063621e`.
+The integrated catalog advances 22→44/1,024 exact, leaving 119,023 branches
+across 980 incomplete rows. The score-85 incumbent and production response
+SHA remain unchanged; neither is a holistic proof. Curated evidence:
+`docs/v3/evidence/all_wildlife_three_to_five_branch23_2026-07-23.json`.

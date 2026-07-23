@@ -1,0 +1,105 @@
+{
+  "schema": "all-wildlife-three-to-five-branch23-evidence-v1",
+  "completed_at": "2026-07-23T21:36:54Z",
+  "source_revision": "b1fb514daf8490a4fb9a9bb00c379865175f2fbe",
+  "taskset_sha256": "5dfa433a83fba599322a100c045f04738b25c46ae65cb98721d681c731b92340",
+  "configuration": {
+    "count_cap": 6,
+    "token_count": 20,
+    "connectivity_required": true,
+    "time_limit_seconds_per_count": 300,
+    "total_time_limit_seconds_per_ruleset": 330,
+    "solver_workers": 8,
+    "heartbeat_interval_seconds": 5,
+    "hosts": [
+      "john1",
+      "john2",
+      "john3",
+      "john4"
+    ]
+  },
+  "summary": {
+    "requested_rulesets": 23,
+    "requested_count_queries": 95,
+    "completed_rulesets": 22,
+    "partially_proved_rulesets": 1,
+    "exact_infeasible_exclusions": 93,
+    "unknown_or_timeout": 2,
+    "fleet_wall_seconds": 394,
+    "longest_completed_exact_query_seconds": 82.2836099578999
+  },
+  "completed_rulesets": {
+    "ACAAC": 69,
+    "ACACC": 77,
+    "ACBAC": 69,
+    "ADBBC": 72,
+    "BBCCD": 80,
+    "BCAAC": 70,
+    "BCADC": 77,
+    "BCBCC": 77,
+    "BDABC": 73,
+    "BDBBC": 73,
+    "BDCAC": 71,
+    "CCABC": 70,
+    "CCACC": 77,
+    "CCBAC": 68,
+    "CDAAC": 71,
+    "CDBBC": 72,
+    "CDBCC": 78,
+    "CDBDC": 78,
+    "CDCBC": 71,
+    "DCBAC": 68,
+    "DDBBC": 72,
+    "DDCBC": 72
+  },
+  "incomplete_rulesets": [
+    {
+      "index": 906,
+      "ruleset": "DCACC",
+      "incumbent": 77,
+      "exact_infeasible_exclusions": 3,
+      "unknown_or_timeout": 2,
+      "remaining_counts": [
+        [
+          4,
+          0,
+          6,
+          6,
+          4
+        ],
+        [
+          6,
+          0,
+          5,
+          6,
+          3
+        ]
+      ],
+      "output_sha256": "7104102a2f9fafbbceabdabe0ef6702e80916a23c77a93629c00142269d8ef00"
+    }
+  ],
+  "catalog": {
+    "proof_union_sha256": "fa544f7a2b7245f7c3ae0b34e1cc0d141ddf21856835a2448f0fd49ea87d1454",
+    "augmented_catalog_path": "docs/v3/evidence/all_wildlife_catalog_augmented_three_to_five_branch23_2026-07-23.json",
+    "augmented_catalog_sha256": "d5936668802f72b8167be9cdc41bf1246274078f00636008add93a2c622d3526",
+    "markdown_path": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_THREE_TO_FIVE_BRANCH23.md",
+    "markdown_sha256": "dd32f4d13389383cc34527d8c528f992621af3676cf2d0e78a659c479063621e",
+    "completed_rulesets": 44,
+    "unresolved_rulesets": 980,
+    "unresolved_count_branches": 119023,
+    "incumbent_holistic_maximum": 85,
+    "incumbent_holistic_rulesets": [
+      "ADCCB",
+      "BABCB",
+      "BBBCB",
+      "BCBCB",
+      "BDBCB",
+      "BDCCB",
+      "CDCCB",
+      "DDCCB"
+    ],
+    "holistic_optimum": null,
+    "production_response_sha256": "e7cb24d1665a77020bbcc921c09026947c09864c8b96742f594485fbc19f19ca"
+  },
+  "verdict": "SELECT_PARTIAL"
+}

@@ -1388,8 +1388,12 @@ unchanged 330-second ruleset cap gives a 33-minute per-host hard wall;
 results will remain sealed until four terminal markers.
 
 The 3–5-branch batch launched at `2026-07-23T21:29:48Z` under revision
-`b1fb514d`; all four wrappers were active after pinned preflight. Results
-remain sealed until every shard is terminal.
+`b1fb514d` and all four wrappers exited zero by `21:36:22Z`. Twenty-two of
+23 rows closed exactly; 93/95 queries were `INFEASIBLE`. DCACC proved three
+branches and retains two `UNKNOWN` branches after its 330-second row cap.
+Independent and production rescoring advances the catalog 22→44 exact,
+leaving 119,023 branches across 980 rows. Curated evidence:
+`docs/v3/evidence/all_wildlife_three_to_five_branch23_2026-07-23.json`.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

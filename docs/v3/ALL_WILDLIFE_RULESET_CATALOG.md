@@ -211,6 +211,13 @@ and batch-compares every board with the production Rust scorer.
   across 1,002 rows. This is strong near-tail throughput evidence, not a
   whole-frontier extrapolation:
   `docs/v3/evidence/all_wildlife_two_branch8_2026-07-23.json`.
+- The complete 3–5-branch slice certified 22/23 rulesets and 93/95 count
+  thresholds in 6m34s fleet wall. DCACC 77 proved three exclusions but
+  retains two `UNKNOWN` branches after the fixed row cap. The integrated
+  catalog advances 22→44/1,024 exact with 119,023 branches across 980 rows.
+  This is the first measured transition from seconds-scale rows into the
+  timeout tail:
+  `docs/v3/evidence/all_wildlife_three_to_five_branch23_2026-07-23.json`.
 - A coupled same/cross-edge and degree-six relaxation passed all 846,848
   count/ruleset containment comparisons but equaled the existing bound in
   every cell. It is not selected; pair-edge resource coupling without richer

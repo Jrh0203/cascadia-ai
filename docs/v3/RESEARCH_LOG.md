@@ -1729,6 +1729,15 @@ one/two-branch near tail is seconds-scale but does not estimate the much
 larger hard tail. Curated evidence:
 `docs/v3/evidence/all_wildlife_two_branch8_2026-07-23.json`.
 
+The complete 3–5-branch slice then closed 22/23 rulesets and 93/95 queries in
+6m34s fleet wall. Completed exact queries took at most 82.28 seconds. DCACC
+77 is the first near-tail exception: three exclusions proved, while counts
+`(4,0,6,6,4)` and `(6,0,5,6,3)` remain unknown after the 330-second row cap.
+The integrated catalog advances 22→44/1,024 exact, with 119,023 branches
+across 980 rows. This locates the start of the timeout tail and demonstrates
+why the full exact ETA cannot be extrapolated from median rows:
+`docs/v3/evidence/all_wildlife_three_to_five_branch23_2026-07-23.json`.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from

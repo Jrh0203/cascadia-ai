@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-three-to-five-branch-fleet-v1",
-  "state": "active",
+  "state": "completed",
   "tag": "all_cards_three_to_five_branch23_fleet_20260723",
   "source_revision": "b1fb514daf8490a4fb9a9bb00c379865175f2fbe",
   "taskset_sha256": "5dfa433a83fba599322a100c045f04738b25c46ae65cb98721d681c731b92340",
@@ -77,5 +77,45 @@
   ],
   "preflight_note": "An initial read-only local process check self-matched its own zsh command and stopped before staging or launch. The corrected comm-filtered Python solver check and every source/candidate/runtime/collision check passed on all four hosts.",
   "launched_at": "2026-07-23T21:29:48Z",
-  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all 23 rulesets become proof_complete, advance the integrated catalog from 22 to 45 exact rows. UNKNOWN or timeout remains unresolved."
+  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all 23 rulesets become proof_complete, advance the integrated catalog from 22 to 45 exact rows. UNKNOWN or timeout remains unresolved.",
+  "completed_at": "2026-07-23T21:36:22Z",
+  "result_summary": {
+    "requested_rulesets": 23,
+    "completed_rulesets": 22,
+    "partially_proved_rulesets": 1,
+    "exact_infeasible_exclusions": 93,
+    "unknown_or_timeout": 2,
+    "incomplete_ruleset": "DCACC",
+    "incomplete_ruleset_index": 906,
+    "incomplete_remaining_branches": 2,
+    "proof_catalog_sha256": "fa544f7a2b7245f7c3ae0b34e1cc0d141ddf21856835a2448f0fd49ea87d1454",
+    "augmented_catalog_sha256": "d5936668802f72b8167be9cdc41bf1246274078f00636008add93a2c622d3526",
+    "verdict": "SELECT_PARTIAL"
+  },
+  "output_sha256": {
+    "130": "ce5e6c01eebb87f6659a892d5b48dd3e4635e3747d1d7157977259e627308f65",
+    "138": "a9c974eeb17260304acf4dfe3821666f96e9deee468535e26c81f22a885743b4",
+    "146": "a38809d4ac7ece9b0137c27979c90b7bdb0a1a7775e9d50911735c616eb800a7",
+    "214": "e7f88fac1eb4d1746dfbe81f5b57410ea45fce87d4c76b7852b91b1e6e0f267e",
+    "363": "b8c35d1c16395e389beda9c4d65c58e26f59957b1a882ca0b5c5975a681018be",
+    "386": "8b74808e3a16b57e2174a7dcb781a8b7d87a4948576dd6e4c54c6b534d2c090a",
+    "398": "0be1b4cac87c684ecc5e4ea64f05153c5e4736a10256584f5f57878831802fad",
+    "410": "d74b4aa2eac495b8c2aee633a92db0f6c709e8fc8988177b99eaadd7d20f6a5f",
+    "454": "4ce33811fc0908524a888536b651966fd6357daebd242cb424ead0f2a03aa03c",
+    "470": "6e1bf7242a0193bd8d8025038897c977649db6599b17912110e30c72416e4e42",
+    "482": "e80cf6ddd05cc3a7a163ff795fca9dfc484fe7bec495c200d55dc18e620e493a",
+    "646": "9f0474949f36cc27edb48a02b904549fcd4a063d4f3d683740629a1e317bb44b",
+    "650": "0d00bc01a5f4cff47f5cfb270cf0a25c872c85e105500ba9503e8587a7fd280a",
+    "658": "667d03324b4881aa77fb45c247551607b5cc374defef23d7fc6cc5f482e7cf81",
+    "706": "5735805568ea0c8faeecc86f0db22cd7bdf17aa85714e3bf46b7029b4c11d8f0",
+    "726": "8865e5b84369f477c47bd5ed49417bc5655a23c0daf003f5847362cf1b7ba6e8",
+    "730": "d93e9244d2a45cadf90b756f519b1f902430b2983c616f7e0c686c77e19cc894",
+    "734": "952b47a756608d23bf227c26c389e0ddccc20b3cde6b5173c2812add8c6b0233",
+    "742": "badcfb7d90065c4291a202cfd91f46be7e5db996fda5349f749391b37503db90",
+    "906": "7104102a2f9fafbbceabdabe0ef6702e80916a23c77a93629c00142269d8ef00",
+    "914": "ee3a587586687b7d18882f53963bfce1171f130cd2d04bef38751be97f6eccc8",
+    "982": "0df04aa3b56da940eb078e3f2a263fc2615c76f0e5d09114341e29d4379b4193",
+    "998": "dafc114cd94109452868e88f9369138c3474d58e0c10ebaf7e89e7d0a357a0b3"
+  }
+}
 }
