@@ -1233,4 +1233,6 @@ restored byte-for-byte.
 A narrower anchor-centroid symmetry experiment is preregistered default-off:
 it exchanges twelve geometric images for at most six anchor labels while
 preserving every other within-species order. It must pass the same correctness
-and paired runtime gate before any production selection.
+and paired runtime gate before any production selection. The reproducible
+default-off implementation and all correctness gates have now landed; the
+paired runtime gate is next.

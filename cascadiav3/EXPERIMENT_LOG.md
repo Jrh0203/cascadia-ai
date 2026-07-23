@@ -10520,3 +10520,13 @@ single-worker paired calibration from the fox-pair gate. Select only on the
 same rule: known exclusion at least 2× faster without status regression, or
 at least one formerly unknown hard case resolved only by the candidate.
 Otherwise keep the production default off.
+
+**15:18 implementation/correctness gate.** Default-off implementation landed
+at revision `eb1e64462135bfe9e396f15c7b32102754d5e8ec`; source SHA-256
+`faafb6492131f89dc116b420a192a4a86307f5ddada0e78c8d8a657f1a8493ce`;
+test SHA-256
+`b4b7c44fedc1da021568315bffbf26593be7dc4df4c03fb62d0c1f975775fb24`.
+Ten unit tests and Ruff pass. The 1,024 fixed-board gate has zero failures and
+retains canonical SHA-256
+`005153bf58a77d32feca858fc225e04db3101d7008b295eabde9fedecb878f2f`.
+Proceed to the frozen paired runtime gate; production remains default-off.
