@@ -9006,3 +9006,27 @@ No proof and no catalog change. Decision: retain the tested formulation as a
 sound diagnostic, but do not spend a longer batch on it. The next formulation
 must eliminate free-coordinate symmetry by anchoring explicit fox components
 and using finite local cell-set packing, matching the prior gap-two diagnosis.
+
+## 2026-07-23 07:56 — AAAAA motif-coordinate v2 screen preregistration
+
+Before abandoning the coordinate relaxation, apply four sound symmetry and
+propagation changes exposed by the first screen: order indistinguishable fox
+and hawk coordinates; order equal-sized Bear/Elk/Salmon scoring groups and
+unscored leftovers conditionally; remove any card-score choice that cannot
+reach the target even with every other standalone maximum; and make each
+selected Fox-A species observation choose exactly one adjacent witness rather
+than leaving many equivalent adjacency booleans. The fixed 68-point witness
+still solves at 52+16. Ruff and all five tests pass. V2 source SHA-256
+`ca46c1ad072e757589ee3687c0e0cbcbc9bf16c794f645f52cafaed714c5290a`;
+unchanged batch/test hashes are
+`0162dd5d83083ecb134a4ed71d79f604853ab012c02ee7154483878c9748ffef` /
+`eb5013bbcb8caf7f1db01727e5aad403c1c29bc108a1a9df1901924fcaf4f0b7`.
+
+Run three cases sequentially with one worker and the same 30-second boundary:
+known exact calibrations `(3,6,6,0,5)>=62` and `(3,6,3,3,5)>=62`, then the
+unresolved gap-one challenge `(6,1,5,2,6)>=68`; base seed 20260723. Durable
+output:
+`docs/v3/evidence/aaaaa_motif_coordinate_relaxation_v2_screen_2026-07-23.json`.
+Accept only exact `INFEASIBLE` per case. If both calibrations remain `UNKNOWN`,
+close this coordinate-relaxation direction regardless of branch-count change
+and proceed to finite fox-component enumeration; no longer run more time.

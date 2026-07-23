@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import itertools
 import json
 import time
 from collections.abc import Iterable
@@ -157,7 +158,7 @@ def _optimal_elk_groups(coords: list[Coord]) -> list[list[Coord]]:
                     best[state] = (previous_score + score, [*previous, row])
     if coords and best[-1][0] < 0:
         raise RuntimeError("failed to reconstruct Elk-A packing")
-    return sorted(best[-1][1], key=lambda row: -len(row)) if coords else []
+    return sorted(best[-1][1], key=lambda row: (-len(row), row[0])) if coords else []
 
 
 def relabel_fixed_witness(
@@ -175,6 +176,7 @@ def relabel_fixed_witness(
 
     bears = set(by_name["bear"])
     bear_pairs = [sorted(component) for component in base.components(bears) if len(component) == 2]
+    bear_pairs.sort()
     ordered_bears: list[Coord] = []
     for pair in bear_pairs:
         left, right = pair
@@ -194,7 +196,7 @@ def relabel_fixed_witness(
             valid_salmon.append(sorted(component))
         else:
             invalid_salmon.update(component)
-    valid_salmon.sort(key=lambda row: -len(row))
+    valid_salmon.sort(key=lambda row: (-len(row), row[0]))
     ordered_salmon = [coord for component in valid_salmon for coord in component]
     ordered_salmon.extend(sorted(invalid_salmon))
 
@@ -262,6 +264,12 @@ def build_model(
     foxes = by_species[base.SPECIES_CODE["fox"]]
     model.add(q[foxes[0]] == 0)
     model.add(r[foxes[0]] == 0)
+    for left, right in itertools.pairwise(foxes):
+        model.add(coordinate_id[left] < coordinate_id[right])
+
+    present_types = sum(count > 0 for count in counts[:4]) + int(counts[4] >= 2)
+    fox_upper = counts[base.SPECIES_CODE["fox"]] * present_types
+    standalone = [base.STANDALONE_SCORES[i][counts[i]] for i in range(4)]
 
     # Bear A: a real score determines the number of isolated pairs.  We keep
     # those pair edges but deliberately drop isolation from other bears.
@@ -269,9 +277,12 @@ def build_model(
     bear_score_terms = []
     bears = by_species[base.SPECIES_CODE["bear"]]
     for pair_count in range(len(bears) // 2 + 1):
+        pair_score = base.BEAR_SCORES[pair_count]
+        if pair_score + sum(standalone[1:]) + fox_upper < target:
+            continue
         selected = model.new_bool_var(f"bear_choice_{pair_count}")
         bear_choices.append(selected)
-        bear_score_terms.append(base.BEAR_SCORES[pair_count] * selected)
+        bear_score_terms.append(pair_score * selected)
         for pair_index in range(pair_count):
             members = bears[2 * pair_index : 2 * pair_index + 2]
             _conditional_offsets(
@@ -283,6 +294,14 @@ def build_model(
                 selected,
                 f"bear_{pair_count}_{pair_index}",
             )
+            if pair_index:
+                previous = bears[2 * (pair_index - 1)]
+                model.add(coordinate_id[previous] < coordinate_id[members[0]]).only_enforce_if(
+                    selected
+                )
+        leftovers = bears[2 * pair_count :]
+        for left, right in itertools.pairwise(leftovers):
+            model.add(coordinate_id[left] < coordinate_id[right]).only_enforce_if(selected)
     model.add_exactly_one(bear_choices)
 
     # Elk A: one choice represents the disjoint line packing that realizes
@@ -292,10 +311,14 @@ def build_model(
     elk_score_by_length = {1: 2, 2: 5, 3: 9, 4: 13}
     elks = by_species[base.SPECIES_CODE["elk"]]
     for choice_index, partition in enumerate(elk_partitions(len(elks))):
+        partition_score = sum(elk_score_by_length[size] for size in partition)
+        if standalone[0] + partition_score + sum(standalone[2:]) + fox_upper < target:
+            continue
         selected = model.new_bool_var(f"elk_choice_{choice_index}")
         elk_choices.append(selected)
-        elk_score_terms.append(sum(elk_score_by_length[size] for size in partition) * selected)
+        elk_score_terms.append(partition_score * selected)
         cursor = 0
+        previous_by_size: dict[int, int] = {}
         for group_index, size in enumerate(partition):
             members = elks[cursor : cursor + size]
             cursor += size
@@ -308,6 +331,11 @@ def build_model(
                 selected,
                 f"elk_{choice_index}_{group_index}",
             )
+            if size in previous_by_size:
+                model.add(
+                    coordinate_id[previous_by_size[size]] < coordinate_id[members[0]]
+                ).only_enforce_if(selected)
+            previous_by_size[size] = members[0]
     model.add_exactly_one(elk_choices)
 
     # Salmon A: scored valid components are represented exactly internally.
@@ -316,10 +344,14 @@ def build_model(
     salmon_score_terms = []
     salmon = by_species[base.SPECIES_CODE["salmon"]]
     for choice_index, partition in enumerate(salmon_partitions(len(salmon))):
+        partition_score = sum(base.SALMON_SCORES[size] for size in partition)
+        if sum(standalone[:2]) + partition_score + standalone[3] + fox_upper < target:
+            continue
         selected = model.new_bool_var(f"salmon_choice_{choice_index}")
         salmon_choices.append(selected)
-        salmon_score_terms.append(sum(base.SALMON_SCORES[size] for size in partition) * selected)
+        salmon_score_terms.append(partition_score * selected)
         cursor = 0
+        previous_by_size = {}
         for component_index, size in enumerate(partition):
             members = salmon[cursor : cursor + size]
             cursor += size
@@ -332,9 +364,24 @@ def build_model(
                 selected,
                 f"salmon_{choice_index}_{component_index}",
             )
+            if size in previous_by_size:
+                model.add(
+                    coordinate_id[previous_by_size[size]] < coordinate_id[members[0]]
+                ).only_enforce_if(selected)
+            previous_by_size[size] = members[0]
+        leftovers = salmon[cursor:]
+        for left, right in itertools.pairwise(leftovers):
+            model.add(coordinate_id[left] < coordinate_id[right]).only_enforce_if(selected)
     model.add_exactly_one(salmon_choices)
 
-    hawk_scores = sorted(set(base.HAWK_SCORES[: counts[base.SPECIES_CODE["hawk"]] + 1]))
+    hawks = by_species[base.SPECIES_CODE["hawk"]]
+    for left, right in itertools.pairwise(hawks):
+        model.add(coordinate_id[left] < coordinate_id[right])
+    hawk_scores = sorted(
+        score
+        for score in set(base.HAWK_SCORES[: counts[base.SPECIES_CODE["hawk"]] + 1])
+        if sum(standalone[:3]) + score + fox_upper >= target
+    )
     hawk_score = model.new_int_var(min(hawk_scores), max(hawk_scores), "hawk_score")
     model.add_allowed_assignments([hawk_score], [(score,) for score in hawk_scores])
 
@@ -355,9 +402,9 @@ def build_model(
             if not relevant:
                 continue
             covered = model.new_bool_var(f"fox_{fox_order}_sees_{species}")
-            adjacency_terms = []
+            witness_terms = []
             for target_token in relevant:
-                adjacent = model.new_bool_var(f"fox_{fox_order}_adjacent_{target_token}")
+                witness = model.new_bool_var(f"fox_{fox_order}_witness_{target_token}")
                 dq = model.new_int_var(
                     -2 * base.GLOBAL_RADIUS,
                     2 * base.GLOBAL_RADIUS,
@@ -370,13 +417,10 @@ def build_model(
                 )
                 model.add(dq == q[target_token] - q[fox])
                 model.add(dr == r[target_token] - r[fox])
-                model.add_allowed_assignments([dq, dr], DIRECTIONS).only_enforce_if(adjacent)
-                adjacency_terms.append(adjacent)
-            model.add(covered <= sum(adjacency_terms))
+                model.add_allowed_assignments([dq, dr], DIRECTIONS).only_enforce_if(witness)
+                witness_terms.append(witness)
+            model.add(sum(witness_terms) == covered)
             coverage_terms.append(covered)
-    fox_upper = counts[base.SPECIES_CODE["fox"]] * (
-        sum(count > 0 for count in counts[:4]) + int(counts[4] >= 2)
-    )
     fox_score = model.new_int_var(0, fox_upper, "fox_score")
     model.add(fox_score == sum(coverage_terms))
     model.add(non_fox_score + fox_score >= target)
@@ -447,7 +491,7 @@ def main() -> int:
     source = Path(__file__).resolve()
     payload.update(
         {
-            "schema": "aaaaa-motif-coordinate-relaxation-v1",
+            "schema": "aaaaa-motif-coordinate-relaxation-v2",
             "ortools_version": ORTOOLS_VERSION,
             "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
             "relaxation": {
