@@ -149,6 +149,9 @@ created them.
   boards.
 - `docs/v3/evidence/aaaaa_wildlife_catalog_first_pass_2026-07-23.json`:
   immutable first-pass evidence retained for mixed-proof provenance.
+- `docs/v3/evidence/aaaaa_motif_certificate_3_6_6_0_5_2026-07-23.json`:
+  exact relaxed-superset certificate that proves `(3,6,6,0,5)` has optimum
+  61; it remains separate until the active catalog writer exits.
 - `docs/v3/evidence/cbddb_wildlife_catalog_2026-07-23.json`: machine-readable
   CBDDB catalog ledger.
 - `docs/v3/CBDDB_WILDLIFE_CATALOG.md`: human-readable CBDDB summary, holistic
@@ -159,9 +162,10 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 06:08 EDT, AAAAA has 711/826 formally certified vectors and
-725 stored boards. Its hash-pinned hinted retry continues over the 115 still
-unproved vectors. CBDDB heuristic staging has completed all 826 vectors in
+As of 2026-07-23 06:48 EDT, AAAAA has 712/826 formally certified vectors: 711
+are embedded in its live ledger and one is frozen in a separate exact motif
+certificate pending a safe post-writer merge. Its hash-pinned hinted retry
+continues over the remaining tail. CBDDB heuristic staging completed all 826 vectors in
 224.244154 seconds with zero independent-score or connectivity failures; the
 current 84-point leader is only an incumbent. The CBDDB exact model,
 independent scorer, Rust candidate generator, and production verifier are

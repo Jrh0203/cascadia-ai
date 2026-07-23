@@ -8633,3 +8633,15 @@ zero non-overlapping relaxed realizations. Under those fixed conditions the
 relaxed superset's infeasibility excludes 62, and the witness proves exact
 optimum 61. Any mismatch or nonzero realization fails the certificate and
 leaves the vector incomplete.
+
+**Result — EXACT CERTIFICATE PASSED.** The frozen generator completed in
+8.359806 seconds and reproduced every preregistered count: 82 free size-six
+polyhexes, 25 valid salmon shapes, 4,623 fox sets, 2,355 relaxed bear-feasible
+sets, 2,342 independently relaxed bear-and-elk-feasible sets, and zero
+non-overlapping relaxed realizations. The retained 20-cell connected witness
+independently scores `(4,18,20,0,19) = 61`. Therefore score 62 is impossible
+and counts `(3,6,6,0,5)` have exact optimum 61. Artifact SHA-256
+`236d429cc5f8a7edf29d3f5630523af413ced5f2615225da78bbd2238a01660b`.
+Decision: accept this as the 712th AAAAA per-vector proof. Keep it separate
+while the active catalog writer runs, then merge it with its distinct proof
+method/provenance after that process exits naturally.
