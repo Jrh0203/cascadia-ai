@@ -1087,5 +1087,10 @@ The eight-rule stratified exact calibration is preregistered at 13:31:
 each mini, with easy/reference/median/leader/max-tail strata. No full exact
 launch occurs until its frozen completion band is applied.
 
-All four calibration shards launched at 13:32 with fresh durable heartbeats;
-do not read their partial scores. Wrapper PIDs are pinned in the fleet ledger.
+All four calibration shards launched at 13:32 and exited naturally by 13:43.
+Only ACACA 76 and ADACA 77 completed: **2/8**, the preregistered rejection
+band. AAAAA retained 30 unresolved count branches; ADCCB/CADAC/CADDA/CBDDB/
+DDDDD retained 91/612/125/309/141. The generic five-minute production shape
+is rejected and no 1,024-rule exact launch occurred. All valid exclusions and
+witnesses are preserved in the collected calibration ledgers. A specialized
+sound-filter pass and frozen-row recalibration are now required.

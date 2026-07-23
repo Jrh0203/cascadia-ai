@@ -9923,3 +9923,27 @@ john1–john4 launched their registered two-index sequences at
 durable per-ruleset ledger, PID, 30-second heartbeat, and terminal marker.
 Launch ledger:
 `cascadiav3/fleet/all_cards_proof_calibration_20260723_fleet.json`.
+
+**13:43 terminal verdict — generic shape rejected.** All four workers exited
+naturally with code 0; john1/2 finished at `17:39:11Z` and john3/4 at
+`17:43:42Z`. Collection waited for all four terminal markers. The final
+collector then validated candidate/proof identities, cap six, connectivity,
+independent scores, and unresolved-branch bookkeeping for all eight rows.
+
+Exactly **2/8** rulesets completed: ACACA 76 (8/8 exclusions, 57.975 solver
+seconds) and ADACA 77 (6/6, 43.776 seconds). This lands in the preregistered
+0–2 band, so the generic five-minute production shape is rejected. No
+1,024-rule production proof was launched.
+
+The incomplete rows remain valid incumbents, not optima: AAAAA 68 retained
+30 unresolved counts after 78 infeasibilities and three timeouts; ADCCB 85
+retained 91; CADAC 66 retained 612; CADDA 78 retained 125; CBDDB 84 retained
+309; DDDDD 78 retained 141. The latter five each exhausted approximately
+300 seconds after only 10–12 attempts; hard attempts overwhelmingly consumed
+the full 30-second per-count cap. All exclusions and witnesses are preserved
+under
+`cascadiav3/fleet/collected_all_cards_proof_calibration_20260723/`.
+The eight proof SHA-256 values and exact per-row totals are frozen in the
+completed launch ledger. Decision: build a sound specialized bound/filter
+pass, measure it on these same frozen rows, and preregister a new calibration
+before any full launch.

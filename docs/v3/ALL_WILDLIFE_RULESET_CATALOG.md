@@ -144,6 +144,10 @@ and batch-compares every board with the production Rust scorer.
   generalized disconnected model in 12.4 seconds.
 - CBDDB count `(6,0,3,6,5)` did not exclude score 85 in 60 seconds; it is a
   proof-tail calibration failure, not evidence that 85 exists.
+- The first eight-rule connected proof calibration completed 2/8 rows within
+  five minutes. ACACA 76 and ADACA 77 are certified; the other six remain
+  incumbents. This triggered the preregistered rejection band, so the generic
+  1,024-row proof shape was not launched.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

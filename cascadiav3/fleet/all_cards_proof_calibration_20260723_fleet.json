@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-proof-fleet-v1",
-  "state": "running",
+  "state": "complete",
   "tag": "all_cards_proof_calibration_20260723",
   "source_revision": "4f4e59c6dd1a5c5489483889c2b404a15ed49075",
   "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
@@ -38,5 +38,22 @@
       "wrapper_pid": 32718,
       "launched_utc": "2026-07-23T17:32:42Z"
     }
-  ]
+  ],
+  "terminal_utc": {
+    "john1": "2026-07-23T17:39:11Z",
+    "john2": "2026-07-23T17:39:11Z",
+    "john3": "2026-07-23T17:43:42Z",
+    "john4": "2026-07-23T17:43:42Z"
+  },
+  "results": [
+    {"index": 0, "ruleset": "AAAAA", "score": 68, "proof_complete": false, "attempts": 81, "unresolved_counts": 30, "sha256": "a0734f728abc436e51f52e8cf41fe24b2f6de9629d1df1dc04f5e7ce58b33f2b"},
+    {"index": 136, "ruleset": "ACACA", "score": 76, "proof_complete": true, "attempts": 8, "unresolved_counts": 0, "sha256": "b9e9d64cb7a6cf24f6e5a9f06a15bf4d421be63f65690076da0c025a34d4d644"},
+    {"index": 200, "ruleset": "ADACA", "score": 77, "proof_complete": true, "attempts": 6, "unresolved_counts": 0, "sha256": "298a9bc61889f05a775717e10cf5e3c45d459a49b612f41bbefbf42f0315a4c6"},
+    {"index": 233, "ruleset": "ADCCB", "score": 85, "proof_complete": false, "attempts": 12, "unresolved_counts": 91, "sha256": "26394a08f96208c6ac2efd1ac9c7a0e93e2fb1832cbd60c33a6b44fc0c38cc9d"},
+    {"index": 562, "ruleset": "CADAC", "score": 66, "proof_complete": false, "attempts": 10, "unresolved_counts": 612, "sha256": "42135ad850a157f9cf5cf9060a1b8ad452d46a97a42f44793384279994362c5f"},
+    {"index": 572, "ruleset": "CADDA", "score": 78, "proof_complete": false, "attempts": 10, "unresolved_counts": 125, "sha256": "426c761ea13c8571d629ced5a338a0ad9f24ef165650529876bed288b1dfe0fc"},
+    {"index": 637, "ruleset": "CBDDB", "score": 84, "proof_complete": false, "attempts": 10, "unresolved_counts": 309, "sha256": "98de10cf8868b053bde7f752a7cf4df2dd2535954dc5dfa319165f39eba26a38"},
+    {"index": 1023, "ruleset": "DDDDD", "score": 78, "proof_complete": false, "attempts": 10, "unresolved_counts": 141, "sha256": "ebc13e27b7b9dd6eeef70877389c59b0777977ac198bd52f777a1fe44f015ae7"}
+  ],
+  "decision": "2/8 exact: reject the generic five-minute production shape and add specialized proof filters before recalibration"
 }

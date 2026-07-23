@@ -40,7 +40,10 @@ over packed expert tensors with Gumbel search-supervised action values.
   passed. Tight Hawk-C/Fox-C filters cut the pilot proof frontier materially;
   a full four-mini incumbent pass completed and cross-scoring 3,502 boards
   improved 444/1,024 rows. Its best score is 85 across eight rulesets, still
-  heuristic. Exact-tail performance work is current. No
+  heuristic. The first stratified exact calibration completed only 2/8 rows
+  inside five minutes, triggering its preregistered rejection band; the
+  generic 1,024-row launch did not run. Specialized sound-filter work is
+  current. No
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
