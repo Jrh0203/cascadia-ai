@@ -42,12 +42,14 @@ LOG_DIR="${ROOT}/cascadiav3/logs"
 HEARTBEAT="${LOG_DIR}/all_wildlife_${FLEET_TAG}_${SHARD_HOST}.heartbeat"
 EXIT_FILE="${LOG_DIR}/all_wildlife_${FLEET_TAG}_${SHARD_HOST}.exit"
 CHILD_PID_FILE="${LOG_DIR}/all_wildlife_${FLEET_TAG}_${SHARD_HOST}.solver.pid"
+WRAPPER_PID_FILE="${LOG_DIR}/all_wildlife_${FLEET_TAG}_${SHARD_HOST}.pid"
 
 cd "$ROOT"
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR"
 test -x "$PYTHON"
 test -s "$INPUT"
 test ! -e "$EXIT_FILE"
+test ! -e "$WRAPPER_PID_FILE"
 observed_candidate="$(shasum -a 256 "$INPUT" | awk '{print $1}')"
 observed_proof="$(shasum -a 256 tools/all_wildlife_global_proof.py | awk '{print $1}')"
 observed_exact="$(shasum -a 256 tools/all_wildlife_exact.py | awk '{print $1}')"
@@ -58,6 +60,8 @@ observed_rules="$(shasum -a 256 tools/all_wildlife_rules.py | awk '{print $1}')"
 [ "$observed_exact" = "$EXACT_SOURCE_SHA256" ]
 [ "$observed_exact_support" = "$EXACT_SUPPORT_SHA256" ]
 [ "$observed_rules" = "$RULES_SOURCE_SHA256" ]
+printf '%s\n' "$$" > "${WRAPPER_PID_FILE}.tmp"
+mv "${WRAPPER_PID_FILE}.tmp" "$WRAPPER_PID_FILE"
 
 IFS=',' read -r -a index_array <<< "$INDICES"
 for index in "${index_array[@]}"; do

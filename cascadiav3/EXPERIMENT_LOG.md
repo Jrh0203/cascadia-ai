@@ -10233,3 +10233,7 @@ worker
 collector
 `2b7298fa1a1e83c1fd320cd086eae0465af8bca3281cf283d4ee0239ee710cf9`.
 The frozen cases, limits, and decision band are unchanged.
+The proof worker now also atomically records its own wrapper PID, removing the
+outer-shell escaping hazard seen in the first lattice-bound launch. Final
+prelaunch worker SHA-256
+`bcb8217d863184520c98759547a632039f27d9333727ca5564dd310f714fa1bf`.
