@@ -8900,3 +8900,22 @@ board independently rescored to 61. Artifact SHA-256
 `9903119c4f0cdf0d7293b48862b4eb7315787e0c783092ad7d0a9e65b90b6686`.
 Decision: accept `(3,6,3,3,5)=61` as the 718th AAAAA per-vector proof,
 pending safe post-writer merge. Every first-pass raw gap <=2 is now closed.
+
+## 2026-07-23 08:29 — AAAAA gap-two/two-salmon diagnostic preregistration
+
+Screen the four remaining raw-gap-three vectors with exactly two salmon:
+`(4,5,2,3,6)>=67`, `(5,5,2,2,6)>=64`, `(3,5,2,4,6)>=63`, and
+`(3,6,2,3,6)>=63`. Exhaust the maximum five-point salmon pair and every one
+of 19 symmetry-reduced two-singleton separations (distance two through seven
+plus a factorized far representative). Zero/one salmon-missing fox is placed
+explicitly; the two-miss maximum-salmon branch retains optimistic abstract
+coverage so remote fox pairs are not excluded. Bear/Hawk isolation and
+whole-board connectivity remain dropped.
+
+Source SHA-256
+`eb4012f74802a12341365a167bdf3cb0b0884f7c8280ef732f966cf071c7a23a`;
+tests SHA-256
+`0a55d374a7aaa7b1f93014b5322a15070b54e799bb5b4331badb0f68886fffb7`;
+Ruff and both tests pass. Use one worker, 30 seconds per subcase. Select each
+case independently for formal certification only if both salmon branches are
+exact and the combined relaxed upper is below its registered threshold.
