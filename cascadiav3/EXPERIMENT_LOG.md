@@ -8749,3 +8749,13 @@ test SHA-256
 `d69b716d6ff69d87d83a32a1a75d3aae2861198fc49b59ff88c6d992997fd70e`.
 Preregister the corrected diagnostic over only the four affected one-salmon
 cases, with the same one worker / 30 seconds per shape and selection rule.
+
+**Corrected diagnostic result — NOT SELECTED.** All four one-salmon models
+completed exactly but the relaxed upper equaled the threshold in every case:
+68 over 11 subcases for `(6,4,1,3,6)`, 68 over 10 for `(6,5,1,2,6)`,
+66 over 11 for `(4,4,1,5,6)`, and 66 over 15 for `(4,6,1,3,6)`.
+Together with the two earlier feasible four-salmon results, the extension
+certifies zero of six cases and fails its selection gate. Decision: retain the
+tested sound diagnostic implementation, but do not build certificate
+serialization or alter catalog evidence. Cross-component isolation—not local
+cell capacity alone—is required to tighten the Hawk-A tail.
