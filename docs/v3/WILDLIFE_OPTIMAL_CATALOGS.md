@@ -156,6 +156,9 @@ created them.
   relaxed local-packing certificates for `(3,6,5,0,6)=60`,
   `(4,6,4,0,6)=63`, and `(4,5,5,0,6)=64`; also pending safe post-writer
   merge.
+- `docs/v3/evidence/aaaaa_hawk_one_loss_certificates_2026-07-23.json`: exact
+  explicit-fox local-packing certificates for `(4,6,4,2,4)=64` and
+  `(3,5,4,3,5)=62`, pending the same safe merge.
 - `docs/v3/evidence/cbddb_wildlife_catalog_2026-07-23.json`: machine-readable
   CBDDB catalog ledger.
 - `docs/v3/CBDDB_WILDLIFE_CATALOG.md`: human-readable CBDDB summary, holistic
@@ -166,8 +169,8 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 07:30 EDT, AAAAA has 715/826 formally certified vectors: 711
-are embedded in its live ledger and four are frozen in separate exact motif
+As of 2026-07-23 07:47 EDT, AAAAA has 717/826 formally certified vectors: 711
+are embedded in its live ledger and six are frozen in separate exact motif
 and local-packing certificates pending a safe post-writer merge. Its hash-pinned hinted retry
 continues over the remaining tail. CBDDB heuristic staging completed all 826 vectors in
 224.244154 seconds with zero independent-score or connectivity failures; the

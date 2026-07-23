@@ -8804,3 +8804,12 @@ upper 64, `(3,5,4,3,5)` exhausts 12 with upper 62, and each independently
 rescored incumbent is a connected 20-cell board at that score. Any `UNKNOWN`,
 larger upper, invalid witness, or count mismatch fails closed for the entire
 artifact. Keep passed evidence separate until the active catalog writer exits.
+
+**Result — BOTH EXACT CERTIFICATES PASSED.** The frozen run completed in
+80.140116 seconds. `(4,6,4,2,4)` exhausted 20 subcases at relaxed upper 64;
+`(3,5,4,3,5)` exhausted 12 at upper 62. Both retained connected boards
+independently rescore to those values and no submodel was `UNKNOWN`. Artifact
+SHA-256
+`d2f769f5a4e5bafc57485c57a90739a8368ce6ec244096f92eca9ae8f5cb3c04`.
+Decision: accept these as the 716th and 717th AAAAA per-vector proofs, pending
+safe post-writer merge.
