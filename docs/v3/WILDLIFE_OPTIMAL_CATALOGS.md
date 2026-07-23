@@ -143,8 +143,9 @@ superset cannot beat the incumbent, the legal board cannot. Disconnected
 salmon scoring components are enumerated through every relative separation at
 which a length-four elk line or shorter motif can interact; all farther
 translations share a factorized representative. Every certificate is
-source-hashed, rerunnable, independently checks its incumbent, and remains
-separate from the live catalog until the catalog writer exits.
+source-hashed, rerunnable, and independently checks its incumbent. The base
+catalog writer exited naturally at 11:07 EDT; its final ledger is now
+immutable input to the certificate union.
 
 A generalized relaxation retaining all 20 coordinates but only forced scoring
 motifs was also implemented and containment-tested. Two preregistered screens,
@@ -216,14 +217,13 @@ created them.
   immutable first-pass evidence retained for mixed-proof provenance.
 - `docs/v3/evidence/aaaaa_motif_certificate_3_6_6_0_5_2026-07-23.json`:
   exact relaxed-superset certificate that proves `(3,6,6,0,5)` has optimum
-  61; it remains separate until the active catalog writer exits.
+  61; retained as independent union evidence.
 - `docs/v3/evidence/aaaaa_zero_hawk_certificates_2026-07-23.json`: exact
   relaxed local-packing certificates for `(3,6,5,0,6)=60`,
-  `(4,6,4,0,6)=63`, and `(4,5,5,0,6)=64`; also pending safe post-writer
-  merge.
+  `(4,6,4,0,6)=63`, and `(4,5,5,0,6)=64`.
 - `docs/v3/evidence/aaaaa_hawk_one_loss_certificates_2026-07-23.json`: exact
   explicit-fox local-packing certificates for `(4,6,4,2,4)=64` and
-  `(3,5,4,3,5)=62`, pending the same safe merge.
+  `(3,5,4,3,5)=62`.
 - `docs/v3/evidence/aaaaa_gap_one_joint_salmon_certificate_2026-07-23.json`:
   exact 113-submodel certificate for `(3,6,3,3,5)=61`; this closes the last
   first-pass raw gap of two or less.
@@ -237,10 +237,13 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 11:01 EDT, AAAAA has 728/826 formally certified vectors.
+As of 2026-07-23 11:08 EDT, AAAAA has 728/826 formally certified vectors.
+The base retry exited naturally with 711/826 exact, adding
+`(4,4,2,4,6)=66` beyond its imported 710-row ledger and leaving 115 timeouts.
 The first exact fleet pass returned all 115 requested tail rows and added 13
 coordinate-model proofs at 60/120-second limits; 102 rows timed out. Three new
-proofs overlap the seven frozen specialized certificates, leaving 98 unique
+proofs overlap the seven frozen specialized certificates, and the base
+retry's one new proof was already in the fleet snapshot, leaving 98 unique
 vectors unresolved after union. Of those, 19 are soundly bounded within two
 points of their incumbent; the remaining sound gaps are 3 (30 rows), 4 (31),
 5 (15), and 6 (3). Empirically, the deep candidate was never more than one

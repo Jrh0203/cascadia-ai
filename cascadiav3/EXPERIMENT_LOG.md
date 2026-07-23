@@ -9594,3 +9594,28 @@ specific: static local tables inside the monolithic coordinate model are not
 enough. Continue only with the already-successful layered finite
 shape/profile/filter pipeline, where local geometry is enumerated outside the
 20-coordinate solve.
+
+## 2026-07-23 11:08 — AAAAA base exact retry exits naturally
+
+The preregistered 05:25 retry completed without intervention. Its final
+826-row v2 ledger contains 711 exact rows and 115 `incomplete_timeout` rows.
+It added one exact result beyond the imported 710-row ledger:
+`(4,4,2,4,6)=66`, proved by connected-model infeasibility at threshold 67
+after the disconnected relaxation returned `UNKNOWN`. The final method counts
+are 332 witness matches, 344 disconnected-relaxation infeasibilities, 35
+connected-model infeasibilities, and 115 timeouts.
+
+This does not change the already reported union: the new result was present in
+the 711-row snapshot used by the terminal fleet pass. Unioning the final base
+ledger, the 13 fleet proofs, and seven specialized certificates still yields
+728/826 unique exact vectors, leaving 98 unresolved. Per John's requested
+AAAAA-then-CBDDB order, the staged CBDDB exact taskset remains blocked.
+
+Final base JSON SHA-256
+`9694f41175799c1454da35c6f6b92f77e8fee79699fb6e805ca3c79e94ffd017`;
+rendered Markdown SHA-256
+`b309570fb1437dd7bec130767e30fc14d4ed68e3f47dff81c4e53470498a5c60`;
+retry log SHA-256
+`205635c72aa2319203d3cf7252738fbab311b1533d1a535ccad1e200ba868f81`.
+The process was confirmed absent and every fleet host idle at the 11:08
+read-only status check; no process was killed or restarted.

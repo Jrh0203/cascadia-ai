@@ -1650,7 +1650,9 @@ time is not a ranked tail strategy.
 Finite local cell-set packing is the active exact-tail method. It explicitly
 enumerates forced salmon/fox geometry and relaxes only remote, noncovering
 motifs. This method has already supplied seven independently serialized exact
-certificates beyond the live catalog ledger. The next extension must model a
+certificates beyond the terminal 711-row base catalog ledger. The base retry
+exited naturally at 11:07 EDT; certificate/fleet union remains 728/826. The
+next extension must model a
 second explicit fox component for cases with two salmon-missing foxes; the
 older abstract treatment was exactly the remaining source of looseness.
 

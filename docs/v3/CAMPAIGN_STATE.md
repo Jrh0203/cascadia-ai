@@ -1026,12 +1026,14 @@ seeds ledger — spent: 2026794000-5249 (Stage A), 2027160000-99 (Gate 0),
 2027193000-3550 (bootstrap), 2027194000-4840 (fs_c1); reserved:
 2027195000+ (certification), 2027079000-99 (unused D1 gate block).
 
-## LOCAL PUZZLE EXPLORATION 2026-07-23 11:01 — LIVE
+## LOCAL PUZZLE EXPLORATION 2026-07-23 11:08 — EXACT TAIL IN PROGRESS
 
 This is independent local CPU work and does not displace or make claims about
 the john0 campaign above. The requested 20-token/cap-6 pure-wildlife catalog
-is sequenced AAAAA then CBDDB. AAAAA is now 728/826 exact after the terminal
-three-host fleet pass added 13 coordinate-model certificates, three
+is sequenced AAAAA then CBDDB. The base AAAAA retry exited naturally at 11:07
+with 711/826 exact: one result beyond the imported 710 proofs and 115
+timeouts. AAAAA remains 728/826 exact after the terminal three-host fleet pass
+added 13 coordinate-model certificates, three
 overlapping the seven frozen specialized certificates. The collector
 validated 115/115 returned rows; 102 timed out and 98 unique vectors remain
 uncertified after the specialized-proof union. CBDDB's
