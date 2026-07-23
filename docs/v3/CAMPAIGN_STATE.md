@@ -1329,6 +1329,11 @@ missing support/rules hashes from the complete fleet ledger's pinned git
 revision and also requires its per-index output hashes. Retry 3 retains the
 same acceptance rule with this legacy provenance made explicit.
 
+Retry 3 then failed before output because current tighter bounds shortened an
+incomplete legacy unresolved list. Retry 4 validates that historical list's
+summary against the hash-matched fleet ledger, retains its exact exclusions,
+and recomputes only the final union under current bounds.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

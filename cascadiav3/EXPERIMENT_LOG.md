@@ -11016,3 +11016,18 @@ and legacy fleet ledger SHA
 All other inputs and the exact six-base/seven-augmented decision rule are
 unchanged. Ledger:
 `cascadiav3/fleet/all_wildlife_catalog_augment_deep_retry3_20260723.json`.
+
+**17:05 EDT retry 3 invalidated; historical-summary adapter frozen.** The
+strict source/file identity checks passed, then an incomplete legacy row's
+unresolved-list comparison failed because current count bounds are stronger
+than its pinned historical rules source. No output was written. The adapter
+now validates historical score/completeness/attempt/unresolved counts against
+the hash-matched complete fleet ledger, retains only exact `INFEASIBLE`
+attempts, and recomputes the aggregate union under current sound bounds.
+
+Retry 4 pins revision `9acc4190a33852d39fb69beeff631cdccb5de80c`
+and collector SHA
+`e5727f834409c355cee3ba89200e9d5493f5349aa708799bc4b8f449449064af`.
+Two focused legacy tests and Ruff pass. All inputs and the six-base/seven-final
+decision rule remain unchanged. Ledger:
+`cascadiav3/fleet/all_wildlife_catalog_augment_deep_retry4_20260723.json`.
