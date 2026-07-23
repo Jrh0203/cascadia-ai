@@ -110,8 +110,11 @@ infeasible, while a feasible disconnected layout is not a valid board.
 ### 5. Fleet execution
 
 Rulesets and remaining count branches are deterministic independent work
-units. Production artifacts are sharded over john1–john4 with atomic
-checkpoints, heartbeats, single-use tags, and exact source/input hashes.
+units. `tools/all_wildlife_proof_plan.py` assigns rulesets by deterministic
+longest-processing-time balancing, using the number of count branches still
+above each incumbent as weight. Production artifacts are sharded over
+john1–john4 with atomic checkpoints, heartbeats, single-use tags, and exact
+source/input hashes.
 Returned boards and ledgers are collected only after every shard is terminal,
 then rescored and revalidated on john1 before catalog publication.
 `tools/all_wildlife_proof_catalog.py` refuses duplicate ruleset proofs,
@@ -120,6 +123,9 @@ mismatches, proofs that omitted connectivity, and inconsistent unresolved
 branch bookkeeping. It writes the machine-readable JSON catalog and the
 1,024-board Markdown catalog atomically. Incomplete rows are visibly labeled
 as unproven incumbents rather than optima.
+`tools/verify_all_wildlife_candidate_catalog.py` then requires the final
+catalog and every row to be proof-complete, recomputes its holistic summary,
+and batch-compares every board with the production Rust scorer.
 
 ## Current measured state
 

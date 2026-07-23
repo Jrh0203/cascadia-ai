@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed independent and production verification of a merged catalog."""
+"""Fail-closed independent/production verification of candidate or exact catalogs."""
 
 from __future__ import annotations
 
@@ -24,11 +24,38 @@ def main() -> int:
 
     encoded = args.catalog.read_bytes()
     payload = json.loads(encoded)
-    if payload.get("schema") != "all-wildlife-merged-candidates-v1":
+    schema = payload.get("schema")
+    if schema == "all-wildlife-merged-candidates-v1":
+        candidates = payload["candidates"]
+        score_key = "score"
+        verification_schema = "all-wildlife-merged-candidate-verification-v1"
+    elif schema == "all-wildlife-optimal-catalog-v1":
+        if not payload.get("proof_complete"):
+            raise ValueError("refusing to verify an incomplete optimal catalog")
+        candidates = payload["results"]
+        if any(
+            not row.get("proof_complete") or row.get("unresolved_counts")
+            for row in candidates
+        ):
+            raise ValueError("optimal catalog contains an incomplete row")
+        score_key = "optimum"
+        verification_schema = "all-wildlife-optimal-catalog-verification-v1"
+    else:
         raise ValueError("unexpected catalog schema")
-    candidates = payload["candidates"]
     if len(candidates) != len(rules.rulesets()):
         raise ValueError("catalog must contain exactly 1,024 candidates")
+    if schema == "all-wildlife-optimal-catalog-v1":
+        holistic = max(candidate[score_key] for candidate in candidates)
+        holistic_rulesets = [
+            candidate["ruleset"]
+            for candidate in candidates
+            if candidate[score_key] == holistic
+        ]
+        if (
+            payload.get("holistic_optimum") != holistic
+            or payload.get("holistic_rulesets") != holistic_rulesets
+        ):
+            raise ValueError("holistic optimum summary mismatch")
     requests = []
     for index, (ruleset, candidate) in enumerate(
         zip(rules.rulesets(), candidates, strict=True)
@@ -50,9 +77,9 @@ def main() -> int:
         independent = rules.score_tokens(tokens, ruleset)
         if list(independent) != candidate["score_breakdown"]:
             raise ValueError(f"{ruleset}: independent breakdown mismatch")
-        if sum(independent) != candidate["score"]:
+        if sum(independent) != candidate[score_key]:
             raise ValueError(f"{ruleset}: independent total mismatch")
-        if rules.count_upper(counts, ruleset) < candidate["score"]:
+        if rules.count_upper(counts, ruleset) < candidate[score_key]:
             raise ValueError(f"{ruleset}: candidate exceeds sound count bound")
         requests.append({"ruleset": ruleset, "tokens": tokens})
 
@@ -67,7 +94,7 @@ def main() -> int:
     if len(responses) != len(candidates):
         raise ValueError("production oracle response count mismatch")
     for candidate, response in zip(candidates, responses, strict=True):
-        if response["score"] != candidate["score"]:
+        if response["score"] != candidate[score_key]:
             raise ValueError(f"{candidate['ruleset']}: production total mismatch")
         if response["score_breakdown"] != candidate["score_breakdown"]:
             raise ValueError(f"{candidate['ruleset']}: production breakdown mismatch")
@@ -75,7 +102,7 @@ def main() -> int:
     print(
         json.dumps(
             {
-                "schema": "all-wildlife-merged-candidate-verification-v1",
+                "schema": verification_schema,
                 "catalog_sha256": hashlib.sha256(encoded).hexdigest(),
                 "rulesets": len(candidates),
                 "production_response_sha256": hashlib.sha256(
