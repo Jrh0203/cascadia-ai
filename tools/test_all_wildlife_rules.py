@@ -86,3 +86,18 @@ def test_known_boards_score_identically_under_mixed_cards() -> None:
             component_scores[species][ruleset[species]]
             for species in range(len(rules.SPECIES))
         )
+
+
+def test_hawk_c_uses_the_tight_cap_six_visibility_bound() -> None:
+    expected = (0, 0, 3, 9, 15, 21, 27)
+    hawk_a = (0, 2, 5, 8, 11, 14, 18)
+    for hawks, hawk_score in enumerate(expected):
+        counts = (6, 6, 6 - hawks, hawks, 2)
+        a_upper = rules.count_upper(counts, "AAAAA")
+        c_upper = rules.count_upper(counts, "AAACA")
+        assert c_upper - a_upper + hawk_a[hawks] == hawk_score
+
+
+def test_fox_c_uses_planar_bipartite_edge_bound() -> None:
+    assert rules._fox_c_upper(6, (4, 4, 4, 2)) == 24
+    assert rules._fox_c_upper(6, (6, 4, 2, 2)) == 24

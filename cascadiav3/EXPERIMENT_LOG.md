@@ -9741,3 +9741,59 @@ pilot JSON
 `8449b1d386ca83c061bfe7ece6881420c7d5865bfc5afa799e13187c75d96696`;
 pilot log
 `fce5f3657cd15d3045fdd30e08393d212870dbe20bd2b7c1d20ef3136da58711`.
+
+## 2026-07-23 13:13 — Generalized exact model passes all-card fixed-board gate
+
+The composable CP-SAT achievement-certificate model now implements all twenty
+cards on the shared coordinate/connectivity core. It includes full-component
+Bear/Salmon/Elk scoring, Elk A/B packing, an ordered remaining-token
+realization of Elk D rings, Hawk A/B qualification and C visibility, Hawk D
+maximum-weight matching, Fox A/B/C neighborhoods, and Fox D pair matching.
+Every selected scoring object is a lower certificate for the represented
+production board; maximizing the certificate is exact because the production
+decomposition can select every scored object.
+
+Fixed-board validation passed AAAAA 66, CBDDB 84, all A/B/C/D uniform sets,
+mixed objectives, all 64 candidate-pilot boards, and finally **all 1,024
+rulesets** on frozen connected seed-202 board `(4,4,4,4,4)`. The exhaustive
+gate completed in 6.925 seconds on eight file-backed spawn workers with zero
+mismatches; canonical row SHA-256
+`005153bf58a77d32feca858fc225e04db3101d7008b295eabde9fedecb878f2f`.
+The verifier is retained as `tools/verify_all_wildlife_exact.py`.
+
+One first attempt to parallelize this gate from an inline stdin program was
+invalid operationally: macOS spawn could not import `<stdin>` and its worker
+pool repeatedly respawned failed children. No score was accepted from it.
+John explicitly authorized termination; only that foreground process tree was
+interrupted. A subsequent process audit found no residual local validation
+worker and no wildlife job on john2–john4; their long-lived Bacalhau daemons
+were untouched. The permanent file-backed verifier is the root fix.
+
+Free-coordinate calibration then reproduced the known disconnected AAAAA
+infeasibility for `(6,1,6,2,5)` at threshold 69 in 12.393 seconds
+(145,251 branches, 6,480 conflicts). The difficult CBDDB `(6,0,3,6,5)`
+threshold-85 disconnected branch remained `UNKNOWN` after 60.090 seconds
+(bound 91, 1,029,719 branches, 167,953 conflicts). Decision: correctness gate
+passes; tail-proof performance remains the launch gate.
+
+Two sound count filters were added. Hawk C uses the tight cap-six visibility
+edge maxima `0,0,1,3,5,7,9`, derived by summing consecutive-pair bounds over
+the three axial projection families. Fox C partitions foxes by their selected
+target species, then bounds each cross-adjacency score by the simple planar
+bipartite/degree-six edge ceiling. On the frozen 64-row shallow pilot these
+reduce mean global-bound gap `16.8125→11.1875`, median count branches above
+the incumbent `406→275.5`, mean `389.953→288.016`, and maximum `747→689`.
+They are proof filters only, not achieved scores.
+
+Hashes: generalized exact model
+`0fd423f6dce7ac4847ff15f16dff9ffe584b4d29f41b98b80821594875e06d5d`;
+exhaustive verifier
+`d76745ca90b2365f9270b1eb20e3e878300755dec8b42876fcb4fec2293a9dae`;
+exact tests
+`f870a8dfca6a277916ef863a84c82c3d7528c74db848f7ee6f62ef32f9cf088f`;
+independent scorer/bounds
+`de8817a123b4e6f688d92817faf8b5b03b2d1126dba2851da8db1fd00ead02f2`;
+scorer tests
+`d6e8d972d52a242758f792637f34fa97ac65020164592d4877133878fc7b698e`;
+Rust candidate/bound engine
+`df5888c5baf3e6ccc80ad5ec7b62d5182275b3fc92dc700c9b2377c3e71ecede`.

@@ -36,10 +36,12 @@ over packed expert tensors with Gumbel search-supervised action values.
   [WILDLIFE_CAP7_UPPER_BOUNDS.md](WILDLIFE_CAP7_UPPER_BOUNDS.md).
   A new cap-six catalog covering all 1,024 ordered A/B/C/D wildlife-card
   combinations is preregistered and in implementation. Its 4,096-case
-  independent/production scorer gate passed; the first candidate pilot exposed
-  a loose proof relaxation, so the generalized exact/filter layer is the
-  current work. No arbitrary-ruleset row is called optimal before its exact
-  certificate completes.
+  independent/production scorer gate and all-1,024 fixed-board exact-model gate
+  passed. Tight Hawk-C/Fox-C filters cut the pilot proof frontier materially;
+  candidate staging and exact-tail performance work are current. No
+  arbitrary-ruleset row is called optimal before its exact certificate
+  completes. Methodology:
+  [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

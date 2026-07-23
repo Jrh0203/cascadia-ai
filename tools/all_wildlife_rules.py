@@ -481,6 +481,31 @@ def _standalone_salmon(count: int, variant: str, non_salmon: int) -> int:
     raise AssertionError(variant)
 
 
+def _bipartite_hex_edge_upper(left: int, right: int) -> int:
+    """Bound adjacency edges between two disjoint token classes."""
+    if not left or not right:
+        return 0
+    planar = 1 if left + right == 2 else 2 * (left + right) - 4
+    return min(left * right, 6 * left, 6 * right, planar)
+
+
+@cache
+def _fox_c_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
+    # Assign each fox to the species whose adjacent count it scores.  Each
+    # group induces a simple planar bipartite graph with its target species.
+    best = 0
+    for assigned in itertools.product(range(foxes + 1), repeat=len(targets)):
+        if sum(assigned) <= foxes:
+            best = max(
+                best,
+                sum(
+                    _bipartite_hex_edge_upper(group, target)
+                    for group, target in zip(assigned, targets, strict=True)
+                ),
+            )
+    return best
+
+
 def count_upper(
     counts: tuple[int, int, int, int, int],
     ruleset: str,
@@ -499,7 +524,12 @@ def count_upper(
     elif cards[3] == "B":
         total += (0, 0, 5, 9, 12, 16, 20)[hawk]
     elif cards[3] == "C":
-        total += 3 * (hawk * (hawk - 1) // 2)
+        # Along each of the three hex axes, only consecutive hawks on one
+        # coordinate line can see one another.  For 2..6 distinct lattice
+        # points the three projection sets contain at least n+3 values total,
+        # so the visibility graph has at most 3n-(n+3)=2n-3 edges.  Scaling a
+        # compact pattern by two shows the bound is tight through the cap.
+        total += 3 * (0, 0, 1, 3, 5, 7, 9)[hawk]
     else:
         distinct_between = sum(count > 0 for count in (bear, elk, salmon, fox))
         total += (hawk // 2) * (0, 4, 7, 9)[min(distinct_between, 3)]
@@ -510,7 +540,7 @@ def count_upper(
         doubled = sum(count >= 2 for count in counts[:4])
         total += fox * (0, 3, 5, 7)[min(doubled, 3)]
     elif cards[4] == "C":
-        total += fox * min(6, max(counts[:4]))
+        total += _fox_c_upper(fox, counts[:4])
     else:
         doubled = sum(count >= 2 for count in counts[:4])
         total += (fox // 2) * (0, 5, 7, 9, 11)[doubled]

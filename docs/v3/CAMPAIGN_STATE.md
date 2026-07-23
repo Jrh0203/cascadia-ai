@@ -1067,6 +1067,9 @@ The exactness/provenance contract is preregistered in `EXPERIMENT_LOG.md`.
 All 4,096 frozen independent/production scorer comparisons passed. The first
 64-ruleset candidate calibration completed in 12.57 seconds, but its separable
 count bounds left a median 406/826 count branches above the incumbent.
-Generalized exact encoding and stronger proof filtering are therefore active;
-no arbitrary-ruleset score has yet been accepted as optimal and no production
-fleet shard has launched.
+The generalized exact model has since matched all 1,024 objectives on a frozen
+board. Tight Hawk-C visibility and Fox-C planar bounds reduce the pilot median
+to 275.5 branches; a known AAAAA exclusion reproved in 12.4 seconds while a
+hard CBDDB exclusion remained unknown at 60 seconds. Candidate staging and
+tail-proof optimization are therefore active; no arbitrary-ruleset score has
+yet been accepted as optimal and no production proof shard has launched.

@@ -83,6 +83,46 @@ fn salmon_upper(count: u8, card: usize) -> u16 {
     }
 }
 
+fn bipartite_hex_edge_upper(left: u8, right: u8) -> u16 {
+    if left == 0 || right == 0 {
+        return 0;
+    }
+    let planar = if left + right == 2 {
+        1
+    } else {
+        2 * u16::from(left + right) - 4
+    };
+    [
+        u16::from(left) * u16::from(right),
+        6 * u16::from(left),
+        6 * u16::from(right),
+        planar,
+    ]
+    .into_iter()
+    .min()
+    .unwrap()
+}
+
+fn fox_c_upper(foxes: u8, targets: [u8; 4]) -> u16 {
+    let mut best = 0;
+    for first in 0..=foxes {
+        for second in 0..=foxes - first {
+            for third in 0..=foxes - first - second {
+                for fourth in 0..=foxes - first - second - third {
+                    let assigned = [first, second, third, fourth];
+                    let score = assigned
+                        .into_iter()
+                        .zip(targets)
+                        .map(|(group, target)| bipartite_hex_edge_upper(group, target))
+                        .sum();
+                    best = best.max(score);
+                }
+            }
+        }
+    }
+    best
+}
+
 fn count_upper(counts: [u8; SPECIES_COUNT], cards: [usize; SPECIES_COUNT]) -> u16 {
     let [bear, elk, salmon, hawk, fox] = counts;
     let mut total =
@@ -90,7 +130,9 @@ fn count_upper(counts: [u8; SPECIES_COUNT], cards: [usize; SPECIES_COUNT]) -> u1
     total += match cards[3] {
         0 => [0, 2, 5, 8, 11, 14, 18][hawk as usize],
         1 => [0, 0, 5, 9, 12, 16, 20][hawk as usize],
-        2 => 3 * u16::from(hawk) * u16::from(hawk.saturating_sub(1)) / 2,
+        // Only consecutive hawks on each of the three axial line families
+        // see one another.  The tight cap-six edge maxima are 0,0,1,3,5,7,9.
+        2 => 3 * [0, 0, 1, 3, 5, 7, 9][hawk as usize],
         3 => {
             let distinct = [bear, elk, salmon, fox]
                 .into_iter()
@@ -116,7 +158,7 @@ fn count_upper(counts: [u8; SPECIES_COUNT], cards: [usize; SPECIES_COUNT]) -> u1
                 .count();
             u16::from(fox) * [0, 3, 5, 7][doubled.min(3)]
         }
-        2 => u16::from(fox) * u16::from([bear, elk, salmon, hawk].into_iter().max().unwrap()),
+        2 => fox_c_upper(fox, [bear, elk, salmon, hawk]),
         3 => {
             let doubled = [bear, elk, salmon, hawk]
                 .into_iter()
