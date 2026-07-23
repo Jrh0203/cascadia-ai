@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -72,3 +73,60 @@ def test_atomic_markdown_writer_creates_parent_and_replaces(tmp_path) -> None:
     _write_text_atomic(output, "first\n")
     _write_text_atomic(output, "second\n")
     assert output.read_text() == "second\n"
+
+
+def test_collect_unions_connected_and_disconnected_exact_exclusions(tmp_path) -> None:
+    candidates = tmp_path / "candidates.json"
+    candidates.write_text(json.dumps(_candidate_catalog()))
+    candidate_sha = hashlib.sha256(candidates.read_bytes()).hexdigest()
+    candidate = json.loads(candidates.read_text())["candidates"][200]
+    ruleset = candidate["ruleset"]
+    unresolved = [
+        counts
+        for counts in rules.count_vectors()
+        if rules.count_upper(counts, ruleset) > candidate["score"]
+    ]
+    assert len(unresolved) >= 2
+    proof_directories = []
+    for name, connected, excluded in (
+        ("connected", True, unresolved[0]),
+        ("disconnected", False, unresolved[1]),
+    ):
+        directory = tmp_path / name
+        directory.mkdir()
+        proof_directories.append(directory)
+        local_unresolved = [
+            list(counts) for counts in unresolved if counts != excluded
+        ]
+        proof = {
+            "schema": "all-wildlife-global-proof-v1",
+            "identity": {
+                "ruleset_index": 200,
+                "ruleset": ruleset,
+                "candidate_sha256": candidate_sha,
+                "proof_source_sha256": "proof",
+                "exact_source_sha256": "exact",
+                "exact_support_source_sha256": "support",
+                "rules_source_sha256": "rules",
+                "connectivity_required": connected,
+            },
+            "configuration": {"connectivity_required": connected},
+            "proof_complete": False,
+            "incumbent": candidate,
+            "attempts": [
+                {
+                    "counts": list(excluded),
+                    "threshold": candidate["score"] + 1,
+                    "status": "INFEASIBLE",
+                }
+            ],
+            "unresolved_counts": local_unresolved,
+        }
+        (directory / "ruleset_200.json").write_text(json.dumps(proof))
+
+    catalog = collect(candidates, proof_directories)
+    row = catalog["results"][200]
+
+    assert len(row["proof_paths"]) == 2
+    assert len(row["unresolved_counts"]) == len(unresolved) - 2
+    assert catalog["connectivity_modes"] == [False, True]

@@ -10305,3 +10305,12 @@ runtime, tag, and idle preflights passed. The frozen four shards launched at
 `18:28:57Z`, wrapper PIDs 74738/46781/12276/33575. Every live proof identity
 has `connectivity_required=false`; heartbeats are fresh. Ledger:
 `cascadiav3/fleet/all_cards_disconnected_prescreen_20260723_fleet.json`.
+
+While the prescreen runs, the final collector was generalized to accept
+multiple ledgers for one ruleset, validate each identity/status/unresolved set
+independently, choose only a connected validated incumbent, and union only
+exact infeasibility thresholds across connectivity modes. A synthetic
+connected/disconnected two-exclusion union test passes. Collector SHA-256
+`65096a1e2be39b395efe522a64eb374a0f3a88d4d7388f7317dfb813dc6b4a60`;
+four-test SHA-256
+`6067392486d14f8596b2e8571c4e192981887be8860c212ad7b2c66e7453fdec`.

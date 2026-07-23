@@ -128,10 +128,14 @@ Returned boards and ledgers are collected only after every shard is terminal,
 then rescored and revalidated on john1 before catalog publication.
 `tools/all_wildlife_proof_catalog.py` refuses duplicate ruleset proofs,
 candidate/proof identity mismatches, disconnected incumbents, cap or scoring
-mismatches, proofs that omitted connectivity, and inconsistent unresolved
+mismatches, connectivity-mode identity mismatches, and inconsistent unresolved
 branch bookkeeping. It writes the machine-readable JSON catalog and the
 1,024-board Markdown catalog atomically. Incomplete rows are visibly labeled
 as unproven incumbents rather than optima.
+When both modes are present, it validates each ledger independently and unions
+only exact infeasibility thresholds; a disconnected relaxation can strengthen
+the upper proof but never replace the connected, independently rescored
+incumbent witness.
 `tools/verify_all_wildlife_candidate_catalog.py` then requires the final
 catalog and every row to be proof-complete, recomputes its holistic summary,
 and batch-compares every board with the production Rust scorer.

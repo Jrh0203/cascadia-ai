@@ -33,14 +33,12 @@ def _write_text_atomic(path: Path, text: str) -> None:
     os.replace(temporary, path)
 
 
-def _proof_paths(directories: list[Path]) -> dict[int, Path]:
-    found = {}
+def _proof_paths(directories: list[Path]) -> dict[int, list[Path]]:
+    found: dict[int, list[Path]] = {}
     for directory in directories:
         for path in directory.glob("ruleset_*.json"):
             index = int(path.stem.removeprefix("ruleset_"))
-            if index in found:
-                raise ValueError(f"duplicate proof for index {index}")
-            found[index] = path
+            found.setdefault(index, []).append(path)
     return found
 
 
@@ -73,9 +71,10 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
     exact_source_hashes: set[str] = set()
     exact_support_hashes: set[str] = set()
     rules_source_hashes: set[str] = set()
+    connectivity_modes: set[bool] = set()
     for index, ruleset in enumerate(rules.rulesets()):
-        path = paths.get(index)
-        if path is None:
+        proof_paths = paths.get(index, [])
+        if not proof_paths:
             candidate = candidates["candidates"][index]
             if candidate["index"] != index or candidate["ruleset"] != ruleset:
                 raise ValueError(f"{ruleset}: candidate identity mismatch")
@@ -94,47 +93,89 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
                         for counts in rules.count_vectors()
                         if rules.count_upper(counts, ruleset) > candidate["score"]
                     ],
-                    "proof_path": None,
+                    "proof_paths": [],
                 }
             )
             continue
-        encoded = path.read_bytes()
-        proof_hashes[str(path)] = hashlib.sha256(encoded).hexdigest()
-        proof = json.loads(encoded)
-        identity = proof["identity"]
-        if (
-            proof.get("schema") != "all-wildlife-global-proof-v1"
-            or identity["ruleset_index"] != index
-            or identity["ruleset"] != ruleset
-            or identity["candidate_sha256"] != candidate_sha
-        ):
-            raise ValueError(f"{path}: proof identity mismatch")
-        if not proof["configuration"]["connectivity_required"]:
-            raise ValueError(f"{path}: proof omitted the connectivity constraint")
-        proof_source_hashes.add(identity["proof_source_sha256"])
-        exact_source_hashes.add(identity["exact_source_sha256"])
-        exact_support_hashes.add(identity["exact_support_source_sha256"])
-        rules_source_hashes.add(identity["rules_source_sha256"])
-        incumbent = proof["incumbent"]
-        _validate_board(incumbent, ruleset)
-        exclusions: dict[tuple[int, ...], int] = {}
-        for attempt in proof["attempts"]:
-            if attempt["status"] == "INFEASIBLE":
-                counts = tuple(attempt["counts"])
-                threshold = int(attempt["threshold"])
-                exclusions[counts] = min(exclusions.get(counts, threshold), threshold)
-        complete = _proof_complete(ruleset, int(incumbent["score"]), exclusions)
-        if complete != bool(proof["proof_complete"]):
-            raise ValueError(f"{path}: proof completeness mismatch")
+        aggregate_exclusions: dict[tuple[int, ...], int] = {}
+        incumbents = []
+        row_proof_hashes = {}
+        for path in proof_paths:
+            encoded = path.read_bytes()
+            digest = hashlib.sha256(encoded).hexdigest()
+            proof_hashes[str(path)] = digest
+            row_proof_hashes[str(path)] = digest
+            proof = json.loads(encoded)
+            identity = proof["identity"]
+            if (
+                proof.get("schema") != "all-wildlife-global-proof-v1"
+                or identity["ruleset_index"] != index
+                or identity["ruleset"] != ruleset
+                or identity["candidate_sha256"] != candidate_sha
+            ):
+                raise ValueError(f"{path}: proof identity mismatch")
+            mode = bool(proof["configuration"]["connectivity_required"])
+            if (
+                "connectivity_required" in identity
+                and bool(identity["connectivity_required"]) != mode
+            ):
+                raise ValueError(f"{path}: connectivity identity mismatch")
+            connectivity_modes.add(mode)
+            proof_source_hashes.add(identity["proof_source_sha256"])
+            exact_source_hashes.add(identity["exact_source_sha256"])
+            exact_support_hashes.add(identity["exact_support_source_sha256"])
+            rules_source_hashes.add(identity["rules_source_sha256"])
+            incumbent = proof["incumbent"]
+            _validate_board(incumbent, ruleset)
+            incumbents.append(incumbent)
+            local_exclusions: dict[tuple[int, ...], int] = {}
+            for attempt in proof["attempts"]:
+                if attempt["status"] == "INFEASIBLE":
+                    counts = tuple(attempt["counts"])
+                    threshold = int(attempt["threshold"])
+                    local_exclusions[counts] = min(
+                        local_exclusions.get(counts, threshold),
+                        threshold,
+                    )
+                    aggregate_exclusions[counts] = min(
+                        aggregate_exclusions.get(counts, threshold),
+                        threshold,
+                    )
+            local_complete = _proof_complete(
+                ruleset,
+                int(incumbent["score"]),
+                local_exclusions,
+            )
+            if local_complete != bool(proof["proof_complete"]):
+                raise ValueError(f"{path}: proof completeness mismatch")
+            local_unresolved = [
+                list(counts)
+                for counts in rules.count_vectors()
+                if rules.count_upper(counts, ruleset) > incumbent["score"]
+                and local_exclusions.get(counts, int(incumbent["score"]) + 2)
+                > int(incumbent["score"]) + 1
+            ]
+            if local_unresolved != proof["unresolved_counts"]:
+                raise ValueError(f"{path}: unresolved count set mismatch")
+        incumbent = min(
+            incumbents,
+            key=lambda row: (
+                -int(row["score"]),
+                json.dumps(row["tokens"], sort_keys=True),
+            ),
+        )
+        complete = _proof_complete(
+            ruleset,
+            int(incumbent["score"]),
+            aggregate_exclusions,
+        )
         expected_unresolved = [
             list(counts)
             for counts in rules.count_vectors()
             if rules.count_upper(counts, ruleset) > incumbent["score"]
-            and exclusions.get(counts, int(incumbent["score"]) + 2)
+            and aggregate_exclusions.get(counts, int(incumbent["score"]) + 2)
             > int(incumbent["score"]) + 1
         ]
-        if expected_unresolved != proof["unresolved_counts"]:
-            raise ValueError(f"{path}: unresolved count set mismatch")
         rows.append(
             {
                 "index": index,
@@ -145,8 +186,8 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
                 "counts": incumbent["counts"],
                 "tokens": incumbent["tokens"],
                 "unresolved_counts": expected_unresolved,
-                "proof_path": str(path),
-                "proof_sha256": proof_hashes[str(path)],
+                "proof_paths": [str(path) for path in proof_paths],
+                "proof_sha256": row_proof_hashes,
             }
         )
     complete = all(row["proof_complete"] for row in rows)
@@ -164,6 +205,7 @@ def collect(candidates_path: Path, directories: list[Path]) -> dict[str, Any]:
         "exact_source_sha256": sorted(exact_source_hashes),
         "exact_support_source_sha256": sorted(exact_support_hashes),
         "rules_source_sha256": sorted(rules_source_hashes),
+        "connectivity_modes": sorted(connectivity_modes),
         "holistic_optimum": holistic,
         "holistic_rulesets": (
             [row["ruleset"] for row in rows if row["optimum"] == holistic]
