@@ -8477,3 +8477,28 @@ on the fixed case, so it fails the selection gate. Artifact SHA-256
 Decision: retain the tested table implementation but do not mix it into
 catalog evidence; fox adjacency must be coupled to per-species coverage and
 non-fox scoring motifs to tighten this tail materially.
+
+## 2026-07-23 06:03 — CBDDB catalog-candidate staging preregistration
+
+Stage heuristic incumbents for all 826 legal 20-token count vectors while
+the AAAAA exact retry owns eight workers. This is deliberately candidate
+generation only: it cannot prove optimality, cannot close a CBDDB catalog
+entry, and no CBDDB holistic conclusion will be drawn from it. The exact
+CBDDB catalog pass remains sequenced after AAAAA completion as requested.
+
+Run the release Rust solver with two otherwise-idle threads, eight restarts
+per count vector, 20,000 mutation iterations per restart, and base seed
+20260723. Every emitted board must pass both the solver's custom CBDDB scorer
+and the production game scorer; the later Python exact runner will rescore
+all imported candidates independently. Durable output:
+`docs/v3/evidence/cbddb_wildlife_candidates_2026-07-23.json`; durable log:
+`cascadiav3/logs/cbddb_wildlife_candidates_2026-07-23.log`. Release-binary
+SHA-256 `37578ee5a379ec290fe04933e9ded9d1283bb9ba2e5743f309b93ab873ad7465`;
+solver source SHA-256
+`8181ddf434fdde8309bca619d51923b927408a6167614ab0cd9573a12094fe6d`;
+shared-support source SHA-256
+`110dc92dcc95b5d0effbcfe17d6ac124ff2f216c6716ae860d496abe77956af9`.
+Decision rule: retain one highest verified candidate per vector (the seeded
+search order resolves ties); completion of all 826 vectors and zero scorer
+mismatches are required before the file may seed the exact pass. Any failure
+or incomplete run is logged and not promoted to proof evidence.
