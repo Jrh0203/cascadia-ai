@@ -1241,3 +1241,8 @@ Anchor-centroid also regressed the known proof to `UNKNOWN` at 30 seconds and
 resolved no hard case. It is rejected and removed; its source remains
 recoverable at revision `eb1e6446`. Simple geometric value-symmetry breaks
 that give back any current fox ordering are now closed.
+
+The next default-off exact optimization is an arithmetic score-profile
+propagator: enumerate only attainable per-card score tuples above threshold
+while preserving the existing coordinate and token-symmetry model. It has the
+same complete correctness and paired runtime gate.

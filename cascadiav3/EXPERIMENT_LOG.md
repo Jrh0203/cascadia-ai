@@ -10545,3 +10545,26 @@ the exact source restored to its pre-experiment SHA-256
 This closes simple value-symmetry breaks that sacrifice the current
 within-species ordering. Evidence:
 `docs/v3/evidence/all_wildlife_anchor_centroid_calibration_2026-07-23.json`.
+
+## 2026-07-23 15:30 — PREREGISTRATION: discrete score-profile propagator
+
+Implement the literature-ranked arithmetic-profile layer without changing
+coordinates or token symmetry. For each fixed count/card, enumerate a sound
+superset of attainable integer scores from disjoint component/group sizes,
+qualifying Hawk counts or pairs, and Fox per-token/pair scores. Filter the
+five-way Cartesian product to tuples whose total lies in the model's requested
+`[minimum, upper]` interval, then add that exact allowed-assignment table on
+the five card-score variables. The existing scoring-object constraints remain
+the authority; the table only removes arithmetically impossible score
+breakdowns.
+
+Land default-off and hash-pinned before measurement. Correctness gates:
+every component of the 4,096 frozen scorer rows and deterministic mixed-count
+boards belongs to its domain; every exact witness remains in the five-way
+table; the all-1,024 fixed-board exact gate retains its canonical hash.
+Record profile counts/model sizes for the four frozen cases, then repeat the
+same paired 30-second, single-worker runtime gate. Select on the established
+rule: ≥2× faster known exclusion without regression, or at least one hard
+case resolved only by the candidate. Otherwise remove it. A later external
+profile sharder is considered only if the in-model table shows material
+pruning but model construction dominates.
