@@ -72,9 +72,14 @@ printf '%s\n' "$$" > "${WRAPPER_PID_FILE}.tmp"
 mv "${WRAPPER_PID_FILE}.tmp" "$WRAPPER_PID_FILE"
 
 IFS=',' read -r -a index_array <<< "$INDICES"
-connectivity_args=()
+proof_args=(
+  --candidates "$INPUT"
+  --time-limit "$TIME_LIMIT"
+  --total-time-limit "$TOTAL_TIME_LIMIT"
+  --workers "$SOLVER_WORKERS"
+)
 if [ "$CONNECTIVITY_REQUIRED" = 0 ]; then
-  connectivity_args+=(--no-connectivity)
+  proof_args+=(--no-connectivity)
 fi
 for index in "${index_array[@]}"; do
   output="${OUTPUT_DIR}/ruleset_${index}.json"
@@ -82,9 +87,7 @@ for index in "${index_array[@]}"; do
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SOURCE_REVISION" "$SHARD_HOST" "$index"
   set +e
   PYTHONDONTWRITEBYTECODE=1 "$PYTHON" -u -m tools.all_wildlife_global_proof \
-    --candidates "$INPUT" --index "$index" --output "$output" \
-    --time-limit "$TIME_LIMIT" --total-time-limit "$TOTAL_TIME_LIMIT" \
-    --workers "$SOLVER_WORKERS" "${connectivity_args[@]}" --resume &
+    "${proof_args[@]}" --index "$index" --output "$output" --resume &
   solver_pid=$!
   printf '%s\n' "$solver_pid" > "${CHILD_PID_FILE}.tmp"
   mv "${CHILD_PID_FILE}.tmp" "$CHILD_PID_FILE"
