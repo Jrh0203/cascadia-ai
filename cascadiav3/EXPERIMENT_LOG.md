@@ -8502,3 +8502,27 @@ Decision rule: retain one highest verified candidate per vector (the seeded
 search order resolves ties); completion of all 826 vectors and zero scorer
 mismatches are required before the file may seed the exact pass. Any failure
 or incomplete run is logged and not promoted to proof evidence.
+
+**Result (06:08) — COMPLETE AS CANDIDATE STAGING, NOT EXACT EVIDENCE.** All
+826 distinct legal count vectors completed in 224.244154 seconds. Independent
+Python rescoring found zero score mismatches, zero overlaps/disconnections,
+and 826 unique vectors. Candidate scores range from 59 to 84; the current
+heuristic leader is counts `(6,0,3,6,5)`, breakdown `(18,0,12,27,27)`, total
+84. This is an incumbent only, not a CBDDB optimum or upper-bound proof.
+Candidate artifact SHA-256
+`cd9d22bf0b7d0990c7b5d4daebcb750ce3f8283bdb42809133e8b0cecbb1084e`;
+log SHA-256
+`e4d0af708983f400173d67c815ab0fb1a6f1b4bb91ea7e0566d4d39679bc90c7`.
+Decision: freeze the candidate file as the exact catalog's warm-start input;
+do not launch the CBDDB exact catalog until the requested AAAAA exact catalog
+is complete.
+
+## 2026-07-23 06:08 — AAAAA retry first new exact closure
+
+The active, untouched eight-worker retry proved counts `(4,4,2,4,6)` have
+optimum 66. Its disconnected relaxation was `UNKNOWN` after 60.016976
+seconds; the connectivity-required model proved threshold 67 `INFEASIBLE`
+in 118.925412 seconds. Retained witness breakdown `(11,13,5,11,26)`.
+The durable live ledger is now 711/826 exact, 725/826 boards stored, with 115
+vectors still unproved. This is a progress transition inside the already
+preregistered retry, not an adaptive run change; the process continues.

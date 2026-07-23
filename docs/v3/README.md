@@ -10,8 +10,14 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-16 13:17 EDT)
+## Status at a glance (updated 2026-07-23 06:08 EDT)
 
+- **Pure-wildlife catalogs (local CPU exploration, live):** AAAAA has one
+  certified optimal board for 711/826 count vectors and a stored incumbent
+  for 725/826; its hash-pinned retry continues without interruption. CBDDB
+  heuristic staging completed and independently verified all 826 vectors;
+  its 84-point leader is only a warm start, not exact evidence. Methodology
+  and live status: [WILDLIFE_OPTIMAL_CATALOGS.md](WILDLIFE_OPTIMAL_CATALOGS.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02
@@ -237,6 +243,9 @@ timestamped snapshot, weaker than current `main`).
 - [Exact AAAAA pure-wildlife optimum](AAAAA_WILDLIFE_OPTIMUM.md): certified
   20-token, six-per-species optimization result, layout, proof model, and
   reproduction commands.
+- [All-count pure-wildlife catalogs](WILDLIFE_OPTIMAL_CATALOGS.md): exactness
+  contract, performance work, cap-6/cap-8 state-space counts, and live AAAAA
+  then CBDDB catalog status.
 - [July 16 research brief](../../research_questions_7_16.md) and
   [answers](../../research_answers_7_16.md): frozen external-research scope,
   primary-source synthesis, gated Q1–Q10 decisions, and the complete D1

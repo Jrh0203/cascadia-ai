@@ -153,11 +153,17 @@ created them.
   CBDDB catalog ledger.
 - `docs/v3/CBDDB_WILDLIFE_CATALOG.md`: human-readable CBDDB summary, holistic
   maximum, and all boards.
+- `docs/v3/evidence/cbddb_wildlife_candidates_2026-07-23.json`: all 826
+  independently verified heuristic warm starts; explicitly not exact proof
+  evidence.
 
 ## Current status
 
-As of 2026-07-23 05:30 EDT, AAAAA has 710/826 formally certified vectors and
-is running a hash-pinned hinted retry over the remaining 116. The CBDDB exact
-model, independent scorer, Rust candidate generator, and production verifier
-are implemented and tested; its exhaustive candidate/proof run starts only
-after the AAAAA catalog is complete.
+As of 2026-07-23 06:08 EDT, AAAAA has 711/826 formally certified vectors and
+725 stored boards. Its hash-pinned hinted retry continues over the 115 still
+unproved vectors. CBDDB heuristic staging has completed all 826 vectors in
+224.244154 seconds with zero independent-score or connectivity failures; the
+current 84-point leader is only an incumbent. The CBDDB exact model,
+independent scorer, Rust candidate generator, and production verifier are
+implemented and tested; its exhaustive proof run starts only after the AAAAA
+catalog is complete.

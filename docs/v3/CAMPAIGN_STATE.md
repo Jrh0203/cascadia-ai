@@ -1025,3 +1025,15 @@ seeds ledger — spent: 2026794000-5249 (Stage A), 2027160000-99 (Gate 0),
 2027190000-99 (CBDDB screening, reusable paired), 2027191000-1399 (s2),
 2027193000-3550 (bootstrap), 2027194000-4840 (fs_c1); reserved:
 2027195000+ (certification), 2027079000-99 (unused D1 gate block).
+
+## LOCAL PUZZLE EXPLORATION 2026-07-23 06:08 — LIVE
+
+This is independent local CPU work and does not displace or make claims about
+the john0 campaign above. The requested 20-token/cap-6 pure-wildlife catalog
+is sequenced AAAAA then CBDDB. AAAAA currently has 711/826 exact entries and
+725 stored boards; its eight-worker, hash-pinned retry continues. CBDDB's
+two-spare-core heuristic staging completed all 826 vectors in 224.244154
+seconds with zero independent scorer/connectivity failures. Its current
+84-point leader at counts `(6,0,3,6,5)` is only an exact-solver warm start.
+Durable methodology/status: `docs/v3/WILDLIFE_OPTIMAL_CATALOGS.md`; detailed
+provenance: `cascadiav3/EXPERIMENT_LOG.md`.
