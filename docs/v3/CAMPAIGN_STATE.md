@@ -1415,6 +1415,12 @@ collector production-rescored all 1,024 boards without changing their
 scores. This validates plumbing only; a preregistered representative fleet
 pilot must show useful bound contraction or a better witness before scaling.
 
+The bound pilot is frozen at eight cases / two per mini. Four target known
+one-point timeout branches; four target CBDDB/DDDDB/DBDAB/DADAB high
+ceilings. Broad scaling requires a strict high-ceiling contraction or a board
+above 85; timeout-only success keeps the lane targeted. Results remain sealed
+until four terminal markers.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

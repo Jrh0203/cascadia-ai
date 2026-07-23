@@ -1,0 +1,120 @@
+{
+  "schema": "all-wildlife-bound-probe-taskset-v1",
+  "catalog_path": "docs/v3/evidence/all_wildlife_catalog_augmented_six_to_ten_branch43_2026-07-23.json",
+  "catalog_sha256": "3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb",
+  "task_count": 8,
+  "tasks": [
+    {
+      "task_index": 0,
+      "ruleset_index": 906,
+      "ruleset": "DCACC",
+      "counts": [
+        4,
+        0,
+        6,
+        6,
+        4
+      ],
+      "incumbent": 77,
+      "analytical_upper": 78
+    },
+    {
+      "task_index": 1,
+      "ruleset_index": 282,
+      "ruleset": "BABCC",
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "incumbent": 77,
+      "analytical_upper": 78
+    },
+    {
+      "task_index": 2,
+      "ruleset_index": 346,
+      "ruleset": "BBBCC",
+      "counts": [
+        6,
+        4,
+        0,
+        6,
+        4
+      ],
+      "incumbent": 77,
+      "analytical_upper": 78
+    },
+    {
+      "task_index": 3,
+      "ruleset_index": 986,
+      "ruleset": "DDBCC",
+      "counts": [
+        4,
+        6,
+        0,
+        6,
+        4
+      ],
+      "incumbent": 78,
+      "analytical_upper": 79
+    },
+    {
+      "task_index": 4,
+      "ruleset_index": 637,
+      "ruleset": "CBDDB",
+      "counts": [
+        0,
+        4,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99
+    },
+    {
+      "task_index": 5,
+      "ruleset_index": 1021,
+      "ruleset": "DDDDB",
+      "counts": [
+        4,
+        0,
+        6,
+        4,
+        6
+      ],
+      "incumbent": 84,
+      "analytical_upper": 99
+    },
+    {
+      "task_index": 6,
+      "ruleset_index": 881,
+      "ruleset": "DBDAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 94
+    },
+    {
+      "task_index": 7,
+      "ruleset_index": 817,
+      "ruleset": "DADAB",
+      "counts": [
+        4,
+        4,
+        6,
+        0,
+        6
+      ],
+      "incumbent": 77,
+      "analytical_upper": 94
+    }
+  ]
+}

@@ -11329,3 +11329,30 @@ and
 `d8c3712e2d41199f58cca495a1331b3b3a78139db1eea1f54f7f522744263348`.
 This proves the pipeline contract, not bound usefulness. Curated evidence:
 `docs/v3/evidence/all_wildlife_bound_probe_smoke_2026-07-23.json`.
+
+## 2026-07-23 18:28 EDT — bounded-maximization eight-case fleet pilot
+
+Freeze eight explicit unresolved count cases against base catalog SHA
+`3303c40ed746e2e6e33ac53382ac7fc8950dcb64b1a74982fa0fd2ef92b03bfb`;
+taskset SHA
+`d605047697ffc7ffdd89216f61ee36f12c2dd545ae1c19b4c417d512c99c0a8b`.
+The first four are known one-point timeout branches: DCACC, BABCC, BBBCC,
+and DDBCC. The last four are high-ceiling cases: CBDDB/DDDDB at `[84,99]`
+and DBDAB/DADAB at `[77,94]`. Assign tasks 0/4 to john1, 1/5 to john2,
+2/6 to john3, and 3/7 to john4. Each task gets 300 seconds, eight workers,
+connected exact maximization, and a five-second heartbeat/handoff. The hard
+fleet wall is ten minutes plus handoff.
+
+Results remain sealed until four terminal markers. Every witness must pass
+the independent and production scorers; every upper is intersected with the
+analytical bound and must remain above its witness.
+
+Decision rule:
+
+- **BROAD_SCALE** only if at least one high-ceiling task 4–7 strictly lowers
+  its upper or improves its incumbent, or any witness scores above the
+  holistic incumbent 85.
+- **TARGETED_ONLY** if at least two of timeout tasks 0–3 strictly contract
+  while the broad gate fails.
+- Otherwise **DO_NOT_SCALE**. Exact closures remain reusable under every
+  verdict; `UNKNOWN` is never relabeled.

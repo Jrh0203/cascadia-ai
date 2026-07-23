@@ -115,6 +115,8 @@ over packed expert tensors with Gumbel search-supervised action values.
   it stores sound CP-SAT upper bounds and concrete witnesses without changing
   the default feasibility prover. The smoke preserved the current holistic
   interval `[85,99]`; usefulness awaits the frozen multi-case fleet pilot.
+  That pilot is now frozen as four known one-point timeout cases plus four
+  high-ceiling cases, two tasks per mini and five minutes per task.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02
