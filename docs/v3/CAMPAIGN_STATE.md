@@ -1255,3 +1255,8 @@ The in-model table misses selection: the known proof is 6.8% slower and no
 hard case resolves. It remains default-off. CADAC and CBDDB branch counts do
 fall 35% and 20%, which triggers the preregistered external profile-sharding
 follow-up for the tractable AAAAA/CADAC 2/6/29-profile cases.
+
+The external calibration is preregistered as 37 independent connected
+single-worker branches over john1–john4, 30 seconds/profile. It selects only
+on a 2× parallel known-proof win or complete exact resolution of all profiles
+for one hard case; all shard outputs remain closed until four terminal markers.

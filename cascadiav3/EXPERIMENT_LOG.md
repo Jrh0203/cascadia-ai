@@ -10599,3 +10599,29 @@ profile receives an independent exact search and fleet scheduling rather than
 one shared CP-SAT tree. CBDDB's 886 profiles are not in the first external
 calibration. Evidence:
 `docs/v3/evidence/all_wildlife_score_profile_calibration_2026-07-23.json`.
+
+## 2026-07-23 15:42 — PREREGISTRATION: external score-profile sharding
+
+Split three exact achievement questions into their frozen arithmetic profiles:
+known AAAAA `(6,1,6,2,5) >= 69` (2 profiles), hard AAAAA
+`(4,2,6,2,6) >= 69` (6), and CADAC `(0,2,6,6,6) >= 67` (29). Each of the
+37 branches fixes its five score-object totals exactly and runs the unchanged
+connected coordinate model for 30 seconds, one CP-SAT worker, seed
+`20260723`. A board above threshold implies at least one full production
+score tuple in this sound profile superset; therefore all-profile exact
+infeasibility is a complete exclusion. A feasible branch is only a witness and
+must be independently rescored.
+
+Freeze the taskset and round-robin branch indices over john1–john4; run up to
+eight single-worker branches concurrently per host. john1 must use a detached
+`screen` session, not `nohup`. Every task/result identity pins the taskset,
+rules/profile source, exact source/support, runner, worker, runtime, and source
+revision. Do not open any shard result until all four terminal markers exist.
+
+Selection rule fixed before output: select external sharding if both known
+profiles resolve infeasible with parallel wall at most 10.388 seconds (2×
+versus the frozen 20.776-second baseline), or if every profile of either hard
+case reaches an exact status within 30 seconds. A feasible hard branch counts
+as exact status only after its connected witness independently scores at least
+the threshold. Otherwise retain the artifacts as branch-level evidence and do
+not scale. CBDDB's 886-profile case is explicitly outside this calibration.
