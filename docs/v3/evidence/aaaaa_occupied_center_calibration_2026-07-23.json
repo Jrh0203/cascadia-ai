@@ -1,0 +1,42 @@
+{
+  "schema": "aaaaa-occupied-center-calibration-v1",
+  "counts": [
+    3,
+    6,
+    6,
+    0,
+    5
+  ],
+  "threshold": 62,
+  "incumbent_score": 61,
+  "wrapper_source_sha256": "32aa014a8749bde5a749139b606b71f96c6e205bdaaa94e90ebb940c35cf6310",
+  "base_source_sha256": "55619db79bd14c9f4935fbf3cad631ef78cf8b246fa770f4b02ddb8bdda309a8",
+  "result": {
+    "counts": [
+      3,
+      6,
+      6,
+      0,
+      5
+    ],
+    "count_relaxation": 62,
+    "model_status": "UNKNOWN",
+    "objective": null,
+    "model_score": null,
+    "score_breakdown": null,
+    "best_bound": 0.0,
+    "wall_seconds": 60.01008,
+    "branches": 357186,
+    "conflicts": 58124,
+    "solver_parameters": {
+      "time_limit_seconds": 60,
+      "workers": 2,
+      "random_seed": 20260723,
+      "maximize": false,
+      "maximum_score": 62,
+      "enforce_connectivity": true,
+      "occupied_center_radius": 10
+    },
+    "tokens": []
+  }
+}

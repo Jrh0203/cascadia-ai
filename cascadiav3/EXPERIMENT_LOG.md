@@ -8549,3 +8549,13 @@ idle workers, 60 seconds, seed 20260723. Durable output:
 Selection rule: only an exact `INFEASIBLE` result within 60 seconds selects
 this wrapper for catalog proof work; a feasible witness is retained if valid
 but does not by itself select the proof formulation; `UNKNOWN` rejects it.
+
+**Calibration result — NOT SELECTED.** The occupied-center model returned
+`UNKNOWN` after 60.010080 seconds with no witness, 357,186 branches, and
+58,124 conflicts. It therefore fails the preregistered exact-result gate.
+Artifact SHA-256
+`44af675ae4a53ec2c9d492d288da1918e9127905aa8a17c75a3ec7963c6bf3c6`.
+Decision: retain the proven-safe constraint and tests, but do not use it as
+catalog proof evidence or alter the active retry. The tail requires stronger
+card-specific combinatorial bounds rather than another generic connectivity
+restriction.
