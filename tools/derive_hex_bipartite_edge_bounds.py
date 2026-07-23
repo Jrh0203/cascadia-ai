@@ -65,6 +65,7 @@ def connected_component_maximum(
     *,
     seconds: float,
     workers: int,
+    metric: str = "edges",
 ) -> dict[str, Any]:
     if not (1 <= left_count <= CAP and 1 <= right_count <= CAP):
         raise ValueError("component sides must both be in 1..6")
@@ -119,8 +120,24 @@ def connected_component_maximum(
             selected_parents.append(selected)
         model.add_exactly_one(selected_parents)
 
-    objective = model.new_int_var(0, left_count * right_count, "cross_edges")
-    model.add(objective == sum(cross_edges))
+    if metric == "edges":
+        objective = model.new_int_var(0, left_count * right_count, "cross_edges")
+        model.add(objective == sum(cross_edges))
+    elif metric == "qualified_left":
+        qualified = []
+        for left in range(left_count):
+            degree = sum(
+                adjacent(adjacency, left, right)
+                for right in range(left_count, token_count)
+            )
+            qualifies = model.new_bool_var(f"left_{left}_degree_at_least_two")
+            model.add(degree >= 2).only_enforce_if(qualifies)
+            model.add(degree <= 1).only_enforce_if(qualifies.negated())
+            qualified.append(qualifies)
+        objective = model.new_int_var(0, left_count, "qualified_left")
+        model.add(objective == sum(qualified))
+    else:
+        raise ValueError(f"unknown metric {metric!r}")
     model.maximize(objective)
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = seconds
@@ -132,6 +149,7 @@ def connected_component_maximum(
     return {
         "left": left_count,
         "right": right_count,
+        "metric": metric,
         "status": status,
         "maximum": (
             int(solver.objective_value)
@@ -165,16 +183,30 @@ def combine_components(component: list[list[int]]) -> list[list[int]]:
     return result
 
 
-def collect_shards(shard_paths: list[Path]) -> dict[str, Any]:
+def collect_shards(
+    shard_paths: list[Path],
+    *,
+    expected_metric: str = "edges",
+) -> dict[str, Any]:
     proofs_by_pair: dict[tuple[int, int], dict[str, Any]] = {}
     shard_hashes = {}
     for path in shard_paths:
         encoded = path.read_bytes()
         payload = json.loads(encoded)
-        if payload.get("schema") != "hex-bipartite-edge-bound-shard-v1":
+        if payload.get("schema") not in (
+            "hex-bipartite-edge-bound-shard-v1",
+            "hex-bipartite-bound-shard-v1",
+        ):
             raise ValueError(f"{path}: unexpected shard schema")
+        shard_metric = payload.get("metric", "edges")
+        if shard_metric != expected_metric:
+            raise ValueError(
+                f"{path}: metric {shard_metric!r} != {expected_metric!r}"
+            )
         shard_hashes[str(path)] = hashlib.sha256(encoded).hexdigest()
         for proof in payload["proofs"]:
+            if proof.get("metric", "edges") != expected_metric:
+                raise ValueError(f"{path}: proof metric mismatch")
             pair = (int(proof["left"]), int(proof["right"]))
             if pair in proofs_by_pair:
                 raise ValueError(f"duplicate component pair {pair}")
@@ -207,7 +239,8 @@ def collect_shards(shard_paths: list[Path]) -> dict[str, Any]:
     ):
         raise ValueError("left/right symmetry check failed")
     return {
-        "schema": "hex-bipartite-edge-bound-derivation-v1",
+        "schema": f"hex-bipartite-{expected_metric}-derivation-v1",
+        "metric": expected_metric,
         "proof_complete": True,
         "cap": CAP,
         "connected_component_maximum": component,
@@ -224,10 +257,15 @@ def main() -> int:
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--end-index", type=int, default=CAP * CAP)
     parser.add_argument("--collect", type=Path, nargs="*")
+    parser.add_argument(
+        "--metric",
+        choices=("edges", "qualified_left"),
+        default="edges",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.collect is not None:
-        payload = collect_shards(args.collect)
+        payload = collect_shards(args.collect, expected_metric=args.metric)
         _write_atomic(args.output, payload)
         print(
             json.dumps(
@@ -253,12 +291,14 @@ def main() -> int:
             right,
             seconds=args.seconds,
             workers=args.workers,
+            metric=args.metric,
         )
         for left, right in pairs
     ]
     incomplete = [proof for proof in proofs if proof["status"] != "OPTIMAL"]
     payload = {
-        "schema": "hex-bipartite-edge-bound-shard-v1",
+        "schema": "hex-bipartite-bound-shard-v1",
+        "metric": args.metric,
         "proof_complete": not incomplete,
         "cap": CAP,
         "start_index": args.start_index,

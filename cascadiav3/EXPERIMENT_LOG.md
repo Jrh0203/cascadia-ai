@@ -10043,3 +10043,30 @@ collector
 `c09ebc6e1a4893db599fc681b3dd71e4bb27bb0fdf63d6727e81a8daf03c0f4b`;
 proof worker
 `12e72974fe0dc08789bf57456e8ea6971acd37008b96183c7bee82d5e0d9d93a`.
+
+## 2026-07-23 14:02 — PREREGISTRATION: exact Fox-B qualification bound
+
+Reuse the now-validated finite-component theorem for Fox B. For every
+fox/target-species size pair in `1..6`, maximize the number of fox vertices
+having at least two adjacent target vertices inside one connected cross-edge
+component; combine components and isolates by the same exact DP. In the Fox-B
+count relaxation, sum these exact per-target-species qualification capacities
+before the existing per-fox scoring DP. This is sound because dropping
+cross-species geometric correlations only enlarges the relaxation.
+
+Freeze metric `qualified_left` as four disjoint nine-pair shards on
+john1–john4, ranges `[0,9)`, `[9,18)`, `[18,27)`, `[27,36)`;
+120 seconds/component, eight workers, seed `20260723`, OR-Tools `9.15.6755`.
+The same 36/36 exact-coverage, objective/bound, and independently solved
+left/right table checks apply. Generic derivation SHA-256
+`eff1c85db870715241f6918fb6ec612599f4811510308646794cde4fcc9bce83`;
+four-test SHA-256
+`989a6d42d14a59e9a29e16b43157cb78d0fae7205ec0f52c065263d20c84ea29`;
+metric-aware worker SHA-256
+`3560b1ec2d9445747537d588fd5efc7e855e4a2f860dfa0bc52f673ff880f0ea`.
+
+Selection rule fixed before output: the table must be everywhere no weaker
+than the current target-pair/common-neighbor capacity and must reduce either
+the frozen 256-rule Fox-B count frontier by ≥5% or one of frozen hard rows
+ADCCB/CBDDB by ≥10%. Otherwise retain it as a proved negative. No incumbent
+score is inspected or changed by this derivation.

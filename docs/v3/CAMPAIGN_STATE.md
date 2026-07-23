@@ -1113,3 +1113,9 @@ component maxima with exact solver bounds and symmetry. The selected table
 cuts the frozen 256-rule Fox-C frontier 51,854→15,553 (−70.01%) and CADAC
 612→361 (−41.01%), passing both preregistered thresholds. Across all rulesets
 it removes 36,301 count branches (−22.33%) without changing an incumbent.
+
+The next preregistered specialized pass applies the same exact
+connected-component-plus-DP derivation to Fox B: maximum foxes with at least
+two neighbors of one target species for all 36 cap-six side-size pairs.
+Selection requires complete proofs plus ≥5% Fox-B or ≥10% ADCCB/CBDDB
+frontier reduction.

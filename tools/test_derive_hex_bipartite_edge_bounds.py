@@ -31,6 +31,19 @@ def test_one_by_one_component_has_one_edge() -> None:
     assert proof["best_bound"] == 1
 
 
+def test_one_by_two_component_qualifies_the_left_vertex() -> None:
+    proof = connected_component_maximum(
+        1,
+        2,
+        seconds=2,
+        workers=1,
+        metric="qualified_left",
+    )
+    assert proof["status"] == "OPTIMAL"
+    assert proof["maximum"] == 1
+    assert proof["best_bound"] == 1
+
+
 def test_collector_requires_exact_disjoint_symmetric_coverage(tmp_path) -> None:
     proofs = []
     for left in range(1, CAP + 1):
@@ -40,6 +53,7 @@ def test_collector_requires_exact_disjoint_symmetric_coverage(tmp_path) -> None:
                 {
                     "left": left,
                     "right": right,
+                    "metric": "edges",
                     "status": "OPTIMAL",
                     "maximum": value,
                     "best_bound": value,
@@ -49,7 +63,8 @@ def test_collector_requires_exact_disjoint_symmetric_coverage(tmp_path) -> None:
     shard.write_text(
         json.dumps(
             {
-                "schema": "hex-bipartite-edge-bound-shard-v1",
+                "schema": "hex-bipartite-bound-shard-v1",
+                "metric": "edges",
                 "proofs": proofs,
             }
         )

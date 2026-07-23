@@ -9,6 +9,7 @@ SOURCE_SHA256="${SOURCE_SHA256:?set SOURCE_SHA256}"
 WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv-py312}"
 SECONDS_PER_COMPONENT="${SECONDS_PER_COMPONENT:-120}"
 SOLVER_WORKERS="${SOLVER_WORKERS:-8}"
+METRIC="${METRIC:-edges}"
 
 case "$FLEET_TAG:$SHARD_HOST" in
   *[!A-Za-z0-9._:-]*)
@@ -25,6 +26,13 @@ esac
 case "$WILDLIFE_VENV" in
   ""|/*|*".."*|*[!A-Za-z0-9._/-]*)
     echo "WILDLIFE_VENV must be a safe relative path" >&2
+    exit 64
+    ;;
+esac
+case "$METRIC" in
+  edges|qualified_left) ;;
+  *)
+    echo "METRIC must be edges or qualified_left" >&2
     exit 64
     ;;
 esac
@@ -55,6 +63,7 @@ set +e
 PYTHONDONTWRITEBYTECODE=1 "$PYTHON" -u -m tools.derive_hex_bipartite_edge_bounds \
   --start-index "$START_INDEX" --end-index "$END_INDEX" \
   --seconds "$SECONDS_PER_COMPONENT" --workers "$SOLVER_WORKERS" \
+  --metric "$METRIC" \
   --output "$OUTPUT" &
 solver_pid=$!
 printf '%s\n' "$solver_pid" > "${CHILD_PID_FILE}.tmp"
