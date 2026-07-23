@@ -123,6 +123,11 @@ over packed expert tensors with Gumbel search-supervised action values.
   All four shards launched by `22:46:21Z` with hash-pinned inputs and current
   heartbeats; the hard terminal deadline is `2026-07-24T08:46:21Z`, and
   outputs remain sealed until every host is terminal.
+  John authorized continuing through approximately 09:00 EDT, so a disjoint
+  224-task second-frontier layer is frozen 56/host against the same base. A
+  durable HOLD-aware waiter will launch it only after four clean first-pass
+  exits, without inspecting the first pass; projected completion is about
+  08:45 EDT.
   The current holistic interval remains `[85,99]` because eight untouched
   rulesets still carry 99-point ceilings.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.

@@ -168,6 +168,11 @@ Subsequent tasksets must be based on that merged catalog, never on the older
 analytical-only catalog; this makes repeated passes monotonic. The taskset
 builder's `--top-frontier-above SCORE` mode deterministically selects every
 count tied for its row's current sound upper above `SCORE`.
+`--frontier-layer N` selects the Nth distinct current-upper level per row.
+An optional `--task-budget K` keeps ruleset tie groups whole while greedily
+packing them by upper descending, group size ascending, and ruleset index.
+This supports fixed non-adaptive continuation tranches without reading a live
+predecessor.
 
 ## Throughput (measured 2026-07-22, model-S incumbent, n128/d2)
 

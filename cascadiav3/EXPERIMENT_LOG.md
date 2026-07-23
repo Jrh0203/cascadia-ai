@@ -11427,3 +11427,28 @@ collision guards; no scientific process was stopped or restarted. Ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_topfrontier435_fleet_20260723.json`.
 Hard terminal deadline: `2026-07-24T08:46:21Z`. Results remain sealed until
 all four terminal exit files exist.
+
+## 2026-07-23 19:36 EDT — queued second-frontier continuation to 09:00
+
+John authorized using the fleet through his approximately 09:00 EDT wake
+window rather than treating the first pass's 04:46 hard bound as a stopping
+target. No live budget or process changes. Freeze a non-adaptive second layer
+against the same sealed base catalog SHA
+`e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82`.
+For every row, rank distinct current per-count upper levels; select complete
+ruleset groups at layer two, prioritized by upper descending, group size
+ascending, then ruleset index, within a 224-task budget. This yields 224
+disjoint cases across 113 rulesets at taskset SHA
+`5c7221f6fb63c8d4777a8d68d4f93bfe86c78c3c9ca63f1c39bef64ee0c2a8c0`.
+Current-upper distribution: 91:6, 92:94, 93:56, 94:17, 95:11, 96:20,
+97:10, 98:10. Round-robin balance is exactly 56 tasks per host.
+
+The continuation uses the unchanged connected maximization worker, 300
+seconds/task, 330 seconds total/task, eight solver workers, and five-second
+heartbeats. A durable waiter may launch it only after all four first-pass exit
+files exist and equal zero, and only after its HOLD gate and full input/source
+hash preflight pass. It must not open first-pass task JSON before launch.
+Because both tasksets are disjoint and frozen against the same base, this is
+not an adaptive peek. Second-pass results remain sealed until its own four
+terminal markers, after which both probe directories are validated and merged
+together. Any nonzero predecessor exit or identity mismatch fails closed.

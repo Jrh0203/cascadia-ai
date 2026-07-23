@@ -64,6 +64,8 @@ def build_taskset(
     cases: list[str] | None = None,
     *,
     top_frontier_above: int | None = None,
+    frontier_layer: int = 1,
+    task_budget: int | None = None,
 ) -> dict[str, Any]:
     encoded = catalog_path.read_bytes()
     catalog = json.loads(encoded)
@@ -74,27 +76,53 @@ def build_taskset(
     if (cases is None) == (top_frontier_above is None):
         raise ValueError("select exactly one of explicit cases or top-frontier mode")
     if cases is not None:
+        if frontier_layer != 1 or task_budget is not None:
+            raise ValueError("frontier options require top-frontier mode")
         parsed = [parse_case(case) for case in cases]
         if not parsed or len(parsed) != len(set(parsed)):
             raise ValueError("cases must be nonempty and unique")
         selection = {"mode": "explicit"}
     else:
-        parsed = []
+        if frontier_layer < 1:
+            raise ValueError("frontier layer must be positive")
+        if task_budget is not None and task_budget < 1:
+            raise ValueError("task budget must be positive")
+        groups = []
         for index, (ruleset, row) in enumerate(
             zip(rules.rulesets(), catalog["results"], strict=True)
         ):
             if row.get("index") != index or row.get("ruleset") != ruleset:
                 raise ValueError(f"catalog identity mismatch at index {index}")
             bounds = _current_bounds(row, ruleset)
-            frontier = max([int(row["optimum"]), *bounds.values()])
-            if frontier <= int(top_frontier_above):
+            levels = sorted(set(bounds.values()), reverse=True)
+            if len(levels) < frontier_layer:
                 continue
-            parsed.extend((index, counts) for counts, upper in bounds.items() if upper == frontier)
+            selected_upper = levels[frontier_layer - 1]
+            if selected_upper <= int(top_frontier_above):
+                continue
+            group = [
+                (index, counts)
+                for counts, upper in bounds.items()
+                if upper == selected_upper
+            ]
+            groups.append((selected_upper, len(group), index, group))
+        groups.sort(key=lambda item: (-item[0], item[1], item[2]))
+        parsed = []
+        selected_group_count = 0
+        for _, group_size, _, group in groups:
+            if task_budget is not None and len(parsed) + group_size > task_budget:
+                continue
+            parsed.extend(group)
+            selected_group_count += 1
         if not parsed:
             raise ValueError("top-frontier selection is empty")
         selection = {
             "mode": "top_frontier",
             "minimum_upper_exclusive": int(top_frontier_above),
+            "frontier_layer": frontier_layer,
+            "task_budget": task_budget,
+            "eligible_group_count": len(groups),
+            "selected_group_count": selected_group_count,
         }
     tasks = []
     for task_index, (index, counts) in enumerate(parsed):
@@ -141,12 +169,16 @@ def main() -> int:
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--case", action="append")
     selection.add_argument("--top-frontier-above", type=int)
+    parser.add_argument("--frontier-layer", type=int, default=1)
+    parser.add_argument("--task-budget", type=int)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     payload = build_taskset(
         args.catalog,
         args.case,
         top_frontier_above=args.top_frontier_above,
+        frontier_layer=args.frontier_layer,
+        task_budget=args.task_budget,
     )
     _write_atomic(args.output, payload)
     print(f"tasks={payload['task_count']}")

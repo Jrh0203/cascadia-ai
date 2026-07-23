@@ -1452,6 +1452,16 @@ PIDs are 63770/78279/36045/36561. The hard terminal deadline is
 `cascadiav3/fleet/all_wildlife_bound_probe_topfrontier435_fleet_20260723.json`.
 Do not inspect task outputs before all four exit files exist.
 
+John extended the useful fleet window through approximately 09:00 EDT. A
+non-adaptive continuation is frozen against the same sealed base: 224
+second-distinct-frontier cases across 113 rulesets, exactly 56 per host,
+taskset SHA
+`5c7221f6fb63c8d4777a8d68d4f93bfe86c78c3c9ca63f1c39bef64ee0c2a8c0`.
+It is disjoint from all 435 live cases and was selected without reading their
+outputs. A durable HOLD-aware waiter may launch only after four zero exit
+files and a complete hash/collision/runtime preflight. At the measured
+five-minute cadence it should use the fleet through roughly 08:45 EDT.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
