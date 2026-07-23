@@ -82,6 +82,13 @@ used; john1 remains reserved for the web UI.
 See the experiment log for pinned hashes and PIDs; use the collector's status
 mode rather than inspecting partial scores.
 
+**Next ruleset authorization:** John authorized john1 for the CBDDB exact
+catalog on 2026-07-23. The frozen 826-vector taskset is therefore planned as
+207/207/206/206 shards on john1–john4. This does not waive preflight: john1
+must authenticate, receive the isolated Python 3.12/OR-Tools environment, and
+pass the same exact version/source/collision checks before launch. Its web UI
+must not be stopped or restarted.
+
 1. **`tools/wildlife_catalog_taskset.py`** freezes the currently unresolved
    canonical count vectors from a validated catalog snapshot:
 

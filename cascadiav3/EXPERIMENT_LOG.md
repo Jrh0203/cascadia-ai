@@ -9300,3 +9300,21 @@ collector while it remains active. If the session is interrupted, collection
 is reboot-reconstructible with
 `fleet_wildlife_exact_collect.sh aaaaa_exact_tail_fleet3_20260723 collect`,
 which still refuses any partial or invalid fleet state.
+
+## 2026-07-23 — john1 authorization for the CBDDB exact catalog
+
+John explicitly authorized using john1 for the next ruleset computation.
+Plan CBDDB as four deterministic shards over john1–john4: 207/207/206/206 of
+the frozen 826-vector taskset, retaining two jobs × four CP-SAT workers,
+Python `3.12.13`, OR-Tools `9.15.6755`, 60/120-second limits, independent
+collection validation, and the rule that CBDDB does not launch before AAAAA's
+exact tail is terminal and collected.
+
+Read-only preflight found the john1 web UI reachable at its documented
+Tailscale address. SSH rejected both the configured `john1` account and the
+infrastructure document's `johnherrick` account with the documented
+`~/.ssh/john0_codex` key; `FLEET.md` warns that repeated failed attempts can
+trigger sshd source penalties. No UI or host process was stopped or restarted.
+Decision: john1 is authorized but not eligible until a cooled-down retry
+authenticates and exact runtime/source provisioning passes. The four-host
+launch must fail closed rather than silently omit or trust an unverified host.
