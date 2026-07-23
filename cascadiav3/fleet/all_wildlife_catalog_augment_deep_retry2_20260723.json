@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-catalog-augmentation-run-v1",
-  "state": "planned",
+  "state": "invalidated",
   "tag": "all_wildlife_catalog_augment_deep_retry2_20260723",
   "source_revision": "0f798dd0df6c8d0b2694db9df706764d0a4dd02f",
   "collector_source_sha256": "69428e3ee59b4b0fd9f738c000e1105229f58bb8d1f7067fa37840d22da35041",
@@ -31,5 +31,10 @@
   "corrected_base_output": "docs/v3/evidence/all_wildlife_catalog_proof_union_complete_leaf_sources_2026-07-23.json",
   "output": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_retry2_2026-07-23.json",
   "markdown": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_DEEP_RETRY2.md",
-  "acceptance_rule": "Pass the 12 explicit john1-john4 leaf directories to the unchanged collector and require exactly six complete base rows: ACACA, ADACA, DCAAC, DCCAC, DDAAC, DDCAC. Then apply the unchanged augmentation contract and require exactly seven completed rows after importing AAAAA, 17 rebased incumbent improvements, all 1,024 independent and production score validations, and holistic incumbent maximum 85."
+  "acceptance_rule": "Pass the 12 explicit john1-john4 leaf directories to the unchanged collector and require exactly six complete base rows: ACACA, ADACA, DCAAC, DCCAC, DDAAC, DDCAC. Then apply the unchanged augmentation contract and require exactly seven completed rows after importing AAAAA, 17 rebased incumbent improvements, all 1,024 independent and production score validations, and holistic incumbent maximum 85.",
+  "invalidation": {
+    "at": "2026-07-23T21:04:28Z",
+    "output_created": false,
+    "reason": "The two complete initial-calibration shards use the earlier proof identity schema, which predates exact_support_source_sha256 and rules_source_sha256. The current collector raised KeyError before emitting an artifact; no scientific result exists."
+  }
 }

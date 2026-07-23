@@ -10999,3 +10999,20 @@ the collector arguments to the 12 explicit john1–john4 leaf paths enumerated
 in
 `cascadiav3/fleet/all_wildlife_catalog_augment_deep_retry2_20260723.json`.
 Require the exact six-row base set before augmentation.
+
+**17:04 EDT retry 2 invalidated; legacy-identity adapter frozen.** Passing the
+12 leaves exposed that the two complete initial-calibration shards predate the
+support/rules identity fields. The collector raised `KeyError` before writing
+an artifact. A strict adapter now accepts such a shard only when its complete
+fleet ledger matches candidate/proof/exact hashes, all source hashes
+reconstruct from the ledger's pinned git revision, and the collected per-index
+file SHA matches the ledger. Two focused legacy tests and Ruff pass.
+
+Retry 3 pins collector revision
+`d241bce69415451bb9781ce209e72a6424a3738f`, source SHA
+`60dd19e9e4b723adb3954e4f5ee4e09c2a74a53a3767e9b793b89e803c279deb`,
+and legacy fleet ledger SHA
+`ff345809a2e1012d975a36533c29ccd6b07ed07591d20bb985abf419aaa6969a`.
+All other inputs and the exact six-base/seven-augmented decision rule are
+unchanged. Ledger:
+`cascadiav3/fleet/all_wildlife_catalog_augment_deep_retry3_20260723.json`.

@@ -1323,6 +1323,12 @@ collector and found no proof files, so it is invalidated. Retry 2 enumerates
 all 12 john1–john4 leaf directories explicitly and retains the same six-row
 base/seven-row augmented acceptance rule.
 
+Those leaves exposed an older identity schema in the complete ACACA/ADACA
+shards; retry 2 failed before output. A strict adapter now reconstructs the
+missing support/rules hashes from the complete fleet ledger's pinned git
+revision and also requires its per-index output hashes. Retry 3 retains the
+same acceptance rule with this legacy provenance made explicit.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

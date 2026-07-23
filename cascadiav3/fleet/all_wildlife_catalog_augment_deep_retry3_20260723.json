@@ -1,0 +1,22 @@
+{
+  "schema": "all-wildlife-catalog-augmentation-run-v1",
+  "state": "planned",
+  "tag": "all_wildlife_catalog_augment_deep_retry3_20260723",
+  "source_revision": "d241bce69415451bb9781ce209e72a6424a3738f",
+  "collector_source_sha256": "60dd19e9e4b723adb3954e4f5ee4e09c2a74a53a3767e9b793b89e803c279deb",
+  "augment_source_sha256": "7894aa3ba6436e460381f5d72e1f7ac3638a9f9c4c261b44dc9f0e27fd43205d",
+  "oracle_sha256": "cccc01f69a7739c11792fb67e39c9bceb8e5d8fd8217aa09e41e517974153b3a",
+  "inputs": {
+    "original_candidates_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+    "proof_leaf_directories": "the same 12 explicit leaf directories frozen in retry2",
+    "legacy_initial_fleet_ledger": "cascadiav3/fleet/all_cards_proof_calibration_20260723_fleet.json",
+    "legacy_initial_fleet_ledger_sha256": "ff345809a2e1012d975a36533c29ccd6b07ed07591d20bb985abf419aaa6969a",
+    "deep_candidates_sha256": "96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9",
+    "aaaaa_global_certificate_sha256": "163c338643fd7c14d45eb00fa1b833b4043260cef47effe14816787e124e3828"
+  },
+  "legacy_identity_contract": "For a proof missing support/rules hashes, require a complete fleet ledger whose candidate/proof/exact hashes match; reconstruct all four source hashes from its pinned git revision; require the reconstructed proof/exact hashes to equal the ledger; and require the per-index output SHA to equal the collected proof file.",
+  "corrected_base_output": "docs/v3/evidence/all_wildlife_catalog_proof_union_legacy_validated_2026-07-23.json",
+  "output": "docs/v3/evidence/all_wildlife_catalog_augmented_deep_retry3_2026-07-23.json",
+  "markdown": "docs/v3/ALL_WILDLIFE_CATALOG_AUGMENTED_DEEP_RETRY3.md",
+  "acceptance_rule": "Require exactly six complete base rows: ACACA, ADACA, DCAAC, DCCAC, DDAAC, DDCAC, with the legacy ledger recorded in output provenance. Then apply the unchanged augmentation contract and require exactly seven completed rows after importing AAAAA, 17 rebased incumbent improvements, all 1,024 independent and production score validations, and holistic incumbent maximum 85."
+}
