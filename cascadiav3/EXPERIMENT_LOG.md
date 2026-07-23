@@ -10864,6 +10864,17 @@ case wall is at most 149.739406 seconds. This is correctness/performance
 reproduction, not new proof evidence. Durable ledger:
 `cascadiav3/fleet/aaaaa_split_salmon_bitset_perf3_full_20260723.json`.
 
+**16:29 EDT wrapper invalidation and fresh retry preregistration.** The
+four-process wrapper stored its PIDs in a scalar; zsh does not split that
+scalar for `wait`, which returned `job not found` and exited 1. Read-only
+inspection found no live child, zero-byte logs, and no result artifacts for
+all four cases. The attempt is invalidated before scientific output.
+
+Freeze the same source, cases, runtimes, hashes, and decision rule under fresh
+tag `aaaaa_split_salmon_bitset_perf3_full_retry1_20260723`; change only the
+wrapper to a native zsh PID array and wait on each child. Durable ledger:
+`cascadiav3/fleet/aaaaa_split_salmon_bitset_perf3_full_retry1_20260723.json`.
+
 **19:59:49Z deep-candidate recovery terminal.** The fresh john1 shard exited
 zero after completing indices 0 and 562. This satisfies the authorized
 recovery condition, so all six parent/recovery files were unsealed and copied

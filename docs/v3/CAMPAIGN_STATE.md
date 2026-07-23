@@ -1297,7 +1297,9 @@ implementation orders species by candidate volume and caches identical
 per-layout deficit queries; 16 tests and Ruff pass. The frozen case-1 probe
 retained all 57 exact exclusions and fell 618.447→12.279 seconds (50.36×).
 A fresh four-case reproduction must now retain 57/57/57/95 exact exclusions
-and a ≤149.739-second critical path before generalization.
+and a ≤149.739-second critical path before generalization. Its first wrapper
+attempt produced no scientific output because of a zsh PID-scalar error; the
+same frozen run is registered under a fresh retry tag with a native PID array.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

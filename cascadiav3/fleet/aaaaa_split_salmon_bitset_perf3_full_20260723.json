@@ -1,6 +1,6 @@
 {
   "schema": "aaaaa-split-salmon-bitset-performance-v1",
-  "state": "planned",
+  "state": "invalidated",
   "tag": "aaaaa_split_salmon_bitset_perf3_full_20260723",
   "source_revision": "33bc7403c1e24c5454f769ff35779373a8064e0b",
   "runner_sha256": "aa2438e82d33d2553d5703fb5ed03491669d1af66ab96e1622d5a6fa28e36f50",
@@ -19,5 +19,9 @@
     "old_sequential_wall_seconds": 2994.78812366724,
     "maximum_selected_critical_path_seconds": 149.739406183362
   },
-  "selection_rule": "select the species-ordered cached engine for generalized component work only if all four fresh outputs retain exact INFEASIBLE status and 57/57/57/95 submodels, and the maximum per-case wall is at most 149.739406183362 seconds (at least 20x projected four-host wall speedup versus the frozen sequential CP-SAT screen)."
+  "selection_rule": "select the species-ordered cached engine for generalized component work only if all four fresh outputs retain exact INFEASIBLE status and 57/57/57/95 submodels, and the maximum per-case wall is at most 149.739406183362 seconds (at least 20x projected four-host wall speedup versus the frozen sequential CP-SAT screen).",
+  "invalidation": {
+    "at": "2026-07-23T20:29:00Z",
+    "reason": "The zsh wrapper stored all child PIDs in one scalar and wait treated the value as one nonexistent job. The shell exited with code 1; all four children exited with the wrapper before producing any bytes of log or any result artifact. No scientific output exists and no selection decision is possible."
+  }
 }
