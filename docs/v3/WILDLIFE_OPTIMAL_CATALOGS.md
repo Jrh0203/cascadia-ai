@@ -154,6 +154,28 @@ search is not treated as useful evidence. Tail work uses finite explicit fox
 components and local cell-set packing, which removes the free-coordinate
 symmetry and has already produced the accepted specialized certificates.
 
+### Why the remaining AAAAA tail is harder
+
+The unresolved tail is dominated by Fox-A geometry: every one of the 98
+remaining vectors has five or six foxes, 81 have six, and 96 contain all five
+species. The additive count relaxation treats every fox's wildlife-type
+observations independently. For six foxes with every type present, it awards
+the full 30 fox points without asking whether all six fox neighborhoods can
+simultaneously contain Fox, Bear, Elk, Salmon, and Hawk.
+
+On a real hex board those observations share scarce neighboring tiles. At the
+same time, Bear A wants isolated pairs, Elk A wants rigid straight groups,
+Salmon A wants unbranched components, and Hawk A wants hawks separated from
+one another. The strongest board is easy to exhibit; the hard direction is
+proving that no one-point-better arrangement exists among many symmetric
+near-solutions. The exact coordinate model must couple 20 positions, all 190
+pair adjacencies, card-motif subset variables, and a rooted connectivity
+certificate. In the first fleet pass, every one of the 102 incomplete rows
+left both its disconnected and connected threshold solves `UNKNOWN`, after a
+median 1.85 million branches and 410 thousand conflicts. Specialized
+high-fox overlap and local-packing certificates attack this missing global
+interference more directly than simply extending the generic timeout.
+
 ## Independent validation
 
 Every final board must pass all of the following:

@@ -9404,3 +9404,42 @@ treated as selected hard cases rather than an exchangeable random sample.
 Verdict: **high empirical confidence** that the remaining stored boards are
 within two, but no defensible guarantee that all 98 are. The exact catalog
 must continue to label 79 rows unproven until their sound gaps close.
+
+## 2026-07-23 — AAAAA tail-difficulty profile
+
+Join the same frozen exact/candidate inputs as the remaining-gap audit and
+compare the 98 unresolved count vectors with the 728 certified vectors. The
+first inline profile invocation had a bracket syntax error and produced no
+result or state change; the corrected invocation completed.
+
+The tail is not a random collection:
+
+- all 98 have five or six foxes; 81 have six foxes;
+- 96/98 have all five species present;
+- mean unresolved counts B/E/S/H/F are
+  `3.265/4.082/4.224/2.602/5.827`, versus
+  `4.099/3.989/3.970/4.188/3.754` for certified rows;
+- unresolved candidate score contribution averages are
+  `7.44/12.09/12.71/6.87/24.82`, so fox supplies about 39% of the total and
+  is near its count-only maximum.
+
+Mechanism: the count relaxation gives each high-count fox one point for every
+present wildlife type independently. With six foxes and all five types it
+therefore assumes 30 fox points, but a legal board must give every fox a fox
+neighbor plus adjacent Bear, Elk, Salmon, and Hawk observations while using
+the same scarce non-fox tiles to form isolated Bear-A pairs, straight Elk-A
+groups, unbranched Salmon-A runs, and isolated Hawk-A tiles. Those individual
+maxima compete for the same hex adjacencies, and the additive relaxation does
+not encode most of that global interference.
+
+The proof task is also asymmetric: a strong board is already known, so the
+solver must refute every board scoring one point higher. Each threshold model
+places 20 labeled tokens in the complete radius-19 coordinate domain, reifies
+all 190 pair adjacencies, and couples subset-based Elk/Salmon motifs, Fox
+observations, non-overlap, and (in the exact pass) a rooted connectivity
+arborescence. Across the 102 fleet timeouts, both the disconnected and
+connected attempts remained `UNKNOWN` (204/204 attempts) after a median
+1.85 million branches and 410 thousand conflicts per vector. Verdict: the
+remaining cases are hard primarily because they require proving subtle
+high-fox motif incompatibility across many symmetric near-solutions, not
+because good incumbent boards are difficult to find.
