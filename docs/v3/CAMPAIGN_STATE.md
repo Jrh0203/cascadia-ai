@@ -1395,6 +1395,12 @@ Independent and production rescoring advances the catalog 22→44 exact,
 leaving 119,023 branches across 980 rows. Curated evidence:
 `docs/v3/evidence/all_wildlife_three_to_five_branch23_2026-07-23.json`.
 
+Next tail tranche: every row with 6–10 branches is frozen in taskset SHA
+`d4c159c5f4b4990baf6696bc156c8ff1a8085bfd39b07e0c698d39c7da25736a`.
+It covers 43 rulesets / 354 queries, balanced 90/90/90/84 across
+john1–john4. The 330-second row cap gives a 60m30s hard wall per host.
+DCACC's two residual branches remain separate; no unknown is discarded.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

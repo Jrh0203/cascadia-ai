@@ -11228,3 +11228,21 @@ The integrated catalog advances 22→44/1,024 exact, leaving 119,023 branches
 across 980 incomplete rows. The score-85 incumbent and production response
 SHA remain unchanged; neither is a holistic proof. Curated evidence:
 `docs/v3/evidence/all_wildlife_three_to_five_branch23_2026-07-23.json`.
+
+## 2026-07-23 17:39 EDT — 6–10-branch tail fleet preregistration
+
+Freeze every incomplete ruleset with 6–10 current unresolved branches from
+the validated 44-row catalog: 43 rulesets / 354 count queries, taskset
+SHA-256
+`d4c159c5f4b4990baf6696bc156c8ff1a8085bfd39b07e0c698d39c7da25736a`.
+The tested builder independently validates all selected incumbents and
+requires byte-identical SHA-72c/deep boards. DCACC's two residual branches
+are not silently rerun in this tranche.
+
+Assignments balance the current frontier at 90/90/90/84 queries and
+11/11/11/10 rows across john1–john4; exact indices are hash-frozen in the
+taskset. Retain connected proof, 300 seconds/count, 330 seconds/ruleset,
+eight solver workers, and five-second handoff/heartbeat. The per-host hard
+wall is at most 60m30s. Results remain sealed until all four terminal
+markers. Keep exact exclusions and validated witnesses; timeout/`UNKNOWN`
+remain unresolved. A clean pass would advance 44→87 exact.

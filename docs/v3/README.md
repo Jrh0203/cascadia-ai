@@ -106,6 +106,8 @@ over packed expert tensors with Gumbel search-supervised action values.
   from 30 to 5 seconds. That pass certified 22/23 rows and 93/95 queries in
   6m34s fleet wall. DCACC retains two explicit unknowns; the integrated
   catalog is now **44/1,024 exact** with 119,023 branches across 980 rows.
+  The next complete slice—43 rows with 6–10 branches, 354 queries—is frozen
+  as a balanced 90/90/90/84-query fleet batch.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02
