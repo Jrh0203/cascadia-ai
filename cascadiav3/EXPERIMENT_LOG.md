@@ -8940,3 +8940,23 @@ not interrupted or restarted. Its Unix niceness was changed from 0 to 15 so
 the hash-pinned eight-worker catalog retry receives CPU priority; the process
 continues naturally and its eventual output remains diagnostic-only. No exact
 solver configuration, deadline, ledger, or proof process was changed.
+
+## 2026-07-23 08:45 — CBDDB deep incumbent staging preregistration
+
+Use the two cores not consumed by the AAAAA eight-worker retry for a deeper
+CBDDB heuristic pass; no CBDDB exact proof starts before AAAAA completion.
+Run the already hash-pinned release solver over all 826 vectors with two
+threads, 32 restarts per count, 100,000 iterations per restart (20x the first
+staging effort), and seed 20260724. Durable output:
+`docs/v3/evidence/cbddb_wildlife_candidates_deep_2026-07-23.json`; log:
+`cascadiav3/logs/cbddb_wildlife_candidates_deep_2026-07-23.log`. Binary
+SHA-256 `37578ee5a379ec290fe04933e9ded9d1283bb9ba2e5743f309b93ab873ad7465`;
+source/support hashes remain
+`8181ddf434fdde8309bca619d51923b927408a6167614ab0cd9573a12094fe6d` /
+`110dc92dcc95b5d0effbcfe17d6ac124ff2f216c6716ae860d496abe77956af9`.
+
+Require all 826 unique vectors, connected 20-cell boards, and zero independent
+Python score mismatches. Compare each row to the frozen first staging file and
+retain the higher independently scored incumbent (seed/order breaks exact
+ties). Neither file is proof evidence. Report the holistic candidate change,
+but do not call it optimal until exact exclusions are complete.
