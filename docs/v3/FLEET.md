@@ -102,6 +102,21 @@ not be stopped or restarted.
      --output <taskset.json>
    ```
 
+   For the 1,024 arbitrary-card catalog,
+   **`tools/all_wildlife_tail_taskset.py`** freezes a complete inclusive slice
+   by current unresolved-branch count. It independently checks every selected
+   candidate score/count and can require byte-identical boards in a second
+   candidate catalog before permitting legacy-proof union:
+
+   ```bash
+   .venv/bin/python -m tools.all_wildlife_tail_taskset \
+     --catalog <integrated-catalog.json> \
+     --candidates <legacy-unionable-candidates.json> \
+     --comparison-candidates <current-candidates.json> \
+     --min-branches 3 --max-branches 5 \
+     --output <taskset.json>
+   ```
+
 2. **`fleet_wildlife_exact_launch.sh`** validates the full candidate file,
    taskset, optional imported proof ledger, host idleness, dependency version,
    and source revision before writing a durable launch ledger. It snapshots

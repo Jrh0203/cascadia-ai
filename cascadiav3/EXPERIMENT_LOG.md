@@ -11179,3 +11179,25 @@ proof model, source identities, or result schema. Local and john2–john4 all
 run Bash 3.2.57; syntax and identical deployed SHA-256
 `5b5e6fa0112c75e5194d9df70e00fdb8e2632f31e625615b15ee2654f2a93d9e`
 pass on all four. Boundary checks 0 and 61 both fail closed with exit 64.
+
+## 2026-07-23 17:29 EDT — 3–5-branch tail fleet preregistration
+
+A new deterministic taskset builder validates the selected catalog/candidate
+identities, independently rescores and recounts every selected board, checks
+all count-vector invariants, and optionally requires byte-identical boards in
+the deep catalog. Three focused tests and Ruff pass. Freeze the complete
+3–5-branch slice from the 22-row integrated catalog: 23 rulesets and 95
+count/threshold queries, taskset SHA-256
+`5dfa433a83fba599322a100c045f04738b25c46ae65cb98721d681c731b92340`.
+All 23 selected boards match candidate SHA-72c and deep candidate SHA-96a
+byte-for-byte.
+
+Assign 214/482/742/470/658/982 (25 branches) to john1;
+363/646/906/998/706 (22) to john2;
+398/730/130/386/146/726 (24) to john3; and
+410/734/138/454/650/914 (24) to john4. Keep connected exact proof,
+300 seconds/count, 330 seconds/ruleset, eight solver workers, and the new
+validated five-second heartbeat/handoff interval. The per-host hard wall is
+at most 33 minutes. Do not inspect results until every shard is terminal.
+Retain exact exclusions and validated connected witnesses; timeout/`UNKNOWN`
+remain unresolved. If all 23 close, advance 22→45 exact.

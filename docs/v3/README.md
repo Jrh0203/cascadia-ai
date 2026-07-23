@@ -101,6 +101,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   two remaining branches, also closed exactly: all 16 threshold queries were
   `INFEASIBLE` in 0.77–3.39 seconds each. The integrated catalog is now
   **22/1,024 exact**, with 119,116 branches across 1,002 unresolved rows.
+  The complete next slice—23 rows with 3–5 branches, 95 queries total—is
+  frozen for a balanced four-mini run after cutting inter-row wrapper latency
+  from 30 to 5 seconds.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02
