@@ -8788,3 +8788,19 @@ exhaustion returned `(4,6,4,2,4)` relaxed upper 64 over 20 subcases in
 their retained incumbents. Decision: add fail-closed two-row serialization,
 independent incumbent validation, and source hashes; diagnostic output alone
 does not yet promote either row.
+
+## 2026-07-23 07:41 — AAAAA Hawk one-loss certificates preregistration
+
+Frozen certificate source SHA-256
+`f907b4526b752d013a742465cc6387c5ccf03e145829cc2de0136ba04ce95697`;
+tests SHA-256
+`28854a6533934a6534eb800eaf78b76df13aa5836be05b242d6b621599aa1366`.
+Ruff and four tests pass. Run both fixed cases with one worker and a 30-second
+per-shape limit; durable output:
+`docs/v3/evidence/aaaaa_hawk_one_loss_certificates_2026-07-23.json`.
+
+Accept only if every submodel is exact, `(4,6,4,2,4)` exhausts 20 cases with
+upper 64, `(3,5,4,3,5)` exhausts 12 with upper 62, and each independently
+rescored incumbent is a connected 20-cell board at that score. Any `UNKNOWN`,
+larger upper, invalid witness, or count mismatch fails closed for the entire
+artifact. Keep passed evidence separate until the active catalog writer exits.
