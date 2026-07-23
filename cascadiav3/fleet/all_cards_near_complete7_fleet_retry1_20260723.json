@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-near-complete-fleet-v1",
-  "state": "planned",
+  "state": "active",
   "tag": "all_cards_near_complete7_fleet_retry1_20260723",
   "source_revision": "51791ef265c108e32ddc9b15137feab86f9dc848",
   "taskset_sha256": "a181069b68dc930ad4cbad6a90b4f41077f9e2cf84a3605a5234dca9768325ce",
@@ -25,29 +25,34 @@
         194,
         202
       ],
-      "local_screen": "wildlife_near_complete7_retry1_john1"
+      "local_screen": "wildlife_near_complete7_retry1_john1",
+      "wrapper_pid": 98894
     },
     {
       "host": "john2",
       "indices": [
         450,
         458
-      ]
+      ],
+      "wrapper_pid": 66050
     },
     {
       "host": "john3",
       "indices": [
         466,
         714
-      ]
+      ],
+      "wrapper_pid": 26537
     },
     {
       "host": "john4",
       "indices": [
         970
-      ]
+      ],
+      "wrapper_pid": 34426
     }
   ],
   "wrapper_change": "Use an always-populated proof_args array; append --no-connectivity only for disconnected mode. Bash -n and connected-mode expansion pass on all four hosts.",
+  "launched_at": "2026-07-23T21:14:45Z",
   "selection_rule": "Unchanged: keep every exact INFEASIBLE one-count exclusion and every independently validated connected witness. If all seven rulesets become proof_complete, advance the integrated catalog from 7 to 14 exact rows. UNKNOWN or timeout remains unresolved."
 }

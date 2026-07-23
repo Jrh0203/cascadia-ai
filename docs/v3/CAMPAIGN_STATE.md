@@ -1352,6 +1352,10 @@ treated an empty connected-mode argument array as unbound under `set -u`.
 There are zero result files. The fixed worker passes all-host shell checks and
 the identical batch is frozen under a fresh retry tag.
 
+The retry launched at `2026-07-23T21:14:45Z`; all four first-index solvers
+have fresh heartbeats. Do not read result files before every shard is
+terminal.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

@@ -11090,3 +11090,8 @@ connected expansion pass locally and on john2–john4. Worker SHA-256
 Freeze the same taskset, assignments, solver limits, and decision rule under
 fresh tag/ledger
 `cascadiav3/fleet/all_cards_near_complete7_fleet_retry1_20260723.json`.
+
+**21:14:45Z retry launch.** All source/candidate/runtime/collision checks
+passed on john1–john4. Wrappers are 98894/66050/26537/34426; first solver
+PIDs are 98921/66069/26556/34445 on indices 194/450/466/970. Heartbeats are
+fresh. Results remain sealed until four terminal markers.
