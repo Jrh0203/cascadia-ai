@@ -23,6 +23,20 @@ const SALMON_STANDALONE: [u16; 7] = [0, 0, 0, 13, 16, 19, 26];
 
 fn score_layout(layout: &Layout) -> WildlifeScore {
     let mut score = WildlifeScore::default();
+    const LOOKUP_RADIUS: i8 = 10;
+    const LOOKUP_DIM: usize = (LOOKUP_RADIUS as usize) * 2 + 1;
+    let mut occupant = [None; LOOKUP_DIM * LOOKUP_DIM];
+    let lookup_index = |coord: HexCoord| {
+        let q = coord.q + LOOKUP_RADIUS;
+        let r = coord.r + LOOKUP_RADIUS;
+        (q >= 0 && r >= 0 && q < LOOKUP_DIM as i8 && r < LOOKUP_DIM as i8)
+            .then_some(q as usize * LOOKUP_DIM + r as usize)
+    };
+    for token in &layout.tokens {
+        occupant[lookup_index(token.coord).expect("search coordinate is inside fast lookup")] =
+            Some(token.wildlife);
+    }
+    let wildlife_at = |coord| lookup_index(coord).and_then(|index| occupant[index]);
 
     let bear_sizes: Vec<_> = components(layout, Wildlife::Bear)
         .into_iter()
@@ -102,7 +116,7 @@ fn score_layout(layout: &Layout) -> WildlifeScore {
                     coord
                         .neighbors()
                         .into_iter()
-                        .filter(|neighbor| layout.wildlife_at(*neighbor) == Some(Wildlife::Salmon))
+                        .filter(|neighbor| wildlife_at(*neighbor) == Some(Wildlife::Salmon))
                         .count()
                         <= 2
                 })
@@ -111,7 +125,7 @@ fn score_layout(layout: &Layout) -> WildlifeScore {
             let mut adjacent = Vec::new();
             for salmon in &component {
                 for neighbor in salmon.neighbors() {
-                    if let Some(wildlife) = layout.wildlife_at(neighbor)
+                    if let Some(wildlife) = wildlife_at(neighbor)
                         && wildlife != Wildlife::Salmon
                         && !adjacent.contains(&neighbor)
                     {
@@ -132,13 +146,13 @@ fn score_layout(layout: &Layout) -> WildlifeScore {
             };
             if between
                 .iter()
-                .any(|coord| layout.wildlife_at(*coord) == Some(Wildlife::Hawk))
+                .any(|coord| wildlife_at(*coord) == Some(Wildlife::Hawk))
             {
                 continue;
             }
             let mask = between
                 .iter()
-                .filter_map(|coord| layout.wildlife_at(*coord))
+                .filter_map(|coord| wildlife_at(*coord))
                 .fold(0u8, |mask, wildlife| mask | (1 << wildlife as u8));
             let edge_score = match mask.count_ones() {
                 0 => 0,
@@ -159,7 +173,7 @@ fn score_layout(layout: &Layout) -> WildlifeScore {
         .map(|fox| {
             let mut counts = [0u8; SPECIES_COUNT];
             for neighbor in fox.neighbors() {
-                if let Some(wildlife) = layout.wildlife_at(neighbor)
+                if let Some(wildlife) = wildlife_at(neighbor)
                     && wildlife != Wildlife::Fox
                 {
                     counts[wildlife as usize] += 1;

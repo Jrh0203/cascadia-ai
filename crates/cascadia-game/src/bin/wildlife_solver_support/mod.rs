@@ -22,12 +22,6 @@ pub struct Layout {
 }
 
 impl Layout {
-    pub fn wildlife_at(&self, coord: HexCoord) -> Option<Wildlife> {
-        self.tokens
-            .iter()
-            .find_map(|token| (token.coord == coord).then_some(token.wildlife))
-    }
-
     pub fn occupied(&self, coord: HexCoord) -> bool {
         self.tokens.iter().any(|token| token.coord == coord)
     }
