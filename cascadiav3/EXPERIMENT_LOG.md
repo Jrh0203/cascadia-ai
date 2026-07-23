@@ -9153,3 +9153,12 @@ had no `~/cascadia-aaaaa-exact` directory, no OR-Tools import, and no pip
 installation process. No remote state changed and no scientific computation
 ran. Decision: correct only the local orchestration variable/shell, retain the
 same pinned dependency and hosts, and retry provisioning.
+
+**09:08 provisioning attempt failed on all hosts.** The corrected parallel
+wrapper reached john2–john4, but each `~/cascadia/venv/bin/python -m pip`
+invocation failed immediately with `No module named pip`. No package was
+installed and no scientific computation ran. Durable per-host logs:
+`cascadiav3/logs/fleet_wildlife_provision_{john2,john3,john4}_20260723.log`.
+Decision: inspect the hosts for their already-supported installer and install
+the same exact OR-Tools pin into the existing venv; do not bootstrap an
+unreviewed dependency path.
