@@ -10244,3 +10244,24 @@ john4 `1023` at `18:14:30–31Z`; self-recorded wrapper PIDs are
 71296/44974/10948/33385 and every heartbeat identifies the first live index.
 Ledger:
 `cascadiav3/fleet/all_cards_proof_recalibration_20260723_fleet.json`.
+
+**14:25 terminal verdict — connected shape still rejected.** All four
+workers exited naturally with code 0. Collection waited for terminal state
+and validated all six fresh proof identities, incumbents, scores,
+connectivity, and unresolved sets. None of the six completed, so with frozen
+ACACA/ADACA the combined result remains **2/8**, the original rejection band.
+No full launch follows.
+
+The selected tables did materially reduce breadth: AAAAA has 23 unresolved
+counts after 85 infeasibilities and two timeouts; ADCCB 64 after seven
+infeasibilities/eight timeouts; CADAC 361; CADDA 125; CBDDB 283; DDDDD 141.
+CADAC/CADDA/CBDDB/DDDDD each spent essentially all 300 seconds on ten
+30-second unknowns. Proof SHA-256 values are frozen in the completed ledger;
+all valid exclusions remain under
+`cascadiav3/fleet/collected_all_cards_proof_recalibration_20260723/`.
+
+Decision: keep the selected bounds, but reject direct connected solving as
+the production architecture. Next measure a disconnected-relaxation
+prescreen on these same six rows. Infeasibility in that strictly larger
+layout space is a sound connected-board exclusion, and it removes the
+380-choice connectivity arborescence that dominates the coordinate model.

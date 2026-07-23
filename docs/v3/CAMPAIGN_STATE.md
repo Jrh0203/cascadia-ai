@@ -1157,3 +1157,10 @@ shape and applies the original combined completion band before any full
 launch.
 All four specialized-bound recalibration shards launched at 14:14 with fully
 pinned exact-support and bound identities and fresh self-recorded heartbeats.
+
+The recalibration exited naturally by 14:25 and completed none of the six
+hard rows; combined with frozen ACACA/ADACA it remains 2/8, the rejection
+band. The new bounds still cut unresolved breadth (AAAAA 23, ADCCB 64, CADAC
+361, CADDA 125, CBDDB 283, DDDDD 141), but four rows spent their full budget
+on ten unknowns. No full launch occurred. The next preregistered optimization
+is a disconnected-relaxation prescreen on the same frozen rows.

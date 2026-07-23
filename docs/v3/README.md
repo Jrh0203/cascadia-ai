@@ -46,7 +46,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   is a 36/36-certified exact Fox-C lattice edge table; it removes 70.01% of
   Fox-C branches. A second 36/36 exact Fox-B qualification table removes
   9.66% of Fox-B branches. Together they remove 26.22% of the original
-  all-rule count frontier. Further specialized sound-filter work is current. No
+  all-rule count frontier. A same-budget connected recalibration nevertheless
+  remained 2/8 complete, so the direct production shape stays rejected and a
+  disconnected-relaxation prescreen is next. No
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).

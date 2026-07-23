@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-proof-fleet-v1",
-  "state": "running",
+  "state": "complete",
   "tag": "all_cards_proof_recalibration_20260723",
   "source_revision": "6fc7099f1c607d1b1617c43395324f14bf082d2e",
   "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
@@ -21,5 +21,21 @@
     {"host": "john2", "indices": [233, 572], "wrapper_pid": 44974},
     {"host": "john3", "indices": [637], "wrapper_pid": 10948},
     {"host": "john4", "indices": [1023], "wrapper_pid": 33385}
-  ]
+  ],
+  "terminal_utc": {
+    "john1": "2026-07-23T18:25:31Z",
+    "john2": "2026-07-23T18:25:31Z",
+    "john3": "2026-07-23T18:20:01Z",
+    "john4": "2026-07-23T18:20:01Z"
+  },
+  "results": [
+    {"index": 0, "ruleset": "AAAAA", "score": 68, "proof_complete": false, "attempts": 87, "unresolved_counts": 23, "sha256": "59de8cbbc749977147c43662761b7f4bd0ea8ac9e61914df8f9e4aea2f9c4f61"},
+    {"index": 233, "ruleset": "ADCCB", "score": 85, "proof_complete": false, "attempts": 15, "unresolved_counts": 64, "sha256": "b6f0b3af8b0a5cf54b23e222844d58dea97d458577e43deeb5231d1cde762921"},
+    {"index": 562, "ruleset": "CADAC", "score": 66, "proof_complete": false, "attempts": 10, "unresolved_counts": 361, "sha256": "d7c3c9e6d97afc24a517da40d2e04c3622e5145a73cd69bfb3345f2155cdb598"},
+    {"index": 572, "ruleset": "CADDA", "score": 78, "proof_complete": false, "attempts": 10, "unresolved_counts": 125, "sha256": "c5d69533f9375f8c85882aca4a8b16ba6afc62a386adba59466414f08c4bfacf"},
+    {"index": 637, "ruleset": "CBDDB", "score": 84, "proof_complete": false, "attempts": 10, "unresolved_counts": 283, "sha256": "522d2cab3d834099a92555c62e6380e13568656c5c7f806be14c822a5a17fe3f"},
+    {"index": 1023, "ruleset": "DDDDD", "score": 78, "proof_complete": false, "attempts": 10, "unresolved_counts": 141, "sha256": "9f4067654dfb743b33f817d8ba490ba4dbe59b2dbabf36971fd2860abe40edc4"}
+  ],
+  "combined_completed_rulesets": 2,
+  "decision": "2/8 exact: generic connected five-minute shape remains rejected; calibrate a disconnected-relaxation prescreen"
 }
