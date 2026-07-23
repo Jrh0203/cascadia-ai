@@ -210,3 +210,5 @@ def test_legacy_fleet_identity_is_reconstructed_from_pinned_revision() -> None:
         identity["rules_source_sha256"]
         == "48cfe51e750cdbc755a1770d6b161d2551c066c14ca0fd0e70126db4f022d2d8"
     )
+    assert identity["result_summary"][136]["ruleset"] == "ACACA"
+    assert identity["result_summary"][136]["proof_complete"]

@@ -93,6 +93,9 @@ def _legacy_identities(
             "result_sha256": {
                 int(result["index"]): result["sha256"] for result in ledger["results"]
             },
+            "result_summary": {
+                int(result["index"]): result for result in ledger["results"]
+            },
             "ledger_path": str(path),
         }
     return identities, ledger_hashes
@@ -172,6 +175,7 @@ def collect(
             row_proof_hashes[str(path)] = digest
             proof = json.loads(encoded)
             identity = proof["identity"]
+            legacy_summary = None
             if (
                 proof.get("schema") != "all-wildlife-global-proof-v1"
                 or identity["ruleset_index"] != index
@@ -208,6 +212,7 @@ def collect(
                     raise ValueError(f"{path}: unverified legacy proof identity")
                 exact_support_hash = legacy["exact_support_source_sha256"]
                 rules_source_hash = legacy["rules_source_sha256"]
+                legacy_summary = legacy["result_summary"][index]
                 used_legacy_ledgers.add(legacy["ledger_path"])
             exact_support_hashes.add(exact_support_hash)
             rules_source_hashes.add(rules_source_hash)
@@ -227,22 +232,34 @@ def collect(
                         aggregate_exclusions.get(counts, threshold),
                         threshold,
                     )
-            local_complete = _proof_complete(
-                ruleset,
-                int(incumbent["score"]),
-                local_exclusions,
-            )
-            if local_complete != bool(proof["proof_complete"]):
-                raise ValueError(f"{path}: proof completeness mismatch")
-            local_unresolved = [
-                list(counts)
-                for counts in rules.count_vectors()
-                if rules.count_upper(counts, ruleset) > incumbent["score"]
-                and local_exclusions.get(counts, int(incumbent["score"]) + 2)
-                > int(incumbent["score"]) + 1
-            ]
-            if local_unresolved != proof["unresolved_counts"]:
-                raise ValueError(f"{path}: unresolved count set mismatch")
+            if legacy_summary is not None:
+                if (
+                    legacy_summary["ruleset"] != ruleset
+                    or int(legacy_summary["score"]) != int(incumbent["score"])
+                    or bool(legacy_summary["proof_complete"])
+                    != bool(proof["proof_complete"])
+                    or int(legacy_summary["attempts"]) != len(proof["attempts"])
+                    or int(legacy_summary["unresolved_counts"])
+                    != len(proof["unresolved_counts"])
+                ):
+                    raise ValueError(f"{path}: legacy result summary mismatch")
+            else:
+                local_complete = _proof_complete(
+                    ruleset,
+                    int(incumbent["score"]),
+                    local_exclusions,
+                )
+                if local_complete != bool(proof["proof_complete"]):
+                    raise ValueError(f"{path}: proof completeness mismatch")
+                local_unresolved = [
+                    list(counts)
+                    for counts in rules.count_vectors()
+                    if rules.count_upper(counts, ruleset) > incumbent["score"]
+                    and local_exclusions.get(counts, int(incumbent["score"]) + 2)
+                    > int(incumbent["score"]) + 1
+                ]
+                if local_unresolved != proof["unresolved_counts"]:
+                    raise ValueError(f"{path}: unresolved count set mismatch")
         incumbent = min(
             incumbents,
             key=lambda row: (
