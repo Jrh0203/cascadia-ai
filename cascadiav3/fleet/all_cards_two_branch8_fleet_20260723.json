@@ -1,0 +1,59 @@
+{
+  "schema": "all-wildlife-two-branch-fleet-v1",
+  "state": "active",
+  "tag": "all_cards_two_branch8_fleet_20260723",
+  "source_revision": "e964665b2df042fd0e11334fa4b2bdfa55c06ee5",
+  "taskset_sha256": "87885d0ac0325fe70e84a133d9d5eb11ffeab17b4eecd252ff339a2c416b9f86",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "proof_source_sha256": "fe71485120e078cf419cf1bdc482b898b39bdf3ac2bdb493be094a67b8a03a05",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "532319a4136d0cb05351ee533b619e1e81551e6222ca70a49411b1853c6ab73f",
+  "configuration": {
+    "time_limit_seconds_per_count": 300,
+    "total_time_limit_seconds_per_ruleset": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "assignments": [
+    {
+      "host": "john1",
+      "indices": [
+        198,
+        210
+      ],
+      "local_screen": "wildlife_two_branch8_john1",
+      "wrapper_pid": 7173
+    },
+    {
+      "host": "john2",
+      "indices": [
+        402,
+        710
+      ],
+      "wrapper_pid": 67085
+    },
+    {
+      "host": "john3",
+      "indices": [
+        722,
+        770
+      ],
+      "wrapper_pid": 27393
+    },
+    {
+      "host": "john4",
+      "indices": [
+        966,
+        978
+      ],
+      "wrapper_pid": 34550
+    }
+  ],
+  "preflight_note": "The first local-only runtime check used the remote venv name and exited before any worker launch. The corrected local .venv and all three remote wildlife-venv-py312 runtimes are Python 3.12.13 with OR-Tools 9.15.6755; every hash, collision, and idle check passed before launch.",
+  "launched_at": "2026-07-23T21:22:54Z",
+  "selection_rule": "Keep every exact INFEASIBLE exclusion and every independently validated connected witness. If all eight rulesets become proof_complete, advance the integrated catalog from 14 to 22 exact rows. UNKNOWN or timeout remains unresolved."
+}

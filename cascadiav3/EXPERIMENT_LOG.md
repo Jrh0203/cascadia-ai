@@ -11140,3 +11140,13 @@ every independently validated connected witness; `UNKNOWN` and timeout
 remain unresolved. If all eight rows close, advance the integrated catalog
 14→22 exact. Source/proof/exact/support/rules/worker hashes are frozen in the
 launch ledger before execution.
+
+**17:22:54 EDT launch.** The first local-only runtime preflight referenced
+the remote venv name and stopped before any worker launched; `.venv` is the
+correct john1 path and reports the same pinned Python/OR-Tools versions.
+Every corrected runtime, source hash, candidate hash, tag collision, and idle
+check passed. The batch launched under revision
+`e964665b2df042fd0e11334fa4b2bdfa55c06ee5` with wrapper PIDs
+7173/67085/27393/34550 on john1/john2/john3/john4. Ledger:
+`cascadiav3/fleet/all_cards_two_branch8_fleet_20260723.json`. Results remain
+sealed until four terminal markers.

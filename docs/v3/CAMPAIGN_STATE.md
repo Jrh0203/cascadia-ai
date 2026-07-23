@@ -1370,6 +1370,11 @@ seconds/ruleset limits give an approximately 11-minute hard wall cap per
 host. Results remain sealed until all four terminal markers exist; a clean
 pass would advance 14→22 exact.
 
+The two-branch batch launched at `2026-07-23T21:22:54Z` under revision
+`e964665b`; all four wrappers passed pinned source/candidate/runtime/collision
+checks and were active after launch. Results remain sealed until all four
+terminal markers exist.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
