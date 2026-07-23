@@ -14,6 +14,9 @@ class AaaaaWildlifeHawkPackingBoundTests(unittest.TestCase):
         self.assertEqual(len(set(counts)), len(counts))
         self.assertTrue(all(row[3] > 0 for row in counts))
 
+    def test_single_salmon_cases_are_retained(self) -> None:
+        self.assertEqual(sum(counts[2] == 1 for counts, _ in SCREEN_CASES), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

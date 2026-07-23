@@ -8731,3 +8731,21 @@ extension for formal certification if at least one case exhausts with a
 relaxed upper below its registered threshold. `UNKNOWN`, a feasible
 relaxation, or an invalid premise promotes nothing for that case. Store no
 diagnostic result in the live catalog.
+
+**Initial diagnostic result — FAIL CLOSED / PARTIAL.** The four one-salmon
+cases stopped before model construction because the premise checker treated
+an impossible zero-point singleton-salmon state as a second-best alternative.
+No bound was emitted for them. The two four-salmon cases completed but their
+relaxations were feasible exactly at threshold: `(4,6,4,2,4)` upper 65 over
+20 subcases in 12.516915 seconds; `(3,5,4,3,5)` upper 63 over 12 subcases in
+18.491991 seconds. They are not selected and remain open.
+
+The root cause is deterministic: a lone salmon is always a valid unbranched
+component and necessarily scores two, so no second-best score exists. The
+premise now represents that state as unattainable. Ruff and three tests pass;
+fixed source SHA-256
+`dc4c8794e78b5e29ea770af52e088fae805965ccd5b0c24586cc5ecc99c042c2`,
+test SHA-256
+`d69b716d6ff69d87d83a32a1a75d3aae2861198fc49b59ff88c6d992997fd70e`.
+Preregister the corrected diagnostic over only the four affected one-salmon
+cases, with the same one worker / 30 seconds per shape and selection rule.

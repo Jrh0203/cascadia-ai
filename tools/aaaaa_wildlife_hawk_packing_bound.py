@@ -208,7 +208,10 @@ def relaxed_upper_bound(
     fox_max = fox * 5
     if zero.second_bear_score(bear) + salmon_max + hawk_max + elk_max + fox_max >= target:
         raise ValueError("target does not force maximum bear score")
-    if bear_max + zero.second_salmon_score(salmon) + hawk_max + elk_max + fox_max >= target:
+    # A singleton salmon is necessarily a valid unbranched component and
+    # always scores two; there is no attainable second-best state.
+    salmon_second = -10**6 if salmon == 1 else zero.second_salmon_score(salmon)
+    if bear_max + salmon_second + hawk_max + elk_max + fox_max >= target:
         raise ValueError("target does not force one maximum salmon component")
     if bear_max + salmon_max + second_hawk_score(hawk) + elk_max + fox_max >= target:
         raise ValueError("target does not force maximum hawk score")
