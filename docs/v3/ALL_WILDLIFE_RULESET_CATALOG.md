@@ -188,6 +188,10 @@ and batch-compares every board with the production Rust scorer.
   every cell. It is not selected; pair-edge resource coupling without richer
   geometry is closed:
   `docs/v3/evidence/all_wildlife_coupled_edge_bound_2026-07-23.json`.
+- A correct twelve-way fox-anchor dihedral break regressed a known exact
+  exclusion from 20.55 seconds to `UNKNOWN` at 30 seconds and resolved no
+  hard case. It was removed and the prior exact source restored:
+  `docs/v3/evidence/all_wildlife_dihedral_calibration_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

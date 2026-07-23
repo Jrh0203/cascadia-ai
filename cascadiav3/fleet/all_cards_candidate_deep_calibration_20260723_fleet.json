@@ -30,7 +30,7 @@
   "launch_utc": "2026-07-23T18:50:56Z",
   "operational_issue": {
     "host": "john1",
-    "observed_utc": "2026-07-23T19:02:00Z",
+    "observed_utc": "2026-07-23T19:01:53Z",
     "wrapper_pid": 82739,
     "solver_pid": 82753,
     "terminal_marker": false,

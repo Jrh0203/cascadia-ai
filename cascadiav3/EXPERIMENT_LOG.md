@@ -10470,3 +10470,22 @@ new mode resolves at least one case the old mode leaves unknown. Otherwise
 retain the old formulation. These are solver-engineering measurements, not
 new optimum claims unless a complete exact exclusion is independently
 collected.
+
+**15:09 verdict — rejected and removed.** Correctness passed: all 1,024
+fixed-board exact objectives retained canonical SHA-256
+`005153bf58a77d32feca858fc225e04db3101d7008b295eabde9fedecb878f2f`,
+and 36,864 score comparisons over three boards × twelve transforms × all
+rulesets had zero failures. Performance failed the gate. The baseline proved
+AAAAA `(6,1,6,2,5) >= 69` infeasible in 20.549 seconds, 351,372 branches;
+the dihedral formulation was still `UNKNOWN` at 30.014 seconds and 456,171
+branches. Both modes left the other three cases `UNKNOWN`.
+
+Root cause: making foxes 0/1 an arbitrary anchor pair removes twelve
+geometric images but reintroduces more fox-label permutations than the
+existing full within-species coordinate order had removed. Experimental
+source SHA-256
+`b029a21a377e560f63dd7b381ee1cd575228dcd1f98243e616678307aa4d79ae`;
+the original exact source was restored byte-for-byte at
+`4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e`.
+Evidence:
+`docs/v3/evidence/all_wildlife_dihedral_calibration_2026-07-23.json`.

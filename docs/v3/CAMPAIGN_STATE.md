@@ -1218,3 +1218,9 @@ The next measured solver optimization is a sound twelve-way dihedral symmetry
 break around an arbitrary ordered fox pair. It has a frozen four-case,
 30-second paired gate and must either deliver ≥2× on the known exclusion or
 resolve a formerly unknown case without regression before selection.
+
+The symmetry break passed all correctness gates but regressed the known
+AAAAA exclusion from 20.55 seconds/INFEASIBLE to 30 seconds/UNKNOWN and
+resolved no hard case. Arbitrary anchor labels cost more than the twelve
+geometric images saved. It is rejected and the original exact source is
+restored byte-for-byte.

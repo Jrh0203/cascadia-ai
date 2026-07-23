@@ -1,0 +1,63 @@
+{
+  "schema": "all-wildlife-dihedral-calibration-v1",
+  "date": "2026-07-23",
+  "configuration": {
+    "time_limit_seconds": 30,
+    "workers": 1,
+    "connectivity_required": true,
+    "seed": 20260723
+  },
+  "experimental_source_sha256": "b029a21a377e560f63dd7b381ee1cd575228dcd1f98243e616678307aa4d79ae",
+  "experimental_test_sha256": "7f86dcfce387cabfd8bef3f22bffe82ef7405d5ce319fa73c13a2746740968cc",
+  "restored_source_sha256": "4c85c3c447879961e065cc400ba3b8195a0df8549dee10e3cbec7b3a2dc6855e",
+  "correctness": {
+    "fixed_board_exact_cases": 1024,
+    "fixed_board_failures": 0,
+    "fixed_board_sha256": "005153bf58a77d32feca858fc225e04db3101d7008b295eabde9fedecb878f2f",
+    "transformed_score_cases": 36864,
+    "transformed_score_failures": 0
+  },
+  "rows": [
+    {
+      "ruleset": "AAAAA",
+      "counts": [6, 1, 6, 2, 5],
+      "threshold": 69,
+      "baseline": {
+        "status": "INFEASIBLE",
+        "elapsed_seconds": 20.54870037501678,
+        "branches": 351372,
+        "conflicts": 96783
+      },
+      "dihedral": {
+        "status": "UNKNOWN",
+        "elapsed_seconds": 30.014232292305678,
+        "branches": 456171,
+        "conflicts": 129810
+      }
+    },
+    {
+      "ruleset": "AAAAA",
+      "counts": [4, 2, 6, 2, 6],
+      "threshold": 69,
+      "baseline_status": "UNKNOWN",
+      "dihedral_status": "UNKNOWN"
+    },
+    {
+      "ruleset": "CADAC",
+      "counts": [0, 2, 6, 6, 6],
+      "threshold": 67,
+      "baseline_status": "UNKNOWN",
+      "dihedral_status": "UNKNOWN"
+    },
+    {
+      "ruleset": "CBDDB",
+      "counts": [0, 2, 6, 6, 6],
+      "threshold": 85,
+      "baseline_status": "UNKNOWN",
+      "dihedral_status": "UNKNOWN"
+    }
+  ],
+  "elapsed_seconds": 230.84635758399963,
+  "selected": false,
+  "decision": "rejected: the dihedral formulation regressed the known exact exclusion to UNKNOWN and resolved none of the three hard cases; the original token-order formulation was restored byte-for-byte"
+}

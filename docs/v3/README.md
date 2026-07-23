@@ -57,7 +57,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   without a terminal marker and will not be restarted without permission,
   while the remote results remain closed. This is warm-start work, never
   proof. A complete shared-edge/degree relaxation passed 846,848 containment
-  checks but tightened zero cells, so it is closed and not integrated. No other
+  checks but tightened zero cells, so it is closed and not integrated. A
+  twelve-way fox-anchor symmetry break also failed its runtime gate and was
+  removed. No other
   arbitrary-ruleset row is called optimal before its exact certificate
   completes. Methodology:
   [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md).
