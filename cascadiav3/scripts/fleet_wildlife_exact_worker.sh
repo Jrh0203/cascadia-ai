@@ -17,8 +17,16 @@ RELAXATION_TIME_LIMIT="${RELAXATION_TIME_LIMIT:-60}"
 CONNECTED_TIME_LIMIT="${CONNECTED_TIME_LIMIT:-120}"
 BASE_SEED="${BASE_SEED:-20260725}"
 ORTOOLS_VERSION="${ORTOOLS_VERSION:?set ORTOOLS_VERSION}"
+WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv}"
 CATALOG_SOURCE_SHA256="${CATALOG_SOURCE_SHA256:?set CATALOG_SOURCE_SHA256}"
 EXACT_SOURCE_SHA256="${EXACT_SOURCE_SHA256:?set EXACT_SOURCE_SHA256}"
+
+case "$WILDLIFE_VENV" in
+  ""|/*|*".."*|*[!A-Za-z0-9._/-]*)
+    echo "WILDLIFE_VENV must be a safe relative path under ~/cascadia" >&2
+    exit 64
+    ;;
+esac
 
 case "$RULESET" in
   aaaaa)
@@ -38,7 +46,7 @@ case "$RULESET" in
 esac
 
 ROOT="${HOME}/cascadia"
-PYTHON="${ROOT}/venv/bin/python"
+PYTHON="${ROOT}/${WILDLIFE_VENV}/bin/python"
 INPUT_DIR="${ROOT}/cascadiav3/fleet_inputs/${FLEET_TAG}"
 OUTPUT_DIR="${ROOT}/cascadiav3/fleet_outputs/${FLEET_TAG}"
 LOG_DIR="${ROOT}/cascadiav3/logs"
