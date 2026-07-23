@@ -1030,8 +1030,8 @@ seeds ledger — spent: 2026794000-5249 (Stage A), 2027160000-99 (Gate 0),
 
 This is independent local CPU work and does not displace or make claims about
 the john0 campaign above. The requested 20-token/cap-6 pure-wildlife catalog
-is sequenced AAAAA then CBDDB. AAAAA currently has 717/826 exact entries: 711
-in the live catalog plus six separately frozen motif/local-packing
+is sequenced AAAAA then CBDDB. AAAAA currently has 718/826 exact entries: 711
+in the live catalog plus seven separately frozen motif/local-packing
 certificates; its eight-worker, hash-pinned retry continues. CBDDB's
 two-spare-core heuristic staging completed all 826 vectors in 224.244154
 seconds with zero independent scorer/connectivity failures. Its current

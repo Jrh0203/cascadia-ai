@@ -1,0 +1,211 @@
+{
+  "schema": "aaaaa-gap-one-joint-salmon-certificate-v1",
+  "counts": [
+    3,
+    6,
+    3,
+    3,
+    5
+  ],
+  "excluded_score": 62,
+  "certified_upper_bound": 61,
+  "proof_complete": true,
+  "proof_method": "gap_one_joint_salmon_local_packing_infeasible",
+  "configuration": {
+    "workers": 1,
+    "per_shape_time_limit_seconds": 30.0
+  },
+  "relaxation": {
+    "whole_board_connectivity_required": false,
+    "maximum_salmon_all_shapes_enumerated": true,
+    "split_salmon_relative_positions_through_distance": 7,
+    "farther_split_salmon_factorized_representative": true,
+    "bear_and_hawk_isolation_dropped": true,
+    "noncovering_scoring_groups_may_be_abstract": true,
+    "forced_local_cells_must_not_overlap": true
+  },
+  "bound": {
+    "status": "INFEASIBLE",
+    "upper_bound": 61,
+    "target": 62,
+    "maximum_salmon": {
+      "status": "INFEASIBLE",
+      "upper_bound": 61,
+      "cases": 15,
+      "best_case": {
+        "elk_partition": [
+          4,
+          2
+        ],
+        "missing_salmon_foxes": 0,
+        "salmon_shape_index": 0,
+        "result": {
+          "status": "OPTIMAL",
+          "local_coverage": 18,
+          "fox_upper": 23,
+          "total_upper": 61,
+          "branches": 109526,
+          "conflicts": 15671,
+          "wall_seconds": 0.770683
+        }
+      },
+      "aggregate_solver_wall_seconds": 40.932132
+    },
+    "joint_split_salmon": {
+      "status": "INFEASIBLE",
+      "upper_bound": 61,
+      "cases": 98,
+      "best_case": {
+        "elk_partition": [
+          4,
+          2
+        ],
+        "salmon_shape_index": 30,
+        "salmon_shape": [
+          [
+            -5,
+            0
+          ],
+          [
+            -4,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "total_upper": 61,
+        "result": {
+          "status": "OPTIMAL",
+          "local_coverage": 19,
+          "fox_upper": 24,
+          "total_upper": 62,
+          "branches": 160508,
+          "conflicts": 38101,
+          "wall_seconds": 1.4145150000000002
+        }
+      },
+      "aggregate_solver_wall_seconds": 361.1546050000001,
+      "interaction_distance": 7,
+      "shape_count": 49
+    }
+  },
+  "incumbent": {
+    "score": 61,
+    "score_breakdown": [
+      4,
+      18,
+      8,
+      8,
+      23
+    ],
+    "tokens": [
+      {
+        "q": 1,
+        "r": 0,
+        "wildlife": "hawk"
+      },
+      {
+        "q": 0,
+        "r": 1,
+        "wildlife": "bear"
+      },
+      {
+        "q": 1,
+        "r": 1,
+        "wildlife": "fox"
+      },
+      {
+        "q": 2,
+        "r": 1,
+        "wildlife": "salmon"
+      },
+      {
+        "q": 3,
+        "r": 1,
+        "wildlife": "salmon"
+      },
+      {
+        "q": 0,
+        "r": 2,
+        "wildlife": "elk"
+      },
+      {
+        "q": 1,
+        "r": 2,
+        "wildlife": "fox"
+      },
+      {
+        "q": 2,
+        "r": 2,
+        "wildlife": "hawk"
+      },
+      {
+        "q": 3,
+        "r": 2,
+        "wildlife": "salmon"
+      },
+      {
+        "q": 0,
+        "r": 3,
+        "wildlife": "elk"
+      },
+      {
+        "q": 1,
+        "r": 3,
+        "wildlife": "bear"
+      },
+      {
+        "q": 2,
+        "r": 3,
+        "wildlife": "fox"
+      },
+      {
+        "q": 3,
+        "r": 3,
+        "wildlife": "elk"
+      },
+      {
+        "q": 0,
+        "r": 4,
+        "wildlife": "elk"
+      },
+      {
+        "q": 1,
+        "r": 4,
+        "wildlife": "bear"
+      },
+      {
+        "q": 2,
+        "r": 4,
+        "wildlife": "fox"
+      },
+      {
+        "q": 3,
+        "r": 4,
+        "wildlife": "elk"
+      },
+      {
+        "q": 0,
+        "r": 5,
+        "wildlife": "elk"
+      },
+      {
+        "q": 1,
+        "r": 5,
+        "wildlife": "fox"
+      },
+      {
+        "q": 2,
+        "r": 5,
+        "wildlife": "hawk"
+      }
+    ]
+  },
+  "ortools_version": "9.15.6755",
+  "source_sha256": "43e4893520e45a80cb6f00c46546813158e31ef305ce466ad3eef1266bf897e5",
+  "hawk_support_source_sha256": "f907b4526b752d013a742465cc6387c5ccf03e145829cc2de0136ba04ce95697",
+  "zero_hawk_support_source_sha256": "47d4f3970d0f4144188b4dc4ee7074c13a23254ee8df677ede5deb2cc622d499",
+  "elapsed_seconds": 403.8379688328132
+}

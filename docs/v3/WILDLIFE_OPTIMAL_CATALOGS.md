@@ -182,6 +182,9 @@ created them.
 - `docs/v3/evidence/aaaaa_hawk_one_loss_certificates_2026-07-23.json`: exact
   explicit-fox local-packing certificates for `(4,6,4,2,4)=64` and
   `(3,5,4,3,5)=62`, pending the same safe merge.
+- `docs/v3/evidence/aaaaa_gap_one_joint_salmon_certificate_2026-07-23.json`:
+  exact 113-submodel certificate for `(3,6,3,3,5)=61`; this closes the last
+  first-pass raw gap of two or less.
 - `docs/v3/evidence/cbddb_wildlife_catalog_2026-07-23.json`: machine-readable
   CBDDB catalog ledger.
 - `docs/v3/CBDDB_WILDLIFE_CATALOG.md`: human-readable CBDDB summary, holistic
@@ -192,8 +195,8 @@ created them.
 
 ## Current status
 
-As of 2026-07-23 07:47 EDT, AAAAA has 717/826 formally certified vectors: 711
-are embedded in its live ledger and six are frozen in separate exact motif
+As of 2026-07-23 08:20 EDT, AAAAA has 718/826 formally certified vectors: 711
+are embedded in its live ledger and seven are frozen in separate exact motif
 and local-packing certificates pending a safe post-writer merge. Its hash-pinned hinted retry
 continues over the remaining tail. CBDDB heuristic staging completed all 826 vectors in
 224.244154 seconds with zero independent-score or connectivity failures; the

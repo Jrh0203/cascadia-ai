@@ -8892,3 +8892,11 @@ Accept only if all 15 maximum-salmon and 98 joint split-salmon submodels are
 exact, both branch uppers and the combined upper equal 61, and the retained
 `(3,6,3,3,5)` connected board independently scores 61. Any deviation fails
 closed. Keep passed evidence separate until the active catalog writer exits.
+
+**Result — EXACT CERTIFICATE PASSED.** The frozen run completed in 403.837969
+seconds. All 15 maximum-salmon and 98 joint split-salmon submodels were exact;
+both branch uppers and the combined upper were 61. The retained connected
+board independently rescored to 61. Artifact SHA-256
+`9903119c4f0cdf0d7293b48862b4eb7315787e0c783092ad7d0a9e65b90b6686`.
+Decision: accept `(3,6,3,3,5)=61` as the 718th AAAAA per-vector proof,
+pending safe post-writer merge. Every first-pass raw gap <=2 is now closed.
