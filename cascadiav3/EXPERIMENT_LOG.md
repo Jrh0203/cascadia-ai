@@ -8645,3 +8645,21 @@ and counts `(3,6,6,0,5)` have exact optimum 61. Artifact SHA-256
 Decision: accept this as the 712th AAAAA per-vector proof. Keep it separate
 while the active catalog writer runs, then merge it with its distinct proof
 method/provenance after that process exits naturally.
+
+## 2026-07-23 06:52 — AAAAA zero-hawk local-packing diagnostic preregistration
+
+Five unresolved zero-hawk vectors remain after the accepted motif certificate:
+`(4,4,6,0,6)`, `(2,6,6,0,6)`, `(4,5,5,0,6)`, `(4,6,4,0,6)`, and
+`(3,6,5,0,6)`. Their incumbents are respectively 65, 63, 64, 63, and 60.
+Before diagnostic output, screen a generalized relaxed local-packing bound:
+enumerate every maximum-score unbranched salmon shape; keep foxes that see
+salmon locally and represent any permitted salmon-missing foxes abstractly;
+enumerate required Bear-A pairs and Elk-A scoring lines; preserve forced local
+cell non-overlap while awarding abstract pieces their maximum possible fox
+coverage. This remains a superset of real boards.
+
+This is an engineering diagnostic, not proof evidence. Continue to a frozen
+audited certificate generator only if the relaxation excludes incumbent+1 for
+at least one of the five vectors; otherwise record the loose witness/profile
+and close this extension. Do not alter the active catalog from diagnostic
+output.
