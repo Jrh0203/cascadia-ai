@@ -8930,3 +8930,13 @@ returned `FEASIBLE` rather than exact `OPTIMAL` at their 30-second boundary
 sound tightening must represent the two salmon-missing foxes as an explicit
 self-adjacent second fox component; do not spend more time on the already
 non-decisive separated-singleton branch first.
+
+## 2026-07-23 08:41 — Exploratory brute-force diagnostic deprioritized
+
+The unregistered-output process associated with the earlier zero-hawk packing
+diagnostic remained alive after 70 minutes because its disposable prototype
+recomputed Bear placements inside its Elk loop. Per the no-kill rule it was
+not interrupted or restarted. Its Unix niceness was changed from 0 to 15 so
+the hash-pinned eight-worker catalog retry receives CPU priority; the process
+continues naturally and its eventual output remains diagnostic-only. No exact
+solver configuration, deadline, ledger, or proof process was changed.
