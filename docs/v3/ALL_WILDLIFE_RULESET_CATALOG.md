@@ -183,6 +183,11 @@ and batch-compares every board with the production Rust scorer.
   exclusion, plus bound-matched DCAAC 69, DCCAC 69, DDAAC 72, and DDCAC 72.
   Proof-less bound matches are now recognized directly by the collector and
   covered by a regression test.
+- A coupled same/cross-edge and degree-six relaxation passed all 846,848
+  count/ruleset containment comparisons but equaled the existing bound in
+  every cell. It is not selected; pair-edge resource coupling without richer
+  geometry is closed:
+  `docs/v3/evidence/all_wildlife_coupled_edge_bound_2026-07-23.json`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.

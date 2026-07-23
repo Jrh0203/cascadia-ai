@@ -6,6 +6,13 @@ from tools import cbddb_wildlife_exact as cbddb
 
 
 def random_connected_board(seed: int) -> list[dict[str, int | str]]:
+    return random_connected_board_with_counts(seed, (4, 4, 4, 4, 4))
+
+
+def random_connected_board_with_counts(
+    seed: int,
+    counts: tuple[int, int, int, int, int],
+) -> list[dict[str, int | str]]:
     rng = random.Random(seed)
     occupied = {(0, 0)}
     while len(occupied) < 20:
@@ -16,7 +23,11 @@ def random_connected_board(seed: int) -> list[dict[str, int | str]]:
             if other not in occupied
         }
         occupied.add(rng.choice(sorted(frontier)))
-    wildlife = [species for species in rules.SPECIES for _ in range(4)]
+    wildlife = [
+        species
+        for species, count in zip(rules.SPECIES, counts, strict=True)
+        for _ in range(count)
+    ]
     rng.shuffle(wildlife)
     return [
         {"q": q, "r": r, "wildlife": species}
@@ -134,3 +145,35 @@ def test_every_count_bound_dominates_frozen_board_scores() -> None:
             assert sum(rules.score_tokens(board, ruleset)) <= rules.count_upper(
                 counts, ruleset
             )
+
+
+def test_coupled_edge_bound_is_sound_on_mixed_count_boards() -> None:
+    count_vectors = (
+        (0, 2, 6, 6, 6),
+        (2, 6, 6, 0, 6),
+        (4, 4, 4, 4, 4),
+        (6, 6, 6, 2, 0),
+    )
+    for seed, counts in enumerate(count_vectors, start=700):
+        board = random_connected_board_with_counts(seed, counts)
+        for ruleset in rules.rulesets():
+            coupled = rules._coupled_count_upper(counts, ruleset)
+            assert coupled <= rules.count_upper(counts, ruleset)
+            assert sum(rules.score_tokens(board, ruleset)) <= coupled
+
+
+def test_coupled_edge_flow_handles_zero_and_impossible_demands() -> None:
+    counts = (4, 4, 4, 4, 4)
+    assert rules._cross_demands_feasible(counts, (0, 0, 0, 0, 0), 0, 0)
+    assert not rules._cross_demands_feasible(
+        counts,
+        (0, 0, 0, 0, 0),
+        25,
+        0,
+    )
+    assert not rules._cross_demands_feasible(
+        counts,
+        (0, 0, 0, 0, 0),
+        0,
+        25,
+    )

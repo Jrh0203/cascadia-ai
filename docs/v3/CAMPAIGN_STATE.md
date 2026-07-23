@@ -1200,3 +1200,9 @@ charge Bear/Elk/Salmon motifs and Fox observations against shared exact
 lattice edge caps and degree-six budgets, including explicit sharing of
 salmon–fox edges. Selection requires ≥5% total frontier reduction or ≥10% on
 two hard rows after containment tests; otherwise it is a frozen negative.
+
+The exhaustive 846,848-cell comparison passed every containment check but the
+coupled bound was identically equal to the existing bound: zero cells reduced
+and 119,959→119,959 frontier branches. It is rejected and not integrated.
+Degree and pair-edge budgets without richer geometric/card interaction are
+now closed as a source of improvement.

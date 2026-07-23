@@ -1,0 +1,31 @@
+{
+  "schema": "all-wildlife-coupled-edge-bound-v1",
+  "date": "2026-07-23",
+  "candidate_sha256": "72c2d30839267ddc2a82134c832c0a504a9a7b82aa7d0b94d335b8fb2a75f46c",
+  "source_sha256": "21bb3cd2cc23e0a16b28797e906944d52424a3522fdda6e7541ee7952c2bed55",
+  "test_sha256": "ed6d30dcdce4a2ae612117885a304e9aac782198da9788be8a6cf2a40d870ff1",
+  "rulesets": 1024,
+  "count_vectors_per_ruleset": 826,
+  "evaluated_count_ruleset_pairs": 846848,
+  "containment_failures": 0,
+  "monotonicity_failures": 0,
+  "reduced_count_ruleset_pairs": 0,
+  "maximum_point_reduction": 0,
+  "frontier": {
+    "before": 119959,
+    "after": 119959,
+    "reduction": 0,
+    "reduction_fraction": 0.0
+  },
+  "hard_rows": {
+    "AAAAA": {"before": 108, "after": 108},
+    "ADCCB": {"before": 71, "after": 71},
+    "CADAC": {"before": 361, "after": 361},
+    "CADDA": {"before": 125, "after": 125},
+    "CBDDB": {"before": 283, "after": 283},
+    "DDDDD": {"before": 141, "after": 141}
+  },
+  "elapsed_seconds": 169.04858433268964,
+  "selected": false,
+  "decision": "rejected: the sound coupled relaxation equals the existing specialized count bound on all 846848 count/ruleset pairs and misses both preregistered selection gates"
+}

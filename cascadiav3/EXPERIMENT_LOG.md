@@ -10411,3 +10411,21 @@ Selection is fixed before frontier output: integrate only if it removes at
 least 5% of the frozen 119,959 all-ruleset count frontier or at least 10% for
 two of the six hard rows. Otherwise retain it as a documented negative. No
 incumbent score changes during this bound experiment.
+
+**15:00 exhaustive verdict — sound but identically redundant.** The complete
+1,024×826 comparison finished in 169.049 seconds. All 846,848 coupled values
+were no greater than the current specialized bound; every frozen merged
+candidate remained contained; the deterministic 4,096 mixed-card/count board
+suite also passed. Thirteen unit tests and Ruff pass. Source SHA-256
+`21bb3cd2cc23e0a16b28797e906944d52424a3522fdda6e7541ee7952c2bed55`;
+test SHA-256
+`ed6d30dcdce4a2ae612117885a304e9aac782198da9788be8a6cf2a40d870ff1`.
+
+The coupled relaxation equals the existing bound on **every one** of the
+846,848 cells: zero point reductions, 119,959→119,959 frontier branches, and
+no reduction on AAAAA/ADCCB/CADAC/CADDA/CBDDB/DDDDD
+(108/71/361/125/283/141 unchanged). It misses both selection gates and is not
+wired into `count_upper`. Retain the tested derivation as a closed negative:
+species degree and pair-edge budgets alone add nothing beyond the selected
+card-specific tables. Evidence:
+`docs/v3/evidence/all_wildlife_coupled_edge_bound_2026-07-23.json`.

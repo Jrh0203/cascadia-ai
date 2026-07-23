@@ -491,6 +491,8 @@ _BIPARTITE_HEX_EDGE_MAXIMUM = (
     (0, 6, 8, 11, 14, 15, 17),
 )
 
+_SAME_SPECIES_HEX_EDGE_MAXIMUM = (0, 0, 1, 3, 5, 7, 9)
+
 
 def _bipartite_hex_edge_upper(left: int, right: int) -> int:
     """Exact cap-six adjacency maximum between two disjoint token classes."""
@@ -516,22 +518,24 @@ def _fox_c_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
     return best
 
 
+_FOX_B_QUALIFICATION_MAXIMUM = (
+    (0, 0, 0, 0, 0, 0, 0),
+    (0, 0, 1, 1, 1, 1, 1),
+    (0, 0, 2, 2, 2, 2, 2),
+    (0, 0, 2, 3, 3, 3, 3),
+    (0, 0, 2, 4, 4, 4, 4),
+    (0, 0, 2, 4, 5, 5, 5),
+    (0, 0, 2, 4, 6, 6, 6),
+)
+
+
 @cache
 def _fox_b_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
     # Exact lattice maximum for fox vertices with at least two neighbors in
     # one target class, derived componentwise through the cap and then combined
     # over disconnected support.
-    qualification_maximum = (
-        (0, 0, 0, 0, 0, 0, 0),
-        (0, 0, 1, 1, 1, 1, 1),
-        (0, 0, 2, 2, 2, 2, 2),
-        (0, 0, 2, 3, 3, 3, 3),
-        (0, 0, 2, 4, 4, 4, 4),
-        (0, 0, 2, 4, 5, 5, 5),
-        (0, 0, 2, 4, 6, 6, 6),
-    )
     qualifications = sum(
-        qualification_maximum[foxes][target] for target in targets
+        _FOX_B_QUALIFICATION_MAXIMUM[foxes][target] for target in targets
     )
     maximum_types = min(3, sum(target >= 2 for target in targets))
     dp = [0] + [-1] * qualifications
@@ -576,6 +580,362 @@ def _fox_a_upper_cached(foxes: int, targets: tuple[int, int, int, int]) -> int:
 
 def _fox_a_upper(foxes: int, targets: tuple[int, int, int, int]) -> int:
     return _fox_a_upper_cached(foxes, tuple(sorted(targets)))
+
+
+def _efficient_edge_profiles(
+    profiles: set[tuple[int, int, int]],
+) -> tuple[tuple[int, int, int], ...]:
+    """Keep only score/same-edge/cross-edge Pareto profiles."""
+    efficient = []
+    for profile in profiles:
+        score, same_edges, cross_edges = profile
+        if any(
+            other_score >= score
+            and other_same <= same_edges
+            and other_cross <= cross_edges
+            and other != profile
+            for other in profiles
+            for other_score, other_same, other_cross in (other,)
+        ):
+            continue
+        efficient.append(profile)
+    return tuple(sorted(efficient, key=lambda row: (-row[0], row[1], row[2])))
+
+
+def _partition_edge_profiles(
+    token_count: int,
+    groups: tuple[tuple[int, int, int], ...],
+) -> tuple[tuple[int, int, int], ...]:
+    """Score profiles for disjoint groups (size, score, minimum same edges)."""
+    best: dict[tuple[int, int], int] = {(0, 0): 0}
+    for used in range(token_count + 1):
+        current = [
+            (edges, score)
+            for (state_used, edges), score in best.items()
+            if state_used == used
+        ]
+        for edges, score in current:
+            for size, group_score, group_edges in groups:
+                if used + size <= token_count:
+                    key = (used + size, edges + group_edges)
+                    best[key] = max(best.get(key, -1), score + group_score)
+    return _efficient_edge_profiles(
+        {(score, edges, 0) for (_, edges), score in best.items()}
+    )
+
+
+@cache
+def _bear_edge_profiles(
+    token_count: int,
+    variant: str,
+) -> tuple[tuple[int, int, int], ...]:
+    if variant == "A":
+        return tuple(
+            (
+                (0, 4, 11, 19, 27)[min(pairs, 4)],
+                pairs,
+                0,
+            )
+            for pairs in range(token_count // 2, -1, -1)
+        )
+    if variant == "B":
+        return _partition_edge_profiles(token_count, ((3, 10, 2),))
+    if variant == "C":
+        profiles = set()
+        for singles in range(token_count + 1):
+            for pairs in range(token_count // 2 + 1):
+                for triples in range(token_count // 3 + 1):
+                    if singles + 2 * pairs + 3 * triples > token_count:
+                        continue
+                    score = 2 * singles + 5 * pairs + 8 * triples
+                    if singles and pairs and triples:
+                        score += 3
+                    profiles.add((score, pairs + 2 * triples, 0))
+        return _efficient_edge_profiles(profiles)
+    if variant == "D":
+        return _partition_edge_profiles(
+            token_count,
+            ((2, 5, 1), (3, 8, 2), (4, 13, 3)),
+        )
+    raise AssertionError(variant)
+
+
+@cache
+def _elk_edge_profiles(
+    token_count: int,
+    variant: str,
+) -> tuple[tuple[int, int, int], ...]:
+    if variant == "A":
+        groups = ((1, 2, 0), (2, 5, 1), (3, 9, 2), (4, 13, 3))
+    elif variant == "B":
+        groups = ((1, 2, 0), (2, 5, 1), (3, 9, 3), (4, 13, 5))
+    elif variant == "C":
+        groups = (
+            (1, 2, 0),
+            (2, 4, 1),
+            (3, 7, 2),
+            (4, 10, 3),
+            (5, 14, 4),
+            (6, 18, 5),
+        )
+    elif variant == "D":
+        groups = (
+            (1, 2, 0),
+            (2, 5, 0),
+            (3, 8, 0),
+            (4, 12, 2),
+            (5, 16, 4),
+            (6, 21, 6),
+        )
+    else:
+        raise AssertionError(variant)
+    return _partition_edge_profiles(token_count, groups)
+
+
+@cache
+def _salmon_edge_profiles(
+    token_count: int,
+    non_salmon: int,
+    variant: str,
+) -> tuple[tuple[int, int, int], ...]:
+    if variant == "A":
+        groups = tuple(
+            (size, (0, 2, 5, 8, 12, 16, 20)[size], size - 1)
+            for size in range(1, 7)
+        )
+        return _partition_edge_profiles(token_count, groups)
+    if variant == "B":
+        groups = tuple(
+            (size, (0, 2, 4, 9, 11, 17, 17)[size], size - 1)
+            for size in range(1, 7)
+        )
+        return _partition_edge_profiles(token_count, groups)
+    if variant == "C":
+        groups = tuple(
+            (size, (0, 0, 0, 10, 12, 15, 15)[size], size - 1)
+            for size in range(3, 7)
+        )
+        return _partition_edge_profiles(token_count, groups)
+    if variant == "D":
+        # Each adjacent non-salmon token counted by a run consumes at least
+        # one cross edge incident to that run. A token may count for multiple
+        # runs only through a separate edge to each run.
+        states: dict[tuple[int, int], int] = {(0, 0): 0}
+        for used in range(token_count + 1):
+            current = [
+                (edges, bonus)
+                for (state_used, edges), bonus in states.items()
+                if state_used == used
+            ]
+            for edges, bonus in current:
+                for size in range(3, token_count - used + 1):
+                    key = (used + size, edges + size - 1)
+                    capacity = min(non_salmon, 2 * size + 4)
+                    states[key] = max(states.get(key, -1), bonus + capacity)
+        profiles = {(0, 0, 0)}
+        for (used, edges), maximum_bonus in states.items():
+            if not used:
+                continue
+            for bonus in range(maximum_bonus + 1):
+                profiles.add((used + bonus, edges, bonus))
+        return _efficient_edge_profiles(profiles)
+    raise AssertionError(variant)
+
+
+@cache
+def _fox_edge_profiles(
+    foxes: int,
+    targets: tuple[int, int, int, int],
+    variant: str,
+) -> tuple[tuple[int, int, int], ...]:
+    if variant == "A":
+        upper = _fox_a_upper(foxes, targets)
+        internal_maximum = foxes if foxes >= 2 else 0
+        target_maximum = upper - internal_maximum
+        profiles = set()
+        for internal_score in range(internal_maximum + 1):
+            same_edges = (internal_score + 1) // 2
+            for target_score in range(target_maximum + 1):
+                if internal_score + target_score <= upper:
+                    profiles.add(
+                        (
+                            internal_score + target_score,
+                            same_edges,
+                            target_score,
+                        )
+                    )
+        return _efficient_edge_profiles(profiles)
+    if variant == "B":
+        maximum_types = min(3, sum(target >= 2 for target in targets))
+        qualification_limit = sum(
+            _FOX_B_QUALIFICATION_MAXIMUM[foxes][target] for target in targets
+        )
+        states = {(0, 0)}
+        table = (0, 3, 5, 7)
+        for _ in range(foxes):
+            states = {
+                (qualifications + count, score + table[count])
+                for qualifications, score in states
+                for count in range(maximum_types + 1)
+                if qualifications + count <= qualification_limit
+            }
+        upper = _fox_b_upper(foxes, targets)
+        return _efficient_edge_profiles(
+            {
+                (score, 0, 2 * qualifications)
+                for qualifications, score in states
+                if score <= upper
+            }
+        )
+    if variant == "C":
+        upper = _fox_c_upper(foxes, targets)
+        return tuple((score, 0, score) for score in range(upper, -1, -1))
+    if variant == "D":
+        maximum_types = sum(target >= 2 for target in targets)
+        states = {(0, 0, 0)}
+        table = (0, 5, 7, 9, 11)
+        for _ in range(foxes // 2):
+            states |= {
+                (score + table[types], pairs + 1, cross_edges + 2 * types)
+                for score, pairs, cross_edges in states
+                for types in range(1, maximum_types + 1)
+            }
+        return _efficient_edge_profiles(states)
+    raise AssertionError(variant)
+
+
+def _hawk_count_upper(
+    hawks: int,
+    variant: str,
+    other_counts: tuple[int, int, int, int],
+) -> int:
+    if variant == "A":
+        return (0, 2, 5, 8, 11, 14, 18)[hawks]
+    if variant == "B":
+        return (0, 0, 5, 9, 12, 16, 20)[hawks]
+    if variant == "C":
+        return 3 * (0, 0, 1, 3, 5, 7, 9)[hawks]
+    distinct_between = sum(count > 0 for count in other_counts)
+    return (hawks // 2) * (0, 4, 7, 9)[min(distinct_between, 3)]
+
+
+def _cross_demands_feasible(
+    counts: tuple[int, int, int, int, int],
+    same_edges: tuple[int, int, int, int, int],
+    salmon_demand: int,
+    fox_demand: int,
+) -> bool:
+    residual = tuple(
+        6 * count - 2 * internal
+        for count, internal in zip(counts, same_edges, strict=True)
+    )
+    if any(value < 0 for value in residual):
+        return False
+    salmon = 2
+    fox = 4
+    middle = (0, 1, 3)
+    salmon_fox_cap = min(
+        _bipartite_hex_edge_upper(counts[salmon], counts[fox]),
+        residual[salmon],
+        residual[fox],
+    )
+    for salmon_fox in range(salmon_fox_cap + 1):
+        salmon_remaining = max(0, salmon_demand - salmon_fox)
+        fox_remaining = max(0, fox_demand - salmon_fox)
+        if (
+            salmon_fox + salmon_remaining > residual[salmon]
+            or salmon_fox + fox_remaining > residual[fox]
+        ):
+            continue
+        reachable = {(0, 0)}
+        for target in middle:
+            salmon_cap = _bipartite_hex_edge_upper(
+                counts[salmon], counts[target]
+            )
+            fox_cap = _bipartite_hex_edge_upper(counts[fox], counts[target])
+            updated = set()
+            for used_salmon, used_fox in reachable:
+                for salmon_edges in range(
+                    min(
+                        salmon_cap,
+                        residual[target],
+                        salmon_remaining - used_salmon,
+                    )
+                    + 1
+                ):
+                    for fox_edges in range(
+                        min(
+                            fox_cap,
+                            residual[target] - salmon_edges,
+                            fox_remaining - used_fox,
+                        )
+                        + 1
+                    ):
+                        updated.add(
+                            (
+                                used_salmon + salmon_edges,
+                                used_fox + fox_edges,
+                            )
+                        )
+            reachable = updated
+        if (salmon_remaining, fox_remaining) in reachable:
+            return True
+    return False
+
+
+@cache
+def _coupled_count_upper(
+    counts: tuple[int, int, int, int, int],
+    ruleset: str,
+) -> int:
+    """Sound shared-edge relaxation for one fixed count vector."""
+    cards = parse_ruleset(ruleset)
+    bear, elk, salmon, hawk, fox = counts
+    bear_profiles = _bear_edge_profiles(bear, cards[0])
+    elk_profiles = _elk_edge_profiles(elk, cards[1])
+    salmon_profiles = _salmon_edge_profiles(
+        salmon,
+        TOKEN_COUNT - salmon,
+        cards[2],
+    )
+    fox_profiles = _fox_edge_profiles(fox, counts[:4], cards[4])
+    hawk_upper = _hawk_count_upper(
+        hawk,
+        cards[3],
+        (bear, elk, salmon, fox),
+    )
+    best = 0
+    for bear_score, bear_edges, _ in bear_profiles:
+        if bear_edges > _SAME_SPECIES_HEX_EDGE_MAXIMUM[bear]:
+            continue
+        for elk_score, elk_edges, _ in elk_profiles:
+            if elk_edges > _SAME_SPECIES_HEX_EDGE_MAXIMUM[elk]:
+                continue
+            for salmon_score, salmon_edges, salmon_cross in salmon_profiles:
+                if salmon_edges > _SAME_SPECIES_HEX_EDGE_MAXIMUM[salmon]:
+                    continue
+                partial = bear_score + elk_score + salmon_score + hawk_upper
+                for fox_score, fox_edges, fox_cross in fox_profiles:
+                    if partial + fox_score <= best:
+                        break
+                    if fox_edges > _SAME_SPECIES_HEX_EDGE_MAXIMUM[fox]:
+                        continue
+                    internal = (
+                        bear_edges,
+                        elk_edges,
+                        salmon_edges,
+                        0,
+                        fox_edges,
+                    )
+                    if _cross_demands_feasible(
+                        counts,
+                        internal,
+                        salmon_cross,
+                        fox_cross,
+                    ):
+                        best = partial + fox_score
+                        break
+    return best
 
 
 def count_upper(
