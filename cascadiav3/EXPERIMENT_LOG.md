@@ -8663,3 +8663,22 @@ audited certificate generator only if the relaxation excludes incumbent+1 for
 at least one of the five vectors; otherwise record the loose witness/profile
 and close this extension. Do not alter the active catalog from diagnostic
 output.
+
+**Diagnostic result — SELECTED FOR FORMAL CERTIFICATION.** The structured
+set-packing model exactly optimized every eligible relaxed subcase and excluded
+incumbent+1 for three vectors:
+
+- `(3,6,5,0,6)`: 50 subcases, relaxed upper 60, 142.042763 s elapsed;
+- `(4,6,4,0,6)`: 20 subcases, relaxed upper 63, 77.084830 s elapsed;
+- `(4,5,5,0,6)`: 30 subcases, relaxed upper 64, 198.141487 s elapsed.
+
+Each upper matches the retained incumbent. The other two registered vectors
+were deliberately not run: their target permits a six-salmon 5+1 split worth
+18, so the model's single maximum-component premise is not forced. They remain
+open. Current bound source SHA-256
+`ff542766b4248f88626c5bc47d2e08c483513aea4f26d98fa333e201ae13ef8e`;
+tests SHA-256
+`3724eb36b80c266a701e5877d8ba06e231a5bc28f55d2f3635848006e87874e2`.
+Decision: add fail-closed certificate serialization and incumbent validation,
+then preregister one frozen three-vector evidence run. Diagnostic output alone
+does not yet promote the rows.
