@@ -1489,3 +1489,19 @@ CADAC rises 66→68 and DDDDD 78→79, reducing their frontiers 361→214 and
 new merged candidate SHA is
 `96a8ba0464fe30e294b293483d15d667808ab0c737c96968d362b22cde1881c9`;
 it is heuristic evidence only.
+
+---
+
+# SNAPSHOT 2026-07-23 20:30 — CAMPAIGN CLOSED (supersedes everything above)
+
+John's ruling 2026-07-23: Cascadia experiments CLOSED for now; he is
+moving to a different game. NOTHING IS RUNNING (john0 verified idle;
+minis handed back to John for his wildlife-catalog work).
+
+- Best CBDDB result: AAAAA champion ZERO-SHOT — 99.4675 screen /
+  101.2 full battery (P90 106.1). >105 target not reached.
+- Every training intervention lost to zero-shot (fine-tune tax
+  98.7-98.9 band x4; from-scratch plateau 98.3).
+- Resume here: docs/v3/RESEARCH_LOG.md §14 (resumption contract:
+  final table, negative results, options A/B/C with B recommended,
+  seed ledger, scripts, checkpoints, standing rules).

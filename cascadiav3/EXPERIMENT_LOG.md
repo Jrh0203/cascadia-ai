@@ -11505,3 +11505,12 @@ C. Stop CBDDB GPU spend; write up; reassess whether >105 is reachable.
 Recommendation: B first (cheap, orthogonal, absolute-strength gains
 compose with any later training win); A only as a deliberate big
 swing with an explicit budget extension.
+
+## 2026-07-23 20:30 — CAMPAIGN CLOSED by John ("close out the cascadia experiments for now")
+
+john0 verified idle (no exporter/benchmark/train/bridge processes).
+No experiment launched after X1's prereg STOP. Close-out written:
+RESEARCH_LOG §14 (resumption contract) + CAMPAIGN_STATE final
+snapshot. Crossroads options A/B/C remain open and unchosen; nothing
+is preauthorized for resumption — a fresh John ruling is required to
+spend GPU on Cascadia again.

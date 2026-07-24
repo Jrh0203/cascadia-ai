@@ -1771,3 +1771,75 @@ are `[68,74]` for AAAAA and `[84,102]` for CBDDB, with the AAAAA lower endpoint
 exact and the CBDDB lower endpoint heuristic. No cap-seven coordinate search
 was run. Derivation and reproducibility:
 `docs/v3/WILDLIFE_CAP7_UPPER_BOUNDS.md`.
+
+## 14. CBDDB campaign close-out (2026-07-23) — PAUSED by John's ruling; state for resumption
+
+John closed Cascadia experimentation on 2026-07-23 evening to work on
+a different game. Nothing is running anywhere (john0 verified idle;
+minis returned to John for wildlife-catalog work). This section is the
+resumption contract.
+
+### Final standings (all on screen block 2027190000-99 unless noted)
+
+| Model / config                          | n256/d4 x100 | n1024/d16 x30 |
+|-----------------------------------------|--------------|---------------|
+| AAAAA champion, CBDDB zero-shot (BEST)  | **99.4675**  | **101.2** (P50 102, P90 106.1) |
+| X1 anchored strong-teacher distill      | 98.84        | not run (John's screen-only ruling) |
+| Anchor arms (3x, same-budget labels)    | 98.75 each   | — |
+| From-scratch S, cycle 1 (fs_c1s)        | 98.30        | — |
+| From-scratch S, cycle 2 (fs_c2)         | 98.3375      | — |
+| Greedy heuristic floor                  | 80.89        | — |
+
+CBDDB INCUMBENT = the UNTOUCHED AAAAA champion
+(john0: cascadiav3/checkpoints/full_v3_gumbel_selfplay_cycle4/
+best_locked_val.manifest.json) played zero-shot. No trained CBDDB
+model ever beat it. John's >105 target NOT reached; best mean 101.2.
+
+### The two decisive negative results
+
+1. FINE-TUNE TAX (~0.6-0.7 pts): all four champion warm-starts landed
+   98.7-98.9 regardless of labels — three same-budget arms (98.75) and
+   X1's genuinely-stronger n512/d8 teacher labels (98.84, despite
+   campaign-best locked-val regret 0.689). Weight movement on 24-32k
+   row corpora damages the net/search coupling more than any label
+   recipe teaches. Untested variable: corpus size (option A below).
+2. FROM-SCRATCH PLATEAU: model-S bootstrap+cycles hit 98.3 and went
+   flat (+0.04/cycle) — the same-budget self-play ceiling. Positive
+   residue: 15M model reaches 98.3 for ~1.4 GPU-days; Card-A priors
+   are not required for 98+.
+
+### Resumption options (logged 2026-07-23 20:00, John has NOT chosen)
+
+A. Big-data distill: 1500+ seed n512/d8 teacher corpus (~3.6 GPU-days
+   gen) — tests the data-volume hypothesis behind the fine-tune tax.
+B. RECOMMENDED FIRST: search-side tuning of the zero-shot champion —
+   cheap eval-only experiments never tried under CBDDB:
+   --gumbel-exact-endgame-turns 1-2 (Salmon-D/Hawk-D rescoring makes
+   exact endgame unusually valuable; currently 0), blend-weight sweep,
+   budget scaling. P90 of 106 at n1024/d16 suggests the tail already
+   contains 105+ play.
+C. Write off >105 and close permanently.
+
+### Operational state at close
+
+- GPU budget spent on CBDDB: ~4.5 GPU-days (envelope was "few").
+- Seed ledger: spent/burned 2027190000-99 (screen, many reuses),
+  2027191000-1399, 2027193000-3550, 2027194000-4840, 2027196000-6440,
+  2027198000-179 (burned fleet spec), 2027199000-430 (X1),
+  2027300000-311 (scratch). FRESH: 2027197000+ (returned), 2027200000+.
+  RESERVED UNTOUCHED: 2027195000+ (>105 certification only).
+- Scripts (all in cascadiav3/scripts/, all deployed to john0):
+  run_cbddb_cycle.sh (self-play cycle; MODEL_SIZE now required),
+  run_cbddb_x1.sh (X1 as run), run_cbddb_distill_round.sh (generalized
+  ladder round, screen-only), fleet_cbddb_{gen,launch,collect}.sh
+  (mini fan-out; docs/v3/FLEET.md is the reference).
+- Checkpoints on john0 (cascadiav3/checkpoints/): cbddb_x1_distill,
+  cbddb_fs_c1s_ft, cbddb_fs_c2_ft, full_v3_cbddb_from_scratch_bootstrap,
+  cbddb_anchor_{vonly,both}, cbddb_s2_ft — all superseded by the
+  zero-shot incumbent for play strength; fs line kept as the 15M
+  CBDDB-native artifact.
+- Standing rules unchanged: one scientific job at a time on john0;
+  preregister before peeking; certification John-visible on fresh
+  2027195000+; champion promotion is John's alone.
+- Reconstruction: this section + §13 + EXPERIMENT_LOG 2026-07-19 →
+  2026-07-23 entries are sufficient to resume cold.
