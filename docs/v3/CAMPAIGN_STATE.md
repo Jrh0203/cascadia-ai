@@ -1509,6 +1509,21 @@ hash every file before creating the original john1 zero exit marker that
 releases the existing complete659 collector. Recovery ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier42_rebalance_fleet_20260724.json`.
 
+All four rebalance shards launched by `17:23:34Z` after collision, runtime,
+input, and source-hash preflight. Live wrapper PIDs are
+86011/28029/59144/65212 on john1/john2/john3/john4; all four had fresh task
+heartbeats at `17:24:16Z`. john1 is protected by detached screen
+`wildlife_bound_secondfrontier42_rebalance_john1`. The hard terminal
+deadline is `18:25:30Z`.
+
+The reconciliation waiter's first activation failed closed before writing a
+PID because the failed original worker had created its output directory but
+left it empty. No solver was affected. Retry1 now explicitly accepts that
+directory only when it contains zero files; detached screen
+`wildlife_bound_reconcile_secondfrontier42_retry1_waiter`, PID 86679, emitted
+its first 0/4 terminal heartbeat at `17:24:07Z`. Retry script SHA:
+`0c235819ff7cff252c873055aa452a92a8bbd81a3dd6074573197e8e35940b64`.
+
 A sealed collector is queued behind those four markers. It will gather
 435+56+168=659 unique probes, validate them against the shared base, and
 production-rescore all 1,024 boards before writing the complete659

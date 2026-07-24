@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-bound-probe-fleet-recovery-v1",
-  "state": "preregistered",
+  "state": "active",
   "tag": "all_wildlife_bound_probe_secondfrontier42_rebalance_20260724",
   "source_revision": "0ff8ec6c8e8dab22ab782b19d2879b41d751f5e4",
   "authorized_by": "John",
@@ -44,27 +44,53 @@
       "host": "john1",
       "task_indices": "0,16,32,48,64,80,96,112,128,144,160",
       "task_count": 11,
-      "launch_mode": "detached screen"
+      "launch_mode": "detached screen",
+      "wrapper_pid": 86011,
+      "started_utc": "2026-07-24T17:23:00Z"
     },
     {
       "host": "john2",
       "task_indices": "4,20,36,52,68,84,100,116,132,148,164",
       "task_count": 11,
-      "launch_mode": "host-local nohup launcher"
+      "launch_mode": "host-local nohup launcher",
+      "wrapper_pid": 28029,
+      "started_utc": "2026-07-24T17:23:32Z"
     },
     {
       "host": "john3",
       "task_indices": "8,24,40,56,72,88,104,120,136,152",
       "task_count": 10,
-      "launch_mode": "host-local nohup launcher"
+      "launch_mode": "host-local nohup launcher",
+      "wrapper_pid": 59144,
+      "started_utc": "2026-07-24T17:23:33Z"
     },
     {
       "host": "john4",
       "task_indices": "12,28,44,60,76,92,108,124,140,156",
       "task_count": 10,
-      "launch_mode": "host-local nohup launcher"
+      "launch_mode": "host-local nohup launcher",
+      "wrapper_pid": 65212,
+      "started_utc": "2026-07-24T17:23:34Z"
     }
   ],
+  "all_hosts_verified_live_utc": "2026-07-24T17:24:16Z",
+  "hard_terminal_deadline_utc": "2026-07-24T18:25:30Z",
+  "local_screen": "wildlife_bound_secondfrontier42_rebalance_john1",
+  "local_launch_script_sha256": "fb943c5f94927363e6eb9f5a50b5ebd301b82461dae2e55b7e98bff8fe39b91d",
+  "reconciliation": {
+    "initial_activation": {
+      "state": "failed_closed",
+      "exit": 1,
+      "cause": "the failed original worker had created an empty output directory; the initial guard required the path to be absent",
+      "scientific_work_affected": false
+    },
+    "retry_name": "all_wildlife_bound_reconcile_secondfrontier42_retry1",
+    "retry_screen": "wildlife_bound_reconcile_secondfrontier42_retry1_waiter",
+    "retry_pid": 86679,
+    "retry_started_utc": "2026-07-24T17:24:07Z",
+    "retry_script_sha256": "0c235819ff7cff252c873055aa452a92a8bbd81a3dd6074573197e8e35940b64",
+    "retry_guard": "accept the pre-existing original output directory only when it contains zero files"
+  },
   "task_partition_contract": "The four assignments are disjoint and their union is exactly range(0,168,4).",
   "result_visibility": "sealed until all four rebalance exit files and the three successful original recovery exit files are zero",
   "reconciliation_contract": "After terminal validation, gather exactly 42 rebalance task files into the original recovery john1 output location, require filenames task_0.json through task_164.json at stride four, write a SHA-256 receipt, and only then atomically create the original john1 zero exit marker.",

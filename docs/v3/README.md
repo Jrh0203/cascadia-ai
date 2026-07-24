@@ -127,8 +127,8 @@ over packed expert tensors with Gumbel search-supervised action values.
   PID/heartbeat-verified launcher. john2–john4 completed all 126 assigned
   cases terminal zero. The local john1 process disappeared during its first
   case without an exit marker or output. John authorized immediate recovery:
-  those exact 42 missing cases are preregistered as disjoint 11/11/10/10
-  shards across the now-idle four-mini fleet, followed by a fail-closed
+  those exact 42 missing cases are live as disjoint 11/11/10/10 shards across
+  the four-mini fleet, with a hard terminal deadline of 14:26 EDT, followed by a fail-closed
   reconciliation into the waiting complete659 collector. No incomplete
   result has been opened. The published holistic interval remains `[85,99]`
   until formal collection and production rescoring; the provisional interval

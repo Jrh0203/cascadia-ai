@@ -11578,6 +11578,25 @@ index, hash mismatch, invalid witness, or production-score mismatch fails
 closed. Ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier42_rebalance_fleet_20260724.json`.
 
+**17:24:16Z launch transition.** All four hosts passed collision, runtime,
+input-hash, source-hash, and predecessor-terminal preflight. Rebalance
+wrappers 86011/28029/59144/65212 launched on john1/john2/john3/john4 by
+`17:23:34Z`, and each emitted a current first-task heartbeat. Local launch
+script SHA is
+`fb943c5f94927363e6eb9f5a50b5ebd301b82461dae2e55b7e98bff8fe39b91d`;
+john1 is in detached screen
+`wildlife_bound_secondfrontier42_rebalance_john1`. The hard terminal
+deadline is `18:25:30Z`.
+
+The first reconciliation-waiter activation failed closed with exit 1 before
+writing its PID: the failed original worker had created an empty output
+directory, while the preregistered guard required the path itself to be
+absent. It did not touch any solver or output. Retry1 accepts that path only
+after proving it contains zero files. Retry script SHA is
+`0c235819ff7cff252c873055aa452a92a8bbd81a3dd6074573197e8e35940b64`;
+detached screen `wildlife_bound_reconcile_secondfrontier42_retry1_waiter`,
+PID 86679, emitted a 0/4 terminal heartbeat at `17:24:07Z`.
+
 ## 2026-07-23 20:00 — X1 FAILED: 98.84 < 99.4675. Distill ladder STOPPED per prereg (strategy crossroads)
 
 X1 screen verified (status pass, CBDDB ruleset, cbddb_x1_distill
