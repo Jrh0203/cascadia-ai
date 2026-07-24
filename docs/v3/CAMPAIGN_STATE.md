@@ -1555,6 +1555,15 @@ Artifacts:
 `docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json`
 and `docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md`.
 
+**19:25 EDT presentation transition.** The validated complete659 catalog now
+has an interactive viewer at `/wildlife-catalog` in `apps/web`. A deterministic
+fail-closed exporter reduced the 13 MB research artifact to a 267 KB browser
+asset while preserving all 1,024 boards, scores, proof status, sound uppers,
+counts, and coordinates. Source/output SHAs are `6a4ba86d…` / `d1061538…`.
+The full TypeScript unit, lint, production-build, and two-viewport browser
+suites pass. Usage, integrity contracts, and recommended next work:
+[WILDLIFE_ATLAS_WEB_APP.md](WILDLIFE_ATLAS_WEB_APP.md).
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

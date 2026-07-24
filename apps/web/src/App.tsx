@@ -696,6 +696,9 @@ export default function App() {
             <button type="button" className="active" onClick={() => setSetupOpen(true)}>
               New Game
             </button>
+            <a className="atlas-nav-link" href="/wildlife-catalog">
+              Wildlife Atlas
+            </a>
           </div>
         </div>
       </header>

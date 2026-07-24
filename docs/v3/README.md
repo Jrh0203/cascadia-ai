@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-24 13:19 EDT)
+## Status at a glance (updated 2026-07-24 19:25 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, in progress):** AAAAA has
   one certified optimal board for 732/826 count vectors after unioning the
@@ -136,6 +136,8 @@ over packed expert tensors with Gumbel search-supervised action values.
   sound all-rules upper contracts **99→97**, giving interval **[85,97]**.
   Full board catalog:
   [ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md](ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md).
+  Interactive field-guide viewer and its deterministic compact-data pipeline:
+  [WILDLIFE_ATLAS_WEB_APP.md](WILDLIFE_ATLAS_WEB_APP.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

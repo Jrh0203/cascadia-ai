@@ -11680,3 +11680,35 @@ RESEARCH_LOG §14 (resumption contract) + CAMPAIGN_STATE final
 snapshot. Crossroads options A/B/C remain open and unchosen; nothing
 is preauthorized for resumption — a fresh John ruling is required to
 spend GPU on Cascadia again.
+
+## 2026-07-24 19:25 EDT — COMPLETE659 wildlife-atlas export and web validation
+
+**Purpose.** Make the terminal complete659 pure-wildlife catalog directly
+inspectable without weakening its proof semantics or serving the 13 MB
+research artifact to the browser.
+
+**Frozen input and transform.** Input
+`docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json`,
+SHA-256
+`6a4ba86d67b1bf4b44b5ef9a84791e078698dea2fc4d2b760324ad010a279b43`;
+20 tokens, per-species cap six, all 1,024 ordered rulesets. Deterministic
+exporter `tools/export_wildlife_atlas.py`, SHA-256
+`dc8676619dca0a48d774343ebc6bb985d0ff3fb710c6e03aa604625a9b7d0419`.
+The transform validates unique indexed rulesets, token occupancy and counts,
+score sums, cap compliance, and exact/incumbent upper-bound consistency
+before writing.
+
+**Artifact.** `apps/web/public/wildlife-atlas.json`, 273,916 bytes, SHA-256
+`d1061538c135bb614ce5fd17fcbf1d27808067423f86b336b5db05d1b0bfb74b`.
+It preserves every board coordinate, animal count, five-part score, exact
+status, and sound upper plus the source SHA. The web client repeats the core
+integrity checks and explicitly labels the 80 exact rows versus 944
+incumbents.
+
+**Validation and result.** `npm test` passed 12/12; `npm run lint` passed with
+zero warnings; `npm run build` passed; `npm run test:e2e` passed 7/7
+applicable tests with three intentional cross-viewport skips. Atlas flows
+passed at 1440×960 and iPhone 13 dimensions. Visual artifacts:
+`artifacts/wildlife-atlas-visual/web-wildlife-atlas.png` and
+`web-wildlife-atlas-mobile.png`. Decision: ship the atlas as the durable
+interactive companion; it creates no new scientific optimum claim.
