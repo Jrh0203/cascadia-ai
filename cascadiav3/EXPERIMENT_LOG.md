@@ -11464,6 +11464,49 @@ Queue ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier224_queue_20260723.json`.
 No predecessor task JSON was read.
 
+## 2026-07-24 08:43 EDT — continuation launch failure and exact recovery
+
+Status inspection found the 435-task first pass terminal zero on all four
+hosts by `06:40:19Z`. The queued continuation attempted launch at `06:40:40Z`.
+john1 launched and completed all 56 assigned tasks at `10:36:23Z`; john2–4
+never created a worker PID, heartbeat, log, output directory, or exit marker.
+The waiter's nested remote-screen quoting failed before worker start. Its
+receipt then incorrectly returned success because the remote validation
+subshell lacked `set -e` and the local receipt did not require a nonempty
+numeric PID. Blank PID rows are present in the durable receipt. This is an
+operational launch failure, not a solver result. No process was killed or
+restarted, and all continuation result payloads remain sealed.
+
+The now-safe first-pass status read, before formal collection, shows 435/435
+outputs: 434 strict count-upper contractions, 137 exact count closures, and
+13 improving witness attempts across 12 unique rulesets. The largest new
+witness score is 83, so the holistic incumbent remains 85. A provisional
+in-memory merge contracts 279 ruleset uppers and the global sound upper
+99→98 while leaving 80 certified rows. These numbers are explicitly
+unpublished until the collector validates every probe and the Rust production
+oracle rescores all selected boards.
+
+John authorized recovery. Freeze exactly the 168 original continuation cases
+assigned to john2–4 (`original task_index % 4 != 0`), with byte-identical
+set comparison against the 224-task source. Recovery taskset SHA:
+`516ecf0b7737a1d2f9cf2bd5e949d03bda2f1461a41492b1d70fe52b95748017`.
+Redistribute them 42/42/42/42 across john1–4 under fresh tag
+`all_wildlife_bound_probe_secondfrontier168_recovery_20260724`. Retain the
+same base catalog, connected maximization model, 300 seconds/task, 330
+seconds total/task, eight workers, and five-second heartbeat.
+
+Replace nested screen quoting with a host-local nohup launcher. It refuses
+all tag collisions and reports success only after the worker-owned PID is
+nonempty/numeric, exactly equals the nohup child, is live, and has written a
+heartbeat. Launcher SHA:
+`db539612ed67efd37b0fbc4d95d0f9fe90d7c74584ab48ac9cf131aa0d17da64`;
+local and john2–4 Bash syntax checks pass. Two launcher regressions require
+the exact live worker PID and reject a nonnumeric PID; 13 focused bound-lane
+tests pass. Results remain sealed until four fresh recovery exit files exist.
+Final collection must validate and merge
+435 first-pass + 56 original john1 continuation + 168 recovery = 659 unique
+probes against the shared base.
+
 ## 2026-07-23 20:00 — X1 FAILED: 98.84 < 99.4675. Distill ladder STOPPED per prereg (strategy crossroads)
 
 X1 screen verified (status pass, CBDDB ruleset, cbddb_x1_distill

@@ -120,16 +120,14 @@ over packed expert tensors with Gumbel search-supervised action values.
   recursive passes cannot forget earlier contractions. The first complete
   top-frontier pass is frozen at 435 count ties across 280 rulesets whose
   current upper exceeds 85, balanced 109/109/109/108 across john1–john4.
-  All four shards launched by `22:46:21Z` with hash-pinned inputs and current
-  heartbeats; the hard terminal deadline is `2026-07-24T08:46:21Z`, and
-  outputs remain sealed until every host is terminal.
-  John authorized continuing through approximately 09:00 EDT, so a disjoint
-  224-task second-frontier layer is frozen 56/host against the same base. A
-  durable HOLD-aware waiter is active and will launch it only after four clean first-pass
-  exits, without inspecting the first pass; projected completion is about
-  08:45 EDT.
-  The current holistic interval remains `[85,99]` because eight untouched
-  rulesets still carry 99-point ceilings.
+  The 435-task pass finished cleanly and provisionally contracts the holistic
+  upper 99→98. Its continuation launcher then failed on john2–john4 while
+  john1 completed 56 tasks; the waiter's blank-PID receipt was invalid. The
+  exact 168 missing cases are frozen 42/host for recovery under a host-local
+  PID/heartbeat-verified launcher. No incomplete continuation result has been
+  opened. The published holistic interval remains `[85,99]` until formal
+  collection and production rescoring; the provisional interval is
+  `[85,98]`.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

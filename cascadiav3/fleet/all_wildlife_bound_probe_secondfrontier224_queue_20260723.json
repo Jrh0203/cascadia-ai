@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-bound-probe-queue-v1",
-  "state": "queued",
+  "state": "partial_launch_failed",
   "tag": "all_wildlife_bound_probe_secondfrontier224_20260723",
   "source_revision": "7558230c9738700144bf9f95b13a877ddba0c3d6",
   "predecessor": {
@@ -66,6 +66,40 @@
     "exit_path": "cascadiav3/logs/queue_all_wildlife_bound_secondfrontier224.exit",
     "launch_receipt_path": "cascadiav3/logs/queue_all_wildlife_bound_secondfrontier224.launched",
     "hold_path": "cascadiav3/logs/HOLD_all_wildlife_bound_secondfrontier224"
+  },
+  "terminal": {
+    "predecessor_all_zero_utc": "2026-07-24T06:40:19Z",
+    "launch_attempt_utc": "2026-07-24T06:40:40Z",
+    "waiter_exit": 0,
+    "waiter_exit_was_valid": false,
+    "john1": {
+      "launched": true,
+      "wrapper_pid": 53921,
+      "terminal_exit": 0,
+      "terminal_utc": "2026-07-24T10:36:23Z",
+      "task_count": 56
+    },
+    "john2": {
+      "launched": false,
+      "task_count_missing": 56
+    },
+    "john3": {
+      "launched": false,
+      "task_count_missing": 56
+    },
+    "john4": {
+      "launched": false,
+      "task_count_missing": 56
+    },
+    "failure": "Nested remote screen quoting created no remote worker, PID, heartbeat, log, output, or terminal marker. Receipt validation ran remote kill/tail commands without set -e and did not require a nonempty numeric PID, so blank PID rows were incorrectly accepted.",
+    "continuation_results_remain_sealed": true
+  },
+  "recovery": {
+    "tag": "all_wildlife_bound_probe_secondfrontier168_recovery_20260724",
+    "taskset_path": "cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier168_recovery_taskset_20260724.json",
+    "taskset_sha256": "516ecf0b7737a1d2f9cf2bd5e949d03bda2f1461a41492b1d70fe52b95748017",
+    "task_count": 168,
+    "exactly_matches_unlaunched_cases": true
   },
   "result_visibility": "sealed until all four continuation exit files exist",
   "collection": "Validate and merge predecessor plus continuation probes together against the shared base catalog."

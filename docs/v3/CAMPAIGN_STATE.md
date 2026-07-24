@@ -1470,6 +1470,21 @@ path: `cascadiav3/logs/HOLD_all_wildlife_bound_secondfrontier224`. Queue
 ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier224_queue_20260723.json`.
 
+The first 435-task pass is terminal zero on all hosts. Its safe preliminary
+read shows 434 strict contractions, 137 exact count closures, 12 uniquely
+improved rulesets, and a provisional global interval `[85,98]`; formal
+collector/oracle publication is still pending.
+
+The 224-task continuation launch partially failed. john1 completed its 56
+tasks, but nested remote-screen quoting launched nothing on john2–4; the
+waiter's receipt bug accepted three blank PIDs and exited zero. No remote
+result exists and all continuation payloads stay sealed. An exact 168-case
+recovery set is frozen at SHA
+`516ecf0b7737a1d2f9cf2bd5e949d03bda2f1461a41492b1d70fe52b95748017`,
+balanced 42/host. A new host-local nohup launcher requires a numeric live
+worker PID plus heartbeat before success. Final merge coverage is 659 unique
+probes.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached
