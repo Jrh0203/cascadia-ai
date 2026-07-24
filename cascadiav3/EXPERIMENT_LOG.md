@@ -11597,6 +11597,39 @@ after proving it contains zero files. Retry script SHA is
 detached screen `wildlife_bound_reconcile_secondfrontier42_retry1_waiter`,
 PID 86679, emitted a 0/4 terminal heartbeat at `17:24:07Z`.
 
+**18:12:12Z terminal verdict — COMPLETE659 VALIDATED.** john4, john3, john2,
+and john1 completed their fresh 10/10/11/11 task shards terminal zero at
+`17:59:08Z`, `18:07:18Z`, `18:07:58Z`, and `18:10:59Z`. The reconciliation
+waiter verified the exact missing index set `range(0,168,4)`, collected 42
+files, wrote receipt SHA
+`2f2bf3ca8d68c91368c02c3ac8a6a18094c67d3daafddb7344cbb76d8d1a08a9`,
+and released the original john1 exit at `18:11:07Z`. The registered collector
+then verified exactly 435+56+168=659 unique probes against the shared base,
+validated every identity/bound/witness, and production-rescored all 1,024
+selected boards. It exited zero at `18:12:12Z`; collector receipt SHA is
+`e16e49448290d1ec0f8554f8bbb3f6400490c030c5e81eebf12cb57f56c5808e`.
+No partial recovery payload was read before this terminal boundary.
+
+The validated result has 80/1,024 exact rows and one connected 20-token
+cap-six board for every row. The other 944 boards are explicitly unproven
+incumbents. The holistic incumbent remains 85 on
+ADCCB/BABCB/BBBCB/BCBCB/BDBCB/BDCCB/CDCCB/DDCCB. The sound global upper
+contracts 99→97, narrowing the gap 14→12; AADDB and ABDDB alone retain upper
+97, both with incumbent 84. Twelve rulesets gained stronger stored witnesses:
+AAADB, BADCD, BBDCD, BBDDD, BCDCD, BDDCD, BDDDD, CDDCD, DBADB, DBCAB,
+DBCDB, and DDDCD. AAAAA remains exact 68; CBDDB is incumbent 84 with sound
+upper 95.
+
+Machine-readable JSON SHA:
+`6a4ba86d67b1bf4b44b5ef9a84791e078698dea2fc4d2b760324ad010a279b43`.
+Full 1,024-board Markdown SHA:
+`f139b7628dc2985be0a7cb4a1bf6cd5ce9a2699349ac67b74aac1760c20b3fb5`.
+Production response SHA:
+`d23b67065f935fd3924e4bbcee01efe7cb33b936a1fbff87c61a8213a0b6e62b`.
+Artifacts:
+`docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json`
+and `docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md`.
+
 ## 2026-07-23 20:00 — X1 FAILED: 98.84 < 99.4675. Distill ladder STOPPED per prereg (strategy crossroads)
 
 X1 screen verified (status pass, CBDDB ruleset, cbddb_x1_distill

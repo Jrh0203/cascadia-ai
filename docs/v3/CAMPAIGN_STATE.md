@@ -1524,15 +1524,36 @@ directory only when it contains zero files; detached screen
 its first 0/4 terminal heartbeat at `17:24:07Z`. Retry script SHA:
 `0c235819ff7cff252c873055aa452a92a8bbd81a3dd6074573197e8e35940b64`.
 
-A sealed collector is queued behind those four markers. It will gather
+A sealed collector was queued behind those four markers to gather
 435+56+168=659 unique probes, validate them against the shared base, and
 production-rescore all 1,024 boards before writing the complete659
 JSON/Markdown catalog. Queue ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_complete659_collection_queue_20260724.json`.
-The collector waiter is live in screen
-`wildlife_bound_collect_complete659_waiter`, PID 21969, with its first
-heartbeat at `13:21:16Z`; at `17:19:06Z` it remained healthy and correctly
-reported 3/4 recovery terminals.
+The collector waiter ran in screen `wildlife_bound_collect_complete659_waiter`,
+PID 21969.
+
+**18:12:12Z terminal result.** All four rebalanced shards exited zero by
+`18:10:59Z`. Retry1 reconciled exactly the missing 42 stride-four tasks,
+wrote a 42-file SHA-256 receipt, and atomically released the original john1
+terminal at `18:11:07Z`. The complete659 collector then validated all 659
+unique probes, inherited bounds, identities, and witnesses and
+production-rescored all 1,024 selected boards; it exited zero at `18:12:12Z`.
+No partial payload was read before the registered terminal boundary.
+
+The complete catalog returns one connected cap-six 20-token board for every
+ordered ruleset. Eighty rows are certified exact; the other 944 are visibly
+marked unproven incumbents. The best found score remains 85 on
+ADCCB/BABCB/BBBCB/BCBCB/BDBCB/BDCCB/CDCCB/DDCCB. The global sound upper
+contracts 99→97, so the honest holistic interval is `[85,97]`; AADDB and
+ABDDB are the only rows at upper 97, each with incumbent 84. CBDDB is now
+`[84,95]`; AAAAA remains exactly 68. Output JSON/Markdown SHAs:
+`6a4ba86d67b1bf4b44b5ef9a84791e078698dea2fc4d2b760324ad010a279b43` /
+`f139b7628dc2985be0a7cb4a1bf6cd5ce9a2699349ac67b74aac1760c20b3fb5`.
+Production response SHA:
+`d23b67065f935fd3924e4bbcee01efe7cb33b936a1fbff87c61a8213a0b6e62b`.
+Artifacts:
+`docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json`
+and `docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md`.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

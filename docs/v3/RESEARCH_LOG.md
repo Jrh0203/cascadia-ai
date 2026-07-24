@@ -1759,6 +1759,20 @@ broad tranche is the complete 435-count top frontier above score 85 across
 their provenance, with a regression proving monotonic two-generation merges:
 `docs/v3/evidence/all_wildlife_bound_probe_pilot8_2026-07-23.json`.
 
+The broad bounded-maximization pass is now terminal and validated. After
+recovering one failed local shard as a disjoint 11/11/10/10 fleet rebalance,
+the collector merged exactly 659 unique probes, checked every inherited bound
+and witness, and production-rescored all 1,024 selected boards. It found no
+score above the existing 85 incumbent, but improved stored boards on 12
+rulesets and contracted the holistic sound upper 99→97. The honest global
+interval is therefore **[85,97]**. AADDB and ABDDB alone retain upper 97,
+each with incumbent 84. Exact coverage remains 80/1,024, so the 944 other
+boards are best-found incumbents rather than optimum claims. The lane remains
+**OPEN/SELECTED for quantitative upper contraction**, not a replacement for
+the component-local exact proof engine. Complete board report:
+`docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md`; machine evidence:
+`docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json`.
+
 ## 15. Cap-seven pure-wildlife upper bounds (2026-07-23)
 
 Exhaustive deterministic enumeration expands the 20-token count space from

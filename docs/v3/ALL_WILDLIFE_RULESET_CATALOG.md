@@ -268,6 +268,15 @@ a later pass cannot loosen an earlier bound.
   ruleset AAAAA frontier, so its reusable exclusion reduces that row 23→22.
   Formal certificate:
   `docs/v3/evidence/aaaaa_split_salmon_bitset_certificate_2026-07-23.json`.
+- The complete bounded-maximization broad pass merged 659 unique five-minute
+  probes after a fail-closed fleet recovery, validated every identity, bound,
+  and witness, and production-rescored all 1,024 selected boards. It preserves
+  one connected cap-six board per ruleset, improves 12 stored incumbents, and
+  contracts the holistic sound upper 99→97 without changing the score-85
+  incumbent. Exact coverage remains 80/1,024, so 944 boards are explicitly
+  labeled unproven. AADDB/ABDDB alone define the 97 ceiling; CBDDB is
+  `[84,95]`, while AAAAA remains exactly 68. Full report:
+  `docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md`.
 
 The durable chronological configurations, hashes, failures, and decisions are
 in `cascadiav3/EXPERIMENT_LOG.md`.
@@ -287,3 +296,11 @@ The collector merges bounds monotonically, never converts `UNKNOWN` into an
 optimum, and reruns the production scorer over all 1,024 selected boards.
 This lane is intended to improve stored boards and make timeout gaps
 quantitative; it does not replace the component-local exact architecture.
+
+The first broad application is complete: 659 validated probes reduce the
+all-rules interval from `[85,99]` to `[85,97]`. The JSON artifact stores each
+of the 1,024 boards, its score breakdown, exactness flag, sound ruleset upper,
+remaining count vectors, aligned count-specific uppers, and all probe
+provenance. The generated Markdown renders every board and marks every
+uncertified entry as an “unproven incumbent”:
+`docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md`.

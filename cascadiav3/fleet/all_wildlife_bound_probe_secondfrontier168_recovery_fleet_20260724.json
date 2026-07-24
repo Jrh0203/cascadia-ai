@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-bound-probe-fleet-v1",
-  "state": "active",
+  "state": "recovered_complete",
   "tag": "all_wildlife_bound_probe_secondfrontier168_recovery_20260724",
   "source_revision": "0ff8ec6c8e8dab22ab782b19d2879b41d751f5e4",
   "recovery_of": {
@@ -62,6 +62,32 @@
   ],
   "all_hosts_verified_live_utc": "2026-07-24T13:18:49Z",
   "hard_terminal_deadline_utc": "2026-07-24T17:09:49Z",
+  "original_terminal_status": {
+    "john1": {
+      "state": "failed_without_terminal",
+      "last_heartbeat_utc": "2026-07-24T13:18:47Z",
+      "output_count": 0
+    },
+    "john2": {
+      "exit": 0,
+      "completed_utc": "2026-07-24T16:22:07Z",
+      "output_count": 42
+    },
+    "john3": {
+      "exit": 0,
+      "completed_utc": "2026-07-24T16:16:12Z",
+      "output_count": 42
+    },
+    "john4": {
+      "exit": 0,
+      "completed_utc": "2026-07-24T16:11:07Z",
+      "output_count": 42
+    }
+  },
+  "john1_recovery_ledger": "cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier42_rebalance_fleet_20260724.json",
+  "reconciled_john1_output_count": 42,
+  "reconciled_john1_exit": 0,
+  "reconciled_utc": "2026-07-24T18:11:07Z",
   "result_visibility": "sealed until all four recovery exit files exist",
   "collection_contract": "Validate and merge 435 first-pass, 56 original john1 continuation, and 168 recovery probes as 659 unique cases against the shared base; production-rescore all 1024 boards."
 }

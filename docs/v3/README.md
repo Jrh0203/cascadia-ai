@@ -127,12 +127,15 @@ over packed expert tensors with Gumbel search-supervised action values.
   PID/heartbeat-verified launcher. john2–john4 completed all 126 assigned
   cases terminal zero. The local john1 process disappeared during its first
   case without an exit marker or output. John authorized immediate recovery:
-  those exact 42 missing cases are live as disjoint 11/11/10/10 shards across
-  the four-mini fleet, with a hard terminal deadline of 14:26 EDT, followed by a fail-closed
-  reconciliation into the waiting complete659 collector. No incomplete
-  result has been opened. The published holistic interval remains `[85,99]`
-  until formal collection and production rescoring; the provisional interval
-  is `[85,98]`.
+  those exact 42 missing cases completed as disjoint 11/11/10/10 shards
+  across the four-mini fleet. The fail-closed reconciliation, 659-probe
+  identity validation, witness checks, and production rescore of all 1,024
+  boards passed. The catalog now contains one validated board for every
+  ruleset, with **80/1,024 certified optima** and 944 explicitly unproven
+  incumbents. The holistic incumbent remains **85** on eight rulesets; the
+  sound all-rules upper contracts **99→97**, giving interval **[85,97]**.
+  Full board catalog:
+  [ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md](ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md).
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

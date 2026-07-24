@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-bound-probe-fleet-recovery-v1",
-  "state": "active",
+  "state": "complete",
   "tag": "all_wildlife_bound_probe_secondfrontier42_rebalance_20260724",
   "source_revision": "0ff8ec6c8e8dab22ab782b19d2879b41d751f5e4",
   "authorized_by": "John",
@@ -89,7 +89,44 @@
     "retry_pid": 86679,
     "retry_started_utc": "2026-07-24T17:24:07Z",
     "retry_script_sha256": "0c235819ff7cff252c873055aa452a92a8bbd81a3dd6074573197e8e35940b64",
-    "retry_guard": "accept the pre-existing original output directory only when it contains zero files"
+    "retry_guard": "accept the pre-existing original output directory only when it contains zero files",
+    "completed_utc": "2026-07-24T18:11:07Z",
+    "exit": 0,
+    "receipt_sha256": "2f2bf3ca8d68c91368c02c3ac8a6a18094c67d3daafddb7344cbb76d8d1a08a9"
+  },
+  "terminals": [
+    {
+      "host": "john1",
+      "exit": 0,
+      "completed_utc": "2026-07-24T18:10:59Z"
+    },
+    {
+      "host": "john2",
+      "exit": 0,
+      "completed_utc": "2026-07-24T18:07:58Z"
+    },
+    {
+      "host": "john3",
+      "exit": 0,
+      "completed_utc": "2026-07-24T18:07:18Z"
+    },
+    {
+      "host": "john4",
+      "exit": 0,
+      "completed_utc": "2026-07-24T17:59:08Z"
+    }
+  ],
+  "collector_exit": 0,
+  "collector_completed_utc": "2026-07-24T18:12:12Z",
+  "collector_receipt_sha256": "e16e49448290d1ec0f8554f8bbb3f6400490c030c5e81eebf12cb57f56c5808e",
+  "output_json_sha256": "6a4ba86d67b1bf4b44b5ef9a84791e078698dea2fc4d2b760324ad010a279b43",
+  "output_markdown_sha256": "f139b7628dc2985be0a7cb4a1bf6cd5ce9a2699349ac67b74aac1760c20b3fb5",
+  "result": {
+    "rulesets": 1024,
+    "certified_rulesets": 80,
+    "incumbent_holistic_maximum": 85,
+    "holistic_sound_upper": 97,
+    "holistic_gap": 12
   },
   "task_partition_contract": "The four assignments are disjoint and their union is exactly range(0,168,4).",
   "result_visibility": "sealed until all four rebalance exit files and the three successful original recovery exit files are zero",
