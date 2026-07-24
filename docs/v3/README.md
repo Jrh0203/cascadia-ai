@@ -124,8 +124,9 @@ over packed expert tensors with Gumbel search-supervised action values.
   upper 99→98. Its continuation launcher then failed on john2–john4 while
   john1 completed 56 tasks; the waiter's blank-PID receipt was invalid. The
   exact 168 missing cases are frozen 42/host for recovery under a host-local
-  PID/heartbeat-verified launcher. No incomplete continuation result has been
-  opened. The published holistic interval remains `[85,99]` until formal
+  PID/heartbeat-verified launcher. That recovery is now live on all four
+  minis, with a hard terminal bound of 13:10 EDT. No incomplete continuation
+  result has been opened. The published holistic interval remains `[85,99]` until formal
   collection and production rescoring; the provisional interval is
   `[85,98]`.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.

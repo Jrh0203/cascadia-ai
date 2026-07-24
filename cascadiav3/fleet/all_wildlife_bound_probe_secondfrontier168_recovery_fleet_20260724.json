@@ -1,0 +1,67 @@
+{
+  "schema": "all-wildlife-bound-probe-fleet-v1",
+  "state": "active",
+  "tag": "all_wildlife_bound_probe_secondfrontier168_recovery_20260724",
+  "source_revision": "0ff8ec6c8e8dab22ab782b19d2879b41d751f5e4",
+  "recovery_of": {
+    "queue_ledger": "cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier224_queue_20260723.json",
+    "original_taskset": "cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier224_taskset_20260723.json",
+    "selection": "exactly original task_index % 4 != 0",
+    "missing_task_count": 168
+  },
+  "taskset_path": "cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier168_recovery_taskset_20260724.json",
+  "taskset_sha256": "516ecf0b7737a1d2f9cf2bd5e949d03bda2f1461a41492b1d70fe52b95748017",
+  "catalog_path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_pilot8_2026-07-23.json",
+  "catalog_sha256": "e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82",
+  "probe_source_sha256": "4c5047c99370d9a433f0b448fe31db5a1dda85fa4b4519aa52498990b788fe31",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "c7dcc31a7bd7d55016d470ebb04112341766cb050a39811d0f8c40aa777008e4",
+  "launcher_sha256": "db539612ed67efd37b0fbc4d95d0f9fe90d7c74584ab48ac9cf131aa0d17da64",
+  "configuration": {
+    "task_count": 168,
+    "tasks_per_host": 42,
+    "time_limit_seconds_per_task": 300,
+    "total_time_limit_seconds_per_task": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "heartbeat_interval_seconds": 5,
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "assignments": [
+    {
+      "host": "john1",
+      "task_index_modulo": 0,
+      "task_count": 42,
+      "wrapper_pid": 21491,
+      "started_utc": "2026-07-24T13:18:42Z"
+    },
+    {
+      "host": "john2",
+      "task_index_modulo": 1,
+      "task_count": 42,
+      "wrapper_pid": 92850,
+      "started_utc": "2026-07-24T13:18:43Z"
+    },
+    {
+      "host": "john3",
+      "task_index_modulo": 2,
+      "task_count": 42,
+      "wrapper_pid": 29919,
+      "started_utc": "2026-07-24T13:18:44Z"
+    },
+    {
+      "host": "john4",
+      "task_index_modulo": 3,
+      "task_count": 42,
+      "wrapper_pid": 56662,
+      "started_utc": "2026-07-24T13:18:46Z"
+    }
+  ],
+  "all_hosts_verified_live_utc": "2026-07-24T13:18:49Z",
+  "hard_terminal_deadline_utc": "2026-07-24T17:09:49Z",
+  "result_visibility": "sealed until all four recovery exit files exist",
+  "collection_contract": "Validate and merge 435 first-pass, 56 original john1 continuation, and 168 recovery probes as 659 unique cases against the shared base; production-rescore all 1024 boards."
+}

@@ -1485,6 +1485,13 @@ balanced 42/host. A new host-local nohup launcher requires a numeric live
 worker PID plus heartbeat before success. Final merge coverage is 659 unique
 probes.
 
+The 168-case recovery launched across john1–john4 by `13:18:46Z`. All hosts
+passed the eight-file hash/runtime/collision preflight and the replacement
+launcher verified live worker PIDs 21491/92850/29919/56662 plus fresh
+heartbeats. The hard terminal deadline is `17:09:49Z`. Recovery ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier168_recovery_fleet_20260724.json`.
+Do not inspect recovery payloads before four terminal markers.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

@@ -11507,6 +11507,15 @@ Final collection must validate and merge
 435 first-pass + 56 original john1 continuation + 168 recovery = 659 unique
 probes against the shared base.
 
+**13:18:49Z recovery launch.** All four hosts passed idle, collision,
+Python/OR-Tools, and eight-file hash checks. The host-local launcher returned
+and revalidated exact live wrapper PIDs 21491/92850/29919/56662 on
+john1/john2/john3/john4, each with a fresh task heartbeat. Start times were
+`13:18:42Z` through `13:18:46Z`. Ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier168_recovery_fleet_20260724.json`.
+The hard terminal deadline is `17:09:49Z`. Recovery results remain sealed
+until all four terminal exit files exist.
+
 ## 2026-07-23 20:00 — X1 FAILED: 98.84 < 99.4675. Distill ladder STOPPED per prereg (strategy crossroads)
 
 X1 screen verified (status pass, CBDDB ruleset, cbddb_x1_distill
