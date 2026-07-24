@@ -1492,6 +1492,12 @@ heartbeats. The hard terminal deadline is `17:09:49Z`. Recovery ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier168_recovery_fleet_20260724.json`.
 Do not inspect recovery payloads before four terminal markers.
 
+A sealed collector is queued behind those four markers. It will gather
+435+56+168=659 unique probes, validate them against the shared base, and
+production-rescore all 1,024 boards before writing the complete659
+JSON/Markdown catalog. Queue ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_complete659_collection_queue_20260724.json`.
+
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
 `all_cards_candidate_deep_recovery_john1_20260723` in the required detached

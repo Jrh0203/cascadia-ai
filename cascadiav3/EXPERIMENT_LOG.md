@@ -11516,6 +11516,22 @@ john1/john2/john3/john4, each with a fresh task heartbeat. Start times were
 The hard terminal deadline is `17:09:49Z`. Recovery results remain sealed
 until all four terminal exit files exist.
 
+**Sealed collection queue preregistration.** After four zero recovery exits,
+collect exactly 435 first-pass + 56 completed original john1-continuation +
+168 recovery probes. Require file counts 435/56/168 before calling the
+fail-closed collector. Validate all identities, inherited bounds, witnesses,
+and source hashes against base catalog SHA
+`e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82`;
+then production-rescore all 1,024 boards with oracle SHA
+`cccc01f69a7739c11792fb67e39c9bceb8e5d8fd8217aa09e41e517974153b3a`.
+Waiter SHA:
+`b646e6bfb331a29aa21b4855d17a41adf2351e0829398cece88f1d29e75faf87`.
+Output targets:
+`docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json`
+and `docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md`. A nonzero
+terminal, missing file, hash mismatch, invalid witness, or production-score
+mismatch fails closed.
+
 ## 2026-07-23 20:00 — X1 FAILED: 98.84 < 99.4675. Distill ladder STOPPED per prereg (strategy crossroads)
 
 X1 screen verified (status pass, CBDDB ruleset, cbddb_x1_distill

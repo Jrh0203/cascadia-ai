@@ -1,0 +1,29 @@
+{
+  "schema": "all-wildlife-bound-probe-collection-queue-v1",
+  "state": "queued",
+  "source_revision": "80bf9353c192c67749746a88e20ada7f37aa2fed",
+  "waits_for_tag": "all_wildlife_bound_probe_secondfrontier168_recovery_20260724",
+  "required_recovery_exits": {
+    "john1": 0,
+    "john2": 0,
+    "john3": 0,
+    "john4": 0
+  },
+  "probe_coverage": {
+    "all_wildlife_bound_probe_topfrontier435_20260723": 435,
+    "all_wildlife_bound_probe_secondfrontier224_20260723_john1_only": 56,
+    "all_wildlife_bound_probe_secondfrontier168_recovery_20260724": 168,
+    "unique_total": 659
+  },
+  "base_catalog_path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_pilot8_2026-07-23.json",
+  "base_catalog_sha256": "e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82",
+  "waiter_path": "cascadiav3/logs/queue_all_wildlife_bound_collect_complete659_20260724.sh",
+  "waiter_sha256": "b646e6bfb331a29aa21b4855d17a41adf2351e0829398cece88f1d29e75faf87",
+  "collector_sha256": "6f3201f6c262d1be2e76c8db4b6a1e949448a0a04ccd7a7275302702e30249d7",
+  "production_oracle_sha256": "cccc01f69a7739c11792fb67e39c9bceb8e5d8fd8217aa09e41e517974153b3a",
+  "collection_root": "cascadiav3/fleet/collected_all_wildlife_bound_complete659_20260724",
+  "output_path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json",
+  "markdown_path": "docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md",
+  "hold_path": "cascadiav3/logs/HOLD_all_wildlife_bound_collect_complete659",
+  "result_visibility": "No recovery or original-continuation payload is read before four zero recovery exits."
+}
