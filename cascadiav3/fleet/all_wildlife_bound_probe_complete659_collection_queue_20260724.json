@@ -1,6 +1,6 @@
 {
   "schema": "all-wildlife-bound-probe-collection-queue-v1",
-  "state": "queued",
+  "state": "active",
   "source_revision": "80bf9353c192c67749746a88e20ada7f37aa2fed",
   "waits_for_tag": "all_wildlife_bound_probe_secondfrontier168_recovery_20260724",
   "required_recovery_exits": {
@@ -25,5 +25,13 @@
   "output_path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json",
   "markdown_path": "docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md",
   "hold_path": "cascadiav3/logs/HOLD_all_wildlife_bound_collect_complete659",
+  "waiter": {
+    "screen": "wildlife_bound_collect_complete659_waiter",
+    "pid": 21969,
+    "activated_utc": "2026-07-24T13:21:16Z",
+    "heartbeat_path": "cascadiav3/logs/queue_all_wildlife_bound_collect_complete659.heartbeat",
+    "exit_path": "cascadiav3/logs/queue_all_wildlife_bound_collect_complete659.exit",
+    "receipt_path": "cascadiav3/logs/queue_all_wildlife_bound_collect_complete659.receipt"
+  },
   "result_visibility": "No recovery or original-continuation payload is read before four zero recovery exits."
 }

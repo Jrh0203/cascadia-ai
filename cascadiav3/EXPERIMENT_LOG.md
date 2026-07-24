@@ -11532,6 +11532,11 @@ and `docs/v3/ALL_WILDLIFE_CATALOG_BOUND_PROBE_COMPLETE659.md`. A nonzero
 terminal, missing file, hash mismatch, invalid witness, or production-score
 mismatch fails closed.
 
+**13:21:16Z collector waiter activation.** Detached screen
+`wildlife_bound_collect_complete659_waiter`, PID 21969, emitted a current
+0/4 recovery-terminal heartbeat. It reads only terminal markers until all
+four are zero.
+
 ## 2026-07-23 20:00 — X1 FAILED: 98.84 < 99.4675. Distill ladder STOPPED per prereg (strategy crossroads)
 
 X1 screen verified (status pass, CBDDB ruleset, cbddb_x1_distill

@@ -1497,6 +1497,9 @@ A sealed collector is queued behind those four markers. It will gather
 production-rescore all 1,024 boards before writing the complete659
 JSON/Markdown catalog. Queue ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_complete659_collection_queue_20260724.json`.
+The collector waiter is live in screen
+`wildlife_bound_collect_complete659_waiter`, PID 21969, with its first
+heartbeat at `13:21:16Z`.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag
