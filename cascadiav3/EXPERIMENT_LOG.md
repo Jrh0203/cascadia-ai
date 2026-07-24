@@ -11537,6 +11537,47 @@ mismatch fails closed.
 0/4 recovery-terminal heartbeat. It reads only terminal markers until all
 four are zero.
 
+## 2026-07-24 17:19Z — Preregister failed-john1 bound recovery rebalance
+
+The original 168-case recovery is terminal zero on john2–john4: their final
+heartbeats are `16:22:07Z`, `16:16:12Z`, and `16:11:07Z`, covering all 126
+assigned cases. The local john1 worker failed operationally during its first
+case. Its last heartbeat is `13:18:47Z` on task 0; wrapper PID 21491 and
+solver PID 21516 were both absent when checked at `15:13:36Z`; it created no
+output directory and no terminal marker. No result payload was opened, and
+no process was killed or restarted.
+
+John explicitly authorized relaunch and fleet repartition. Preregister exact
+missing indices `range(0,168,4)` as four disjoint assignments under fresh tag
+`all_wildlife_bound_probe_secondfrontier42_rebalance_20260724`:
+
+- john1 (11): `0,16,32,48,64,80,96,112,128,144,160`
+- john2 (11): `4,20,36,52,68,84,100,116,132,148,164`
+- john3 (10): `8,24,40,56,72,88,104,120,136,152`
+- john4 (10): `12,28,44,60,76,92,108,124,140,156`
+
+Retain taskset SHA
+`516ecf0b7737a1d2f9cf2bd5e949d03bda2f1461a41492b1d70fe52b95748017`,
+base-catalog SHA
+`e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82`,
+source revision `0ff8ec6c8e8dab22ab782b19d2879b41d751f5e4`, probe/exact/support/rules
+SHAs `4c5047c9…`, `c5667b9d…`, `362b5d7f…`, `c94945c6…`, 300 seconds
+per CP-SAT solve, 330 seconds total per case, eight workers, and five-second
+heartbeats. Local john1 launches in detached `screen`; remote hosts use the
+PID/heartbeat-verified host-local launcher. Every collision, runtime, source,
+and input hash must pass before launch.
+
+**Frozen reconciliation rule:** keep all fresh results sealed until the four
+rebalance exits and the three successful original recovery exits are zero.
+Then collect exactly 42 task files, require their filename indices to equal
+`range(0,168,4)`, write a per-file SHA-256 receipt, and only afterward create
+the original john1 recovery exit marker. The already-active sealed collector
+then performs its registered 435+56+168 identity validation and production
+rescore of all 1,024 selected boards. Any nonzero exit, missing/duplicate
+index, hash mismatch, invalid witness, or production-score mismatch fails
+closed. Ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier42_rebalance_fleet_20260724.json`.
+
 ## 2026-07-23 20:00 — X1 FAILED: 98.84 < 99.4675. Distill ladder STOPPED per prereg (strategy crossroads)
 
 X1 screen verified (status pass, CBDDB ruleset, cbddb_x1_distill

@@ -10,7 +10,7 @@ Cascadia v3 is the transformer-based training and search stack for pushing
 four-player Cascadia beyond the previous neural/search plateau: CascadiaFormer
 over packed expert tensors with Gumbel search-supervised action values.
 
-## Status at a glance (updated 2026-07-23 18:41 EDT)
+## Status at a glance (updated 2026-07-24 13:19 EDT)
 
 - **Pure-wildlife catalogs (local CPU exploration, in progress):** AAAAA has
   one certified optimal board for 732/826 count vectors after unioning the
@@ -123,12 +123,16 @@ over packed expert tensors with Gumbel search-supervised action values.
   The 435-task pass finished cleanly and provisionally contracts the holistic
   upper 99→98. Its continuation launcher then failed on john2–john4 while
   john1 completed 56 tasks; the waiter's blank-PID receipt was invalid. The
-  exact 168 missing cases are frozen 42/host for recovery under a host-local
-  PID/heartbeat-verified launcher. That recovery is now live on all four
-  minis, with a hard terminal bound of 13:10 EDT. No incomplete continuation
-  result has been opened. The published holistic interval remains `[85,99]` until formal
-  collection and production rescoring; the provisional interval is
-  `[85,98]`.
+  exact 168 missing cases were frozen 42/host for recovery under a host-local
+  PID/heartbeat-verified launcher. john2–john4 completed all 126 assigned
+  cases terminal zero. The local john1 process disappeared during its first
+  case without an exit marker or output. John authorized immediate recovery:
+  those exact 42 missing cases are preregistered as disjoint 11/11/10/10
+  shards across the now-idle four-mini fleet, followed by a fail-closed
+  reconciliation into the waiting complete659 collector. No incomplete
+  result has been opened. The published holistic interval remains `[85,99]`
+  until formal collection and production rescoring; the provisional interval
+  is `[85,98]`.
 - **Goal:** mean seat score **≥ 100 over 1,000 games** of 4-player self-play.
 - **Last durable D1 state; john0 currently unreachable:** attempt 4 completed
   no seed because 24 owned CUDA contexts thrashed. Attempt 5 launched at 10:02

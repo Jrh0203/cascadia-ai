@@ -1487,10 +1487,27 @@ probes.
 
 The 168-case recovery launched across john1–john4 by `13:18:46Z`. All hosts
 passed the eight-file hash/runtime/collision preflight and the replacement
-launcher verified live worker PIDs 21491/92850/29919/56662 plus fresh
-heartbeats. The hard terminal deadline is `17:09:49Z`. Recovery ledger:
+launcher initially verified live worker PIDs 21491/92850/29919/56662 plus
+fresh heartbeats. john2–john4 subsequently completed all 42 cases apiece
+terminal zero at `16:22:07Z`, `16:16:12Z`, and `16:11:07Z`. The local john1
+worker and solver disappeared during task 0: its heartbeat stopped at
+`13:18:47Z`, both PIDs were absent at `15:13:36Z`, no output directory was
+created, and no exit marker exists. No process was killed or restarted.
+Recovery ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier168_recovery_fleet_20260724.json`.
-Do not inspect recovery payloads before four terminal markers.
+
+John explicitly authorized the failed john1 shard to be relaunched and
+repartitioned across the fleet. The exact missing set `range(0,168,4)` is
+frozen as disjoint 11/11/10/10 assignments under fresh tag
+`all_wildlife_bound_probe_secondfrontier42_rebalance_20260724`. The original
+taskset, catalog, model, 300/330-second limits, eight solver workers, and all
+source hashes remain unchanged. john1 must launch in detached `screen`;
+john2–john4 use the verified host-local nohup launcher. Results stay sealed
+until four fresh zero exits plus the three original remote zero exits.
+A reconciliation waiter must then require exactly those 42 filenames and
+hash every file before creating the original john1 zero exit marker that
+releases the existing complete659 collector. Recovery ledger:
+`cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier42_rebalance_fleet_20260724.json`.
 
 A sealed collector is queued behind those four markers. It will gather
 435+56+168=659 unique probes, validate them against the shared base, and
@@ -1499,7 +1516,8 @@ JSON/Markdown catalog. Queue ledger:
 `cascadiav3/fleet/all_wildlife_bound_probe_complete659_collection_queue_20260724.json`.
 The collector waiter is live in screen
 `wildlife_bound_collect_complete659_waiter`, PID 21969, with its first
-heartbeat at `13:21:16Z`.
+heartbeat at `13:21:16Z`; at `17:19:06Z` it remained healthy and correctly
+reported 3/4 recovery terminals.
 
 John has now explicitly authorized the failed-sealed deep-incumbent recovery.
 Only john1's missing AAAAA/CADAC indices `0,562` will rerun under fresh tag

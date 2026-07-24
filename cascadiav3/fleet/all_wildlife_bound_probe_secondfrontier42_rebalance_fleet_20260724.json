@@ -1,0 +1,72 @@
+{
+  "schema": "all-wildlife-bound-probe-fleet-recovery-v1",
+  "state": "preregistered",
+  "tag": "all_wildlife_bound_probe_secondfrontier42_rebalance_20260724",
+  "source_revision": "0ff8ec6c8e8dab22ab782b19d2879b41d751f5e4",
+  "authorized_by": "John",
+  "authorized_utc": "2026-07-24T17:16:00Z",
+  "recovery_of": {
+    "tag": "all_wildlife_bound_probe_secondfrontier168_recovery_20260724",
+    "failed_host": "john1",
+    "failed_assignment": "task_index % 4 == 0",
+    "failure": "worker and solver disappeared during task 0 without an exit marker or output",
+    "last_heartbeat_utc": "2026-07-24T13:18:47Z",
+    "failure_verified_utc": "2026-07-24T15:13:36Z",
+    "successful_original_hosts": [
+      "john2",
+      "john3",
+      "john4"
+    ],
+    "missing_task_count": 42
+  },
+  "taskset_path": "cascadiav3/fleet/all_wildlife_bound_probe_secondfrontier168_recovery_taskset_20260724.json",
+  "taskset_sha256": "516ecf0b7737a1d2f9cf2bd5e949d03bda2f1461a41492b1d70fe52b95748017",
+  "catalog_path": "docs/v3/evidence/all_wildlife_catalog_bound_probe_pilot8_2026-07-23.json",
+  "catalog_sha256": "e6927839a3cabdaf5d6316fc5a7e8641940d5c123406bac359376a0a3f598b82",
+  "probe_source_sha256": "4c5047c99370d9a433f0b448fe31db5a1dda85fa4b4519aa52498990b788fe31",
+  "exact_source_sha256": "c5667b9d24c79489dd916c9e2a1548c08922d5f36783e67fac53fe7093add5e9",
+  "exact_support_source_sha256": "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329",
+  "rules_source_sha256": "c94945c6c2865e6566697edf8de233fa91763e73d6b2be185cd53c23d4e63790",
+  "worker_sha256": "c7dcc31a7bd7d55016d470ebb04112341766cb050a39811d0f8c40aa777008e4",
+  "launcher_sha256": "db539612ed67efd37b0fbc4d95d0f9fe90d7c74584ab48ac9cf131aa0d17da64",
+  "configuration": {
+    "task_count": 42,
+    "time_limit_seconds_per_task": 300,
+    "total_time_limit_seconds_per_task": 330,
+    "solver_workers": 8,
+    "connectivity_required": true,
+    "heartbeat_interval_seconds": 5,
+    "python": "3.12.13",
+    "ortools": "9.15.6755"
+  },
+  "assignments": [
+    {
+      "host": "john1",
+      "task_indices": "0,16,32,48,64,80,96,112,128,144,160",
+      "task_count": 11,
+      "launch_mode": "detached screen"
+    },
+    {
+      "host": "john2",
+      "task_indices": "4,20,36,52,68,84,100,116,132,148,164",
+      "task_count": 11,
+      "launch_mode": "host-local nohup launcher"
+    },
+    {
+      "host": "john3",
+      "task_indices": "8,24,40,56,72,88,104,120,136,152",
+      "task_count": 10,
+      "launch_mode": "host-local nohup launcher"
+    },
+    {
+      "host": "john4",
+      "task_indices": "12,28,44,60,76,92,108,124,140,156",
+      "task_count": 10,
+      "launch_mode": "host-local nohup launcher"
+    }
+  ],
+  "task_partition_contract": "The four assignments are disjoint and their union is exactly range(0,168,4).",
+  "result_visibility": "sealed until all four rebalance exit files and the three successful original recovery exit files are zero",
+  "reconciliation_contract": "After terminal validation, gather exactly 42 rebalance task files into the original recovery john1 output location, require filenames task_0.json through task_164.json at stride four, write a SHA-256 receipt, and only then atomically create the original john1 zero exit marker.",
+  "collection_contract": "The already-running complete659 collector then validates and merges 435 first-pass, 56 original john1-continuation, and 168 reconciled recovery probes and production-rescores all 1,024 selected boards."
+}
