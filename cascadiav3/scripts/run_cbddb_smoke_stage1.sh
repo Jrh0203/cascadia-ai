@@ -4,16 +4,15 @@ set -euo pipefail
 # CBDDB smoke test, Stage 1: ZERO-SHOT transfer. The AAAAA champion
 # (cycle4 scalar, best_locked_val) plays the CBDDB research ruleset
 # (Bear C, Elk B, Salmon D, Hawk D, Fox B; Elk-B strict-diamond per
-# John's 2026-07-19 ruling) with no retraining. Preregistration:
-# EXPERIMENT_LOG 2026-07-19 09:40. Historical old-tech anchors (base):
+# the strict-diamond Elk-B interpretation) with no retraining.
+# Historical old-tech anchors (base):
 # greedy-MCE-750 ~96.5, NNUE-MCE-750 ~97.2 (measured under the looser
 # legacy Elk-B rule, so slightly generous vs this identity).
 #
 # Arms: 1-game full-stack smoke, no-search floors, n256/d4 x 100.
-# Seeds 2027190000..99, fresh block, touch-once.
+# Seeds default to 2027190000..99 and may be changed or reused.
 
 ROOT="${ROOT:-/home/john0/cascadia}"
-SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION to the deployed Git revision}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 FIRST_SEED="${FIRST_SEED:-2027190000}"
@@ -43,7 +42,7 @@ mkdir -p "$REPORT_DIR" "$LOG_DIR"
 grep -q 'rules_2026_07_19' cascadiav3/real-root-exporter/src/main.rs
 test -s "$CYCLE4_MANIFEST"
 
-echo "[cbddb-s1] source_revision=$SOURCE_REVISION ruleset=$RULESET_ID seeds=${FIRST_SEED}x${GAMES}"
+echo "[cbddb-s1] ruleset=$RULESET_ID seeds=${FIRST_SEED}x${GAMES}"
 
 cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 
@@ -54,7 +53,7 @@ fi
 
 report_matches() {
   local report="$1"
-  [ -s "$report" ] && "$PYTHON" - "$report" "$RULESET_ID" "$SOURCE_REVISION" <<'PY'
+  [ -s "$report" ] && "$PYTHON" - "$report" "$RULESET_ID" <<'PY'
 import json
 import sys
 
@@ -63,7 +62,6 @@ raise SystemExit(
     0
     if report.get("status") == "pass"
     and report.get("ruleset_id") == sys.argv[2]
-    and report.get("source_revision") == sys.argv[3]
     else 1
 )
 PY
@@ -86,7 +84,6 @@ run_no_search() {
     --baseline-workers "$JOBS" \
     --treatment-workers 1 \
     --device cuda \
-    --source-revision "$SOURCE_REVISION" \
     --experiment-id cbddb-smoke-s1-no-search \
     --out "$report" \
     --decisions-out "$REPORT_DIR/cbddb_smoke_s1_no_search_decisions.jsonl" \
@@ -124,7 +121,6 @@ run_gumbel() {
     --k-interior 16 \
     --control none \
     --model-timeout-ms 300000 \
-    --source-revision "$SOURCE_REVISION" \
     --experiment-id "$tag" \
     --out "$report" \
     --decisions-out "$REPORT_DIR/${tag}_decisions.jsonl" \

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import multiprocessing
 import os
@@ -73,14 +72,9 @@ def _solve(
 
 
 def run(args: argparse.Namespace) -> int:
-    encoded = args.taskset.read_bytes()
-    taskset_sha = hashlib.sha256(encoded).hexdigest()
-    taskset = json.loads(encoded)
+    taskset = json.loads(args.taskset.read_text())
     if taskset.get("schema") != "all-wildlife-score-profile-taskset-v1":
         raise ValueError("unexpected taskset schema")
-    rules_sha = hashlib.sha256(Path(rules.__file__).read_bytes()).hexdigest()
-    if taskset["rules_source_sha256"] != rules_sha:
-        raise ValueError("taskset rules-source mismatch")
     indices = [int(value) for value in args.indices.split(",")]
     if len(indices) != len(set(indices)):
         raise ValueError("duplicate task indices")
@@ -96,17 +90,7 @@ def run(args: argparse.Namespace) -> int:
     results.sort(key=lambda row: row["task_index"])
     payload = {
         "schema": "all-wildlife-score-profile-shard-v1",
-        "identity": {
-            "taskset_sha256": taskset_sha,
-            "rules_source_sha256": rules_sha,
-            "exact_source_sha256": hashlib.sha256(
-                Path("tools/all_wildlife_exact.py").read_bytes()
-            ).hexdigest(),
-            "exact_support_source_sha256": hashlib.sha256(
-                Path("tools/cbddb_wildlife_exact.py").read_bytes()
-            ).hexdigest(),
-            "runner_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        },
+        "taskset": str(args.taskset),
         "configuration": {
             "seconds_per_profile": args.seconds,
             "jobs": args.jobs,

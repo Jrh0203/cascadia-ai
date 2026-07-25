@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
@@ -67,8 +66,7 @@ def build_taskset(
     frontier_layer: int = 1,
     task_budget: int | None = None,
 ) -> dict[str, Any]:
-    encoded = catalog_path.read_bytes()
-    catalog = json.loads(encoded)
+    catalog = json.loads(catalog_path.read_bytes())
     if catalog.get("schema") != "all-wildlife-optimal-catalog-v1" or len(
         catalog.get("results", [])
     ) != len(rules.rulesets()):
@@ -147,7 +145,6 @@ def build_taskset(
     return {
         "schema": SCHEMA,
         "catalog_path": str(catalog_path),
-        "catalog_sha256": hashlib.sha256(encoded).hexdigest(),
         "selection": selection,
         "task_count": len(tasks),
         "tasks": tasks,

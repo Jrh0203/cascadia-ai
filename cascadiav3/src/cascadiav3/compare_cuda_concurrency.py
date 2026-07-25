@@ -27,7 +27,6 @@ from .compare_gumbel_execution import (
     _load_decisions,
     _load_games,
     _load_report,
-    _sha256,
 )
 from .torch_benchmark_stats import paired_delta_stats
 
@@ -68,7 +67,6 @@ def _load_gpu_profile(path: Path) -> dict[str, Any]:
         "power_draw_watts": aggregate(1),
         "memory_used_mib": aggregate(2),
         "temperature_celsius": aggregate(3),
-        "sha256": _sha256(path),
     }
 
 
@@ -240,9 +238,6 @@ def build_comparison(
 
     reports = {jobs: _load_report(paths[0]) for jobs, paths in arms.items()}
     reference = reports[REFERENCE_JOBS]
-    revision = str(reference["source_revision"])
-    if source_revision is not None and revision != source_revision:
-        raise ValueError("reports do not match the required source revision")
     seeds = [int(seed) for seed in reference.get("seeds", [])]
     if len(seeds) < max(JOBS):
         raise ValueError("concurrency comparison needs at least 24 seeds to fill jobs24")
@@ -250,8 +245,6 @@ def build_comparison(
     reference_execution = _execution_without_concurrency(reference)
     reference_artifacts = _artifact_identity(reference)
     for jobs, report in reports.items():
-        if report.get("source_revision") != revision:
-            raise ValueError("source revision mismatch between concurrency arms")
         if report.get("seeds") != seeds:
             raise ValueError("seed mismatch between concurrency arms")
         if report.get("search") != reference_search:
@@ -310,9 +303,9 @@ def build_comparison(
             "p95_decision_seconds": p95_decision,
             "comparison_vs_jobs12": comparison,
             "inputs": {
-                "report_sha256": _sha256(arms[jobs][0]),
-                "decisions_sha256": _sha256(arms[jobs][1]),
-                "games_sha256": _sha256(arms[jobs][2]),
+                "report": str(arms[jobs][0]),
+                "decisions": str(arms[jobs][1]),
+                "games": str(arms[jobs][2]),
             },
             "gpu_profile": (
                 _load_gpu_profile(gpu_profiles[jobs]) if gpu_profiles is not None else None
@@ -340,9 +333,7 @@ def build_comparison(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "engineering_cuda_concurrency_only",
         "ruleset_id": RULESET_ID,
-        "source_revision": revision,
         "seeds": seeds,
         "search": reference_search,
         "execution_common": reference_execution,
@@ -365,7 +356,6 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
     lines = [
         "# CUDA Gumbel Concurrency Calibration",
         "",
-        f"Source revision: `{report['source_revision']}`",
         f"Seeds: `{len(report['seeds'])}`",
         "",
         "| Jobs | Wall | Games/hour | Speedup vs 12 | Mean decision | P95 | GPU mean | Power mean | Div. seeds | Score Δ vs 12 | Max root drift |",

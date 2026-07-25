@@ -1,5 +1,8 @@
 # CascadiaFormer Architecture
 
+> The technical architecture is current where it matches the code. Historical
+> gate, eligibility, and promotion language in this document is not policy.
+
 ## Recommendation
 
 Build CascadiaFormer-Zero: a sparse public-state transformer with legal-action

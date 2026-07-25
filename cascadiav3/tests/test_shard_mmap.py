@@ -106,16 +106,16 @@ class ShardMmapTest(unittest.TestCase):
     def test_shards_survive_source_file_intact(self) -> None:
         """Opening via mmap must not mutate the shard file."""
         self._require()
-        from cascadiav3.expert_tensor_shards import ExpertTensorShard, _sha256
+        from cascadiav3.expert_tensor_shards import ExpertTensorShard
 
         with tempfile.TemporaryDirectory() as tmp:
             copy = Path(tmp) / "copy.npz"
             shutil.copyfile(FIXTURE, copy)
-            before = _sha256(copy)
+            before = copy.read_bytes()
             shard = ExpertTensorShard(copy)
             _ = shard.example(0)
             shard.close()
-            self.assertEqual(before, _sha256(copy))
+            self.assertEqual(before, copy.read_bytes())
 
 
 if __name__ == "__main__":

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import time
 from pathlib import Path
@@ -12,10 +11,6 @@ from typing import Any
 
 from tools import aaaaa_wildlife_exact as base
 from tools import aaaaa_wildlife_motif_relaxation as relaxation
-
-
-def file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def parse_case(value: str) -> tuple[tuple[int, int, int, int, int], int]:
@@ -51,8 +46,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             f"status={result['status']} wall={result['wall_seconds']:.6f}s",
             flush=True,
         )
-    source = Path(__file__).resolve()
-    relaxation_source = Path(relaxation.__file__).resolve()
     return {
         "schema": "aaaaa-motif-coordinate-relaxation-batch-v1",
         "proof_complete": all(row["proof_complete"] for row in rows),
@@ -72,8 +65,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "forced_scoring_motifs_exact": True,
             "fox_positive_observations_exact": True,
         },
-        "source_sha256": file_sha256(source),
-        "relaxation_source_sha256": file_sha256(relaxation_source),
         "results": rows,
         "elapsed_seconds": time.monotonic() - started,
     }

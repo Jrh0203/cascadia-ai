@@ -16,7 +16,6 @@ improve propagation and never remove a legal board.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 import time
@@ -350,20 +349,12 @@ def main() -> int:
         enforce_connectivity=not args.disconnected,
         initial_tokens=tokens,
     )
-    source = Path(__file__).resolve()
     payload = {
         "schema": "aaaaa-fox-neighborhood-calibration-v1",
         "proof_complete": result["model_status"] == "INFEASIBLE",
         "result": result,
         "ortools_version": ORTOOLS_VERSION,
-        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "exact_source_sha256": hashlib.sha256(
-            source.with_name("aaaaa_wildlife_exact.py").read_bytes()
-        ).hexdigest(),
-        "catalog": {
-            "path": str(args.catalog),
-            "sha256": hashlib.sha256(args.catalog.read_bytes()).hexdigest(),
-        },
+        "catalog": {"path": str(args.catalog)},
         "table_rows": {
             str(size): len(neighborhood_rows(size))
             for size in range(1, MAX_TABLE_SIZE + 1)

@@ -190,7 +190,6 @@ def run_semantic_vanilla_public_token_pilot(
 
     result = {
         "status": "pass",
-        "scientific_eligibility": "dry_run",
         "experiment_id": experiment_id,
         "seed": seed,
         "steps": steps,

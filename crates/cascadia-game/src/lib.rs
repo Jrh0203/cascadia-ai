@@ -3,9 +3,9 @@
 //! This crate intentionally has no dependency on the v1 implementation. Rules,
 //! simulation, AI, and presentation build on this single canonical state model.
 
-/// Rules-semantics identity for reports, APIs, and promotion provenance.
-/// Changing an official rule or the legal policy action space requires a new
-/// value and a fresh baseline campaign.
+/// Human-readable rules version exposed by the API.
+/// Update it when doing so helps callers distinguish behavior; no campaign
+/// or migration ceremony is attached to the value.
 pub const RULES_SEMANTICS_ID: &str = "cascadia-base-official-2026-07-16";
 
 mod board;

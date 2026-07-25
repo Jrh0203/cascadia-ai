@@ -16,7 +16,6 @@ certificate; FEASIBLE or UNKNOWN proves nothing.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 import time
@@ -488,12 +487,10 @@ def main() -> int:
         time_limit=args.time_limit,
         seed=args.seed,
     )
-    source = Path(__file__).resolve()
     payload.update(
         {
             "schema": "aaaaa-motif-coordinate-relaxation-v2",
             "ortools_version": ORTOOLS_VERSION,
-            "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
             "relaxation": {
                 "whole_board_connectivity_required": False,
                 "bear_pair_isolation_required": False,

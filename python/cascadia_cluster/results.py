@@ -1,8 +1,7 @@
-"""Validate published output manifests and atomically import accepted artifacts."""
+"""Read published output inventories and atomically import artifacts."""
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import shutil
@@ -17,14 +16,6 @@ from .object_store import ObjectStoreClient
 MANIFEST_NAME = "manifest.json"
 MAX_ARCHIVE_MEMBERS = 100_000
 MAX_ARCHIVE_BYTES = 256 * 1024 * 1024 * 1024
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def validate_output_directory(root: Path) -> ArtifactManifest:
@@ -49,9 +40,14 @@ def validate_output_directory(root: Path) -> ArtifactManifest:
     files = []
     seen: set[str] = set()
     for descriptor in raw["files"]:
-        if not isinstance(descriptor, dict) or set(descriptor) != {"path", "bytes", "sha256"}:
+        if not isinstance(descriptor, dict) or set(descriptor) not in (
+            {"path", "bytes"},
+            {"path", "bytes", "sha256"},
+        ):
             raise ArtifactValidationError("output file descriptor differs")
-        artifact = ArtifactFile(**descriptor)
+        # Older manifests included a checksum. Keep them readable, but do not
+        # verify or preserve that retired receipt field.
+        artifact = ArtifactFile(path=descriptor["path"], bytes=descriptor["bytes"])
         if artifact.path == MANIFEST_NAME or artifact.path in seen:
             raise ArtifactValidationError("output manifest duplicates or includes itself")
         seen.add(artifact.path)
@@ -62,8 +58,6 @@ def validate_output_directory(root: Path) -> ArtifactManifest:
             raise ArtifactValidationError("output artifact escapes root") from error
         if not path.is_file() or path.stat().st_size != artifact.bytes:
             raise ArtifactValidationError(f"output size differs: {artifact.path}")
-        if _sha256_file(path) != artifact.sha256:
-            raise ArtifactValidationError(f"output checksum differs: {artifact.path}")
         files.append(artifact)
     actual = {
         path.relative_to(root).as_posix()

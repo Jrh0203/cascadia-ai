@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -11,14 +10,6 @@ from typing import Any
 RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 DEFAULT_MIN_WALL_SPEEDUP = 1.05
 DEFAULT_MAX_ROOT_VALUE_DRIFT = 2.0e-5
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _load_report(path: Path) -> dict[str, Any]:
@@ -29,10 +20,6 @@ def _load_report(path: Path) -> dict[str, Any]:
         raise ValueError(f"ruleset mismatch in {path}")
     if report.get("control", {}).get("kind") != "none":
         raise ValueError(f"execution comparison requires control=none in {path}")
-    if report.get("scientific_eligibility") != "candidate_only_search_arm":
-        raise ValueError(f"unexpected scientific eligibility in {path}")
-    if not report.get("source_revision"):
-        raise ValueError(f"missing source revision in {path}")
     return report
 
 
@@ -45,9 +32,6 @@ def _search_without_parallel_rollouts(report: dict[str, Any]) -> dict[str, Any]:
 def _artifact_identity(report: dict[str, Any]) -> dict[str, Any]:
     artifacts = report.get("artifacts", {})
     keys = (
-        "binary_sha256",
-        "manifest_sha256",
-        "weights_sha256",
         "checkpoint_tag",
         "checkpoint_step",
         "q_quantiles",
@@ -126,11 +110,6 @@ def build_comparison(
         raise ValueError("maximum root-value drift must be non-negative")
     baseline = _load_report(baseline_report_path)
     candidate = _load_report(candidate_report_path)
-    revision = str(baseline["source_revision"])
-    if candidate.get("source_revision") != revision:
-        raise ValueError("source revision mismatch between execution reports")
-    if source_revision is not None and revision != source_revision:
-        raise ValueError("reports do not match the required source revision")
     if baseline.get("seeds") != candidate.get("seeds"):
         raise ValueError("seed mismatch between execution reports")
     seeds = [int(seed) for seed in baseline["seeds"]]
@@ -201,25 +180,23 @@ def build_comparison(
     observed_max_root_value_drift = max(root_value_differences, default=0.0)
     exact_numeric_parity = observed_max_root_value_drift == 0.0
     numeric_parity_within_tolerance = observed_max_root_value_drift <= max_root_value_drift
-    performance_gate_pass = bool(
+    meets_targets = bool(
         policy_parity
         and numeric_parity_within_tolerance
         and wall_speedup is not None
         and wall_speedup >= min_wall_speedup
     )
     inputs = {
-        "baseline_report_sha256": _sha256(baseline_report_path),
-        "candidate_report_sha256": _sha256(candidate_report_path),
-        "baseline_decisions_sha256": _sha256(baseline_decisions_path),
-        "candidate_decisions_sha256": _sha256(candidate_decisions_path),
-        "baseline_games_sha256": _sha256(baseline_games_path),
-        "candidate_games_sha256": _sha256(candidate_games_path),
+        "baseline_report": str(baseline_report_path),
+        "candidate_report": str(candidate_report_path),
+        "baseline_decisions": str(baseline_decisions_path),
+        "candidate_decisions": str(candidate_decisions_path),
+        "baseline_games": str(baseline_games_path),
+        "candidate_games": str(candidate_games_path),
     }
     return {
         "status": "pass",
-        "scientific_eligibility": "engineering_execution_parity_only",
         "ruleset_id": RULESET_ID,
-        "source_revision": revision,
         "seeds": seeds,
         "execution": baseline["execution"],
         "search": _search_without_parallel_rollouts(baseline)
@@ -257,7 +234,7 @@ def build_comparison(
         },
         "minimum_wall_speedup": min_wall_speedup,
         "maximum_root_value_drift": max_root_value_drift,
-        "performance_gate_pass": performance_gate_pass,
+        "meets_targets": meets_targets,
         "inputs": inputs,
     }
 
@@ -268,7 +245,6 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
     lines = [
         "# Gumbel Execution Parity and Performance",
         "",
-        f"- Source revision: `{report['source_revision']}`",
         f"- Seeds: `{len(report['seeds'])}`",
         f"- Decisions compared: `{comparison['decision_count']}`",
         f"- Action differences: `{comparison['action_difference_count']}`",
@@ -280,7 +256,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"- Mean decision: `{timing['baseline_mean_decision_seconds']:.6f}s` -> "
         f"`{timing['candidate_mean_decision_seconds']:.6f}s` "
         f"(`{timing['mean_decision_speedup']:.3f}x`)",
-        f"- Performance gate pass: `{report['performance_gate_pass']}`",
+        f"- Meets requested parity/speed targets: `{report['meets_targets']}`",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

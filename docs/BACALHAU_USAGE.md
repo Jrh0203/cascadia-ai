@@ -72,14 +72,10 @@ Run this before any real campaign:
 PYTHONPATH=python:tools uv run python tools/cluster_fabric_health.py
 ```
 
-Healthy means:
-
-- exactly john1, john2, john3, and john4 are present;
-- every node is connected;
-- every node advertises Docker support;
-- every node runs Bacalhau `v1.9.0`;
-- CPU, memory, and disk match the contract above;
-- john1 registry and MinIO health endpoints respond.
+Healthy means the scheduler is alive, at least one compute node is available,
+observed nodes are connected with Docker support, and the registry/MinIO
+endpoints respond. Extra nodes, changed capacities, and newer Bacalhau versions
+are accepted.
 
 Raw scheduler view:
 
@@ -123,30 +119,27 @@ registry state, as long as storage containers are recreated afterward.
 
 ## Build And Publish Images
 
-Only build research images on john1. Use immutable digests only; mutable tags are
-rejected by the Python API.
+Build from any machine with access to the configured Docker host and registry.
 
 ```bash
 uv run python tools/cluster_build_push.py \
   --context . \
   --dockerfile Dockerfile \
   --name worker-name \
-  --tag descriptive-tag \
-  --receipt artifacts/cluster/images/worker-name-descriptive-tag.json
+  --tag descriptive-tag
 ```
 
-The receipt contains `image_digest`, for example:
+The command prints both a mutable tag and the registry-provided digest:
 
 ```text
 100.110.109.6:5000/cascadia/worker-name@sha256:<64 hex chars>
 ```
 
-Use that digest in every job. Do not submit `:latest` or any mutable tag.
+Either reference is accepted by the Python API.
 
 Research images should include `/usr/local/bin/cascadia-cluster-job` and set it
 as the entrypoint. That wrapper:
 
-- verifies content-addressed inputs before the command runs;
 - materializes model bundles under `/tmp/cascadia-models`;
 - creates a transient `$CASCADIA_SCRATCH_ROOT`;
 - writes `/outputs/manifest.json`;
@@ -156,8 +149,8 @@ as the entrypoint. That wrapper:
 
 ## Preferred Python Submission Path
 
-Use `ClusterClient` for real work. It provides request persistence, immutable
-spec validation, content-addressed inputs, S3Managed results, manifest
+Use `ClusterClient` for real work. It provides request persistence,
+S3Managed results, manifest
 validation, and canonical artifact import.
 
 ```python
@@ -234,8 +227,8 @@ handle.wait(timeout_seconds=3600)
 summary = handle.results()
 ```
 
-Keep `request_id` stable for resumable long runs. Reusing the same request ID
-with the same spec reconnects. Reusing it with a different spec fails closed.
+Keep `request_id` stable when reconnecting to a long run. Use a new request ID
+when you want a separate run.
 
 ## Inputs
 
@@ -281,8 +274,7 @@ After the command exits:
    the configured `artifact_directory`;
 4. worker-local scratch is disposable and must not be used as a source of truth.
 
-The importer rejects traversal, links, undeclared files, size mismatches, and
-checksum mismatches.
+The importer rejects traversal, links, undeclared files, and size mismatches.
 
 ## Resource Requests
 

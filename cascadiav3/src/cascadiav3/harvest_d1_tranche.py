@@ -1,6 +1,6 @@
-"""Harvest the preregistered D1 relabel tranche from a hard-roots census.
+"""Sample a D1 relabel tranche from a hard-roots census.
 
-Implements the frozen sampling design (EXPERIMENT_LOG 2026-07-16 09:00):
+The defaults provide a balanced, deterministic sample:
 
 - eligibility: ``hard == true`` census rows, exact-K1 rows excluded (the
   generation census only emits searched roots, and rows carry an explicit
@@ -9,18 +9,14 @@ Implements the frozen sampling design (EXPERIMENT_LOG 2026-07-16 09:00):
   phase proxy (tile count: late >= 13, mid >= 8, else opening);
 - within each phase, stratification over fixed deciles of the hardness
   ratio (top-two gap / pairwise SE) computed once from the full hard pool,
-  uniform sampling within cells via deterministic salted-hash order;
+  uniform sampling within cells via a stable pseudo-random order;
 - correlation control: at most 12 roots per game in the first pass; a
   deterministic phase-stratified top-up may raise a game's count to at
   most 16 when a phase falls short;
-- sentinel: 1,500 phase-matched non-hard roots, same machinery, disjoint
-  from the tranche, never in any training arm.
+- sentinel: 1,500 phase-matched non-hard roots, sampled by the same machinery.
 
 Outputs probe-roots JSONL masks consumable by the exporter's
-``--probe-roots`` plus a registry JSON recording strata, counts, and the
-exact selection provenance. Everything is a pure function of the census
-file and the frozen constants: rerunning must reproduce byte-identical
-masks (the registry records a content hash for that check).
+``--probe-roots`` plus a compact JSON summary of strata and counts.
 """
 
 from __future__ import annotations
@@ -277,8 +273,6 @@ def harvest(census_path: Path, output_dir: Path) -> dict[str, Any]:
         },
         "tranche": tranche_provenance,
         "sentinel": {**sentinel_provenance, "targets": sentinel_targets},
-        "tranche_mask_sha256": hashlib.sha256(tranche_path.read_bytes()).hexdigest(),
-        "sentinel_mask_sha256": hashlib.sha256(sentinel_path.read_bytes()).hexdigest(),
     }
     registry_path = output_dir / "d1_tranche_registry.json"
     registry_path.write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n")

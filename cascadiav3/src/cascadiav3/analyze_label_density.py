@@ -14,7 +14,7 @@ probe, in the same JSON+Markdown report shape as ``analyze_menu_coverage``:
 2. **V1 falsifier** — for the ACTIVE seat of each record, compares the
    exported ``search_root_value`` against the realized terminal outcome
    ``final_score_vector[active_seat]``. Operationalization of the
-   preregistered continuation bar ("search_root_value must cut value-target
+   reference continuation bar ("search_root_value should cut value-target
    RMSE >= 20% vs the raw outcome at |bias| <= 0.5 points"):
 
    - ``rmse_search_root_value``    = RMSE(outcome_i, search_root_value_i);
@@ -81,7 +81,7 @@ from typing import Any
 
 from .expert_tensor_shards import ExpertTensorShard
 
-# Preregistered Stage 0 continuation bar for V1 (design doc section 5).
+# Reference Stage 0 continuation threshold for V1.
 V1_RMSE_REDUCTION_PCT_REQUIRED = 20.0
 V1_ABS_BIAS_MAX = 0.5
 
@@ -448,7 +448,7 @@ def _v1_falsifier(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "rmse_baseline_global_mean": global_baseline,
         "rmse_reduction_vs_within_phase_baseline_pct": reduction_within,
         "rmse_reduction_vs_global_baseline_pct": reduction_global,
-        "preregistered_bar": {
+        "reference_bar": {
             "rmse_reduction_pct_required": V1_RMSE_REDUCTION_PCT_REQUIRED,
             "abs_bias_max": V1_ABS_BIAS_MAX,
             "rmse_reduction_pct_observed": reduction_within,
@@ -546,7 +546,7 @@ def _fmt(value: Any, spec: str = ".4f") -> str:
 def write_markdown(report: dict[str, Any], path: Path) -> None:
     census = report["density_census"]
     falsifier = report["v1_falsifier"]
-    bar = falsifier["preregistered_bar"]
+    bar = falsifier["reference_bar"]
     hard = report["hard_root_census"]
     adjacency = report["trajectory_adjacency"]
     lines = [
@@ -582,7 +582,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"Bias mean(search_root_value - outcome): "
         f"`{_fmt(falsifier['bias_search_root_value'], '+.4f')}` "
         f"(bar `|bias| <= {bar['abs_bias_max']}`)",
-        f"Preregistered continuation bar: `{'PASS' if bar['passes'] else 'FAIL'}`",
+        f"Reference continuation bar: `{'PASS' if bar['passes'] else 'FAIL'}`",
         "",
         "| phase | records | RMSE(srv) | bias | baseline RMSE |",
         "|---|---|---|---|---|",
@@ -628,8 +628,8 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
             "",
             "Runs are same-game *candidates* by shared backfilled final scores; "
             "score collisions across games can inflate this, so treat it as "
-            "evidence, not proof. The audit is Stage 0 measurement only — it is "
-            "never promotion evidence.",
+            "evidence, not proof. Use this Stage 0 measurement alongside the "
+            "other available model and gameplay results.",
         ]
     )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -670,7 +670,7 @@ def main() -> int:
                     "rmse_reduction_vs_within_phase_baseline_pct"
                 ],
                 "bias_search_root_value": falsifier["bias_search_root_value"],
-                "v1_bar_passes": falsifier["preregistered_bar"]["passes"],
+                "v1_bar_passes": falsifier["reference_bar"]["passes"],
                 "hard_fraction": report["hard_root_census"]["hard_fraction"],
             }
         )

@@ -22,44 +22,8 @@ cleanup_scratch() {
 }
 trap cleanup_scratch EXIT HUP INT TERM
 
-# Bacalhau's S3 ChecksumSHA256 field refers to optional checksum metadata
-# returned by HeadObject, not the raw object's hexadecimal digest. MinIO does
-# not expose that metadata for these uploads, so validate the content-addressed
-# digest inside the container before any user command can observe the input.
-input_checks="${CASCADIA_INPUT_SHA256_JSON:-}"
-if [ -z "$input_checks" ]; then
-  input_checks='{}'
-fi
-python3 - "$input_checks" <<'PY'
-import hashlib
-import json
-import os
-import stat
-import sys
-
-checks = json.loads(sys.argv[1])
-if not isinstance(checks, dict):
-    raise SystemExit("cluster input checksum map is not an object")
-for raw_path, expected in sorted(checks.items()):
-    if not isinstance(raw_path, str) or not raw_path.startswith("/"):
-        raise SystemExit("cluster input checksum path is not absolute")
-    if not isinstance(expected, str) or len(expected) != 64:
-        raise SystemExit("cluster input checksum is malformed")
-    info = os.lstat(raw_path)
-    if not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
-        raise SystemExit(f"cluster input is not a regular file: {raw_path}")
-    digest = hashlib.sha256()
-    with open(raw_path, "rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    if digest.hexdigest() != expected:
-        raise SystemExit(f"cluster input checksum differs: {raw_path}")
-PY
-unset CASCADIA_INPUT_SHA256_JSON
-
 # Bacalhau mounts every S3 object into a distinct directory. Materialize any
-# explicitly declared two-file V3 serving bundles only after each source file
-# has passed the content-addressed checksum gate above.
+# explicitly declared two-file V3 serving bundles.
 model_bundles="${CASCADIA_MODEL_BUNDLES_JSON:-}"
 if [ -z "$model_bundles" ]; then
   model_bundles='{}'

@@ -17,13 +17,15 @@ from cascadia_cluster.models import canonical_sha256, item_specification, reject
 IMAGE = "registry.cascadia/worker@sha256:" + "a" * 64
 
 
-def test_public_models_reject_topology_and_mutable_images() -> None:
-    with pytest.raises(ValidationError, match="immutable"):
-        ContainerSpec("registry.cascadia/worker:latest")
-    with pytest.raises(ValidationError, match="topology"):
-        reject_topology_fields({"jobs": [{"compatible_hosts": ["john2"]}]})
-    with pytest.raises(ValidationError, match="secrets"):
-        ContainerInput("item", environment={"ACCESS_TOKEN": "not-allowed"})
+def test_public_models_accept_mutable_images_topology_and_credentials() -> None:
+    assert ContainerSpec("registry.cascadia/worker:latest").image.endswith(":latest")
+    reject_topology_fields({"jobs": [{"compatible_hosts": ["john2"]}]})
+    assert (
+        ContainerInput("item", environment={"ACCESS_TOKEN": "allowed"}).environment[
+            "ACCESS_TOKEN"
+        ]
+        == "allowed"
+    )
 
 
 def test_specification_hash_is_stable_and_sensitive_to_scientific_inputs() -> None:
@@ -87,10 +89,11 @@ def test_resources_and_timeouts_fail_closed() -> None:
         )
 
 
-def test_retry_policy_is_bounded_and_does_not_retry_deterministic_errors() -> None:
+def test_retry_policy_is_configurable_and_does_not_retry_deterministic_errors() -> None:
     policy = RetryPolicy(maximum_attempts=3, retryable_exit_codes=(137,))
-    with pytest.raises(ValidationError, match="Cascadia's contract"):
-        RetryPolicy(maximum_attempts=2)
+    assert RetryPolicy(maximum_attempts=2).maximum_attempts == 2
+    with pytest.raises(ValidationError, match="positive"):
+        RetryPolicy(maximum_attempts=0)
     assert not policy.should_retry(attempt=1, exit_code=2)
     assert policy.should_retry(attempt=1, exit_code=137)
     assert policy.should_retry(attempt=2, exit_code=None, infrastructure_failure=True)

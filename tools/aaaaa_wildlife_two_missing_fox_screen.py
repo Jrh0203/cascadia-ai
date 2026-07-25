@@ -4,17 +4,12 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import time
 from pathlib import Path
 from typing import Any
 
 from tools import aaaaa_wildlife_two_missing_fox_bound as bound
-
-
-def file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def run(*, workers: int, per_case_time_limit: float) -> dict[str, Any]:
@@ -33,8 +28,6 @@ def run(*, workers: int, per_case_time_limit: float) -> dict[str, Any]:
             f"status={result['status']} upper={result['upper_bound']}",
             flush=True,
         )
-    source = Path(__file__).resolve()
-    bound_source = Path(bound.__file__).resolve()
     return {
         "schema": "aaaaa-two-missing-fox-screen-v1",
         "proof_complete": all(row["bound"]["status"] == "INFEASIBLE" for row in results),
@@ -44,8 +37,6 @@ def run(*, workers: int, per_case_time_limit: float) -> dict[str, Any]:
             "per_submodel_time_limit_seconds": per_case_time_limit,
             "cases_sequential": True,
         },
-        "source_sha256": file_sha256(source),
-        "bound_source_sha256": file_sha256(bound_source),
         "results": results,
         "elapsed_seconds": time.monotonic() - started,
     }

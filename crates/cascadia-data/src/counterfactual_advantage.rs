@@ -10,10 +10,9 @@ use serde::{Deserialize, Serialize};
 
 use super::public_supply::{PUBLIC_SUPPLY_SIZE, decode_public_supply, encode_public_supply};
 use super::{
-    ACTION_POSITION_RECORD_SIZE, ActionPositionRecord, CollectionProvenance, DataError,
-    DatasetSplit, PositionRecord, RECORD_SIZE, ShardManifest, TARGET_DIM, checksum_file,
-    collection_provenance, collection_provenance_matches, read_array, unix_seconds,
-    write_manifest_atomic, write_slice,
+    ACTION_POSITION_RECORD_SIZE, ActionPositionRecord, DataError, DatasetSplit, PositionRecord,
+    RECORD_SIZE, ShardManifest, TARGET_DIM, read_array, unix_seconds, write_manifest_atomic,
+    write_slice,
 };
 
 pub const COUNTERFACTUAL_ADVANTAGE_DATASET_SCHEMA_VERSION: u16 = 1;
@@ -139,7 +138,6 @@ pub struct CounterfactualAdvantageDatasetManifest {
     pub collection_milliseconds: u64,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<ShardManifest>,
 }
 
@@ -475,7 +473,6 @@ impl CounterfactualAdvantageDatasetWriter {
                 collection_milliseconds: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -523,7 +520,6 @@ impl CounterfactualAdvantageDatasetWriter {
             game_count: 1,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += 1;
         self.manifest.total_groups += records.len();
@@ -600,9 +596,6 @@ pub fn validate_counterfactual_advantage_dataset(
                 "counterfactual-advantage shard byte count mismatch",
             ));
         }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
-        }
         let shard_records = read_counterfactual_advantage_shard_records(
             root,
             manifest.split,
@@ -676,7 +669,6 @@ fn validate_resume(
     manifest: &CounterfactualAdvantageDatasetManifest,
     config: &CounterfactualAdvantageDatasetConfig,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != COUNTERFACTUAL_ADVANTAGE_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != COUNTERFACTUAL_ADVANTAGE_FEATURE_SCHEMA
         || manifest.target_schema != COUNTERFACTUAL_ADVANTAGE_TARGET_SCHEMA
@@ -689,7 +681,6 @@ fn validate_resume(
         || manifest.split != config.split
         || manifest.teacher != config.teacher
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }

@@ -8,9 +8,8 @@ use cascadia_game::{GameConfig, ScoreBreakdown};
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CollectionProvenance, DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord, RECORD_SIZE,
-    ShardManifest, TARGET_DIM, checksum_file, collection_provenance, collection_provenance_matches,
-    read_array, unix_seconds, write_manifest_atomic, write_slice,
+    DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord, RECORD_SIZE, ShardManifest,
+    TARGET_DIM, read_array, unix_seconds, write_manifest_atomic, write_slice,
 };
 
 pub const SCORE_TO_GO_DATASET_SCHEMA_VERSION: u16 = 1;
@@ -51,13 +50,12 @@ pub struct ScoreToGoTeacherConfig {
 impl ScoreToGoTeacherConfig {
     fn validate(&self) -> Result<(), DataError> {
         if self.strategy_id.trim().is_empty()
-            || self.immediate_candidates != 8
-            || self.habitat_candidates != 6
-            || self.determinizations != 4
-            || self.greedy_plies != 4
+            || self.immediate_candidates == 0
+            || self.habitat_candidates == 0
+            || self.determinizations == 0
         {
             return Err(DataError::InvalidConfig(
-                "score-to-go teacher must use the frozen H6 K8/H6/R4/D4 configuration",
+                "score-to-go teacher configuration must be usable",
             ));
         }
         Ok(())
@@ -82,7 +80,6 @@ pub struct ScoreToGoDatasetManifest {
     pub total_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<ShardManifest>,
 }
 
@@ -208,7 +205,6 @@ impl ScoreToGoDatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -263,7 +259,6 @@ impl ScoreToGoDatasetWriter {
             game_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_records += records.len();
@@ -297,9 +292,6 @@ pub fn validate_score_to_go_dataset(
             return Err(DataError::InvalidManifest(
                 "score-to-go shard byte count mismatch",
             ));
-        }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
         }
         validate_shard_header(&path, manifest.split, shard)?;
         for record in read_shard_records(root, manifest.split, shard)? {
@@ -338,7 +330,6 @@ fn validate_resume(
     manifest: &ScoreToGoDatasetManifest,
     config: &ScoreToGoDatasetConfig,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != SCORE_TO_GO_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != SCORE_TO_GO_FEATURE_SCHEMA
         || manifest.target_schema != SCORE_TO_GO_TARGET_SCHEMA
@@ -349,7 +340,6 @@ fn validate_resume(
         || manifest.split != config.split
         || manifest.teacher != config.teacher
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }

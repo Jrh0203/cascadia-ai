@@ -1,4 +1,4 @@
-"""Contract tests for the worlds-allocation (search-shape) comparator."""
+"""Tests for the direct strength comparator."""
 
 import json
 import unittest
@@ -7,24 +7,13 @@ from tempfile import TemporaryDirectory
 
 from cascadiav3.compare_search_shape import build_comparison
 
-RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
-SEEDS = [31, 32, 33]
 
-
-def make_report(worlds: int, seed_scores: dict[int, float], revision="rev1") -> dict:
-    return {
+def make_report(seed_scores: dict[int, float], **extra: object) -> dict:
+    report = {
         "status": "pass",
-        "ruleset_id": RULES,
-        "control": {"kind": "none"},
-        "source_revision": revision,
         "seeds": list(seed_scores),
-        "search": {
-            "n_simulations": 256,
-            "determinizations": worlds,
-            "exact_endgame_turns": 1,
-            "market_decision_samples": 8,
-        },
-        "manifest": "checkpoints/x/best_locked_val.manifest.json",
+        "search": {"determinizations": 4},
+        "manifest": "checkpoints/model.manifest.json",
         "candidate_per_seed": [
             {"seed": seed, "mean_score_per_seat": score}
             for seed, score in seed_scores.items()
@@ -37,124 +26,57 @@ def make_report(worlds: int, seed_scores: dict[int, float], revision="rev1") -> 
         },
         "candidate_wall_seconds": 100.0,
     }
+    report.update(extra)
+    return report
 
 
-def write(tmp: str, name: str, payload: dict) -> Path:
-    path = Path(tmp) / name
+def write(root: str, name: str, payload: dict) -> Path:
+    path = Path(root) / name
     path.write_text(json.dumps(payload), encoding="utf-8")
     return path
 
 
 class CompareSearchShapeTest(unittest.TestCase):
-    def test_manifest_varied_key_compares_two_models(self) -> None:
-        with TemporaryDirectory() as tmp:
-            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
-            cand_payload = make_report(4, {31: 97.5, 32: 97.25, 33: 97.75})
-            cand_payload["manifest"] = "checkpoints/d1/best_locked_val.manifest.json"
-            baseline = write(tmp, "b.json", base_payload)
-            candidate = write(tmp, "c.json", cand_payload)
-            report = build_comparison(baseline, candidate, varied_keys=("manifest",))
-            self.assertEqual(report["paired_delta_stats"]["mean"], 0.5)
-
-    def test_manifest_varied_key_refuses_identical_models(self) -> None:
-        with TemporaryDirectory() as tmp:
-            baseline = write(tmp, "b.json", make_report(4, {s: 97.0 for s in SEEDS}))
+    def test_compares_common_seeds_without_identity_gates(self) -> None:
+        with TemporaryDirectory() as root:
+            baseline = write(
+                root,
+                "baseline.json",
+                make_report({1: 90.0, 2: 92.0}, source_revision="old"),
+            )
             candidate = write(
-                tmp, "c.json", make_report(4, {31: 97.5, 32: 97.25, 33: 97.75})
+                root,
+                "candidate.json",
+                make_report(
+                    {2: 93.0, 3: 99.0},
+                    source_revision="new",
+                    ruleset_id="anything",
+                    manifest="another-model.json",
+                ),
             )
-            with self.assertRaisesRegex(ValueError, "same model"):
-                build_comparison(baseline, candidate, varied_keys=("manifest",))
+            result = build_comparison(baseline, candidate)
+        self.assertEqual(result["matched_seeds"], [2])
+        self.assertEqual(result["paired_delta_stats"]["mean"], 1.0)
+        self.assertEqual(result["assessment"], "uncertain")
 
-    def test_manifest_varied_key_still_refuses_search_deltas(self) -> None:
-        with TemporaryDirectory() as tmp:
-            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
-            cand_payload = make_report(8, {31: 97.5, 32: 97.25, 33: 97.75})
-            cand_payload["manifest"] = "checkpoints/d1/best_locked_val.manifest.json"
-            baseline = write(tmp, "b.json", base_payload)
-            candidate = write(tmp, "c.json", cand_payload)
-            with self.assertRaisesRegex(ValueError, "search settings differ"):
-                build_comparison(baseline, candidate, varied_keys=("manifest",))
-
-    def test_happy_path_reports_paired_verdict(self) -> None:
-        with TemporaryDirectory() as tmp:
-            baseline = write(tmp, "b.json", make_report(4, {s: 97.0 for s in SEEDS}))
+    def test_reports_candidate_ahead_when_interval_is_positive(self) -> None:
+        with TemporaryDirectory() as root:
+            baseline = write(
+                root, "baseline.json", make_report({seed: 90.0 for seed in range(8)})
+            )
             candidate = write(
-                tmp, "c.json", make_report(8, {31: 97.5, 32: 97.25, 33: 97.75})
+                root, "candidate.json", make_report({seed: 91.0 for seed in range(8)})
             )
-            report = build_comparison(baseline, candidate)
-            self.assertEqual(report["paired_delta_stats"]["mean"], 0.5)
-            self.assertEqual(report["search"]["baseline_determinizations"], 4)
-            self.assertEqual(report["search"]["candidate_determinizations"], 8)
-            # 3 seeds is not promotion scale: never proceed automatically.
-            self.assertFalse(report["proceed_to_high_budget"])
+            result = build_comparison(baseline, candidate)
+        self.assertEqual(result["assessment"], "candidate_ahead")
+        self.assertEqual(result["paired_delta_stats"]["mean"], 1.0)
 
-    def test_identical_world_counts_are_refused(self) -> None:
-        with TemporaryDirectory() as tmp:
-            baseline = write(tmp, "b.json", make_report(4, {s: 97.0 for s in SEEDS}))
-            candidate = write(tmp, "c.json", make_report(4, {s: 97.5 for s in SEEDS}))
-            with self.assertRaisesRegex(ValueError, "distinct positive world counts"):
+    def test_requires_at_least_one_common_score(self) -> None:
+        with TemporaryDirectory() as root:
+            baseline = write(root, "baseline.json", make_report({1: 90.0}))
+            candidate = write(root, "candidate.json", make_report({2: 91.0}))
+            with self.assertRaisesRegex(ValueError, "no scored seeds in common"):
                 build_comparison(baseline, candidate)
-
-    def test_other_search_deltas_are_refused(self) -> None:
-        with TemporaryDirectory() as tmp:
-            baseline = write(tmp, "b.json", make_report(4, {s: 97.0 for s in SEEDS}))
-            payload = make_report(8, {s: 97.5 for s in SEEDS})
-            payload["search"]["market_decision_samples"] = 4
-            candidate = write(tmp, "c.json", payload)
-            with self.assertRaisesRegex(ValueError, "differ beyond determinizations"):
-                build_comparison(baseline, candidate)
-
-    def test_revision_mismatch_is_refused(self) -> None:
-        with TemporaryDirectory() as tmp:
-            baseline = write(tmp, "b.json", make_report(4, {s: 97.0 for s in SEEDS}))
-            candidate = write(
-                tmp, "c.json", make_report(8, {s: 97.5 for s in SEEDS}, revision="rev2")
-            )
-            with self.assertRaisesRegex(ValueError, "one non-empty source revision"):
-                build_comparison(baseline, candidate)
-
-    def test_custom_varied_keys_compare_sigma_arms(self) -> None:
-        with TemporaryDirectory() as tmp:
-            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
-            base_payload["search"]["c_scale"] = 1.0
-            base_payload["search"]["sigma_norm"] = "minmax"
-            cand_payload = make_report(4, {31: 97.5, 32: 97.25, 33: 97.75})
-            cand_payload["search"]["c_scale"] = 0.1
-            cand_payload["search"]["sigma_norm"] = "topk:8"
-            baseline = write(tmp, "b.json", base_payload)
-            candidate = write(tmp, "c.json", cand_payload)
-            report = build_comparison(
-                baseline, candidate, varied_keys=("c_scale", "sigma_norm")
-            )
-            self.assertEqual(report["paired_delta_stats"]["mean"], 0.5)
-            self.assertEqual(report["varied_keys"], ["c_scale", "sigma_norm"])
-            self.assertEqual(report["search"]["baseline_c_scale"], 1.0)
-            self.assertEqual(report["search"]["candidate_c_scale"], 0.1)
-            self.assertEqual(report["search"]["candidate_sigma_norm"], "topk:8")
-            # determinizations must now MATCH (it is not a varied key here).
-            self.assertEqual(report["search"]["determinizations"], 4)
-
-    def test_custom_varied_keys_refuse_identical_arms(self) -> None:
-        with TemporaryDirectory() as tmp:
-            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
-            base_payload["search"]["c_scale"] = 1.0
-            cand_payload = make_report(4, {s: 97.5 for s in SEEDS})
-            cand_payload["search"]["c_scale"] = 1.0
-            baseline = write(tmp, "b.json", base_payload)
-            candidate = write(tmp, "c.json", cand_payload)
-            with self.assertRaisesRegex(ValueError, "identical across the varied keys"):
-                build_comparison(baseline, candidate, varied_keys=("c_scale",))
-
-    def test_custom_varied_keys_still_refuse_other_deltas(self) -> None:
-        with TemporaryDirectory() as tmp:
-            base_payload = make_report(4, {s: 97.0 for s in SEEDS})
-            base_payload["search"]["c_scale"] = 1.0
-            cand_payload = make_report(8, {s: 97.5 for s in SEEDS})
-            cand_payload["search"]["c_scale"] = 0.1
-            baseline = write(tmp, "b.json", base_payload)
-            candidate = write(tmp, "c.json", cand_payload)
-            with self.assertRaisesRegex(ValueError, "differ beyond c_scale"):
-                build_comparison(baseline, candidate, varied_keys=("c_scale",))
 
 
 if __name__ == "__main__":

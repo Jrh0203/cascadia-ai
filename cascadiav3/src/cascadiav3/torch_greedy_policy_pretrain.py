@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import random
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -233,7 +232,6 @@ def make_greedy_policy_loader(
 
 
 def _policy_loss(outputs: dict[str, Any], batch: dict[str, Any]):  # type: ignore[no-untyped-def]
-    import torch
     import torch.nn.functional as F
 
     logits = outputs["logits"].masked_fill(~batch["action_mask"], -1.0e9)
@@ -397,7 +395,6 @@ def run_greedy_policy_pretrain(
     )
     return {
         "status": "pass",
-        "scientific_eligibility": "behavior_clone_pretraining",
         "experiment_id": experiment_id,
         "seed": seed,
         "steps": steps,

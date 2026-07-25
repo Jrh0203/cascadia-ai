@@ -233,7 +233,6 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "cascadia-game",
- "cascadia-provenance",
  "cascadia-sim",
  "rayon",
  "serde",
@@ -275,14 +274,6 @@ version = "0.1.0"
 dependencies = [
  "cascadia-data",
  "thiserror",
-]
-
-[[package]]
-name = "cascadia-provenance"
-version = "0.1.0"
-dependencies = [
- "blake3",
- "serde",
 ]
 
 [[package]]

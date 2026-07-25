@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
@@ -17,9 +16,8 @@ TASKSET_SCHEMA = "all-wildlife-near-complete-taskset-v1"
 SPECIES_INDEX = {species: index for index, species in enumerate(rules.SPECIES)}
 
 
-def _read(path: Path) -> tuple[dict[str, Any], str]:
-    encoded = path.read_bytes()
-    return json.loads(encoded), hashlib.sha256(encoded).hexdigest()
+def _read(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text())
 
 
 def _validate_candidate(
@@ -38,6 +36,12 @@ def _validate_candidate(
         counts[SPECIES_INDEX[token["wildlife"]]] += 1
     if counts != row.get("counts"):
         raise ValueError(f"candidate count mismatch at index {index}")
+    occupied = {
+        (int(token["q"]), int(token["r"]))
+        for token in row["tokens"]
+    }
+    if len(occupied) != rules.TOKEN_COUNT or len(rules.components(occupied)) != 1:
+        raise ValueError(f"candidate board is disconnected at index {index}")
 
 
 def build_taskset(
@@ -51,9 +55,12 @@ def build_taskset(
     if minimum_branches < 1 or maximum_branches < minimum_branches:
         raise ValueError("branch limits must satisfy 1 <= minimum <= maximum")
 
-    catalog, catalog_sha = _read(catalog_path)
-    candidate, candidate_sha = _read(candidate_path)
-    if catalog.get("schema") != "all-wildlife-optimal-catalog-v1":
+    catalog = _read(catalog_path)
+    candidate = _read(candidate_path)
+    if catalog.get("schema") not in {
+        "all-wildlife-optimal-catalog-v1",
+        "all-wildlife-optimal-catalog-v2",
+    }:
         raise ValueError("unexpected catalog schema")
     if candidate.get("schema") != "all-wildlife-merged-candidates-v1":
         raise ValueError("unexpected candidate schema")
@@ -64,9 +71,8 @@ def build_taskset(
         raise ValueError("catalog/candidate row-count mismatch")
 
     comparison = None
-    comparison_sha = None
     if comparison_candidate_path is not None:
-        comparison, comparison_sha = _read(comparison_candidate_path)
+        comparison = _read(comparison_candidate_path)
         if comparison.get("schema") != "all-wildlife-merged-candidates-v1":
             raise ValueError("unexpected comparison-candidate schema")
         if len(comparison.get("candidates", [])) != len(candidates):
@@ -87,13 +93,16 @@ def build_taskset(
         incumbent = int(result["optimum"])
         base_row = candidates[index]
         _validate_candidate(base_row, index=index, ruleset=ruleset)
-        if int(base_row["score"]) != incumbent:
-            raise ValueError(f"candidate/incumbent mismatch at index {index}")
+        incumbent = max(incumbent, int(base_row["score"]))
         if comparison is not None:
             comparison_row = comparison["candidates"][index]
             _validate_candidate(comparison_row, index=index, ruleset=ruleset)
-            if comparison_row["tokens"] != base_row["tokens"]:
-                raise ValueError(f"candidate board mismatch at index {index}")
+            incumbent = max(incumbent, int(comparison_row["score"]))
+        unresolved = [
+            counts
+            for counts in unresolved
+            if rules.count_upper(tuple(counts), ruleset) > incumbent
+        ]
         for counts in unresolved:
             if len(counts) != 5 or sum(counts) != 20 or max(counts) > 6:
                 raise ValueError(f"invalid count vector at index {index}: {counts}")
@@ -110,9 +119,7 @@ def build_taskset(
     payload: dict[str, Any] = {
         "schema": TASKSET_SCHEMA,
         "source_catalog": str(catalog_path),
-        "source_catalog_sha256": catalog_sha,
         "candidate_catalog": str(candidate_path),
-        "candidate_sha256": candidate_sha,
         "minimum_unresolved_branches": minimum_branches,
         "maximum_unresolved_branches": maximum_branches,
         "selection_rule": (
@@ -125,10 +132,7 @@ def build_taskset(
     }
     if comparison_candidate_path is not None:
         payload["comparison_candidate_catalog"] = str(comparison_candidate_path)
-        payload["comparison_candidate_sha256"] = comparison_sha
-        payload["selection_rule"] += (
-            " Every selected board is byte-identical in the comparison catalog."
-        )
+        payload["selection_rule"] += " Stronger comparison incumbents are used when present."
     return payload
 
 

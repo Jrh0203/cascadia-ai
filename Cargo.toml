@@ -6,7 +6,6 @@ members = [
     "crates/cascadia-data",
     "crates/cascadia-model",
     "crates/cascadia-search",
-    "crates/cascadia-provenance",
     "crates/cascadia-api",
 ]
 exclude = [

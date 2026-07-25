@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -15,7 +14,7 @@ from tools.test_all_wildlife_rules import random_connected_board
 DEFAULT_SEEDS = (101, 202, 303, 404)
 
 
-def verify(oracle: Path, seeds: tuple[int, ...]) -> dict[str, int | str]:
+def verify(oracle: Path, seeds: tuple[int, ...]) -> dict[str, int | bool]:
     boards = [random_connected_board(seed) for seed in seeds]
     requests = [
         {"ruleset": ruleset, "tokens": board}
@@ -43,12 +42,11 @@ def verify(oracle: Path, seeds: tuple[int, ...]) -> dict[str, int | str]:
             raise AssertionError(
                 f"{request['ruleset']} mismatch: independent={expected}, production={actual}"
             )
-    canonical = json.dumps(responses, sort_keys=True, separators=(",", ":"))
     return {
         "boards": len(boards),
         "rulesets": len(all_wildlife_rules.rulesets()),
         "cases": len(requests),
-        "sha256": hashlib.sha256(canonical.encode()).hexdigest(),
+        "verified": True,
     }
 
 

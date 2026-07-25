@@ -2,16 +2,16 @@
 
 Reads a mega-budget relabel bank (the `--puzzle-bank` exporter mode with
 repeats >= 2 on a serving decision ledger) and measures how often the
-mega-budget label disagrees with the serving-time choice. The preregistered
-kill test (EXPERIMENT_LOG 2026-07-14) is evaluated on the repeat-STABLE
+mega-budget label disagrees with the serving-time choice. The reference
+threshold is evaluated on the repeat-STABLE
 stratum only — roots where every mega repeat picked the same argmax — so a
 "moved" label is a stable relabel, not mega-search noise. Repeat-unstable
 roots are reported separately as the noise-flippable census D1 would target.
 
 Bar: stable-stratum movement rate >= 0.20 keeps D1 funded. Guard: if the bar
 passes but the mean mega-regret of moved stable roots is < 0.05 points, the
-movement is near-tie churn and the report flags it; both numbers are part of
-the preregistered verdict, and neither is promotion evidence.
+movement is near-tie churn and the report flags it. These are descriptive
+thresholds, not workflow gates.
 """
 
 from __future__ import annotations
@@ -145,7 +145,7 @@ def analyze(bank_dir: Path) -> dict[str, Any]:
             phase: _summarize([row for row in stable if row["phase"] == phase])
             for phase in ("opening", "mid", "late")
         },
-        "preregistered_bar": {
+        "reference_bar": {
             "description": (
                 "stable-stratum movement rate >= 0.20 keeps D1 funded; "
                 "guard flags near-tie churn when mean moved regret < 0.05"
@@ -161,7 +161,7 @@ def analyze(bank_dir: Path) -> dict[str, Any]:
 
 
 def write_markdown(report: dict[str, Any], path: Path) -> None:
-    bar = report["preregistered_bar"]
+    bar = report["reference_bar"]
     stable = report["stable"]
     lines = [
         "# D1 Label-Movement Pilot",
@@ -198,8 +198,8 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         )
     lines += [
         "",
-        "Pilot measurement only — never promotion evidence; the funding "
-        "decision applies the preregistered bar above.",
+        "Use this pilot measurement as one input when deciding whether more "
+        "relabeling work is worthwhile.",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -221,11 +221,11 @@ def main() -> int:
             {
                 "roots": report["roots"],
                 "unstable_fraction": report["unstable_fraction"],
-                "stable_movement_rate": report["preregistered_bar"][
+                "stable_movement_rate": report["reference_bar"][
                     "stable_movement_rate"
                 ],
-                "bar_pass": report["preregistered_bar"]["bar_pass"],
-                "near_tie_churn_flag": report["preregistered_bar"][
+                "bar_pass": report["reference_bar"]["bar_pass"],
+                "near_tie_churn_flag": report["reference_bar"][
                     "near_tie_churn_flag"
                 ],
             },

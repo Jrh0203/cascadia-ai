@@ -1,5 +1,8 @@
 # Cascadia Rival implementation execution plan
 
+> Historical plan. Its provenance crate, receipts, fixed gates, seed controls,
+> and campaign procedures have been removed from the active repository.
+
 **Date:** 2026-07-16
 
 **Parent proposal:**

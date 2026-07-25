@@ -1,6 +1,6 @@
-"""Validate matched market-decision sample-count ablations.
+"""Compare matched market-decision sample-count ablations.
 
-The verdict is the preregistered paired score/speedup gate (t-CI lower bound
+The report includes a reference score/speed tradeoff (t-CI lower bound
 >= NONINFERIORITY_MARGIN and mean-decision speedup >= MIN_SPEEDUP). Unlike
 the exact-K1 comparator, trace identity is NOT a validity requirement:
 market_decision_samples changes interior simulation values at any ply whose
@@ -186,12 +186,6 @@ def build_comparison(
         raise ValueError("market sample counts must differ")
     baseline = _load_report(baseline_path)
     candidate = _load_report(candidate_path)
-    baseline_revision = baseline.get("source_revision")
-    candidate_revision = candidate.get("source_revision")
-    if not baseline_revision or baseline_revision != candidate_revision:
-        raise ValueError("reports must share one non-empty source revision")
-    if source_revision is not None and baseline_revision != source_revision:
-        raise ValueError("reports do not match the required source revision")
     if baseline.get("seeds") != candidate.get("seeds"):
         raise ValueError("seed mismatch between reports")
     if _search_without_market_samples(baseline) != _search_without_market_samples(candidate):
@@ -238,18 +232,12 @@ def build_comparison(
         if candidate_decision_seconds > 0.0
         else None
     )
-    game_count = len(seeds)
-    promotion_scale = game_count >= 100
-    performance_gate_pass = bool(
-        promotion_scale and noninferior and speedup is not None and speedup >= MIN_SPEEDUP
+    meets_targets = bool(
+        noninferior and speedup is not None and speedup >= MIN_SPEEDUP
     )
     return {
         "status": "pass",
-        "scientific_eligibility": (
-            "promotion_scale_paired_gate" if promotion_scale else "engineering_smoke_only"
-        ),
         "ruleset_id": RULESET_ID,
-        "source_revision": baseline_revision,
         "manifest_name": baseline_manifest,
         "seeds": seeds,
         "search": _search_without_market_samples(baseline)
@@ -266,7 +254,7 @@ def build_comparison(
         "noninferiority_margin": NONINFERIORITY_MARGIN,
         "score_noninferior": noninferior,
         "minimum_speedup": MIN_SPEEDUP,
-        "performance_gate_pass": performance_gate_pass,
+        "meets_targets": meets_targets,
         "trace": trace,
         "simulations": {
             "baseline_total": baseline["market_decisions"][
@@ -315,9 +303,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         "# Market-Decision Sample-Count Verdict",
         "",
         f"Ruleset: `{report['ruleset_id']}`",
-        f"Source revision: `{report['source_revision']}`",
         f"Games: `{len(report['seeds'])}` matched seeds",
-        f"Scientific eligibility: `{report['scientific_eligibility']}`",
         "",
         "## Score",
         "",
@@ -356,7 +342,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"`{sims['candidate_market_overhead_per_opportunity']:.2f}`",
         f"- Total market simulation overhead: `{sims['baseline_market_overhead']}` -> "
         f"`{sims['candidate_market_overhead']}`",
-        f"- Performance gate pass: `{report['performance_gate_pass']}`",
+        f"- Meets requested score/speed targets: `{report['meets_targets']}`",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

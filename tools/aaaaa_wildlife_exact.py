@@ -12,7 +12,6 @@ the incumbent is declared optimal.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 import sys
@@ -181,22 +180,9 @@ def add_optimum_to_complete_proof(payload: dict[str, object]) -> None:
     payload["optimal_configuration_ascii"] = render_tokens(KNOWN_INCUMBENT_TOKENS)
 
 
-def add_provenance(payload: dict[str, object]) -> None:
-    model_source = Path(__file__).resolve()
-    production_verifier = (
-        model_source.parents[1]
-        / "crates"
-        / "cascadia-game"
-        / "src"
-        / "bin"
-        / "aaaaa_wildlife_solver.rs"
-    )
+def add_run_metadata(payload: dict[str, object]) -> None:
     payload["model"] = "labeled-token-cp-sat-v2"
     payload["ortools_version"] = ORTOOLS_VERSION
-    payload["model_source_sha256"] = hashlib.sha256(model_source.read_bytes()).hexdigest()
-    payload["production_verifier_sha256"] = hashlib.sha256(
-        production_verifier.read_bytes()
-    ).hexdigest()
     payload["assumptions"] = {
         "occupied_connected_hexes": TOKEN_COUNT,
         "maximum_per_species": COUNT_CAP,
@@ -615,7 +601,7 @@ def solve(args: argparse.Namespace) -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
 
     def write_payload(payload: dict[str, object]) -> None:
-        add_provenance(payload)
+        add_run_metadata(payload)
         temporary = output.with_suffix(output.suffix + ".tmp")
         temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         temporary.replace(output)

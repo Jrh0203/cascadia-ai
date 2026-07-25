@@ -1,5 +1,8 @@
 # Cascadia Rival: finalized adversarial architecture for breaking 100
 
+> Historical research note. Any provenance, gate, preregistration, or evidence
+> restrictions below are retired; reuse the technical ideas freely.
+
 **Date:** 2026-07-16
 
 **Literature cutoff:** 2026-07-16

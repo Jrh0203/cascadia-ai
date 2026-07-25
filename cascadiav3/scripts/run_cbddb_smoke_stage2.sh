@@ -12,7 +12,6 @@ set -euo pipefail
 # Heartbeat markers ([cbddb-s2] ...) drive the session monitor.
 
 ROOT="${ROOT:-/home/john0/cascadia}"
-SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION to the deployed Git revision}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 JOBS="${JOBS:-12}"
@@ -47,7 +46,7 @@ hb(){ echo "[$(date "+%F %T")] [cbddb-s2] $*"; }
 grep -q 'rules_2026_07_19' cascadiav3/real-root-exporter/src/main.rs
 test -s "$INCUMBENT"
 
-hb "start source_revision=$SOURCE_REVISION ruleset=$RULESET_ID"
+hb "start ruleset=$RULESET_ID"
 
 cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 
@@ -73,7 +72,6 @@ gen_corpus() {
     --gumbel-n-simulations 256 --gumbel-top-m 16 --gumbel-depth-rounds 1 \
     --gumbel-determinizations 4 --gumbel-market-decision-samples 8 \
     --gumbel-exact-endgame-turns 0 --gumbel-blend-weight 0.5 --k-interior 16 \
-    --source-revision "$SOURCE_REVISION" \
     --first-seed "$first" --seed-count "$count" --plies-per-seed 80 \
     --max-actions 8 --rollouts-per-action 1 --rollout-top-k 4 \
     --tensor-compression stored \
@@ -118,7 +116,7 @@ test -s "$FT_MANIFEST"
 
 report_matches() {
   local report="$1"
-  [ -s "$report" ] && "$PYTHON" - "$report" "$RULESET_ID" "$SOURCE_REVISION" <<'PY'
+  [ -s "$report" ] && "$PYTHON" - "$report" "$RULESET_ID" <<'PY'
 import json
 import sys
 
@@ -127,7 +125,6 @@ raise SystemExit(
     0
     if report.get("status") == "pass"
     and report.get("ruleset_id") == sys.argv[2]
-    and report.get("source_revision") == sys.argv[3]
     else 1
 )
 PY
@@ -159,7 +156,6 @@ run_eval() {
     --k-interior 16 \
     --control none \
     --model-timeout-ms 300000 \
-    --source-revision "$SOURCE_REVISION" \
     --experiment-id "cbddb_smoke_s2_${tag}" \
     --out "$report" \
     --decisions-out "$REPORT_DIR/cbddb_smoke_s2_${tag}_decisions.jsonl" \

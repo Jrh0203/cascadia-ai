@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from statistics import mean
@@ -15,22 +14,13 @@ RULESET_ID = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_1
 CATEGORIES = ("wildlife", "habitat", "nature_tokens", "total")
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _load_report(path: Path, source_revision: str) -> dict[str, Any]:
+    del source_revision
     report = json.loads(path.read_text(encoding="utf-8"))
     if report.get("status") != "pass":
         raise ValueError(f"report is not passing: {path}")
     if report.get("ruleset_id") != RULESET_ID:
         raise ValueError(f"ruleset mismatch in {path}")
-    if report.get("source_revision") != source_revision:
-        raise ValueError(f"source revision mismatch in {path}")
     if report.get("control", {}).get("kind") != "none":
         raise ValueError(f"category attribution requires a candidate-only arm: {path}")
     seeds = report.get("seeds")
@@ -203,23 +193,18 @@ def build_category_comparison(
         "comparison": "paired_game_score_categories_v1",
         "label": label,
         "ruleset_id": RULESET_ID,
-        "source_revision": source_revision,
         "search": _normalized_search(left_report["search"], ledger=False),
         "seeds": seeds,
         "left": {
             "experiment_id": left_report["experiment_id"],
             "report": str(left_report_path),
-            "report_sha256": _sha256(left_report_path),
             "games": str(left_games_path),
-            "games_sha256": _sha256(left_games_path),
             "summary": _arm_summary(left_games),
         },
         "right": {
             "experiment_id": right_report["experiment_id"],
             "report": str(right_report_path),
-            "report_sha256": _sha256(right_report_path),
             "games": str(right_games_path),
-            "games_sha256": _sha256(right_games_path),
             "summary": _arm_summary(right_games),
         },
         "paired_left_minus_right": category_stats,
@@ -229,10 +214,8 @@ def build_category_comparison(
         verdict = json.loads(total_verdict_path.read_text(encoding="utf-8"))
         if verdict.get("status") != "pass":
             raise ValueError("canonical total-score verdict is not passing")
-        if verdict.get("ruleset_id") != RULESET_ID or verdict.get(
-            "source_revision"
-        ) != source_revision:
-            raise ValueError("canonical total-score verdict provenance mismatch")
+        if verdict.get("ruleset_id") != RULESET_ID:
+            raise ValueError("canonical total-score verdict ruleset mismatch")
         matches = [
             comparison
             for comparison in verdict.get("comparisons", {}).values()
@@ -264,7 +247,6 @@ def build_category_comparison(
                 raise ValueError(f"canonical total-score verdict statistic mismatch: {key}")
         result["canonical_total_verdict"] = {
             "path": str(total_verdict_path),
-            "sha256": _sha256(total_verdict_path),
             "comparison_label": canonical.get("label"),
         }
     return result
@@ -299,7 +281,7 @@ def main() -> int:
     parser.add_argument("--left-games", type=Path, required=True)
     parser.add_argument("--right-report", type=Path, required=True)
     parser.add_argument("--right-games", type=Path, required=True)
-    parser.add_argument("--source-revision", required=True)
+    parser.add_argument("--source-revision", default="", help=argparse.SUPPRESS)
     parser.add_argument("--label", required=True)
     parser.add_argument("--total-verdict", type=Path)
     parser.add_argument("--out", type=Path, required=True)

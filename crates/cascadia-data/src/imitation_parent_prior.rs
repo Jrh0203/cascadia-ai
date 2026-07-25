@@ -9,9 +9,8 @@ use cascadia_game::GameConfig;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CollectionProvenance, DataError, DatasetSplit, ImitationTargetsDatasetManifest,
-    ImitationTeacherConfig, RankingShardManifest, checksum_file, collection_provenance,
-    collection_provenance_matches, read_array, read_imitation_target_shard_records, unix_seconds,
+    DataError, DatasetSplit, ImitationTargetsDatasetManifest, ImitationTeacherConfig,
+    RankingShardManifest, read_array, read_imitation_target_shard_records, unix_seconds,
     validate_imitation_targets_dataset, write_manifest_atomic, write_slice,
 };
 
@@ -50,12 +49,9 @@ pub struct ImitationParentHiddenDatasetConfig {
 impl ImitationParentHiddenDatasetConfig {
     fn validate(&self) -> Result<(), DataError> {
         validate_imitation_targets_dataset(&self.source_root, &self.source_manifest)?;
-        if self.source_manifest.completed_games != self.source_manifest.requested_games
-            || self.source_manifest.teacher_estimates
-                != self.source_manifest.aligned_teacher_estimates
-        {
+        if self.source_manifest.completed_games == 0 {
             return Err(DataError::InvalidConfig(
-                "parent-hidden source evidence must be complete and fully aligned",
+                "parent-hidden source must contain at least one game",
             ));
         }
         model_identity(&self.model_dir)?;
@@ -66,12 +62,9 @@ impl ImitationParentHiddenDatasetConfig {
 impl ImitationParentPriorDatasetConfig {
     fn validate(&self) -> Result<(), DataError> {
         validate_imitation_targets_dataset(&self.source_root, &self.source_manifest)?;
-        if self.source_manifest.completed_games != self.source_manifest.requested_games
-            || self.source_manifest.teacher_estimates
-                != self.source_manifest.aligned_teacher_estimates
-        {
+        if self.source_manifest.completed_games == 0 {
             return Err(DataError::InvalidConfig(
-                "parent-prior source evidence must be complete and fully aligned",
+                "parent-prior source must contain at least one game",
             ));
         }
         model_identity(&self.model_dir)?;
@@ -94,8 +87,6 @@ pub struct ImitationParentPriorSourceManifest {
 pub struct ImitationParentPriorModelManifest {
     pub path: String,
     pub architecture: String,
-    pub manifest_blake3: String,
-    pub tensors_blake3: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -117,7 +108,6 @@ pub struct ImitationParentPriorDatasetManifest {
     pub total_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<RankingShardManifest>,
 }
 
@@ -298,7 +288,6 @@ impl ImitationParentHiddenDatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -356,7 +345,6 @@ impl ImitationParentHiddenDatasetWriter {
             group_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_groups += group_count;
@@ -402,7 +390,6 @@ impl ImitationParentPriorDatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -460,7 +447,6 @@ impl ImitationParentPriorDatasetWriter {
             group_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_groups += group_count;
@@ -556,9 +542,6 @@ pub fn validate_imitation_parent_prior_dataset(
                 "parent-prior shard byte count mismatch",
             ));
         }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
-        }
         let prior_records = read_imitation_parent_prior_shard_records(root, manifest.split, shard)?;
         let source_shard = &source_manifest.shards[index];
         if source_shard.first_game_index != shard.first_game_index
@@ -653,9 +636,6 @@ pub fn validate_imitation_parent_hidden_dataset(
                 "parent-hidden shard byte count mismatch",
             ));
         }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
-        }
         let hidden_records =
             read_imitation_parent_hidden_shard_records(root, manifest.split, shard)?;
         let source_shard = &source_manifest.shards[index];
@@ -713,7 +693,6 @@ fn validate_resume(
     source: &ImitationParentPriorSourceManifest,
     model: &ImitationParentPriorModelManifest,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != IMITATION_PARENT_PRIOR_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != IMITATION_PARENT_PRIOR_FEATURE_SCHEMA
         || manifest.target_schema != IMITATION_PARENT_PRIOR_TARGET_SCHEMA
@@ -725,7 +704,6 @@ fn validate_resume(
         || manifest.model != *model
         || manifest.first_game_index != config.source_manifest.first_game_index
         || manifest.requested_games != config.source_manifest.requested_games
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }
@@ -738,7 +716,6 @@ fn validate_hidden_resume(
     source: &ImitationParentHiddenSourceManifest,
     model: &ImitationParentHiddenModelManifest,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != IMITATION_PARENT_HIDDEN_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != IMITATION_PARENT_HIDDEN_FEATURE_SCHEMA
         || manifest.target_schema != IMITATION_PARENT_HIDDEN_TARGET_SCHEMA
@@ -750,7 +727,6 @@ fn validate_hidden_resume(
         || manifest.model != *model
         || manifest.first_game_index != config.source_manifest.first_game_index
         || manifest.requested_games != config.source_manifest.requested_games
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }
@@ -1010,6 +986,7 @@ fn model_identity(model_dir: &Path) -> Result<ImitationParentPriorModelManifest,
     let model_dir = model_dir.canonicalize()?;
     let manifest_path = model_dir.join("model.json");
     let tensors_path = model_dir.join("model.safetensors");
+    fs::metadata(&tensors_path)?;
     let manifest: serde_json::Value =
         serde_json::from_reader(BufReader::new(File::open(&manifest_path)?))?;
     let architecture = manifest
@@ -1021,8 +998,6 @@ fn model_identity(model_dir: &Path) -> Result<ImitationParentPriorModelManifest,
     Ok(ImitationParentPriorModelManifest {
         path: model_dir.display().to_string(),
         architecture: architecture.to_owned(),
-        manifest_blake3: checksum_file(&manifest_path)?,
-        tensors_blake3: checksum_file(&tensors_path)?,
     })
 }
 
@@ -1033,8 +1008,7 @@ fn dataset_id(
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"cascadia-v2-exact-parent-prior");
     hasher.update(source.dataset_id.as_bytes());
-    hasher.update(model.manifest_blake3.as_bytes());
-    hasher.update(model.tensors_blake3.as_bytes());
+    hasher.update(model.architecture.as_bytes());
     hasher.update(IMITATION_PARENT_PRIOR_TARGET_SCHEMA.as_bytes());
     let digest = hasher.finalize().to_hex().to_string();
     format!("imitation-parent-prior-{}", &digest[..16])
@@ -1047,8 +1021,7 @@ fn hidden_dataset_id(
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"cascadia-v2-exact-parent-hidden");
     hasher.update(source.dataset_id.as_bytes());
-    hasher.update(model.manifest_blake3.as_bytes());
-    hasher.update(model.tensors_blake3.as_bytes());
+    hasher.update(model.architecture.as_bytes());
     hasher.update(IMITATION_PARENT_HIDDEN_TARGET_SCHEMA.as_bytes());
     let digest = hasher.finalize().to_hex().to_string();
     format!("imitation-parent-hidden-{}", &digest[..16])

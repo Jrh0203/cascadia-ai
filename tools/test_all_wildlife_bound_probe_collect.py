@@ -145,7 +145,7 @@ def _probe(
     }
 
 
-def test_collector_preserves_prior_count_bounds_and_provenance(
+def test_collector_preserves_prior_count_bounds_and_paths(
     tmp_path: Path,
 ) -> None:
     base_path = tmp_path / "base.json"
@@ -191,4 +191,4 @@ def test_collector_preserves_prior_count_bounds_and_provenance(
     assert merged_row["unresolved_count_upper_bounds"] == [first_upper]
     assert merged_row["sound_upper"] == first_upper
     assert merged_row["bound_probe_paths"] == [str(first_path), str(second_path)]
-    assert set(second["bound_probe_sha256"]) == {str(first_path), str(second_path)}
+    assert "bound_probe_sha256" not in second

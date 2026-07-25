@@ -220,21 +220,5 @@ class CompareGameCategoriesTest(unittest.TestCase):
                     total_verdict_path=verdict_path,
                 )
 
-    def test_n1024_harvest_pins_complete_artifacts_and_total_reconciliation(self) -> None:
-        script = (
-            Path(__file__).resolve().parents[1]
-            / "scripts"
-            / "fetch_rules_n1024_verdict.sh"
-        ).read_text(encoding="utf-8")
-        self.assertIn("rules_20260709_cycle4_n1024_d16", script)
-        self.assertIn("rules_20260709_distq_k8_n1024_d16", script)
-        self.assertIn("d20daf44dc6aa4aad3d03c6ccb7d3a21c3013135", script)
-        self.assertIn("rules_20260709_remaining_raw_watcher.pid", script)
-        self.assertIn("--total-verdict", script)
-        self.assertIn("_category_summary.json", script)
-        self.assertIn("_games.jsonl", script)
-        self.assertNotIn("scp ", script)
-
-
 if __name__ == "__main__":
     unittest.main()

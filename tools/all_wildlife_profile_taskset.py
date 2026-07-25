@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
@@ -78,7 +77,6 @@ def build_taskset(cases: list[str]) -> dict[str, Any]:
             )
     return {
         "schema": "all-wildlife-score-profile-taskset-v1",
-        "rules_source_sha256": hashlib.sha256(Path(rules.__file__).read_bytes()).hexdigest(),
         "cases": case_rows,
         "task_count": len(tasks),
         "tasks": tasks,

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
 from copy import deepcopy
@@ -22,8 +21,18 @@ from tools.all_wildlife_proof_catalog import (
 COUNT_VECTORS = frozenset(rules.count_vectors())
 
 
-def _sha256(encoded: bytes) -> str:
-    return hashlib.sha256(encoded).hexdigest()
+def _strip_audit(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strip_audit(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    return {
+        key: _strip_audit(item)
+        for key, item in value.items()
+        if "sha256" not in key.lower()
+        and not key.lower().endswith("_hash")
+        and key not in {"proof_provenance", "imported_ledgers"}
+    }
 
 
 def _validate_board(
@@ -98,7 +107,6 @@ def _validate_aaaaa_certificate(
         "tokens": payload["optimal_configuration"],
         "unresolved_counts": [],
         "proof_paths": [str(path)],
-        "external_certificate_sha256": _sha256(encoded),
     }
     tokens = _validate_board(row, "AAAAA", "optimum")
     if (
@@ -108,10 +116,7 @@ def _validate_aaaaa_certificate(
         raise ValueError("AAAAA certificate disagrees with its original scorer")
     identity = {
         "path": str(path),
-        "sha256": _sha256(encoded),
         "model": payload.get("model"),
-        "model_source_sha256": payload.get("model_source_sha256"),
-        "production_verifier_sha256": payload.get("production_verifier_sha256"),
         "ortools_version": payload.get("ortools_version"),
         "threshold": threshold,
         "excluded_allocations": len(results),
@@ -136,7 +141,7 @@ def _validate_catalog_row(
         raise ValueError(f"{ruleset}: base completeness mismatch")
 
 
-def _production_validate(rows: list[dict[str, Any]], oracle: Path) -> str:
+def _production_validate(rows: list[dict[str, Any]], oracle: Path) -> None:
     requests = [
         {"ruleset": row["ruleset"], "tokens": rules.normalized_tokens(row["tokens"])}
         for row in rows
@@ -157,22 +162,17 @@ def _production_validate(rows: list[dict[str, Any]], oracle: Path) -> str:
             or response["score_breakdown"] != row["score_breakdown"]
         ):
             raise ValueError(f"{row['ruleset']}: production score mismatch")
-    canonical = json.dumps(responses, sort_keys=True, separators=(",", ":"))
-    return _sha256(canonical.encode())
-
-
 def augment(
     base_catalog_path: Path,
     candidates_path: Path,
     aaaaa_certificate_path: Path,
     oracle: Path | None = None,
 ) -> dict[str, Any]:
-    base_encoded = base_catalog_path.read_bytes()
-    candidate_encoded = candidates_path.read_bytes()
-    base = json.loads(base_encoded)
-    candidates = json.loads(candidate_encoded)
+    base = json.loads(base_catalog_path.read_text())
+    candidates = json.loads(candidates_path.read_text())
     if (
-        base.get("schema") != "all-wildlife-optimal-catalog-v1"
+        base.get("schema")
+        not in {"all-wildlife-optimal-catalog-v1", "all-wildlife-optimal-catalog-v2"}
         or candidates.get("schema") != "all-wildlife-merged-candidates-v1"
         or len(base.get("results", [])) != len(rules.rulesets())
         or len(candidates.get("candidates", [])) != len(rules.rulesets())
@@ -218,20 +218,20 @@ def augment(
 
     for index, (ruleset, row) in enumerate(zip(rules.rulesets(), rows, strict=True)):
         _validate_catalog_row(row, index, ruleset)
-    production_sha = _production_validate(rows, oracle) if oracle else None
+    if oracle:
+        _production_validate(rows, oracle)
     complete = all(row["proof_complete"] for row in rows)
     holistic = max(row["optimum"] for row in rows) if complete else None
     incumbent_maximum = max(row["optimum"] for row in rows)
+    rows = _strip_audit(rows)
+    result = _strip_audit(result)
     result.update(
         {
+            "schema": "all-wildlife-optimal-catalog-v2",
             "proof_complete": complete,
             "completed_rulesets": sum(row["proof_complete"] for row in rows),
-            "candidate_sha256": _sha256(candidate_encoded),
-            "base_catalog_sha256": _sha256(base_encoded),
-            "base_candidate_sha256": base.get("candidate_sha256"),
-            "external_ruleset_certificates": [certificate_identity],
+            "imported_certificates": [certificate_identity],
             "rebased_improved_rulesets": rebased,
-            "production_response_sha256": production_sha,
             "holistic_optimum": holistic,
             "holistic_rulesets": (
                 [row["ruleset"] for row in rows if row["optimum"] == holistic]

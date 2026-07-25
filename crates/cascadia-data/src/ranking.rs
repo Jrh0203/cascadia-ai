@@ -8,8 +8,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CollectionProvenance, DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord, checksum_file,
-    collection_provenance, collection_provenance_matches, unix_seconds, write_manifest_atomic,
+    DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord, unix_seconds, write_manifest_atomic,
     write_slice,
 };
 
@@ -72,9 +71,7 @@ impl RankingDatasetConfig {
             ));
         }
         if self.trajectory.as_ref().is_some_and(|trajectory| {
-            trajectory.strategy_id.trim().is_empty()
-                || trajectory.model_manifest.trim().is_empty()
-                || trajectory.model_manifest_blake3.trim().is_empty()
+            trajectory.strategy_id.trim().is_empty() || trajectory.model_manifest.trim().is_empty()
         }) {
             return Err(DataError::InvalidConfig(
                 "ranking trajectory policy metadata cannot be empty",
@@ -104,7 +101,6 @@ pub struct RankingTeacherConfig {
 pub struct RankingTrajectoryConfig {
     pub strategy_id: String,
     pub model_manifest: String,
-    pub model_manifest_blake3: String,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -135,7 +131,6 @@ pub struct RankingDatasetManifest {
     pub total_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<RankingShardManifest>,
 }
 
@@ -147,7 +142,6 @@ pub struct RankingShardManifest {
     pub group_count: usize,
     pub record_count: usize,
     pub byte_count: u64,
-    pub blake3: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -264,7 +258,6 @@ impl RankingDatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -322,7 +315,6 @@ impl RankingDatasetWriter {
             group_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_groups += group_count;
@@ -358,9 +350,6 @@ pub fn validate_ranking_dataset(
                 "ranking shard byte count mismatch",
             ));
         }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
-        }
         validate_ranking_shard_header(&path, manifest.split, shard)?;
         games += shard.game_count;
         groups += shard.group_count;
@@ -381,7 +370,6 @@ fn validate_resume(
     manifest: &RankingDatasetManifest,
     config: &RankingDatasetConfig,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != RANKING_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != FEATURE_SCHEMA
         || manifest.target_schema != RANKING_TARGET_SCHEMA
@@ -391,7 +379,6 @@ fn validate_resume(
         || manifest.teacher != config.teacher
         || manifest.trajectory != config.trajectory
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }
@@ -651,52 +638,6 @@ mod tests {
     }
 
     #[test]
-    fn ranking_resume_rejects_changed_provenance() {
-        let root = std::env::temp_dir().join(format!(
-            "cascadia-ranking-provenance-{}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&root);
-        let config = RankingDatasetConfig {
-            output: root.clone(),
-            split: DatasetSplit::Train,
-            first_game_index: 0,
-            games: 2,
-            teacher: RankingTeacherConfig {
-                strategy_id: "teacher-v1".to_owned(),
-                immediate_candidates: 2,
-                candidate_family: RankingCandidateFamily::Bear,
-                bear_candidates: 1,
-                habitat_candidates: 0,
-                determinizations: 2,
-                greedy_plies: 1,
-                terminal_continuation_strategy_id: None,
-            },
-            trajectory: None,
-            resume: false,
-        };
-        let mut writer = RankingDatasetWriter::open(&config).unwrap();
-        writer
-            .append_shard(0, 1, &[sample_record(1, 0, 1)])
-            .unwrap();
-        drop(writer);
-        let manifest_path = root.join("dataset.json");
-        let mut manifest: RankingDatasetManifest =
-            serde_json::from_reader(File::open(&manifest_path).unwrap()).unwrap();
-        manifest.provenance.executable_blake3 = "different-executable".to_owned();
-        write_manifest_atomic(&manifest_path, &manifest).unwrap();
-
-        let error = RankingDatasetWriter::open(&RankingDatasetConfig {
-            resume: true,
-            ..config
-        })
-        .err()
-        .expect("changed provenance must reject resume");
-        assert!(matches!(error, DataError::ResumeMismatch));
-        fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
     fn ranking_resume_rejects_changed_trajectory_policy() {
         let root = std::env::temp_dir().join(format!(
             "cascadia-ranking-trajectory-{}",
@@ -721,7 +662,6 @@ mod tests {
             trajectory: Some(RankingTrajectoryConfig {
                 strategy_id: "apprentice-v1".to_owned(),
                 model_manifest: "/models/apprentice/model.json".to_owned(),
-                model_manifest_blake3: "abc123".to_owned(),
             }),
             resume: false,
         };
@@ -735,7 +675,6 @@ mod tests {
             trajectory: Some(RankingTrajectoryConfig {
                 strategy_id: "apprentice-v2".to_owned(),
                 model_manifest: "/models/apprentice/model.json".to_owned(),
-                model_manifest_blake3: "different".to_owned(),
             }),
             resume: true,
             ..config

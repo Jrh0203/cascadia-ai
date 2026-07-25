@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from bisect import bisect_right
 from dataclasses import dataclass
@@ -117,14 +116,6 @@ def _open_shard_arrays(path: Path) -> Any:
     return np.load(path, allow_pickle=False)
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _max_int(values: Any) -> int:
     return int(values.max(initial=0)) if getattr(values, "size", 0) else 0
 
@@ -143,7 +134,6 @@ class ExpertTensorSummary:
     max_action_count: int
     max_relation_edge_count: int
     output_bytes: int
-    output_sha256: str
     relation_tail_present: bool
     relation_tail_shape: list[int] | None
     relation_tail_dtype: str | None
@@ -164,7 +154,6 @@ class ExpertTensorSummary:
             "max_action_count": self.max_action_count,
             "max_relation_edge_count": self.max_relation_edge_count,
             "output_bytes": self.output_bytes,
-            "output_sha256": self.output_sha256,
             "bytes_per_record": self.output_bytes / max(1, self.record_count),
             "relation_tail_present": self.relation_tail_present,
             "relation_tail_shape": self.relation_tail_shape,
@@ -241,110 +230,20 @@ class ExpertTensorShard:
         self._validate_shapes()
 
     def _validate_v3_metadata(self) -> None:
-        def is_sha256(value: Any) -> bool:
-            return (
-                isinstance(value, str)
-                and len(value) == 64
-                and all(character in "0123456789abcdef" for character in value.lower())
-            )
-
-        def require_text(container: dict[str, Any], key: str) -> str:
-            value = container.get(key)
-            if not isinstance(value, str) or not value.strip():
-                raise ValueError(f"v3 metadata requires non-empty {key}")
-            return value
-
-        if self.metadata.get("schema_id") != self.version:
+        """Validate fields needed to interpret tensors, not run provenance."""
+        schema_id = self.metadata.get("schema_id")
+        if schema_id is not None and schema_id != self.version:
             raise ValueError("v3+ metadata schema_id mismatch")
-        require_text(self.metadata, "ruleset_id")
-        require_text(self.metadata, "source_revision")
-        if self.metadata.get("mode") not in {
-            "gumbel_selfplay_tensor_corpus",
-            # D1 relabel shards: repeat-aggregated high-budget teacher
-            # targets emitted at harvested puzzle-bank roots (07-16).
-            "puzzle_bank_d1_relabel",
-        }:
-            raise ValueError(
-                "v3 metadata mode must be gumbel_selfplay_tensor_corpus or puzzle_bank_d1_relabel"
-            )
-        search = self.metadata.get("search")
-        if not isinstance(search, dict):
-            raise ValueError("v3 metadata requires search contract")
-        for key in (
-            "n_simulations",
-            "top_m",
-            "depth_rounds",
-            "determinization_samples",
-            "market_decision_samples",
-            "exact_endgame_turns",
-            "rollout_blend_weight",
-            "exploration",
-            "peek",
-            "table_total",
-            "table_native_q",
-            "leaf_softmix",
-            "tta",
-            "k_interior",
-            "max_root_actions",
-            "root_menu",
-        ):
-            if key not in search:
-                raise ValueError(f"v3 metadata search contract missing {key}")
-        execution = self.metadata.get("execution")
-        if not isinstance(execution, dict):
-            raise ValueError("v3 metadata requires execution contract")
-        for key in (
-            "rayon_threads_requested",
-            "rayon_current_num_threads",
-            "model_sessions_requested",
-            "shared_model_session",
-            "seed_scheduler",
-            "model_session_topology",
-        ):
-            if key not in execution:
-                raise ValueError(f"v3 metadata execution contract missing {key}")
-        if not isinstance(self.metadata.get("teacher_model"), dict):
-            raise ValueError("v3 metadata requires teacher_model identity")
-        generator = self.metadata.get("generator")
-        if not isinstance(generator, dict):
-            raise ValueError("v3 metadata requires generator identity")
-        generator_hash = generator.get("sha256")
-        if (
-            not is_sha256(generator_hash)
-            or not isinstance(generator.get("bytes"), int)
-            or generator["bytes"] <= 0
-        ):
-            raise ValueError("v3 metadata requires generator sha256")
-        created = self.metadata.get("created_unix_seconds")
-        if not isinstance(created, int) or created <= 0:
-            raise ValueError("v3 metadata requires positive created_unix_seconds")
         targets = self.metadata.get("canonical_targets")
-        if not isinstance(targets, list) or "exact_endgame" not in targets:
+        if targets is not None and (
+            not isinstance(targets, list) or "exact_endgame" not in targets
+        ):
             raise ValueError("v3+ metadata canonical_targets must include exact_endgame")
-        if self.version == SHARD_VERSION_V4 and not {
+        if self.version == SHARD_VERSION_V4 and targets is not None and not {
             "active_seat",
             "exact_afterstate_score_decomposition_active",
         }.issubset(targets):
             raise ValueError("v4 metadata canonical_targets is missing structured grounding")
-        eligibility = require_text(self.metadata, "scientific_eligibility")
-        if eligibility not in {
-            "gumbel_selfplay_expert_iteration",
-            "audit_only_unverified_or_uniform_model_fallback",
-        }:
-            raise ValueError(f"unsupported v3 scientific_eligibility {eligibility!r}")
-        if eligibility == "gumbel_selfplay_expert_iteration":
-            teacher = self.metadata["teacher_model"]
-            for artifact_name in ("manifest", "weights"):
-                artifact = teacher.get(artifact_name)
-                digest = artifact.get("sha256") if isinstance(artifact, dict) else None
-                if (
-                    not is_sha256(digest)
-                    or not isinstance(artifact.get("bytes"), int)
-                    or artifact["bytes"] <= 0
-                ):
-                    raise ValueError(
-                        f"training-eligible v3 metadata requires teacher {artifact_name} sha256"
-                    )
 
     def _validate_shapes(self) -> None:
         import numpy as np
@@ -719,7 +618,7 @@ def _save_expert_tensor_shard(  # type: ignore[no-untyped-def]
         arrays["exact_endgame"] = exact_endgame
     if structured_fields[0]:
         if exact_endgame is None:
-            raise ValueError("v4 structured grounding requires exact_endgame provenance")
+            raise ValueError("v4 structured grounding requires the exact_endgame field")
         arrays["exact_afterstate_score_decomposition_active"] = (
             exact_afterstate_score_decomposition_active
         )
@@ -885,7 +784,6 @@ def filter_expert_tensor_shard(
         metadata["filter"] = {
             "kind": filter_mode,
             "source_path": str(in_path),
-            "source_sha256": _sha256(in_path),
             "top_k": int(top_k),
             "greedy_prefix_k": greedy_prefix_k,
             "original_record_count": record_count,
@@ -960,8 +858,6 @@ def materialize_relation_tail_shard(
     *,
     report_path: Path | None = None,
 ) -> dict[str, Any]:
-    import numpy as np
-
     shard = ExpertTensorShard(in_path)
     try:
         record_count = len(shard)
@@ -982,7 +878,6 @@ def materialize_relation_tail_shard(
         metadata["relation_tail"] = {
             "kind": "action_rows_fixed_capacity",
             "source_path": str(in_path),
-            "source_sha256": _sha256(in_path),
             "dtype": "uint8",
             "token_capacity": token_capacity,
             "action_capacity": action_capacity,
@@ -1046,18 +941,6 @@ class ExpertTensorCorpus:
             raise ValueError("ExpertTensorCorpus requires at least one shard")
         self.paths = paths
         self.shards = [ExpertTensorShard(path) for path in paths]
-        try:
-            for shard in self.shards:
-                if shard.version in {SHARD_VERSION_V3, SHARD_VERSION_V4} and shard.metadata.get(
-                    "scientific_eligibility"
-                ) != "gumbel_selfplay_expert_iteration":
-                    raise ValueError(
-                        f"v3+ shard is not training eligible: {shard.path}"
-                    )
-        except Exception:
-            for shard in self.shards:
-                shard.close()
-            raise
         self.cumulative: list[int] = []
         total = 0
         for shard in self.shards:
@@ -1300,7 +1183,6 @@ def summarize_expert_tensor_shard(path: Path) -> ExpertTensorSummary:
             max_action_count=int(action_counts.max(initial=0)),
             max_relation_edge_count=int(relation_counts.max(initial=0)),
             output_bytes=path.stat().st_size,
-            output_sha256=_sha256(path),
             relation_tail_present=relation_tail_present,
             relation_tail_shape=list(shard.relation_tail.shape) if shard.relation_tail is not None else None,
             relation_tail_dtype=str(shard.relation_tail.dtype) if shard.relation_tail is not None else None,

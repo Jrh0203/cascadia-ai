@@ -5,11 +5,8 @@ from pathlib import Path
 
 import pytest
 from cascadia_cluster import (
-    ArtifactFile,
-    ArtifactManifest,
     ClusterClient,
     ContainerInput,
-    JobResult,
     JobStatus,
     MapError,
     RequestConflictError,
@@ -168,45 +165,6 @@ def test_job_name_binds_full_request_id_not_a_colliding_suffix(tmp_path: Path) -
     assert all(suffix not in name for name in names)
 
 
-def test_accepted_artifact_persists_scheduler_provenance(tmp_path: Path) -> None:
-    client = ClusterClient(
-        "http://bacalhau.invalid",
-        state_directory=tmp_path / "state",
-        object_store=object(),  # type: ignore[arg-type]
-        artifact_directory=tmp_path / "artifacts",
-    )
-    result = JobResult(
-        item_key="pair-0007",
-        request_id="req-fixed",
-        bacalhau_job_id="job-7",
-        accepted_execution_id="exec-9",
-        image_digest=IMAGE,
-        spec_sha256="a" * 64,
-        status=JobStatus.SUCCEEDED,
-        artifact_manifest=ArtifactManifest(
-            protocol_version="cascadia-cluster-map-v1",
-            command=("worker", "pair-0007"),
-            files=(ArtifactFile("result.json", 3, "b" * 64),),
-            application_metadata={"gate_archive_sha256": "c" * 64},
-        ),
-        attempts=2,
-        created_unix_ns=11,
-        modified_unix_ns=22,
-    )
-    client._persist_result_receipt(result)
-    client._persist_result_receipt(result)
-    receipt = json.loads((tmp_path / "artifacts/req-fixed/.receipts/pair-0007.json").read_text())
-    assert receipt["request_id"] == "req-fixed"
-    assert receipt["item_id"] == "pair-0007"
-    assert receipt["bacalhau_job_id"] == "job-7"
-    assert receipt["accepted_execution_id"] == "exec-9"
-    assert receipt["image_digest"] == IMAGE
-    assert receipt["spec_sha256"] == "a" * 64
-    assert receipt["application_metadata"] == {"gate_archive_sha256": "c" * 64}
-    assert len(receipt["output_manifest_sha256"]) == 64
-    assert len(receipt["receipt_sha256"]) == 64
-
-
 def test_conflicting_item_reuse_is_rejected(tmp_path: Path) -> None:
     client, _api = _client(tmp_path)
     _submit(client)
@@ -302,7 +260,7 @@ def test_cancel_preserves_terminal_jobs_and_stops_only_nonterminal(tmp_path: Pat
     assert api.jobs[second]["State"]["StateType"] == "Stopped"
 
 
-def test_s3_input_payload_binds_application_checksum_without_minio_head_metadata(
+def test_s3_input_payload_does_not_add_application_checksum_gate(
     tmp_path: Path,
 ) -> None:
     from cascadia_cluster import InputReference
@@ -333,9 +291,7 @@ def test_s3_input_payload_binds_application_checksum_without_minio_head_metadata
     task = next(iter(api.jobs.values()))["Tasks"][0]
     source = task["InputSources"][0]["Source"]
     assert "ChecksumSHA256" not in source["Params"]
-    assert json.loads(task["Env"]["CASCADIA_INPUT_SHA256_JSON"]) == {
-        "/inputs/input/input.bin": "a" * 64
-    }
+    assert "CASCADIA_INPUT_SHA256_JSON" not in task["Env"]
 
 
 def test_scheduler_backpressure_adds_bounded_multinode_placement_slack(

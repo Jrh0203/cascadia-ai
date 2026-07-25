@@ -1,4 +1,4 @@
-"""Build the hash-pinned D1 training views (preregistration 2026-07-16 09:00).
+"""Build masked D1 training views.
 
 The raw corpora stay immutable; this tool derives two masked training
 views:
@@ -18,26 +18,15 @@ the behavior trajectory's realized result, which must not be trained on
 again at the same roots (EfficientZero stale-target correction). The
 fresh aggregated search fields stay fully valid.
 
-Every output embeds a ``view`` metadata block with the source shard
-SHA-256, the mask SHA-256, and counts, so a training manifest pins the
-exact view bytes.
+Every output embeds a ``view`` metadata block with source paths and counts.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def read_mask(path: Path) -> set[tuple[int, int]]:
@@ -148,9 +137,7 @@ def build_base_view(
         "type": "d1_base_view_masked_stale_search",
         "view_version": 1,
         "source_shard": str(base_path),
-        "source_shard_sha256": _sha256(base_path),
         "mask": str(mask_path),
-        "mask_sha256": _sha256(mask_path),
         "masked_roots": len(selected),
         "masked_fields": ["per_action_Q (via q_valid)", "improved_policy (via policy_valid)"],
         "outcome_fields": "retained (realized trajectory)",
@@ -162,7 +149,6 @@ def build_base_view(
         "records": record_count,
         "masked_roots": len(selected),
         "out": str(out_path),
-        "out_sha256": _sha256(out_path),
     }
     return report
 
@@ -206,11 +192,8 @@ def build_d1_view(
         "type": "d1_relabel_view_masked_outcomes",
         "view_version": 1,
         "source_shard": str(d1_path),
-        "source_shard_sha256": _sha256(d1_path),
         "mask": str(mask_path),
-        "mask_sha256": _sha256(mask_path),
         "audit": str(audit_path),
-        "audit_sha256": _sha256(audit_path),
         "mask_coverage": coverage,
         "masked_fields": ["final_score_vector/score/rank (via outcome_valid)"],
         "search_fields": "fresh repeat-aggregated teacher targets, fully valid",
@@ -222,7 +205,6 @@ def build_d1_view(
         "records": record_count,
         "mask_coverage": coverage,
         "out": str(out_path),
-        "out_sha256": _sha256(out_path),
     }
 
 
@@ -323,14 +305,13 @@ def subset_view_by_hash_order(
         "count": count,
         "of": record_count,
         "ordering": "harvest_selection_hash",
-        "source_view_sha256": _sha256(view_path),
+        "source_view": str(view_path),
     }
     _write_view(out, metadata, out_path)
     return {
         "view": f"d1_subset_{count}",
         "records": count,
         "out": str(out_path),
-        "out_sha256": _sha256(out_path),
     }
 
 

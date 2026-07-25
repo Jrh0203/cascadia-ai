@@ -395,7 +395,6 @@ def run_search_benchmark(
         timing_ratio = candidate_summary["mean_total_decision_seconds"] / full_summary["mean_total_decision_seconds"]
     return {
         "status": "pass",
-        "scientific_eligibility": "cascadiaformer_search_integrated_complete_game_benchmark",
         "experiment_id": experiment_id,
         "binary": str(binary),
         "manifest": checkpoint["manifest_path"],

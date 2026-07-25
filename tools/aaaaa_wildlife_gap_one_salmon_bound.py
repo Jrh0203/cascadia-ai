@@ -13,7 +13,6 @@ abstract coverage, yielding a sound superset.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import time
 from pathlib import Path
@@ -297,7 +296,6 @@ def certificate(
             f"bound {bound['status']} / {bound['upper_bound']} "
             f"does not certify incumbent {incumbent['score']}"
         )
-    source = Path(__file__).resolve()
     return {
         "schema": "aaaaa-gap-one-joint-salmon-certificate-v1",
         "counts": list(COUNTS),
@@ -321,13 +319,6 @@ def certificate(
         "bound": bound,
         "incumbent": incumbent,
         "ortools_version": ORTOOLS_VERSION,
-        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "hawk_support_source_sha256": hashlib.sha256(
-            source.with_name("aaaaa_wildlife_hawk_packing_bound.py").read_bytes()
-        ).hexdigest(),
-        "zero_hawk_support_source_sha256": hashlib.sha256(
-            source.with_name("aaaaa_wildlife_zero_hawk_bound.py").read_bytes()
-        ).hexdigest(),
         "elapsed_seconds": time.monotonic() - started,
     }
 

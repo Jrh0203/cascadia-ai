@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from .hex import RADIUS6_CELL_COUNT, coord_ref
-from .schema import SCHEMA_ID, attach_checksum, checksum
+from .schema import SCHEMA_ID
 
 
 def tiny_actions() -> list[dict[str, Any]]:
@@ -100,7 +100,7 @@ def tiny_search_root_record() -> dict[str, Any]:
         },
         "rank_vector": [1, 2, 3, 4],
     }
-    return attach_checksum(record)
+    return record
 
 
 def tiny_search_root_record_three_actions() -> dict[str, Any]:
@@ -131,7 +131,7 @@ def tiny_search_root_record_three_actions() -> dict[str, Any]:
         },
         "rank_vector": [1, 2, 3, 4],
     }
-    return attach_checksum(record)
+    return record
 
 
 def tiny_replay_records() -> list[dict[str, Any]]:
@@ -144,8 +144,6 @@ def tiny_replay_manifest(root_record: dict[str, Any]) -> dict[str, Any]:
         "source_generator": "cascadiav3.fixtures.tiny_search_root_record",
         "seed_domain": "fixed-demo-seed",
         "record_count": 1,
-        "checksum": checksum(root_record),
-        "scientific_eligibility": "dry_run",
         "created_at_utc": datetime(2026, 6, 29, tzinfo=UTC).isoformat(),
         "format": "jsonl",
         "notes": "CPU-only pre-GPU fixture; not training evidence.",

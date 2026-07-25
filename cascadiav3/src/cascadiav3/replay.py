@@ -3,23 +3,15 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-import hashlib
 import json
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .schema import SCHEMA_ID, validate_replay_manifest, validate_search_root_record
 
 
 def canonical_record_line(record: dict[str, Any]) -> str:
     return json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
-
-
-def records_checksum(records: Iterable[dict[str, Any]]) -> str:
-    digest = hashlib.sha256()
-    for record in records:
-        digest.update(canonical_record_line(record).encode("utf-8"))
-    return digest.hexdigest()
 
 
 def write_replay_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
@@ -53,7 +45,6 @@ def replay_manifest_for_records(
     *,
     source_generator: str,
     seed_domain: str,
-    scientific_eligibility: str = "dry_run",
     format: str = "jsonl",
 ) -> dict[str, Any]:
     schema_id = records[0].get("schema_id", SCHEMA_ID) if records else SCHEMA_ID
@@ -62,8 +53,6 @@ def replay_manifest_for_records(
         "source_generator": source_generator,
         "seed_domain": seed_domain,
         "record_count": len(records),
-        "checksum": records_checksum(records),
-        "scientific_eligibility": scientific_eligibility,
         "created_at_utc": datetime(2026, 6, 29, tzinfo=UTC).isoformat(),
         "format": format,
         "notes": "CPU/GPU smoke replay shard; not training evidence.",

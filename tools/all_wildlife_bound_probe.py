@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -19,10 +18,6 @@ from tools.all_wildlife_exact import solve_counts
 
 SCHEMA = "all-wildlife-bound-probe-v1"
 COUNT_VECTORS = frozenset(rules.count_vectors())
-
-
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
@@ -75,11 +70,13 @@ def _parse_counts(values: list[str] | None) -> list[tuple[int, int, int, int, in
 def _load_catalog(
     path: Path,
     index: int,
-) -> tuple[dict[str, Any], dict[str, Any], str]:
-    encoded = path.read_bytes()
-    payload = json.loads(encoded)
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    payload = json.loads(path.read_text())
     expected_ruleset = rules.rulesets()[index]
-    if payload.get("schema") != "all-wildlife-optimal-catalog-v1":
+    if payload.get("schema") not in {
+        "all-wildlife-optimal-catalog-v1",
+        "all-wildlife-optimal-catalog-v2",
+    }:
         raise ValueError("unexpected catalog schema")
     results = payload.get("results", [])
     if index >= len(results):
@@ -95,16 +92,7 @@ def _load_catalog(
         raise ValueError("invalid unresolved count set")
     if bool(row.get("proof_complete")) != (not unresolved):
         raise ValueError("catalog completeness mismatch")
-    return payload, row, hashlib.sha256(encoded).hexdigest()
-
-
-def _sources() -> dict[str, str]:
-    return {
-        "probe_source_sha256": _sha256(Path(__file__)),
-        "exact_source_sha256": _sha256(Path("tools/all_wildlife_exact.py")),
-        "exact_support_source_sha256": _sha256(Path("tools/cbddb_wildlife_exact.py")),
-        "rules_source_sha256": _sha256(Path("tools/all_wildlife_rules.py")),
-    }
+    return payload, row
 
 
 def _best_board(
@@ -173,7 +161,7 @@ def _summary(
 
 
 def run_probe(args: argparse.Namespace) -> int:
-    _, base, catalog_sha = _load_catalog(args.catalog, args.index)
+    _, base = _load_catalog(args.catalog, args.index)
     ruleset = base["ruleset"]
     unresolved = [tuple(counts) for counts in base["unresolved_counts"]]
     explicit = _parse_counts(args.counts)
@@ -188,24 +176,27 @@ def run_probe(args: argparse.Namespace) -> int:
             raise ValueError("max-counts must be positive")
         selected = selected[: args.max_counts]
 
-    sources = _sources()
     identity = {
         "ruleset_index": args.index,
         "ruleset": ruleset,
-        "base_catalog_sha256": catalog_sha,
-        **sources,
         "connectivity_required": not args.no_connectivity,
     }
     attempts: list[dict[str, Any]] = []
     if args.resume and args.output.exists():
         prior = json.loads(args.output.read_text())
+        prior_identity = prior.get("identity", {})
         if (
             prior.get("schema") != SCHEMA
-            or prior.get("identity") != identity
-            or prior.get("selected_counts") != [list(counts) for counts in selected]
+            or prior_identity.get("ruleset_index") != args.index
+            or prior_identity.get("ruleset") != ruleset
         ):
-            raise ValueError("resume identity mismatch")
-        attempts = prior["attempts"]
+            raise ValueError("resume ruleset mismatch")
+        selected_set = set(selected)
+        attempts = [
+            attempt
+            for attempt in prior.get("attempts", [])
+            if tuple(attempt["counts"]) in selected_set
+        ]
 
     attempted = {tuple(attempt["counts"]) for attempt in attempts}
     started = time.monotonic()

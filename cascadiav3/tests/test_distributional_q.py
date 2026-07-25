@@ -122,7 +122,6 @@ class DistributionalQTest(unittest.TestCase):
             default_model_service_command(Path("checkpoint.json"), "cpu", "tail")
 
     def test_gumbel_execution_and_artifact_provenance(self) -> None:
-        import hashlib
         import json
         import tempfile
         from pathlib import Path
@@ -164,12 +163,10 @@ class DistributionalQTest(unittest.TestCase):
                 encoding="utf-8",
             )
             provenance = model_artifact_provenance(binary, manifest)
-        self.assertEqual(
-            provenance["binary_sha256"], hashlib.sha256(b"exact exporter").hexdigest()
-        )
-        self.assertEqual(
-            provenance["weights_sha256"], hashlib.sha256(b"exact weights").hexdigest()
-        )
+        self.assertEqual(provenance["binary_bytes"], len(b"exact exporter"))
+        self.assertEqual(provenance["weights_bytes"], len(b"exact weights"))
+        self.assertNotIn("binary_sha256", provenance)
+        self.assertNotIn("weights_sha256", provenance)
         self.assertEqual(provenance["q_quantiles"], 8)
 
     def test_q_risk_probe_reports_crossing_and_policy_flips(self) -> None:

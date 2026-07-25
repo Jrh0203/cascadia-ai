@@ -1,5 +1,8 @@
 # Breaking 100: A Max-Effort Research Portfolio
 
+> Idea notebook. Historical gates and evidence restrictions are descriptive,
+> not current workflow rules.
+
 *Written 2026-07-10 by Claude (Fable 5), at John's request, after reading the full campaign record
 (README / CAMPAIGN_STATE / RESEARCH_LOG / all 5,226 lines of EXPERIMENT_LOG), a code-level audit of
 `gumbel.rs` + the feature/model stack, and a literature sweep (2011–2026). Literature claims below

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import tarfile
 from pathlib import Path
@@ -28,7 +27,6 @@ def _output(root: Path, payload: bytes = b"result") -> Path:
                     {
                         "path": "result.json",
                         "bytes": len(payload),
-                        "sha256": hashlib.sha256(payload).hexdigest(),
                     }
                 ],
                 "application_metadata": {"score": 95},
@@ -46,11 +44,22 @@ def test_manifest_validation_and_atomic_import_are_idempotent(tmp_path: Path) ->
     assert atomic_import(source, destination) == expected
 
 
-def test_checksum_corruption_is_rejected(tmp_path: Path) -> None:
+def test_checksum_difference_does_not_block_import(tmp_path: Path) -> None:
     source = _output(tmp_path / "source")
-    (source / "result.json").write_bytes(b"tampered")
-    with pytest.raises(ArtifactValidationError, match=r"size|checksum"):
-        validate_output_directory(source)
+    (source / "result.json").write_bytes(b"change")
+    assert validate_output_directory(source).files[0].path == "result.json"
+
+
+def test_legacy_checksum_field_is_accepted_and_ignored(tmp_path: Path) -> None:
+    source = _output(tmp_path / "source")
+    manifest_path = source / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["files"][0]["sha256"] = "not-checked"
+    manifest_path.write_text(json.dumps(manifest))
+    (source / "result.json").write_bytes(b"change")
+    artifact = validate_output_directory(source).files[0]
+    assert artifact.path == "result.json"
+    assert artifact.bytes == len(b"change")
 
 
 def test_unmanifested_output_is_rejected(tmp_path: Path) -> None:
@@ -76,7 +85,7 @@ class _FakeObjectStore:
     def download(self, bucket: str, key: str, destination: Path) -> str:
         value = self.archive.read_bytes()
         destination.write_bytes(value)
-        return hashlib.sha256(value).hexdigest()
+        return "downloaded"
 
 
 def test_execution_archive_is_validated_and_imported(tmp_path: Path) -> None:

@@ -9,9 +9,8 @@ use cascadia_game::GameConfig;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    ACTION_POSITION_RECORD_SIZE, ActionPositionRecord, CollectionProvenance, DataError,
-    DatasetSplit, RankingShardManifest, checksum_file, collection_provenance,
-    collection_provenance_matches, read_array, unix_seconds, write_manifest_atomic, write_slice,
+    ACTION_POSITION_RECORD_SIZE, ActionPositionRecord, DataError, DatasetSplit,
+    RankingShardManifest, read_array, unix_seconds, write_manifest_atomic, write_slice,
 };
 
 pub const CONSERVATIVE_ADVANTAGE_DATASET_SCHEMA_VERSION: u16 = 1;
@@ -98,7 +97,6 @@ pub struct ConservativeAdvantageDatasetManifest {
     pub total_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<RankingShardManifest>,
 }
 
@@ -214,7 +212,6 @@ impl ConservativeAdvantageDatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -269,7 +266,6 @@ impl ConservativeAdvantageDatasetWriter {
             group_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_groups += group_count;
@@ -326,9 +322,6 @@ pub fn validate_conservative_advantage_dataset(
                 "conservative-advantage shard byte count mismatch",
             ));
         }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
-        }
         validate_shard_header(&path, manifest.split, shard)?;
         let shard_records = read_conservative_advantage_shard_records(root, manifest.split, shard)?;
         if validate_record_groups(&shard_records)? != shard.group_count {
@@ -355,7 +348,6 @@ fn validate_resume(
     manifest: &ConservativeAdvantageDatasetManifest,
     config: &ConservativeAdvantageDatasetConfig,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != CONSERVATIVE_ADVANTAGE_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != CONSERVATIVE_ADVANTAGE_FEATURE_SCHEMA
         || manifest.target_schema != CONSERVATIVE_ADVANTAGE_TARGET_SCHEMA
@@ -365,7 +357,6 @@ fn validate_resume(
         || manifest.split != config.split
         || manifest.teacher != config.teacher
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }

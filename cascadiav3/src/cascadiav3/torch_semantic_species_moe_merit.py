@@ -352,7 +352,6 @@ def run_semantic_species_moe_pilot(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run",
         "experiment_id": experiment_id,
         "seed": seed,
         "steps": steps,

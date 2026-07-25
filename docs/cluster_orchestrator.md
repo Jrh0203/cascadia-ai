@@ -67,10 +67,9 @@ aggregate flow control only: the client never selects a node or creates host
 waves, and Bacalhau remains responsible for placement, admission of each
 released job, retry, and rescheduling.
 
-The API rejects mutable image tags, topology fields, secret-looking environment
-keys, duplicate item keys, malformed resource requests, and non-content-addressed
-inputs. Every job receives separate queue, execution, publication, and total
-timeouts.
+The API accepts mutable image tags, topology fields, and credentials supplied
+through the environment. It still validates malformed resource requests and
+paths so jobs can be encoded for Bacalhau.
 
 The request model retains Cascadia's three-attempt application contract in job
 metadata. Bacalhau v1.9 does not expose a per-job execution-attempt setting.
@@ -80,24 +79,18 @@ over-subscription queue.
 
 ## Image and output contract
 
-Only john1 builds images. Use `tools/cluster_build_push.py`; it builds linux/arm64,
-pushes once, resolves the registry digest, and writes a source-bound publication
-receipt. Before building, the tool hashes every tracked and nonignored untracked
-John1 workspace file, embeds that BLAKE3 plus the Git revision and image tag in
-reserved OCI labels, verifies those labels locally, and records the identity in
-the publication receipt. Jobs must use the returned `@sha256:` reference.
+Use `tools/cluster_build_push.py` from any configured Docker host. It builds and
+pushes linux/arm64, then prints both the mutable tag and registry digest. Jobs
+may use either.
 
 Research images include `/usr/local/bin/cascadia-cluster-job`. Set it as the
 entrypoint and pass the real command as arguments. It creates
-`/outputs/manifest.json`, checksums every returned file, and prevents deterministic
-application failures from being retried on every node. Transient exit codes remain
-nonzero for Bacalhau recovery.
+`/outputs/manifest.json`; transient exit codes remain nonzero for Bacalhau
+recovery.
 
-MinIO inputs use keys derived from SHA-256. Managed result objects use the immutable
-`executions/<job-id>/<execution-id>.tar.gz` layout. The importer rejects traversal,
-links, undeclared files, size differences, and checksum differences before an
-atomic canonical import. Duplicate successful attempts remain noncanonical evidence;
-the earliest valid execution is accepted.
+MinIO and AWS signing still use protocol-required SHA-256 values. Managed result
+objects use the `executions/<job-id>/<execution-id>.tar.gz` layout. The importer
+rejects unsafe archive paths and links before import.
 
 ## Operations
 
@@ -108,10 +101,10 @@ make cluster-fabric-test
 make cluster-fabric-start-storage
 ```
 
-The first command verifies and installs the pinned Bacalhau binary on all four
-nodes. The health record requires exactly john1-john4, v1.9.0, Docker support,
-and connected membership. The dashboard at `/cluster` shows the same authoritative
-scheduler state beside the four-node fleet and the separate john1 MLX indicator.
+The first command installs the configured Bacalhau binary on the configured
+nodes. Health requires an alive scheduler and connected Docker-capable compute;
+it accepts extra nodes, capacity changes, and newer versions. The dashboard at
+`/cluster` shows the scheduler state.
 
 Storage startup is intentionally independent from scheduler startup so native MLX
 training is never disturbed by a Colima image pull. After storage is live, create
@@ -144,7 +137,7 @@ all worker-local files vanish after the execution finishes.
 - Deterministic nonretryable exits become validated failure manifests and do not
   churn across workers.
 - Transient runtime exits retain their nonzero status for bounded Bacalhau retry.
-- Object-store or checksum failure never imports a success.
+- Object-store transfer failures never import a success.
 - An oversized resource request remains visibly queued/unschedulable; resources are
   never silently reduced.
 - Cancellation stops only nonterminal children and preserves terminal results.

@@ -320,7 +320,6 @@ def run_benchmark(
     paired_deltas = paired_score_deltas(learned_results, greedy_results)
     return {
         "status": "pass",
-        "scientific_eligibility": "greedy_policy_complete_game_benchmark",
         "experiment_id": experiment_id,
         "binary": str(binary),
         "checkpoint": policy["checkpoint_path"],

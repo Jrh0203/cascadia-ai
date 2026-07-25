@@ -7,7 +7,6 @@ set -euo pipefail
 # EXPERIMENT_LOG 2026-07-19 15:20 ("continue trying to break past 105").
 #
 # Required env:
-#   SOURCE_REVISION  deployed git revision
 #   CYCLE_TAG        e.g. c2, c3 (artifact namespace cbddb_<tag>_*)
 #   INCUMBENT        manifest of the model that generates the corpus
 #                    and warm-starts the fine-tune
@@ -26,7 +25,6 @@ set -euo pipefail
 # run_cbddb_certification.sh on a John-visible decision.
 
 ROOT="${ROOT:-/home/john0/cascadia}"
-SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION}"
 CYCLE_TAG="${CYCLE_TAG:?set CYCLE_TAG (e.g. c2)}"
 INCUMBENT="${INCUMBENT:?set INCUMBENT manifest path}"
 TRAIN_FIRST_SEED="${TRAIN_FIRST_SEED:?set TRAIN_FIRST_SEED}"
@@ -86,7 +84,7 @@ hb(){ echo "[$(date "+%F %T")] [cbddb-$CYCLE_TAG] $*"; }
 grep -q 'rules_2026_07_19' cascadiav3/real-root-exporter/src/main.rs
 test -s "$INCUMBENT"
 
-hb "start rev=$SOURCE_REVISION incumbent=$INCUMBENT seeds=${TRAIN_FIRST_SEED}x${TRAIN_SEEDS}+${VAL_FIRST_SEED}x${VAL_SEEDS}"
+hb "start incumbent=$INCUMBENT seeds=${TRAIN_FIRST_SEED}x${TRAIN_SEEDS}+${VAL_FIRST_SEED}x${VAL_SEEDS}"
 
 cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 
@@ -112,7 +110,6 @@ gen_corpus() {
     --gumbel-n-simulations "$GEN_N_SIMULATIONS" --gumbel-top-m 16 --gumbel-depth-rounds 1 \
     --gumbel-determinizations "$GEN_DETERMINIZATIONS" --gumbel-market-decision-samples 8 \
     --gumbel-exact-endgame-turns 0 --gumbel-blend-weight 0.5 --k-interior 16 \
-    --source-revision "$SOURCE_REVISION" \
     --first-seed "$first" --seed-count "$count" --plies-per-seed 80 \
     --max-actions 8 --rollouts-per-action 1 --rollout-top-k 4 \
     --tensor-compression stored \
@@ -157,7 +154,7 @@ test -s "$FT_MANIFEST"
 
 report_matches() {
   local report="$1"
-  [ -s "$report" ] && "$PYTHON" - "$report" "$RULESET_ID" "$SOURCE_REVISION" <<'PY'
+  [ -s "$report" ] && "$PYTHON" - "$report" "$RULESET_ID" <<'PY'
 import json
 import sys
 
@@ -166,7 +163,6 @@ raise SystemExit(
     0
     if report.get("status") == "pass"
     and report.get("ruleset_id") == sys.argv[2]
-    and report.get("source_revision") == sys.argv[3]
     else 1
 )
 PY
@@ -198,7 +194,6 @@ run_eval() {
     --k-interior 16 \
     --control none \
     --model-timeout-ms 300000 \
-    --source-revision "$SOURCE_REVISION" \
     --experiment-id "cbddb_${CYCLE_TAG}_${tag}" \
     --out "$report" \
     --decisions-out "$REPORT_DIR/cbddb_${CYCLE_TAG}_${tag}_decisions.jsonl" \

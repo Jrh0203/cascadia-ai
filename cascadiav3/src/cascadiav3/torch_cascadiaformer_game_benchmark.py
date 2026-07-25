@@ -452,8 +452,6 @@ def run_benchmark(
     return {
         "status": "pass",
         "ruleset_id": expected_ruleset_id,
-        "source_revision": source_revision,
-        "scientific_eligibility": "cascadiaformer_no_search_complete_game_benchmark",
         "experiment_id": experiment_id,
         "binary": str(binary),
         "manifest": checkpoint["manifest_path"],
@@ -494,7 +492,6 @@ def write_markdown_summary(report: dict[str, Any], path: Path) -> None:
         "",
         f"Experiment: `{report['experiment_id']}`",
         f"Ruleset: `{report['ruleset_id']}`",
-        f"Source revision: `{report['source_revision']}`",
         f"Manifest: `{report['manifest']}`",
         f"Games: `{len(report['seeds'])}` matched seeds",
         f"Max actions/root: `{report['max_actions']}`",

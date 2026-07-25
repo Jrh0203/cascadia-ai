@@ -143,10 +143,10 @@ class ModelThroughputBenchmarkTest(unittest.TestCase):
             )
 
         self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["scientific_eligibility"], "engineering_throughput_only")
-        self.assertEqual(report["source_revision"], "tested-revision")
+        self.assertNotIn("scientific_eligibility", report)
+        self.assertNotIn("source_revision", report)
         self.assertEqual(report["roots"]["benchmark_format"], "production-packed")
-        self.assertEqual(len(report["roots"]["benchmark_payload_sha256"]), 64)
+        self.assertNotIn("sha256", report["roots"])
         self.assertEqual(report["baseline_label"], "synthetic_tiny")
         self.assertEqual([row["batch_size"] for row in report["models"][0]["batches"]], [1, 2])
         self.assertTrue(

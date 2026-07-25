@@ -1,6 +1,6 @@
-"""Held-out policy probe for pairwise-comparator checkpoints.
+"""Policy probe for pairwise-comparator checkpoints.
 
-This is an offline routing gate, never gameplay evidence. It evaluates only
+It evaluates only
 roots whose top-two completed-Q comparison has at least two samples per action
 and clears the configured SNR threshold. Established logits, pairwise Borda,
 and their sum are compared on exactly the same v3 roots.
@@ -9,7 +9,6 @@ and their sum are compared on exactly the same v3 roots.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -23,16 +22,8 @@ from .torch_train_cascadiaformer import _add_pairwise_supervision, _move_to_devi
 POLICY_MODES = ("logits", "pairwise-borda", "logits-plus-pairwise")
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _artifact(path: Path) -> dict[str, Any]:
-    return {"path": str(path), "bytes": path.stat().st_size, "sha256": _sha256(path)}
+    return {"path": str(path), "bytes": path.stat().st_size}
 
 
 def _empty_mode_totals() -> dict[str, float]:
@@ -127,10 +118,9 @@ def run_probe(
         if record_count <= 0:
             raise ValueError("pairwise policy probe requires at least one record")
         metadata = [shard.metadata for shard in corpus.shards]
-        source_revisions = sorted({str(item["source_revision"]) for item in metadata})
-        ruleset_ids = sorted({str(item["ruleset_id"]) for item in metadata})
-        if len(source_revisions) != 1 or len(ruleset_ids) != 1:
-            raise ValueError("probe shards must share one source revision and ruleset")
+        ruleset_ids = sorted(
+            {str(item["ruleset_id"]) for item in metadata if item.get("ruleset_id")}
+        )
         filter_contracts = [item.get("filter") for item in metadata if item.get("filter")]
         exact_full_menu = not filter_contracts
 
@@ -266,11 +256,6 @@ def run_probe(
     return {
         "status": "pass",
         "schema_id": "cascadiav3.pairwise_policy_probe.v4",
-        "scientific_eligibility": (
-            "exact_full_menu_offline_policy_routing_only_not_gameplay"
-            if exact_full_menu
-            else "filtered_action_surface_offline_routing_only_not_gameplay"
-        ),
         "action_surface": {
             "exact_full_legal_menu": exact_full_menu,
             "filter_contracts": filter_contracts,
@@ -280,8 +265,7 @@ def run_probe(
                 else "policy top-K is computed inside the filtered tensor, not the full legal menu"
             ),
         },
-        "ruleset_id": ruleset_ids[0],
-        "source_revision": source_revisions[0],
+        "ruleset_ids": ruleset_ids,
         "record_count": record_count,
         "exact_endgame_root_count": exact_endgame_roots,
         "eligible_policy_root_count": eligible_policy_roots,
@@ -372,7 +356,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
             f"[{regret['bootstrap_ci_low']:+.4f}, {regret['bootstrap_ci_high']:+.4f}] | "
             f"{discordance['candidate_only_correct']} / {discordance['logits_only_correct']} |"
         )
-    lines.extend(["", "Offline routing evidence only; this is not gameplay or promotion evidence."])
+    lines.extend(["", "Pairwise policy comparison on the supplied records."])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

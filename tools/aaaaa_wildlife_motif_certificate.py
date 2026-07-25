@@ -15,7 +15,6 @@ a sound upper-bound certificate for real connected boards.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 import time
@@ -276,7 +275,6 @@ def certificate(catalog_path: Path) -> dict[str, Any]:
     stats = enumerate_relaxed_superset()
     if not stats["infeasible"]:
         raise RuntimeError("relaxed motif superset has a realization; certificate failed")
-    source = Path(__file__).resolve()
     return {
         "schema": "aaaaa-motif-incompatibility-certificate-v1",
         "counts": list(COUNTS),
@@ -293,7 +291,6 @@ def certificate(catalog_path: Path) -> dict[str, Any]:
         "enumeration": stats,
         "incumbent": load_incumbent(catalog_path),
         "elapsed_seconds": time.monotonic() - started,
-        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
     }
 
 

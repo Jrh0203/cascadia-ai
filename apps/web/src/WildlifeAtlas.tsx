@@ -467,7 +467,7 @@ export default function WildlifeAtlas() {
             })}
           </section>
 
-          <section className="atlas-provenance">
+          <section className="atlas-notes">
             <button type="button" onClick={() => void copyLink()}>
               {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
               {copied ? "Copied" : "Copy board link"}
@@ -476,9 +476,6 @@ export default function WildlifeAtlas() {
               Connected 20-token boards, maximum six of any animal. Habitat,
               Nature tokens, and all non-wildlife scoring are excluded.
             </p>
-            <code title={document.sourceSha256}>
-              source {document.sourceSha256.slice(0, 12)}
-            </code>
           </section>
         </aside>
       </div>

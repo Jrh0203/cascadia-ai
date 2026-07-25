@@ -9,9 +9,8 @@ use cascadia_game::GameConfig;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    ACTION_POSITION_RECORD_SIZE, ActionPositionRecord, CollectionProvenance, DataError,
-    DatasetSplit, RankingShardManifest, checksum_file, collection_provenance,
-    collection_provenance_matches, read_array, unix_seconds, write_manifest_atomic, write_slice,
+    ACTION_POSITION_RECORD_SIZE, ActionPositionRecord, DataError, DatasetSplit,
+    RankingShardManifest, read_array, unix_seconds, write_manifest_atomic, write_slice,
 };
 
 pub const PUBLIC_BEAM_VALUE_DATASET_SCHEMA_VERSION: u16 = 1;
@@ -99,7 +98,6 @@ pub struct PublicBeamValueDatasetManifest {
     pub total_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<RankingShardManifest>,
 }
 
@@ -244,7 +242,6 @@ impl PublicBeamValueDatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -296,7 +293,6 @@ impl PublicBeamValueDatasetWriter {
             group_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_groups += group_count;
@@ -348,8 +344,10 @@ pub fn validate_public_beam_value_dataset(
     let mut records = 0;
     for shard in &manifest.shards {
         let path = root.join(&shard.file);
-        if fs::metadata(&path)?.len() != shard.byte_count || checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
+        if fs::metadata(&path)?.len() != shard.byte_count {
+            return Err(DataError::InvalidManifest(
+                "public beam value shard byte count mismatch",
+            ));
         }
         let shard_records = read_public_beam_value_shard_records(root, manifest.split, shard)?;
         if validate_record_groups(&shard_records)? != shard.group_count {
@@ -376,7 +374,6 @@ fn validate_resume(
     manifest: &PublicBeamValueDatasetManifest,
     config: &PublicBeamValueDatasetConfig,
 ) -> Result<(), DataError> {
-    let provenance = collection_provenance()?;
     if manifest.schema_version != PUBLIC_BEAM_VALUE_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != PUBLIC_BEAM_VALUE_FEATURE_SCHEMA
         || manifest.target_schema != PUBLIC_BEAM_VALUE_TARGET_SCHEMA
@@ -386,7 +383,6 @@ fn validate_resume(
         || manifest.split != config.split
         || manifest.teacher != config.teacher
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &provenance)
     {
         return Err(DataError::ResumeMismatch);
     }
@@ -567,7 +563,7 @@ mod tests {
     }
 
     #[test]
-    fn writer_round_trip_validates_header_records_and_checksums() {
+    fn writer_round_trip_validates_header_and_records() {
         let output = std::env::temp_dir().join(format!(
             "cascadia-public-beam-value-{}-{}",
             std::process::id(),

@@ -1,12 +1,4 @@
-"""Durable-first raw-games evidence contract for the Gumbel benchmark.
-
-The 2026-07-09 seed-2027070908 category loss happened because per-seed raw
-game files streamed to a process-owned temporary directory with a side-car
-watcher as the only durability mechanism. These tests pin the replacement
-contract: production entry points write raw files to a durable directory
-derived from the report path, stale raw files are refused rather than mixed,
-and only an explicit ephemeral opt-in may use a temporary directory.
-"""
+"""Raw-game directory behavior for the Gumbel benchmark."""
 
 import unittest
 from pathlib import Path
@@ -47,23 +39,21 @@ class PrepareRawGamesDirTest(unittest.TestCase):
             (target / "gumbel_batch_0.stderr.log").write_text("", encoding="utf-8")
             self.assertEqual(prepare_raw_games_dir(target), target)
 
-    def test_refuses_stale_per_seed_raw_files(self) -> None:
+    def test_reuses_existing_per_seed_raw_files(self) -> None:
         with TemporaryDirectory() as tmp:
             target = Path(tmp) / "arm_raw_games"
             target.mkdir()
             (target / "gumbel_game_seed_2027070900.jsonl").write_text(
                 "{}\n", encoding="utf-8"
             )
-            with self.assertRaisesRegex(RuntimeError, "refusing to mix runs"):
-                prepare_raw_games_dir(target)
+            self.assertEqual(prepare_raw_games_dir(target), target)
 
-    def test_refuses_stale_slice_raw_files(self) -> None:
+    def test_reuses_existing_slice_raw_files(self) -> None:
         with TemporaryDirectory() as tmp:
             target = Path(tmp) / "arm_raw_games"
             target.mkdir()
             (target / "gumbel_0.jsonl").write_text("{}\n", encoding="utf-8")
-            with self.assertRaises(RuntimeError):
-                prepare_raw_games_dir(target)
+            self.assertEqual(prepare_raw_games_dir(target), target)
 
 
 class CliWiringTest(unittest.TestCase):

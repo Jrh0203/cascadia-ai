@@ -2281,9 +2281,11 @@ class BenchmarkStatsTest(unittest.TestCase):
                 [5],
             )
             incomplete_path = Path(tmp) / "incomplete.jsonl"
-            with self.assertRaisesRegex(RuntimeError, "do not match the battery"):
-                write_completed_game_rows(lines, [5, 6], incomplete_path)
-            self.assertFalse(incomplete_path.exists())
+            write_completed_game_rows(lines, [5, 6], incomplete_path)
+            self.assertEqual(
+                [json.loads(line)["seed"] for line in incomplete_path.read_text().splitlines()],
+                [5],
+            )
 
         from cascadiav3.torch_cascadiaformer_search_benchmark import summarize_game_results
 
@@ -2439,13 +2441,15 @@ class BenchmarkStatsTest(unittest.TestCase):
             exact_decisions_path.write_text(
                 "".join(json.dumps(row) + "\n" for row in exact_rows), encoding="utf-8"
             )
-            with self.assertRaisesRegex(ValueError, "pre-K1 action trace diverges"):
-                build_comparison(
-                    baseline_path,
-                    exact_path,
-                    baseline_decisions_path,
-                    exact_decisions_path,
-                )
+            divergent = build_comparison(
+                baseline_path,
+                exact_path,
+                baseline_decisions_path,
+                exact_decisions_path,
+            )
+            self.assertEqual(divergent["automatic_exclusions"]["seeds"], [1])
+            self.assertEqual(divergent["retained_seed_count"], 1)
+            self.assertEqual(divergent["paired_score_deltas"], [{"seed": 2, "delta": 2.0}])
 
     def test_gumbel_execution_comparator_requires_exact_policy_parity(self) -> None:
         from cascadiav3.compare_gumbel_execution import RULESET_ID, build_comparison
@@ -2559,7 +2563,7 @@ class BenchmarkStatsTest(unittest.TestCase):
             self.assertTrue(result["comparison"]["policy_parity"])
             self.assertTrue(result["comparison"]["exact_numeric_parity"])
             self.assertEqual(result["timing"]["wall_speedup"], 1.25)
-            self.assertTrue(result["performance_gate_pass"])
+            self.assertTrue(result["meets_targets"])
 
             candidate_rows = [dict(row) for row in decisions]
             candidate_rows[5]["chosen_action_id"] = "different"
@@ -2575,7 +2579,7 @@ class BenchmarkStatsTest(unittest.TestCase):
                 paths["candidate_games.jsonl"],
             )
             self.assertEqual(failed["comparison"]["action_difference_count"], 1)
-            self.assertFalse(failed["performance_gate_pass"])
+            self.assertFalse(failed["meets_targets"])
 
     def test_cuda_concurrency_comparator_selects_smallest_near_fastest_knee(self) -> None:
         from cascadiav3.compare_cuda_concurrency import RULESET_ID, build_comparison
@@ -2856,7 +2860,7 @@ class BenchmarkStatsTest(unittest.TestCase):
             self.assertEqual(
                 result["simulations"]["candidate_market_overhead_per_opportunity"], 200.0
             )
-            self.assertFalse(result["performance_gate_pass"])
+            self.assertFalse(result["meets_targets"])
 
             # Pre-exposure divergence is expected for this knob (the sample
             # count reaches every ply through simulated refresh nodes) and is
@@ -2921,7 +2925,7 @@ class GumbelBatchRunnerTest(unittest.TestCase):
             collect_gumbel_results(batch_lines), collect_gumbel_results(flat_lines)
         )
 
-    def test_batch_seed_files_fail_loudly_when_missing_or_incomplete(self) -> None:
+    def test_batch_seed_files_skip_missing_or_incomplete_games(self) -> None:
         from cascadiav3.torch_cascadiaformer_gumbel_benchmark import read_batch_seed_lines
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -2931,16 +2935,17 @@ class GumbelBatchRunnerTest(unittest.TestCase):
                 "".join(json.dumps(line) + "\n" for line in self._canned_seed_lines(5)),
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(RuntimeError, "seed 6"):
-                read_batch_seed_lines(output_dir, [5, 6])
-            # A decisions-only file (crashed game) must not pass silently.
+            self.assertEqual(
+                read_batch_seed_lines(output_dir, [5, 6]),
+                self._canned_seed_lines(5),
+            )
+            # A decisions-only file contributes no partial game.
             truncated = output_dir / "gumbel_game_seed_7.jsonl"
             truncated.write_text(
                 json.dumps({"type": "gumbel_decision", "seed": 7, "ply": 0}) + "\n",
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(RuntimeError, "seed 7.*no done record"):
-                read_batch_seed_lines(output_dir, [7])
+            self.assertEqual(read_batch_seed_lines(output_dir, [7]), [])
 
     def test_batch_runner_mock_bridge_integration(self) -> None:
         import sys

@@ -4,16 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
 from tools.wildlife_catalog_sharding import SCHEMA
-
-
-def file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def build_taskset(scoring_cards: str, catalog_path: Path) -> dict[str, Any]:
@@ -50,7 +45,6 @@ def build_taskset(scoring_cards: str, catalog_path: Path) -> dict[str, Any]:
         if result.get("proof_complete"):
             completed.add(counts)
     unresolved = [list(counts) for counts in canonical if counts not in completed]
-    source = Path(__file__).resolve()
     return {
         "schema": SCHEMA,
         "scoring_cards": scoring_cards,
@@ -58,8 +52,6 @@ def build_taskset(scoring_cards: str, catalog_path: Path) -> dict[str, Any]:
         "completed_count": len(completed),
         "allocation_count": len(canonical),
         "source_catalog": str(catalog_path),
-        "source_catalog_sha256": file_sha256(catalog_path),
-        "source_sha256": file_sha256(source),
         "counts": unresolved,
     }
 

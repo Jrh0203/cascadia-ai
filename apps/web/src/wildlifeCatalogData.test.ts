@@ -70,7 +70,7 @@ describe("wildlife atlas helpers", () => {
     ]);
   });
 
-  it("fails closed on incomplete catalog payloads", () => {
+  it("rejects incomplete catalog payloads", () => {
     const document = {
       schema: "cascadia-wildlife-atlas-v1",
       rulesetCount: 1024,

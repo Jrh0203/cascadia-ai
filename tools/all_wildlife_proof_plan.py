@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
@@ -26,8 +25,7 @@ def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
 def build_plan(candidates_path: Path, hosts: list[str]) -> dict[str, Any]:
     if not hosts or len(hosts) != len(set(hosts)):
         raise ValueError("hosts must be a nonempty unique list")
-    encoded = candidates_path.read_bytes()
-    candidates = json.loads(encoded)
+    candidates = json.loads(candidates_path.read_bytes())
     if candidates.get("schema") != "all-wildlife-merged-candidates-v1":
         raise ValueError("unexpected candidate schema")
     work = []
@@ -81,7 +79,6 @@ def build_plan(candidates_path: Path, hosts: list[str]) -> dict[str, Any]:
         shard["ruleset_count"] = len(shard["indices"])
     return {
         "schema": "all-wildlife-proof-plan-v1",
-        "candidate_sha256": hashlib.sha256(encoded).hexdigest(),
         "ruleset_count": len(work),
         "count_cap": rules.COUNT_CAP,
         "shards": shards,

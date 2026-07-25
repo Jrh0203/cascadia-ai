@@ -1,17 +1,12 @@
-"""Shared fail-closed task selection for distributed wildlife catalogs."""
+"""Shared task selection for distributed wildlife catalogs."""
 
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
 SCHEMA = "wildlife-catalog-taskset-v1"
-
-
-def file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load_taskset(
@@ -41,7 +36,6 @@ def load_taskset(
         raise ValueError(f"taskset count says {expected_count}, contains {len(rows)} rows")
     return set(rows), {
         "path": str(path),
-        "sha256": file_sha256(path),
         "schema": SCHEMA,
         "scoring_cards": scoring_cards,
         "task_count": len(rows),
@@ -59,4 +53,3 @@ def select_shard(
     if not 0 <= shard_index < shard_count:
         raise ValueError(f"shard_index {shard_index} outside [0, {shard_count})")
     return tasks[shard_index::shard_count]
-

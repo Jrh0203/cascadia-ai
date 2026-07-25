@@ -73,7 +73,7 @@ class AnalyzeLabelMovementTest(unittest.TestCase):
     def test_bar_uses_stable_stratum_only(self):
         # Three unstable roots all moved; two stable roots did not move.
         # Overall movement is 3/5 but the stable-stratum rate is 0/2, so the
-        # preregistered bar must FAIL.
+        # Reference bar must fail.
         records = [
             _root(1, p, [2.0, 1.9], serving_index=1, agreement=0.5)
             for p in (0, 4, 8)
@@ -85,7 +85,7 @@ class AnalyzeLabelMovementTest(unittest.TestCase):
         self.assertAlmostEqual(report["unstable_fraction"], 0.6)
         self.assertAlmostEqual(report["overall"]["movement_rate"], 0.6)
         self.assertAlmostEqual(report["stable"]["movement_rate"], 0.0)
-        self.assertFalse(report["preregistered_bar"]["bar_pass"])
+        self.assertFalse(report["reference_bar"]["bar_pass"])
 
     def test_bar_pass_and_near_tie_guard(self):
         # 2 of 4 stable roots moved (rate 0.5 >= bar) but both moves are
@@ -97,7 +97,7 @@ class AnalyzeLabelMovementTest(unittest.TestCase):
             _root(2, 4, [3.0, 1.0], serving_index=0),
         ]
         report = analyze(self._write_bank(records))
-        bar = report["preregistered_bar"]
+        bar = report["reference_bar"]
         self.assertGreaterEqual(bar["stable_movement_rate"], MOVEMENT_BAR)
         self.assertTrue(bar["bar_pass"])
         self.assertTrue(bar["near_tie_churn_flag"])
@@ -108,7 +108,7 @@ class AnalyzeLabelMovementTest(unittest.TestCase):
             _root(2, 0, [3.0, 1.0], serving_index=0),
         ]
         report = analyze(self._write_bank(records))
-        bar = report["preregistered_bar"]
+        bar = report["reference_bar"]
         self.assertTrue(bar["bar_pass"])
         self.assertFalse(bar["near_tie_churn_flag"])
 

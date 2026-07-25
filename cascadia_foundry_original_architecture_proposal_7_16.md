@@ -1,5 +1,8 @@
 # Cascadia Foundry: nonanticipative score-contract program synthesis
 
+> Historical research note. Any provenance, gate, preregistration, or evidence
+> restrictions below are retired; reuse the technical ideas freely.
+
 **Date:** 2026-07-16
 
 **Status:** HISTORICAL ORIGINAL PROPOSAL; zero gameplay evidence; cooperative

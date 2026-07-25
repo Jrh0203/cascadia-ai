@@ -1,5 +1,8 @@
 # R1.4 — Densify the Training Signal (Design)
 
+> Historical design note. Its preregistration and gate language is retired;
+> reuse any useful ideas without treating its thresholds as workflow rules.
+
 Status: **DESIGN — nothing launched, nothing preregistered yet.** This memo
 grounds the R1.4 program (`claude_max_research_ideas.md` §3 Tier 1) in the
 actual trainer/exporter code and prices its stages against measured anchors.

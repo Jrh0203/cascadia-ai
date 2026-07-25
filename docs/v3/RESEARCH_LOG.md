@@ -1,5 +1,10 @@
 # Cascadia v3 Research Log — the road to 100
 
+> Historical research notebook. Since 2026-07-25, closed-direction rulings,
+> preregistered gates, source identities, receipts, and seed restrictions are
+> advisory history only. Reopen, inspect, or redirect work whenever current
+> evidence makes that useful.
+
 **Deliverable doc.** Every research direction tried in the Gumbel self-play
 campaign: what it was, why we tried it, what we measured, and the verdict.
 Updated continuously; §7 carries the latest consolidated verdicts (07-16); the live queue is [`RESEARCH_AGENDA.md`](RESEARCH_AGENDA.md).

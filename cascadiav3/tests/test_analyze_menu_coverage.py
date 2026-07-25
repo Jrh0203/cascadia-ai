@@ -80,8 +80,7 @@ class AnalyzeMenuCoverageTest(unittest.TestCase):
     def test_capped_not_subset_roots_skipped_and_counted(self) -> None:
         with TemporaryDirectory() as tmp:
             # Ply 0 violates the subset invariant ("zz" is not in the full
-            # menu); plies 1..10 are clean, keeping the skip rate at 1/11
-            # (below the 10% fail-closed tolerance).
+            # menu); plies 1..10 are clean.
             capped_rows = [menu_root(1, 0, ["zz", "a1"], [90.0, 91.0])]
             full_rows = [menu_root(1, 0, ["a0", "a1"], [90.0, 91.0])]
             for ply in range(1, 11):
@@ -111,9 +110,9 @@ class AnalyzeMenuCoverageTest(unittest.TestCase):
             self.assertEqual(report["capped_missing_roots"], 1)
             self.assertEqual(report["skipped_roots"], 1)
 
-    def test_excess_mismatch_fails_closed(self) -> None:
+    def test_large_mismatch_is_reported_without_blocking_useful_rows(self) -> None:
         with TemporaryDirectory() as tmp:
-            # 1 mismatch out of 2 full roots (50%) exceeds the 10% tolerance.
+            # One mismatch out of two full roots is simply reported.
             capped = write_shards(
                 tmp,
                 "capped",
@@ -130,8 +129,10 @@ class AnalyzeMenuCoverageTest(unittest.TestCase):
                     menu_root(1, 3, ["b0", "b1"], [88.0, 87.0]),
                 ],
             )
-            with self.assertRaisesRegex(ValueError, "tolerance"):
-                analyze(capped, full)
+            report = analyze(capped, full)
+            self.assertEqual(report["roots"], 1)
+            self.assertEqual(report["skipped_roots"], 1)
+            self.assertEqual(report["subset_mismatch_roots"], 1)
 
     def test_empty_join_fails_closed(self) -> None:
         with TemporaryDirectory() as tmp:

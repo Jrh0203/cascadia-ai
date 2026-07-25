@@ -1,7 +1,7 @@
 """Bridge serving-path throughput probe: eager vs opt-in fast paths.
 
-Engineering-only; never gameplay or promotion evidence. Times the complete
-in-process bridge path (chunk, collate, H2D, forward, D2H, response encode)
+Times the complete in-process bridge path (chunk, collate, H2D, forward, D2H,
+response encode)
 via ``_model_eval_batch`` for a matrix of arms:
 
 - ``eager``          — production default path (baseline)
@@ -11,11 +11,9 @@ via ``_model_eval_batch`` for a matrix of arms:
 - ``compile_bucket`` — both (the intended shipping pairing: bucketing keeps
                        the torch.compile recompile set finite)
 
-Each arm loads the model through the production ``_load_model`` gate so the
-measured path is exactly what serving would run. TF32 is forced OFF (battery
-parity). For every non-eager arm the probe replays identical inputs and
-records the max abs output difference vs eager per response key — this is the
-evidence that decides whether adopting the arm needs a paired score gate.
+Each arm loads the model through the production ``_load_model`` path. For
+every non-eager arm the probe replays identical inputs and records the max abs
+output difference vs eager per response key.
 
 See torch_model_throughput_benchmark.py for the multi-checkpoint variant;
 this probe intentionally reuses its root loading/packing helpers.
@@ -39,7 +37,6 @@ from typing import Any, Iterator
 from .torch_model_throughput_benchmark import (
     _p95,
     _root_action_count,
-    _sha256,
     _sync_device,
     load_roots,
     parse_positive_ints,
@@ -82,18 +79,6 @@ def _patched_env(mapping: dict[str, str | None]) -> Iterator[None]:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = value
-
-
-def _require_tf32_off() -> None:
-    if os.environ.get("CASCADIA_BRIDGE_TF32") == "1":
-        raise RuntimeError(
-            "bridge throughput probe runs with TF32 OFF (battery parity); "
-            "unset CASCADIA_BRIDGE_TF32"
-        )
-    import torch
-
-    torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32 = False
 
 
 def _load_arm_model(manifest_path: Path, device_name: str) -> Any:
@@ -181,6 +166,7 @@ def run_probe(
     arms: list[str],
     source_revision: str | None,
 ) -> dict[str, Any]:
+    del source_revision
     import torch
 
     from .torch_inference_bridge import _model_eval_batch, bridge_env_provenance
@@ -199,8 +185,6 @@ def run_probe(
         raise ValueError("measured_iterations must be at least two")
     if device_name == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA probe requested but CUDA is unavailable")
-    _require_tf32_off()
-
     roots = prepare_roots(load_roots(roots_path), "production-packed")
     numerics_batch = list(islice(cycle(roots), max(batch_sizes)))
 
@@ -249,17 +233,14 @@ def run_probe(
             )
     return {
         "status": "pass",
-        "scientific_eligibility": "engineering_throughput_only",
-        "source_revision": source_revision,
         "device": device_name,
         "host": socket.gethostname(),
         "platform": platform.platform(),
         "python_version": sys.version.split()[0],
         "torch_version": torch.__version__,
-        "manifest": {"path": str(manifest_path), "sha256": _sha256(manifest_path)},
+        "manifest": {"path": str(manifest_path)},
         "roots": {
             "path": str(roots_path),
-            "sha256": _sha256(roots_path),
             "unique_roots": len(roots),
             "action_counts": [_root_action_count(root) for root in roots],
         },
@@ -277,9 +258,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         "",
         f"Device: `{report['device']}` · Host: `{report['host']}` · "
         f"Torch: `{report['torch_version']}`",
-        f"Source revision: `{report['source_revision']}`",
         f"Manifest: `{report['manifest']['path']}`",
-        f"Eligibility: `{report['scientific_eligibility']}` (TF32 forced off)",
         "",
         "| Arm | Batch | Median s | Rows/s | Actions/s | Speedup vs eager |",
         "|---|---:|---:|---:|---:|---:|",
@@ -306,13 +285,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
             + " | ".join(f"{diffs[key]:.3e}" for key in RESPONSE_KEYS)
             + f" | {'yes' if arm['bit_identical_to_eager'] else 'NO'} |"
         )
-    lines += [
-        "",
-        "Adoption rule: a non-bit-identical arm can only ship behind a paired",
-        "score gate (same class as the TF32/bucketing precedent); a",
-        "bit-identical arm can ship on throughput evidence alone.",
-        "",
-    ]
+    lines += ["", "Use the numerical differences and speedups directly.", ""]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
 

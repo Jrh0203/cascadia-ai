@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import time
 from pathlib import Path
@@ -12,10 +11,6 @@ from typing import Any
 
 from tools import aaaaa_wildlife_split_salmon_feasibility as feasibility
 from tools.aaaaa_wildlife_gap_two_salmon_pair_bound import SCREEN_CASES
-
-
-def file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def run(*, workers: int, per_shape_time_limit: float) -> dict[str, Any]:
@@ -34,8 +29,6 @@ def run(*, workers: int, per_shape_time_limit: float) -> dict[str, Any]:
             f"status={result['status']} cases={result['cases']}",
             flush=True,
         )
-    source = Path(__file__).resolve()
-    feasibility_source = Path(feasibility.__file__).resolve()
     return {
         "schema": "aaaaa-split-salmon-feasibility-screen-v1",
         "proof_complete": all(row["bound"]["status"] == "INFEASIBLE" for row in results),
@@ -45,8 +38,6 @@ def run(*, workers: int, per_shape_time_limit: float) -> dict[str, Any]:
             "per_submodel_time_limit_seconds": per_shape_time_limit,
             "cases_sequential": True,
         },
-        "source_sha256": file_sha256(source),
-        "feasibility_source_sha256": file_sha256(feasibility_source),
         "results": results,
         "elapsed_seconds": time.monotonic() - started,
     }

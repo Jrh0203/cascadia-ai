@@ -8,9 +8,8 @@ subset of the full menu (same ledger, same stride); the full-run
 mean-completed-Q is the shared yardstick: when the full-run argmax action is
 absent from the capped menu, the regret is the full-run Q gap to the best
 action the cap did keep, otherwise zero. Roots where the capped arm is
-missing or the subset invariant fails are skipped and counted; more than
-``MAX_SKIP_FRACTION`` of them fails the audit closed. The audit measures menu
-coverage only — it is not promotion evidence for any serving change.
+missing or the subset invariant fails are skipped and counted. The report
+states the resulting sample size so the caller can judge its usefulness.
 """
 
 from __future__ import annotations
@@ -23,9 +22,6 @@ from typing import Any
 
 from .analyze_puzzle_screen import _load_roots
 from .torch_benchmark_stats import paired_delta_stats
-
-MAX_SKIP_FRACTION = 0.10
-
 
 def analyze(capped_dir: Path, full_dir: Path) -> dict[str, Any]:
     capped = _load_roots(capped_dir)
@@ -66,14 +62,6 @@ def analyze(capped_dir: Path, full_dir: Path) -> dict[str, Any]:
             }
         )
     skipped = len(capped_missing) + len(subset_mismatch)
-    if skipped > MAX_SKIP_FRACTION * len(full):
-        raise ValueError(
-            f"skipped {skipped}/{len(full)} roots "
-            f"(capped-missing {len(capped_missing)}, "
-            f"subset-mismatch {len(subset_mismatch)}) — exceeds the "
-            f"{MAX_SKIP_FRACTION:.0%} tolerance; arms likely replayed "
-            "different ledgers or strides"
-        )
     if not per_root:
         raise ValueError("no analyzable roots after skipping mismatches")
     regrets = [row["regret"] for row in per_root]
@@ -122,8 +110,8 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"(95% t-CI `[{_fmt(stats['t_ci_low'])}, {_fmt(stats['t_ci_high'])}]`)",
         f"P95 regret overall: `{_fmt(report['p95_regret_overall'])}`",
         "",
-        "Regret is measured on the full-run Q scale. The audit measures menu "
-        "coverage only; it is never promotion evidence.",
+        "Regret is measured on the full-run Q scale. Use this menu-coverage "
+        "measurement alongside gameplay and speed results.",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

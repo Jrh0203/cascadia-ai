@@ -3985,7 +3985,7 @@ select {
 
 .atlas-breakdown,
 .atlas-rules,
-.atlas-provenance {
+.atlas-notes {
   margin-top: 19px;
 }
 
@@ -4088,13 +4088,13 @@ select {
   text-transform: uppercase;
 }
 
-.atlas-provenance {
+.atlas-notes {
   padding: 12px;
   border-left: 2px solid var(--atlas-rule);
   background: var(--atlas-panel-deep);
 }
 
-.atlas-provenance button {
+.atlas-notes button {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
@@ -4107,22 +4107,22 @@ select {
   cursor: pointer;
 }
 
-.atlas-provenance button:hover {
+.atlas-notes button:hover {
   border-color: var(--atlas-paper);
 }
 
-.atlas-provenance button svg {
+.atlas-notes button svg {
   width: 13px;
 }
 
-.atlas-provenance p {
+.atlas-notes p {
   margin-top: 9px;
   color: var(--atlas-muted);
   font-size: 8px;
   line-height: 1.55;
 }
 
-.atlas-provenance code {
+.atlas-notes code {
   display: block;
   margin-top: 7px;
   color: var(--atlas-faint);

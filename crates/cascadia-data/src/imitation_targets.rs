@@ -9,9 +9,8 @@ use cascadia_game::GameConfig;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CollectionProvenance, DataError, DatasetSplit, ImitationDatasetManifest,
-    ImitationTeacherConfig, RankingShardManifest, checksum_file, collection_provenance,
-    collection_provenance_matches, read_array, read_imitation_shard_records, unix_seconds,
+    DataError, DatasetSplit, ImitationDatasetManifest, ImitationTeacherConfig,
+    RankingShardManifest, read_array, read_imitation_shard_records, unix_seconds,
     validate_imitation_dataset, write_manifest_atomic, write_slice,
 };
 
@@ -77,7 +76,6 @@ pub struct ImitationTargetsDatasetManifest {
     pub aligned_teacher_estimates: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<RankingShardManifest>,
 }
 
@@ -181,7 +179,6 @@ impl ImitationTargetsDatasetWriter {
                 aligned_teacher_estimates: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -249,7 +246,6 @@ impl ImitationTargetsDatasetWriter {
             group_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_groups += group_count;
@@ -326,9 +322,6 @@ pub fn validate_imitation_targets_dataset(
                 "imitation-target shard byte count mismatch",
             ));
         }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
-        }
         let shard_records = read_imitation_target_shard_records(root, manifest.split, shard)?;
         let source_shard = &source_manifest.shards[shard_index];
         if source_shard.first_game_index != shard.first_game_index
@@ -391,7 +384,6 @@ fn validate_resume(
     config: &ImitationTargetsDatasetConfig,
     source: &ImitationTargetsSourceManifest,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != IMITATION_TARGETS_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != IMITATION_TARGETS_FEATURE_SCHEMA
         || manifest.target_schema != IMITATION_TARGETS_TARGET_SCHEMA
@@ -403,7 +395,6 @@ fn validate_resume(
         || manifest.first_game_index != config.source_manifest.first_game_index
         || manifest.requested_games != config.source_manifest.requested_games
         || manifest.teacher_estimates < manifest.aligned_teacher_estimates
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }

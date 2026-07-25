@@ -81,7 +81,6 @@ export interface WildlifeAtlasRow {
 export interface WildlifeAtlasDocument {
   schema: "cascadia-wildlife-atlas-v1";
   sourceSchema: string;
-  sourceSha256: string;
   rulesetCount: number;
   tokenCount: number;
   countCap: number;
@@ -199,7 +198,7 @@ export function assertAtlasDocument(value: unknown): WildlifeAtlasDocument {
         (row.exact && row.upper !== row.score),
     )
   ) {
-    throw new Error("Wildlife atlas data failed integrity checks");
+    throw new Error("Wildlife atlas data contains an invalid board");
   }
   return document as WildlifeAtlasDocument;
 }

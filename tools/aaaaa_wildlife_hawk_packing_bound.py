@@ -10,7 +10,6 @@ are deliberately dropped, making the model a superset of real boards.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 import time
@@ -335,9 +334,6 @@ def certificates(
                 "incumbent": incumbent,
             }
         )
-    source = Path(__file__).resolve()
-    zero_source = source.with_name("aaaaa_wildlife_zero_hawk_bound.py")
-    exact_source = source.with_name("aaaaa_wildlife_exact.py")
     return {
         "schema": "aaaaa-hawk-one-loss-local-packing-certificates-v1",
         "proof_complete": True,
@@ -358,9 +354,6 @@ def certificates(
             "forced_local_cells_must_not_overlap": True,
         },
         "ortools_version": ORTOOLS_VERSION,
-        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "zero_hawk_support_source_sha256": hashlib.sha256(zero_source.read_bytes()).hexdigest(),
-        "exact_scorer_source_sha256": hashlib.sha256(exact_source.read_bytes()).hexdigest(),
         "elapsed_seconds": time.monotonic() - started,
         "results": results,
     }

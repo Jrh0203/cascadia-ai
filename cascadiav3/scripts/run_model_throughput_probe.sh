@@ -5,13 +5,11 @@ set -euo pipefail
 # direction. This never emits gameplay strength evidence.
 
 ROOT="${ROOT:-/home/john0/cascadia}"
-SOURCE_REVISION="${SOURCE_REVISION:-$(git -C "$ROOT" rev-parse HEAD)}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 DEVICE="${DEVICE:-cuda}"
 REPORT_DIR="${REPORT_DIR:-cascadiav3/reports}"
 LOG_DIR="${LOG_DIR:-cascadiav3/logs}"
-DEPLOYED_REVISION_FILE="${DEPLOYED_REVISION_FILE:-$LOG_DIR/exact_k1_deployed_revision.txt}"
 M_MANIFEST="${M_MANIFEST:-cascadiav3/checkpoints/full_v3_gumbel_selfplay_cycle4/best_locked_val.manifest.json}"
 S_MANIFEST="${S_MANIFEST:-cascadiav3/checkpoints/full_v3_ei0_greedy_search_bootstrap/guarded_retention_safe_best.manifest.json}"
 TAG="model_throughput_20260709"
@@ -32,16 +30,6 @@ mkdir -p "$REPORT_DIR" "$LOG_DIR"
 test -x "$BINARY"
 test -s "$M_MANIFEST"
 test -s "$S_MANIFEST"
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  test "$(git rev-parse HEAD)" = "$SOURCE_REVISION"
-  git diff --quiet
-  git diff --cached --quiet
-elif [ ! -s "$DEPLOYED_REVISION_FILE" ] \
-  || [ "$(tr -d '[:space:]' < "$DEPLOYED_REVISION_FILE")" != "$SOURCE_REVISION" ]; then
-  echo "[model-throughput] source snapshot lacks the deployed revision marker" >&2
-  exit 1
-fi
-
 "$BINARY" \
   --chance-mcts-dry-run \
   --allow-model-fallback \
@@ -68,7 +56,6 @@ test "$(wc -l < "$TMP/roots.jsonl" | tr -d '[:space:]')" = 4
   --measured-iterations 10 \
   --device "$DEVICE" \
   --baseline-label cycle4_M \
-  --source-revision "$SOURCE_REVISION" \
   --out "$REPORT_DIR/${TAG}_${DEVICE}.json" \
   --summary-out "$REPORT_DIR/${TAG}_${DEVICE}.md"
 
@@ -80,7 +67,6 @@ with open(sys.argv[1], "w", encoding="utf-8") as handle:
     json.dump(
         {
             "status": "complete",
-            "source_revision": "$SOURCE_REVISION",
             "device": "$DEVICE",
             "report": "$REPORT_DIR/${TAG}_${DEVICE}.json",
         },

@@ -1,5 +1,8 @@
 # Critical evaluation of the July 16 architecture proposals
 
+> Historical research note. Any provenance, gate, preregistration, or evidence
+> restrictions below are retired; reuse the technical ideas freely.
+
 **Date:** 2026-07-16
 **Author:** Claude (Fable 5), at John's request
 **Scope:** critical evaluation and ranking of the three post-D1 architecture

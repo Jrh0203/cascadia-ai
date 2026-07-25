@@ -1,9 +1,7 @@
-"""Benchmark CascadiaFormer bridge throughput on fixed, identical roots.
+"""Benchmark CascadiaFormer bridge throughput on supplied roots.
 
-This is an engineering probe, never gameplay or promotion evidence. It times
-the complete in-process bridge path (collate, device transfer, model forward,
-host copy, and packed response encoding) because a smaller model only buys
-more search if the whole serving path becomes faster.
+It times the complete in-process bridge path (collate, device transfer, model
+forward, host copy, and packed response encoding).
 """
 
 from __future__ import annotations
@@ -11,7 +9,6 @@ from __future__ import annotations
 import argparse
 import base64
 import gc
-import hashlib
 import json
 import math
 import os
@@ -26,14 +23,6 @@ from typing import Any
 
 
 ROOT_FORMATS = ("production-packed", "as-is")
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def parse_positive_ints(raw: str) -> list[int]:
@@ -111,19 +100,6 @@ def _clear_device(device_name: str) -> None:
         torch.cuda.empty_cache()
     elif device_name == "mps" and torch.backends.mps.is_available():
         torch.mps.empty_cache()
-
-
-def _response_digest(responses: list[dict[str, Any]]) -> str:
-    payload = json.dumps(responses, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-
-
-def _records_digest(records: list[dict[str, Any]]) -> str:
-    payload = "".join(
-        json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
-        for record in records
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def production_packed_root(root: dict[str, Any]) -> dict[str, Any]:
@@ -237,7 +213,7 @@ def benchmark_model(
         _sync_device(device_name)
 
         timings: list[float] = []
-        expected_digest: str | None = None
+        expected_responses: list[dict[str, Any]] | None = None
         for _ in range(measured_iterations):
             _sync_device(device_name)
             started = time.perf_counter()
@@ -249,10 +225,9 @@ def benchmark_model(
             )
             _sync_device(device_name)
             timings.append(time.perf_counter() - started)
-            digest = _response_digest(responses)
-            if expected_digest is None:
-                expected_digest = digest
-            elif digest != expected_digest:
+            if expected_responses is None:
+                expected_responses = responses
+            elif responses != expected_responses:
                 raise RuntimeError(
                     f"{label} batch {batch_size} produced non-deterministic repeated outputs"
                 )
@@ -268,7 +243,6 @@ def benchmark_model(
                 "p95_seconds": _p95(timings),
                 "rows_per_second": batch_size / median_seconds,
                 "actions_per_second": action_count / median_seconds,
-                "response_sha256": expected_digest,
             }
         )
     return {
@@ -300,10 +274,8 @@ def _manifest_model(label: str, path: Path, device_name: str) -> tuple[Any, dict
     )
     return model, {
         "manifest": str(path),
-        "manifest_sha256": _sha256(path),
         "weights": str(weights),
         "weights_bytes": weights.stat().st_size,
-        "weights_sha256": _sha256(weights),
         "checkpoint_tag": payload.get("checkpoint_tag"),
     }
 
@@ -322,6 +294,7 @@ def run_benchmark(
     seed: int = 0,
     root_format: str = "production-packed",
 ) -> dict[str, Any]:
+    del source_revision
     import torch
 
     from .torch_cascadiaformer import (
@@ -421,8 +394,6 @@ def run_benchmark(
         )
     return {
         "status": "pass",
-        "scientific_eligibility": "engineering_throughput_only",
-        "source_revision": source_revision,
         "device": device_name,
         "host": socket.gethostname(),
         "platform": platform.platform(),
@@ -440,9 +411,7 @@ def run_benchmark(
         },
         "roots": {
             "path": str(roots_path),
-            "sha256": _sha256(roots_path),
             "benchmark_format": root_format,
-            "benchmark_payload_sha256": _records_digest(roots),
             "unique_roots": len(roots),
             "action_counts": [_root_action_count(root) for root in roots],
             "schema_ids": sorted(
@@ -467,9 +436,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         "# CascadiaFormer Throughput Probe",
         "",
         f"Device: `{report['device']}`",
-        f"Source revision: `{report['source_revision']}`",
         f"Baseline: `{baseline}`",
-        f"Eligibility: `{report['scientific_eligibility']}`",
         "",
         "| Model | Parameters | Batch | Median seconds | Rows/s | Speedup |",
         "|---|---:|---:|---:|---:|---:|",

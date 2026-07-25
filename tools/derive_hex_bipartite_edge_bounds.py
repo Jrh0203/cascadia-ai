@@ -12,7 +12,6 @@ globally exact table without assuming that an optimum is connected.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
@@ -189,10 +188,8 @@ def collect_shards(
     expected_metric: str = "edges",
 ) -> dict[str, Any]:
     proofs_by_pair: dict[tuple[int, int], dict[str, Any]] = {}
-    shard_hashes = {}
     for path in shard_paths:
-        encoded = path.read_bytes()
-        payload = json.loads(encoded)
+        payload = json.loads(path.read_bytes())
         if payload.get("schema") not in (
             "hex-bipartite-edge-bound-shard-v1",
             "hex-bipartite-bound-shard-v1",
@@ -203,7 +200,6 @@ def collect_shards(
             raise ValueError(
                 f"{path}: metric {shard_metric!r} != {expected_metric!r}"
             )
-        shard_hashes[str(path)] = hashlib.sha256(encoded).hexdigest()
         for proof in payload["proofs"]:
             if proof.get("metric", "edges") != expected_metric:
                 raise ValueError(f"{path}: proof metric mismatch")
@@ -245,7 +241,6 @@ def collect_shards(
         "cap": CAP,
         "connected_component_maximum": component,
         "global_maximum": combine_components(component),
-        "shard_sha256": shard_hashes,
         "proofs": proofs,
     }
 

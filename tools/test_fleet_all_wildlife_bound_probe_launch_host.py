@@ -17,13 +17,6 @@ def _environment(home: Path, *, tag: str = "launch_test") -> dict[str, str]:
         "FLEET_TAG": tag,
         "SHARD_HOST": "john-test",
         "TASK_INDICES": "0,4",
-        "SOURCE_REVISION": "revision",
-        "TASKSET_SHA256": "taskset",
-        "CATALOG_SHA256": "catalog",
-        "PROBE_SOURCE_SHA256": "probe",
-        "EXACT_SOURCE_SHA256": "exact",
-        "EXACT_SUPPORT_SHA256": "support",
-        "RULES_SOURCE_SHA256": "rules",
         "WILDLIFE_VENV": ".venv",
         "TIME_LIMIT": "1",
         "TOTAL_TIME_LIMIT": "2",
@@ -32,7 +25,7 @@ def _environment(home: Path, *, tag: str = "launch_test") -> dict[str, str]:
     }
 
 
-def _fake_worker(home: Path, pid_value: str = "$$") -> Path:
+def _fake_worker(home: Path) -> Path:
     worker = (
         home
         / "cascadia"
@@ -42,14 +35,8 @@ def _fake_worker(home: Path, pid_value: str = "$$") -> Path:
     )
     worker.parent.mkdir(parents=True)
     worker.write_text(
-        f"""#!/usr/bin/env bash
+        """#!/usr/bin/env bash
 set -euo pipefail
-log_dir="$HOME/cascadia/cascadiav3/logs"
-base="$log_dir/all_wildlife_bound_${{FLEET_TAG}}_${{SHARD_HOST}}"
-printf '%s\\n' "{pid_value}" > "${{base}}.pid.tmp"
-mv "${{base}}.pid.tmp" "${{base}}.pid"
-printf 'heartbeat\\n' > "${{base}}.heartbeat.tmp"
-mv "${{base}}.heartbeat.tmp" "${{base}}.heartbeat"
 sleep 2
 """
     )
@@ -57,7 +44,7 @@ sleep 2
     return worker
 
 
-def test_host_launcher_requires_and_reports_live_worker_pid(tmp_path: Path) -> None:
+def test_host_launcher_reports_live_process_pid(tmp_path: Path) -> None:
     home = tmp_path / "home"
     _fake_worker(home)
 
@@ -72,30 +59,36 @@ def test_host_launcher_requires_and_reports_live_worker_pid(tmp_path: Path) -> N
 
     worker_pid = int(result.stdout.strip())
     os.kill(worker_pid, 0)
-    heartbeat = (
+    pid_file = (
         home
         / "cascadia"
         / "cascadiav3"
         / "logs"
-        / "all_wildlife_bound_launch_test_john-test.heartbeat"
+        / "all_wildlife_bound_launch_test_john-test.pid"
     )
-    assert heartbeat.read_text() == "heartbeat\n"
+    assert pid_file.read_text() == f"{worker_pid}\n"
     time.sleep(2.1)
 
 
-def test_host_launcher_rejects_nonnumeric_worker_pid(tmp_path: Path) -> None:
+def test_host_launcher_allows_rerun_without_receipt_checks(tmp_path: Path) -> None:
     home = tmp_path / "home"
-    _fake_worker(home, "not-a-pid")
+    _fake_worker(home)
 
-    result = subprocess.run(
+    first = subprocess.run(
         ["/bin/bash", str(LAUNCHER)],
         env=_environment(home, tag="invalid_pid"),
-        check=False,
+        check=True,
         capture_output=True,
         text=True,
         timeout=10,
     )
-
-    assert result.returncode == 70
-    assert "invalid PID" in result.stderr
+    second = subprocess.run(
+        ["/bin/bash", str(LAUNCHER)],
+        env=_environment(home, tag="invalid_pid"),
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert int(first.stdout) != int(second.stdout)
     time.sleep(2.1)

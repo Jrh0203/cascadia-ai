@@ -19,7 +19,7 @@ export JOB_SLUG="${JOB_SLUG:-gumbel_selfplay_cycle}"
 export PROFILE="${PROFILE:-gumbel_selfplay_cycle}"
 export EXPERT_TENSOR_MODE="gumbel_selfplay"
 export OBJECTIVE="${OBJECTIVE:-gumbel-selfplay}"
-export MAX_EXAMPLE_PASSES="${MAX_EXAMPLE_PASSES:-4}"
+export MAX_EXAMPLE_PASSES="${MAX_EXAMPLE_PASSES:-0}"
 
 export MODEL_MANIFEST="${MODEL_MANIFEST:?set MODEL_MANIFEST to the incumbent checkpoint manifest}"
 export MODEL_SERVICE="${MODEL_SERVICE:-python -m cascadiav3.torch_inference_bridge --manifest $MODEL_MANIFEST --device cuda}"

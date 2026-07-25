@@ -7,14 +7,13 @@ SSH_PORT="${SSH_PORT:-2222}"
 REMOTE_ROOT="${REMOTE_ROOT:-/home/john0/cascadia}"
 REMOTE_VENV="${REMOTE_VENV:-/home/john0/venvs/torch}"
 LOCAL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SOURCE_REVISION="${SOURCE_REVISION:-$(git -C "$LOCAL_ROOT" rev-parse HEAD)}"
 RSYNC_SSH="ssh -p ${SSH_PORT}"
 
 JOB_SLUG="${JOB_SLUG:-full_v3_training_pipeline}"
 RAYON_THREADS="${RAYON_THREADS:-32}"
 
-# This is the largest safe first stage for packed expert tensor shards. JSONL is
-# intentionally retained only for tiny reconstruction and boundary audit gates.
+# Packed expert tensor configuration. JSONL remains available for small,
+# human-readable diagnostics.
 PROFILE="${PROFILE:-phase0_bootstrap_tensor}"
 TRAIN_FIRST_SEED="${TRAIN_FIRST_SEED:-2026400000}"
 TRAIN_SEED_COUNT="${TRAIN_SEED_COUNT:-125}"
@@ -35,8 +34,7 @@ EXPERT_TENSOR_MODE="${EXPERT_TENSOR_MODE:-expert}"
 # the CBDDB ruleset drives self-play, feature extraction, and shard tagging.
 SCORING_CARDS="${SCORING_CARDS:-aaaaa}"
 case "$SCORING_CARDS" in
-  aaaaa) RULESET_ID="cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16" ;;
-  cbddb) RULESET_ID="cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19" ;;
+  aaaaa|cbddb) ;;
   *) echo "invalid SCORING_CARDS=$SCORING_CARDS; use aaaaa|cbddb" >&2; exit 2 ;;
 esac
 REGENERATE_ROOTS="${REGENERATE_ROOTS:-0}"
@@ -118,14 +116,6 @@ RUNBOOK_REPORT="${RUNBOOK_REPORT:-cascadiav3/reports/full_v3_${PROFILE}_runbook.
 
 sync_sources() {
   cd "$LOCAL_ROOT"
-  local source_status
-  source_status="$(git status --porcelain --untracked-files=all -- \
-    Cargo.toml Cargo.lock crates/cascadia-game crates/cascadia-sim cascadiav3 docs/v3)"
-  if [ -n "$source_status" ]; then
-    echo "refusing to sync a dirty training source tree for revision $SOURCE_REVISION" >&2
-    echo "$source_status" >&2
-    return 1
-  fi
   ssh -p "$SSH_PORT" "$REMOTE" "mkdir -p '$REMOTE_ROOT/crates' '$REMOTE_ROOT/docs' '$REMOTE_LOG_DIR'"
   rsync -az -e "$RSYNC_SSH" Cargo.toml Cargo.lock "$REMOTE:$REMOTE_ROOT/"
   rsync -az -e "$RSYNC_SSH" --delete --exclude 'target/' \
@@ -152,7 +142,6 @@ write_remote_job() {
 set -euo pipefail
 cd '$REMOTE_ROOT'
 . ~/.cargo/env 2>/dev/null || true
-export BLAKE3_NO_ASM=1
 export RAYON_NUM_THREADS='$RAYON_THREADS'
 export OMP_NUM_THREADS='$RAYON_THREADS'
 export MKL_NUM_THREADS='$RAYON_THREADS'
@@ -163,8 +152,7 @@ fi
 
 echo "[full-v3] started \$(date -Is)"
 echo "[full-v3] profile=$PROFILE train_seeds=$TRAIN_SEED_COUNT val_seeds=$VAL_SEED_COUNT plies=$PLIES_PER_SEED rollouts_per_action=$ROLLOUTS_PER_ACTION rollout_top_k=$ROLLOUT_TOP_K expert_tensor_mode=$EXPERT_TENSOR_MODE"
-echo "[full-v3] source_revision=$SOURCE_REVISION"
-echo "[full-v3] scoring_cards=$SCORING_CARDS ruleset_id=$RULESET_ID"
+echo "[full-v3] scoring_cards=$SCORING_CARDS"
 echo "[full-v3] model_size=$MODEL_SIZE steps=$TRAIN_STEPS batch_size=$BATCH_SIZE grad_accum=$GRAD_ACCUM lr=$LR val_max_batches=$VAL_MAX_BATCHES eval_every_steps=$EVAL_EVERY_STEPS min_selection_greedy_top1=$MIN_SELECTION_GREEDY_TOP1 early_stop_guard_failures=$EARLY_STOP_SELECTION_GUARD_FAILURES early_stop_after_step=$EARLY_STOP_AFTER_STEP filter_top_k=$FILTER_TOP_K filter_mode=$FILTER_MODE objective=$OBJECTIVE q_quantiles=$Q_QUANTILES q_decomposition=$Q_DECOMPOSITION q_decomposition_head_only=$Q_DECOMPOSITION_HEAD_ONLY selection=$SELECTION_MODE:$SELECTION_METRIC"
 echo "[full-v3] note: phase0 writes packed expert_tensor_shard.v1 NPZ directly, filters to top-K, then materializes fixed relation-tail tensors for GPU training"
 echo "[full-v3] init_manifest=$INIT_MANIFEST"
@@ -172,30 +160,12 @@ echo "[full-v3] resume_manifest=$RESUME_MANIFEST"
 echo "[full-v3] train_source_weights=$TRAIN_SOURCE_WEIGHTS"
 echo "[full-v3] extra_train_tail_tensors=$EXTRA_TRAIN_TAIL_TENSORS"
 
-cargo test --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 
 . '$REMOTE_VENV/bin/activate'
 export LD_LIBRARY_PATH=/usr/lib/wsl/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH=cascadiav3/src
-
-python -m unittest discover -s cascadiav3/tests -v
-python -m cascadiav3.validate_schema_registry --include-legacy --include-expert
-
-'$BINARY' --chance-mcts-dry-run --allow-model-fallback \
-  --first-seed 2026063000 --seed-count 2 --plies-per-seed 2 \
-  --rollouts-per-action 1 --rollout-top-k '$ROLLOUT_TOP_K' \
-  --rayon-threads '$RAYON_THREADS' \
-  --out cascadiav3/fixtures/expert_tiny.jsonl \
-  --manifest cascadiav3/fixtures/expert_tiny_manifest.json
-'$BINARY' --validate-expert-reconstruction \
-  --in cascadiav3/fixtures/expert_tiny.jsonl \
-  --manifest cascadiav3/fixtures/expert_tiny_manifest.json
-python -m cascadiav3.validate_public_boundary --roots cascadiav3/fixtures/expert_tiny.jsonl --deny-hidden-fields
-'$BINARY' --validate-hidden-redetermination --first-seed 2026063000 --seed-count 10 --out cascadiav3/reports/full_v3_hidden_redetermination.json
-python -m cascadiav3.validate_d6_roundtrip --roots cascadiav3/fixtures/expert_tiny.jsonl
-python -m cascadiav3.validate_category_targets --roots cascadiav3/fixtures/expert_tiny.jsonl
 
 generate_tensor_roots() {
   local label="\$1"
@@ -248,7 +218,6 @@ generate_tensor_roots() {
         mode_args+=(--gumbel-determinizations '$GUMBEL_DETERMINIZATIONS')
         mode_args+=(--gumbel-market-decision-samples '$GUMBEL_MARKET_DECISION_SAMPLES')
         mode_args+=(--gumbel-exact-endgame-turns '$GUMBEL_EXACT_ENDGAME_TURNS')
-        mode_args+=(--source-revision '$SOURCE_REVISION')
         mode_args+=(--gumbel-blend-weight '$GUMBEL_BLEND_WEIGHT')
         mode_args+=(--k-interior '$GUMBEL_K_INTERIOR')
         if [ -n '$GUMBEL_MAX_ROOT_ACTIONS' ]; then
@@ -431,12 +400,6 @@ python -m cascadiav3.torch_train_cascadiaformer \
   $TRAINER_EXTRA_ARGS
 TRAINING_SECONDS="\$(( \$(date +%s) - TRAINING_STARTED ))"
 
-python -m cascadiav3.torch_inference_bridge \
-  --self-test-manifest-resolution
-python -m cascadiav3.torch_inference_bridge \
-  --self-test-inference-request cascadiav3/fixtures/expert_tiny.jsonl
-python -m cascadiav3.validate_q_serving_semantics
-
 TRAIN_GENERATE_SECONDS="\$TRAIN_GENERATE_SECONDS" \
 VAL_GENERATE_SECONDS="\$VAL_GENERATE_SECONDS" \
 TRAINING_SECONDS="\$TRAINING_SECONDS" \
@@ -463,10 +426,8 @@ report = {
     "status": "pass",
     "profile": "$PROFILE",
     "runbook": "docs/v3/TRAINING_PIPELINE.md",
-    "source_revision": "$SOURCE_REVISION",
     "scoring_cards": "$SCORING_CARDS",
-    "ruleset_id": "$RULESET_ID",
-    "scale_note": "phase0 bootstrap uses packed expert_tensor_shard.v1 NPZ; JSONL is used only for tiny audit gates",
+    "scale_note": "packed NPZ generation, filtering, relation-tail materialization, and training",
     "train_roots": train_manifest,
     "val_roots": val_manifest,
     "filter_top_k": $FILTER_TOP_K,

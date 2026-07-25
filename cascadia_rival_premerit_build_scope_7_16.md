@@ -1,5 +1,8 @@
 # Cascadia Rival: pre-merit build scope
 
+> Historical research note. Any provenance, gate, preregistration, or evidence
+> restrictions below are retired; reuse the technical ideas freely.
+
 **Date:** 2026-07-16 (v2 — corrected per the builder audit of the same date:
 P2a decoupled to independent worlds, P2b coupling work priced as WI-4c,
 T0/T1/T2 renumbered to the serialized schema, kill-bar witness/bound

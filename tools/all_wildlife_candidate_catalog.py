@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
@@ -33,9 +32,8 @@ def _score_from_matrix(
     )  # type: ignore[return-value]
 
 
-def _validated_library_rows(path: Path) -> tuple[list[dict[str, Any]], str]:
-    encoded = path.read_bytes()
-    payload = json.loads(encoded)
+def _validated_library_rows(path: Path) -> list[dict[str, Any]]:
+    payload = json.loads(path.read_bytes())
     rows = payload.get("candidates", payload.get("results"))
     if not isinstance(rows, list):
         raise ValueError(f"{path}: no candidate/result rows")
@@ -69,37 +67,19 @@ def _validated_library_rows(path: Path) -> tuple[list[dict[str, Any]], str]:
                 "_fleet_direct": False,
             }
         )
-    return result, hashlib.sha256(encoded).hexdigest()
+    return result
 
 
 def _validate_shards(
     paths: list[Path],
     libraries: list[Path],
-) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
     indices: set[int] = set()
-    shared: dict[str, Any] | None = None
-    shard_hashes = {}
     for path in paths:
-        encoded = path.read_bytes()
-        shard_hashes[str(path)] = hashlib.sha256(encoded).hexdigest()
-        payload = json.loads(encoded)
+        payload = json.loads(path.read_bytes())
         if payload.get("schema") != "all-wildlife-candidates-v1":
             raise ValueError(f"{path}: unexpected schema")
-        configuration = {
-            key: payload[key]
-            for key in (
-                "token_count",
-                "count_cap",
-                "seed",
-                "restarts_per_ruleset",
-                "iterations_per_restart",
-            )
-        }
-        if shared is None:
-            shared = configuration
-        elif configuration != shared:
-            raise ValueError(f"{path}: configuration differs across shards")
         for candidate in payload["candidates"]:
             index = int(candidate["index"])
             if index in indices:
@@ -133,21 +113,13 @@ def _validate_shards(
     if indices != set(range(len(rules.rulesets()))):
         missing = sorted(set(range(len(rules.rulesets()))) - indices)
         raise ValueError(f"candidate coverage is incomplete; missing {missing[:20]}")
-    assert shared is not None
-    library_hashes = {}
     for path in libraries:
-        rows, digest = _validated_library_rows(path)
-        candidates.extend(rows)
-        library_hashes[str(path)] = digest
-    return candidates, {
-        "configuration": shared,
-        "shard_sha256": shard_hashes,
-        "library_sha256": library_hashes,
-    }
+        candidates.extend(_validated_library_rows(path))
+    return candidates
 
 
 def merge(paths: list[Path], libraries: list[Path] | None = None) -> dict[str, Any]:
-    candidates, provenance = _validate_shards(paths, libraries or [])
+    candidates = _validate_shards(paths, libraries or [])
     best: list[dict[str, Any] | None] = [None] * len(rules.rulesets())
     direct_scores: dict[str, int] = {}
     cross_improvements = 0
@@ -201,7 +173,6 @@ def merge(paths: list[Path], libraries: list[Path] | None = None) -> dict[str, A
         "ruleset_count": len(rules.rulesets()),
         "source_candidate_count": len(candidates),
         "cross_improved_rulesets": cross_improvements,
-        **provenance,
         "candidates": merged,
     }
 

@@ -15,7 +15,6 @@ the realizable fox-neighborhood tables without changing the legal boards.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 from functools import cache
@@ -263,23 +262,12 @@ def main() -> int:
         enforce_connectivity=not args.disconnected,
         initial_tokens=list(row["tokens"]),
     )
-    source = Path(__file__).resolve()
     payload = {
         "schema": "aaaaa-fox-witness-calibration-v1",
         "proof_complete": result["model_status"] == "INFEASIBLE",
         "result": result,
         "ortools_version": ORTOOLS_VERSION,
-        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "neighborhood_source_sha256": hashlib.sha256(
-            source.with_name("aaaaa_wildlife_fox_neighborhood_exact.py").read_bytes()
-        ).hexdigest(),
-        "exact_source_sha256": hashlib.sha256(
-            source.with_name("aaaaa_wildlife_exact.py").read_bytes()
-        ).hexdigest(),
-        "catalog": {
-            "path": str(args.catalog),
-            "sha256": hashlib.sha256(args.catalog.read_bytes()).hexdigest(),
-        },
+        "catalog": {"path": str(args.catalog)},
         "ring_triple_rows": len(ring_triple_rows()),
         "conditional_ring_triple_rows": len(conditional_ring_triple_rows()),
     }

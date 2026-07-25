@@ -1,4 +1,4 @@
-//! Versioned, checksummed training data for Cascadia AI v2.
+//! Versioned training data for Cascadia AI v2.
 
 mod action_ranking;
 mod conservative_advantage;
@@ -17,7 +17,6 @@ use std::{
     fs::{self, File},
     io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
-    process::Command,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -26,7 +25,6 @@ use cascadia_game::{
     Board, GameConfig, GameSeed, GameState, Market, MarketSlot, PublicGameState, ScoreBreakdown,
     ScoringVariant, Terrain, Wildlife,
 };
-use cascadia_provenance::source_provenance;
 use cascadia_sim::{MatchConfig, SimulationError, StrategyKind, play_match_observed};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -242,21 +240,7 @@ pub struct DatasetManifest {
     pub total_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<ShardManifest>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CollectionProvenance {
-    pub collector_version: String,
-    pub git_revision: String,
-    pub git_dirty: bool,
-    #[serde(default)]
-    pub git_status_blake3: String,
-    #[serde(default)]
-    pub v2_source_blake3: String,
-    pub executable_blake3: String,
-    pub hardware: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -266,7 +250,6 @@ pub struct ShardManifest {
     pub game_count: usize,
     pub record_count: usize,
     pub byte_count: u64,
-    pub blake3: String,
 }
 
 pub struct DatasetWriter {
@@ -562,7 +545,6 @@ impl DatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -621,7 +603,6 @@ impl DatasetWriter {
             game_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_records += records.len();
@@ -685,9 +666,6 @@ pub fn validate_dataset(root: &Path, manifest: &DatasetManifest) -> Result<(), D
         let metadata = fs::metadata(&path)?;
         if metadata.len() != shard.byte_count {
             return Err(DataError::InvalidManifest("shard byte count mismatch"));
-        }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
         }
         validate_shard_header(&path, shard)?;
         games += shard.game_count;
@@ -786,7 +764,6 @@ fn validate_writer_resume(
     manifest: &DatasetManifest,
     config: &DatasetWriterConfig,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != DATASET_SCHEMA_VERSION
         || manifest.feature_schema != FEATURE_SCHEMA
         || manifest.target_schema != TARGET_SCHEMA
@@ -795,7 +772,6 @@ fn validate_writer_resume(
         || manifest.split != config.split
         || manifest.strategy != config.strategy_id
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }
@@ -807,15 +783,6 @@ fn validate_writer_resume(
     Ok(())
 }
 
-fn collection_provenance_matches(
-    original: &CollectionProvenance,
-    current: &CollectionProvenance,
-) -> bool {
-    original.executable_blake3 == current.executable_blake3
-        && (original.v2_source_blake3.is_empty()
-            || original.v2_source_blake3 == current.v2_source_blake3)
-}
-
 fn write_manifest_atomic(path: &Path, manifest: &impl Serialize) -> Result<(), DataError> {
     let temp_path = path.with_extension("json.tmp");
     let mut writer = BufWriter::new(File::create(&temp_path)?);
@@ -825,48 +792,6 @@ fn write_manifest_atomic(path: &Path, manifest: &impl Serialize) -> Result<(), D
     writer.get_ref().sync_all()?;
     fs::rename(temp_path, path)?;
     Ok(())
-}
-
-fn checksum_file(path: &Path) -> Result<String, DataError> {
-    let mut reader = BufReader::new(File::open(path)?);
-    let mut hasher = Hasher::new();
-    let mut buffer = [0u8; 64 * 1024];
-    loop {
-        let read = reader.read(&mut buffer)?;
-        if read == 0 {
-            break;
-        }
-        hasher.update(&buffer[..read]);
-    }
-    Ok(hasher.finalize().to_hex().to_string())
-}
-
-fn collection_provenance() -> Result<CollectionProvenance, DataError> {
-    let executable = std::env::current_exe()?;
-    let source = source_provenance()?;
-    let chip = command_output("sysctl", &["-n", "machdep.cpu.brand_string"])
-        .unwrap_or_else(|| std::env::consts::ARCH.to_owned());
-    let memory =
-        command_output("sysctl", &["-n", "hw.memsize"]).unwrap_or_else(|| "unknown".into());
-    let os = command_output("sw_vers", &["-productVersion"])
-        .unwrap_or_else(|| std::env::consts::OS.to_owned());
-    Ok(CollectionProvenance {
-        collector_version: env!("CARGO_PKG_VERSION").to_owned(),
-        git_revision: source.git_revision,
-        git_dirty: source.git_dirty,
-        git_status_blake3: source.git_status_blake3,
-        v2_source_blake3: source.v2_source_blake3,
-        executable_blake3: checksum_file(&executable)?,
-        hardware: format!("{chip}; memory_bytes={memory}; os={os}"),
-    })
-}
-
-fn command_output(program: &str, args: &[&str]) -> Option<String> {
-    let output = Command::new(program).args(args).output().ok()?;
-    output
-        .status
-        .success()
-        .then(|| String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 
 fn scoring_card_codes(config: GameConfig) -> [u8; 5] {
@@ -929,8 +854,6 @@ pub enum DataError {
     InvalidManifest(&'static str),
     #[error("dataset shard is invalid: {0}")]
     InvalidShard(&'static str),
-    #[error("dataset shard checksum does not match: {0}")]
-    ChecksumMismatch(PathBuf),
     #[error("system clock is before the Unix epoch")]
     ClockBeforeEpoch,
     #[error(transparent)]
@@ -1097,37 +1020,6 @@ mod tests {
         assert_eq!(resumed.manifest().strategy, "teacher-search-v1");
         assert_eq!(resumed.manifest().completed_games, 1);
         assert_eq!(resumed.manifest().requested_games, 2);
-        fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
-    fn collection_resume_rejects_changed_provenance() {
-        let root =
-            std::env::temp_dir().join(format!("cascadia-data-provenance-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
-        let config = CollectConfig {
-            output: root.clone(),
-            split: DatasetSplit::Train,
-            first_game_index: 0,
-            games: 1,
-            shard_games: 1,
-            strategy: StrategyKind::Random,
-            resume: false,
-        };
-        collect_dataset(&config).unwrap();
-        let manifest_path = root.join("dataset.json");
-        let mut manifest: DatasetManifest =
-            serde_json::from_reader(File::open(&manifest_path).unwrap()).unwrap();
-        manifest.provenance.v2_source_blake3 = "different-source".to_owned();
-        write_manifest_atomic(&manifest_path, &manifest).unwrap();
-
-        let error = collect_dataset(&CollectConfig {
-            games: 2,
-            resume: true,
-            ..config
-        })
-        .unwrap_err();
-        assert!(matches!(error, DataError::ResumeMismatch));
         fs::remove_dir_all(root).unwrap();
     }
 }

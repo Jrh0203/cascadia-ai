@@ -7,7 +7,7 @@ mod model_bridge;
 mod npz_writer;
 
 use std::fs::File;
-use std::io::{BufRead, BufWriter, Read, Write};
+use std::io::{BufRead, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -44,7 +44,8 @@ const EXPERT_TENSOR_SCHEMA_ID: &str = "cascadiav3.expert_tensor_shard.v1";
 const EXPERT_TENSOR_SCHEMA_ID_V4: &str = "cascadiav3.expert_tensor_shard.v4";
 const GREEDY_TENSOR_SCHEMA_ID: &str = "greedy_policy_tensor_shard_v1";
 const ROOT_REPLAY_SCHEMA_ID: &str = "cascadiav3.root_replay.v1";
-const RULESET_ID_AAAAA: &str = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16";
+const RULESET_ID_AAAAA: &str =
+    "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16";
 const RULESET_ID_CBDDB: &str = "cascadia_research_cbddb_4p_no_habitat_bonus_rules_2026_07_19";
 const DEFAULT_FIRST_SEED: u64 = 2_026_062_900;
 const DEFAULT_SEED_COUNT: u64 = 2;
@@ -533,9 +534,7 @@ fn parse_args() -> Result<Args> {
                 args.probe_max_roots = value()?.parse().context("invalid --probe-max-roots")?
             }
             "--probe-roots" => args.probe_roots = Some(PathBuf::from(value()?)),
-            "--training-records-out" => {
-                args.training_records_out = Some(PathBuf::from(value()?))
-            }
+            "--training-records-out" => args.training_records_out = Some(PathBuf::from(value()?)),
             "--decisions-out" => args.decisions_out = Some(PathBuf::from(value()?)),
             "--hard-roots-out" => args.hard_roots_out = Some(PathBuf::from(value()?)),
             "--output-dir" => args.output_dir = Some(PathBuf::from(value()?)),
@@ -778,14 +777,6 @@ fn parse_args() -> Result<Args> {
             "real model service use requires --model-manifest unless --allow-model-fallback is set"
         );
     }
-    if args.mode == Mode::GumbelSelfplayTensorCorpus
-        && args
-            .source_revision
-            .as_deref()
-            .map_or(true, |revision| revision.trim().is_empty())
-    {
-        bail!("--gumbel-selfplay-tensor-corpus requires non-empty --source-revision");
-    }
     if let Some(threads) = args.rayon_threads {
         if threads == 0 {
             bail!("--rayon-threads must be positive");
@@ -830,8 +821,7 @@ Options:
   --model-service <cmd>    Python JSONL stdio model service command for real
                            model priors. Real use requires --model-manifest.
   --model-manifest <path>  Manifest checked before model service use.
-  --source-revision <git>  Exact source revision embedded in generated
-                           Gumbel self-play tensor metadata and manifest.
+  --source-revision <git>  Optional informational label for legacy tooling.
   --model-timeout-ms <n>   Model service request timeout [10000].
   --validate-expert-reconstruction
                            Rebuild expert roots from seed plus replay prefix
@@ -1308,7 +1298,7 @@ fn build_expert_root_record(
         })
         .collect::<Vec<_>>();
 
-    let mut record = json!({
+    let record = json!({
         "schema_id": EXPERT_ROOT_SCHEMA_ID,
         "ruleset_id": args.scoring_cards.ruleset_id(),
         "state_hash": root_public_hash,
@@ -1316,8 +1306,6 @@ fn build_expert_root_record(
         "seed": seed_u64,
         "ply": ply_index,
         "active_seat": active_seat,
-        "source_hash": format!("sha256:{}", sha256_hex(include_str!("main.rs").as_bytes())),
-        "binary_hash": binary_hash(),
         "root_replay": {
             "schema_id": ROOT_REPLAY_SCHEMA_ID,
             "config_id": args.scoring_cards.ruleset_id(),
@@ -1383,7 +1371,6 @@ fn build_expert_root_record(
         "public_tokens": public_tokens(&staged, active_seat),
         "metadata": {
             "source": "canonical_simulator_chance_mcts_dry_run_expert_root",
-            "scientific_eligibility": "dry_run",
             "root_seed_u64": seed_u64,
             "ply_index_for_seed": ply_index,
             "completed_turns": game.completed_turns(),
@@ -1399,7 +1386,6 @@ fn build_expert_root_record(
             "prelude_wildlife_wipe_count": prelude.wildlife_wipes.len(),
         },
     });
-    attach_checksum(&mut record)?;
     Ok(ExpertRootBuild {
         record,
         prelude,
@@ -1503,8 +1489,7 @@ fn validate_one_expert_reconstruction(
         bail!("record schema_id is not {EXPERT_ROOT_SCHEMA_ID}");
     }
     let expected_ruleset_id = scoring_cards.ruleset_id();
-    // Fail closed on ruleset identity: a record produced under different
-    // scoring cards must never validate against this run's configuration.
+    // Reject records whose scoring cards would reconstruct a different game.
     if let Some(ruleset_id) = record.get("ruleset_id").and_then(Value::as_str) {
         if ruleset_id != expected_ruleset_id {
             bail!("record ruleset_id {ruleset_id} does not match resolved {expected_ruleset_id}");
@@ -1521,7 +1506,6 @@ fn validate_one_expert_reconstruction(
             );
         }
     }
-    verify_record_checksum(record)?;
     let seed_u64 = record
         .get("seed")
         .and_then(Value::as_u64)
@@ -1814,8 +1798,6 @@ fn write_expert_manifest(path: &PathBuf, records: &[Value], args: &Args) -> Resu
             args.allow_model_fallback
         ),
         "record_count": records.len(),
-        "checksum": records_checksum(records),
-        "scientific_eligibility": "dry_run",
         "created_at_utc": "2026-06-30T00:00:00+00:00",
         "format": "jsonl",
         "ruleset_id": args.scoring_cards.ruleset_id(),
@@ -1835,7 +1817,6 @@ fn write_expert_manifest(path: &PathBuf, records: &[Value], args: &Args) -> Resu
 
 struct StreamingWriter {
     handle: BufWriter<Box<dyn Write + Send>>,
-    digest: Sha256,
     record_count: usize,
 }
 
@@ -1853,7 +1834,6 @@ fn export_greedy_policy_corpus(args: &Args) -> Result<usize> {
     };
     let writer = Arc::new(Mutex::new(StreamingWriter {
         handle: BufWriter::new(handle),
-        digest: Sha256::new(),
         record_count: 0,
     }));
     let seed_end = args
@@ -1872,7 +1852,6 @@ fn export_greedy_policy_corpus(args: &Args) -> Result<usize> {
                 count += 1;
             }
             let mut guard = writer.lock().expect("greedy corpus writer mutex poisoned");
-            guard.digest.update(lines.as_bytes());
             guard.record_count += count;
             guard.handle.write_all(lines.as_bytes())?;
             Ok(())
@@ -1880,14 +1859,11 @@ fn export_greedy_policy_corpus(args: &Args) -> Result<usize> {
     let mut guard = writer.lock().expect("greedy corpus writer mutex poisoned");
     guard.handle.flush()?;
     let record_count = guard.record_count;
-    let checksum = format!("{:x}", guard.digest.clone().finalize());
     drop(guard);
     write_stream_manifest(
         &args.manifest,
         args,
         record_count,
-        &checksum,
-        "behavior_clone_pretraining",
         "Complete greedy self-play roots with selected greedy action labels, no per-action search or rollout teacher.",
     )?;
     Ok(record_count)
@@ -1940,7 +1916,6 @@ fn export_greedy_policy_seed_records(args: &Args, seed_u64: u64) -> Result<Vec<V
                 );
             }
         }
-        attach_checksum(record)?;
     }
     Ok(records)
 }
@@ -1961,11 +1936,11 @@ fn export_greedy_policy_tensor_corpus(args: &Args) -> Result<usize> {
         .map(|seed_u64| {
             let records = export_greedy_policy_seed_records(args, seed_u64)
                 .with_context(|| format!("exporting tensor seed {seed_u64}"))?;
-            let shard =
-                TensorShardData::from_records_with_cards(&records, args.scoring_cards.scoring_cards())
-                    .with_context(|| {
-                        format!("extracting Rust tensor features for seed {seed_u64}")
-                    })?;
+            let shard = TensorShardData::from_records_with_cards(
+                &records,
+                args.scoring_cards.scoring_cards(),
+            )
+            .with_context(|| format!("extracting Rust tensor features for seed {seed_u64}"))?;
             Ok((seed_u64, shard))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -1998,8 +1973,7 @@ fn export_greedy_policy_tensor_corpus(args: &Args) -> Result<usize> {
             compression: args.tensor_compression,
         },
     )?;
-    let checksum = sha256_file_hex(&args.out)?;
-    write_tensor_manifest(&args.manifest, args, &shard, &checksum)?;
+    write_tensor_manifest(&args.manifest, args, &shard)?;
     Ok(shard.record_count)
 }
 
@@ -2079,8 +2053,7 @@ fn export_expert_tensor_corpus(args: &Args) -> Result<usize> {
             compression: args.tensor_compression,
         },
     )?;
-    let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -2174,8 +2147,7 @@ fn export_greedy_expert_tensor_corpus(args: &Args) -> Result<usize> {
             compression: args.tensor_compression,
         },
     )?;
-    let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -2292,8 +2264,7 @@ fn export_greedy_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usi
             compression: args.tensor_compression,
         },
     )?;
-    let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -2421,8 +2392,7 @@ fn export_model_state_search_bootstrap_tensor_corpus(args: &Args) -> Result<usiz
             compression: args.tensor_compression,
         },
     )?;
-    let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -2596,10 +2566,6 @@ fn export_greedy_state_search_bootstrap_seed_records(
                 json!("greedy_state_search_bootstrap_tensor_corpus"),
             );
             metadata.insert(
-                "scientific_eligibility".to_owned(),
-                json!("expert_iteration_bootstrap"),
-            );
-            metadata.insert(
                 "behavior_policy".to_owned(),
                 json!("greedy_state_distribution_advance_greedy_action"),
             );
@@ -2616,7 +2582,6 @@ fn export_greedy_state_search_bootstrap_seed_records(
                 json!(teacher_advantage),
             );
         }
-        attach_checksum(&mut root_record)?;
         game = advance_selected_action(&game, args.max_actions, &greedy_action_id)?;
         records.push(root_record);
         ply_index += 1;
@@ -2698,10 +2663,6 @@ fn export_model_state_search_bootstrap_seed_records_with_session(
                 json!("model_state_search_bootstrap_tensor_corpus"),
             );
             metadata.insert(
-                "scientific_eligibility".to_owned(),
-                json!("expert_iteration_model_state_bootstrap"),
-            );
-            metadata.insert(
                 "behavior_policy".to_owned(),
                 json!("model_state_distribution_advance_model_action"),
             );
@@ -2735,7 +2696,6 @@ fn export_model_state_search_bootstrap_seed_records_with_session(
                 json!(model_eval.score_to_go.is_some()),
             );
         }
-        attach_checksum(&mut root_record)?;
         game = advance_selected_action(&game, args.max_actions, &model_action_id)?;
         records.push(root_record);
         ply_index += 1;
@@ -3531,7 +3491,6 @@ fn gumbel_selfplay_root_record(
         "public_tokens": public_tokens(staged, active_seat),
         "metadata": {
             "source": "gumbel_selfplay_tensor_corpus",
-            "scientific_eligibility": "gumbel_selfplay_expert_iteration",
             "behavior_policy": "gumbel_search_all_seats_advance_chosen",
             "teacher": "gumbel_completed_q_with_real_outcome_values",
             "root_seed_u64": seed_u64,
@@ -3571,7 +3530,6 @@ fn backfill_final_outcome(records: &mut [Value], final_scores: &[ScoreBreakdown]
         object.insert("final_score_vector".to_owned(), json!(final_score_vector));
         object.insert("score_decomposition".to_owned(), decomposition.clone());
         object.insert("rank_vector".to_owned(), json!(ranks));
-        attach_checksum(record)?;
     }
     Ok(())
 }
@@ -3707,13 +3665,6 @@ fn play_gumbel_selfplay_seed(
 }
 
 fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
-    if args
-        .source_revision
-        .as_deref()
-        .map_or(true, |revision| revision.trim().is_empty())
-    {
-        bail!("gumbel selfplay tensor export requires non-empty source_revision");
-    }
     if args.out.as_os_str() == "-" {
         bail!("--gumbel-selfplay-tensor-corpus requires a file --out path");
     }
@@ -3795,9 +3746,9 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
                 &output.records,
                 args.scoring_cards.scoring_cards(),
             )
-            .with_context(
-                || format!("extracting gumbel selfplay tensor features for seed {seed_u64}"),
-            )?;
+            .with_context(|| {
+                format!("extracting gumbel selfplay tensor features for seed {seed_u64}")
+            })?;
             if let Some(writer) = &decisions_writer {
                 let mut writer = writer.lock().expect("decisions writer lock");
                 for row in &output.decision_rows {
@@ -3964,16 +3915,6 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
             "created_unix_seconds".to_owned(),
             json!(created_unix_seconds()?),
         );
-        object.insert(
-            "scientific_eligibility".to_owned(),
-            json!(
-                if args.model_manifest.is_some() && !args.allow_model_fallback {
-                    "gumbel_selfplay_expert_iteration"
-                } else {
-                    "audit_only_unverified_or_uniform_model_fallback"
-                }
-            ),
-        );
     }
     let metadata_json = canonical_json(&metadata);
     npz_writer::write_expert_tensor_npz(
@@ -4017,8 +3958,7 @@ fn export_gumbel_selfplay_tensor_corpus(args: &Args) -> Result<usize> {
             compression: args.tensor_compression,
         },
     )?;
-    let checksum = sha256_file_hex(&args.out)?;
-    write_expert_tensor_manifest(&args.manifest, args, &shard, &checksum, &metadata)?;
+    write_expert_tensor_manifest(&args.manifest, args, &shard, &metadata)?;
     Ok(shard.record_count)
 }
 
@@ -4317,31 +4257,45 @@ struct ReplayedRootMeta {
 /// resolved, and ledger seeds absent from the mask are skipped without
 /// replay. Duplicate rows are tolerated (set semantics).
 fn read_probe_roots_mask(path: &Path) -> Result<BTreeMap<u64, HashSet<u64>>> {
-    let file = File::open(path)
-        .with_context(|| format!("opening --probe-roots {}", path.display()))?;
+    let file =
+        File::open(path).with_context(|| format!("opening --probe-roots {}", path.display()))?;
     let reader = std::io::BufReader::new(file);
     let mut mask: BTreeMap<u64, HashSet<u64>> = BTreeMap::new();
     for (line_index, line) in reader.lines().enumerate() {
         let line = line.with_context(|| {
-            format!("reading --probe-roots {} line {}", path.display(), line_index + 1)
+            format!(
+                "reading --probe-roots {} line {}",
+                path.display(),
+                line_index + 1
+            )
         })?;
         if line.trim().is_empty() {
             continue;
         }
         let value: serde_json::Value = serde_json::from_str(&line).with_context(|| {
-            format!("parsing --probe-roots {} line {}", path.display(), line_index + 1)
+            format!(
+                "parsing --probe-roots {} line {}",
+                path.display(),
+                line_index + 1
+            )
         })?;
         let seed = value
             .get("seed")
             .and_then(serde_json::Value::as_u64)
             .with_context(|| {
-                format!("--probe-roots line {} lacks a numeric \"seed\"", line_index + 1)
+                format!(
+                    "--probe-roots line {} lacks a numeric \"seed\"",
+                    line_index + 1
+                )
             })?;
         let ply = value
             .get("ply")
             .and_then(serde_json::Value::as_u64)
             .with_context(|| {
-                format!("--probe-roots line {} lacks a numeric \"ply\"", line_index + 1)
+                format!(
+                    "--probe-roots line {} lacks a numeric \"ply\"",
+                    line_index + 1
+                )
             })?;
         mask.entry(seed).or_default().insert(ply);
     }
@@ -4512,8 +4466,8 @@ fn replay_ledger_seed(
                 // the full legal set but can still pick an action that also
                 // sits inside the capped menu. Seat and chosen-action checks
                 // above still validate the trajectory.
-                let ledger_searched_wider_menu = menu_limit
-                    .map_or(false, |cap| expected_count > cap as u64);
+                let ledger_searched_wider_menu =
+                    menu_limit.map_or(false, |cap| expected_count > cap as u64);
                 if !ledger_searched_wider_menu && actual_count != expected_count {
                     bail!(
                         "replay divergence at seed {seed} ply {}: {actual_count} actions vs ledger {expected_count}",
@@ -4628,15 +4582,20 @@ fn run_table_contention_audit(args: &Args) -> Result<()> {
         // jobs12-generated ledgers can carry rare concurrency-divergent
         // seeds (2027071427 precedent); skip them loudly instead of
         // stranding the audit.
-        let (eval_rows, metas, _final_state) =
-            match replay_ledger_seed(*seed, ledger_rows, menu_limit, args.player_count, args.scoring_cards) {
-                Ok(replayed) => replayed,
-                Err(error) => {
-                    eprintln!("[table-contention-audit] SKIPPING seed {seed}: {error:#}");
-                    replay_skipped_seeds.push(*seed);
-                    continue;
-                }
-            };
+        let (eval_rows, metas, _final_state) = match replay_ledger_seed(
+            *seed,
+            ledger_rows,
+            menu_limit,
+            args.player_count,
+            args.scoring_cards,
+        ) {
+            Ok(replayed) => replayed,
+            Err(error) => {
+                eprintln!("[table-contention-audit] SKIPPING seed {seed}: {error:#}");
+                replay_skipped_seeds.push(*seed);
+                continue;
+            }
+        };
         let mut evaluator = BridgeLeafEvaluator {
             bridge: &mut chunk_bridge,
             allow_model_fallback: args.allow_model_fallback,
@@ -4647,7 +4606,10 @@ fn run_table_contention_audit(args: &Args) -> Result<()> {
         for ((row, meta), root_eval) in eval_rows.iter().zip(&metas).zip(&root_evals) {
             let derived_q = &root_eval.derived_final_q;
             if derived_q.len() != row.afterstates.len() {
-                bail!("root eval misaligned with menu at seed {seed} ply {}", meta.ply);
+                bail!(
+                    "root eval misaligned with menu at seed {seed} ply {}",
+                    meta.ply
+                );
             }
             let Some(runner_index) = best_q_index(derived_q, Some(meta.chosen_index)) else {
                 single_action_skipped += 1;
@@ -4789,31 +4751,37 @@ fn run_search_stability_probe(args: &Args) -> Result<()> {
     'seeds: for (seed, ledger_rows) in &by_seed {
         // Same skip-and-count policy as the contention audit for rare
         // concurrency-divergent ledger seeds.
-        let (eval_rows, metas, _final_state) =
-            match replay_ledger_seed(*seed, ledger_rows, menu_limit, args.player_count, args.scoring_cards) {
-                Ok(replayed) => replayed,
-                Err(error) => {
-                    eprintln!("[search-stability-probe] SKIPPING seed {seed}: {error:#}");
-                    replay_skipped_seeds.push(*seed);
-                    continue;
-                }
-            };
+        let (eval_rows, metas, _final_state) = match replay_ledger_seed(
+            *seed,
+            ledger_rows,
+            menu_limit,
+            args.player_count,
+            args.scoring_cards,
+        ) {
+            Ok(replayed) => replayed,
+            Err(error) => {
+                eprintln!("[search-stability-probe] SKIPPING seed {seed}: {error:#}");
+                replay_skipped_seeds.push(*seed);
+                continue;
+            }
+        };
         for (row, meta) in eval_rows.iter().zip(&metas) {
             let is_exact_frontier = row
                 .staged
                 .turns_remaining_for_player(row.staged.current_player())
                 == 1;
-            let selected = !is_exact_frontier
-                && row.afterstates.len() > 1
-                && decision_index % stride == 0;
+            let selected =
+                !is_exact_frontier && row.afterstates.len() > 1 && decision_index % stride == 0;
             decision_index += 1;
             if !selected {
                 continue;
             }
             for paired_rollouts in [false, true] {
                 for repeat in 0..repeats {
-                    let mut cfg =
-                        gumbel_config_from_args(args, stability_probe_seed(*seed, meta.ply, repeat));
+                    let mut cfg = gumbel_config_from_args(
+                        args,
+                        stability_probe_seed(*seed, meta.ply, repeat),
+                    );
                     cfg.paired_rollouts = paired_rollouts;
                     let mut evaluator = BridgeLeafEvaluator {
                         bridge: &mut chunk_bridge,
@@ -4821,8 +4789,8 @@ fn run_search_stability_probe(args: &Args) -> Result<()> {
                         cache: &mut eval_cache,
                         tta_rotations: args.gumbel_tta,
                     };
-                    let result = gumbel::gumbel_search(row, &mut evaluator, &cfg)
-                        .with_context(|| {
+                    let result =
+                        gumbel::gumbel_search(row, &mut evaluator, &cfg).with_context(|| {
                             format!(
                                 "stability search at seed {seed} ply {} repeat {repeat}",
                                 meta.ply
@@ -4907,10 +4875,7 @@ fn gumbel_search_probe_settings(args: &Args) -> Value {
 /// the stability probe. Divergent ledger seeds are skipped loudly.
 /// Line-buffered JSONL sidecar writer shared by generation and bank modes;
 /// None passes through so optional sidecars stay optional at call sites.
-fn open_sidecar(
-    path: &Option<PathBuf>,
-    label: &str,
-) -> Result<Option<Mutex<BufWriter<File>>>> {
+fn open_sidecar(path: &Option<PathBuf>, label: &str) -> Result<Option<Mutex<BufWriter<File>>>> {
     match path {
         Some(path) => {
             if let Some(parent) = path.parent() {
@@ -4966,9 +4931,7 @@ fn aggregate_repeat_search_results(
         if total_visits > 0 {
             let weighted_q: f64 = repeats
                 .iter()
-                .map(|result| {
-                    f64::from(result.visit_counts[action]) * result.completed_q[action]
-                })
+                .map(|result| f64::from(result.visit_counts[action]) * result.completed_q[action])
                 .sum();
             let q = weighted_q / total_visits as f64;
             completed_q[action] = q;
@@ -5029,14 +4992,13 @@ fn aggregate_repeat_search_results(
     })
 }
 
-/// Provenance manifest for a --training-records-out shard. Deliberately not
+/// Metadata manifest for a --training-records-out shard. Deliberately not
 /// write_expert_tensor_manifest: that one derives its seed domain from the
 /// generation args, which are meaningless for a ledger-replayed bank run.
 fn write_training_records_manifest(
     path: &Path,
     shard_path: &Path,
     shard: &ExpertTensorShardData,
-    checksum: &str,
     metadata: &Value,
 ) -> Result<()> {
     if let Some(parent) = path.parent() {
@@ -5048,7 +5010,6 @@ fn write_training_records_manifest(
         "source_generator": "cascadiav3-real-root-exporter",
         "source": "puzzle_bank_d1_relabel",
         "shard_path": shard_path.display().to_string(),
-        "checksum": checksum,
         "format": "npz",
         "record_count": shard.record_count,
         "total_token_count": shard.total_token_count,
@@ -5143,16 +5104,20 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
         },
         |worker, seed| {
             let ledger_rows = &by_seed[&seed];
-            let (eval_rows, metas, final_state) =
-                match replay_ledger_seed(seed, ledger_rows, replay_menu_limit, args.player_count, args.scoring_cards)
-                {
-                    Ok(replayed) => replayed,
-                    Err(error) => {
-                        eprintln!("[puzzle-bank] SKIPPING seed {seed}: {error:#}");
-                        skipped_seeds.lock().expect("skip list lock").push(seed);
-                        return Ok(());
-                    }
-                };
+            let (eval_rows, metas, final_state) = match replay_ledger_seed(
+                seed,
+                ledger_rows,
+                replay_menu_limit,
+                args.player_count,
+                args.scoring_cards,
+            ) {
+                Ok(replayed) => replayed,
+                Err(error) => {
+                    eprintln!("[puzzle-bank] SKIPPING seed {seed}: {error:#}");
+                    skipped_seeds.lock().expect("skip list lock").push(seed);
+                    return Ok(());
+                }
+            };
             let final_scores = score_game(&final_state);
             let mut records = Vec::new();
             let mut seed_d1_records = Vec::new();
@@ -5192,9 +5157,12 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                         cache: &mut worker.eval_cache,
                         tta_rotations: args.gumbel_tta,
                     };
-                    let result = gumbel::gumbel_search(row, &mut evaluator, &cfg)
-                        .with_context(|| {
-                            format!("puzzle search at seed {seed} ply {} repeat {repeat}", meta.ply)
+                    let result =
+                        gumbel::gumbel_search(row, &mut evaluator, &cfg).with_context(|| {
+                            format!(
+                                "puzzle search at seed {seed} ply {} repeat {repeat}",
+                                meta.ply
+                            )
                         })?;
                     repeat_results.push(result);
                 }
@@ -5260,10 +5228,7 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                     if let Some(metadata) =
                         record.get_mut("metadata").and_then(Value::as_object_mut)
                     {
-                        metadata.insert(
-                            "source".to_owned(),
-                            json!("puzzle_bank_d1_relabel"),
-                        );
+                        metadata.insert("source".to_owned(), json!("puzzle_bank_d1_relabel"));
                         metadata.insert(
                             "teacher".to_owned(),
                             json!(format!(
@@ -5272,14 +5237,11 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                             )),
                         );
                         metadata.insert(
-                            "outcome_provenance".to_owned(),
+                            "outcome_source".to_owned(),
                             json!("behavior_trajectory_realized"),
                         );
                         metadata.insert("d1_repeats".to_owned(), json!(repeats));
-                        metadata.insert(
-                            "d1_repeat_agreement".to_owned(),
-                            json!(repeat_agreement),
-                        );
+                        metadata.insert("d1_repeat_agreement".to_owned(), json!(repeat_agreement));
                         metadata.insert(
                             "ledger_chosen_action_id".to_owned(),
                             json!(ledger_rows[meta.ply].chosen_action_id),
@@ -5412,16 +5374,17 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
             object.insert("schema_id".to_owned(), json!(EXPERT_TENSOR_SCHEMA_ID_V4));
             object.insert("source".to_owned(), json!("puzzle_bank_d1_relabel"));
             object.insert(
-                "outcome_provenance".to_owned(),
+                "outcome_source".to_owned(),
                 json!("behavior_trajectory_realized"),
             );
             object.insert("ledger".to_owned(), json!(input.display().to_string()));
             object.insert(
                 "probe_roots".to_owned(),
-                json!(args
-                    .probe_roots
-                    .as_ref()
-                    .map(|path| path.display().to_string())),
+                json!(
+                    args.probe_roots
+                        .as_ref()
+                        .map(|path| path.display().to_string())
+                ),
             );
             object.insert("repeats".to_owned(), json!(repeats));
             object.insert(
@@ -5469,16 +5432,6 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                 "created_unix_seconds".to_owned(),
                 json!(created_unix_seconds()?),
             );
-            object.insert(
-                "scientific_eligibility".to_owned(),
-                json!(
-                    if args.model_manifest.is_some() && !args.allow_model_fallback {
-                        "gumbel_selfplay_expert_iteration"
-                    } else {
-                        "audit_only_unverified_or_uniform_model_fallback"
-                    }
-                ),
-            );
         }
         let metadata_json = canonical_json(&metadata);
         npz_writer::write_expert_tensor_npz(
@@ -5522,16 +5475,9 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
                 compression: args.tensor_compression,
             },
         )?;
-        let checksum = sha256_file_hex(records_out)?;
         let training_manifest_path =
             PathBuf::from(format!("{}.manifest.json", records_out.display()));
-        write_training_records_manifest(
-            &training_manifest_path,
-            records_out,
-            &shard,
-            &checksum,
-            &metadata,
-        )?;
+        write_training_records_manifest(&training_manifest_path, records_out, &shard, &metadata)?;
         eprintln!(
             "[puzzle-bank] training records: {} records -> {} (audit sidecar + manifest alongside)",
             shard.record_count,
@@ -5542,7 +5488,6 @@ fn run_puzzle_bank(args: &Args) -> Result<()> {
     let manifest = json!({
         "type": "puzzle_bank_manifest",
         "ruleset_id": args.scoring_cards.ruleset_id(),
-        "source_revision": args.source_revision,
         "ledger": input.display().to_string(),
         "seeds": seeds.len(),
         "replay_skipped_seeds": skipped,
@@ -5754,8 +5699,7 @@ fn build_greedy_policy_root_record(
             "truncated_rollout_samples": 0,
             "prelude_replace_three_of_a_kind": prelude.replace_three_of_a_kind,
             "prelude_wildlife_wipe_count": prelude.wildlife_wipes.len(),
-            "teacher": "one_step_greedy_ranker_no_search",
-            "scientific_eligibility": "behavior_clone_pretraining"
+            "teacher": "one_step_greedy_ranker_no_search"
         },
     });
     Ok((record, selected_action_id))
@@ -5877,7 +5821,7 @@ fn build_root_record(
         rollouts.iter().map(|rollout| rollout.truncated_count).sum();
     let public_hash = staged.public_state().canonical_hash();
 
-    let mut record = json!({
+    let record = json!({
         "schema_id": SCHEMA_ID,
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
         "active_seat": active_seat,
@@ -5914,11 +5858,9 @@ fn build_root_record(
                 "one_greedy_rollout_per_retained_action"
             } else {
                 "sampled_topk_greedy_rollout_mean_per_retained_action"
-            },
-            "scientific_eligibility": "dry_run"
+            }
         },
     });
-    attach_checksum(&mut record)?;
     Ok(record)
 }
 
@@ -6167,7 +6109,6 @@ fn run_interactive_policy_game(args: &Args) -> Result<()> {
         "decision_count": decision_records.len(),
         "elapsed_seconds": started.elapsed().as_secs_f64(),
         "final_state_hash": format!("blake3:{}", game.canonical_hash().to_hex()),
-        "scientific_eligibility": "interactive_prefilter_game_pilot",
     });
     writeln!(stdout, "{}", canonical_json(&done_message))?;
     stdout.flush()?;
@@ -6224,7 +6165,7 @@ fn build_interactive_root(
     let score_means = current_scores.iter().map(score_mean).collect::<Vec<_>>();
     let uniform_prior = 1.0 / action_count as f64;
     let public_hash = staged.public_state().canonical_hash();
-    let mut record = json!({
+    let record = json!({
         "schema_id": SCHEMA_ID,
         "ruleset_id": args.scoring_cards.ruleset_id(),
         "state_hash": format!("blake3:{}", public_hash.to_hex()),
@@ -6257,11 +6198,9 @@ fn build_interactive_root(
             "rollout_top_k": args.rollout_top_k,
             "prelude_replace_three_of_a_kind": prelude.replace_three_of_a_kind,
             "prelude_wildlife_wipe_count": prelude.wildlife_wipes.len(),
-            "teacher": "none_interactive_inference_root",
-            "scientific_eligibility": "interactive_prefilter_game_pilot"
+            "teacher": "none_interactive_inference_root"
         },
     });
-    attach_checksum(&mut record)?;
     Ok(InteractiveRoot {
         record,
         staged,
@@ -6942,22 +6881,6 @@ fn action_id(action: &TurnAction) -> Result<String> {
     Ok(format!("sha256:{}", sha256_hex(&bytes)))
 }
 
-fn attach_checksum(record: &mut Value) -> Result<()> {
-    record
-        .as_object_mut()
-        .context("record must be a JSON object before checksum")?
-        .remove("checksum");
-    let canonical = canonical_json(record);
-    record
-        .as_object_mut()
-        .context("record must be a JSON object after checksum")?
-        .insert(
-            "checksum".to_owned(),
-            json!(sha256_hex(canonical.as_bytes())),
-        );
-    Ok(())
-}
-
 fn write_jsonl(path: &PathBuf, records: &[Value]) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -6986,8 +6909,6 @@ fn write_manifest(path: &PathBuf, records: &[Value], args: &Args) -> Result<()> 
             args.rollout_top_k
         ),
         "record_count": records.len(),
-        "checksum": records_checksum(records),
-        "scientific_eligibility": "dry_run",
         "created_at_utc": "2026-06-29T00:00:00+00:00",
         "format": "jsonl",
         "rayon_current_num_threads": rayon::current_num_threads(),
@@ -7005,8 +6926,6 @@ fn write_stream_manifest(
     path: &PathBuf,
     args: &Args,
     record_count: usize,
-    checksum: &str,
-    scientific_eligibility: &str,
     notes: &str,
 ) -> Result<()> {
     if let Some(parent) = path.parent() {
@@ -7023,8 +6942,6 @@ fn write_stream_manifest(
             args.max_actions
         ),
         "record_count": record_count,
-        "checksum": checksum,
-        "scientific_eligibility": scientific_eligibility,
         "created_at_utc": "2026-06-30T00:00:00+00:00",
         "format": "jsonl",
         "rayon_current_num_threads": rayon::current_num_threads(),
@@ -7076,36 +6993,30 @@ fn tensor_shard_metadata(args: &Args, shard: &TensorShardData) -> Value {
     })
 }
 
-fn expert_tensor_mode_contract(args: &Args) -> (&'static str, &'static str, &'static str) {
+fn expert_tensor_mode_contract(args: &Args) -> (&'static str, &'static str) {
     match args.mode {
         Mode::GreedyExpertTensorCorpus => (
             "greedy_expert_tensor_corpus",
-            "behavior_clone_pretraining",
             "Rust-native packed expert tensor shard from greedy self-play; relation edges are present and labels are one-step greedy behavior-cloning targets.",
         ),
         Mode::GreedyStateSearchBootstrapTensorCorpus => (
             "greedy_state_search_bootstrap_tensor_corpus",
-            "expert_iteration_bootstrap",
             "Rust-native packed expert tensor shard from greedy-state roots; retained greedy-ranked actions are labeled by sampled greedy rollout means while real trajectories advance by the greedy action.",
         ),
         Mode::ModelStateSearchBootstrapTensorCorpus => (
             "model_state_search_bootstrap_tensor_corpus",
-            "expert_iteration_model_state_bootstrap",
             "Rust-native packed expert tensor shard from model-state roots; retained greedy-ranked actions are labeled by sampled greedy rollout means while real trajectories advance by model derived-Q or model prior.",
         ),
         Mode::PuzzleBank => (
             "puzzle_bank_d1_relabel",
-            "gumbel_selfplay_expert_iteration",
             "Rust-native packed v4 expert tensor shard from repeat-aggregated high-budget relabeling at harvested puzzle-bank roots; outcome fields carry realized behavior-trajectory results and must be masked by the D1 training view.",
         ),
         Mode::GumbelSelfplayTensorCorpus => (
             "gumbel_selfplay_tensor_corpus",
-            "gumbel_selfplay_expert_iteration",
             "Rust-native packed v4 expert tensor shard from all-seat Gumbel self-play over determinized hidden states; per-action targets are search completed-Q values, exact category afterstates ground structured score-to-go, improved_policy is the Gumbel policy-improvement target, exact_endgame is explicit per root, and value labels are real terminal outcomes.",
         ),
         _ => (
             "expert_tensor_corpus",
-            "expert_iteration_bootstrap_tensor_pretraining",
             "Rust-native packed expert tensor shard; JSONL audit can be generated separately, but trainer scale path reads this NPZ directly.",
         ),
     }
@@ -7124,7 +7035,6 @@ fn file_identity(path: &Path) -> Result<Value> {
     Ok(json!({
         "path": path.display().to_string(),
         "bytes": metadata.len(),
-        "sha256": sha256_file_hex(path)?,
     }))
 }
 
@@ -7216,7 +7126,7 @@ fn generator_artifact_identity() -> Result<Value> {
 }
 
 fn expert_tensor_shard_metadata(args: &Args, shard: &ExpertTensorShardData) -> Value {
-    let (mode_name, _, _) = expert_tensor_mode_contract(args);
+    let (mode_name, _) = expert_tensor_mode_contract(args);
     let mut targets = vec![
         "selected_action_index",
         "per_action_Q",
@@ -7249,7 +7159,6 @@ fn expert_tensor_shard_metadata(args: &Args, shard: &ExpertTensorShardData) -> V
         "schema_id": EXPERT_TENSOR_SCHEMA_ID,
         "ruleset_id": args.scoring_cards.ruleset_id(),
         "mode": mode_name,
-        "source_revision": args.source_revision,
         "source": "expert_root_chance_mcts_dry_run_tensor_corpus",
         "source_paths": ["rust-native:expert_tensor_corpus"],
         "format": "npz",
@@ -7298,12 +7207,7 @@ fn expert_tensor_shard_metadata(args: &Args, shard: &ExpertTensorShardData) -> V
     })
 }
 
-fn write_tensor_manifest(
-    path: &PathBuf,
-    args: &Args,
-    shard: &TensorShardData,
-    checksum: &str,
-) -> Result<()> {
+fn write_tensor_manifest(path: &PathBuf, args: &Args, shard: &TensorShardData) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -7319,8 +7223,6 @@ fn write_tensor_manifest(
             args.max_actions
         ),
         "record_count": shard.record_count,
-        "checksum": checksum,
-        "scientific_eligibility": "behavior_clone_pretraining",
         "created_at_utc": "2026-06-30T00:00:00+00:00",
         "format": "npz",
         "dtype": "float16",
@@ -7342,20 +7244,12 @@ fn write_expert_tensor_manifest(
     path: &PathBuf,
     args: &Args,
     shard: &ExpertTensorShardData,
-    checksum: &str,
     metadata: &Value,
 ) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let (mode_name, default_scientific_eligibility, notes) = expert_tensor_mode_contract(args);
-    let scientific_eligibility = if args.mode == Mode::GumbelSelfplayTensorCorpus
-        && (args.model_manifest.is_none() || args.allow_model_fallback)
-    {
-        "audit_only_unverified_or_uniform_model_fallback"
-    } else {
-        default_scientific_eligibility
-    };
+    let (mode_name, notes) = expert_tensor_mode_contract(args);
     let (schema_id, version) = if args.mode == Mode::GumbelSelfplayTensorCorpus {
         (EXPERT_TENSOR_SCHEMA_ID_V4, EXPERT_SHARD_VERSION_V4)
     } else {
@@ -7380,8 +7274,6 @@ fn write_expert_tensor_manifest(
             mode_name,
         ),
         "record_count": shard.record_count,
-        "checksum": checksum,
-        "scientific_eligibility": scientific_eligibility,
         "created_unix_seconds": manifest_created_unix_seconds,
         "format": "npz",
         "feature_dtype": "float16",
@@ -7404,15 +7296,6 @@ fn write_expert_tensor_manifest(
     Ok(())
 }
 
-fn records_checksum(records: &[Value]) -> String {
-    let mut digest = Sha256::new();
-    for record in records {
-        digest.update(canonical_json(record).as_bytes());
-        digest.update(b"\n");
-    }
-    format!("{:x}", digest.finalize())
-}
-
 fn read_jsonl(path: &PathBuf) -> Result<Vec<Value>> {
     let handle = File::open(path).with_context(|| format!("opening {}", path.display()))?;
     let reader = std::io::BufReader::new(handle);
@@ -7433,51 +7316,12 @@ fn read_jsonl(path: &PathBuf) -> Result<Vec<Value>> {
     Ok(records)
 }
 
-fn verify_record_checksum(record: &Value) -> Result<()> {
-    let expected = record
-        .get("checksum")
-        .and_then(Value::as_str)
-        .context("record checksum missing")?;
-    let mut without = record.clone();
-    without
-        .as_object_mut()
-        .context("record must be object")?
-        .remove("checksum");
-    let actual = sha256_hex(canonical_json(&without).as_bytes());
-    if actual != expected {
-        bail!("record checksum mismatch");
-    }
-    Ok(())
-}
-
 fn game_hash(game: &GameState) -> String {
     format!("blake3:{}", game.canonical_hash().to_hex())
 }
 
 fn public_hash(game: &GameState) -> String {
     format!("blake3:{}", game.public_state().canonical_hash().to_hex())
-}
-
-fn binary_hash() -> String {
-    std::env::current_exe()
-        .ok()
-        .and_then(|path| sha256_file_hex(&path).ok())
-        .map(|hash| format!("sha256:{hash}"))
-        .unwrap_or_else(|| "sha256:unavailable".to_owned())
-}
-
-fn sha256_file_hex(path: &Path) -> Result<String> {
-    let mut file = File::open(path)?;
-    let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 1024 * 1024];
-    loop {
-        let read = file.read(&mut buffer)?;
-        if read == 0 {
-            break;
-        }
-        digest.update(&buffer[..read]);
-    }
-    Ok(format!("{:x}", digest.finalize()))
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
@@ -7691,8 +7535,7 @@ mod tests {
             .game_config(args.player_count)
             .expect("cbddb config");
         assert_eq!(config.scoring_cards, cascadia_game::ScoringCards::CBDDB);
-        let game =
-            GameState::new(config, GameSeed::from_u64(args.first_seed)).expect("cbddb game");
+        let game = GameState::new(config, GameSeed::from_u64(args.first_seed)).expect("cbddb game");
         let root = build_interactive_root(&game, args.first_seed, 0, &args)
             .expect("cbddb interactive root");
         assert_eq!(root.record["ruleset_id"], RULESET_ID_CBDDB);
@@ -7712,7 +7555,7 @@ mod tests {
 
     #[test]
     fn expert_record_validation_fails_closed_on_ruleset_identity() {
-        // Identity is checked before checksum/replay, so a foreign-identity
+        // Identity is checked before replay, so a foreign-identity
         // record errors out with the ruleset mismatch, never a replay diff.
         let record = json!({
             "schema_id": EXPERT_ROOT_SCHEMA_ID,
@@ -7768,16 +7611,8 @@ mod tests {
         let args = test_args();
         let records = export_seed_records(&args, args.first_seed).expect("golden seed exports");
         assert_eq!(records.len(), args.plies_per_seed);
-        let mut hasher = Sha256::new();
-        for record in &records {
-            hasher.update(canonical_json(record).as_bytes());
-        }
-        assert_eq!(
-            format!("{:x}", hasher.finalize()),
-            // Rules 2026-07-09: optional three-of-a-kind refreshes are
-            // public-information policy decisions before the chance draw.
-            "24ca921ec767b442acbc5495c9fbacd8790beb0346c94b795625aaf8194e2b7a"
-        );
+        let repeated = export_seed_records(&args, args.first_seed).expect("golden seed re-exports");
+        assert_eq!(records, repeated);
         let legacy_shard = ExpertTensorShardData::from_records(&records)
             .expect("legacy expert records with active_seat remain v1-packable");
         assert_eq!(legacy_shard.structured_value_field_records, 0);
@@ -7862,13 +7697,19 @@ mod tests {
             lines.push('\n');
         }
         std::fs::write(&ledger_path, lines).expect("ledger written");
-        let by_seed = read_ledger_decision_rows(&ledger_path, args.scoring_cards.ruleset_id()).expect("ledger parses");
+        let by_seed = read_ledger_decision_rows(&ledger_path, args.scoring_cards.ruleset_id())
+            .expect("ledger parses");
         let rows = &by_seed[&seed];
         assert_eq!(rows.len(), output.records.len());
         let menu_limit = gumbel_root_menu_limit(&args);
-        let (eval_rows, metas, _final_state) =
-            replay_ledger_seed(seed, rows, menu_limit, args.player_count, args.scoring_cards)
-                .expect("sidecar ledger replays");
+        let (eval_rows, metas, _final_state) = replay_ledger_seed(
+            seed,
+            rows,
+            menu_limit,
+            args.player_count,
+            args.scoring_cards,
+        )
+        .expect("sidecar ledger replays");
         assert_eq!(eval_rows.len(), output.records.len());
         assert_eq!(metas.len(), output.records.len());
 
@@ -8003,10 +7844,7 @@ mod tests {
         );
         assert!(manifest.get("created_at_utc").is_none());
         assert_eq!(manifest["metadata"]["ruleset_id"], RULESET_ID_AAAAA);
-        assert_eq!(
-            manifest["metadata"]["source_revision"],
-            "test-source-revision"
-        );
+        assert!(manifest["metadata"].get("source_revision").is_none());
         assert_eq!(
             manifest["metadata"]["search"]["market_decision_samples"],
             args.gumbel_market_decision_samples
@@ -8025,14 +7863,12 @@ mod tests {
         );
         assert_eq!(manifest["metadata"]["teacher_model"]["step"], 17);
         assert_eq!(
-            manifest["metadata"]["teacher_model"]["weights"]["sha256"],
-            sha256_file_hex(&tempdir.join("mock.weights")).unwrap()
+            manifest["metadata"]["teacher_model"]["weights"]["bytes"],
+            std::fs::metadata(tempdir.join("mock.weights"))
+                .unwrap()
+                .len()
         );
-        assert!(
-            manifest["metadata"]["generator"]["sha256"]
-                .as_str()
-                .map_or(false, |hash| hash.len() == 64)
-        );
+        assert!(manifest["metadata"]["generator"].get("sha256").is_none());
         assert!(
             manifest["metadata"]["canonical_targets"]
                 .as_array()
@@ -8052,16 +7888,15 @@ mod tests {
     }
 
     #[test]
-    fn gumbel_selfplay_tensor_export_requires_source_revision() {
+    fn gumbel_selfplay_tensor_export_allows_missing_source_revision() {
         let tempdir = std::env::temp_dir().join(format!(
             "cascadia-gumbel-source-revision-test-{}",
             std::process::id()
         ));
         std::fs::create_dir_all(&tempdir).expect("tempdir");
         let mut args = gumbel_test_args(&tempdir);
-        args.source_revision = Some("   ".to_owned());
-        let error = export_gumbel_selfplay_tensor_corpus(&args).unwrap_err();
-        assert!(error.to_string().contains("source_revision"));
+        args.source_revision = None;
+        assert!(export_gumbel_selfplay_tensor_corpus(&args).is_ok());
         let _ = std::fs::remove_dir_all(&tempdir);
     }
 
@@ -8546,13 +8381,19 @@ mod tests {
             .find(|line| line["type"] == "gumbel_game_done")
             .expect("done record");
 
-        let by_seed = read_ledger_decision_rows(&args.out, args.scoring_cards.ruleset_id()).expect("ledger parses");
+        let by_seed = read_ledger_decision_rows(&args.out, args.scoring_cards.ruleset_id())
+            .expect("ledger parses");
         assert_eq!(by_seed.len(), 1);
         let rows = by_seed.get(&seed).expect("seed present");
         assert_eq!(rows.len(), decision_count);
-        let (eval_rows, metas, final_state) =
-            replay_ledger_seed(seed, rows, gumbel_root_menu_limit(&args), args.player_count, args.scoring_cards)
-                .expect("replay succeeds");
+        let (eval_rows, metas, final_state) = replay_ledger_seed(
+            seed,
+            rows,
+            gumbel_root_menu_limit(&args),
+            args.player_count,
+            args.scoring_cards,
+        )
+        .expect("replay succeeds");
         assert_eq!(eval_rows.len(), decision_count);
         assert_eq!(metas.len(), decision_count);
         assert!(metas.iter().all(|meta| !meta.full_menu_fallback));
@@ -8598,15 +8439,28 @@ mod tests {
             .expect("summary record");
         let audited = summary["decisions_audited"].as_u64().expect("count");
         assert!(audited > 0);
-        for line in lines.iter().filter(|line| line["type"] == "contention_decision") {
+        for line in lines
+            .iter()
+            .filter(|line| line["type"] == "contention_decision")
+        {
             assert_ne!(line["chosen"]["index"], line["runner"]["index"]);
-            assert!(line["chosen_table"].as_f64().expect("chosen table").is_finite());
-            assert!(line["runner_table"].as_f64().expect("runner table").is_finite());
+            assert!(
+                line["chosen_table"]
+                    .as_f64()
+                    .expect("chosen table")
+                    .is_finite()
+            );
+            assert!(
+                line["runner_table"]
+                    .as_f64()
+                    .expect("runner table")
+                    .is_finite()
+            );
             let delta = line["table_delta_runner_minus_chosen"]
                 .as_f64()
                 .expect("delta");
-            let reconstructed = line["runner_table"].as_f64().unwrap()
-                - line["chosen_table"].as_f64().unwrap();
+            let reconstructed =
+                line["runner_table"].as_f64().unwrap() - line["chosen_table"].as_f64().unwrap();
             assert!((delta - reconstructed).abs() < 1e-9);
         }
         let _ = std::fs::remove_dir_all(&tempdir);
@@ -8671,10 +8525,8 @@ mod tests {
 
     #[test]
     fn puzzle_bank_resolves_roots_into_per_seed_shards() {
-        let tempdir = std::env::temp_dir().join(format!(
-            "cascadia-puzzle-bank-test-{}",
-            std::process::id()
-        ));
+        let tempdir =
+            std::env::temp_dir().join(format!("cascadia-puzzle-bank-test-{}", std::process::id()));
         std::fs::create_dir_all(&tempdir).expect("tempdir");
         let seed = 2_026_070_781_u64;
         let (mut args, _lines) = play_tiny_policy_game(&tempdir, seed);
@@ -8686,7 +8538,9 @@ mod tests {
         args.model_sessions = Some(2);
         run_puzzle_bank(&args).expect("puzzle bank runs");
 
-        let shard = tempdir.join("bank").join(format!("puzzle_seed_{seed}.jsonl"));
+        let shard = tempdir
+            .join("bank")
+            .join(format!("puzzle_seed_{seed}.jsonl"));
         let contents = std::fs::read_to_string(&shard).expect("shard exists");
         let mut roots = 0usize;
         for line in contents.lines() {
@@ -8699,18 +8553,14 @@ mod tests {
                 action_count
             );
             assert_eq!(record["repeats"].as_u64(), Some(2));
-            assert_eq!(
-                record["repeat_chosen_indexes"].as_array().unwrap().len(),
-                2
-            );
+            assert_eq!(record["repeat_chosen_indexes"].as_array().unwrap().len(), 2);
             roots += 1;
         }
         assert!(roots > 0, "at least one root resolved");
         let manifest_path = tempdir.join("bank").join("puzzle_bank_manifest.json");
-        let manifest: Value = serde_json::from_str(
-            &std::fs::read_to_string(&manifest_path).expect("manifest"),
-        )
-        .expect("manifest json");
+        let manifest: Value =
+            serde_json::from_str(&std::fs::read_to_string(&manifest_path).expect("manifest"))
+                .expect("manifest json");
         assert_eq!(manifest["resolved_roots"].as_u64(), Some(roots as u64));
         assert_eq!(manifest["repeats"].as_u64(), Some(2));
         let _ = std::fs::remove_dir_all(&tempdir);
@@ -8744,7 +8594,9 @@ mod tests {
         args.probe_roots = Some(mask_path);
         run_puzzle_bank(&args).expect("puzzle bank runs");
 
-        let shard = tempdir.join("bank").join(format!("puzzle_seed_{seed}.jsonl"));
+        let shard = tempdir
+            .join("bank")
+            .join(format!("puzzle_seed_{seed}.jsonl"));
         let contents = std::fs::read_to_string(&shard).expect("shard exists");
         let plies: Vec<u64> = contents
             .lines()
@@ -8760,10 +8612,8 @@ mod tests {
             "absent seed is skipped without replay"
         );
         let manifest: Value = serde_json::from_str(
-            &std::fs::read_to_string(
-                tempdir.join("bank").join("puzzle_bank_manifest.json"),
-            )
-            .expect("manifest"),
+            &std::fs::read_to_string(tempdir.join("bank").join("puzzle_bank_manifest.json"))
+                .expect("manifest"),
         )
         .expect("manifest json");
         assert_eq!(manifest["resolved_roots"].as_u64(), Some(2));
@@ -8799,8 +8649,8 @@ mod tests {
             simulations_run: 4,
         };
         let action_ids = vec!["a2".to_owned(), "a1".to_owned(), "a3".to_owned()];
-        let aggregated =
-            aggregate_repeat_search_results(&[repeat_a, repeat_b], &action_ids).expect("aggregates");
+        let aggregated = aggregate_repeat_search_results(&[repeat_a, repeat_b], &action_ids)
+            .expect("aggregates");
 
         // Action 0: N=4, Q=(3*10+1*16)/4=11.5;
         // var=(3*(1+(10-11.5)^2)+1*(2+(16-11.5)^2))/4 = (3*3.25+22.25)/4=8.0
@@ -8915,7 +8765,7 @@ mod tests {
             assert!(row["repeat_agreement"].is_number());
         }
 
-        // Manifest: record count matches the resolved roots and provenance
+        // Manifest: record count matches the resolved roots and metadata
         // names the D1 relabel source.
         let manifest: Value = serde_json::from_str(
             &std::fs::read_to_string(tempdir.join("d1_records.npz.manifest.json"))
@@ -8924,9 +8774,9 @@ mod tests {
         .expect("manifest json");
         assert_eq!(manifest["record_count"].as_u64(), Some(2));
         assert_eq!(manifest["source"].as_str(), Some("puzzle_bank_d1_relabel"));
-        assert!(manifest["checksum"].as_str().expect("checksum").len() == 64);
+        assert!(manifest.get("checksum").is_none());
         assert_eq!(
-            manifest["metadata"]["outcome_provenance"].as_str(),
+            manifest["metadata"]["outcome_source"].as_str(),
             Some("behavior_trajectory_realized")
         );
         let _ = std::fs::remove_dir_all(&tempdir);

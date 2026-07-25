@@ -141,7 +141,7 @@ class ExpertTensorV3Test(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "requires exact_endgame"):
                 ExpertTensorShard(path)
 
-    def test_audit_only_v3_is_readable_but_rejected_for_training(self) -> None:
+    def test_legacy_eligibility_label_does_not_block_training(self) -> None:
         from cascadiav3.expert_tensor_shards import ExpertTensorCorpus, ExpertTensorShard
 
         with tempfile.TemporaryDirectory() as directory:
@@ -152,8 +152,11 @@ class ExpertTensorV3Test(unittest.TestCase):
             )
             shard = ExpertTensorShard(path)
             shard.close()
-            with self.assertRaisesRegex(ValueError, "not training eligible"):
-                ExpertTensorCorpus([path])
+            corpus = ExpertTensorCorpus([path])
+            try:
+                self.assertEqual(len(corpus), 1)
+            finally:
+                corpus.close()
 
 
 if __name__ == "__main__":

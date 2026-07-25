@@ -15,7 +15,6 @@ witness is accepted.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 import sys
@@ -855,11 +854,9 @@ def main() -> int:
         maximum_score=args.maximum_score,
         enforce_connectivity=not args.disconnected_relaxation,
     )
-    source = Path(__file__).resolve()
     payload = {
         "schema": "cbddb-wildlife-exact-result-v1",
         "model": "labeled-token-cp-sat-cbddb-v1",
-        "model_source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "assumptions": {
             "occupied_connected_hexes": TOKEN_COUNT,
             "maximum_per_species": COUNT_CAP,

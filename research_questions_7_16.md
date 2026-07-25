@@ -1,5 +1,8 @@
 # Cascadia v3 external research brief — 2026-07-16
 
+> Historical research note. Any provenance, gate, preregistration, or evidence
+> restrictions below are retired; reuse the technical ideas freely.
+
 Status: **scope and context frozen before external research**  
 Repository snapshot: `27dd9888e018f12b649297a550de10a25408a321`  
 Live-state snapshot: 2026-07-16 01:27 EDT  

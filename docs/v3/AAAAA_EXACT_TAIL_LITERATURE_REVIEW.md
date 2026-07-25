@@ -1,5 +1,8 @@
 # AAAAA exact-tail literature review and implementation verdict
 
+> The solver analysis remains useful. Historical strength gates and campaign
+> closure language do not constrain current solver work.
+
 Date: 2026-07-23
 
 ## Outcome

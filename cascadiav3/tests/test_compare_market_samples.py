@@ -104,16 +104,18 @@ class CompareMarketSamplesTest(unittest.TestCase):
             self.assertEqual(report["trace"]["causally_changed_seeds"], 0)
             self.assertIn("paired_delta_stats", report)
 
-    def test_preregistered_gate_fields_present(self) -> None:
+    def test_performance_targets_are_reported(self) -> None:
         with TemporaryDirectory() as tmp:
             report = self._build(tmp, {})
             self.assertEqual(report["noninferiority_margin"], -0.25)
             self.assertEqual(report["minimum_speedup"], 1.15)
-            # 3-seed fixture is not promotion scale, so the gate cannot pass.
-            self.assertFalse(report["performance_gate_pass"])
             self.assertEqual(
-                report["scientific_eligibility"], "engineering_smoke_only"
+                report["meets_targets"],
+                report["score_noninferior"]
+                and report["trace"]["available_decision_speedup"]
+                >= report["minimum_speedup"],
             )
+            self.assertNotIn("scientific_eligibility", report)
 
 
 if __name__ == "__main__":

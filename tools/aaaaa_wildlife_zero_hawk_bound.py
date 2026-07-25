@@ -12,7 +12,6 @@ optimistic abstract coverage, so the model is a superset of real boards.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 import time
@@ -431,8 +430,6 @@ def certificates(
                 "incumbent": incumbent,
             }
         )
-    source = Path(__file__).resolve()
-    exact_source = source.with_name("aaaaa_wildlife_exact.py")
     return {
         "schema": "aaaaa-zero-hawk-local-packing-certificates-v1",
         "proof_complete": True,
@@ -450,8 +447,6 @@ def certificates(
             "forced_local_cells_must_not_overlap": True,
         },
         "ortools_version": ORTOOLS_VERSION,
-        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "exact_scorer_source_sha256": hashlib.sha256(exact_source.read_bytes()).hexdigest(),
         "elapsed_seconds": time.monotonic() - started,
         "results": results,
     }

@@ -1,7 +1,4 @@
-"""R1.4 Stage 1 preregistered trainer flags: V1b, V2, C1, T0.
-
-Preregistration: `cascadiav3/EXPERIMENT_LOG.md` 2026-07-13 23:45 ("Stage 1
-arms"); design memo `docs/v3/R1_4_DENSIFICATION_DESIGN.md` sections 4-5.
+"""R1.4 Stage 1 trainer flags: V1b, V2, C1, T0.
 
 The cardinal constraint under test: with none of the new flags set, the
 trainer is BIT-IDENTICAL to the pre-Stage-1 trainer. `GOLDEN_GUMBEL` /
@@ -278,7 +275,6 @@ class ValueTargetSearchMixTest(_TorchCase):
 
     def test_mixes_only_active_seat_and_only_at_or_above_min_tiles(self) -> None:
         self._require_torch()
-        import torch
         import torch.nn.functional as F
 
         from cascadiav3.torch_train_cascadiaformer import (

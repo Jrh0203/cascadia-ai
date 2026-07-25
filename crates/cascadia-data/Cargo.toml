@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 blake3.workspace = true
 cascadia-game = { path = "../cascadia-game" }
-cascadia-provenance = { path = "../cascadia-provenance" }
 cascadia-sim = { path = "../cascadia-sim" }
 rayon.workspace = true
 serde.workspace = true

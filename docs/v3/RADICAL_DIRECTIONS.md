@@ -1,5 +1,8 @@
 # Radical Directions — speculative architecture bets beyond the current stack
 
+> Idea notebook. “Closed,” gate, and preregistration labels below do not block
+> revisiting or directly implementing any promising direction.
+
 Written 2026-07-08, end of the day the scalar-head plateau broke. These are
 NOT the incremental next steps (those are RESEARCH_LOG §5) — these are
 architecture-level departures, each judged against the campaign's two

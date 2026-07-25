@@ -1,10 +1,8 @@
-"""Contract tests for the group-sequential chunk-report merger.
+"""Tests for the permissive benchmark chunk-report merger.
 
 The merger must recompute every aggregate exactly from the underlying rows
-(concatenated decision JSONLs + per-seed score breakdowns) via the real
-benchmark summarizers, refuse mismatched or overlapping chunks loudly, and
-emit a report whose comparator-read fields are indistinguishable from a
-single monolithic benchmark run over the union of the seeds.
+(concatenated decision JSONLs + per-game score breakdowns) via the real
+benchmark summarizers while allowing repeated seeds and mixed run metadata.
 """
 
 import json
@@ -213,9 +211,7 @@ class MergeHappyPathTest(unittest.TestCase):
             self.assertIsNone(merged["raw_games_dir"])
             self.assertEqual(merged["paired_score_deltas"], [])
             self.assertEqual(merged["paired_delta_stats"]["n"], 0)
-            self.assertEqual(
-                merged["scientific_eligibility"], "candidate_only_search_arm"
-            )
+            self.assertNotIn("scientific_eligibility", merged)
             self.assertEqual(merged["experiment_id"], "merged_exp")
             self.assertEqual(merged["execution"]["merged_chunks"], 2)
             self.assertEqual(
@@ -294,48 +290,52 @@ class MergeHappyPathTest(unittest.TestCase):
 
 
 class MergeValidationTest(unittest.TestCase):
-    def test_overlapping_seed_sets_are_refused(self) -> None:
+    def test_overlapping_seed_sets_are_counted_as_separate_games(self) -> None:
         overlapping = {12: CHUNK_B[13], 13: CHUNK_B[14]}
         with TemporaryDirectory() as tmp:
             chunk_a, decisions_a = write_chunk(tmp, "a", CHUNK_A, 100.0)
             chunk_b, decisions_b = write_chunk(tmp, "b", overlapping, 250.0)
-            with self.assertRaisesRegex(ValueError, "seed sets overlap"):
-                build_merged_report(
-                    [chunk_a, chunk_b], [decisions_a, decisions_b], "merged_exp"
-                )
+            merged = build_merged_report(
+                [chunk_a, chunk_b], [decisions_a, decisions_b], "merged_exp"
+            )
+            self.assertEqual(merged["seeds"], [11, 12, 12, 13])
+            self.assertEqual(merged["strategies"]["gumbel-search"]["games"], 4)
 
-    def test_search_dict_mismatch_is_refused(self) -> None:
+    def test_search_dict_mismatch_is_recorded(self) -> None:
         with TemporaryDirectory() as tmp:
             chunk_a, decisions_a = write_chunk(tmp, "a", CHUNK_A, 100.0)
             chunk_b, decisions_b = write_chunk(tmp, "b", CHUNK_B, 250.0)
             payload = json.loads(chunk_b.read_text(encoding="utf-8"))
             payload["search"]["determinizations"] = 8
             chunk_b.write_text(json.dumps(payload), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "search settings mismatch"):
-                build_merged_report(
-                    [chunk_a, chunk_b], [decisions_a, decisions_b], "merged_exp"
-                )
+            merged = build_merged_report(
+                [chunk_a, chunk_b], [decisions_a, decisions_b], "merged_exp"
+            )
+            self.assertTrue(merged["search"]["mixed"])
 
-    def test_source_revision_mismatch_is_refused(self) -> None:
+    def test_source_revision_mismatch_does_not_block_merge(self) -> None:
         with TemporaryDirectory() as tmp:
             chunk_a, decisions_a = write_chunk(tmp, "a", CHUNK_A, 100.0)
             chunk_b, decisions_b = write_chunk(
                 tmp, "b", CHUNK_B, 250.0, revision="rev-other"
             )
-            with self.assertRaisesRegex(ValueError, "source_revision mismatch"):
-                build_merged_report(
-                    [chunk_a, chunk_b], [decisions_a, decisions_b], "merged_exp"
-                )
+            merged = build_merged_report(
+                [chunk_a, chunk_b], [decisions_a, decisions_b], "merged_exp"
+            )
+            self.assertEqual(merged["seeds"], [11, 12, 13, 14, 15])
 
-    def test_decisions_seed_set_mismatch_is_refused(self) -> None:
+    def test_decisions_seed_set_mismatch_is_recorded(self) -> None:
         with TemporaryDirectory() as tmp:
             chunk_a, decisions_a = write_chunk(tmp, "a", CHUNK_A, 100.0)
             chunk_b, decisions_b = write_chunk(tmp, "b", CHUNK_B, 250.0)
-            # Swapped decision files: each covers the other chunk's seeds.
-            with self.assertRaisesRegex(ValueError, "covers seeds"):
-                build_merged_report(
-                    [chunk_a, chunk_b], [decisions_b, decisions_a], "merged_exp"
-                )
+            # Swapped decision files: score rows remain usable and missing /
+            # extra decision coverage is reported.
+            merged = build_merged_report(
+                [chunk_a, chunk_b], [decisions_b, decisions_a], "merged_exp"
+            )
+            coverage = merged["execution"]["decision_coverage"]
+            self.assertEqual(coverage[0]["missing"], [11, 12])
+            self.assertEqual(coverage[1]["missing"], [13, 14, 15])
 
     def test_chunk_and_decisions_count_mismatch_is_refused(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -344,31 +344,31 @@ class MergeValidationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must match --chunk count"):
                 build_merged_report([chunk_a, chunk_b], [decisions_a], "merged_exp")
 
-    def test_non_pass_status_is_refused(self) -> None:
+    def test_non_pass_status_does_not_discard_available_rows(self) -> None:
         with TemporaryDirectory() as tmp:
             chunk_a, decisions_a = write_chunk(tmp, "a", CHUNK_A, 100.0)
             payload = json.loads(chunk_a.read_text(encoding="utf-8"))
             payload["status"] = "fail"
             chunk_a.write_text(json.dumps(payload), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "not passing"):
-                build_merged_report([chunk_a], [decisions_a], "merged_exp")
+            merged = build_merged_report([chunk_a], [decisions_a], "merged_exp")
+            self.assertEqual(merged["strategies"]["gumbel-search"]["games"], 2)
 
-    def test_non_decision_row_type_is_refused(self) -> None:
+    def test_non_decision_rows_are_ignored(self) -> None:
         with TemporaryDirectory() as tmp:
             chunk_a, decisions_a = write_chunk(tmp, "a", CHUNK_A, 100.0)
             with decisions_a.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps({"type": "gumbel_game_done", "seed": 11}) + "\n")
-            with self.assertRaisesRegex(ValueError, "expected 'gumbel_decision'"):
-                build_merged_report([chunk_a], [decisions_a], "merged_exp")
+            merged = build_merged_report([chunk_a], [decisions_a], "merged_exp")
+            self.assertEqual(merged["strategies"]["gumbel-search"]["games"], 2)
 
-    def test_control_arm_chunk_is_refused(self) -> None:
+    def test_control_metadata_does_not_block_candidate_rows(self) -> None:
         with TemporaryDirectory() as tmp:
             chunk_a, decisions_a = write_chunk(tmp, "a", CHUNK_A, 100.0)
             payload = json.loads(chunk_a.read_text(encoding="utf-8"))
             payload["control"]["kind"] = "full-search"
             chunk_a.write_text(json.dumps(payload), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "candidate-only"):
-                build_merged_report([chunk_a], [decisions_a], "merged_exp")
+            merged = build_merged_report([chunk_a], [decisions_a], "merged_exp")
+            self.assertEqual(merged["strategies"]["gumbel-search"]["games"], 2)
 
     def test_per_seed_coverage_mismatch_is_refused(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -379,17 +379,19 @@ class MergeValidationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "candidate_per_seed seeds"):
                 build_merged_report([chunk_a], [decisions_a], "merged_exp")
 
-    def test_mismatched_execution_jobs_are_refused(self) -> None:
+    def test_mismatched_execution_jobs_are_recorded(self) -> None:
         with TemporaryDirectory() as tmp:
             chunk_a, decisions_a = write_chunk(tmp, "a", CHUNK_A, 100.0)
             chunk_b, decisions_b = write_chunk(tmp, "b", CHUNK_B, 250.0)
             payload = json.loads(chunk_b.read_text(encoding="utf-8"))
             payload["execution"]["requested_jobs"] = 8
             chunk_b.write_text(json.dumps(payload), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "requested_jobs mismatch"):
-                build_merged_report(
-                    [chunk_a, chunk_b], [decisions_a, decisions_b], "merged_exp"
-                )
+            merged = build_merged_report(
+                [chunk_a, chunk_b], [decisions_a, decisions_b], "merged_exp"
+            )
+            self.assertEqual(
+                merged["execution"]["requested_jobs_by_chunk"], [4, 8]
+            )
 
 
 if __name__ == "__main__":

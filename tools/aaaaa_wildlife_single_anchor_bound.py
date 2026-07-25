@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import collections
-import hashlib
 import itertools
 import json
 import time
@@ -493,10 +492,6 @@ def relaxed_upper_bound(
     }
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def _proof_counts(payload: dict[str, Any]) -> set[tuple[int, ...]]:
     result = set()
     if payload.get("proof_complete") and "counts" in payload:
@@ -613,9 +608,6 @@ def run_batch(
             flush=True,
         )
 
-    source = Path(__file__).resolve()
-    exact_source = source.with_name("aaaaa_wildlife_exact.py")
-    motif_source = source.with_name("aaaaa_wildlife_motif_certificate.py")
     return {
         "schema": "aaaaa-single-anchor-local-packing-batch-v1",
         "proof_complete": bool(results) and all(row["proof_complete"] for row in results),
@@ -646,15 +638,9 @@ def run_batch(
             "abstract_fox_coverage_optimistic": True,
         },
         "ortools_version": ORTOOLS_VERSION,
-        "source_sha256": _sha256(source),
-        "exact_scorer_source_sha256": _sha256(exact_source),
-        "motif_support_source_sha256": _sha256(motif_source),
-        "catalog": {"path": str(catalog_path), "sha256": _sha256(catalog_path)},
-        "candidates": {"path": str(candidates_path), "sha256": _sha256(candidates_path)},
-        "proof_ledgers": [
-            {"path": str(path), "sha256": _sha256(path)}
-            for path in proof_ledgers
-        ],
+        "catalog": {"path": str(catalog_path)},
+        "candidates": {"path": str(candidates_path)},
+        "proof_ledgers": [{"path": str(path)} for path in proof_ledgers],
         "elapsed_seconds": time.monotonic() - started,
         "results": results,
     }

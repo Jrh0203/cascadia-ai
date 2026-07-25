@@ -5,8 +5,8 @@ serving flags, repeats=1) against the frozen mega-budget bank on the same
 roots and scores the candidate by *bank regret*: for each root, the bank's
 mean completed-Q of the bank-best action minus the bank value of the action
 the candidate search chose. Low mean regret at parity cost is the screen
-signal; a candidate must still win a preregistered paired gate before any
-adoption — the screen only decides which candidates deserve one.
+signal. It can be combined directly with gameplay results when choosing a
+candidate.
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"P95 regret: `{report['p95_regret']:+.4f}`",
         f"Chose-bank-best rate: `{report['zero_regret_rate']:.1%}`",
         "",
-        "Screens rank candidates for gates; they are never promotion evidence.",
+        "This is one useful candidate-ranking signal; inspect it alongside gameplay.",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

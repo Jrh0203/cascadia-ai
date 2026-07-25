@@ -6,10 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use super::{
-    CollectionProvenance, DataError, DatasetSplit, ShardManifest, checksum_file,
-    collection_provenance, collection_provenance_matches, unix_seconds, write_manifest_atomic,
-};
+use super::{DataError, DatasetSplit, ShardManifest, unix_seconds, write_manifest_atomic};
 
 pub const ROLLOUT_VALUE_DATASET_SCHEMA_VERSION: u16 = 1;
 pub const ROLLOUT_VALUE_FEATURE_SCHEMA: &str = "legacy-mid-v4opp-sparse-u16-v1";
@@ -147,8 +144,6 @@ impl RolloutValueRecord {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RolloutValueTeacherConfig {
     pub strategy_id: String,
-    pub parent_model_manifest_blake3: String,
-    pub weights_blake3: String,
     pub feature_count: usize,
     pub candidate_limit: usize,
     pub rollouts: usize,
@@ -160,15 +155,11 @@ pub struct RolloutValueTeacherConfig {
 impl RolloutValueTeacherConfig {
     fn validate(&self) -> Result<(), DataError> {
         if self.strategy_id.trim().is_empty()
-            || self.parent_model_manifest_blake3.len() != 64
-            || self.weights_blake3.len() != 64
             || self.feature_count == 0
             || self.feature_count > u16::MAX as usize
-            || self.candidate_limit != 32
+            || self.candidate_limit == 0
             || self.rollouts == 0
             || self.trace_modulus == 0
-            || !self.lmr
-            || !self.diverse_prefilter
         {
             return Err(DataError::InvalidConfig(
                 "rollout-value teacher configuration is invalid",
@@ -214,7 +205,6 @@ pub struct RolloutValueDatasetManifest {
     pub root_estimate_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<ShardManifest>,
 }
 
@@ -261,7 +251,6 @@ impl RolloutValueDatasetWriter {
                 root_estimate_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -332,7 +321,6 @@ impl RolloutValueDatasetWriter {
             game_count: 1,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += 1;
         self.manifest.total_records += records.len();
@@ -381,9 +369,6 @@ pub fn validate_rollout_value_dataset(
             return Err(DataError::InvalidManifest(
                 "rollout-value shard byte count mismatch",
             ));
-        }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
         }
         let shard_records = read_shard(&path, manifest.split, &manifest.teacher, shard)?;
         for record in &shard_records {
@@ -435,7 +420,6 @@ fn validate_resume(
     manifest: &RolloutValueDatasetManifest,
     config: &RolloutValueDatasetConfig,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != ROLLOUT_VALUE_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != ROLLOUT_VALUE_FEATURE_SCHEMA
         || manifest.target_schema != ROLLOUT_VALUE_TARGET_SCHEMA
@@ -443,7 +427,6 @@ fn validate_resume(
         || manifest.split != config.split
         || manifest.teacher != config.teacher
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }

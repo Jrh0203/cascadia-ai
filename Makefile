@@ -7,7 +7,7 @@ CARGO := /usr/bin/env PATH=$(HOST_TOOL_PATH) $(CARGO_BIN)
 PYTHON ?= python3
 
 PYTHONPATH_ACTIVE := PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=python:cascadiav3/src:tools
-RUFF_PATHS := python/cascadia_cluster tests/cluster_unit tools/cluster_*.py tools/r2_map_bacalhau_gate.py
+RUFF_PATHS := python/cascadia_cluster tests/cluster_unit tools/cluster_*.py
 
 check:
 	$(CARGO) check --workspace

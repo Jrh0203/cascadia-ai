@@ -147,7 +147,7 @@ pub struct GumbelConfig {
     /// R0.3 unvisited-Q bias correction: the raw model Q used for unvisited
     /// actions (halving fallbacks and completed-Q export) is offset by the
     /// per-root mean (simulation mean − model Q) over visited actions —
-    /// the measured model-Q heat (+1.02 on the structured-Q holdouts).
+    /// the measured model-Q heat (+1.02 on the structured-Q sample).
     pub q_bias_correction: bool,
     /// R0.4 variance-aware final selection: when > 0, the final action is
     /// argmax of (mean − lcb_c · SE) among actions with at least half the
@@ -448,7 +448,9 @@ fn normalize_for_sigma(values: &[f64], scheme: SigmaNormalization) -> Vec<f64> {
             if sorted.is_empty() {
                 return vec![0.0; values.len()];
             }
-            sorted.sort_by(|left, right| right.partial_cmp(left).unwrap_or(std::cmp::Ordering::Equal));
+            sorted.sort_by(|left, right| {
+                right.partial_cmp(left).unwrap_or(std::cmp::Ordering::Equal)
+            });
             let k = k.max(2).min(sorted.len());
             let max = sorted[0];
             let min = sorted[k - 1];
@@ -466,17 +468,12 @@ fn normalize_for_sigma(values: &[f64], scheme: SigmaNormalization) -> Vec<f64> {
 /// Rebuilds a root row's action menu at a different cap on the SAME staged
 /// state. Trajectory reconstruction must use the ledger-era cap; resolution
 /// may want another menu (e.g. the full legal set for coverage audits).
-pub(crate) fn rebuild_row_with_menu(
-    row: &EvalRow,
-    menu_limit: Option<usize>,
-) -> Result<EvalRow> {
-    let candidates =
-        match rank_greedy_actions(&row.staged, &MarketPrelude::default(), menu_limit) {
-            Ok(candidates) => candidates,
-            Err(error) => return Err(error).context("re-ranking root menu"),
-        };
-    let afterstates =
-        candidate_afterstates(&row.staged, &candidates, row.staged.current_player())?;
+pub(crate) fn rebuild_row_with_menu(row: &EvalRow, menu_limit: Option<usize>) -> Result<EvalRow> {
+    let candidates = match rank_greedy_actions(&row.staged, &MarketPrelude::default(), menu_limit) {
+        Ok(candidates) => candidates,
+        Err(error) => return Err(error).context("re-ranking root menu"),
+    };
+    let afterstates = candidate_afterstates(&row.staged, &candidates, row.staged.current_player())?;
     Ok(EvalRow {
         staged: row.staged.clone(),
         prelude: row.prelude.clone(),
@@ -497,12 +494,16 @@ fn visited_model_q_offset(
     let mut count = 0_usize;
     for index in 0..visit_counts.len() {
         if visit_counts[index] > 0 {
-            total += value_sums[index] / f64::from(visit_counts[index])
-                - (derived_q[index] + shift);
+            total +=
+                value_sums[index] / f64::from(visit_counts[index]) - (derived_q[index] + shift);
             count += 1;
         }
     }
-    if count == 0 { 0.0 } else { total / count as f64 }
+    if count == 0 {
+        0.0
+    } else {
+        total / count as f64
+    }
 }
 
 /// Deterministic rollout stream seed for one (action, visit) simulation.
@@ -650,8 +651,7 @@ fn advance_simulations(
                     if state.is_game_over() || state.current_player() == root_seat {
                         break;
                     }
-                    let Some(row) =
-                        eval_row_for_prelude(state, MarketPrelude::default(), Some(1))?
+                    let Some(row) = eval_row_for_prelude(state, MarketPrelude::default(), Some(1))?
                     else {
                         break; // truncation: valued as its own terminal below
                     };
@@ -1150,8 +1150,8 @@ pub fn gumbel_search_for_state(
     if cfg.exact_endgame_turns > 0 && (cfg.table_total || cfg.table_native_q) {
         bail!("exact final-personal-turn solving is incompatible with table-total objectives");
     }
-    let exact_endgame = cfg.exact_endgame_turns == 1
-        && game.turns_remaining_for_player(game.current_player()) == 1;
+    let exact_endgame =
+        cfg.exact_endgame_turns == 1 && game.turns_remaining_for_player(game.current_player()) == 1;
     // The normal root-menu cap is a performance pre-filter. Exact means the
     // complete legal menu: even a score-ranked cap could become unsound if a
     // future rules/scoring change makes that ranking differ from final score.
@@ -1499,7 +1499,10 @@ mod tests {
         );
         assert_eq!(decision.result.simulations_run, 0);
         assert_eq!(decision.total_simulations_run, 0);
-        assert_eq!(evaluator.calls, 0, "exact frontier must not invoke the model");
+        assert_eq!(
+            evaluator.calls, 0,
+            "exact frontier must not invoke the model"
+        );
         let best_exact = decision
             .row
             .afterstates
@@ -1538,8 +1541,8 @@ mod tests {
                     .ok()?
                     .into_iter()
                     .find(|choice| choice.replace_three_of_a_kind)?;
-                let decline_row = eval_row_for_prelude(&game, MarketPrelude::default(), None)
-                    .ok()??;
+                let decline_row =
+                    eval_row_for_prelude(&game, MarketPrelude::default(), None).ok()??;
                 let decline_value = row_best(&decline_row);
                 let accept_total: f64 = (0..cfg.market_decision_samples)
                     .map(|sample_index| {
@@ -1551,8 +1554,12 @@ mod tests {
                     })
                     .sum();
                 let accept_value = accept_total / cfg.market_decision_samples as f64;
-                (accept_value > decline_value)
-                    .then_some((game, accept, decline_value, accept_value))
+                (accept_value > decline_value).then_some((
+                    game,
+                    accept,
+                    decline_value,
+                    accept_value,
+                ))
             })
             .expect("seed search must find a profitable final-turn refresh");
 
@@ -2132,7 +2139,10 @@ mod tests {
             let result = gumbel_search(&root, &mut evaluator, &cfg).expect("search completes");
             assert!(result.chosen_index < root.afterstates.len(), "{scheme:?}");
             let policy_sum: f64 = result.improved_policy.iter().sum();
-            assert!((policy_sum - 1.0).abs() < 1e-9, "{scheme:?} policy sums to 1");
+            assert!(
+                (policy_sum - 1.0).abs() < 1e-9,
+                "{scheme:?} policy sums to 1"
+            );
         }
     }
 
@@ -2239,7 +2249,10 @@ mod tests {
             }
         }
         let offset = shared_offset.expect("test root must leave unvisited actions");
-        assert!(offset.abs() > 1e-9, "mock evaluator Q runs hot; offset must be nonzero");
+        assert!(
+            offset.abs() > 1e-9,
+            "mock evaluator Q runs hot; offset must be nonzero"
+        );
     }
 
     #[test]

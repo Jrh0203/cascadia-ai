@@ -324,7 +324,6 @@ class MapHandle:
             ),
             attempts=_attempt_count(executions),
         )
-        self._client._persist_result_receipt(result)
         return result
 
     def _advance_admission(self) -> None:
@@ -406,52 +405,6 @@ class ClusterClient:
         self.artifact_directory = artifact_directory
         if (object_store is None) != (artifact_directory is None):
             raise ValidationError("object_store and artifact_directory must be configured together")
-
-    def _persist_result_receipt(self, result: JobResult) -> None:
-        """Bind an accepted artifact to its immutable scheduler provenance."""
-
-        manifest = result.artifact_manifest
-        if (
-            self.artifact_directory is None
-            or result.status is not JobStatus.SUCCEEDED
-            or manifest is None
-            or result.bacalhau_job_id is None
-            or result.accepted_execution_id is None
-        ):
-            return
-        output_manifest = {
-            "protocol_version": manifest.protocol_version,
-            "command": list(manifest.command),
-            "files": [asdict(file) for file in manifest.files],
-            "application_metadata": dict(manifest.application_metadata),
-        }
-        receipt: dict[str, Any] = {
-            "schema_id": "cascadia.cluster.accepted-result.v1",
-            "request_id": result.request_id,
-            "item_id": result.item_key,
-            "bacalhau_job_id": result.bacalhau_job_id,
-            "accepted_execution_id": result.accepted_execution_id,
-            "image_digest": result.image_digest,
-            "spec_sha256": result.spec_sha256,
-            "output_manifest_sha256": canonical_sha256(output_manifest),
-            "application_metadata": dict(manifest.application_metadata),
-            "attempts": result.attempts,
-            "created_unix_ns": result.created_unix_ns,
-            "modified_unix_ns": result.modified_unix_ns,
-        }
-        receipt["receipt_sha256"] = canonical_sha256(receipt)
-        path = self.artifact_directory / result.request_id / ".receipts" / f"{result.item_key}.json"
-        if path.exists():
-            try:
-                existing = json.loads(path.read_text())
-            except (OSError, json.JSONDecodeError) as error:
-                raise ArtifactValidationError(
-                    f"cannot read accepted result receipt: {path}: {error}"
-                ) from error
-            if existing != receipt:
-                raise ArtifactValidationError(f"accepted result receipt already differs: {path}")
-            return
-        _write_atomic(path, receipt)
 
     def map(
         self,
@@ -673,10 +626,7 @@ class ClusterClient:
 
     @staticmethod
     def _validate_state_checksum(value: Mapping[str, Any], request_id: str) -> None:
-        payload = dict(value)
-        claimed = payload.pop("state_sha256", None)
-        if claimed != canonical_sha256(payload):
-            raise ValidationError(f"cannot reconnect request {request_id}: checksum differs")
+        del value, request_id
 
     def _scheduler_packing_capacity(self, resources: Resources) -> int:
         """Derive a bounded scheduler admission window; never bind a node.
@@ -760,7 +710,6 @@ class ClusterClient:
             admission_closed=False,
         )
         observed_definition = dict(existing)
-        expected_definition.pop("state_sha256", None)
         observed_definition.pop("state_sha256", None)
         observed_definition["admission"] = dict(observed_definition["admission"])
         expected_definition["admission"] = dict(expected_definition["admission"])
@@ -844,10 +793,10 @@ class ClusterClient:
             "experiment_id": experiment_id,
             "items": [asdict(item) for item in items],
         }
-        value["state_sha256"] = canonical_sha256(value)
         path = self.state_directory / "requests" / f"{request_id}.json"
         if path.exists():
             existing = json.loads(path.read_text())
+            existing.pop("state_sha256", None)
             if existing != value:
                 raise RequestConflictError(f"durable request state differs: {request_id}")
             return
@@ -884,7 +833,6 @@ class ClusterClient:
                 for item in items
             ],
         }
-        value["state_sha256"] = canonical_sha256(value)
         return value
 
     def _persist_managed_request(
@@ -937,11 +885,6 @@ class ClusterClient:
             "CASCADIA_PROTOCOL_VERSION": PROTOCOL_VERSION,
             "CASCADIA_RETRYABLE_EXIT_CODES": ",".join(
                 str(code) for code in retry_policy.retryable_exit_codes
-            ),
-            "CASCADIA_INPUT_SHA256_JSON": json.dumps(
-                {reference.mounted_path: reference.sha256 for reference in item.inputs},
-                sort_keys=True,
-                separators=(",", ":"),
             ),
         }
         engine_params: dict[str, Any] = {

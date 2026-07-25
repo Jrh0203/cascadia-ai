@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
-import hashlib
 import json
 import os
 import time
@@ -28,10 +27,6 @@ from tools.wildlife_catalog_sharding import load_taskset, select_shard
 SCHEMA = "aaaaa-wildlife-optimal-catalog-v2"
 LEGACY_SCHEMA = "aaaaa-wildlife-optimal-catalog-v1"
 GLOBAL_EXACT_UPPER_BOUND = 68
-
-
-def file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def atomic_json(path: Path, payload: dict[str, Any]) -> None:
@@ -128,7 +123,6 @@ def solve_one(task: dict[str, Any]) -> dict[str, Any]:
             "proof_complete": True,
             "attempts": attempts,
             "wall_seconds": time.monotonic() - started,
-            "proof_provenance": task["proof_provenance"],
         }
 
     while incumbent < upper:
@@ -158,7 +152,6 @@ def solve_one(task: dict[str, Any]) -> dict[str, Any]:
                 "proof_complete": True,
                 "attempts": attempts,
                 "wall_seconds": time.monotonic() - started,
-                "proof_provenance": task["proof_provenance"],
             }
         if relaxed["objective"] is not None:
             relaxed_tokens = normalized_tokens(relaxed["tokens"])
@@ -195,7 +188,6 @@ def solve_one(task: dict[str, Any]) -> dict[str, Any]:
                 "proof_complete": True,
                 "attempts": attempts,
                 "wall_seconds": time.monotonic() - started,
-                "proof_provenance": task["proof_provenance"],
             }
         if connected["objective"] is None:
             return {
@@ -209,7 +201,6 @@ def solve_one(task: dict[str, Any]) -> dict[str, Any]:
                 "proof_complete": False,
                 "attempts": attempts,
                 "wall_seconds": time.monotonic() - started,
-                "proof_provenance": task["proof_provenance"],
             }
         tokens, breakdown = validate_witness(counts, connected["tokens"])
         improved = sum(breakdown)
@@ -228,24 +219,17 @@ def solve_one(task: dict[str, Any]) -> dict[str, Any]:
         "proof_complete": True,
         "attempts": attempts,
         "wall_seconds": time.monotonic() - started,
-        "proof_provenance": task["proof_provenance"],
     }
 
 
 def payload_for(
     args: argparse.Namespace,
-    candidates_sha256: str,
     results: dict[tuple[int, ...], dict[str, Any]],
 ) -> dict[str, Any]:
     ordered_counts = [counts for counts, _ in count_vectors()]
     ordered_results = [results[counts] for counts in ordered_counts if counts in results]
     complete = len(ordered_results) == len(ordered_counts) and all(
         result["proof_complete"] for result in ordered_results
-    )
-    source = Path(__file__).resolve()
-    exact_source = source.with_name("aaaaa_wildlife_exact.py")
-    candidate_source = (
-        source.parents[1] / "crates" / "cascadia-game" / "src" / "bin" / "aaaaa_wildlife_solver.rs"
     )
     return {
         "schema": SCHEMA,
@@ -270,16 +254,9 @@ def payload_for(
         },
         "global_upper_bound": {
             "score": GLOBAL_EXACT_UPPER_BOUND,
-            "proof_ledger": "docs/v3/evidence/aaaaa_wildlife_optimum_2026-07-22.json",
-            "proof_ledger_sha256": (
-                "163c338643fd7c14d45eb00fa1b833b4043260cef47effe14816787e124e3828"
-            ),
+            "basis": "independent exact AAAAA whole-board solve",
         },
-        "imported_ledgers": getattr(args, "imported_ledger_records", []),
-        "candidates_sha256": candidates_sha256,
-        "catalog_source_sha256": file_sha256(source),
-        "exact_model_source_sha256": file_sha256(exact_source),
-        "candidate_generator_source_sha256": file_sha256(candidate_source),
+        "imported_catalogs": getattr(args, "imported_catalogs", []),
         "results": ordered_results,
     }
 
@@ -305,7 +282,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "beat the incumbent. It first uses a disconnected relaxation (an infeasibility result is",
         "also valid for connected boards), then the exact connected model when needed. Every",
         "accepted board is rescored by the independent executable Python specification; the",
-        "machine-readable JSON records every proof attempt and source hash.",
+        "machine-readable JSON records every proof attempt.",
         "",
         "## Summary",
         "",
@@ -341,7 +318,6 @@ def render_markdown(payload: dict[str, Any]) -> str:
 def run(args: argparse.Namespace) -> int:
     candidate_path = Path(args.candidates)
     output = Path(args.output)
-    candidates_sha256 = file_sha256(candidate_path)
     candidates = load_candidates(candidate_path)
     canonical_counts = [counts for counts, _ in count_vectors()]
     selected_counts = set(canonical_counts)
@@ -356,27 +332,16 @@ def run(args: argparse.Namespace) -> int:
         counts: candidate for counts, candidate in zip(canonical_counts, candidates, strict=True)
     }
     results: dict[tuple[int, ...], dict[str, Any]] = {}
-    args.imported_ledger_records = []
+    args.imported_catalogs = []
 
-    for imported_path_string in args.import_ledger:
+    for imported_path_string in args.import_catalog:
         imported_path = Path(imported_path_string)
-        imported_sha256 = file_sha256(imported_path)
         prior = json.loads(imported_path.read_text(encoding="utf-8"))
         if prior.get("schema") not in (LEGACY_SCHEMA, SCHEMA):
             raise SystemExit(f"unsupported imported ledger schema: {imported_path}")
         if int(prior.get("allocation_count", -1)) != len(canonical_counts):
             raise SystemExit(f"imported ledger count mismatch: {imported_path}")
-        ledger_record = {
-            "path": str(imported_path),
-            "sha256": imported_sha256,
-            "schema": prior["schema"],
-            "catalog_source_sha256": prior.get("catalog_source_sha256"),
-            "exact_model_source_sha256": prior.get("exact_model_source_sha256"),
-            "candidate_generator_source_sha256": prior.get("candidate_generator_source_sha256"),
-            "candidates_sha256": prior.get("candidates_sha256"),
-            "configuration": prior.get("configuration"),
-        }
-        args.imported_ledger_records.append(ledger_record)
+        args.imported_catalogs.append(str(imported_path))
         for result in prior.get("results", []):
             counts = tuple(int(value) for value in result["counts"])
             if counts not in candidate_by_counts:
@@ -388,7 +353,7 @@ def run(args: argparse.Namespace) -> int:
                 imported_result = dict(result)
                 imported_result["tokens"] = tokens
                 imported_result["score_breakdown"] = breakdown
-                imported_result.setdefault("proof_provenance", ledger_record)
+                imported_result.pop("proof_provenance", None)
                 results[counts] = imported_result
             elif sum(breakdown) > int(candidate_by_counts[counts]["score"]):
                 candidate_by_counts[counts]["tokens"] = tokens
@@ -397,34 +362,15 @@ def run(args: argparse.Namespace) -> int:
 
     if args.resume and output.exists():
         prior = json.loads(output.read_text(encoding="utf-8"))
-        if prior.get("schema") != SCHEMA or prior.get("candidates_sha256") != candidates_sha256:
-            raise SystemExit("resume ledger schema or candidate hash mismatch")
-        current_provenance = payload_for(args, candidates_sha256, {})
-        for field in (
-            "catalog_source_sha256",
-            "exact_model_source_sha256",
-            "candidate_generator_source_sha256",
-        ):
-            if prior.get(field) != current_provenance[field]:
-                raise SystemExit(f"resume ledger {field} mismatch")
-        if prior.get("configuration") != current_provenance["configuration"]:
-            raise SystemExit("resume ledger configuration mismatch")
-        if not args.imported_ledger_records:
-            args.imported_ledger_records = list(prior.get("imported_ledgers", []))
+        if prior.get("schema") != SCHEMA:
+            raise SystemExit("unsupported resume catalog schema")
+        if not args.imported_catalogs:
+            args.imported_catalogs = list(prior.get("imported_catalogs", []))
         for result in prior.get("results", []):
             counts = tuple(int(value) for value in result["counts"])
             if result.get("proof_complete"):
+                result.pop("proof_provenance", None)
                 results[counts] = result
-
-    current_payload = payload_for(args, candidates_sha256, {})
-    current_proof_provenance = {
-        "catalog_schema": SCHEMA,
-        "catalog_source_sha256": current_payload["catalog_source_sha256"],
-        "exact_model_source_sha256": current_payload["exact_model_source_sha256"],
-        "candidate_generator_source_sha256": current_payload["candidate_generator_source_sha256"],
-        "candidates_sha256": candidates_sha256,
-        "configuration": current_payload["configuration"],
-    }
 
     pending = []
     for index, (counts, candidate) in enumerate(zip(canonical_counts, candidates, strict=True)):
@@ -442,7 +388,6 @@ def run(args: argparse.Namespace) -> int:
             "seed": args.seed + index * 1000,
             "candidate_gap": min(count_relaxation(counts), GLOBAL_EXACT_UPPER_BOUND)
             - int(candidate["score"]),
-            "proof_provenance": current_proof_provenance,
         }
         pending.append(task)
     pending.sort(key=lambda task: (task["candidate_gap"], task["counts"]))
@@ -461,7 +406,7 @@ def run(args: argparse.Namespace) -> int:
         else:
             tasks.append(task)
 
-    payload = payload_for(args, candidates_sha256, results)
+    payload = payload_for(args, results)
     atomic_json(output, payload)
     print(
         f"precertified={payload['completed_count']}/{payload['allocation_count']} "
@@ -479,7 +424,7 @@ def run(args: argparse.Namespace) -> int:
             results[counts] = result
             if not result["proof_complete"]:
                 print(f"INCOMPLETE counts={counts} incumbent={result['optimum']}", flush=True)
-            payload = payload_for(args, candidates_sha256, results)
+            payload = payload_for(args, results)
             atomic_json(output, payload)
             print(
                 f"completed={payload['completed_count']}/{payload['allocation_count']} "
@@ -488,7 +433,7 @@ def run(args: argparse.Namespace) -> int:
                 flush=True,
             )
 
-    payload = payload_for(args, candidates_sha256, results)
+    payload = payload_for(args, results)
     atomic_json(output, payload)
     if args.markdown:
         markdown = Path(args.markdown)
@@ -515,10 +460,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
+        "--import-catalog",
         "--import-ledger",
+        dest="import_catalog",
         action="append",
         default=[],
-        help="import completed proofs and stronger incomplete incumbents from a prior ledger",
+        help="reuse completed proofs and stronger incumbents from a prior catalog",
     )
     parser.add_argument("--limit", type=int, help="calibration only: submit at most this many")
     args = parser.parse_args()

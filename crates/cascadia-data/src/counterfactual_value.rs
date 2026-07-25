@@ -10,9 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use super::public_supply::{PUBLIC_SUPPLY_SIZE, decode_public_supply, encode_public_supply};
 use super::{
-    CollectionProvenance, DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord, RECORD_SIZE,
-    ShardManifest, TARGET_DIM, checksum_file, collection_provenance, collection_provenance_matches,
-    read_array, unix_seconds, write_manifest_atomic, write_slice,
+    DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord, RECORD_SIZE, ShardManifest,
+    TARGET_DIM, read_array, unix_seconds, write_manifest_atomic, write_slice,
 };
 
 pub const COUNTERFACTUAL_VALUE_DATASET_SCHEMA_VERSION: u16 = 1;
@@ -97,7 +96,6 @@ pub struct CounterfactualValueDatasetManifest {
     pub collection_milliseconds: u64,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<ShardManifest>,
 }
 
@@ -300,7 +298,6 @@ impl CounterfactualValueDatasetWriter {
                 collection_milliseconds: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -348,7 +345,6 @@ impl CounterfactualValueDatasetWriter {
             game_count: 1,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += 1;
         self.manifest.total_records += records.len();
@@ -396,9 +392,6 @@ pub fn validate_counterfactual_value_dataset(
             return Err(DataError::InvalidManifest(
                 "counterfactual-value shard byte count mismatch",
             ));
-        }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
         }
         let shard_records = read_counterfactual_value_shard_records(
             root,
@@ -472,7 +465,6 @@ fn validate_resume(
     manifest: &CounterfactualValueDatasetManifest,
     config: &CounterfactualValueDatasetConfig,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != COUNTERFACTUAL_VALUE_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != COUNTERFACTUAL_VALUE_FEATURE_SCHEMA
         || manifest.target_schema != COUNTERFACTUAL_VALUE_TARGET_SCHEMA
@@ -484,7 +476,6 @@ fn validate_resume(
         || manifest.split != config.split
         || manifest.teacher != config.teacher
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }

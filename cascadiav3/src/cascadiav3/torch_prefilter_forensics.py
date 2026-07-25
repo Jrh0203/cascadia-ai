@@ -320,7 +320,6 @@ def run_forensics(
     )
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run_prefilter_forensics",
         "experiment_id": experiment_id,
         "val": str(val_path),
         "checkpoint": str(checkpoint_path),

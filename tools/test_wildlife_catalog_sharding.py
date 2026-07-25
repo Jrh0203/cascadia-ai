@@ -43,7 +43,7 @@ class WildlifeCatalogShardingTest(unittest.TestCase):
             )
         self.assertEqual({(3, 6, 6, 0, 5)}, selected)
         self.assertEqual(1, record["task_count"])
-        self.assertEqual(64, len(record["sha256"]))
+        self.assertNotIn("sha256", record)
 
     def test_taskset_rejects_duplicates(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

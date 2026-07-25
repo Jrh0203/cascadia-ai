@@ -68,9 +68,8 @@ def test_augment_imports_aaaaa_and_validates_every_row(tmp_path) -> None:
     assert result["results"][0]["proof_complete"]
     assert result["results"][0]["optimum"] == 68
     assert result["completed_rulesets"] >= 1
-    assert result["candidate_sha256"]
-    assert result["base_catalog_sha256"]
-    assert result["production_response_sha256"] is None
+    assert result["imported_certificates"][0]["path"] == str(AAAAA_CERTIFICATE)
+    assert not any("sha256" in key for key in result)
 
 
 def test_augment_rejects_incomplete_external_certificate(tmp_path) -> None:

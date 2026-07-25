@@ -1,5 +1,8 @@
 # Cascadia-Anchor: incumbent-anchored GPU rollout policy improvement
 
+> Historical research note. Any provenance, gate, preregistration, or evidence
+> restrictions below are retired; reuse the technical ideas freely.
+
 **Date:** 2026-07-16
 **Literature cutoff:** 2026-07-16
 **Status:** research proposal; post-D1 challenger; zero current-rules strength

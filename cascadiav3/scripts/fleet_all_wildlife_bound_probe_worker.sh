@@ -4,13 +4,6 @@ set -euo pipefail
 FLEET_TAG="${FLEET_TAG:?set FLEET_TAG}"
 SHARD_HOST="${SHARD_HOST:?set SHARD_HOST}"
 TASK_INDICES="${TASK_INDICES:?set comma-separated TASK_INDICES}"
-SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION}"
-TASKSET_SHA256="${TASKSET_SHA256:?set TASKSET_SHA256}"
-CATALOG_SHA256="${CATALOG_SHA256:?set CATALOG_SHA256}"
-PROBE_SOURCE_SHA256="${PROBE_SOURCE_SHA256:?set PROBE_SOURCE_SHA256}"
-EXACT_SOURCE_SHA256="${EXACT_SOURCE_SHA256:?set EXACT_SOURCE_SHA256}"
-EXACT_SUPPORT_SHA256="${EXACT_SUPPORT_SHA256:?set EXACT_SUPPORT_SHA256}"
-RULES_SOURCE_SHA256="${RULES_SOURCE_SHA256:?set RULES_SOURCE_SHA256}"
 WILDLIFE_VENV="${WILDLIFE_VENV:-wildlife-venv-py312}"
 TIME_LIMIT="${TIME_LIMIT:-300}"
 TOTAL_TIME_LIMIT="${TOTAL_TIME_LIMIT:-330}"
@@ -57,14 +50,7 @@ mkdir -p "$OUTPUT_DIR" "$LOG_DIR"
 test -x "$PYTHON"
 test -s "$TASKSET"
 test -s "$CATALOG"
-test ! -e "$EXIT_FILE"
-test ! -e "$WRAPPER_PID_FILE"
-test "$(shasum -a 256 "$TASKSET" | awk '{print $1}')" = "$TASKSET_SHA256"
-test "$(shasum -a 256 "$CATALOG" | awk '{print $1}')" = "$CATALOG_SHA256"
-test "$(shasum -a 256 tools/all_wildlife_bound_probe.py | awk '{print $1}')" = "$PROBE_SOURCE_SHA256"
-test "$(shasum -a 256 tools/all_wildlife_exact.py | awk '{print $1}')" = "$EXACT_SOURCE_SHA256"
-test "$(shasum -a 256 tools/cbddb_wildlife_exact.py | awk '{print $1}')" = "$EXACT_SUPPORT_SHA256"
-test "$(shasum -a 256 tools/all_wildlife_rules.py | awk '{print $1}')" = "$RULES_SOURCE_SHA256"
+rm -f "$EXIT_FILE" "$WRAPPER_PID_FILE"
 printf '%s\n' "$$" > "${WRAPPER_PID_FILE}.tmp"
 mv "${WRAPPER_PID_FILE}.tmp" "$WRAPPER_PID_FILE"
 
@@ -94,8 +80,8 @@ PY
   ruleset_index="${task%%:*}"
   counts="${task#*:}"
   output="${OUTPUT_DIR}/task_${task_index}.json"
-  printf '%s source=%s host=%s task=%s ruleset_index=%s counts=%s\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SOURCE_REVISION" "$SHARD_HOST" \
+  printf '%s host=%s task=%s ruleset_index=%s counts=%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SHARD_HOST" \
     "$task_index" "$ruleset_index" "$counts"
   set +e
   PYTHONDONTWRITEBYTECODE=1 "$PYTHON" -u -m tools.all_wildlife_bound_probe \

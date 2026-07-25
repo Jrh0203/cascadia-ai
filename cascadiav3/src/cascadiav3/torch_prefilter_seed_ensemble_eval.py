@@ -277,7 +277,6 @@ def run_seed_ensemble_eval(
     metrics = evaluate_aligned_groups(groups, weights=weights, k_values=k_values, per_root_path=per_root_path)
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run_prefilter_seed_ensemble_eval",
         "experiment_id": experiment_id,
         "inputs": [str(path) for path in inputs],
         "weights": weights,

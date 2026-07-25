@@ -262,7 +262,6 @@ def semantic_action_features(root: dict[str, Any]) -> list[list[float]]:
     rows = []
     for action in root["legal_actions"]:
         species = _species_from_action(action)
-        target = _coord_key(action.get("target_coord_ref"))
         wildlife_coord = _coord_key(action.get("wildlife_coord_ref"))
         wildlife_present = bool(action.get("wildlife_placement_present")) and wildlife_coord is not None
         matches, mismatches, open_edges = _habitat_edge_counts(action, state)
@@ -592,7 +591,6 @@ def run_semantic_relation_bias_pilot(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run",
         "experiment_id": experiment_id,
         "seed": seed,
         "steps": steps,

@@ -9,7 +9,6 @@ maximizing count allocation is geometrically realizable.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 from collections.abc import Callable
@@ -19,10 +18,6 @@ from typing import Any
 SPECIES = ("bear", "elk", "salmon", "hawk", "fox")
 TOKEN_COUNT = 20
 SCHEMA = "wildlife-cap-upper-bounds-v1"
-
-
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _partition_upper(token_count: int, group_scores: tuple[int, ...]) -> int:
@@ -219,7 +214,6 @@ def main() -> int:
     args = parser.parse_args()
     payload = {
         "schema": SCHEMA,
-        "source_sha256": sha256(Path(__file__).resolve()),
         "analysis": [analyze_cap(cap) for cap in args.cap],
         "interpretation": {
             "sound_upper_bounds": True,

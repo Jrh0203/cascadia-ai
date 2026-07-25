@@ -92,15 +92,15 @@ def test_build_taskset_selects_complete_branch_slice(tmp_path: Path) -> None:
     assert payload["count_query_count"] == 2
     assert payload["tasks"][0]["index"] == 0
     assert payload["tasks"][0]["threshold"] == payload["tasks"][0]["incumbent"] + 1
-    assert payload["comparison_candidate_sha256"]
+    assert payload["comparison_candidate_catalog"] == str(comparison)
 
 
-def test_build_taskset_rejects_selected_board_mismatch(tmp_path: Path) -> None:
+def test_build_taskset_rejects_semantically_invalid_comparison_board(tmp_path: Path) -> None:
     catalog, candidate, comparison = _fixture(tmp_path)
     payload = json.loads(comparison.read_text())
     payload["candidates"][0]["tokens"][0]["q"] = 99
     _write(comparison, payload)
-    with pytest.raises(ValueError, match=r"candidate score mismatch|board mismatch"):
+    with pytest.raises(ValueError, match="disconnected"):
         build_taskset(
             catalog,
             candidate,

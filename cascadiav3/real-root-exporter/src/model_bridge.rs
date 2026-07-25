@@ -67,7 +67,7 @@ pub fn uniform_model_eval(action_count: usize) -> ModelEval {
 /// variants). A mean of normalized prior vectors stays normalized, so no
 /// re-normalization is needed. Optional arrays are averaged only when every
 /// variant provides them (a partially available head cannot be averaged
-/// consistently). The first variant's raw response is kept for provenance;
+/// consistently). The first variant's raw response is retained for debugging;
 /// `model_fallback` is OR-ed so a fallback in any variant stays visible.
 pub fn average_model_evals(evals: &[&ModelEval]) -> Result<ModelEval> {
     let first = *evals
@@ -281,11 +281,10 @@ impl ModelServiceSession {
 
     /// Receives the next eval_batch response and parses it against the root
     /// requests it answers (FIFO pairing with `send_eval_batch_request`).
-    pub fn recv_eval_batch_response(
-        &mut self,
-        root_requests: &[Value],
-    ) -> Result<Vec<ModelEval>> {
-        let scale = (root_requests.len() as u32).min(BATCH_TIMEOUT_SCALE_CAP).max(1);
+    pub fn recv_eval_batch_response(&mut self, root_requests: &[Value]) -> Result<Vec<ModelEval>> {
+        let scale = (root_requests.len() as u32)
+            .min(BATCH_TIMEOUT_SCALE_CAP)
+            .max(1);
         let response_line = recv_model_line(
             &self.line_rx,
             &mut self.child,
@@ -561,8 +560,9 @@ mod tests {
     fn eval_batch_matches_sequential_eval() {
         let roots: Vec<Value> = (0..3).map(root_request).collect();
 
-        let mut batch_session = ModelServiceSession::spawn(&mock_bridge_command(""), &test_config())
-            .expect("spawn batch mock");
+        let mut batch_session =
+            ModelServiceSession::spawn(&mock_bridge_command(""), &test_config())
+                .expect("spawn batch mock");
         assert!(batch_session.supports_eval_batch());
         let batch_evals = batch_session.eval_batch(&roots).expect("batch evals");
         batch_session.shutdown();
@@ -607,9 +607,11 @@ mod tests {
         let packed_single = packed_session.eval(&roots[0]).expect("packed single eval");
         packed_session.shutdown();
 
-        let mut json_session =
-            ModelServiceSession::spawn(&mock_bridge_command("--no-packed-response"), &test_config())
-                .expect("spawn json mock");
+        let mut json_session = ModelServiceSession::spawn(
+            &mock_bridge_command("--no-packed-response"),
+            &test_config(),
+        )
+        .expect("spawn json mock");
         assert!(!json_session.supports_packed_response());
         assert!(json_session.supports_eval_batch());
         let json_evals = json_session.eval_batch(&roots).expect("json evals");
@@ -696,7 +698,9 @@ mod tests {
         for row in 0..rows {
             let action_ids: Vec<String> = (0..actions).map(|i| format!("a{row}-{i}")).collect();
             let priors: Vec<f64> = (0..actions).map(|i| 1.0 / (i + 1) as f64).collect();
-            let q: Vec<f64> = (0..actions).map(|i| (row * actions + i) as f64 * 0.37 + 0.001).collect();
+            let q: Vec<f64> = (0..actions)
+                .map(|i| (row * actions + i) as f64 * 0.37 + 0.001)
+                .collect();
             let score_to_go: Vec<f64> = q.iter().map(|value| value - 11.25).collect();
             let value = vec![80.5, 79.25, 63.0, 41.125];
             roots.push(json!({
@@ -781,8 +785,16 @@ mod tests {
             "response decode microbench ({rows} rows x {actions} actions, mean of {iterations}):"
         )
         .unwrap();
-        writeln!(report, "  json:   {json_time:>10.2?}  payload {json_bytes} bytes").unwrap();
-        writeln!(report, "  packed: {packed_time:>10.2?}  payload {packed_bytes} bytes").unwrap();
+        writeln!(
+            report,
+            "  json:   {json_time:>10.2?}  payload {json_bytes} bytes"
+        )
+        .unwrap();
+        writeln!(
+            report,
+            "  packed: {packed_time:>10.2?}  payload {packed_bytes} bytes"
+        )
+        .unwrap();
         writeln!(
             report,
             "  speedup: {:.2}x, payload {:.2}x smaller",
@@ -1109,8 +1121,9 @@ mod shared_tests {
             let evals = client
                 .eval_batch(&[request(round, actions)])
                 .expect("pipelined single-worker eval");
-            let expected: Vec<f64> =
-                (0..actions).map(|i| (round * 10 + i) as f64 + 1.0).collect();
+            let expected: Vec<f64> = (0..actions)
+                .map(|i| (round * 10 + i) as f64 + 1.0)
+                .collect();
             assert_eq!(evals[0].q.as_ref().expect("q"), &expected);
         }
     }

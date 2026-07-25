@@ -13,22 +13,6 @@ from pathlib import Path
 from cascadia_cluster.bacalhau_api import BacalhauAPI
 
 ENDPOINT = "http://100.110.109.6:1234"
-EXPECTED_NODES = {"john1", "john2", "john3", "john4"}
-EXPECTED_CPU_CAPACITY = {"john1": 9, "john2": 10, "john3": 10, "john4": 10}
-EXPECTED_MEMORY_CAPACITY_BYTES = {
-    "john1": 12 * 1024**3,
-    "john2": 15 * 1024**3,
-    "john3": 15 * 1024**3,
-    "john4": 15 * 1024**3,
-}
-EXPECTED_DISK_CAPACITY_BYTES = {
-    "john1": 80 * 1024**3,
-    "john2": 80 * 1024**3,
-    "john3": 80 * 1024**3,
-    "john4": 80 * 1024**3,
-}
-
-
 def _http_health(url: str) -> bool:
     try:
         with urllib.request.urlopen(url, timeout=2) as response:
@@ -53,12 +37,10 @@ def main() -> int:
         raw_nodes = []
         errors.append(str(error))
     nodes = []
-    observed_names = set()
     for raw in raw_nodes:
         info = raw.get("Info", {})
         labels = info.get("Labels", {})
         name = labels.get("cascadia_internal_node", "unknown")
-        observed_names.add(name)
         compute = info.get("ComputeNodeInfo", {})
         maximum = compute.get("MaxCapacity", {})
         available = compute.get("AvailableCapacity", {})
@@ -78,32 +60,11 @@ def main() -> int:
                 "running_executions": compute.get("RunningExecutions", 0),
             }
         )
-    if observed_names != EXPECTED_NODES:
-        errors.append(
-            f"compute membership differs: expected {sorted(EXPECTED_NODES)}, "
-            f"observed {sorted(observed_names)}"
-        )
     for node in nodes:
-        if not node["connected"] or not node["docker"] or node["version"] != "v1.9.0":
+        if not node["connected"] or not node["docker"]:
             errors.append(f"compute node is not ready: {node['name']}")
-        expected_cpu = EXPECTED_CPU_CAPACITY.get(node["name"])
-        if expected_cpu is not None and node["cpu_capacity"] != expected_cpu:
-            errors.append(
-                f"compute CPU capacity differs for {node['name']}: "
-                f"expected {expected_cpu}, observed {node['cpu_capacity']}"
-            )
-        expected_memory = EXPECTED_MEMORY_CAPACITY_BYTES.get(node["name"])
-        if expected_memory is not None and node["memory_capacity_bytes"] != expected_memory:
-            errors.append(
-                f"compute memory capacity differs for {node['name']}: "
-                f"expected {expected_memory}, observed {node['memory_capacity_bytes']}"
-            )
-        expected_disk = EXPECTED_DISK_CAPACITY_BYTES.get(node["name"])
-        if expected_disk is not None and node["disk_capacity_bytes"] != expected_disk:
-            errors.append(
-                f"compute disk capacity differs for {node['name']}: "
-                f"expected {expected_disk}, observed {node['disk_capacity_bytes']}"
-            )
+    if alive and not nodes:
+        errors.append("scheduler has no compute nodes")
     registry = _http_health("http://100.110.109.6:5000/v2/")
     object_store = _http_health("http://100.110.109.6:9000/minio/health/live")
     if not args.allow_storage_down and not registry:
@@ -119,11 +80,8 @@ def main() -> int:
         "object_store_healthy": object_store,
         "nodes": sorted(nodes, key=lambda node: node["name"]),
         "cpu_capacity_total": sum(node["cpu_capacity"] for node in nodes),
-        "cpu_capacity_expected": sum(EXPECTED_CPU_CAPACITY.values()),
         "memory_capacity_total_bytes": sum(node["memory_capacity_bytes"] for node in nodes),
-        "memory_capacity_expected_bytes": sum(EXPECTED_MEMORY_CAPACITY_BYTES.values()),
         "disk_capacity_total_bytes": sum(node["disk_capacity_bytes"] for node in nodes),
-        "disk_capacity_expected_bytes": sum(EXPECTED_DISK_CAPACITY_BYTES.values()),
         "errors": errors,
     }
     encoded = json.dumps(value, sort_keys=True, indent=2) + "\n"

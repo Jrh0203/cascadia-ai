@@ -1,23 +1,14 @@
-"""Create the strict output manifest required by the cluster result importer."""
+"""Create the lightweight output inventory used by the cluster result importer."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
 from pathlib import Path
 
 from .results import MANIFEST_NAME
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def write_manifest(
@@ -41,7 +32,6 @@ def write_manifest(
                 {
                     "path": path.relative_to(root).as_posix(),
                     "bytes": path.stat().st_size,
-                    "sha256": _sha256(path),
                 }
             )
     value = {

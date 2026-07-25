@@ -1,12 +1,10 @@
-# Cascadia Base-Game Rules Contract
+# Cascadia Base-Game Rules Reference
 
-This document is the authoritative rules boundary for Cascadia v3. AI,
-simulation, search, training data, the API, and the web game must all use the
-same transactional implementation in `crates/cascadia-game`.
-
-Rules semantics ID: `cascadia-base-official-2026-07-16`.
-(Supersedes `cascadia-base-official-2026-07-09`; see the compatibility
-breaks at the bottom.)
+This describes the intended base-game behavior. The current implementation in
+`crates/cascadia-game` is what the rest of the repository executes. Change the
+implementation and this note together when a better interpretation or
+deliberate rules variant is wanted; no rules identity or contract process is
+required.
 
 Primary source: the official AEG
 [Cascadia rulebook](https://www.alderac.com/wp-content/uploads/2025/02/Cascadia-Rulebook.pdf),
@@ -80,29 +78,18 @@ revealed market. The accept/decline choice itself must be invariant to the
 actual hidden bag order; only the downstream draft may change with the market
 revealed after acceptance.
 
-## Scientific compatibility breaks
+## Historical behavior changes
 
-**2026-07-16 (`cascadia-base-official-2026-07-16`, engine rev `45fb5072`):**
+**2026-07-16:**
 overpopulation wipes now return set-aside tokens per resolution instead of
 after the loop stabilizes. Trajectories are bit-identical unless a game
 contains consecutive four-of-a-kind wipes (or an automatic wipe following a
-voluntary wipe), so the practical divergence is rare — but any divergence
-breaks paired seed comparability, so artifacts stamped with the 2026-07-09
-identity are a closed historical evidence boundary. New scientific runs must
-stamp `..._rules_2026_07_16`; do not mix identities in a paired confidence
-interval. The historical champion number (98.2975) belongs to the 07-09
-identity and needs a fresh canonical battery under 07-16 before use as a
-paired control.
+voluntary wipe), so the practical divergence is rare. Older scores used the
+old behavior; keep that in mind when comparing them.
 
-**2026-07-09 (`cascadia-base-official-2026-07-09`):**
+**2026-07-09:**
 All reports, checkpoints, corpora, and score baselines produced before this
 rules contract used a policy stack that automatically accepted a free
-three-of-a-kind refresh. They are legacy evidence and are not valid controls
-for promotion under the corrected action space.
-
-New artifacts must record the updated ruleset/config identity. Rebaseline
-greedy, no-search model play, and every promoted Gumbel serving configuration
-before making strength claims. Do not mix pre-fix and post-fix games in a
-paired confidence interval. Benchmark reports must retain per-decision
-accept/decline telemetry and summarize the acceptance rate so a score claim is
-auditable against the corrected policy boundary.
+three-of-a-kind refresh. Newer code exposes the choice to the policy. Older
+results remain useful context, but their scores include that behavioral
+difference.

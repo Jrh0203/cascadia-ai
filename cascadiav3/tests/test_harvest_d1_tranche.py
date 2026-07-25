@@ -87,10 +87,10 @@ class HarvestD1TrancheTest(unittest.TestCase):
 
     def test_determinism_byte_identical_masks(self):
         rows = synthetic_census(seed_count=2000)
-        first, _, _ = self.run_harvest(rows)
-        second, _, _ = self.run_harvest(rows)
-        self.assertEqual(first["tranche_mask_sha256"], second["tranche_mask_sha256"])
-        self.assertEqual(first["sentinel_mask_sha256"], second["sentinel_mask_sha256"])
+        _, first_tranche, first_sentinel = self.run_harvest(rows)
+        _, second_tranche, second_sentinel = self.run_harvest(rows)
+        self.assertEqual(first_tranche, second_tranche)
+        self.assertEqual(first_sentinel, second_sentinel)
 
     def test_scarce_pool_fills_phases_evenly_not_sequentially(self):
         registry, tranche, _ = self.run_harvest(synthetic_census(seed_count=200))

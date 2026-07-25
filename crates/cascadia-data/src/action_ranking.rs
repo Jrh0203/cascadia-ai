@@ -9,9 +9,8 @@ use cascadia_game::{DraftChoice, GameConfig, GameState, ScoreBreakdown, TurnActi
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CollectionProvenance, DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord,
-    RankingDatasetManifest, RankingShardManifest, RankingTeacherConfig, RankingTrajectoryConfig,
-    checksum_file, collection_provenance, collection_provenance_matches, read_array, unix_seconds,
+    DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord, RankingDatasetManifest,
+    RankingShardManifest, RankingTeacherConfig, RankingTrajectoryConfig, read_array, unix_seconds,
     validate_ranking_dataset, write_manifest_atomic, write_slice,
 };
 
@@ -59,7 +58,6 @@ impl ActionRankingDatasetConfig {
 pub struct ActionRankingSourceManifest {
     pub path: String,
     pub dataset_id: String,
-    pub manifest_blake3: String,
     pub feature_schema: String,
     pub target_schema: String,
     pub record_size: usize,
@@ -91,7 +89,6 @@ pub struct ActionRankingDatasetManifest {
     pub total_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<RankingShardManifest>,
 }
 
@@ -433,7 +430,6 @@ impl ActionRankingDatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -490,7 +486,6 @@ impl ActionRankingDatasetWriter {
             group_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_groups += group_count;
@@ -528,9 +523,6 @@ pub fn validate_action_ranking_dataset(
                 "action-ranking shard byte count mismatch",
             ));
         }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
-        }
         validate_shard_header(&path, manifest.split, shard)?;
         games += shard.game_count;
         groups += shard.group_count;
@@ -550,11 +542,9 @@ pub fn validate_action_ranking_dataset(
 fn source_manifest(
     config: &ActionRankingDatasetConfig,
 ) -> Result<ActionRankingSourceManifest, DataError> {
-    let manifest_path = config.source_root.join("dataset.json");
     Ok(ActionRankingSourceManifest {
         path: config.source_root.canonicalize()?.display().to_string(),
         dataset_id: config.source_manifest.dataset_id.clone(),
-        manifest_blake3: checksum_file(&manifest_path)?,
         feature_schema: config.source_manifest.feature_schema.clone(),
         target_schema: config.source_manifest.target_schema.clone(),
         record_size: config.source_manifest.record_size,
@@ -570,7 +560,6 @@ fn validate_resume(
     config: &ActionRankingDatasetConfig,
     source: &ActionRankingSourceManifest,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != ACTION_RANKING_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != ACTION_FEATURE_SCHEMA
         || manifest.position_feature_schema != FEATURE_SCHEMA
@@ -584,7 +573,6 @@ fn validate_resume(
         || manifest.source != *source
         || manifest.first_game_index != config.source_manifest.first_game_index
         || manifest.requested_games != config.source_manifest.completed_games
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }

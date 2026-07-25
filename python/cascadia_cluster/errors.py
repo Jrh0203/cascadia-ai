@@ -26,7 +26,7 @@ class RequestConflictError(ClusterError):
 
 
 class ArtifactValidationError(ClusterError):
-    """A published execution artifact failed manifest or checksum validation."""
+    """A published execution artifact is malformed or unsafe to import."""
 
 
 @dataclass

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import subprocess
@@ -13,11 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from tools import all_wildlife_rules as rules
-from tools.aaaaa_wildlife_split_salmon_dp_screen import CASES, DEPENDENCIES
-
-
-def _sha256(path: str | Path) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+from tools.aaaaa_wildlife_split_salmon_dp_screen import CASES
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -70,34 +65,10 @@ def collect(
         raise ValueError("unexpected fleet schema")
     if fleet.get("state") not in {"running", "completed"}:
         raise ValueError("fleet is neither running nor completed")
-    current = {
-        "runner_sha256": _sha256("tools/aaaaa_wildlife_split_salmon_dp_screen.py"),
-        "dp_sha256": _sha256("tools/aaaaa_wildlife_split_salmon_dp.py"),
-        "gap_source_sha256": _sha256(
-            "tools/aaaaa_wildlife_gap_two_salmon_pair_bound.py"
-        ),
-        "zero_source_sha256": _sha256("tools/aaaaa_wildlife_zero_hawk_bound.py"),
-        "exact_source_sha256": _sha256("tools/aaaaa_wildlife_exact.py"),
-        "motif_source_sha256": _sha256(
-            "tools/aaaaa_wildlife_motif_certificate.py"
-        ),
-        "worker_sha256": _sha256(
-            "cascadiav3/scripts/fleet_aaaaa_split_salmon_dp_worker.sh"
-        ),
-    }
-    for key, value in current.items():
-        if fleet.get(key) != value:
-            raise ValueError(f"fleet/current {key} mismatch")
-    expected_dependencies = {
-        path: _sha256(path)
-        for path in DEPENDENCIES
-    }
-
     by_case = {row["case_index"]: row for row in fleet["cases"]}
     if sorted(by_case) != list(range(len(CASES))) or len(by_case) != len(fleet["cases"]):
         raise ValueError("fleet case coverage mismatch")
     collected: dict[int, dict[str, Any]] = {}
-    shard_hashes = {}
     for path in shard_paths:
         shard = _read(path)
         if shard.get("schema") != "aaaaa-split-salmon-bitset-shard-v1":
@@ -116,11 +87,6 @@ def collect(
             raise ValueError(f"{path}: case identity mismatch")
         if shard["runtime"] != fleet["runtime"]:
             raise ValueError(f"{path}: runtime mismatch")
-        if shard["identity"] != {
-            "runner_source_sha256": current["runner_sha256"],
-            "dependency_sha256": expected_dependencies,
-        }:
-            raise ValueError(f"{path}: source identity mismatch")
         result = shard["result"]
         if (
             result.get("status") != "INFEASIBLE"
@@ -138,17 +104,11 @@ def collect(
             ):
                 raise ValueError(f"{path}: non-infeasible submodel")
         collected[index] = shard
-        shard_hashes[str(path)] = _sha256(path)
     if sorted(collected) != list(range(len(CASES))):
         raise ValueError("missing split-Salmon shard")
 
     maximum_path = Path(fleet["maximum_salmon_evidence"]["path"])
     candidate_path = Path(fleet["candidate_evidence"]["path"])
-    if (
-        _sha256(maximum_path) != fleet["maximum_salmon_evidence"]["sha256"]
-        or _sha256(candidate_path) != fleet["candidate_evidence"]["sha256"]
-    ):
-        raise ValueError("supporting evidence hash mismatch")
     maximum = _read(maximum_path)
     if (
         maximum.get("schema") != "aaaaa-two-missing-fox-screen-v1"
@@ -212,25 +172,18 @@ def collect(
         ):
             raise ValueError(f"{certificate['counts']}: production score mismatch")
 
-    canonical_responses = json.dumps(
-        responses, sort_keys=True, separators=(",", ":")
-    ).encode()
     return {
         "schema": "aaaaa-split-salmon-bitset-certificate-v1",
         "proof_complete": True,
         "fleet": {
             "path": str(fleet_path),
-            "sha256": _sha256(fleet_path),
-            "tag": fleet["tag"],
-            "source_revision": fleet["source_revision"],
+            "tag": fleet.get("tag"),
         },
-        "shard_sha256": shard_hashes,
-        "maximum_salmon_evidence": fleet["maximum_salmon_evidence"],
-        "candidate_evidence": fleet["candidate_evidence"],
+        "shards": [str(path) for path in shard_paths],
+        "maximum_salmon_evidence": {"path": str(maximum_path)},
+        "candidate_evidence": {"path": str(candidate_path)},
         "production_oracle": {
             "path": str(oracle),
-            "sha256": _sha256(oracle),
-            "response_sha256": hashlib.sha256(canonical_responses).hexdigest(),
         },
         "certificates": certificates,
     }

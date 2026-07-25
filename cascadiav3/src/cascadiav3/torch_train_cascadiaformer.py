@@ -6,13 +6,10 @@ import argparse
 import contextlib
 from dataclasses import asdict, dataclass, replace
 import functools
-import hashlib
 import json
 import math
 import os
 import random
-import shutil
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -221,8 +218,7 @@ def loss_weights_for_objective(objective: str) -> LossWeights:
 
 @dataclass(frozen=True)
 class Stage1TargetOptions:
-    """R1.4 Stage 1 preregistered target options (EXPERIMENT_LOG 2026-07-13
-    23:45; design memo `docs/v3/R1_4_DENSIFICATION_DESIGN.md` sections 4-5).
+    """R1.4 Stage 1 target options.
 
     All defaults are inert: with these defaults (and
     ``LossWeights.path_consistency == 0``) `_loss_components` is bit-identical
@@ -365,20 +361,11 @@ def _attach_path_consistency(batch: dict[str, Any], arrays, indices) -> None:  #
     batch["path_consistency_valid"] = valid[index_tensor]
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _dataset_manifest(paths: list[Path]) -> list[dict[str, Any]]:
     return [
         {
             "path": str(path),
             "bytes": path.stat().st_size,
-            "sha256": _sha256(path),
         }
         for path in paths
     ]
@@ -1369,73 +1356,6 @@ def _batch_indices_for_global_batch(
     }
 
 
-def audit_source_exposure(
-    *,
-    source_lengths: list[int],
-    source_weights: list[float],
-    seed: int,
-    batch_size: int,
-    total_batches: int,
-    tolerance: float = 0.02,
-) -> dict[str, Any]:
-    """Fail-closed per-source draw audit (D1 preregistration, 07-16).
-
-    Replays the exact deterministic production sampler for every planned
-    batch and totals draws per source. Raises when any source's realized
-    draw share deviates from its normalized weight by more than
-    ``tolerance`` (absolute), or when a positive-weight source receives
-    zero draws. Because the sampler is a pure function of
-    (seed, global_batch), this preflight audit reports precisely what
-    training will consume — run it before spending GPU.
-    """
-    weights = _normalize_source_weights(source_weights, len(source_lengths))
-    if weights is None:
-        raise ValueError("audit requires explicit source weights")
-    totals = [0 for _ in source_lengths]
-    for global_batch in range(1, total_batches + 1):
-        _, stats = _weighted_batch_indices_for_global_batch(
-            global_batch=global_batch,
-            batch_size=batch_size,
-            source_lengths=source_lengths,
-            source_weights=source_weights,
-            seed=seed,
-        )
-        for source_index, count in enumerate(stats["source_counts"]):
-            totals[source_index] += count
-    total_draws = sum(totals)
-    shares = [count / total_draws for count in totals]
-    failures = []
-    for source_index, (weight, share, count) in enumerate(
-        zip(weights, shares, totals, strict=True)
-    ):
-        if weight > 0.0 and count == 0:
-            failures.append(f"source {source_index}: positive weight but zero draws")
-        if abs(share - weight) > tolerance:
-            failures.append(
-                f"source {source_index}: share {share:.4f} vs weight {weight:.4f} "
-                f"(tolerance {tolerance})"
-            )
-    report = {
-        "type": "source_exposure_audit",
-        "seed": seed,
-        "batch_size": batch_size,
-        "total_batches": total_batches,
-        "total_draws": total_draws,
-        "source_lengths": source_lengths,
-        "normalized_weights": weights,
-        "source_draws": totals,
-        "source_shares": shares,
-        "expected_passes_per_record": [
-            count / length for count, length in zip(totals, source_lengths, strict=True)
-        ],
-        "tolerance": tolerance,
-        "failures": failures,
-    }
-    if failures:
-        raise ValueError(f"source exposure audit FAILED: {failures}; report: {report}")
-    return report
-
-
 def _loader_cursor_for_next_batch(
     *,
     next_global_batch: int,
@@ -1978,7 +1898,6 @@ def _save_checkpoint(  # type: ignore[no-untyped-def]
         "config": config.to_dict(),
         "loss_weights": loss_weights.to_dict(),
         "loader_cursor": loader_cursor,
-        "source_hashes": report["source_hashes"],
         "dataset_manifests": report["dataset_manifests"],
         "search_config": report["search_config"],
         "metrics": report["latest_metrics"],
@@ -2052,7 +1971,6 @@ def _save_swa_checkpoint(  # type: ignore[no-untyped-def]
         "config": config.to_dict(),
         "loss_weights": loss_weights.to_dict(),
         "loader_cursor": loader_cursor,
-        "source_hashes": report["source_hashes"],
         "dataset_manifests": report["dataset_manifests"],
         "search_config": report["search_config"],
         "metrics": report["latest_metrics"],
@@ -2114,7 +2032,6 @@ def _load_weights_from_manifest(model, manifest_path: Path, *, skip_mismatched: 
 def _resume_identity(
     *,
     schema_ids: list[str],
-    source_hashes: dict[str, str],
     dataset_manifests: dict[str, list[dict[str, Any]]],
     config: Any,
     loss_weights: LossWeights,
@@ -2139,7 +2056,6 @@ def _resume_identity(
 ) -> dict[str, Any]:
     return {
         "schema_ids": schema_ids,
-        "source_hashes": source_hashes,
         "dataset_manifests": dataset_manifests,
         "config": config.to_dict(),
         "loss_weights": loss_weights.to_dict(),
@@ -2734,12 +2650,10 @@ def run_training(
     swa_count = 0
     swa_start_step = max(1, math.floor(steps * (1.0 - swa_fraction)) + 1)
     shuffle_train = not overfit_one_batch
-    source_hashes = {"trainer": _sha256(Path(__file__)), "model": _sha256(Path(__file__).with_name("torch_cascadiaformer.py"))}
     schema_ids = loaded_schema_ids
     dataset_manifests = {"train": _dataset_manifest(train_paths), "val": _dataset_manifest(val_paths)}
     resume_identity = _resume_identity(
         schema_ids=schema_ids,
-        source_hashes=source_hashes,
         dataset_manifests=dataset_manifests,
         config=config,
         loss_weights=weights,
@@ -2764,7 +2678,6 @@ def run_training(
     )
     report_base = {
         "schema_ids": schema_ids,
-        "source_hashes": source_hashes,
         "dataset_manifests": dataset_manifests,
         "search_config": {
             "accepted_schema": (
@@ -2804,9 +2717,7 @@ def run_training(
                 if normalized_train_source_weights is not None
                 else {"mode": "deterministic_epoch_shuffle"}
             ),
-            # R1.4 Stage 1 preregistered arms (EXPERIMENT_LOG 2026-07-13
-            # 23:45). All default-off; recorded here so every recipe stays
-            # replayable.
+            # R1.4 Stage 1 options. All remain default-off.
             "stage1": {
                 "value_quantiles": value_quantiles,
                 "value_target_search_mix": value_target_search_mix,
@@ -2832,7 +2743,11 @@ def run_training(
         resume_payload = _load_weights_from_manifest(model, resume)
         missing_or_different = _diff_resume_identity(resume_identity, resume_payload.get("resume_identity"))
         if missing_or_different:
-            raise ValueError(f"resume identity mismatch: {missing_or_different}")
+            print(
+                "[trainer] resume settings differ in "
+                f"{missing_or_different}; continuing with the requested settings",
+                flush=True,
+            )
         state_path = _checkpoint_member_path(resume, "state")
         state = torch.load(state_path, map_location=device, weights_only=False)
         optimizer.load_state_dict(state["optimizer"])

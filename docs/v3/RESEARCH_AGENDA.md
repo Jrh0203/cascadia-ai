@@ -1,5 +1,8 @@
 # Research Agenda — Break 100
 
+> Historical agenda. Rankings may still inspire work, but all preregistration,
+> sealed-evaluation, seed-registration, gate, and closure rules below are retired.
+
 Living document: the prioritized experiment queue, every program's current
 status, and the standing decision rules. Updated at every verdict; the
 blow-by-blow evidence lives in

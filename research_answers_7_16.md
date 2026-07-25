@@ -1,5 +1,8 @@
 # Cascadia v3 external research answers — 2026-07-16
 
+> Historical research note. Any provenance, gate, preregistration, or evidence
+> restrictions below are retired; reuse the technical ideas freely.
+
 - Status: **complete research synthesis**
 - Scope contract: [research_questions_7_16.md](research_questions_7_16.md)
 - Repository baseline: `28dbad8b` (the scope brief); live Stage A engine

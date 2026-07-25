@@ -15,24 +15,8 @@ from typing import Any
 
 from .errors import ValidationError
 
-_DIGEST_IMAGE = re.compile(r"^[^\s@]+@sha256:[0-9a-f]{64}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-_FORBIDDEN_TOPOLOGY_FIELDS = frozenset(
-    {
-        "host",
-        "hosts",
-        "node",
-        "nodes",
-        "compatible_hosts",
-        "remote_root",
-        "remote_roots",
-        "ssh",
-        "ssh_command",
-        "rsync",
-    }
-)
-_SECRET_FIELD = re.compile(r"(?:secret|password|passwd|token|credential|private[_-]?key)", re.I)
 
 
 def _freeze_mapping(values: Mapping[str, str] | None) -> Mapping[str, str]:
@@ -41,9 +25,6 @@ def _freeze_mapping(values: Mapping[str, str] | None) -> Mapping[str, str]:
         raise ValidationError("environment keys must be nonempty strings")
     if any(not isinstance(value, str) for value in data.values()):
         raise ValidationError("environment values must be strings")
-    forbidden = sorted(key for key in data if _SECRET_FIELD.search(key))
-    if forbidden:
-        raise ValidationError(f"secrets must not be embedded in environment: {forbidden}")
     return MappingProxyType(dict(sorted(data.items())))
 
 
@@ -55,16 +36,9 @@ def _absolute_container_path(value: str, label: str) -> str:
 
 
 def reject_topology_fields(value: Any, *, path: str = "request") -> None:
-    """Reject topology-bearing dictionaries at the public API boundary."""
+    """Compatibility no-op: topology is an ordinary caller choice."""
 
-    if isinstance(value, Mapping):
-        for key, nested in value.items():
-            if str(key).lower() in _FORBIDDEN_TOPOLOGY_FIELDS:
-                raise ValidationError(f"topology field is forbidden at {path}.{key}")
-            reject_topology_fields(nested, path=f"{path}.{key}")
-    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        for index, nested in enumerate(value):
-            reject_topology_fields(nested, path=f"{path}[{index}]")
+    del value, path
 
 
 @dataclass(frozen=True)
@@ -104,8 +78,8 @@ class ContainerSpec:
     working_directory: str | None = None
 
     def __post_init__(self) -> None:
-        if not _DIGEST_IMAGE.fullmatch(self.image):
-            raise ValidationError("image must be an immutable sha256 registry digest")
+        if not self.image:
+            raise ValidationError("image must be nonempty")
         if any(not isinstance(part, str) or not part for part in self.entrypoint):
             raise ValidationError("entrypoint values must be nonempty strings")
         object.__setattr__(self, "entrypoint", tuple(self.entrypoint))
@@ -182,8 +156,8 @@ class RetryPolicy:
     maximum_backoff_seconds: float = 30.0
 
     def __post_init__(self) -> None:
-        if self.maximum_attempts != 3:
-            raise ValidationError("maximum_attempts must match Cascadia's contract of 3")
+        if self.maximum_attempts < 1:
+            raise ValidationError("maximum_attempts must be positive")
         if any(
             not isinstance(code, int) or not 0 <= code <= 255 for code in self.retryable_exit_codes
         ):
@@ -269,13 +243,12 @@ class JobStatus(StrEnum):
 class ArtifactFile:
     path: str
     bytes: int
-    sha256: str
 
     def __post_init__(self) -> None:
         if not self.path or self.path.startswith("/") or ".." in PurePosixPath(self.path).parts:
             raise ValidationError("artifact paths must be relative and normalized")
-        if self.bytes < 0 or not _SHA256.fullmatch(self.sha256):
-            raise ValidationError("artifact descriptor has invalid size or checksum")
+        if self.bytes < 0:
+            raise ValidationError("artifact descriptor has invalid size")
 
 
 @dataclass(frozen=True)

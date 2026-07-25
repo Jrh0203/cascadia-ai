@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import platform
@@ -22,19 +21,6 @@ CASES = (
     ((3, 5, 2, 4, 6), 63),
     ((3, 6, 2, 3, 6), 63),
 )
-DEPENDENCIES = (
-    "tools/aaaaa_wildlife_split_salmon_dp.py",
-    "tools/aaaaa_wildlife_gap_two_salmon_pair_bound.py",
-    "tools/aaaaa_wildlife_zero_hawk_bound.py",
-    "tools/aaaaa_wildlife_exact.py",
-    "tools/aaaaa_wildlife_motif_certificate.py",
-)
-
-
-def _sha256(path: str | Path) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
 def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as handle:
@@ -51,12 +37,6 @@ def run(case_index: int) -> dict[str, Any]:
     result = split_branch_packing(counts, target)
     return {
         "schema": "aaaaa-split-salmon-bitset-shard-v1",
-        "identity": {
-            "runner_source_sha256": _sha256(__file__),
-            "dependency_sha256": {
-                path: _sha256(path) for path in DEPENDENCIES
-            },
-        },
         "runtime": {
             "python": platform.python_version(),
             "ortools": ORTOOLS_VERSION,

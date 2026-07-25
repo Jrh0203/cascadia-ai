@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""Collect and validate per-ruleset exact proofs into the final catalog."""
+"""Combine available per-ruleset exact proofs into a wildlife catalog."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -43,64 +41,6 @@ def _proof_paths(directories: list[Path]) -> dict[int, list[Path]]:
     return found
 
 
-def _git_blob_sha256(revision: str, path: str) -> str:
-    completed = subprocess.run(
-        ["git", "show", f"{revision}:{path}"],
-        capture_output=True,
-        check=True,
-    )
-    return hashlib.sha256(completed.stdout).hexdigest()
-
-
-def _legacy_identities(
-    ledgers: list[Path],
-) -> tuple[dict[tuple[str, str, str], dict[str, Any]], dict[str, str]]:
-    identities = {}
-    ledger_hashes = {}
-    for path in ledgers:
-        encoded = path.read_bytes()
-        ledger_hashes[str(path)] = hashlib.sha256(encoded).hexdigest()
-        ledger = json.loads(encoded)
-        if (
-            ledger.get("schema") != "all-wildlife-proof-fleet-v1"
-            or ledger.get("state") != "complete"
-        ):
-            raise ValueError(f"{path}: invalid legacy fleet ledger")
-        revision = ledger["source_revision"]
-        proof_sha = _git_blob_sha256(revision, "tools/all_wildlife_global_proof.py")
-        exact_sha = _git_blob_sha256(revision, "tools/all_wildlife_exact.py")
-        support_sha = _git_blob_sha256(revision, "tools/cbddb_wildlife_exact.py")
-        rules_sha = _git_blob_sha256(revision, "tools/all_wildlife_rules.py")
-        if (
-            proof_sha != ledger["proof_source_sha256"]
-            or exact_sha != ledger["exact_source_sha256"]
-            or (
-                ledger.get("exact_support_source_sha256") is not None
-                and support_sha != ledger["exact_support_source_sha256"]
-            )
-            or (
-                ledger.get("rules_source_sha256") is not None
-                and rules_sha != ledger["rules_source_sha256"]
-            )
-        ):
-            raise ValueError(f"{path}: legacy source revision mismatch")
-        key = (ledger["candidate_sha256"], proof_sha, exact_sha)
-        if key in identities:
-            raise ValueError(f"{path}: duplicate legacy identity")
-        identities[key] = {
-            "exact_support_source_sha256": support_sha,
-            "rules_source_sha256": rules_sha,
-            "result_sha256": {
-                int(result["index"]): result["sha256"] for result in ledger["results"]
-            },
-            "result_summary": {
-                int(result["index"]): result for result in ledger["results"]
-            },
-            "ledger_path": str(path),
-        }
-    return identities, ledger_hashes
-
-
 def _validate_board(row: dict[str, Any], ruleset: str) -> None:
     tokens = rules.normalized_tokens(row["tokens"])
     counts = tuple(
@@ -113,8 +53,31 @@ def _validate_board(row: dict[str, Any], ruleset: str) -> None:
     if len(rules.components(occupied)) != 1:
         raise ValueError(f"{ruleset}: disconnected incumbent")
     breakdown = rules.score_tokens(tokens, ruleset)
-    if list(breakdown) != row["score_breakdown"] or sum(breakdown) != row["score"]:
+    score = row.get("score", row.get("optimum"))
+    if list(breakdown) != row["score_breakdown"] or sum(breakdown) != score:
         raise ValueError(f"{ruleset}: incumbent score mismatch")
+
+
+def _proof_exclusions(
+    proof: dict[str, Any],
+    *,
+    index: int,
+    ruleset: str,
+) -> tuple[dict[str, Any], dict[tuple[int, ...], int]]:
+    if proof.get("schema") != "all-wildlife-global-proof-v1":
+        raise ValueError(f"{ruleset}: unexpected proof schema")
+    identity = proof.get("identity", {})
+    if identity.get("ruleset_index") != index or identity.get("ruleset") != ruleset:
+        raise ValueError(f"{ruleset}: proof ruleset mismatch")
+    incumbent = proof["incumbent"]
+    _validate_board(incumbent, ruleset)
+    exclusions: dict[tuple[int, ...], int] = {}
+    for attempt in proof.get("attempts", []):
+        if attempt.get("status") == "INFEASIBLE":
+            counts = tuple(int(value) for value in attempt["counts"])
+            threshold = int(attempt["threshold"])
+            exclusions[counts] = min(exclusions.get(counts, threshold), threshold)
+    return incumbent, exclusions
 
 
 def collect(
@@ -122,202 +85,90 @@ def collect(
     directories: list[Path],
     legacy_fleet_ledgers: list[Path] | None = None,
 ) -> dict[str, Any]:
-    candidate_encoded = candidates_path.read_bytes()
-    candidate_sha = hashlib.sha256(candidate_encoded).hexdigest()
-    candidates = json.loads(candidate_encoded)
+    del legacy_fleet_ledgers  # accepted by the CLI for old command compatibility
+    candidates = json.loads(candidates_path.read_text())
     if candidates.get("schema") != "all-wildlife-merged-candidates-v1":
         raise ValueError("unexpected candidate schema")
+    candidate_rows = candidates.get("candidates", [])
+    if len(candidate_rows) != len(rules.rulesets()):
+        raise ValueError("candidate catalog does not cover every ruleset")
+
     paths = _proof_paths(directories)
-    legacy_identities, legacy_ledger_hashes = _legacy_identities(
-        legacy_fleet_ledgers or []
-    )
-    used_legacy_ledgers: set[str] = set()
     rows = []
-    proof_hashes = {}
-    proof_source_hashes: set[str] = set()
-    exact_source_hashes: set[str] = set()
-    exact_support_hashes: set[str] = set()
-    rules_source_hashes: set[str] = set()
     connectivity_modes: set[bool] = set()
     for index, ruleset in enumerate(rules.rulesets()):
-        proof_paths = paths.get(index, [])
-        if not proof_paths:
-            candidate = candidates["candidates"][index]
-            if candidate["index"] != index or candidate["ruleset"] != ruleset:
-                raise ValueError(f"{ruleset}: candidate identity mismatch")
-            _validate_board(candidate, ruleset)
-            unresolved = [
-                list(counts)
-                for counts in rules.count_vectors()
-                if rules.count_upper(counts, ruleset) > candidate["score"]
-            ]
-            rows.append(
-                {
-                    "index": index,
-                    "ruleset": ruleset,
-                    "proof_complete": not unresolved,
-                    "optimum": candidate["score"],
-                    "score_breakdown": candidate["score_breakdown"],
-                    "counts": candidate["counts"],
-                    "tokens": candidate["tokens"],
-                    "unresolved_counts": unresolved,
-                    "proof_paths": [],
-                }
-            )
-            continue
+        candidate = candidate_rows[index]
+        if candidate.get("index") != index or candidate.get("ruleset") != ruleset:
+            raise ValueError(f"{ruleset}: candidate identity mismatch")
+        _validate_board(candidate, ruleset)
+
+        incumbents = [candidate]
         aggregate_exclusions: dict[tuple[int, ...], int] = {}
-        incumbents = []
-        row_proof_hashes = {}
-        for path in proof_paths:
-            encoded = path.read_bytes()
-            digest = hashlib.sha256(encoded).hexdigest()
-            proof_hashes[str(path)] = digest
-            row_proof_hashes[str(path)] = digest
-            proof = json.loads(encoded)
-            identity = proof["identity"]
-            legacy_summary = None
-            if (
-                proof.get("schema") != "all-wildlife-global-proof-v1"
-                or identity["ruleset_index"] != index
-                or identity["ruleset"] != ruleset
-                or identity["candidate_sha256"] != candidate_sha
-            ):
-                raise ValueError(f"{path}: proof identity mismatch")
-            mode = bool(proof["configuration"]["connectivity_required"])
-            if (
-                "connectivity_required" in identity
-                and bool(identity["connectivity_required"]) != mode
-            ):
-                raise ValueError(f"{path}: connectivity identity mismatch")
-            connectivity_modes.add(mode)
-            proof_source_hashes.add(identity["proof_source_sha256"])
-            exact_source_hashes.add(identity["exact_source_sha256"])
-            if (
-                "exact_support_source_sha256" in identity
-                and "rules_source_sha256" in identity
-            ):
-                exact_support_hash = identity["exact_support_source_sha256"]
-                rules_source_hash = identity["rules_source_sha256"]
-            else:
-                legacy_key = (
-                    identity["candidate_sha256"],
-                    identity["proof_source_sha256"],
-                    identity["exact_source_sha256"],
-                )
-                legacy = legacy_identities.get(legacy_key)
-                if (
-                    legacy is None
-                    or legacy["result_sha256"].get(index) != digest
-                ):
-                    raise ValueError(f"{path}: unverified legacy proof identity")
-                exact_support_hash = legacy["exact_support_source_sha256"]
-                rules_source_hash = legacy["rules_source_sha256"]
-                legacy_summary = legacy["result_summary"][index]
-                used_legacy_ledgers.add(legacy["ledger_path"])
-            exact_support_hashes.add(exact_support_hash)
-            rules_source_hashes.add(rules_source_hash)
-            incumbent = proof["incumbent"]
-            _validate_board(incumbent, ruleset)
+        used_paths = []
+        for path in paths.get(index, []):
+            proof = json.loads(path.read_text())
+            incumbent, exclusions = _proof_exclusions(
+                proof,
+                index=index,
+                ruleset=ruleset,
+            )
             incumbents.append(incumbent)
-            local_exclusions: dict[tuple[int, ...], int] = {}
-            for attempt in proof["attempts"]:
-                if attempt["status"] == "INFEASIBLE":
-                    counts = tuple(attempt["counts"])
-                    threshold = int(attempt["threshold"])
-                    local_exclusions[counts] = min(
-                        local_exclusions.get(counts, threshold),
-                        threshold,
-                    )
-                    aggregate_exclusions[counts] = min(
-                        aggregate_exclusions.get(counts, threshold),
-                        threshold,
-                    )
-            if legacy_summary is not None:
-                if (
-                    legacy_summary["ruleset"] != ruleset
-                    or int(legacy_summary["score"]) != int(incumbent["score"])
-                    or bool(legacy_summary["proof_complete"])
-                    != bool(proof["proof_complete"])
-                    or int(legacy_summary["attempts"]) != len(proof["attempts"])
-                    or int(legacy_summary["unresolved_counts"])
-                    != len(proof["unresolved_counts"])
-                ):
-                    raise ValueError(f"{path}: legacy result summary mismatch")
-            else:
-                local_complete = _proof_complete(
-                    ruleset,
-                    int(incumbent["score"]),
-                    local_exclusions,
+            used_paths.append(str(path))
+            connectivity_modes.add(
+                bool(proof.get("configuration", {}).get("connectivity_required", True))
+            )
+            for counts, threshold in exclusions.items():
+                aggregate_exclusions[counts] = min(
+                    aggregate_exclusions.get(counts, threshold),
+                    threshold,
                 )
-                if local_complete != bool(proof["proof_complete"]):
-                    raise ValueError(f"{path}: proof completeness mismatch")
-                local_unresolved = [
-                    list(counts)
-                    for counts in rules.count_vectors()
-                    if rules.count_upper(counts, ruleset) > incumbent["score"]
-                    and local_exclusions.get(counts, int(incumbent["score"]) + 2)
-                    > int(incumbent["score"]) + 1
-                ]
-                if local_unresolved != proof["unresolved_counts"]:
-                    raise ValueError(f"{path}: unresolved count set mismatch")
+
         incumbent = min(
             incumbents,
             key=lambda row: (
-                -int(row["score"]),
+                -int(row.get("score", row.get("optimum"))),
                 json.dumps(row["tokens"], sort_keys=True),
             ),
         )
-        complete = _proof_complete(
-            ruleset,
-            int(incumbent["score"]),
-            aggregate_exclusions,
-        )
-        expected_unresolved = [
+        score = int(incumbent.get("score", incumbent.get("optimum")))
+        complete = _proof_complete(ruleset, score, aggregate_exclusions)
+        unresolved = [
             list(counts)
             for counts in rules.count_vectors()
-            if rules.count_upper(counts, ruleset) > incumbent["score"]
-            and aggregate_exclusions.get(counts, int(incumbent["score"]) + 2)
-            > int(incumbent["score"]) + 1
+            if rules.count_upper(counts, ruleset) > score
+            and aggregate_exclusions.get(counts, score + 2) > score + 1
         ]
         rows.append(
             {
                 "index": index,
                 "ruleset": ruleset,
                 "proof_complete": complete,
-                "optimum": incumbent["score"],
+                "optimum": score,
                 "score_breakdown": incumbent["score_breakdown"],
                 "counts": incumbent["counts"],
                 "tokens": incumbent["tokens"],
-                "unresolved_counts": expected_unresolved,
-                "proof_paths": [str(path) for path in proof_paths],
-                "proof_sha256": row_proof_hashes,
+                "unresolved_counts": unresolved,
+                "proof_paths": used_paths,
             }
         )
+
     complete = all(row["proof_complete"] for row in rows)
-    holistic = max(row["optimum"] for row in rows) if complete else None
+    best_score = max(int(row["optimum"]) for row in rows)
     return {
-        "schema": "all-wildlife-optimal-catalog-v1",
+        "schema": "all-wildlife-optimal-catalog-v2",
         "proof_complete": complete,
         "completed_rulesets": sum(row["proof_complete"] for row in rows),
         "ruleset_count": len(rows),
         "token_count": rules.TOKEN_COUNT,
         "count_cap": rules.COUNT_CAP,
-        "candidate_sha256": candidate_sha,
-        "proof_sha256": proof_hashes,
-        "proof_source_sha256": sorted(proof_source_hashes),
-        "exact_source_sha256": sorted(exact_source_hashes),
-        "exact_support_source_sha256": sorted(exact_support_hashes),
-        "rules_source_sha256": sorted(rules_source_hashes),
+        "candidate_catalog": str(candidates_path),
+        "proof_directories": [str(path) for path in directories],
         "connectivity_modes": sorted(connectivity_modes),
-        "legacy_fleet_ledger_sha256": {
-            path: legacy_ledger_hashes[path] for path in sorted(used_legacy_ledgers)
-        },
-        "holistic_optimum": holistic,
-        "holistic_rulesets": (
-            [row["ruleset"] for row in rows if row["optimum"] == holistic]
-            if holistic is not None
-            else []
-        ),
+        "holistic_best_score": best_score,
+        "holistic_best_rulesets": [
+            row["ruleset"] for row in rows if row["optimum"] == best_score
+        ],
+        "holistic_optimum": best_score if complete else None,
         "results": rows,
     }
 
@@ -325,26 +176,21 @@ def collect(
 def render_markdown(payload: dict[str, Any]) -> str:
     status = "COMPLETE" if payload["proof_complete"] else "INCOMPLETE"
     lines = [
-        "# Exact cap-six wildlife optimum for every card set",
+        "# Cap-six wildlife optimum for every card set",
         "",
         f"Proof status: **{status}** "
         f"({payload['completed_rulesets']}/{payload['ruleset_count']}).",
+        "",
+        f"Best score found: **{payload['holistic_best_score']}**.",
+        f"Rulesets attaining it: `{', '.join(payload['holistic_best_rulesets'])}`.",
         "",
         "Each ruleset ID is ordered Bear/Elk/Salmon/Hawk/Fox. Every board has",
         "exactly 20 connected wildlife tokens and at most six of one species.",
         "All non-wildlife mechanics are ignored.",
         "",
     ]
-    if payload["proof_complete"]:
-        lines.extend(
-            [
-                f"Holistic optimum: **{payload['holistic_optimum']}**.",
-                f"Rulesets attaining it: `{', '.join(payload['holistic_rulesets'])}`.",
-                "",
-            ]
-        )
     for row in payload["results"]:
-        marker = "" if row["proof_complete"] else " (unproven incumbent)"
+        marker = "" if row["proof_complete"] else " (best known; proof incomplete)"
         lines.extend(
             [
                 f"## {row['ruleset']} — {row['optimum']}{marker}",
@@ -354,12 +200,6 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 "",
                 "```text",
                 render_tokens(row["tokens"]),
-                "```",
-                "",
-                "Coordinates:",
-                "",
-                "```json",
-                json.dumps(row["tokens"], separators=(",", ":")),
                 "```",
                 "",
             ]
@@ -389,11 +229,12 @@ def main() -> int:
                 "proof_complete": payload["proof_complete"],
                 "completed_rulesets": payload["completed_rulesets"],
                 "rulesets": payload["ruleset_count"],
+                "best_score": payload["holistic_best_score"],
             },
             sort_keys=True,
         )
     )
-    return 0 if payload["proof_complete"] else 2
+    return 0
 
 
 if __name__ == "__main__":

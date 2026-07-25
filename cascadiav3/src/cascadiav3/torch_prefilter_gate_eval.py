@@ -269,7 +269,6 @@ def run_gate_eval(
     heldout_metrics = _metrics_from_scores(heldout_q.detach().cpu(), heldout_scores.detach().cpu(), k=k)
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run_prefilter_gate_eval",
         "experiment_id": experiment_id,
         "checkpoint": str(checkpoint_path),
         "checkpoint_experiment_id": checkpoint["report"].get("experiment_id"),

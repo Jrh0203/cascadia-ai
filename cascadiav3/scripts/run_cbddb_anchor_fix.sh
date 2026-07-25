@@ -19,7 +19,6 @@ set -euo pipefail
 # Screen block 2027190000..99 (paired vs zero-shot 99.4675 @ n256/d4).
 
 ROOT="${ROOT:-/home/john0/cascadia}"
-SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION}"
 BINARY="${BINARY:-cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter}"
 PYTHON="${PYTHON:-python3}"
 JOBS="${JOBS:-12}"
@@ -54,7 +53,7 @@ grep -q 'rules_2026_07_19' cascadiav3/real-root-exporter/src/main.rs
 grep -q 'anchor-policy-kl-weight' cascadiav3/src/cascadiav3/torch_train_cascadiaformer.py
 test -s "$TRAIN_NPZ"; test -s "$VAL_NPZ"; test -s "$INCUMBENT"
 
-hb "start rev=$SOURCE_REVISION kl=$KL_WEIGHT l2=$L2_WEIGHT corpus=$TRAIN_NPZ (reused)"
+hb "start kl=$KL_WEIGHT l2=$L2_WEIGHT corpus=$TRAIN_NPZ (reused)"
 
 cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 if [ -f /home/john0/venvs/torch/bin/activate ]; then
@@ -100,10 +99,10 @@ train_arm() {
 
 report_matches() {
   local report="$1"
-  [ -s "$report" ] && "$PYTHON" - "$report" "$RULESET_ID" "$SOURCE_REVISION" <<'PY'
+  [ -s "$report" ] && "$PYTHON" - "$report" "$RULESET_ID" <<'PY'
 import json, sys
 r = json.load(open(sys.argv[1], encoding="utf-8"))
-raise SystemExit(0 if r.get("status")=="pass" and r.get("ruleset_id")==sys.argv[2] and r.get("source_revision")==sys.argv[3] else 1)
+raise SystemExit(0 if r.get("status")=="pass" and r.get("ruleset_id")==sys.argv[2] else 1)
 PY
 }
 
@@ -119,7 +118,7 @@ run_eval() {
     --gumbel-n-simulations "$sims" --gumbel-top-m 16 --gumbel-depth-rounds 1 \
     --gumbel-determinizations "$dets" --gumbel-market-decision-samples 8 \
     --gumbel-blend-weight 0.5 --k-interior 16 --control none \
-    --model-timeout-ms 300000 --source-revision "$SOURCE_REVISION" \
+    --model-timeout-ms 300000 \
     --experiment-id "cbddb_anchor_${tag}" \
     --out "$report" \
     --decisions-out "$REPORT_DIR/cbddb_anchor_${tag}_decisions.jsonl" \

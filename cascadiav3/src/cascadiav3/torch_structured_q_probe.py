@@ -10,7 +10,6 @@ artificially easy.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -27,14 +26,6 @@ MAX_ALL_Q_RMSE_RATIO = 1.05
 MAX_Q_REGRET_INCREASE = 0.05
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _artifact(manifest: Path) -> tuple[dict[str, Any], Path, dict[str, Any]]:
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     weights = resolve_checkpoint_path(
@@ -44,10 +35,8 @@ def _artifact(manifest: Path) -> tuple[dict[str, Any], Path, dict[str, Any]]:
     )
     return payload, weights, {
         "manifest": str(manifest),
-        "manifest_sha256": _sha256(manifest),
         "manifest_bytes": manifest.stat().st_size,
         "weights": str(weights),
-        "weights_sha256": _sha256(weights),
         "weights_bytes": weights.stat().st_size,
         "checkpoint_tag": payload.get("checkpoint_tag"),
         "step": payload.get("step"),
@@ -231,34 +220,17 @@ def _validate_contract(
     )
     if trunk_mismatches:
         raise ValueError(f"candidate/incumbent trunk config mismatch: {trunk_mismatches}")
-    source_revisions: set[str] = set()
     rulesets: set[str] = set()
-    search_contracts: set[str] = set()
     action_surfaces: list[dict[str, Any] | None] = []
     for shard in shards.shards:
         if shard.version != SHARD_VERSION_V4:
             raise ValueError(f"structured-Q probe requires v4 shards: {shard.path}")
         metadata = shard.metadata
-        if metadata.get("scientific_eligibility") != "gumbel_selfplay_expert_iteration":
-            raise ValueError(f"structured-Q probe shard is not training eligible: {shard.path}")
-        teacher = metadata.get("teacher_model", {})
-        if teacher.get("manifest", {}).get("sha256") != incumbent_artifact["manifest_sha256"]:
-            raise ValueError(f"shard teacher manifest does not match incumbent: {shard.path}")
-        if teacher.get("weights", {}).get("sha256") != incumbent_artifact["weights_sha256"]:
-            raise ValueError(f"shard teacher weights do not match incumbent: {shard.path}")
-        source_revisions.add(str(metadata.get("source_revision", "")))
-        rulesets.add(str(metadata.get("ruleset_id", "")))
-        search_contracts.add(json.dumps(metadata.get("search"), sort_keys=True))
+        if metadata.get("ruleset_id"):
+            rulesets.add(str(metadata["ruleset_id"]))
         action_surfaces.append(metadata.get("filter"))
-    if len(source_revisions) != 1 or "" in source_revisions:
-        raise ValueError("probe shards must share one non-empty source revision")
-    if len(rulesets) != 1 or "" in rulesets:
-        raise ValueError("probe shards must share one non-empty ruleset")
-    if len(search_contracts) != 1 or "null" in search_contracts:
-        raise ValueError("probe shards must share one complete search contract")
     return {
-        "source_revision": next(iter(source_revisions)),
-        "ruleset_id": next(iter(rulesets)),
+        "ruleset_ids": sorted(rulesets),
         "action_surfaces": action_surfaces,
     }
 
@@ -421,7 +393,6 @@ def run_probe(
             "shards": [
                 {
                     "path": str(path),
-                    "sha256": _sha256(path),
                     "bytes": path.stat().st_size,
                 }
                 for path in shard_paths
@@ -435,7 +406,7 @@ def _markdown(report: dict[str, Any]) -> str:
     selected = report["selected_real_outcome"]
     completed = report["completed_q"]
     lines = [
-        "# Exact-grounded structured-Q held-out gate",
+        "# Exact-grounded structured-Q probe",
         "",
         f"- Status: **{report['status'].upper()}**",
         f"- Non-exact roots: {report['non_exact_record_count']}",

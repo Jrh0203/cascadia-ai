@@ -1,7 +1,6 @@
 """Fixed-root diagnostic for distributional-Q serving policies.
 
-This is an engineering screen, not gameplay or promotion evidence. It runs one
-checkpoint once over a provenance-locked root corpus, measures raw quantile
+This diagnostic runs one checkpoint over a root corpus, measures raw quantile
 crossing, and reports how monotone-rearranged q25/q50/q75 serving changes the
 direct derived-Q argmax relative to the established quantile mean.
 """
@@ -9,7 +8,6 @@ direct derived-Q argmax relative to the established quantile mean.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import platform
 import socket
@@ -30,25 +28,6 @@ from .torch_model_throughput_benchmark import production_packed_root
 
 REPORT_SCHEMA = "cascadiav3.q_risk_probe.v1"
 RISK_TARGETS = {"q25": 0.25, "q50": 0.50, "q75": 0.75}
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _records_sha256(records: list[dict[str, Any]]) -> str:
-    digest = hashlib.sha256()
-    for record in records:
-        digest.update(
-            (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode(
-                "utf-8"
-            )
-        )
-    return digest.hexdigest()
 
 
 def _percentile(values: list[float], fraction: float) -> float:
@@ -233,8 +212,6 @@ def run_q_risk_probe(
 ) -> dict[str, Any]:
     import torch
 
-    if not source_revision.strip():
-        raise ValueError("source_revision is required")
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")
     manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -291,8 +268,6 @@ def run_q_risk_probe(
 
     return {
         "schema_id": REPORT_SCHEMA,
-        "scientific_eligibility": "engineering_fixed_root_screen_only",
-        "source_revision": source_revision,
         "host": socket.gethostname(),
         "platform": platform.platform(),
         "torch_version": torch.__version__,
@@ -300,17 +275,12 @@ def run_q_risk_probe(
         "device_resolved": str(device),
         "checkpoint": {
             "manifest": str(manifest),
-            "manifest_sha256": _sha256(manifest),
             "weights": str(weights),
-            "weights_sha256": _sha256(weights),
             "checkpoint_tag": manifest_payload.get("checkpoint_tag"),
             "step": manifest_payload.get("step"),
         },
         "roots": {
             "path": str(roots_path),
-            "source_file_sha256": _sha256(roots_path),
-            "selected_record_sha256": _records_sha256(roots),
-            "production_packed_record_sha256": _records_sha256(prepared_roots),
             "max_roots": max_roots,
         },
         "serving_definition": {
@@ -328,8 +298,6 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines = [
         "# Distributional-Q Risk-Serving Fixed-Root Probe",
         "",
-        f"- Eligibility: `{report['scientific_eligibility']}`",
-        f"- Source revision: `{report['source_revision']}`",
         f"- Host/device: `{report['host']}` / `{report['device_resolved']}`",
         f"- Roots/actions: {results['root_count']} / {results['action_count']}",
         f"- Raw adjacent-head crossing rate: {crossing['crossing_pair_rate']:.3%}",
@@ -363,7 +331,7 @@ def main() -> int:
     parser.add_argument("--device", default="mps")
     parser.add_argument("--max-roots", type=int, default=160)
     parser.add_argument("--chunk-size", type=int, default=4)
-    parser.add_argument("--source-revision", required=True)
+    parser.add_argument("--source-revision", default="")
     parser.add_argument("--out", required=True)
     parser.add_argument("--markdown-out", default="")
     args = parser.parse_args()

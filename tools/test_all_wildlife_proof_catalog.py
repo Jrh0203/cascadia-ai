@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import hashlib
 import json
-from pathlib import Path
 
 import pytest
 
 from tools import all_wildlife_rules as rules
 from tools.all_wildlife_proof_catalog import (
-    _legacy_identities,
     _write_text_atomic,
     collect,
     render_markdown,
@@ -55,7 +52,7 @@ def test_collect_without_proofs_emits_valid_incomplete_catalog(tmp_path) -> None
     assert catalog["holistic_optimum"] is None
     assert catalog["results"][0]["ruleset"] == "AAAAA"
     assert catalog["results"][-1]["ruleset"] == "DDDDD"
-    assert "(unproven incumbent)" in render_markdown(catalog)
+    assert "(best known; proof incomplete)" in render_markdown(catalog)
 
 
 def test_collect_certifies_bound_matched_candidate_without_proof(
@@ -106,7 +103,6 @@ def test_atomic_markdown_writer_creates_parent_and_replaces(tmp_path) -> None:
 def test_collect_unions_connected_and_disconnected_exact_exclusions(tmp_path) -> None:
     candidates = tmp_path / "candidates.json"
     candidates.write_text(json.dumps(_candidate_catalog()))
-    candidate_sha = hashlib.sha256(candidates.read_bytes()).hexdigest()
     candidate = json.loads(candidates.read_text())["candidates"][200]
     ruleset = candidate["ruleset"]
     unresolved = [
@@ -131,11 +127,6 @@ def test_collect_unions_connected_and_disconnected_exact_exclusions(tmp_path) ->
             "identity": {
                 "ruleset_index": 200,
                 "ruleset": ruleset,
-                "candidate_sha256": candidate_sha,
-                "proof_source_sha256": "proof",
-                "exact_source_sha256": "exact",
-                "exact_support_source_sha256": "support",
-                "rules_source_sha256": "rules",
                 "connectivity_required": connected,
             },
             "configuration": {"connectivity_required": connected},
@@ -160,10 +151,9 @@ def test_collect_unions_connected_and_disconnected_exact_exclusions(tmp_path) ->
     assert catalog["connectivity_modes"] == [False, True]
 
 
-def test_collect_requires_verified_adapter_for_legacy_identity(tmp_path) -> None:
+def test_collect_rejects_proof_for_wrong_ruleset(tmp_path) -> None:
     candidates = tmp_path / "candidates.json"
     candidates.write_text(json.dumps(_candidate_catalog()))
-    candidate_sha = hashlib.sha256(candidates.read_bytes()).hexdigest()
     candidate = json.loads(candidates.read_text())["candidates"][200]
     ruleset = candidate["ruleset"]
     directory = tmp_path / "proofs"
@@ -172,10 +162,7 @@ def test_collect_requires_verified_adapter_for_legacy_identity(tmp_path) -> None
         "schema": "all-wildlife-global-proof-v1",
         "identity": {
             "ruleset_index": 200,
-            "ruleset": ruleset,
-            "candidate_sha256": candidate_sha,
-            "proof_source_sha256": "legacy-proof",
-            "exact_source_sha256": "legacy-exact",
+            "ruleset": "AAAAA",
         },
         "configuration": {"connectivity_required": True},
         "proof_complete": False,
@@ -189,26 +176,5 @@ def test_collect_requires_verified_adapter_for_legacy_identity(tmp_path) -> None
     }
     (directory / "ruleset_200.json").write_text(json.dumps(proof))
 
-    with pytest.raises(ValueError, match="unverified legacy proof identity"):
+    with pytest.raises(ValueError, match="proof ruleset mismatch"):
         collect(candidates, [directory])
-
-
-def test_legacy_fleet_identity_is_reconstructed_from_pinned_revision() -> None:
-    path = Path(
-        "cascadiav3/fleet/all_cards_proof_calibration_20260723_fleet.json"
-    )
-    identities, hashes = _legacy_identities([path])
-
-    assert hashes[str(path)]
-    assert len(identities) == 1
-    identity = next(iter(identities.values()))
-    assert (
-        identity["exact_support_source_sha256"]
-        == "362b5d7f82a156579e33c4b2c630c06bff3f45fa08f72a4dc70fe378eadca329"
-    )
-    assert (
-        identity["rules_source_sha256"]
-        == "48cfe51e750cdbc755a1770d6b161d2551c066c14ca0fd0e70126db4f022d2d8"
-    )
-    assert identity["result_summary"][136]["ruleset"] == "ACACA"
-    assert identity["result_summary"][136]["proof_complete"]

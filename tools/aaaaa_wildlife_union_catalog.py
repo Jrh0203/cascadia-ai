@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import hashlib
 import json
 import os
 import tempfile
@@ -13,10 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from tools import aaaaa_wildlife_catalog as catalog
-
-
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _write_atomic(path: Path, text: str) -> None:
@@ -32,7 +27,7 @@ def union(paths: list[Path]) -> dict[str, Any]:
         raise ValueError("at least one catalog is required")
     canonical = [counts for counts, _ in catalog.count_vectors()]
     by_counts: dict[tuple[int, ...], list[tuple[Path, dict[str, Any]]]] = {}
-    source_hashes = {}
+    source_paths = []
     token_count = None
     count_cap = None
     for path in paths:
@@ -63,7 +58,7 @@ def union(paths: list[Path]) -> dict[str, Any]:
             normalized = copy.deepcopy(row)
             normalized["tokens"] = tokens
             by_counts.setdefault(counts, []).append((path, normalized))
-        source_hashes[str(path)] = _sha256(path)
+        source_paths.append(str(path))
     missing = set(canonical) - set(by_counts)
     if missing:
         raise ValueError(f"catalog union is missing {len(missing)} count vectors")
@@ -86,7 +81,6 @@ def union(paths: list[Path]) -> dict[str, Any]:
             )
         chosen = copy.deepcopy(chosen)
         chosen["union_source_path"] = str(chosen_path)
-        chosen["union_source_sha256"] = source_hashes[str(chosen_path)]
         results.append(chosen)
     if conflicts:
         raise ValueError(f"conflicting exact optima: {conflicts[:5]}")
@@ -99,7 +93,7 @@ def union(paths: list[Path]) -> dict[str, Any]:
         "allocation_count": len(canonical),
         "completed_count": sum(row.get("proof_complete", False) for row in results),
         "proof_complete": all(row.get("proof_complete", False) for row in results),
-        "union_sources": source_hashes,
+        "union_sources": source_paths,
         "external_certificates": [],
         "results": results,
     }

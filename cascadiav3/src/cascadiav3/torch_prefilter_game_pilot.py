@@ -404,7 +404,6 @@ def run_game_pilot(
     paired_deltas = paired_score_deltas(prefilter_results, full_results)
     return {
         "status": "pass",
-        "scientific_eligibility": "interactive_prefilter_game_pilot",
         "experiment_id": experiment_id,
         "binary": str(binary),
         "seeds": seeds,

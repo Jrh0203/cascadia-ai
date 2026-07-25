@@ -9,8 +9,6 @@ expert-root and expert-tensor contracts register beside them.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-import hashlib
-import json
 from typing import Any
 
 from .hex import RADIUS6_CELL_COUNT
@@ -102,7 +100,7 @@ SCHEMA_REGISTRY: dict[str, SchemaDefinition] = {
         artifact_kind="expert_tensor_shard",
         version=3,
         status="active",
-        description="v2 Gumbel self-play shard plus an explicit per-record exact_endgame flag and complete generation provenance in metadata.",
+        description="v2 Gumbel self-play shard plus an explicit per-record exact_endgame flag and generation metadata.",
         compatible_readers=(
             "cascadiav3.expert_tensor_shards",
             "cascadiav3.torch_train_cascadiaformer",
@@ -136,24 +134,6 @@ TENSOR_SCHEMA_IDS = {
 
 class SchemaError(ValueError):
     """Raised when a fixture violates a Cascadia v3 schema contract."""
-
-
-def canonical_json_bytes(payload: Any) -> bytes:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-
-
-def checksum(payload: Any) -> str:
-    return hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
-
-
-def _payload_without_checksum(record: dict[str, Any]) -> dict[str, Any]:
-    return {k: v for k, v in record.items() if k != "checksum"}
-
-
-def attach_checksum(record: dict[str, Any]) -> dict[str, Any]:
-    out = dict(record)
-    out["checksum"] = checksum(_payload_without_checksum(out))
-    return out
 
 
 def registry_report(*, include_legacy: bool = True, include_expert: bool = True) -> dict[str, Any]:
@@ -304,7 +284,6 @@ def _validate_common_search_root_fields(record: dict[str, Any]) -> int:
         "final_score_vector",
         "score_decomposition",
         "rank_vector",
-        "checksum",
     ]
     missing = [field for field in required if field not in record]
     if missing:
@@ -343,16 +322,9 @@ def _validate_common_search_root_fields(record: dict[str, Any]) -> int:
     return action_count
 
 
-def _validate_checksum(record: dict[str, Any], label: str) -> None:
-    expected_checksum = checksum(_payload_without_checksum(record))
-    if record["checksum"] != expected_checksum:
-        raise SchemaError(f"{label} checksum mismatch")
-
-
 def validate_pre_gpu_search_root_record(record: dict[str, Any]) -> None:
     validate_schema_id(record, PRE_GPU_SCHEMA_ID)
     _validate_common_search_root_fields(record)
-    _validate_checksum(record, "SearchRootRecord")
 
 
 def validate_expert_root_record(record: dict[str, Any]) -> None:
@@ -362,14 +334,7 @@ def validate_expert_root_record(record: dict[str, Any]) -> None:
         "seed",
         "ply",
         "public_hash",
-        "source_hash",
-        "binary_hash",
         "root_replay",
-        "actor_identity",
-        "opponent_identities",
-        "model_identity",
-        "search_identity",
-        "rng_identity",
         "action_ids",
         "afterstate_hashes",
         "exact_afterstate_score_active",
@@ -421,9 +386,6 @@ def validate_expert_root_record(record: dict[str, Any]) -> None:
     if record["public_hash"] != root_replay["root_public_hash"]:
         raise SchemaError("public_hash must match root_replay.root_public_hash")
 
-    if not isinstance(record["opponent_identities"], list) or len(record["opponent_identities"]) != 3:
-        raise SchemaError("opponent_identities must contain the three non-active seats")
-
     for sample in record["chance_samples"]:
         if not isinstance(sample, dict):
             raise SchemaError("chance_samples entries must be maps")
@@ -454,9 +416,6 @@ def validate_expert_root_record(record: dict[str, Any]) -> None:
         if coverage is not None and abs(float(coverage) - 1.0) > 1.0e-9:
             raise SchemaError("expert roots must report 100% legal action coverage")
 
-    _validate_checksum(record, "ExpertRootRecord")
-
-
 def validate_search_root_record(record: dict[str, Any]) -> None:
     schema_id = record.get("schema_id")
     if schema_id == PRE_GPU_SCHEMA_ID:
@@ -476,21 +435,11 @@ def validate_replay_manifest(manifest: dict[str, Any]) -> None:
         "source_generator",
         "seed_domain",
         "record_count",
-        "checksum",
-        "scientific_eligibility",
         "created_at_utc",
         "format",
     ]
     missing = [field for field in required if field not in manifest]
     if missing:
         raise SchemaError(f"ReplayShardManifest missing fields: {missing}")
-    if manifest["scientific_eligibility"] not in {
-        "dry_run",
-        "debug",
-        "behavior_clone_pretraining",
-        "training_candidate",
-        "evaluation_locked",
-    }:
-        raise SchemaError("unknown scientific_eligibility")
     if manifest["format"] not in {"jsonl", "binary", "npz"}:
         raise SchemaError("unknown replay format")

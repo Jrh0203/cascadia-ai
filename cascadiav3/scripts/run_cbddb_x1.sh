@@ -12,14 +12,12 @@ set -euo pipefail
 # gap, inverted). The champion is then fine-tuned on those labels with
 # the trust-region anchor (the one warm-start shape never killed).
 #
-# Required env: SOURCE_REVISION.
 # Optional env: TRAIN_FIRST_SEED (2027199000), TRAIN_SEEDS (300),
 #   VAL_FIRST_SEED (2027199400), VAL_SEEDS (30), KL_WEIGHT (2.0),
 #   L2_WEIGHT (2.0), MAX_PASSES (8), JOBS (24), RAYON (28),
 #   EVAL_JOBS (6), N1024_THRESHOLD (100.5).
 
 ROOT="${ROOT:-/home/john0/cascadia}"
-SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION}"
 TEACHER="cascadiav3/checkpoints/full_v3_gumbel_selfplay_cycle4/best_locked_val.manifest.json"
 TRAIN_FIRST_SEED="${TRAIN_FIRST_SEED:-2027199000}"
 TRAIN_SEEDS="${TRAIN_SEEDS:-300}"
@@ -58,7 +56,7 @@ hb(){ echo "[$(date "+%F %T")] [cbddb-x1] $*"; }
 grep -q 'rules_2026_07_19' cascadiav3/real-root-exporter/src/main.rs
 test -s "$TEACHER"
 
-hb "start rev=$SOURCE_REVISION teacher=$TEACHER seeds=${TRAIN_FIRST_SEED}x${TRAIN_SEEDS}+${VAL_FIRST_SEED}x${VAL_SEEDS} kl=$KL_WEIGHT l2=$L2_WEIGHT"
+hb "start teacher=$TEACHER seeds=${TRAIN_FIRST_SEED}x${TRAIN_SEEDS}+${VAL_FIRST_SEED}x${VAL_SEEDS} kl=$KL_WEIGHT l2=$L2_WEIGHT"
 
 cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 
@@ -84,7 +82,6 @@ gen_corpus() {
     --gumbel-n-simulations 512 --gumbel-top-m 16 --gumbel-depth-rounds 1 \
     --gumbel-determinizations 8 --gumbel-market-decision-samples 8 \
     --gumbel-exact-endgame-turns 0 --gumbel-blend-weight 0.5 --k-interior 16 \
-    --source-revision "$SOURCE_REVISION" \
     --first-seed "$first" --seed-count "$count" --plies-per-seed 80 \
     --max-actions 8 --rollouts-per-action 1 --rollout-top-k 4 \
     --tensor-compression stored \
@@ -153,7 +150,6 @@ run_eval() {
     --k-interior 16 \
     --control none \
     --model-timeout-ms 300000 \
-    --source-revision "$SOURCE_REVISION" \
     --experiment-id "cbddb_x1_${tag}" \
     --out "$report" \
     --decisions-out "$REPORT_DIR/cbddb_x1_${tag}_decisions.jsonl" \

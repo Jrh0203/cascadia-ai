@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import multiprocessing
 import time
@@ -65,7 +64,6 @@ def main() -> int:
         for ruleset, model_score, expected, status in rows
         if status != "OPTIMAL" or model_score != expected
     ]
-    canonical = json.dumps(rows, separators=(",", ":"))
     summary = {
         "schema": "all-wildlife-exact-fixed-board-verification-v1",
         "seed": args.seed,
@@ -74,7 +72,6 @@ def main() -> int:
         "cases": len(rows),
         "failures": failures,
         "elapsed_seconds": time.monotonic() - started,
-        "sha256": hashlib.sha256(canonical.encode()).hexdigest(),
     }
     print(json.dumps(summary, sort_keys=True))
     return int(bool(failures))

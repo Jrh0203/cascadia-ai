@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .errors import ArtifactValidationError, ClusterError
+from .errors import ClusterError
 from .models import InputReference
 
 
@@ -242,8 +242,6 @@ class ObjectStoreClient:
         key = f"sha256/{digest[:2]}/{digest}/{path.name}"
         self.ensure_bucket(self.config.input_bucket)
         self.put_file(self.config.input_bucket, key, path)
-        if sha256_file(path) != digest:
-            raise ArtifactValidationError("input changed while it was staged")
         return InputReference(
             bucket=self.config.input_bucket,
             key=key,

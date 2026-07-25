@@ -410,7 +410,6 @@ def _top16_prefilter_loss(
     import torch
 
     mask = batch["action_mask"]
-    mask_f = mask.to(output["q"].dtype)
     reliability = _label_reliability(batch).to(output["q"].dtype)
     q_loss = (((output["q"] - batch["target_z"]) ** 2) * reliability).sum() / reliability.sum().clamp_min(1.0)
 
@@ -455,7 +454,6 @@ def _topk_retention_loss(
     import torch
 
     mask = batch["action_mask"]
-    mask_f = mask.to(output["q"].dtype)
     reliability = _label_reliability(batch).to(output["q"].dtype)
 
     q_loss = (((output["q"] - batch["target_z"]) ** 2) * reliability).sum() / reliability.sum().clamp_min(1.0)
@@ -821,7 +819,6 @@ def run_relation_bias_pilot(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run",
         "experiment_id": experiment_id,
         "seed": seed,
         "steps": steps,

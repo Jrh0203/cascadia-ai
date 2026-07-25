@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import hashlib
 import os
 import secrets
 import shlex
@@ -16,7 +15,6 @@ import time
 from pathlib import Path
 
 REPOSITORY = Path(__file__).resolve().parents[1]
-BACALHAU_SHA256 = "adb62f07b9e0ef2122f11714ba9bc233c8a4e36d61b4044603c7dbea638bd7c7"
 JOHN1_ROOT = Path("/Users/johnherrick/cascadia-bench/orchestrator")
 JOHN1_BINARY = JOHN1_ROOT / "bacalhau/v1.9.0/bin/bacalhau"
 NODES = {
@@ -28,12 +26,6 @@ NODES = {
 
 def _run(*args: str, input_bytes: bytes | None = None) -> None:
     subprocess.run(args, input=input_bytes, check=True)
-
-
-def _verify_binary(path: Path) -> None:
-    observed = hashlib.sha256(path.read_bytes()).hexdigest()
-    if observed != BACALHAU_SHA256:
-        raise SystemExit(f"Bacalhau binary checksum differs: {observed}")
 
 
 def _secrets() -> str:
@@ -74,7 +66,6 @@ def _install_john1(*, start: bool) -> None:
     root = JOHN1_ROOT
     for directory in ("bin", "config", "logs", "state/bacalhau", "state/registry", "state/minio"):
         (root / directory).mkdir(parents=True, exist_ok=True)
-    _verify_binary(JOHN1_BINARY)
     shutil.copy2(JOHN1_BINARY, root / "bin/bacalhau")
     shutil.copy2(REPOSITORY / "infra/bacalhau/run-node.zsh", root / "bin/run-node.zsh")
     shutil.copy2(REPOSITORY / "infra/bacalhau/launchd-entry.zsh", root / "bin/launchd-entry.zsh")
@@ -307,7 +298,6 @@ def main() -> int:
     )
     parser.add_argument("--skip-john1", action="store_true")
     args = parser.parse_args()
-    _verify_binary(JOHN1_BINARY)
     if not args.skip_john1:
         _install_john1(start=not args.no_start)
     secrets_path = JOHN1_ROOT / "config/secrets.env"

@@ -202,7 +202,7 @@ pub struct ExpertTensorNpz<'a> {
     /// v2+ arrays; omitted from the archive when `None`.
     pub improved_policy: Option<&'a [f32]>,
     pub search_root_value: Option<&'a [f32]>,
-    /// v3-only per-record exact-solver provenance.
+    /// v3-only per-record exact-solver flag.
     pub exact_endgame: Option<&'a [u8]>,
     pub record_count: usize,
     pub compression: NpzCompression,

@@ -1,5 +1,8 @@
 # V3 Performance Notes
 
+> Performance notebook. Historical gates and preregistered thresholds are
+> descriptive only and impose no launch or adoption requirement.
+
 These are engineering measurements and diagnostics, not promotion evidence.
 
 Measurements recorded before rules semantics `cascadia-base-official-2026-07-09`

@@ -47,7 +47,7 @@ honest current claim.
 The page is responsive. On a narrow viewport it reads top-to-bottom as a
 field guide: cards, board, score dossier, then a bounded ranked ledger.
 
-## Data pipeline and integrity
+## Data pipeline
 
 The browser does not load the 13 MB research artifact directly. A deterministic
 export produces a 267 KB purpose-built asset:
@@ -58,7 +58,7 @@ python3 tools/export_wildlife_atlas.py \
   apps/web/public/wildlife-atlas.json
 ```
 
-The exporter fails closed unless:
+The exporter validates the board data before writing:
 
 - all 1,024 rulesets are unique and in catalog-index order;
 - every board contains exactly 20 non-overlapping tokens;
@@ -68,16 +68,10 @@ The exporter fails closed unless:
 - every exact row has `score == sound upper`, while every other upper is at
   least its incumbent.
 
-The compact asset preserves the source artifact SHA-256. The client repeats
-the core schema, row-count, score-sum, token-count, and score-interval checks
-before rendering.
-
-Current provenance:
-
-- Source catalog SHA-256:
-  `6a4ba86d67b1bf4b44b5ef9a84791e078698dea2fc4d2b760324ad010a279b43`
-- Compact web asset SHA-256:
-  `d1061538c135bb614ce5fd17fcbf1d27808067423f86b336b5db05d1b0bfb74b`
+The client repeats the core schema, row-count, score-sum, token-count, and
+score-interval checks before rendering so malformed boards produce a useful
+error instead of a broken visualization. No source hash, receipt, or
+provenance chain is required.
 
 ## Implementation map
 

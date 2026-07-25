@@ -46,8 +46,6 @@ def simplex_weight_grid(source_count: int, step: float) -> list[tuple[float, ...
 
 
 def _normalize_scores(values):  # type: ignore[no-untyped-def]
-    import torch
-
     mean = values.mean()
     std = values.std(unbiased=False).clamp_min(1.0e-6)
     return (values - mean) / std
@@ -279,7 +277,6 @@ def run_blend_eval(
     )
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run_prefilter_blend_eval",
         "experiment_id": experiment_id,
         "checkpoint": str(checkpoint_path),
         "checkpoint_experiment_id": checkpoint["report"].get("experiment_id"),

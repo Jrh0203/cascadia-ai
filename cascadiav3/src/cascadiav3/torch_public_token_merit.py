@@ -21,10 +21,8 @@ from .torch_action_query_merit import (
     _coord_features,
     _decision,
     _loss,
-    _masked_fill_invalid,
     _normalizer,
     _safe_float,
-    _species_one_hot,
     _tile_id,
     merit_action_features,
     parameter_count,
@@ -588,7 +586,6 @@ def run_public_token_pilot(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run",
         "experiment_id": "crt-public-token-query-merit-v1",
         "seed": seed,
         "steps": steps,

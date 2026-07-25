@@ -264,7 +264,7 @@ class AnalyzeLabelDensityTest(unittest.TestCase):
             100.0 * (1.0 - math.sqrt(1.5) / math.sqrt(125.0)),
             places=3,
         )
-        bar = falsifier["preregistered_bar"]
+        bar = falsifier["reference_bar"]
         self.assertEqual(bar["rmse_reduction_pct_required"], 20.0)
         self.assertEqual(bar["abs_bias_max"], 0.5)
         self.assertTrue(bar["passes"])
@@ -333,7 +333,7 @@ class AnalyzeLabelDensityTest(unittest.TestCase):
         # One record per phase -> degenerate zero baseline, no reduction claim.
         self.assertAlmostEqual(falsifier["rmse_baseline_within_phase"], 0.0, places=6)
         self.assertIsNone(falsifier["rmse_reduction_vs_within_phase_baseline_pct"])
-        self.assertFalse(falsifier["preregistered_bar"]["passes"])
+        self.assertFalse(falsifier["reference_bar"]["passes"])
         self.assertEqual(report["v1_falsifier"], repeat["v1_falsifier"])
         # The adjacency probe still sees the full shard.
         self.assertEqual(report["trajectory_adjacency"]["record_count"], 4)

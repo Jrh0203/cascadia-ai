@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import tempfile
@@ -26,9 +25,8 @@ def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
-def _candidate(path: Path, index: int) -> tuple[dict[str, Any], str]:
-    encoded = path.read_bytes()
-    payload = json.loads(encoded)
+def _candidate(path: Path, index: int) -> dict[str, Any]:
+    payload = json.loads(path.read_text())
     if payload.get("schema") != "all-wildlife-merged-candidates-v1":
         raise ValueError("unexpected candidate schema")
     row = payload["candidates"][index]
@@ -38,7 +36,7 @@ def _candidate(path: Path, index: int) -> tuple[dict[str, Any], str]:
     breakdown = rules.score_tokens(row["tokens"], expected)
     if list(breakdown) != row["score_breakdown"] or sum(breakdown) != row["score"]:
         raise ValueError("candidate score mismatch")
-    return row, hashlib.sha256(encoded).hexdigest()
+    return row
 
 
 def _proof_complete(
@@ -57,18 +55,8 @@ def _proof_complete(
 
 def run(args: argparse.Namespace) -> int:
     ruleset = rules.rulesets()[args.index]
-    candidate, candidate_sha = _candidate(args.candidates, args.index)
+    candidate = _candidate(args.candidates, args.index)
     output = args.output
-    source_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    exact_sha = hashlib.sha256(
-        Path("tools/all_wildlife_exact.py").read_bytes()
-    ).hexdigest()
-    exact_support_sha = hashlib.sha256(
-        Path("tools/cbddb_wildlife_exact.py").read_bytes()
-    ).hexdigest()
-    rules_sha = hashlib.sha256(
-        Path("tools/all_wildlife_rules.py").read_bytes()
-    ).hexdigest()
     incumbent = {
         "score": int(candidate["score"]),
         "score_breakdown": candidate["score_breakdown"],
@@ -83,19 +71,11 @@ def run(args: argparse.Namespace) -> int:
     if args.resume and output.exists():
         payload = json.loads(output.read_text())
         identity = payload["identity"]
-        expected_identity = {
-            "ruleset_index": args.index,
-            "ruleset": ruleset,
-            "candidate_sha256": candidate_sha,
-            "proof_source_sha256": source_sha,
-            "exact_source_sha256": exact_sha,
-            "exact_support_source_sha256": exact_support_sha,
-            "rules_source_sha256": rules_sha,
-            "connectivity_required": not args.no_connectivity,
-        }
-        if identity != expected_identity:
-            raise ValueError("resume identity mismatch")
-        incumbent = payload["incumbent"]
+        if identity.get("ruleset_index") != args.index or identity.get("ruleset") != ruleset:
+            raise ValueError("resume ruleset mismatch")
+        prior_incumbent = payload["incumbent"]
+        if int(prior_incumbent["score"]) > int(incumbent["score"]):
+            incumbent = prior_incumbent
         attempts = payload["attempts"]
         for attempt in attempts:
             if attempt["status"] == "INFEASIBLE":
@@ -119,11 +99,6 @@ def run(args: argparse.Namespace) -> int:
             "identity": {
                 "ruleset_index": args.index,
                 "ruleset": ruleset,
-                "candidate_sha256": candidate_sha,
-                "proof_source_sha256": source_sha,
-                "exact_source_sha256": exact_sha,
-                "exact_support_source_sha256": exact_support_sha,
-                "rules_source_sha256": rules_sha,
                 "connectivity_required": not args.no_connectivity,
             },
             "configuration": {

@@ -24,10 +24,8 @@ from .torch_public_token_merit import (
 )
 from .torch_relation_bias_merit import (
     _decision_with_vanilla,
-    _evaluate_relation_scores,
     _loss_with_mode,
     _public_scores,
-    _to_device,
 )
 from .torch_semantic_cross_attention_merit import (
     _model_metrics,
@@ -59,7 +57,6 @@ class SemanticResidualAttentionConfig:
 
 
 def build_semantic_residual_attention_transformer(config: Any):
-    import torch
     from torch import nn
 
     class ResidualDecoderLayer(nn.Module):
@@ -257,7 +254,6 @@ def run_semantic_residual_attention_pilot(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run",
         "experiment_id": experiment_id,
         "seed": seed,
         "steps": steps,

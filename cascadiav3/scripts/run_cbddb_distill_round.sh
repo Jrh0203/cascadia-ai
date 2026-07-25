@@ -11,20 +11,14 @@ set -euo pipefail
 # stronger than the previous student, so the loop does not eat its own
 # tail the way same-budget self-play does.
 #
-# Per John's ruling 2026-07-23: NO full-battery (n1024/d16) eval inside
-# rounds — the paired n256/d4 x100 screen is the go/no-go signal.
-# The full battery runs once, manually, when the ladder stalls or
-# pre-certification.
-#
-# Required env: SOURCE_REVISION, ROUND_TAG (e.g. x2), TEACHER (manifest
-#   path on john0), TRAIN_FIRST_SEED, VAL_FIRST_SEED (fresh blocks,
-#   audited in EXPERIMENT_LOG before launch).
+# Required env: ROUND_TAG (e.g. x2), TEACHER (manifest path on john0),
+#   TRAIN_FIRST_SEED, and VAL_FIRST_SEED.
 # Optional env: TRAIN_SEEDS (300), VAL_SEEDS (30), KL_WEIGHT (2.0),
 #   L2_WEIGHT (2.0), MAX_PASSES (8), JOBS (24), RAYON (28),
-#   EVAL_JOBS (6), GEN_SIMS (512), GEN_DETS (8).
+#   EVAL_JOBS (6), EVAL_GAMES (100), EVAL_SIMS (256), EVAL_DETS (4),
+#   GEN_SIMS (512), and GEN_DETS (8).
 
 ROOT="${ROOT:-/home/john0/cascadia}"
-SOURCE_REVISION="${SOURCE_REVISION:?set SOURCE_REVISION}"
 ROUND_TAG="${ROUND_TAG:?set ROUND_TAG (e.g. x2)}"
 TEACHER="${TEACHER:?set TEACHER manifest path}"
 TRAIN_FIRST_SEED="${TRAIN_FIRST_SEED:?set TRAIN_FIRST_SEED (fresh block)}"
@@ -37,6 +31,9 @@ MAX_PASSES="${MAX_PASSES:-8}"
 JOBS="${JOBS:-24}"
 RAYON="${RAYON:-28}"
 EVAL_JOBS="${EVAL_JOBS:-6}"
+EVAL_GAMES="${EVAL_GAMES:-100}"
+EVAL_SIMS="${EVAL_SIMS:-256}"
+EVAL_DETS="${EVAL_DETS:-4}"
 GEN_SIMS="${GEN_SIMS:-512}"
 GEN_DETS="${GEN_DETS:-8}"
 BINARY="cascadiav3/real-root-exporter/target/release/cascadiav3-real-root-exporter"
@@ -44,7 +41,7 @@ PYTHON="${PYTHON:-python3}"
 REPORT_DIR="cascadiav3/reports"
 LOG_DIR="cascadiav3/logs"
 FIX="cascadiav3/fixtures"
-EVAL_FIRST_SEED=2027190000
+EVAL_FIRST_SEED="${EVAL_FIRST_SEED:-2027190000}"
 
 export PATH="$HOME/.cargo/bin:$PATH:/usr/lib/wsl/lib"
 if [ -x "$HOME/.local/bin/zig-cc" ] && ! command -v cc >/dev/null 2>&1; then
@@ -64,7 +61,7 @@ hb(){ echo "[$(date "+%F %T")] [cbddb-$ROUND_TAG] $*"; }
 grep -q 'rules_2026_07_19' cascadiav3/real-root-exporter/src/main.rs
 test -s "$TEACHER"
 
-hb "start rev=$SOURCE_REVISION teacher=$TEACHER seeds=${TRAIN_FIRST_SEED}x${TRAIN_SEEDS}+${VAL_FIRST_SEED}x${VAL_SEEDS} gen=n${GEN_SIMS}/d${GEN_DETS} kl=$KL_WEIGHT l2=$L2_WEIGHT"
+hb "start teacher=$TEACHER seeds=${TRAIN_FIRST_SEED}x${TRAIN_SEEDS}+${VAL_FIRST_SEED}x${VAL_SEEDS} gen=n${GEN_SIMS}/d${GEN_DETS} kl=$KL_WEIGHT l2=$L2_WEIGHT"
 
 cargo build --release --manifest-path cascadiav3/real-root-exporter/Cargo.toml
 
@@ -90,7 +87,6 @@ gen_corpus() {
     --gumbel-n-simulations "$GEN_SIMS" --gumbel-top-m 16 --gumbel-depth-rounds 1 \
     --gumbel-determinizations "$GEN_DETS" --gumbel-market-decision-samples 8 \
     --gumbel-exact-endgame-turns 0 --gumbel-blend-weight 0.5 --k-interior 16 \
-    --source-revision "$SOURCE_REVISION" \
     --first-seed "$first" --seed-count "$count" --plies-per-seed 80 \
     --max-actions 8 --rollouts-per-action 1 --rollout-top-k 4 \
     --tensor-compression stored \
@@ -136,36 +132,36 @@ fi
 ROUND_MANIFEST="cascadiav3/checkpoints/cbddb_${ROUND_TAG}_distill/best_locked_val.manifest.json"
 test -s "$ROUND_MANIFEST"
 
-report="$REPORT_DIR/cbddb_${ROUND_TAG}_screen_n256_d4.json"
+eval_tag="cbddb_${ROUND_TAG}_screen_n${EVAL_SIMS}_d${EVAL_DETS}"
+report="$REPORT_DIR/${eval_tag}.json"
 if [ -s "$report" ]; then
   hb "EVAL screen reuse"
 else
-  hb "EVAL screen_n256_d4 starting (n256/d4 x 100)"
+  hb "EVAL starting (n${EVAL_SIMS}/d${EVAL_DETS} x ${EVAL_GAMES})"
   "$PYTHON" -m cascadiav3.torch_cascadiaformer_gumbel_benchmark \
     --binary "$BINARY" \
     --manifest "$ROUND_MANIFEST" \
     --scoring-cards cbddb \
     --device cuda \
     --first-seed "$EVAL_FIRST_SEED" \
-    --games 100 \
+    --games "$EVAL_GAMES" \
     --jobs "$EVAL_JOBS" \
     --batch-runner \
-    --gumbel-n-simulations 256 \
+    --gumbel-n-simulations "$EVAL_SIMS" \
     --gumbel-top-m 16 \
     --gumbel-depth-rounds 1 \
-    --gumbel-determinizations 4 \
+    --gumbel-determinizations "$EVAL_DETS" \
     --gumbel-market-decision-samples 8 \
     --gumbel-blend-weight 0.5 \
     --k-interior 16 \
     --control none \
     --model-timeout-ms 300000 \
-    --source-revision "$SOURCE_REVISION" \
-    --experiment-id "cbddb_${ROUND_TAG}_screen_n256_d4" \
+    --experiment-id "$eval_tag" \
     --out "$report" \
-    --decisions-out "$REPORT_DIR/cbddb_${ROUND_TAG}_screen_n256_d4_decisions.jsonl" \
-    --games-out "$REPORT_DIR/cbddb_${ROUND_TAG}_screen_n256_d4_games.jsonl" \
-    --summary-out "$REPORT_DIR/cbddb_${ROUND_TAG}_screen_n256_d4.md"
-  hb "EVAL screen_n256_d4 DONE"
+    --decisions-out "$REPORT_DIR/${eval_tag}_decisions.jsonl" \
+    --games-out "$REPORT_DIR/${eval_tag}_games.jsonl" \
+    --summary-out "$REPORT_DIR/${eval_tag}.md"
+  hb "EVAL DONE"
 fi
 
 MEAN=$("$PYTHON" -c "

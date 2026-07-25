@@ -85,7 +85,6 @@ def compare_reports(
     )
     return {
         "status": "pass",
-        "scientific_eligibility": "interactive_prefilter_game_report_comparison",
         "candidate_experiment_id": candidate_report.get("experiment_id"),
         "baseline_experiment_id": baseline_report.get("experiment_id"),
         "candidate_strategy": candidate_strategy,

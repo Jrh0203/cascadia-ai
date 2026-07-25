@@ -1,5 +1,9 @@
 # Cascadia v3 Transformer Experiment Log
 
+> Historical notebook. Since 2026-07-25, entries, preregistration, hashes,
+> receipts, seed allocation, and formal verdicts are optional. This file does
+> not gate launches, inspection, iteration, or checkpoint selection.
+
 This log records v3 transformer architecture experiments as they run. Entries
 distinguish implementation health from model merit; dry-run experiments are not
 promotion evidence.

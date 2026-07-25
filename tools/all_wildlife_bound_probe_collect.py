@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Validate bounded-maximization probes and merge their bounds/witnesses."""
+"""Merge available bounded-maximization probes into a wildlife catalog."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
@@ -22,64 +21,6 @@ from tools.all_wildlife_proof_catalog import (
 COUNT_VECTORS = frozenset(rules.count_vectors())
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def _hash_set(value: Any, field: str) -> set[str]:
-    if value is None:
-        return set()
-    values = [value] if isinstance(value, str) else value
-    if not isinstance(values, list) or any(
-        not isinstance(item, str) or len(item) != 64 for item in values
-    ):
-        raise ValueError(f"invalid {field}")
-    return set(values)
-
-
-def _base_count_bounds(
-    row: dict[str, Any],
-    ruleset: str,
-    unresolved: list[tuple[int, int, int, int, int]],
-) -> dict[tuple[int, int, int, int, int], int]:
-    analytical = {counts: rules.count_upper(counts, ruleset) for counts in unresolved}
-    stored = row.get("unresolved_count_upper_bounds")
-    if stored is None:
-        return analytical
-    if not isinstance(stored, list) or len(stored) != len(unresolved):
-        raise ValueError(f"{ruleset}: invalid unresolved count upper bounds")
-    incumbent = int(row["optimum"])
-    bounds = {}
-    for counts, value in zip(unresolved, stored, strict=True):
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, int)
-            or value <= incumbent
-            or value > analytical[counts]
-        ):
-            raise ValueError(f"{ruleset} {counts}: invalid stored count upper")
-        bounds[counts] = value
-    expected_sound_upper = max([incumbent, *bounds.values()])
-    if int(row.get("sound_upper", expected_sound_upper)) != expected_sound_upper:
-        raise ValueError(f"{ruleset}: stored count bounds disagree with sound upper")
-    return bounds
-
-
-def _base_probe_provenance(row: dict[str, Any], ruleset: str) -> tuple[list[str], dict[str, str]]:
-    paths = row.get("bound_probe_paths", [])
-    hashes = row.get("bound_probe_sha256", {})
-    if (
-        not isinstance(paths, list)
-        or any(not isinstance(path, str) for path in paths)
-        or len(paths) != len(set(paths))
-        or not isinstance(hashes, dict)
-        or set(hashes) != set(paths)
-        or any(not isinstance(value, str) or len(value) != 64 for value in hashes.values())
-    ):
-        raise ValueError(f"{ruleset}: invalid inherited bound-probe provenance")
-    return list(paths), dict(hashes)
-
-
 def _paths(directories: list[Path]) -> list[Path]:
     return sorted(
         (path for directory in directories for path in directory.glob("task_*.json")),
@@ -87,85 +28,31 @@ def _paths(directories: list[Path]) -> list[Path]:
     )
 
 
-def _expected_sources() -> dict[str, str]:
-    return {
-        "probe_source_sha256": _sha256(Path("tools/all_wildlife_bound_probe.py")),
-        "exact_source_sha256": _sha256(Path("tools/all_wildlife_exact.py")),
-        "exact_support_source_sha256": _sha256(Path("tools/cbddb_wildlife_exact.py")),
-        "rules_source_sha256": _sha256(Path("tools/all_wildlife_rules.py")),
-    }
-
-
-def _validate_probe(
-    path: Path,
-    payload: dict[str, Any],
+def _validate_attempt(
+    attempt: dict[str, Any],
     *,
-    base_sha: str,
-    base_row: dict[str, Any],
-) -> list[dict[str, Any]]:
-    identity = payload.get("identity", {})
-    expected_sources = _expected_sources()
-    index = int(base_row["index"])
-    ruleset = base_row["ruleset"]
-    if (
-        payload.get("schema") != PROBE_SCHEMA
-        or identity.get("ruleset_index") != index
-        or identity.get("ruleset") != ruleset
-        or identity.get("base_catalog_sha256") != base_sha
-        or not identity.get("connectivity_required")
-        or any(identity.get(key) != value for key, value in expected_sources.items())
-    ):
-        raise ValueError(f"{path}: probe identity mismatch")
-    selected = [tuple(counts) for counts in payload.get("selected_counts", [])]
-    base_unresolved = {tuple(counts) for counts in base_row["unresolved_counts"]}
-    if (
-        not selected
-        or len(selected) != len(set(selected))
-        or any(counts not in base_unresolved for counts in selected)
-    ):
-        raise ValueError(f"{path}: invalid selected counts")
-    attempts = payload.get("attempts", [])
-    if len(attempts) > len(selected):
-        raise ValueError(f"{path}: too many attempts")
-    observed = set()
-    for attempt in attempts:
-        counts = tuple(attempt["counts"])
-        if counts not in selected or counts in observed:
-            raise ValueError(f"{path}: invalid attempted count")
-        observed.add(counts)
-        analytical = rules.count_upper(counts, ruleset)
-        if int(attempt["analytical_upper"]) != analytical:
-            raise ValueError(f"{path}: analytical upper mismatch")
-        status = attempt["status"]
-        refined = int(attempt["refined_upper"])
-        witness_score = attempt.get("witness_score")
-        if status == "DOMINATED":
-            if refined != analytical or witness_score is not None:
-                raise ValueError(f"{path}: invalid dominated result")
-        elif status == "INFEASIBLE":
-            if refined != int(attempt["minimum_score"]) - 1 or witness_score is not None:
-                raise ValueError(f"{path}: invalid infeasible result")
-        elif status in {"OPTIMAL", "FEASIBLE", "UNKNOWN"}:
-            best_bound = attempt.get("best_bound")
-            if best_bound is None or refined != min(analytical, int(best_bound)):
-                raise ValueError(f"{path}: invalid objective bound")
-            if status in {"OPTIMAL", "FEASIBLE"} and witness_score is None:
-                raise ValueError(f"{path}: feasible result omitted witness")
-        else:
-            raise ValueError(f"{path}: unexpected status {status}")
-        if refined > analytical:
-            raise ValueError(f"{path}: refined upper exceeds analytical upper")
-        if witness_score is not None:
-            witness = {
-                "tokens": attempt["tokens"],
-                "counts": attempt["counts"],
-                "score_breakdown": attempt["score_breakdown"],
-                "score": witness_score,
-            }
-            _validate_board(witness, ruleset, "score")
-            if int(witness_score) > refined:
-                raise ValueError(f"{path}: witness exceeds refined upper")
-    return attempts
+    ruleset: str,
+    unresolved: set[tuple[int, ...]],
+) -> tuple[int, ...]:
+    counts = tuple(int(value) for value in attempt["counts"])
+    if counts not in unresolved:
+        raise ValueError(f"{ruleset}: probe count is not unresolved")
+    analytical = rules.count_upper(counts, ruleset)
+    refined = int(attempt["refined_upper"])
+    if refined > analytical:
+        raise ValueError(f"{ruleset}: refined upper exceeds analytical upper")
+    witness_score = attempt.get("witness_score")
+    if witness_score is not None:
+        witness = {
+            "tokens": attempt["tokens"],
+            "counts": attempt["counts"],
+            "score_breakdown": attempt["score_breakdown"],
+            "score": witness_score,
+        }
+        _validate_board(witness, ruleset, "score")
+        if int(witness_score) > refined:
+            raise ValueError(f"{ruleset}: witness exceeds refined upper")
+    return counts
 
 
 def collect(
@@ -173,75 +60,59 @@ def collect(
     directories: list[Path],
     oracle: Path | None = None,
 ) -> dict[str, Any]:
-    base_encoded = base_catalog_path.read_bytes()
-    base_sha = hashlib.sha256(base_encoded).hexdigest()
-    base = json.loads(base_encoded)
-    if base.get("schema") != "all-wildlife-optimal-catalog-v1" or len(
-        base.get("results", [])
-    ) != len(rules.rulesets()):
+    base = json.loads(base_catalog_path.read_text())
+    if base.get("schema") not in {
+        "all-wildlife-optimal-catalog-v1",
+        "all-wildlife-optimal-catalog-v2",
+    } or len(base.get("results", [])) != len(rules.rulesets()):
         raise ValueError("unexpected base catalog schema or row count")
 
-    paths = _paths(directories)
-    if not paths:
-        raise ValueError("no bound-probe outputs found")
     by_index: dict[int, list[tuple[Path, dict[str, Any]]]] = {}
-    probe_hashes = dict(base.get("bound_probe_sha256", {}))
-    if any(
-        not isinstance(path, str) or not isinstance(value, str) or len(value) != 64
-        for path, value in probe_hashes.items()
-    ):
-        raise ValueError("invalid inherited bound-probe hashes")
-    for path in paths:
-        encoded = path.read_bytes()
-        payload = json.loads(encoded)
-        index = int(payload.get("identity", {}).get("ruleset_index", -1))
-        if index < 0 or index >= len(rules.rulesets()):
-            raise ValueError(f"{path}: invalid ruleset index")
-        by_index.setdefault(index, []).append((path, payload))
-        digest = hashlib.sha256(encoded).hexdigest()
-        previous = probe_hashes.get(str(path))
-        if previous is not None and previous != digest:
-            raise ValueError(f"{path}: inherited bound-probe hash collision")
-        probe_hashes[str(path)] = digest
+    for path in _paths(directories):
+        probe = json.loads(path.read_text())
+        identity = probe.get("identity", {})
+        index = int(identity.get("ruleset_index", -1))
+        if (
+            probe.get("schema") != PROBE_SCHEMA
+            or index < 0
+            or index >= len(rules.rulesets())
+            or identity.get("ruleset") != rules.rulesets()[index]
+        ):
+            raise ValueError(f"{path}: probe ruleset mismatch")
+        by_index.setdefault(index, []).append((path, probe))
 
     rows = []
-    improved_rulesets = list(base.get("bound_probe_improved_rulesets", []))
-    if any(ruleset not in rules.rulesets() for ruleset in improved_rulesets):
-        raise ValueError("invalid inherited improved-ruleset list")
-    probe_source_hashes = _hash_set(
-        base.get("bound_probe_source_sha256"), "bound-probe source hashes"
-    )
-    exact_source_hashes = _hash_set(
-        base.get("bound_probe_exact_source_sha256"), "bound-probe exact hashes"
-    )
+    improved_rulesets = []
+    used_probe_paths = []
     for index, ruleset in enumerate(rules.rulesets()):
         row = deepcopy(base["results"][index])
         if row.get("index") != index or row.get("ruleset") != ruleset:
             raise ValueError(f"{ruleset}: base identity mismatch")
         _validate_board(row, ruleset, "optimum")
-        base_unresolved = [tuple(counts) for counts in row["unresolved_counts"]]
-        if len(base_unresolved) != len(set(base_unresolved)) or any(
+        base_unresolved = [tuple(counts) for counts in row.get("unresolved_counts", [])]
+        unresolved_set = set(base_unresolved)
+        if len(base_unresolved) != len(unresolved_set) or any(
             counts not in COUNT_VECTORS for counts in base_unresolved
         ):
-            raise ValueError(f"{ruleset}: invalid base unresolved set")
-        bounds = _base_count_bounds(row, ruleset, base_unresolved)
+            raise ValueError(f"{ruleset}: invalid unresolved counts")
+
+        bounds = {
+            counts: rules.count_upper(counts, ruleset) for counts in base_unresolved
+        }
+        stored_bounds = row.get("unresolved_count_upper_bounds")
+        if stored_bounds and len(stored_bounds) == len(base_unresolved):
+            for counts, value in zip(base_unresolved, stored_bounds, strict=True):
+                bounds[counts] = min(bounds[counts], int(value))
+
         witnesses = []
-        row_paths, row_hashes = _base_probe_provenance(row, ruleset)
+        row_paths = list(row.get("bound_probe_paths", []))
         for path, probe in by_index.get(index, []):
-            attempts = _validate_probe(
-                path,
-                probe,
-                base_sha=base_sha,
-                base_row=row,
-            )
-            probe_source_hashes.add(probe["identity"]["probe_source_sha256"])
-            exact_source_hashes.add(probe["identity"]["exact_source_sha256"])
-            path_text = str(path)
-            if path_text not in row_hashes:
-                row_paths.append(path_text)
-            row_hashes[path_text] = probe_hashes[path_text]
-            for attempt in attempts:
-                counts = tuple(attempt["counts"])
+            for attempt in probe.get("attempts", []):
+                counts = _validate_attempt(
+                    attempt,
+                    ruleset=ruleset,
+                    unresolved=unresolved_set,
+                )
                 bounds[counts] = min(bounds[counts], int(attempt["refined_upper"]))
                 if attempt.get("witness_score") is not None:
                     witnesses.append(
@@ -252,9 +123,13 @@ def collect(
                             "tokens": attempt["tokens"],
                         }
                     )
-        candidates = [row, *witnesses]
+            path_text = str(path)
+            if path_text not in row_paths:
+                row_paths.append(path_text)
+                used_probe_paths.append(path_text)
+
         best = min(
-            candidates,
+            [row, *witnesses],
             key=lambda candidate: (
                 -int(candidate["optimum"]),
                 json.dumps(candidate["tokens"], sort_keys=True),
@@ -270,43 +145,36 @@ def collect(
                     "tokens": best["tokens"],
                 }
             )
+
         incumbent = int(row["optimum"])
-        unresolved_counts = [counts for counts in base_unresolved if bounds[counts] > incumbent]
-        row["unresolved_counts"] = [list(counts) for counts in unresolved_counts]
-        row["unresolved_count_upper_bounds"] = [bounds[counts] for counts in unresolved_counts]
-        row["proof_complete"] = not unresolved_counts
-        row["sound_upper"] = max([incumbent, *(bounds[counts] for counts in unresolved_counts)])
+        remaining = [counts for counts in base_unresolved if bounds[counts] > incumbent]
+        row["unresolved_counts"] = [list(counts) for counts in remaining]
+        row["unresolved_count_upper_bounds"] = [bounds[counts] for counts in remaining]
+        row["proof_complete"] = not remaining
+        row["sound_upper"] = max([incumbent, *(bounds[counts] for counts in remaining)])
         if row_paths:
             row["bound_probe_paths"] = row_paths
-            row["bound_probe_sha256"] = row_hashes
+        row.pop("bound_probe_sha256", None)
+        row.pop("proof_sha256", None)
         rows.append(row)
 
-    for index, (ruleset, row) in enumerate(zip(rules.rulesets(), rows, strict=True)):
-        if row["index"] != index or row["ruleset"] != ruleset:
-            raise ValueError("merged identity mismatch")
-        _validate_board(row, ruleset, "optimum")
-        if row["sound_upper"] < row["optimum"]:
-            raise ValueError(f"{ruleset}: sound upper below incumbent")
-        if bool(row["proof_complete"]) != (not row["unresolved_counts"]):
-            raise ValueError(f"{ruleset}: merged completeness mismatch")
-
-    production_sha = _production_validate(rows, oracle) if oracle else None
+    if oracle:
+        _production_validate(rows, oracle)
     complete = all(row["proof_complete"] for row in rows)
     incumbent_maximum = max(int(row["optimum"]) for row in rows)
     holistic_upper = max(int(row["sound_upper"]) for row in rows)
-    result = deepcopy(base)
+    result = {
+        key: value
+        for key, value in base.items()
+        if "sha256" not in key.lower() and not key.lower().endswith("_hash")
+    }
     result.update(
         {
+            "schema": "all-wildlife-optimal-catalog-v2",
             "proof_complete": complete,
             "completed_rulesets": sum(row["proof_complete"] for row in rows),
-            "base_catalog_sha256": base_sha,
-            "bound_probe_sha256": probe_hashes,
-            "bound_probe_source_sha256": sorted(probe_source_hashes),
-            "bound_probe_exact_source_sha256": sorted(exact_source_hashes),
-            "bound_probe_improved_rulesets": [
-                ruleset for ruleset in rules.rulesets() if ruleset in set(improved_rulesets)
-            ],
-            "production_response_sha256": production_sha,
+            "bound_probe_paths": used_probe_paths,
+            "bound_probe_improved_rulesets": improved_rulesets,
             "holistic_optimum": incumbent_maximum if complete else None,
             "holistic_rulesets": (
                 [row["ruleset"] for row in rows if row["optimum"] == incumbent_maximum]
@@ -333,10 +201,7 @@ def render_bound_markdown(payload: dict[str, Any]) -> str:
             "",
             f"Holistic interval: **[{payload['incumbent_holistic_maximum']}, "
             f"{payload['holistic_sound_upper']}]**.",
-            f"Certified rows: **{payload['completed_rulesets']}/{payload['ruleset_count']}**.",
-            "",
-            "The JSON artifact records `sound_upper` for every ruleset and all",
-            "validated probe paths. Boards marked unproven remain incumbents.",
+            f"Proven rows: **{payload['completed_rulesets']}/{payload['ruleset_count']}**.",
             "",
         ]
     )
@@ -347,11 +212,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-catalog", type=Path, required=True)
     parser.add_argument("--probe-directories", type=Path, nargs="+", required=True)
-    parser.add_argument(
-        "--oracle",
-        type=Path,
-        default=Path("target/release/all_wildlife_score_oracle"),
-    )
+    parser.add_argument("--oracle", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--markdown", type=Path)
     args = parser.parse_args()

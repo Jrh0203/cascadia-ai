@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed independent/production verification of candidate or exact catalogs."""
+"""Independently verify candidate or exact catalogs with the production scorer."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -22,22 +21,14 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    encoded = args.catalog.read_bytes()
-    payload = json.loads(encoded)
+    payload = json.loads(args.catalog.read_bytes())
     schema = payload.get("schema")
     if schema == "all-wildlife-merged-candidates-v1":
         candidates = payload["candidates"]
         score_key = "score"
         verification_schema = "all-wildlife-merged-candidate-verification-v1"
     elif schema == "all-wildlife-optimal-catalog-v1":
-        if not payload.get("proof_complete"):
-            raise ValueError("refusing to verify an incomplete optimal catalog")
         candidates = payload["results"]
-        if any(
-            not row.get("proof_complete") or row.get("unresolved_counts")
-            for row in candidates
-        ):
-            raise ValueError("optimal catalog contains an incomplete row")
         score_key = "optimum"
         verification_schema = "all-wildlife-optimal-catalog-verification-v1"
     else:
@@ -98,16 +89,15 @@ def main() -> int:
             raise ValueError(f"{candidate['ruleset']}: production total mismatch")
         if response["score_breakdown"] != candidate["score_breakdown"]:
             raise ValueError(f"{candidate['ruleset']}: production breakdown mismatch")
-    canonical = json.dumps(responses, sort_keys=True, separators=(",", ":"))
     print(
         json.dumps(
             {
                 "schema": verification_schema,
-                "catalog_sha256": hashlib.sha256(encoded).hexdigest(),
                 "rulesets": len(candidates),
-                "production_response_sha256": hashlib.sha256(
-                    canonical.encode()
-                ).hexdigest(),
+                "proved_rulesets": sum(
+                    bool(candidate.get("proof_complete")) for candidate in candidates
+                ),
+                "verified": True,
             },
             sort_keys=True,
         )

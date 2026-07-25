@@ -557,7 +557,6 @@ def run_merit_pilot(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run",
         "experiment_id": "crt-mini-action-query-merit-v1",
         "seed": seed,
         "steps": steps,

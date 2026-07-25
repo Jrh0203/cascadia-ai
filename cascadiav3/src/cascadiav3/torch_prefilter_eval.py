@@ -516,7 +516,6 @@ def run_prefilter_eval(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run_prefilter_eval",
         "experiment_id": experiment_id,
         "checkpoint_member": checkpoint_member,
         "checkpoint": str(checkpoint_path),

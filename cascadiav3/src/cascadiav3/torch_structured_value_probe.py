@@ -1,20 +1,16 @@
-"""Held-out action-conditioned score-decomposition representation probe.
+"""Action-conditioned score-decomposition representation probe.
 
 This probe is deliberately upstream of a serving implementation. It asks one
-bounded question: does the incumbent's frozen selected-action representation
-predict real terminal wildlife/habitat/Nature components better than the
-incumbent scalar/value heads on an untouched seed block? A positive result
-only authorizes building an exact-grounded action-decomposition schema; it is
-not gameplay or promotion evidence.
+question: does the incumbent's selected-action representation predict real
+terminal wildlife/habitat/Nature components better than the incumbent
+scalar/value heads? Its result can directly inform the next implementation.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
-import re
 from pathlib import Path
 from typing import Any
 
@@ -30,76 +26,29 @@ SCORE_CATEGORIES = ("wildlife", "habitat", "nature_tokens")
 ACTIVE_SEAT_FEATURE_ATOL = 1.0e-3
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _artifact(path: Path) -> dict[str, Any]:
-    return {"path": str(path), "bytes": path.stat().st_size, "sha256": _sha256(path)}
-
-
-def _seed_interval(seed_domain: str) -> tuple[int, int]:
-    match = re.search(r"first_seed=(\d+),seed_count=(\d+)", seed_domain)
-    if match is None:
-        raise ValueError(f"cannot parse seed interval from {seed_domain!r}")
-    first = int(match.group(1))
-    count = int(match.group(2))
-    if count <= 0:
-        raise ValueError("seed count must be positive")
-    return first, first + count
+    return {"path": str(path), "bytes": path.stat().st_size}
 
 
 def _validate_blocks(
-    manifest: Path,
     manifest_payload: dict[str, Any],
-    weights: Path,
     shards: dict[str, ExpertTensorShard],
 ) -> dict[str, Any]:
-    manifest_hash = _sha256(manifest)
-    weights_hash = _sha256(weights)
-    source_revisions: set[str] = set()
-    intervals: dict[str, tuple[int, int]] = {}
     for name, shard in shards.items():
         metadata = shard.metadata
         if shard.version != SHARD_VERSION_V3:
             raise ValueError(f"{name} block is not a v3 tensor shard")
         if metadata.get("ruleset_id") != RULESET_ID:
             raise ValueError(f"{name} block has the wrong ruleset")
-        if metadata.get("scientific_eligibility") != "gumbel_selfplay_expert_iteration":
-            raise ValueError(f"{name} block is not training-eligible")
         if metadata.get("filter") is not None:
             raise ValueError(f"{name} block must be an exact unfiltered action menu")
-        source_revisions.add(str(metadata.get("source_revision", "")))
-        intervals[name] = _seed_interval(str(metadata.get("seed_domain", "")))
-        teacher = metadata.get("teacher_model", {})
-        teacher_manifest = teacher.get("manifest", {})
-        teacher_weights = teacher.get("weights", {})
-        if teacher_manifest.get("sha256") != manifest_hash:
-            raise ValueError(f"{name} teacher manifest does not match the probed checkpoint")
-        if teacher_weights.get("sha256") != weights_hash:
-            raise ValueError(f"{name} teacher weights do not match the probed checkpoint")
-    if len(source_revisions) != 1 or "" in source_revisions:
-        raise ValueError("probe blocks must share one exact source revision")
-    names = list(intervals)
-    for left_index, left in enumerate(names):
-        for right in names[left_index + 1 :]:
-            left_start, left_end = intervals[left]
-            right_start, right_end = intervals[right]
-            if max(left_start, right_start) < min(left_end, right_end):
-                raise ValueError(f"seed blocks overlap: {left} and {right}")
     config = manifest_payload.get("config", manifest_payload)
     return {
         "ruleset_id": RULESET_ID,
-        "source_revision": next(iter(source_revisions)),
         "checkpoint_tag": manifest_payload.get("checkpoint_tag"),
         "checkpoint_step": manifest_payload.get("step"),
         "model_name": config.get("model_name"),
         "q_quantiles": int(config.get("q_quantiles", 1)),
-        "seed_intervals": {name: list(interval) for name, interval in intervals.items()},
     }
 
 
@@ -337,7 +286,7 @@ def run_probe(
     }
     shards = {name: ExpertTensorShard(path) for name, path in paths.items()}
     try:
-        identity = _validate_blocks(manifest, manifest_payload, weights, shards)
+        identity = _validate_blocks(manifest_payload, shards)
         blocks = {
             name: _extract_block(model, shard, device, batch_size)
             for name, shard in shards.items()
@@ -407,7 +356,6 @@ def run_probe(
     gate_pass = relative_gain >= min_relative_rmse_gain
     return {
         "status": "pass",
-        "scientific_eligibility": "offline_representation_preflight_only",
         "identity": identity,
         "device": str(device),
         "execution": {
@@ -462,7 +410,6 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         "# Action-Conditioned Structured-Value Preflight",
         "",
         f"- Rules: `{report['identity']['ruleset_id']}`",
-        f"- Source: `{report['identity']['source_revision']}`",
         f"- Device: `{report['device']}`",
         f"- CGAB fused: `{report['execution']['cgab_fused']}`",
         f"- Non-exact records: fit `{report['blocks']['fit']['records']}`, "

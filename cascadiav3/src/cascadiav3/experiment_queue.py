@@ -1,9 +1,9 @@
-"""Fail-closed parsing and validation for experiment-queue JSONL files.
+"""Parsing and shell-safe rendering for experiment-queue JSONL files.
 
 Consumed by ``cascadiav3/scripts/run_experiment_queue.sh``: the runner imports
-this module from a python3 heredoc, validates the whole queue file BEFORE any
-stage runs (AGENTS.md fail-closed rule), and receives one TAB-separated
-``name<TAB>script<TAB>env-prefix`` line per stage. Standard library only.
+this module and receives one TAB-separated ``name<TAB>script<TAB>env-prefix``
+line per stage. Standard library only. These checks protect shell execution;
+they do not impose source, seed, receipt, or promotion policy.
 
 Queue file contract (one JSON object per line; blank lines and full-line
 ``#`` comments are skipped):
@@ -15,9 +15,7 @@ Queue file contract (one JSON object per line; blank lines and full-line
   so it must match ``[A-Za-z0-9][A-Za-z0-9._-]*`` and be unique in the file.
 - ``script`` is a path relative to the repo root (john0:
   ``/home/john0/cascadia``); existence is checked via ``missing_scripts``.
-- ``env``    keys must match ``[A-Z][A-Z0-9_]*``. ``SOURCE_REVISION`` is
-  reserved — the runner pins it for every stage and a queue entry must not
-  try to override it. Values may be strings or numbers (normalized to
+- ``env``    keys must match ``[A-Z][A-Z0-9_]*``. Values may be strings or numbers (normalized to
   strings); control characters (tabs/newlines) are rejected because the
   shell hand-off format is line- and TAB-delimited.
 """
@@ -32,7 +30,6 @@ ENV_KEY_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 STAGE_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 _ALLOWED_STAGE_KEYS = frozenset({"name", "script", "env", "notes"})
-_RESERVED_ENV_KEYS = frozenset({"SOURCE_REVISION"})
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
 
 
@@ -44,10 +41,6 @@ def _normalize_env(env: dict, where: str) -> dict:
     for key, value in env.items():
         if not isinstance(key, str) or not ENV_KEY_PATTERN.match(key):
             raise ValueError(f"{where}: invalid env key {key!r} (must match [A-Z][A-Z0-9_]*)")
-        if key in _RESERVED_ENV_KEYS:
-            raise ValueError(
-                f"{where}: env key {key} is reserved (the runner pins it for every stage)"
-            )
         if isinstance(value, bool) or not isinstance(value, (str, int, float)):
             raise ValueError(
                 f"{where}: env value for {key} must be a string or number,"
@@ -68,9 +61,9 @@ def parse_queue(path: str) -> list[dict]:
 
     Raises ValueError (naming the offending line) on: malformed JSON, a
     non-object line, unknown keys, a missing/invalid ``name`` or ``script``,
-    a duplicate stage name, a non-dict ``env``, an invalid or reserved env
+    a duplicate stage name, a non-dict ``env``, an invalid env
     key, a non-scalar env value, control characters anywhere, or a queue
-    with no stages at all. Fail closed: any error rejects the whole file.
+    with no stages at all.
     """
     stages = []
     seen = set()
@@ -176,7 +169,7 @@ def _main(argv: list[str]) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Validate an experiment-queue JSONL file (fail closed)."
+        description="Validate an experiment-queue JSONL file."
     )
     parser.add_argument("queue_file", help="path to the JSONL queue file")
     parser.add_argument(
@@ -202,4 +195,4 @@ if __name__ == "__main__":
     try:
         raise SystemExit(_main(sys.argv[1:]))
     except ValueError as exc:
-        raise SystemExit(f"queue validation failed: {exc}")
+        raise SystemExit(f"queue validation failed: {exc}") from None

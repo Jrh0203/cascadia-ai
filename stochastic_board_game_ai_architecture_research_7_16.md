@@ -1,5 +1,8 @@
 # Beyond CascadiaFormer: a structured exact-rules architecture for stochastic board-game AI
 
+> Historical research note. Any provenance, gate, preregistration, or evidence
+> restrictions below are retired; reuse the technical ideas freely.
+
 **Date:** 2026-07-16
 
 **Literature cutoff:** 2026-07-16

@@ -8,7 +8,6 @@ large completed-Q difference based on one visit is not a reliable comparison.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import random
@@ -21,14 +20,6 @@ from .expert_tensor_shards import ExpertTensorShard, SHARD_VERSION_V2, SHARD_VER
 
 MARGIN_THRESHOLDS = (0.25, 0.5, 1.0, 2.0)
 SNR_THRESHOLDS = (1.0, 1.96, 3.0)
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1 << 20):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _percentile(values: list[float], q: float) -> float | None:
@@ -289,12 +280,10 @@ def audit_shards(paths: list[Path], *, reservoir_size: int = 1_000_000) -> dict[
         return {
             "status": "pass",
             "schema_id": "cascadiav3.pairwise_label_audit.v1",
-            "scientific_eligibility": "training_label_feasibility_only",
             "inputs": [
                 {
                     "path": str(path),
                     "bytes": path.stat().st_size,
-                    "sha256": _sha256(path),
                     "version": shard.version,
                     "record_count": len(shard),
                     "metadata": shard.metadata,
@@ -331,7 +320,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"Evaluable pairs with SNR >= 1.96: `{percent(confidence['fraction_at_least_among_evaluable']['1.96'])}`",
         f"Projected pairs / 100k roots: `{summary['projected_pair_count_per_100k_roots']:.0f}`",
         "",
-        "Engineering feasibility only; this is not gameplay or promotion evidence.",
+        "Use this label-quality view alongside training and gameplay results.",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -342,7 +331,7 @@ def main() -> None:
     parser.add_argument("--tensor", action="append", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--summary-out", type=Path)
-    parser.add_argument("--source-revision", required=True)
+    parser.add_argument("--source-revision", default="", help=argparse.SUPPRESS)
     parser.add_argument("--reservoir-size", type=int, default=1_000_000)
     args = parser.parse_args()
     report = audit_shards(args.tensor, reservoir_size=args.reservoir_size)

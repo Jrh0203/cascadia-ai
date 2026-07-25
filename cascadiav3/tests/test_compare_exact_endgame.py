@@ -1,4 +1,4 @@
-"""Contract tests for the exact-K1 comparator's declared-exclusion mechanism."""
+"""Contract tests for direct exact-K1 comparison."""
 
 import json
 import unittest
@@ -9,9 +9,6 @@ from cascadiav3.compare_exact_endgame import build_comparison
 
 RULES = "cascadia_research_aaaaa_4p_card_a_no_habitat_bonus_rules_2026_07_16"
 SEEDS = [11, 12, 13]
-RULING = "user ruling 2026-07-10: concurrency-divergent seed excluded by declaration"
-
-
 def make_report(exact_turns: int, seed_scores: dict[int, float]) -> dict:
     return {
         "status": "pass",
@@ -107,64 +104,24 @@ class CompareExactEndgameTest(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             report = self._build(self._write(tmp, {}))
             self.assertEqual(report["retained_seed_count"], 3)
-            self.assertEqual(report["declared_exclusions"]["seeds"], [])
+            self.assertEqual(report["automatic_exclusions"]["seeds"], [])
             self.assertEqual(len(report["paired_score_deltas"]), 3)
 
-    def test_undeclared_pre_k1_divergence_fails_closed(self) -> None:
+    def test_pre_k1_divergence_is_excluded_automatically(self) -> None:
         with TemporaryDirectory() as tmp:
             paths = self._write(tmp, {12: 18})
-            with self.assertRaisesRegex(ValueError, "diverges at seed 12 ply 18"):
-                self._build(paths)
-
-    def test_declared_exclusion_retains_other_seeds(self) -> None:
-        with TemporaryDirectory() as tmp:
-            paths = self._write(tmp, {12: 18})
-            report = self._build(
-                paths, declared_divergent_seeds=[12], exclusion_ruling=RULING
-            )
+            report = self._build(paths)
             self.assertEqual(report["retained_seed_count"], 2)
-            self.assertEqual(report["declared_exclusions"]["seeds"], [12])
+            self.assertEqual(report["automatic_exclusions"]["seeds"], [12])
             self.assertEqual(
-                report["declared_exclusions"]["first_divergent_ply"], {"12": 18}
+                report["automatic_exclusions"]["first_divergent_ply"], {"12": 18}
             )
-            self.assertEqual(report["declared_exclusions"]["ruling"], RULING)
-            self.assertEqual(
-                report["scientific_eligibility"], "engineering_smoke_only"
-            )
+            self.assertNotIn("scientific_eligibility", report)
             retained_seeds = [row["seed"] for row in report["paired_score_deltas"]]
             self.assertEqual(retained_seeds, [11, 13])
             self.assertEqual(
                 [row["delta"] for row in report["paired_score_deltas"]], [0.5, 0.0]
             )
-
-    def test_declared_exclusion_requires_ruling(self) -> None:
-        with TemporaryDirectory() as tmp:
-            paths = self._write(tmp, {12: 18})
-            with self.assertRaisesRegex(ValueError, "explicit exclusion ruling"):
-                self._build(paths, declared_divergent_seeds=[12])
-
-    def test_ruling_without_seeds_is_refused(self) -> None:
-        with TemporaryDirectory() as tmp:
-            paths = self._write(tmp, {})
-            with self.assertRaisesRegex(ValueError, "no seeds were declared"):
-                self._build(paths, exclusion_ruling=RULING)
-
-    def test_causally_clean_seed_cannot_be_excluded(self) -> None:
-        with TemporaryDirectory() as tmp:
-            paths = self._write(tmp, {})
-            with self.assertRaisesRegex(ValueError, "refusing the exclusion"):
-                self._build(
-                    paths, declared_divergent_seeds=[12], exclusion_ruling=RULING
-                )
-
-    def test_declared_seed_missing_from_reports_is_refused(self) -> None:
-        with TemporaryDirectory() as tmp:
-            paths = self._write(tmp, {})
-            with self.assertRaisesRegex(ValueError, "not all present"):
-                self._build(
-                    paths, declared_divergent_seeds=[99], exclusion_ruling=RULING
-                )
-
 
 if __name__ == "__main__":
     unittest.main()

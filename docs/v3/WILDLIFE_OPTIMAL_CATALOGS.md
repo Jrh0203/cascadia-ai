@@ -1,5 +1,8 @@
 # Pure-Wildlife Optimal Board Catalogs
 
+> The boards, scores, and mathematical proof statuses remain useful. Historical
+> run receipts, source hashes, and preregistered screens are no longer required.
+
 ## Scope
 
 This analysis asks a deliberately isolated Cascadia question: place exactly

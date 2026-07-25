@@ -1,5 +1,8 @@
 # Gumbel Self-Play Campaign: The 100-Point Plan
 
+> Historical campaign plan. Its technical observations may be reused, but its
+> gates, evidence classes, seed controls, and preregistration rules are retired.
+
 This is the canonical plan for pushing CascadiaFormer past a 100 mean seat
 score in 4-player Cascadia. It replaces the rollout-teacher expert-iteration
 line (EI-0/EI-1) as the active strategy. Implementation landed 2026-07-02.

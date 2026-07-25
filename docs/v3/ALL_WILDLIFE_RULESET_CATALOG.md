@@ -1,5 +1,8 @@
 # All wildlife-card rulesets: exact cap-six catalog
 
+> The boards and mathematical proof statuses remain useful. Historical
+> provenance, receipt, source-identity, and preregistration requirements do not.
+
 Status: implementation and proof-performance calibration in progress. No row
 is published as optimal until its certificate is complete.
 

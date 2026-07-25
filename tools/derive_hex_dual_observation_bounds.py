@@ -11,7 +11,6 @@ isolated vertices without assuming global connectivity.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 import os
@@ -168,13 +167,10 @@ def combine_components(component: list[list[list[int]]]) -> list[list[list[int]]
 
 def collect_shards(paths: list[Path]) -> dict[str, Any]:
     proofs_by_counts: dict[tuple[int, int, int], dict[str, Any]] = {}
-    shard_hashes = {}
     for path in paths:
-        encoded = path.read_bytes()
-        payload = json.loads(encoded)
+        payload = json.loads(path.read_bytes())
         if payload.get("schema") != "hex-dual-observation-bound-shard-v1":
             raise ValueError(f"{path}: unexpected schema")
-        shard_hashes[str(path)] = hashlib.sha256(encoded).hexdigest()
         for proof in payload["proofs"]:
             counts = (
                 int(proof["foxes"]),
@@ -221,7 +217,6 @@ def collect_shards(paths: list[Path]) -> dict[str, Any]:
         "cap": CAP,
         "connected_component_maximum": component,
         "global_maximum": combine_components(component),
-        "shard_sha256": shard_hashes,
         "proofs": proofs,
     }
 

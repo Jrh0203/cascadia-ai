@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 from collections import Counter
@@ -14,14 +13,6 @@ from typing import Any
 SPECIES = ("bear", "elk", "salmon", "hawk", "fox")
 VARIANTS = ("A", "B", "C", "D")
 EXPECTED_RULESETS = len(VARIANTS) ** len(SPECIES)
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _validate_row(row: dict[str, Any], token_count: int, count_cap: int) -> None:
@@ -63,8 +54,7 @@ def _validate_row(row: dict[str, Any], token_count: int, count_cap: int) -> None
 
 
 def export(source: Path, output: Path) -> dict[str, Any]:
-    source_bytes = source.read_bytes()
-    source_document = json.loads(source_bytes)
+    source_document = json.loads(source.read_bytes())
     rows = source_document["results"]
     token_count = int(source_document["token_count"])
     count_cap = int(source_document["count_cap"])
@@ -116,7 +106,6 @@ def export(source: Path, output: Path) -> dict[str, Any]:
     document = {
         "schema": "cascadia-wildlife-atlas-v1",
         "sourceSchema": str(source_document["schema"]),
-        "sourceSha256": hashlib.sha256(source_bytes).hexdigest(),
         "rulesetCount": len(compact_rows),
         "tokenCount": token_count,
         "countCap": count_cap,
@@ -148,8 +137,6 @@ def main() -> None:
         json.dumps(
             {
                 "output": str(args.output),
-                "output_sha256": _sha256(args.output),
-                "source_sha256": document["sourceSha256"],
                 "rows": document["rulesetCount"],
                 "bytes": args.output.stat().st_size,
             },

@@ -170,7 +170,6 @@ def run_union_eval(
     )
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run_prefilter_union_eval",
         "experiment_id": experiment_id,
         "checkpoint": str(checkpoint_path),
         "checkpoint_experiment_id": checkpoint["report"].get("experiment_id"),

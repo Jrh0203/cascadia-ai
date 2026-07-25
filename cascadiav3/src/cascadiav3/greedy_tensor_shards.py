@@ -9,7 +9,6 @@ of raw simulator records.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 import time
@@ -41,7 +40,6 @@ class TensorShardSummary:
     max_token_count: int
     max_action_count: int
     output_bytes: int
-    output_sha256: str
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -56,7 +54,6 @@ class TensorShardSummary:
             "max_token_count": self.max_token_count,
             "max_action_count": self.max_action_count,
             "output_bytes": self.output_bytes,
-            "output_sha256": self.output_sha256,
             "bytes_per_record": self.output_bytes / max(1, self.record_count),
         }
 
@@ -90,14 +87,6 @@ def selected_action_index(record: dict[str, Any]) -> int:
         return action_ids.index(selected)
     except ValueError as exc:
         raise ValueError(f"selected action missing from legal actions for {record['state_hash']}") from exc
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _string_array(value: str):  # type: ignore[no-untyped-def]
@@ -513,7 +502,6 @@ def summarize_tensor_shard(path: Path) -> TensorShardSummary:
             max_token_count=int((token_offsets[1:] - token_offsets[:-1]).max(initial=0)),
             max_action_count=int(action_counts.max(initial=0)),
             output_bytes=path.stat().st_size,
-            output_sha256=_sha256(path),
         )
 
 

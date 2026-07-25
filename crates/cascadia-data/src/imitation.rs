@@ -12,9 +12,8 @@ use cascadia_game::{
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CollectionProvenance, DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord,
-    RankingShardManifest, checksum_file, collection_provenance, collection_provenance_matches,
-    read_array, unix_seconds, write_manifest_atomic, write_slice,
+    DataError, DatasetSplit, FEATURE_SCHEMA, PositionRecord, RankingShardManifest, read_array,
+    unix_seconds, write_manifest_atomic, write_slice,
 };
 
 pub const IMITATION_DATASET_SCHEMA_VERSION: u16 = 1;
@@ -55,8 +54,6 @@ pub struct ImitationTeacherConfig {
     pub rollouts: usize,
     pub prefilter_candidates: usize,
     pub weights_path: String,
-    pub weights_bytes: u64,
-    pub weights_blake3: String,
 }
 
 impl ImitationTeacherConfig {
@@ -72,8 +69,6 @@ impl ImitationTeacherConfig {
             rollouts,
             prefilter_candidates,
             weights_path: weights.display().to_string(),
-            weights_bytes: fs::metadata(&weights)?.len(),
-            weights_blake3: checksum_file(&weights)?,
         })
     }
 
@@ -82,19 +77,9 @@ impl ImitationTeacherConfig {
             || self.rollouts == 0
             || self.prefilter_candidates == 0
             || self.weights_path.trim().is_empty()
-            || self.weights_bytes == 0
-            || self.weights_blake3.trim().is_empty()
         {
             return Err(DataError::InvalidConfig(
                 "imitation teacher metadata is incomplete",
-            ));
-        }
-        let weights = Path::new(&self.weights_path);
-        if fs::metadata(weights)?.len() != self.weights_bytes
-            || checksum_file(weights)? != self.weights_blake3
-        {
-            return Err(DataError::InvalidConfig(
-                "imitation teacher weights failed integrity validation",
             ));
         }
         Ok(())
@@ -429,7 +414,6 @@ pub struct ImitationDatasetManifest {
     pub total_records: usize,
     pub created_unix_seconds: u64,
     pub updated_unix_seconds: u64,
-    pub provenance: CollectionProvenance,
     pub shards: Vec<RankingShardManifest>,
 }
 
@@ -475,7 +459,6 @@ impl ImitationDatasetWriter {
                 total_records: 0,
                 created_unix_seconds: now,
                 updated_unix_seconds: now,
-                provenance: collection_provenance()?,
                 shards: Vec::new(),
             }
         };
@@ -540,7 +523,6 @@ impl ImitationDatasetWriter {
             group_count,
             record_count: records.len(),
             byte_count: metadata.len(),
-            blake3: checksum_file(&path)?,
         });
         self.manifest.completed_games += game_count;
         self.manifest.total_groups += group_count;
@@ -581,9 +563,6 @@ pub fn validate_imitation_dataset(
                 "imitation shard byte count mismatch",
             ));
         }
-        if checksum_file(&path)? != shard.blake3 {
-            return Err(DataError::ChecksumMismatch(path));
-        }
         let shard_records = read_imitation_shard_records(root, manifest.split, shard)?;
         let shard_groups = validate_record_groups(&shard_records, manifest.candidates.group_limit)?;
         if shard_groups != shard.group_count {
@@ -610,7 +589,6 @@ fn validate_resume(
     manifest: &ImitationDatasetManifest,
     config: &ImitationDatasetConfig,
 ) -> Result<(), DataError> {
-    let current_provenance = collection_provenance()?;
     if manifest.schema_version != IMITATION_DATASET_SCHEMA_VERSION
         || manifest.feature_schema != IMITATION_FEATURE_SCHEMA
         || manifest.position_feature_schema != FEATURE_SCHEMA
@@ -623,7 +601,6 @@ fn validate_resume(
         || manifest.teacher != config.teacher
         || manifest.candidates != config.candidates
         || manifest.first_game_index != config.first_game_index
-        || !collection_provenance_matches(&manifest.provenance, &current_provenance)
     {
         return Err(DataError::ResumeMismatch);
     }
@@ -980,7 +957,6 @@ mod tests {
             group_count: 1,
             record_count: records.len(),
             byte_count: fs::metadata(&path).unwrap().len(),
-            blake3: checksum_file(&path).unwrap(),
         };
 
         assert_eq!(

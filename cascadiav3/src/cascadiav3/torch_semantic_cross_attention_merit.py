@@ -55,7 +55,6 @@ class SemanticCrossAttentionConfig:
 
 
 def build_semantic_cross_attention_transformer(config: Any):
-    import torch
     from torch import nn
 
     class CrossAttentionDecoderLayer(nn.Module):
@@ -273,7 +272,6 @@ def run_semantic_cross_attention_pilot(
 
     return {
         "status": "pass",
-        "scientific_eligibility": "dry_run",
         "experiment_id": experiment_id,
         "seed": seed,
         "steps": steps,

@@ -1,5 +1,8 @@
 # Bridge Throughput Investigation (R2.4)
 
+> Historical investigation. Its performance data remains useful, but the old
+> preregistration, launch-refusal, and promotion rules are retired.
+
 Status: **CLOSED 2026-07-13** — every lever measured, none cleared its
 preregistered bar (EXPERIMENT_LOG 07-13 03:25): pipelining +4.2%
 (bit-identical on CUDA, below the 10% bar), CHUNK_ROWS +3.9% bound (eager
