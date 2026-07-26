@@ -175,14 +175,24 @@ def collect(
 
 def render_markdown(payload: dict[str, Any]) -> str:
     status = "COMPLETE" if payload["proof_complete"] else "INCOMPLETE"
+    best_score = payload.get(
+        "holistic_best_score",
+        payload.get("incumbent_holistic_maximum"),
+    )
+    best_rulesets = payload.get(
+        "holistic_best_rulesets",
+        payload.get("incumbent_holistic_rulesets", []),
+    )
+    if best_score is None:
+        raise ValueError("catalog is missing its best incumbent score")
     lines = [
         "# Cap-six wildlife optimum for every card set",
         "",
         f"Proof status: **{status}** "
         f"({payload['completed_rulesets']}/{payload['ruleset_count']}).",
         "",
-        f"Best score found: **{payload['holistic_best_score']}**.",
-        f"Rulesets attaining it: `{', '.join(payload['holistic_best_rulesets'])}`.",
+        f"Best score found: **{best_score}**.",
+        f"Rulesets attaining it: `{', '.join(best_rulesets)}`.",
         "",
         "Each ruleset ID is ordered Bear/Elk/Salmon/Hawk/Fox. Every board has",
         "exactly 20 connected wildlife tokens and at most six of one species.",

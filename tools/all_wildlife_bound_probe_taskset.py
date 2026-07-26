@@ -67,9 +67,10 @@ def build_taskset(
     task_budget: int | None = None,
 ) -> dict[str, Any]:
     catalog = json.loads(catalog_path.read_bytes())
-    if catalog.get("schema") != "all-wildlife-optimal-catalog-v1" or len(
-        catalog.get("results", [])
-    ) != len(rules.rulesets()):
+    if catalog.get("schema") not in {
+        "all-wildlife-optimal-catalog-v1",
+        "all-wildlife-optimal-catalog-v2",
+    } or len(catalog.get("results", [])) != len(rules.rulesets()):
         raise ValueError("unexpected catalog schema or row count")
     if (cases is None) == (top_frontier_above is None):
         raise ValueError("select exactly one of explicit cases or top-frontier mode")

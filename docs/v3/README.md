@@ -22,12 +22,13 @@ The wildlife-card catalog currently has:
 - one validated board for all 1,024 ordered A/B/C/D rulesets;
 - 80 rulesets with completed exact proofs;
 - a best known animal-only score of 85, achieved by eight rulesets;
-- a sound historical all-rules interval of [85, 97] under the 20-animal,
+- a sound all-rules interval of [85, 96] under the 20-animal,
   maximum-six-per-species constraint.
 
+The July 26 bound merge eliminated the last two score-97 count branches.
 The catalog boards and exact-search artifacts remain useful. Their embedded
-hashes and proof-provenance fields are no longer required to continue,
-combine, or improve the search.
+hashes and proof-provenance fields are no longer required to continue, combine,
+or improve the search.
 
 ## Resume here
 

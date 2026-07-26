@@ -54,7 +54,7 @@ export produces a 267 KB purpose-built asset:
 
 ```bash
 python3 tools/export_wildlife_atlas.py \
-  docs/v3/evidence/all_wildlife_catalog_bound_probe_complete659_2026-07-24.json \
+  docs/v3/evidence/all_wildlife_catalog_lean_top97_2026-07-26.json \
   apps/web/public/wildlife-atlas.json
 ```
 
@@ -68,10 +68,11 @@ The exporter validates the board data before writing:
 - every exact row has `score == sound upper`, while every other upper is at
   least its incumbent.
 
+The current compact asset contains the July 26 sound interval `[85, 96]`.
 The client repeats the core schema, row-count, score-sum, token-count, and
 score-interval checks before rendering so malformed boards produce a useful
-error instead of a broken visualization. No source hash, receipt, or
-provenance chain is required.
+error instead of a broken visualization. No source hash, receipt, or provenance
+chain is required.
 
 ## Implementation map
 

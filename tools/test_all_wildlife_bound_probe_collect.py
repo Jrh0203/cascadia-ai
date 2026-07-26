@@ -6,7 +6,7 @@ from pathlib import Path
 
 from tools import all_wildlife_rules as rules
 from tools.all_wildlife_bound_probe import SCHEMA
-from tools.all_wildlife_bound_probe_collect import collect
+from tools.all_wildlife_bound_probe_collect import collect, render_bound_markdown
 
 
 def _tokens() -> list[dict[str, object]]:
@@ -97,6 +97,9 @@ def test_collector_merges_sound_infeasible_bound(tmp_path: Path) -> None:
     assert result["results"][0]["proof_complete"]
     assert result["results"][0]["sound_upper"] == incumbent
     assert result["holistic_sound_upper"] >= result["incumbent_holistic_maximum"]
+    markdown = render_bound_markdown(result)
+    assert f"Best score found: **{result['incumbent_holistic_maximum']}**." in markdown
+    assert "Bounded-maximization wildlife catalog" in markdown
 
 
 def _probe(

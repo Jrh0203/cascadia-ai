@@ -41,6 +41,19 @@ def test_taskset_freezes_explicit_unresolved_case(tmp_path: Path) -> None:
     assert payload["tasks"][0]["current_upper"] == rules.count_upper(counts, "AAAAA")
 
 
+def test_taskset_accepts_merged_v2_catalog(tmp_path: Path) -> None:
+    catalog = tmp_path / "catalog.json"
+    counts = _catalog(catalog)
+    payload = json.loads(catalog.read_text())
+    payload["schema"] = "all-wildlife-optimal-catalog-v2"
+    catalog.write_text(json.dumps(payload))
+
+    taskset = build_taskset(catalog, [f"0:{','.join(map(str, counts))}"])
+
+    assert taskset["task_count"] == 1
+    assert taskset["tasks"][0]["ruleset"] == "AAAAA"
+
+
 def test_taskset_rejects_resolved_case(tmp_path: Path) -> None:
     catalog = tmp_path / "catalog.json"
     counts = _catalog(catalog)
