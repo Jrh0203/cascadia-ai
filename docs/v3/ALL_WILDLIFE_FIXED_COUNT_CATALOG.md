@@ -22,6 +22,16 @@ cells and uses eight search threads.
    Exact CP-SAT work remains selective because proving every cell would be
    dominated by the extreme timeout tail.
 
+After both stages are synchronized, the pipeline automatically writes the
+deterministic best board for every cell under:
+
+```text
+cascadiav3/fleet_outputs/all_wildlife_fixed_count_best_20260726/
+```
+
+Production wins only when its score is higher. Ties use canonical token JSON
+and then stage order, making repeated merges byte-stable.
+
 The run configuration is
 `cascadiav3/fleet/all_wildlife_fixed_count_pipeline_20260726.json`.
 

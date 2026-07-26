@@ -101,4 +101,6 @@ Let the fixed-count pipeline run. Inspect its atomic summary at
 It is safe to stop and resume at any point; only one unpublished chunk per host
 can be lost. Deeply validate the completed shallow stage, then merge each
 production chunk by maximum score while retaining the shallow board whenever
-it remains stronger.
+it remains stronger. The synchronized pipeline performs that deterministic
+merge automatically into
+`cascadiav3/fleet_outputs/all_wildlife_fixed_count_best_20260726/`.
