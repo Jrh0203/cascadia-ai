@@ -1,6 +1,6 @@
 # Campaign State
 
-Updated 2026-07-25.
+Updated 2026-07-26.
 
 ## Resume here
 
@@ -47,6 +47,23 @@ PID, heartbeat, done marker, or receipt exists. Verify the process.
   `optimal` only when the exact solver actually finishes the proof; this is a
   mathematical distinction, not a provenance policy.
 
+### Live exact search
+
+Four direct CP-SAT maximization jobs are running on the two count branches
+that currently define the all-ruleset upper ceiling of 97:
+
+- john1: AADDB `(4,0,6,4,6)`, connected model;
+- john2: ABDDB `(4,0,6,4,6)`, connected model;
+- john3: AADDB `(4,0,6,4,6)`, disconnected upper-bound relaxation;
+- john4: ABDDB `(4,0,6,4,6)`, disconnected upper-bound relaxation.
+
+Each job uses eight solver workers and a practical 30-day ceiling, with no
+short early stop. The commands write one ordinary JSON result and one log per
+host under `cascadiav3/fleet_outputs/lean_top97_20260726/` and
+`cascadiav3/logs/`. There is no receipt, hash, HOLD, heartbeat, seed ledger,
+or collector dependency. As of the 2026-07-26 status check, all four solver
+processes were healthy at roughly 745-797% CPU.
+
 ## Next actions
 
 The audit/provenance teardown is complete across the active runners, solvers,
@@ -54,7 +71,7 @@ training readers, cluster helpers, and documentation. Legacy gate tools were
 removed rather than kept as dormant complexity. No live computation was
 stopped or replaced during the teardown.
 
-Next, establish the actual live process/checkpoint state and resume whichever
-strength or wildlife search has the highest expected value. Benchmark
-concurrency in the course of useful work instead of creating a separate
-approval campaign around it.
+Next, let the four ceiling jobs run and inspect their result JSONs directly
+when they finish. A better witness raises the stored board; a lower objective
+bound contracts the holistic interval. Do not interrupt them to recreate any
+of the retired campaign infrastructure.
