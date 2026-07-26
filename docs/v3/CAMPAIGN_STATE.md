@@ -67,10 +67,11 @@ It covers all 845,824 ruleset/count cells in atomic 256-cell chunks:
   behind shallow coverage on every host;
 - john1-john4: shard indices 0-3 of four, eight search threads each.
 
-The first five live chunks averaged 21.1 seconds, with a 16.4-23.3 second
-range. That early sample projects roughly five hours for shallow coverage;
-allow 5-8 hours as scoring-card complexity changes across the catalog. The
-production stage is expected to take roughly 36-55 additional hours.
+At 14:17 EDT, 62 synchronized chunks (15,872 boards, 1.88%) averaged 26.1
+seconds, with a 32.8-second 90th percentile. That projects roughly six hours
+for shallow coverage; allow 6-8 hours as scoring-card complexity changes
+across the catalog. The production stage is expected to take roughly 36-55
+additional hours.
 
 The live pipeline configuration is
 `cascadiav3/fleet/all_wildlife_fixed_count_pipeline_20260726.json`. john1 runs
