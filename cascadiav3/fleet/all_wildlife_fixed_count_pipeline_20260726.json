@@ -1,0 +1,66 @@
+{
+  "schema": "all-wildlife-fixed-count-pipeline-v1",
+  "state": "running",
+  "created_local": "2026-07-26T14:11:18-04:00",
+  "pipeline_tag": "all_wildlife_fixed_count_pipeline_20260726",
+  "scope": {
+    "rulesets": 1024,
+    "count_vectors": 826,
+    "cells": 845824,
+    "tokens_per_board": 20,
+    "maximum_per_species": 6
+  },
+  "durability": {
+    "chunk_size": 256,
+    "chunk_count": 3304,
+    "publication": "atomic rename after full Rust validation",
+    "resume": "existing chunks are deeply validated and skipped",
+    "maximum_rework_after_interruption": "one active chunk per host",
+    "central_sync_interval_seconds": 300
+  },
+  "stages": [
+    {
+      "name": "shallow",
+      "tag": "all_wildlife_fixed_count_shallow_20260726",
+      "restarts_per_cell": 8,
+      "iterations_per_restart": 20000,
+      "base_seed": 20260726,
+      "status": "running"
+    },
+    {
+      "name": "production",
+      "tag": "all_wildlife_fixed_count_production_20260726",
+      "restarts_per_cell": 12,
+      "iterations_per_restart": 100000,
+      "base_seed": 20260726,
+      "status": "queued_after_shallow"
+    }
+  ],
+  "shards": [
+    {
+      "host": "john1",
+      "shard_index": 0,
+      "shard_count": 4
+    },
+    {
+      "host": "john2",
+      "shard_index": 1,
+      "shard_count": 4
+    },
+    {
+      "host": "john3",
+      "shard_index": 2,
+      "shard_count": 4
+    },
+    {
+      "host": "john4",
+      "shard_index": 3,
+      "shard_count": 4
+    }
+  ],
+  "search_threads_per_host": 8,
+  "summary_paths": {
+    "shallow": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_shallow_20260726/summary.json",
+    "production": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_production_20260726/summary.json"
+  }
+}

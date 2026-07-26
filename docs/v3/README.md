@@ -52,6 +52,8 @@ Details:
 - [FLEET.md](FLEET.md) — Mac mini fleet access
 - [WILDLIFE_OPTIMAL_CATALOGS.md](WILDLIFE_OPTIMAL_CATALOGS.md) — AAAAA/CBDDB work
 - [ALL_WILDLIFE_RULESET_CATALOG.md](ALL_WILDLIFE_RULESET_CATALOG.md) — all 1,024 rulesets
+- [ALL_WILDLIFE_FIXED_COUNT_CATALOG.md](ALL_WILDLIFE_FIXED_COUNT_CATALOG.md) —
+  all 845,824 ruleset/count cells
 - [WILDLIFE_ATLAS_WEB_APP.md](WILDLIFE_ATLAS_WEB_APP.md) — catalog viewer
 
 ## Historical material

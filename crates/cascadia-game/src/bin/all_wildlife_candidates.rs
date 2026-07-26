@@ -11,13 +11,18 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
-use serde::Serialize;
+use cascadia_game::{ScoringCards, ScoringVariant, Wildlife};
+use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use wildlife_solver_support::production_score_all;
 use wildlife_solver_support::{
     COUNT_CAP, Layout, SPECIES_COUNT, TOKEN_COUNT, WildlifeScore, anneal_any_counts,
-    production_score_all, wildlife_name,
+    anneal_fixed_counts, production_score, wildlife_name,
 };
 
 const RULESET_COUNT: usize = 4usize.pow(SPECIES_COUNT as u32);
+const COUNT_VECTOR_COUNT: usize = 826;
+const FIXED_COUNT_CELL_COUNT: usize = RULESET_COUNT * COUNT_VECTOR_COUNT;
 
 fn ruleset(index: usize) -> ([usize; SPECIES_COUNT], String) {
     assert!(index < RULESET_COUNT);
@@ -285,10 +290,42 @@ fn global_upper(cards: [usize; SPECIES_COUNT]) -> u16 {
     best
 }
 
+fn count_vectors() -> Vec<[u8; SPECIES_COUNT]> {
+    let mut vectors = Vec::with_capacity(COUNT_VECTOR_COUNT);
+    for bear in 0..=COUNT_CAP {
+        for elk in 0..=COUNT_CAP {
+            for salmon in 0..=COUNT_CAP {
+                for hawk in 0..=COUNT_CAP {
+                    for fox in 0..=COUNT_CAP {
+                        let counts = [bear, elk, salmon, hawk, fox];
+                        if counts.into_iter().map(usize::from).sum::<usize>() == TOKEN_COUNT {
+                            vectors.push(counts);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(vectors.len(), COUNT_VECTOR_COUNT);
+    vectors
+}
+
 fn score_layout(layout: &Layout, cards: [usize; SPECIES_COUNT]) -> WildlifeScore {
-    let all = production_score_all(layout);
+    let variants = [
+        ScoringVariant::A,
+        ScoringVariant::B,
+        ScoringVariant::C,
+        ScoringVariant::D,
+    ];
+    let cards = ScoringCards {
+        bear: variants[cards[0]],
+        elk: variants[cards[1]],
+        salmon: variants[cards[2]],
+        hawk: variants[cards[3]],
+        fox: variants[cards[4]],
+    };
     WildlifeScore {
-        by_species: std::array::from_fn(|species| all[cards[species]][species]),
+        by_species: production_score(layout, cards),
     }
 }
 
@@ -327,8 +364,50 @@ struct CandidateFile {
     candidates: Vec<Candidate>,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct FixedCountCandidate {
+    cell_index: usize,
+    ruleset_index: usize,
+    count_index: usize,
+    ruleset: String,
+    count_upper: u16,
+    score: u16,
+    score_breakdown: [u16; SPECIES_COUNT],
+    counts: [u8; SPECIES_COUNT],
+    upper_bound_matched: bool,
+    states_evaluated: u64,
+    /// Compact `[q, r, wildlife_index]` records.
+    tokens: Vec<[i8; 3]>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct FixedCountChunkFile {
+    schema: String,
+    token_count: usize,
+    count_cap: u8,
+    total_cells: usize,
+    range_start: usize,
+    range_end: usize,
+    seed: u64,
+    threads: usize,
+    restarts_per_cell: usize,
+    iterations_per_restart: usize,
+    elapsed_seconds: f64,
+    candidates: Vec<FixedCountCandidate>,
+}
+
 #[derive(Clone, Copy)]
 struct Config {
+    start: usize,
+    end: usize,
+    threads: usize,
+    restarts: usize,
+    iterations: usize,
+    seed: u64,
+}
+
+#[derive(Clone, Copy)]
+struct FixedCountConfig {
     start: usize,
     end: usize,
     threads: usize,
@@ -430,6 +509,210 @@ fn generate(output: &Path, config: Config) {
     fs::rename(&temporary, output).expect("publish candidate catalog atomically");
 }
 
+fn fixed_count_identity(
+    cell_index: usize,
+    vectors: &[[u8; SPECIES_COUNT]],
+) -> (
+    usize,
+    usize,
+    [u8; SPECIES_COUNT],
+    [usize; SPECIES_COUNT],
+    String,
+) {
+    assert!(cell_index < FIXED_COUNT_CELL_COUNT);
+    let ruleset_index = cell_index / COUNT_VECTOR_COUNT;
+    let count_index = cell_index % COUNT_VECTOR_COUNT;
+    let counts = vectors[count_index];
+    let (cards, ruleset) = ruleset(ruleset_index);
+    (ruleset_index, count_index, counts, cards, ruleset)
+}
+
+fn validate_fixed_count_chunk(
+    payload: &FixedCountChunkFile,
+    expected: FixedCountConfig,
+) -> Result<(), String> {
+    if payload.schema != "all-wildlife-fixed-count-candidates-v1"
+        || payload.token_count != TOKEN_COUNT
+        || payload.count_cap != COUNT_CAP
+        || payload.total_cells != FIXED_COUNT_CELL_COUNT
+        || payload.range_start != expected.start
+        || payload.range_end != expected.end
+        || payload.seed != expected.seed
+        || payload.restarts_per_cell != expected.restarts
+        || payload.iterations_per_restart != expected.iterations
+        || payload.candidates.len() != expected.end - expected.start
+    {
+        return Err("fixed-count chunk header/configuration mismatch".to_string());
+    }
+    if payload.threads == 0 || payload.threads > expected.threads.max(1) {
+        return Err("fixed-count chunk has an invalid thread count".to_string());
+    }
+
+    let vectors = count_vectors();
+    for (offset, candidate) in payload.candidates.iter().enumerate() {
+        let cell_index = expected.start + offset;
+        let (ruleset_index, count_index, counts, cards, ruleset) =
+            fixed_count_identity(cell_index, &vectors);
+        if candidate.cell_index != cell_index
+            || candidate.ruleset_index != ruleset_index
+            || candidate.count_index != count_index
+            || candidate.ruleset != ruleset
+            || candidate.counts != counts
+            || candidate.count_upper != count_upper(counts, cards)
+            || candidate.score_breakdown.into_iter().sum::<u16>() != candidate.score
+            || candidate.upper_bound_matched != (candidate.score == candidate.count_upper)
+            || candidate.states_evaluated == 0
+            || candidate.tokens.len() != TOKEN_COUNT
+        {
+            return Err(format!("fixed-count cell {cell_index} metadata mismatch"));
+        }
+
+        let mut tokens = Vec::with_capacity(TOKEN_COUNT);
+        for [q, r, species] in candidate.tokens.iter().copied() {
+            let wildlife = Wildlife::ALL
+                .get(usize::try_from(species).map_err(|_| {
+                    format!("fixed-count cell {cell_index} has a negative wildlife index")
+                })?)
+                .copied()
+                .ok_or_else(|| {
+                    format!("fixed-count cell {cell_index} has an invalid wildlife index")
+                })?;
+            tokens.push(wildlife_solver_support::Token {
+                coord: cascadia_game::HexCoord::new(q, r),
+                wildlife,
+            });
+        }
+        for left in 0..tokens.len() {
+            if tokens[left + 1..]
+                .iter()
+                .any(|right| right.coord == tokens[left].coord)
+            {
+                return Err(format!("fixed-count cell {cell_index} overlaps"));
+            }
+        }
+        let layout = Layout { tokens };
+        if !layout.is_connected() || layout.counts() != counts {
+            return Err(format!(
+                "fixed-count cell {cell_index} has an invalid board"
+            ));
+        }
+        let observed = score_layout(&layout, cards);
+        if observed.by_species != candidate.score_breakdown {
+            return Err(format!("fixed-count cell {cell_index} score mismatch"));
+        }
+    }
+    Ok(())
+}
+
+fn generate_fixed_count_chunk(output: &Path, config: FixedCountConfig) {
+    assert!(config.start < config.end && config.end <= FIXED_COUNT_CELL_COUNT);
+    assert!(config.threads > 0 && config.restarts > 0 && config.iterations > 0);
+
+    if output.exists() {
+        let payload: FixedCountChunkFile =
+            serde_json::from_slice(&fs::read(output).expect("read existing fixed-count chunk"))
+                .expect("parse existing fixed-count chunk");
+        validate_fixed_count_chunk(&payload, config)
+            .expect("existing fixed-count chunk failed validation");
+        println!(
+            "resume fixed-count cells {}..{} from {}",
+            config.start,
+            config.end,
+            output.display()
+        );
+        return;
+    }
+
+    let started = Instant::now();
+    let vectors = count_vectors();
+    let task_count = config.end - config.start;
+    let next = AtomicUsize::new(0);
+    let results: Mutex<Vec<Option<FixedCountCandidate>>> =
+        Mutex::new((0..task_count).map(|_| None).collect());
+    let thread_count = config.threads.min(task_count);
+
+    std::thread::scope(|scope| {
+        for _ in 0..thread_count {
+            let next = &next;
+            let results = &results;
+            let vectors = &vectors;
+            scope.spawn(move || {
+                loop {
+                    let local_index = next.fetch_add(1, Ordering::Relaxed);
+                    if local_index >= task_count {
+                        break;
+                    }
+                    let cell_index = config.start + local_index;
+                    let (ruleset_index, count_index, counts, cards, ruleset) =
+                        fixed_count_identity(cell_index, vectors);
+                    let upper = count_upper(counts, cards);
+                    let candidate_seed =
+                        config.seed ^ (cell_index as u64 + 1).wrapping_mul(0x9e37_79b9_7f4a_7c15);
+                    let (layout, score, states_evaluated) = anneal_fixed_counts(
+                        counts,
+                        config.restarts,
+                        config.iterations,
+                        candidate_seed,
+                        |layout| score_layout(layout, cards),
+                        |_| upper,
+                    );
+                    assert_eq!(layout.counts(), counts);
+                    assert!(layout.is_connected());
+                    assert_eq!(score_layout(&layout, cards), score);
+                    let candidate = FixedCountCandidate {
+                        cell_index,
+                        ruleset_index,
+                        count_index,
+                        ruleset,
+                        count_upper: upper,
+                        score: score.total(),
+                        score_breakdown: score.by_species,
+                        counts,
+                        upper_bound_matched: score.total() == upper,
+                        states_evaluated,
+                        tokens: layout
+                            .tokens
+                            .iter()
+                            .map(|token| [token.coord.q, token.coord.r, token.wildlife as i8])
+                            .collect(),
+                    };
+                    results.lock().expect("fixed-count result lock")[local_index] = Some(candidate);
+                }
+            });
+        }
+    });
+
+    let candidates = results
+        .into_inner()
+        .expect("fixed-count result lock")
+        .into_iter()
+        .map(|candidate| candidate.expect("every fixed-count task completed"))
+        .collect();
+    let payload = FixedCountChunkFile {
+        schema: "all-wildlife-fixed-count-candidates-v1".to_string(),
+        token_count: TOKEN_COUNT,
+        count_cap: COUNT_CAP,
+        total_cells: FIXED_COUNT_CELL_COUNT,
+        range_start: config.start,
+        range_end: config.end,
+        seed: config.seed,
+        threads: thread_count,
+        restarts_per_cell: config.restarts,
+        iterations_per_restart: config.iterations,
+        elapsed_seconds: started.elapsed().as_secs_f64(),
+        candidates,
+    };
+    validate_fixed_count_chunk(&payload, config).expect("generated fixed-count chunk validates");
+    let encoded = serde_json::to_vec(&payload).expect("fixed-count candidate JSON serializes");
+    let temporary = output.with_extension("json.tmp");
+    fs::write(&temporary, encoded).expect("write fixed-count candidate chunk");
+    fs::rename(&temporary, output).expect("publish fixed-count candidate chunk atomically");
+    println!(
+        "generated fixed-count cells {}..{} in {:.3}s",
+        config.start, config.end, payload.elapsed_seconds
+    );
+}
+
 fn parse<T: std::str::FromStr>(args: &[String], index: usize, default: T, name: &str) -> T {
     args.get(index)
         .map(|value| value.parse().unwrap_or_else(|_| panic!("invalid {name}")))
@@ -438,6 +721,26 @@ fn parse<T: std::str::FromStr>(args: &[String], index: usize, default: T, name: 
 
 fn main() {
     let args: Vec<_> = env::args().collect();
+    if args.get(1).map(String::as_str) == Some("fixed-count-chunk") {
+        let output = PathBuf::from(args.get(2).unwrap_or_else(|| {
+            panic!(
+                "usage: all_wildlife_candidates fixed-count-chunk OUTPUT \
+                 START END THREADS RESTARTS ITERATIONS SEED"
+            )
+        }));
+        generate_fixed_count_chunk(
+            &output,
+            FixedCountConfig {
+                start: parse(&args, 3, 0, "start"),
+                end: parse(&args, 4, FIXED_COUNT_CELL_COUNT, "end"),
+                threads: parse(&args, 5, 1, "threads"),
+                restarts: parse(&args, 6, 8, "restarts"),
+                iterations: parse(&args, 7, 20_000, "iterations"),
+                seed: parse(&args, 8, 1, "seed"),
+            },
+        );
+        return;
+    }
     let output = PathBuf::from(args.get(1).unwrap_or_else(|| {
         eprintln!(
             "usage: all_wildlife_candidates OUTPUT [START=0] [END=1024] \
@@ -473,5 +776,75 @@ mod tests {
         assert_eq!(global_upper(ruleset(0).0), 72);
         assert_eq!(global_upper([2, 1, 3, 3, 1]), 99);
         assert_eq!(global_upper(ruleset(RULESET_COUNT - 1).0), 87);
+    }
+
+    #[test]
+    fn selected_card_scoring_matches_all_variant_matrix() {
+        let (layout, _, _) = anneal_fixed_counts(
+            [4; SPECIES_COUNT],
+            1,
+            10,
+            11,
+            |layout| {
+                let all = production_score_all(layout);
+                WildlifeScore {
+                    by_species: std::array::from_fn(|species| all[species % 4][species]),
+                }
+            },
+            |_| u16::MAX,
+        );
+        let all = production_score_all(&layout);
+        for index in 0..RULESET_COUNT {
+            let cards = ruleset(index).0;
+            assert_eq!(
+                score_layout(&layout, cards).by_species,
+                std::array::from_fn(|species| all[cards[species]][species])
+            );
+        }
+    }
+
+    #[test]
+    fn fixed_count_cells_have_stable_lexicographic_identity() {
+        let vectors = count_vectors();
+        assert_eq!(vectors.len(), COUNT_VECTOR_COUNT);
+        assert_eq!(vectors[0], [0, 2, 6, 6, 6]);
+        assert_eq!(vectors[COUNT_VECTOR_COUNT - 1], [6, 6, 6, 2, 0]);
+        assert_eq!(fixed_count_identity(0, &vectors).4, "AAAAA");
+        assert_eq!(
+            fixed_count_identity(COUNT_VECTOR_COUNT, &vectors).4,
+            "AAAAB"
+        );
+        assert_eq!(
+            fixed_count_identity(FIXED_COUNT_CELL_COUNT - 1, &vectors).4,
+            "DDDDD"
+        );
+    }
+
+    #[test]
+    fn fixed_count_chunk_is_atomic_and_resumable() {
+        let output = std::env::temp_dir().join(format!(
+            "cascadia-fixed-count-{}-{}.json",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("test")
+        ));
+        let temporary = output.with_extension("json.tmp");
+        let _ = fs::remove_file(&output);
+        let _ = fs::remove_file(&temporary);
+        let config = FixedCountConfig {
+            start: 0,
+            end: 2,
+            threads: 2,
+            restarts: 1,
+            iterations: 10,
+            seed: 17,
+        };
+
+        generate_fixed_count_chunk(&output, config);
+        let first = fs::read(&output).expect("fixed-count test output exists");
+        assert!(!temporary.exists());
+        generate_fixed_count_chunk(&output, config);
+        assert_eq!(fs::read(&output).unwrap(), first);
+
+        fs::remove_file(output).unwrap();
     }
 }
