@@ -29,6 +29,17 @@ deterministic best board for every cell under:
 cascadiav3/fleet_outputs/all_wildlife_fixed_count_best_20260726/
 ```
 
+It then deeply validates the complete merged catalog again, selects the
+highest-scoring count configuration for each of the 1,024 rulesets, and writes:
+
+- `ruleset_catalog.json`: full machine-readable boards and holistic summary;
+- `ruleset_catalog.md`: human-readable leaders and the complete ranking;
+- `wildlife-atlas.json`: compact data for the existing board explorer; and
+- `delivery_summary.json`: the atomic completion signal used by monitoring.
+
+The atlas copy at `apps/web/public/wildlife-atlas.json` is refreshed only after
+the complete reduction validates.
+
 Production wins only when its score is higher. Ties use canonical token JSON
 and then stage order, making repeated merges byte-stable.
 
@@ -150,5 +161,5 @@ Health history is appended to
 `cascadiav3/logs/all_wildlife_fixed_count_watchdog_20260726.jsonl`.
 The synchronizer remains recovery-eligible after all four search workers have
 finished; monitoring stops considering the catalog complete only after both
-stage summaries and the deeply source- and output-validated merged summary are
-present.
+stage summaries, the deeply source- and output-validated merged summary, the
+per-ruleset catalog and Markdown report, and the refreshed atlas are present.

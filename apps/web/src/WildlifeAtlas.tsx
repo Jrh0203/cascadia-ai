@@ -290,7 +290,7 @@ export default function WildlifeAtlas() {
                     aria-pressed={listFilter === filter}
                     onClick={() => setListFilter(filter)}
                   >
-                    {filter === "all" ? "All" : filter === "exact" ? "Proven" : "85s"}
+                    {filter === "all" ? "All" : filter === "exact" ? "Proven" : "Leaders"}
                   </button>
                 ))}
               </div>

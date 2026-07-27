@@ -121,7 +121,7 @@ def test_watchdog_relaunches_an_absent_pipeline(
 ) -> None:
     config = {
         "pipeline_tag": "pipeline",
-        "scope": {"cells": 10},
+        "scope": {"cells": 10, "rulesets": 2},
         "durability": {
             "chunk_size": 2,
             "central_sync_interval_seconds": 300,
@@ -192,7 +192,7 @@ def test_watchdog_relaunches_an_absent_pipeline(
 def test_john1_launch_is_anchored_in_tmux(monkeypatch) -> None:
     config = {
         "pipeline_tag": "pipeline",
-        "scope": {"cells": 10},
+        "scope": {"cells": 10, "rulesets": 2},
         "durability": {"chunk_size": 2},
         "stages": [
             {
@@ -330,8 +330,18 @@ def test_catalog_complete_requires_both_stages_and_deep_best_summary() -> None:
                 "deep_output_validation": True,
                 "validated_output_cells": 10,
             },
+            "delivery": {
+                "complete": True,
+                "deep_validation": True,
+                "validated_cells": 10,
+                "ruleset_count": 2,
+                "catalog_json": "rulesets.json",
+                "catalog_markdown": "rulesets.md",
+                "atlas_outputs": ["atlas.json"],
+            },
         },
         expected_cells=10,
+        expected_rulesets=2,
     )
     assert not watchdog._catalog_complete(
         {
@@ -343,16 +353,28 @@ def test_catalog_complete_requires_both_stages_and_deep_best_summary() -> None:
                 "deep_output_validation": True,
                 "validated_output_cells": 10,
             },
+            "delivery": {
+                "complete": True,
+                "deep_validation": True,
+                "validated_cells": 10,
+                "ruleset_count": 2,
+                "catalog_json": "rulesets.json",
+                "catalog_markdown": "rulesets.md",
+                "atlas_outputs": ["atlas.json"],
+            },
         },
         expected_cells=10,
+        expected_rulesets=2,
     )
     assert not watchdog._catalog_complete(
         {
             "shallow": complete_stage,
             "production": complete_stage,
             "best": None,
+            "delivery": None,
         },
         expected_cells=10,
+        expected_rulesets=2,
     )
 
 
@@ -362,7 +384,7 @@ def test_watchdog_relaunches_sync_after_workers_finish_until_catalog_exists(
 ) -> None:
     config = {
         "pipeline_tag": "pipeline",
-        "scope": {"cells": 10},
+        "scope": {"cells": 10, "rulesets": 2},
         "durability": {
             "chunk_size": 2,
             "central_sync_interval_seconds": 300,

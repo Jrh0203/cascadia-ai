@@ -78,6 +78,7 @@
   "summary_paths": {
     "shallow": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_shallow_20260726/summary.json",
     "production": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_production_20260726/summary.json",
-    "best": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_best_20260726/summary.json"
+    "best": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_best_20260726/summary.json",
+    "delivery": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_best_20260726/delivery_summary.json"
   }
 }

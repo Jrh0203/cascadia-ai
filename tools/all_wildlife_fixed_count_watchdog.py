@@ -534,10 +534,12 @@ def _catalog_complete(
     summaries: dict[str, dict[str, Any] | None],
     *,
     expected_cells: int,
+    expected_rulesets: int,
 ) -> bool:
     shallow = summaries.get("shallow")
     production = summaries.get("production")
     best = summaries.get("best")
+    delivery = summaries.get("delivery")
     stage_summaries_complete = all(
         isinstance(summary, dict)
         and summary.get("complete") is True
@@ -550,6 +552,14 @@ def _catalog_complete(
         and best.get("deep_source_validation") is True
         and best.get("deep_output_validation") is True
         and best.get("validated_output_cells") == expected_cells
+        and isinstance(delivery, dict)
+        and delivery.get("complete") is True
+        and delivery.get("deep_validation") is True
+        and delivery.get("validated_cells") == expected_cells
+        and delivery.get("ruleset_count") == expected_rulesets
+        and bool(delivery.get("catalog_json"))
+        and bool(delivery.get("catalog_markdown"))
+        and bool(delivery.get("atlas_outputs"))
     )
 
 
@@ -602,6 +612,7 @@ def run_watchdog(
     catalog_complete = _catalog_complete(
         summaries,
         expected_cells=config["scope"]["cells"],
+        expected_rulesets=config["scope"]["rulesets"],
     )
 
     if restart:

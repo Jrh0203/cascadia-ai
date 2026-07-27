@@ -25,3 +25,14 @@ PYTHONDONTWRITEBYTECODE=1 "${ROOT}/.venv/bin/python" \
   --output-directory "${ROOT}/cascadiav3/fleet_outputs/${BEST_TAG}" \
   --chunk-size "$CHUNK_SIZE" \
   --deep
+
+BEST_DIRECTORY="${ROOT}/cascadiav3/fleet_outputs/${BEST_TAG}"
+PYTHONDONTWRITEBYTECODE=1 "${ROOT}/.venv/bin/python" \
+  -m tools.all_wildlife_fixed_count_report \
+  "$BEST_DIRECTORY" \
+  --output-json "${BEST_DIRECTORY}/ruleset_catalog.json" \
+  --output-markdown "${BEST_DIRECTORY}/ruleset_catalog.md" \
+  --atlas-output "${BEST_DIRECTORY}/wildlife-atlas.json" \
+  --atlas-output "${ROOT}/apps/web/public/wildlife-atlas.json" \
+  --delivery-summary "${BEST_DIRECTORY}/delivery_summary.json" \
+  --chunk-size "$CHUNK_SIZE"

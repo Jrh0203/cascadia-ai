@@ -100,7 +100,8 @@ forty-five-minute-progress-stalled hosts from their atomic chunks and appends sn
 headless john1 session uses the installer's idempotent hourly crontab fallback.
 Central recovery continues after worker completion until the deterministic
 merged catalog has independently rescored every source and materialized output
-board.
+board, selected one winning board per ruleset, written the holistic Markdown
+report, and refreshed the wildlife atlas asset.
 
 ## Next actions
 
