@@ -55,6 +55,17 @@ class HostStatus:
     detail: str
 
 
+@dataclass(frozen=True)
+class StorageStatus:
+    host: str
+    reachable: bool
+    total_bytes: int | None
+    free_bytes: int | None
+    minimum_free_bytes: int
+    healthy: bool
+    detail: str
+
+
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
@@ -231,6 +242,57 @@ def inspect_host(
         progress_since_epoch=None,
         progress_age_seconds=None,
         progress_stalled=False,
+        healthy=healthy,
+        detail=detail,
+    )
+
+
+def inspect_storage(host: str, *, minimum_free_bytes: int) -> StorageStatus:
+    command = """df -Pk "$HOME" | awk 'END {print $2, $4}'"""
+    try:
+        result = _run_on_host(host, command)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return StorageStatus(
+            host=host,
+            reachable=False,
+            total_bytes=None,
+            free_bytes=None,
+            minimum_free_bytes=minimum_free_bytes,
+            healthy=False,
+            detail=str(error),
+        )
+    fields = result.stdout.split()
+    if (
+        result.returncode != 0
+        or len(fields) != 2
+        or any(not field.isdigit() for field in fields)
+    ):
+        detail = result.stderr.strip() or "could not parse filesystem capacity"
+        return StorageStatus(
+            host=host,
+            reachable=result.returncode == 0,
+            total_bytes=None,
+            free_bytes=None,
+            minimum_free_bytes=minimum_free_bytes,
+            healthy=False,
+            detail=detail,
+        )
+    total_bytes, free_bytes = (int(field) * 1024 for field in fields)
+    healthy = free_bytes >= minimum_free_bytes
+    detail = (
+        "filesystem has sufficient free space"
+        if healthy
+        else (
+            f"filesystem has {free_bytes} free bytes, below the "
+            f"{minimum_free_bytes}-byte minimum"
+        )
+    )
+    return StorageStatus(
+        host=host,
+        reachable=True,
+        total_bytes=total_bytes,
+        free_bytes=free_bytes,
+        minimum_free_bytes=minimum_free_bytes,
         healthy=healthy,
         detail=detail,
     )
@@ -505,6 +567,7 @@ def run_watchdog(
     stale_after_seconds: int,
     progress_stale_after_seconds: int,
     restart: bool,
+    minimum_free_bytes: int = 2 * 1024**3,
 ) -> dict[str, Any]:
     config = json.loads(config_path.read_bytes())
     now_epoch = int(time.time())
@@ -525,6 +588,13 @@ def run_watchdog(
         for shard in config["shards"]
     ]
     status_by_host = {status.host: status for status in statuses}
+    storage = [
+        inspect_storage(
+            shard["host"],
+            minimum_free_bytes=minimum_free_bytes,
+        )
+        for shard in config["shards"]
+    ]
     summaries = {
         name: _read_summary(REPOSITORY / relative)
         for name, relative in config.get("summary_paths", {}).items()
@@ -594,6 +664,8 @@ def run_watchdog(
         "stale_after_seconds": stale_after_seconds,
         "progress_stale_after_seconds": progress_stale_after_seconds,
         "hosts": [asdict(status) for status in statuses],
+        "storage": [asdict(status) for status in storage],
+        "storage_healthy": all(status.healthy for status in storage),
         "sync_running": sync_running,
         "catalog_complete": catalog_complete,
         "summaries": summaries,
@@ -618,17 +690,26 @@ def main() -> int:
         action="store_true",
         help="record health without restarting unhealthy workers",
     )
+    parser.add_argument(
+        "--minimum-free-gib",
+        type=float,
+        default=2.0,
+        help="record a storage warning below this per-host free-space threshold",
+    )
     args = parser.parse_args()
     if args.stale_after_seconds < 60:
         parser.error("--stale-after-seconds must be at least 60")
     if args.progress_stale_after_seconds < 5 * 60:
         parser.error("--progress-stale-after-seconds must be at least 300")
+    if args.minimum_free_gib <= 0:
+        parser.error("--minimum-free-gib must be positive")
     payload = run_watchdog(
         args.config,
         args.status_log,
         stale_after_seconds=args.stale_after_seconds,
         progress_stale_after_seconds=args.progress_stale_after_seconds,
         restart=not args.check_only,
+        minimum_free_bytes=int(args.minimum_free_gib * 1024**3),
     )
     print(json.dumps(payload, sort_keys=True))
     failed_recoveries = {

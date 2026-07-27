@@ -126,10 +126,11 @@ collection performs the deep pass.
 
 ## Hourly health monitoring
 
-The watchdog checks all four pipeline PIDs, stage heartbeats, and cross-run
-chunk advancement; verifies the central synchronizer; records a JSONL health
-snapshot; and restarts an absent, twenty-minute-heartbeat-stale, or
-forty-five-minute-progress-stalled pipeline from its existing chunks:
+The watchdog checks all four pipeline PIDs, stage heartbeats, cross-run chunk
+advancement, and per-host disk headroom; verifies the central synchronizer;
+records a JSONL health snapshot; and restarts an absent,
+twenty-minute-heartbeat-stale, or forty-five-minute-progress-stalled pipeline
+from its existing chunks:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. .venv/bin/python \

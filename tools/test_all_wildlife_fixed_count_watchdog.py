@@ -16,6 +16,18 @@ def _completed(stdout: str, returncode: int = 0) -> subprocess.CompletedProcess[
     )
 
 
+def _healthy_storage(host: str) -> watchdog.StorageStatus:
+    return watchdog.StorageStatus(
+        host=host,
+        reachable=True,
+        total_bytes=10 * 1024**3,
+        free_bytes=5 * 1024**3,
+        minimum_free_bytes=2 * 1024**3,
+        healthy=True,
+        detail="filesystem has sufficient free space",
+    )
+
+
 def test_inspect_host_requires_a_live_process_and_fresh_heartbeat(
     monkeypatch,
 ) -> None:
@@ -66,6 +78,41 @@ def test_inspect_host_marks_stale_heartbeat_unhealthy(monkeypatch) -> None:
 
     assert not status.healthy
     assert "stale" in status.detail
+
+
+def test_inspect_storage_records_healthy_capacity(monkeypatch) -> None:
+    monkeypatch.setattr(
+        watchdog,
+        "_run_on_host",
+        lambda *_args, **_kwargs: _completed("10000000 5000000\n"),
+    )
+
+    status = watchdog.inspect_storage(
+        "john2",
+        minimum_free_bytes=2 * 1024**3,
+    )
+
+    assert status.reachable
+    assert status.healthy
+    assert status.total_bytes == 10_000_000 * 1024
+    assert status.free_bytes == 5_000_000 * 1024
+
+
+def test_inspect_storage_warns_below_minimum(monkeypatch) -> None:
+    monkeypatch.setattr(
+        watchdog,
+        "_run_on_host",
+        lambda *_args, **_kwargs: _completed("10000000 1000000\n"),
+    )
+
+    status = watchdog.inspect_storage(
+        "john1",
+        minimum_free_bytes=2 * 1024**3,
+    )
+
+    assert status.reachable
+    assert not status.healthy
+    assert "below" in status.detail
 
 
 def test_watchdog_relaunches_an_absent_pipeline(
@@ -120,6 +167,11 @@ def test_watchdog_relaunches_an_absent_pipeline(
         detail="pipeline process absent",
     )
     monkeypatch.setattr(watchdog, "inspect_host", lambda *_args, **_kwargs: absent)
+    monkeypatch.setattr(
+        watchdog,
+        "inspect_storage",
+        lambda host, **_kwargs: _healthy_storage(host),
+    )
     monkeypatch.setattr(watchdog, "launch_host", lambda *_args, **_kwargs: "456")
     monkeypatch.setattr(watchdog, "_sync_running", lambda: True)
 
@@ -355,6 +407,11 @@ def test_watchdog_relaunches_sync_after_workers_finish_until_catalog_exists(
         detail="pipeline complete",
     )
     monkeypatch.setattr(watchdog, "inspect_host", lambda *_args, **_kwargs: complete)
+    monkeypatch.setattr(
+        watchdog,
+        "inspect_storage",
+        lambda host, **_kwargs: _healthy_storage(host),
+    )
     monkeypatch.setattr(watchdog, "_sync_running", lambda: False)
     monkeypatch.setattr(watchdog, "launch_sync", lambda *_args, **_kwargs: 789)
 
