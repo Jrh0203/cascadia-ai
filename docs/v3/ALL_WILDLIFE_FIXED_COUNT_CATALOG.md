@@ -69,7 +69,9 @@ count until replacement, so reported progress always means reusable,
 current-scoring work.
 
 john1 synchronizes finished chunks from john2-john4 every five minutes and
-writes an atomic partial summary. The shallow summary is:
+writes an atomic partial summary. Synchronization accepts a remote chunk only
+when it is newer than the central copy, allowing corrected v2 replacements
+without permitting an older v1 file to overwrite them. The shallow summary is:
 
 ```text
 cascadiav3/fleet_outputs/all_wildlife_fixed_count_shallow_20260726/summary.json

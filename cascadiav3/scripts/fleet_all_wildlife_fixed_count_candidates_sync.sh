@@ -34,7 +34,7 @@ test -x "$PYTHON"
 
 while true; do
   for host in $REMOTE_HOSTS; do
-    if ! rsync -a --ignore-existing \
+    if ! rsync -a --update \
       --include='chunk_*.json' --exclude='*' \
       "${host}:cascadia/cascadiav3/fleet_outputs/${FLEET_TAG}/" \
       "${OUTPUT_DIR}/"; then
