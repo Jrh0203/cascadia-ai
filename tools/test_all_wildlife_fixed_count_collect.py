@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 
 from tools import all_wildlife_rules as rules
-from tools.all_wildlife_fixed_count_collect import TOTAL_CELLS, collect
+from tools.all_wildlife_fixed_count_collect import (
+    SCHEMA_V1,
+    SCHEMA_V2,
+    TOTAL_CELLS,
+    _legacy_chunk_needs_elk_d_regeneration,
+    collect,
+)
 
 
 def _chunk(path: Path) -> None:
@@ -68,6 +74,32 @@ def test_collect_validates_incremental_chunk_deeply(tmp_path: Path) -> None:
     assert summary["first_missing_chunks"][0] == 1
     assert summary["seed"] == 17
     assert summary["canonical_upper_bound_matches"] in {0, 1}
+
+
+def test_collect_accepts_current_chunk_schema(tmp_path: Path) -> None:
+    path = tmp_path / "chunk_00000.json"
+    _chunk(path)
+    payload = json.loads(path.read_text())
+    payload["schema"] = SCHEMA_V2
+    path.write_text(json.dumps(payload))
+
+    assert collect([tmp_path], chunk_size=1, deep=True)["completed_cells"] == 1
+
+
+def test_legacy_elk_d_chunks_require_regeneration() -> None:
+    elk_d_start = 192 * len(rules.count_vectors())
+
+    assert not _legacy_chunk_needs_elk_d_regeneration(SCHEMA_V1, 0, 1)
+    assert _legacy_chunk_needs_elk_d_regeneration(
+        SCHEMA_V1,
+        elk_d_start,
+        elk_d_start + 1,
+    )
+    assert not _legacy_chunk_needs_elk_d_regeneration(
+        SCHEMA_V2,
+        elk_d_start,
+        elk_d_start + 1,
+    )
 
 
 def test_collect_rejects_duplicate_chunk_across_directories(tmp_path: Path) -> None:

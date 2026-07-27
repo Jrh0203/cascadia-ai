@@ -1,6 +1,6 @@
 # Campaign State
 
-Updated 2026-07-26.
+Updated 2026-07-27.
 
 ## Resume here
 
@@ -54,10 +54,6 @@ PID, heartbeat, done marker, or receipt exists. Verify the process.
 
 ### Live fixed-count search
 
-The 32-case CP-SAT ceiling queue was intentionally stopped at approximately
-14:00 EDT on 2026-07-26. It had not completed its first long case on any host,
-so there were no new final probe JSONs to merge. Its logs remain available.
-
 The fleet now runs the complete fixed-count candidate pipeline described in
 [ALL_WILDLIFE_FIXED_COUNT_CATALOG.md](ALL_WILDLIFE_FIXED_COUNT_CATALOG.md).
 It covers all 845,824 ruleset/count cells in atomic 256-cell chunks:
@@ -67,11 +63,17 @@ It covers all 845,824 ruleset/count cells in atomic 256-cell chunks:
   behind shallow coverage on every host;
 - john1-john4: shard indices 0-3 of four, eight search threads each.
 
-At 14:17 EDT, 62 synchronized chunks (15,872 boards, 1.88%) averaged 26.1
-seconds, with a 32.8-second 90th percentile. That projects roughly six hours
-for shallow coverage; allow 6-8 hours as scoring-card complexity changes
-across the catalog. The production stage is expected to take roughly 36-55
-additional hours.
+The first pass stopped at 35.5% after its score-consistency assertion exposed
+an order-dependent Elk-D recurrence. The corrected scorer explicitly optimizes
+disjoint subsets around ring centers and uses a constant-size fast path for
+the catalog's maximum-six constraint. Corrected output is schema v2. The 929
+unaffected v1 chunks remain reusable; 244 already-generated v1 chunks
+containing Elk D are excluded from progress and atomically regenerated.
+
+At 02:09 EDT on July 27, corrected reusable coverage was 929 chunks / 237,824
+boards (28.12%). All four hosts resumed at 02:11 EDT. Initial corrected chunks
+took 26-42 seconds, projecting roughly 5-7 fleet-hours for the rest of shallow
+coverage. The production stage remains approximately 36-55 additional hours.
 
 The live pipeline configuration is
 `cascadiav3/fleet/all_wildlife_fixed_count_pipeline_20260726.json`. john1 runs
@@ -90,6 +92,12 @@ for host in john2 john3 john4; do
 done
 ```
 
+An hourly watchdog checks exact pipeline PIDs, twenty-minute stage-heartbeat
+freshness, and the central synchronizer. It automatically resumes unhealthy
+hosts from their atomic chunks and appends snapshots to
+`cascadiav3/logs/all_wildlife_fixed_count_watchdog_20260726.jsonl`. The
+headless john1 session uses the installer's idempotent hourly crontab fallback.
+
 ## Next actions
 
 The audit/provenance teardown is complete across the active runners, solvers,
@@ -97,7 +105,8 @@ training readers, cluster helpers, and documentation. Legacy gate tools were
 removed rather than kept as dormant complexity. No live computation was
 stopped or replaced during the teardown.
 
-Let the fixed-count pipeline run. Inspect its atomic summary at
+Let the fixed-count pipeline and hourly watchdog run. Inspect the atomic
+summary at
 `cascadiav3/fleet_outputs/all_wildlife_fixed_count_shallow_20260726/summary.json`.
 It is safe to stop and resume at any point; only one unpublished chunk per host
 can be lost. Deeply validate the completed shallow stage, then merge each

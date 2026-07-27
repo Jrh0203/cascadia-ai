@@ -3,6 +3,7 @@
   "state": "running",
   "created_local": "2026-07-26T14:11:18-04:00",
   "pipeline_tag": "all_wildlife_fixed_count_pipeline_20260726",
+  "scoring_revision": "elk-d-order-invariant-v2",
   "scope": {
     "rulesets": 1024,
     "count_vectors": 826,
@@ -15,6 +16,7 @@
     "chunk_count": 3304,
     "publication": "atomic rename after full Rust validation",
     "resume": "existing chunks are deeply validated and skipped",
+    "legacy_chunk_migration": "v1 chunks containing Elk D are atomically regenerated as v2; unaffected v1 chunks remain reusable",
     "maximum_rework_after_interruption": "one active chunk per host",
     "central_sync_interval_seconds": 300
   },
@@ -65,6 +67,13 @@
     }
   ],
   "search_threads_per_host": 8,
+  "monitoring": {
+    "watchdog": "tools/all_wildlife_fixed_count_watchdog.py",
+    "interval_seconds": 3600,
+    "stale_heartbeat_seconds": 1200,
+    "automatic_recovery": true,
+    "status_log": "cascadiav3/logs/all_wildlife_fixed_count_watchdog_20260726.jsonl"
+  },
   "summary_paths": {
     "shallow": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_shallow_20260726/summary.json",
     "production": "cascadiav3/fleet_outputs/all_wildlife_fixed_count_production_20260726/summary.json",

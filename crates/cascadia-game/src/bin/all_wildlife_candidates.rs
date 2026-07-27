@@ -23,6 +23,8 @@ use wildlife_solver_support::{
 const RULESET_COUNT: usize = 4usize.pow(SPECIES_COUNT as u32);
 const COUNT_VECTOR_COUNT: usize = 826;
 const FIXED_COUNT_CELL_COUNT: usize = RULESET_COUNT * COUNT_VECTOR_COUNT;
+const FIXED_COUNT_SCHEMA_V1: &str = "all-wildlife-fixed-count-candidates-v1";
+const FIXED_COUNT_SCHEMA_V2: &str = "all-wildlife-fixed-count-candidates-v2";
 
 fn ruleset(index: usize) -> ([usize; SPECIES_COUNT], String) {
     assert!(index < RULESET_COUNT);
@@ -527,12 +529,25 @@ fn fixed_count_identity(
     (ruleset_index, count_index, counts, cards, ruleset)
 }
 
-fn validate_fixed_count_chunk(
+fn fixed_count_range_uses_elk_d(start: usize, end: usize) -> bool {
+    let first_ruleset = start / COUNT_VECTOR_COUNT;
+    let last_ruleset = (end - 1) / COUNT_VECTOR_COUNT;
+    (first_ruleset..=last_ruleset).any(|ruleset_index| ruleset(ruleset_index).0[1] == 3)
+}
+
+fn fixed_count_chunk_needs_regeneration(payload: &FixedCountChunkFile) -> bool {
+    payload.schema == FIXED_COUNT_SCHEMA_V1
+        && fixed_count_range_uses_elk_d(payload.range_start, payload.range_end)
+}
+
+fn validate_fixed_count_chunk_header(
     payload: &FixedCountChunkFile,
     expected: FixedCountConfig,
 ) -> Result<(), String> {
-    if payload.schema != "all-wildlife-fixed-count-candidates-v1"
-        || payload.token_count != TOKEN_COUNT
+    if !matches!(
+        payload.schema.as_str(),
+        FIXED_COUNT_SCHEMA_V1 | FIXED_COUNT_SCHEMA_V2
+    ) || payload.token_count != TOKEN_COUNT
         || payload.count_cap != COUNT_CAP
         || payload.total_cells != FIXED_COUNT_CELL_COUNT
         || payload.range_start != expected.start
@@ -547,7 +562,14 @@ fn validate_fixed_count_chunk(
     if payload.threads == 0 || payload.threads > expected.threads.max(1) {
         return Err("fixed-count chunk has an invalid thread count".to_string());
     }
+    Ok(())
+}
 
+fn validate_fixed_count_chunk(
+    payload: &FixedCountChunkFile,
+    expected: FixedCountConfig,
+) -> Result<(), String> {
+    validate_fixed_count_chunk_header(payload, expected)?;
     let vectors = count_vectors();
     for (offset, candidate) in payload.candidates.iter().enumerate() {
         let cell_index = expected.start + offset;
@@ -612,15 +634,26 @@ fn generate_fixed_count_chunk(output: &Path, config: FixedCountConfig) {
         let payload: FixedCountChunkFile =
             serde_json::from_slice(&fs::read(output).expect("read existing fixed-count chunk"))
                 .expect("parse existing fixed-count chunk");
-        validate_fixed_count_chunk(&payload, config)
-            .expect("existing fixed-count chunk failed validation");
-        println!(
-            "resume fixed-count cells {}..{} from {}",
-            config.start,
-            config.end,
-            output.display()
-        );
-        return;
+        validate_fixed_count_chunk_header(&payload, config)
+            .expect("existing fixed-count chunk header failed validation");
+        if fixed_count_chunk_needs_regeneration(&payload) {
+            println!(
+                "regenerate legacy Elk-D fixed-count cells {}..{} from {}",
+                config.start,
+                config.end,
+                output.display()
+            );
+        } else {
+            validate_fixed_count_chunk(&payload, config)
+                .expect("existing fixed-count chunk failed validation");
+            println!(
+                "resume fixed-count cells {}..{} from {}",
+                config.start,
+                config.end,
+                output.display()
+            );
+            return;
+        }
     }
 
     let started = Instant::now();
@@ -658,7 +691,11 @@ fn generate_fixed_count_chunk(output: &Path, config: FixedCountConfig) {
                     );
                     assert_eq!(layout.counts(), counts);
                     assert!(layout.is_connected());
-                    assert_eq!(score_layout(&layout, cards), score);
+                    assert_eq!(
+                        score_layout(&layout, cards),
+                        score,
+                        "annealer score drift for fixed-count cell {cell_index} ({ruleset})"
+                    );
                     let candidate = FixedCountCandidate {
                         cell_index,
                         ruleset_index,
@@ -689,7 +726,7 @@ fn generate_fixed_count_chunk(output: &Path, config: FixedCountConfig) {
         .map(|candidate| candidate.expect("every fixed-count task completed"))
         .collect();
     let payload = FixedCountChunkFile {
-        schema: "all-wildlife-fixed-count-candidates-v1".to_string(),
+        schema: FIXED_COUNT_SCHEMA_V2.to_string(),
         token_count: TOKEN_COUNT,
         count_cap: COUNT_CAP,
         total_cells: FIXED_COUNT_CELL_COUNT,
@@ -821,6 +858,41 @@ mod tests {
     }
 
     #[test]
+    fn legacy_chunks_are_regenerated_only_when_they_include_elk_d() {
+        let config = FixedCountConfig {
+            start: 0,
+            end: 1,
+            threads: 1,
+            restarts: 1,
+            iterations: 1,
+            seed: 1,
+        };
+        let mut payload = FixedCountChunkFile {
+            schema: FIXED_COUNT_SCHEMA_V1.to_string(),
+            token_count: TOKEN_COUNT,
+            count_cap: COUNT_CAP,
+            total_cells: FIXED_COUNT_CELL_COUNT,
+            range_start: config.start,
+            range_end: config.end,
+            seed: config.seed,
+            threads: config.threads,
+            restarts_per_cell: config.restarts,
+            iterations_per_restart: config.iterations,
+            elapsed_seconds: 0.0,
+            candidates: Vec::new(),
+        };
+        assert!(!fixed_count_chunk_needs_regeneration(&payload));
+
+        payload.range_start = 192 * COUNT_VECTOR_COUNT;
+        payload.range_end = payload.range_start + 1;
+        assert_eq!(ruleset(payload.range_start / COUNT_VECTOR_COUNT).1, "ADAAA");
+        assert!(fixed_count_chunk_needs_regeneration(&payload));
+
+        payload.schema = FIXED_COUNT_SCHEMA_V2.to_string();
+        assert!(!fixed_count_chunk_needs_regeneration(&payload));
+    }
+
+    #[test]
     fn fixed_count_chunk_is_atomic_and_resumable() {
         let output = std::env::temp_dir().join(format!(
             "cascadia-fixed-count-{}-{}.json",
@@ -844,6 +916,38 @@ mod tests {
         assert!(!temporary.exists());
         generate_fixed_count_chunk(&output, config);
         assert_eq!(fs::read(&output).unwrap(), first);
+
+        fs::remove_file(output).unwrap();
+    }
+
+    #[test]
+    fn legacy_elk_d_chunk_is_atomically_regenerated() {
+        let output = std::env::temp_dir().join(format!(
+            "cascadia-fixed-count-elk-d-migration-{}.json",
+            std::process::id(),
+        ));
+        let _ = fs::remove_file(&output);
+        let config = FixedCountConfig {
+            start: 192 * COUNT_VECTOR_COUNT,
+            end: 192 * COUNT_VECTOR_COUNT + 1,
+            threads: 1,
+            restarts: 1,
+            iterations: 1,
+            seed: 23,
+        };
+
+        generate_fixed_count_chunk(&output, config);
+        let mut legacy: FixedCountChunkFile =
+            serde_json::from_slice(&fs::read(&output).unwrap()).unwrap();
+        assert_eq!(legacy.schema, FIXED_COUNT_SCHEMA_V2);
+        legacy.schema = FIXED_COUNT_SCHEMA_V1.to_string();
+        fs::write(&output, serde_json::to_vec(&legacy).unwrap()).unwrap();
+
+        generate_fixed_count_chunk(&output, config);
+        let regenerated: FixedCountChunkFile =
+            serde_json::from_slice(&fs::read(&output).unwrap()).unwrap();
+        assert_eq!(regenerated.schema, FIXED_COUNT_SCHEMA_V2);
+        validate_fixed_count_chunk(&regenerated, config).unwrap();
 
         fs::remove_file(output).unwrap();
     }

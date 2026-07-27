@@ -51,6 +51,23 @@ validated, and skipped. An interruption can lose only the active unpublished
 chunk on each host—normally tens of seconds in the shallow stage. Completed
 chunks never need to be regenerated.
 
+### Elk-D scoring revision
+
+The first run exposed an order-dependence bug in Elk-D scoring: the old
+set-packing recurrence greedily claimed every still-unassigned elk around a
+ring center. Reordering the identical coordinates could therefore change the
+score. The corrected scorer explicitly considers every nonempty subset around
+each center and maximizes over disjoint groups. A constant-size bitmask fast
+path keeps the common zero-to-six-elk case inexpensive.
+
+Corrected chunks use schema
+`all-wildlife-fixed-count-candidates-v2`. On resume, v1 chunks that do not
+contain Elk D are still deeply validated and reused. V1 chunks containing Elk
+D are regenerated and replaced atomically only after the corrected chunk is
+complete. The collector excludes those stale v1 chunks from its completion
+count until replacement, so reported progress always means reusable,
+current-scoring work.
+
 john1 synchronizes finished chunks from john2-john4 every five minutes and
 writes an atomic partial summary. The shallow summary is:
 
@@ -98,3 +115,26 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. .venv/bin/python \
 `--deep` independently recomputes every species score in Python. The recurring
 five-minute synchronizer performs the cheaper structural validation; the final
 collection performs the deep pass.
+
+## Hourly health monitoring
+
+The watchdog checks all four pipeline PIDs and stage heartbeats, verifies the
+central synchronizer, records a JSONL health snapshot, and restarts an absent
+or twenty-minute-stale pipeline from its existing chunks:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. .venv/bin/python \
+  tools/all_wildlife_fixed_count_watchdog.py
+```
+
+The macOS installer registers that check as a per-user background launchd job
+with a one-hour interval. In a headless/background login domain where launchd
+rejects a LaunchAgent, it installs the equivalent idempotent hourly crontab
+entry instead:
+
+```bash
+cascadiav3/scripts/install_all_wildlife_fixed_count_watchdog.sh
+```
+
+Health history is appended to
+`cascadiav3/logs/all_wildlife_fixed_count_watchdog_20260726.jsonl`.

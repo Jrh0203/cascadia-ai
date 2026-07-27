@@ -22,7 +22,9 @@ mkdir -p "$LOG_DIR"
 test -x "$PIPELINE"
 rm -f "$PID_FILE"
 
-/usr/bin/nohup /bin/bash "$PIPELINE" > "$LOG" 2>&1 < /dev/null &
+printf '%s host=%s action=pipeline-launch\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SHARD_HOST" >> "$LOG"
+/usr/bin/nohup /bin/bash "$PIPELINE" >> "$LOG" 2>&1 < /dev/null &
 nohup_pid=$!
 printf '%s\n' "$nohup_pid" > "$PID_FILE"
 printf '%s\n' "$nohup_pid"

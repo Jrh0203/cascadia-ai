@@ -201,16 +201,22 @@ def _score_elk_d(ordered: list[tuple[int, int]]) -> int:
                     mask |= 1 << index[cell]
             if mask:
                 rings.add(mask)
-    dp = [0] * (1 << len(ordered))
     table = (0, 2, 5, 8, 12, 16, 21)
-    for state in range(1, len(dp)):
-        first = (state & -state).bit_length() - 1
-        for ring in rings:
-            if not ring & (1 << first):
-                continue
-            claimed = ring & state
-            dp[state] = max(dp[state], table[claimed.bit_count()] + dp[state & ~claimed])
-    return dp[-1]
+    groups = {
+        (group, table[group.bit_count()])
+        for ring in rings
+        for group in _nonempty_subsets(ring)
+    }
+    return _maximum_disjoint_groups(len(ordered), groups)
+
+
+def _nonempty_subsets(mask: int) -> list[int]:
+    subsets = []
+    subset = mask
+    while subset:
+        subsets.append(subset)
+        subset = (subset - 1) & mask
+    return subsets
 
 
 def _score_elk(coords: set[tuple[int, int]], variant: str) -> int:

@@ -543,28 +543,62 @@ fn score_elk_rings(positions: &[HexCoord]) -> u16 {
     rings.sort_unstable();
     rings.dedup();
 
-    let state_count = 1usize << n;
-    let mut dp = vec![0u16; state_count];
-    for state in 1..state_count {
-        let first = state.trailing_zeros();
-        for ring in &rings {
-            if ring & (1 << first) == 0 {
-                continue;
+    // A scoring group may use any nonempty subset of the elk surrounding a
+    // center. Enumerate those groups explicitly before the disjoint-set DP.
+    // Claiming every currently unassigned elk around a center makes the result
+    // depend on the input ordering: elk assigned earlier can remove arbitrary
+    // members of a ring, while later elk cannot make the same choice.
+    if n <= 6 {
+        let mut valid_groups = 0u64;
+        for ring in rings {
+            let mut group = ring;
+            while group != 0 {
+                valid_groups |= 1u64 << group;
+                group = (group - 1) & ring;
             }
-            let claimed = *ring & state as u32;
-            let score = match claimed.count_ones() {
-                0 => 0,
-                1 => 2,
-                2 => 5,
-                3 => 8,
-                4 => 12,
-                5 => 16,
-                _ => 21,
-            };
-            dp[state] = dp[state].max(score + dp[state & !(claimed as usize)]);
+        }
+
+        let state_count = 1usize << n;
+        let mut dp = [0u16; 64];
+        for state in 1..state_count {
+            let first = 1usize << state.trailing_zeros();
+            let mut group = state;
+            while group != 0 {
+                if group & first != 0 && valid_groups & (1u64 << group) != 0 {
+                    dp[state] = dp[state]
+                        .max(elk_ring_group_score(group.count_ones()) + dp[state & !group]);
+                }
+                group = (group - 1) & state;
+            }
+        }
+        return dp[state_count - 1];
+    }
+
+    let mut seen_groups = vec![false; 1usize << n];
+    let mut groups = Vec::new();
+    for ring in rings {
+        let mut group = ring;
+        while group != 0 {
+            if !seen_groups[group as usize] {
+                seen_groups[group as usize] = true;
+                groups.push((group, elk_ring_group_score(group.count_ones())));
+            }
+            group = (group - 1) & ring;
         }
     }
-    dp[state_count - 1]
+    maximize_disjoint_groups(n, &groups)
+}
+
+#[inline]
+fn elk_ring_group_score(size: u32) -> u16 {
+    match size {
+        1 => 2,
+        2 => 5,
+        3 => 8,
+        4 => 12,
+        5 => 16,
+        _ => 21,
+    }
 }
 
 fn score_salmon(board: &Board, variant: ScoringVariant) -> u16 {
@@ -875,13 +909,23 @@ fn connected_subset(mask: u32, adjacency: &[u32]) -> bool {
 }
 
 fn maximize_disjoint_groups(n: usize, groups: &[(u32, u16)]) -> u16 {
+    let mut groups_by_member = vec![Vec::new(); n];
+    for &(group, score) in groups {
+        let mut members = group;
+        while members != 0 {
+            let member = members.trailing_zeros() as usize;
+            members &= members - 1;
+            groups_by_member[member].push((group, score));
+        }
+    }
+
     let state_count = 1usize << n;
     let mut dp = vec![0u16; state_count];
     for state in 1..state_count {
-        let first = state.trailing_zeros();
-        for (group, score) in groups {
-            if group & (1 << first) != 0 && group & state as u32 == *group {
-                dp[state] = dp[state].max(*score + dp[state & !(*group as usize)]);
+        let first = state.trailing_zeros() as usize;
+        for &(group, score) in &groups_by_member[first] {
+            if group & state as u32 == group {
+                dp[state] = dp[state].max(score + dp[state & !(group as usize)]);
             }
         }
     }
@@ -1201,5 +1245,25 @@ mod tests {
         .unwrap();
         let scores = score_game(&game);
         assert!(scores.iter().all(|score| score.total == score.base_total));
+    }
+
+    #[test]
+    fn elk_d_score_is_permutation_and_translation_invariant_for_catalog_regression() {
+        let positions = vec![
+            HexCoord::new(-3, 2),
+            HexCoord::new(-3, 1),
+            HexCoord::new(-5, 3),
+            HexCoord::new(-3, 4),
+            HexCoord::new(-4, 4),
+            HexCoord::new(-2, 3),
+        ];
+        let mut translated = positions
+            .iter()
+            .map(|position| HexCoord::new(position.q + 5, position.r + 1))
+            .collect::<Vec<_>>();
+        translated.sort_by_key(|position| (position.r, position.q));
+
+        assert_eq!(score_elk_rings(&positions), 17);
+        assert_eq!(score_elk_rings(&translated), 17);
     }
 }

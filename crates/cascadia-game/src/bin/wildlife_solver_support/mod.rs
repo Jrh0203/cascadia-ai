@@ -374,7 +374,17 @@ pub fn anneal_fixed_counts(
         }
     }
 
+    assert_eq!(
+        score_layout(&global_layout),
+        global_score,
+        "fixed-count annealer score drift before normalization"
+    );
     global_layout.normalize();
+    assert_eq!(
+        score_layout(&global_layout),
+        global_score,
+        "fixed-count annealer score drift after normalization"
+    );
     (global_layout, global_score, evaluated)
 }
 
@@ -422,7 +432,17 @@ pub fn anneal_any_counts(
         }
     }
 
+    assert_eq!(
+        score_layout(&global_layout),
+        global_score,
+        "unconstrained annealer score drift before normalization"
+    );
     global_layout.normalize();
+    assert_eq!(
+        score_layout(&global_layout),
+        global_score,
+        "unconstrained annealer score drift after normalization"
+    );
     (global_layout, global_score, evaluated)
 }
 

@@ -99,6 +99,24 @@ def test_known_boards_score_identically_under_mixed_cards() -> None:
         )
 
 
+def test_elk_d_is_permutation_invariant_for_catalog_regression() -> None:
+    positions = [
+        (-3, 2),
+        (-3, 1),
+        (-5, 3),
+        (-3, 4),
+        (-4, 4),
+        (-2, 3),
+    ]
+    translated_and_reordered = sorted(
+        ((q + 5, r + 1) for q, r in positions),
+        key=lambda position: (position[1], position[0]),
+    )
+
+    assert rules._score_elk_d(positions) == 17
+    assert rules._score_elk_d(translated_and_reordered) == 17
+
+
 def test_hawk_c_uses_the_tight_cap_six_visibility_bound() -> None:
     expected = (0, 0, 3, 9, 15, 21, 27)
     hawk_a = (0, 2, 5, 8, 11, 14, 18)

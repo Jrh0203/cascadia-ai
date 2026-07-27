@@ -13,7 +13,9 @@ from typing import Any
 
 from tools import all_wildlife_rules as rules
 
-SCHEMA = "all-wildlife-fixed-count-candidates-v1"
+SCHEMA_V1 = "all-wildlife-fixed-count-candidates-v1"
+SCHEMA_V2 = "all-wildlife-fixed-count-candidates-v2"
+SCHEMAS = frozenset((SCHEMA_V1, SCHEMA_V2))
 SUMMARY_SCHEMA = "all-wildlife-fixed-count-summary-v1"
 COUNT_VECTORS = rules.count_vectors()
 RULESETS = rules.rulesets()
@@ -33,6 +35,18 @@ def _chunk_index(path: Path) -> int:
         return int(path.stem.removeprefix("chunk_"))
     except ValueError as error:
         raise ValueError(f"{path}: invalid chunk filename") from error
+
+
+def _legacy_chunk_needs_elk_d_regeneration(
+    schema: object,
+    start: int,
+    end: int,
+) -> bool:
+    if schema != SCHEMA_V1:
+        return False
+    first_ruleset = start // len(COUNT_VECTORS)
+    last_ruleset = (end - 1) // len(COUNT_VECTORS)
+    return any(RULESETS[index][1] == "D" for index in range(first_ruleset, last_ruleset + 1))
 
 
 def _tokens(candidate: dict[str, Any], cell_index: int) -> list[dict[str, Any]]:
@@ -125,6 +139,12 @@ def collect(
         payload = json.loads(path.read_bytes())
         start = chunk_index * chunk_size
         end = min(start + chunk_size, TOTAL_CELLS)
+        if _legacy_chunk_needs_elk_d_regeneration(
+            payload.get("schema"),
+            start,
+            end,
+        ):
+            continue
         current_configuration = (
             int(payload.get("seed", -1)),
             int(payload.get("restarts_per_cell", -1)),
@@ -133,7 +153,7 @@ def collect(
         if configuration is None:
             configuration = current_configuration
         if (
-            payload.get("schema") != SCHEMA
+            payload.get("schema") not in SCHEMAS
             or payload.get("token_count") != rules.TOKEN_COUNT
             or payload.get("count_cap") != rules.COUNT_CAP
             or payload.get("total_cells") != TOTAL_CELLS
