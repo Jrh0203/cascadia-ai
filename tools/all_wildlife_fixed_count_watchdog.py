@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -56,7 +56,7 @@ class HostStatus:
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _shell_join_environment(values: dict[str, str | int]) -> str:
@@ -138,7 +138,8 @@ if [ -n "$stage" ] && [ "$stage" != "complete" ]; then
     heartbeat_chunk="$(sed -n 's/.* chunk=\\([0-9][0-9]*\\).*/\\1/p' "$heartbeat")"
   fi
 fi
-printf 'pid=%s\\nrunning=%s\\nstage=%s\\nexit_code=%s\\nheartbeat_epoch=%s\\nheartbeat_chunk=%s\\n' \
+printf 'pid=%s\\nrunning=%s\\nstage=%s\\nexit_code=%s\\n'\
+'heartbeat_epoch=%s\\nheartbeat_chunk=%s\\n' \
   "$pid" "$running" "$stage" "$exit_code" "$heartbeat_epoch" "$heartbeat_chunk"
 """
 
@@ -467,6 +468,27 @@ def _read_summary(path: Path) -> dict[str, Any] | None:
         return None
 
 
+def _catalog_complete(
+    summaries: dict[str, dict[str, Any] | None],
+    *,
+    expected_cells: int,
+) -> bool:
+    shallow = summaries.get("shallow")
+    production = summaries.get("production")
+    best = summaries.get("best")
+    stage_summaries_complete = all(
+        isinstance(summary, dict)
+        and summary.get("complete") is True
+        and summary.get("total_cells") == expected_cells
+        for summary in (shallow, production, best)
+    )
+    return (
+        stage_summaries_complete
+        and isinstance(best, dict)
+        and best.get("deep_source_validation") is True
+    )
+
+
 def _append_status(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a") as handle:
@@ -501,6 +523,14 @@ def run_watchdog(
         for shard in config["shards"]
     ]
     status_by_host = {status.host: status for status in statuses}
+    summaries = {
+        name: _read_summary(REPOSITORY / relative)
+        for name, relative in config.get("summary_paths", {}).items()
+    }
+    catalog_complete = _catalog_complete(
+        summaries,
+        expected_cells=config["scope"]["cells"],
+    )
 
     if restart:
         for shard in config["shards"]:
@@ -535,9 +565,7 @@ def run_watchdog(
                 )
 
     sync_running = _sync_running()
-    if restart and not sync_running and not all(
-        status.stage == "complete" for status in statuses
-    ):
+    if restart and not sync_running and not catalog_complete:
         try:
             sync_pid = launch_sync(config)
             sync_running = True
@@ -557,10 +585,6 @@ def run_watchdog(
                 }
             )
 
-    summaries = {
-        name: _read_summary(REPOSITORY / relative)
-        for name, relative in config.get("summary_paths", {}).items()
-    }
     payload = {
         "schema": "all-wildlife-fixed-count-watchdog-v1",
         "timestamp": _utc_now(),
@@ -569,6 +593,7 @@ def run_watchdog(
         "progress_stale_after_seconds": progress_stale_after_seconds,
         "hosts": [asdict(status) for status in statuses],
         "sync_running": sync_running,
+        "catalog_complete": catalog_complete,
         "summaries": summaries,
         "actions": actions,
     }

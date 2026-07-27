@@ -263,3 +263,107 @@ def test_progress_health_resets_when_the_chunk_advances() -> None:
     assert not observed.progress_stalled
     assert observed.progress_since_epoch == 3700
     assert observed.progress_age_seconds == 0
+
+
+def test_catalog_complete_requires_both_stages_and_deep_best_summary() -> None:
+    complete_stage = {"complete": True, "total_cells": 10}
+
+    assert watchdog._catalog_complete(
+        {
+            "shallow": complete_stage,
+            "production": complete_stage,
+            "best": {
+                **complete_stage,
+                "deep_source_validation": True,
+            },
+        },
+        expected_cells=10,
+    )
+    assert not watchdog._catalog_complete(
+        {
+            "shallow": complete_stage,
+            "production": complete_stage,
+            "best": {
+                **complete_stage,
+                "deep_source_validation": False,
+            },
+        },
+        expected_cells=10,
+    )
+    assert not watchdog._catalog_complete(
+        {
+            "shallow": complete_stage,
+            "production": complete_stage,
+            "best": None,
+        },
+        expected_cells=10,
+    )
+
+
+def test_watchdog_relaunches_sync_after_workers_finish_until_catalog_exists(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = {
+        "pipeline_tag": "pipeline",
+        "scope": {"cells": 10},
+        "durability": {
+            "chunk_size": 2,
+            "central_sync_interval_seconds": 300,
+        },
+        "stages": [
+            {
+                "name": "shallow",
+                "tag": "shallow",
+                "restarts_per_cell": 1,
+                "iterations_per_restart": 2,
+                "base_seed": 3,
+            },
+            {
+                "name": "production",
+                "tag": "production",
+                "restarts_per_cell": 4,
+                "iterations_per_restart": 5,
+                "base_seed": 3,
+            },
+            {"name": "best-of-stages", "tag": "best"},
+        ],
+        "shards": [{"host": "john1", "shard_index": 0, "shard_count": 1}],
+        "search_threads_per_host": 8,
+        "summary_paths": {},
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config))
+    complete = watchdog.HostStatus(
+        host="john1",
+        reachable=True,
+        running=False,
+        pipeline_pid=123,
+        stage="complete",
+        exit_code=0,
+        heartbeat_epoch=None,
+        heartbeat_age_seconds=None,
+        heartbeat_chunk=None,
+        progress_since_epoch=None,
+        progress_age_seconds=None,
+        progress_stalled=False,
+        healthy=True,
+        detail="pipeline complete",
+    )
+    monkeypatch.setattr(watchdog, "inspect_host", lambda *_args, **_kwargs: complete)
+    monkeypatch.setattr(watchdog, "_sync_running", lambda: False)
+    monkeypatch.setattr(watchdog, "launch_sync", lambda *_args, **_kwargs: 789)
+
+    result = watchdog.run_watchdog(
+        config_path,
+        tmp_path / "status.jsonl",
+        stale_after_seconds=1200,
+        progress_stale_after_seconds=2700,
+        restart=True,
+    )
+
+    assert result["actions"] == [
+        {"host": "john1", "action": "launched_sync", "pid": 789}
+    ]
+    assert result["sync_running"]
+    assert not result["catalog_complete"]
