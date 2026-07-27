@@ -112,6 +112,10 @@ def test_watchdog_relaunches_an_absent_pipeline(
         exit_code=101,
         heartbeat_epoch=1000,
         heartbeat_age_seconds=5000,
+        heartbeat_chunk=10,
+        progress_since_epoch=None,
+        progress_age_seconds=None,
+        progress_stalled=False,
         healthy=False,
         detail="pipeline process absent",
     )
@@ -123,6 +127,7 @@ def test_watchdog_relaunches_an_absent_pipeline(
         config_path,
         status_log,
         stale_after_seconds=1200,
+        progress_stale_after_seconds=2700,
         restart=True,
     )
 
@@ -174,3 +179,87 @@ def test_john1_launch_is_anchored_in_tmux(monkeypatch) -> None:
     assert observed["host"] == "john1"
     assert "tmux new-session" in observed["command"]
     assert watchdog.PIPELINE_SCRIPT in observed["command"]
+
+
+def test_progress_health_detects_a_live_solver_stuck_on_one_chunk() -> None:
+    status = watchdog.HostStatus(
+        host="john2",
+        reachable=True,
+        running=True,
+        pipeline_pid=123,
+        stage="shallow",
+        exit_code=None,
+        heartbeat_epoch=3699,
+        heartbeat_age_seconds=1,
+        heartbeat_chunk=42,
+        progress_since_epoch=None,
+        progress_age_seconds=None,
+        progress_stalled=False,
+        healthy=True,
+        detail="pipeline and stage heartbeat are live",
+    )
+    previous = {
+        "timestamp": "1970-01-01T00:16:40Z",
+        "hosts": [
+            {
+                "host": "john2",
+                "stage": "shallow",
+                "heartbeat_chunk": 42,
+                "progress_since_epoch": 900,
+            }
+        ],
+    }
+
+    observed = watchdog._with_progress_health(
+        status,
+        previous,
+        now_epoch=3700,
+        progress_stale_after_seconds=2700,
+    )
+
+    assert not observed.healthy
+    assert observed.progress_stalled
+    assert observed.progress_age_seconds == 2800
+    assert "chunk 42" in observed.detail
+
+
+def test_progress_health_resets_when_the_chunk_advances() -> None:
+    status = watchdog.HostStatus(
+        host="john2",
+        reachable=True,
+        running=True,
+        pipeline_pid=123,
+        stage="shallow",
+        exit_code=None,
+        heartbeat_epoch=3699,
+        heartbeat_age_seconds=1,
+        heartbeat_chunk=43,
+        progress_since_epoch=None,
+        progress_age_seconds=None,
+        progress_stalled=False,
+        healthy=True,
+        detail="pipeline and stage heartbeat are live",
+    )
+    previous = {
+        "timestamp": "1970-01-01T00:16:40Z",
+        "hosts": [
+            {
+                "host": "john2",
+                "stage": "shallow",
+                "heartbeat_chunk": 42,
+                "progress_since_epoch": 900,
+            }
+        ],
+    }
+
+    observed = watchdog._with_progress_health(
+        status,
+        previous,
+        now_epoch=3700,
+        progress_stale_after_seconds=2700,
+    )
+
+    assert observed.healthy
+    assert not observed.progress_stalled
+    assert observed.progress_since_epoch == 3700
+    assert observed.progress_age_seconds == 0

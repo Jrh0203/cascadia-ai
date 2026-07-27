@@ -71,6 +71,7 @@
     "watchdog": "tools/all_wildlife_fixed_count_watchdog.py",
     "interval_seconds": 3600,
     "stale_heartbeat_seconds": 1200,
+    "stale_chunk_progress_seconds": 2700,
     "automatic_recovery": true,
     "status_log": "cascadiav3/logs/all_wildlife_fixed_count_watchdog_20260726.jsonl"
   },

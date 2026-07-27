@@ -93,8 +93,9 @@ done
 ```
 
 An hourly watchdog checks exact pipeline PIDs, twenty-minute stage-heartbeat
-freshness, and the central synchronizer. It automatically resumes unhealthy
-hosts from their atomic chunks and appends snapshots to
+freshness, cross-hour chunk advancement, and the central synchronizer. It
+automatically resumes absent or forty-five-minute-progress-stalled hosts from
+their atomic chunks and appends snapshots to
 `cascadiav3/logs/all_wildlife_fixed_count_watchdog_20260726.jsonl`. The
 headless john1 session uses the installer's idempotent hourly crontab fallback.
 

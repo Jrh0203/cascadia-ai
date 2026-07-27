@@ -10,7 +10,7 @@ import shlex
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -47,6 +47,10 @@ class HostStatus:
     exit_code: int | None
     heartbeat_epoch: int | None
     heartbeat_age_seconds: int | None
+    heartbeat_chunk: int | None
+    progress_since_epoch: int | None
+    progress_age_seconds: int | None
+    progress_stalled: bool
     healthy: bool
     detail: str
 
@@ -126,14 +130,16 @@ if [ -f "$exit_file" ]; then
   exit_code="$(tr -cd '0-9-' < "$exit_file")"
 fi
 heartbeat_epoch=""
+heartbeat_chunk=""
 if [ -n "$stage" ] && [ "$stage" != "complete" ]; then
   heartbeat="$log_dir/all_wildlife_fixed_${{stage}}_${{host}}.heartbeat"
   if [ -f "$heartbeat" ]; then
     heartbeat_epoch="$(stat -f '%m' "$heartbeat" 2>/dev/null || true)"
+    heartbeat_chunk="$(sed -n 's/.* chunk=\\([0-9][0-9]*\\).*/\\1/p' "$heartbeat")"
   fi
 fi
-printf 'pid=%s\\nrunning=%s\\nstage=%s\\nexit_code=%s\\nheartbeat_epoch=%s\\n' \
-  "$pid" "$running" "$stage" "$exit_code" "$heartbeat_epoch"
+printf 'pid=%s\\nrunning=%s\\nstage=%s\\nexit_code=%s\\nheartbeat_epoch=%s\\nheartbeat_chunk=%s\\n' \
+  "$pid" "$running" "$stage" "$exit_code" "$heartbeat_epoch" "$heartbeat_chunk"
 """
 
 
@@ -157,6 +163,10 @@ def inspect_host(
             exit_code=None,
             heartbeat_epoch=None,
             heartbeat_age_seconds=None,
+            heartbeat_chunk=None,
+            progress_since_epoch=None,
+            progress_age_seconds=None,
+            progress_stalled=False,
             healthy=False,
             detail=str(error),
         )
@@ -171,6 +181,10 @@ def inspect_host(
             exit_code=None,
             heartbeat_epoch=None,
             heartbeat_age_seconds=None,
+            heartbeat_chunk=None,
+            progress_since_epoch=None,
+            progress_age_seconds=None,
+            progress_stalled=False,
             healthy=False,
             detail=detail,
         )
@@ -212,8 +226,96 @@ def inspect_host(
         exit_code=_parse_optional_int(fields.get("exit_code")),
         heartbeat_epoch=heartbeat_epoch,
         heartbeat_age_seconds=heartbeat_age,
+        heartbeat_chunk=_parse_optional_int(fields.get("heartbeat_chunk")),
+        progress_since_epoch=None,
+        progress_age_seconds=None,
+        progress_stalled=False,
         healthy=healthy,
         detail=detail,
+    )
+
+
+def _timestamp_epoch(value: object) -> int | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return int(datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp())
+    except ValueError:
+        return None
+
+
+def _previous_status(path: Path) -> dict[str, Any] | None:
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return None
+    for line in reversed(lines):
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
+
+
+def _with_progress_health(
+    status: HostStatus,
+    previous: dict[str, Any] | None,
+    *,
+    now_epoch: int,
+    progress_stale_after_seconds: int,
+) -> HostStatus:
+    if (
+        not status.running
+        or status.stage == "complete"
+        or status.heartbeat_chunk is None
+    ):
+        return status
+
+    previous_host = None
+    if previous is not None:
+        previous_host = next(
+            (
+                host
+                for host in previous.get("hosts", ())
+                if isinstance(host, dict) and host.get("host") == status.host
+            ),
+            None,
+        )
+    same_work = (
+        previous_host is not None
+        and previous_host.get("stage") == status.stage
+        and previous_host.get("heartbeat_chunk") == status.heartbeat_chunk
+    )
+    if same_work:
+        progress_since = _parse_optional_int(
+            str(previous_host.get("progress_since_epoch", ""))
+        )
+        if progress_since is None:
+            progress_since = _timestamp_epoch(previous.get("timestamp"))
+    else:
+        progress_since = now_epoch
+    if progress_since is None:
+        progress_since = now_epoch
+    progress_age = max(0, now_epoch - progress_since)
+    stalled = progress_age >= progress_stale_after_seconds
+    if stalled:
+        return replace(
+            status,
+            progress_since_epoch=progress_since,
+            progress_age_seconds=progress_age,
+            progress_stalled=True,
+            healthy=False,
+            detail=(
+                f"pipeline has remained on chunk {status.heartbeat_chunk} "
+                f"for {progress_age} seconds"
+            ),
+        )
+    return replace(
+        status,
+        progress_since_epoch=progress_since,
+        progress_age_seconds=progress_age,
     )
 
 
@@ -377,15 +479,24 @@ def run_watchdog(
     status_log: Path,
     *,
     stale_after_seconds: int,
+    progress_stale_after_seconds: int,
     restart: bool,
 ) -> dict[str, Any]:
     config = json.loads(config_path.read_bytes())
+    now_epoch = int(time.time())
+    previous = _previous_status(status_log)
     actions: list[dict[str, Any]] = []
     statuses = [
-        inspect_host(
-            config["pipeline_tag"],
-            shard["host"],
-            stale_after_seconds=stale_after_seconds,
+        _with_progress_health(
+            inspect_host(
+                config["pipeline_tag"],
+                shard["host"],
+                stale_after_seconds=stale_after_seconds,
+                now_epoch=now_epoch,
+            ),
+            previous,
+            now_epoch=now_epoch,
+            progress_stale_after_seconds=progress_stale_after_seconds,
         )
         for shard in config["shards"]
     ]
@@ -455,6 +566,7 @@ def run_watchdog(
         "timestamp": _utc_now(),
         "restart_enabled": restart,
         "stale_after_seconds": stale_after_seconds,
+        "progress_stale_after_seconds": progress_stale_after_seconds,
         "hosts": [asdict(status) for status in statuses],
         "sync_running": sync_running,
         "summaries": summaries,
@@ -470,6 +582,11 @@ def main() -> int:
     parser.add_argument("--status-log", type=Path, default=DEFAULT_STATUS_LOG)
     parser.add_argument("--stale-after-seconds", type=int, default=20 * 60)
     parser.add_argument(
+        "--progress-stale-after-seconds",
+        type=int,
+        default=45 * 60,
+    )
+    parser.add_argument(
         "--check-only",
         action="store_true",
         help="record health without restarting unhealthy workers",
@@ -477,10 +594,13 @@ def main() -> int:
     args = parser.parse_args()
     if args.stale_after_seconds < 60:
         parser.error("--stale-after-seconds must be at least 60")
+    if args.progress_stale_after_seconds < 5 * 60:
+        parser.error("--progress-stale-after-seconds must be at least 300")
     payload = run_watchdog(
         args.config,
         args.status_log,
         stale_after_seconds=args.stale_after_seconds,
+        progress_stale_after_seconds=args.progress_stale_after_seconds,
         restart=not args.check_only,
     )
     print(json.dumps(payload, sort_keys=True))
