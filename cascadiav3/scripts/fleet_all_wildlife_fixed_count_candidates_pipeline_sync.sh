@@ -10,7 +10,9 @@ CHUNK_SIZE="${CHUNK_SIZE:-256}"
 
 ROOT="${HOME}/cascadia"
 SYNC="${ROOT}/cascadiav3/scripts/fleet_all_wildlife_fixed_count_candidates_sync.sh"
+BEST_DIRECTORY="${ROOT}/cascadiav3/fleet_outputs/${BEST_TAG}"
 
+cd "$ROOT"
 test -x "$SYNC"
 for stage_tag in "$SHALLOW_TAG" "$PRODUCTION_TAG"; do
   FLEET_TAG="$stage_tag" REMOTE_HOSTS="$REMOTE_HOSTS" \
@@ -18,6 +20,7 @@ for stage_tag in "$SHALLOW_TAG" "$PRODUCTION_TAG"; do
     /bin/bash "$SYNC"
 done
 
+rm -f "${BEST_DIRECTORY}/delivery_summary.json"
 PYTHONDONTWRITEBYTECODE=1 "${ROOT}/.venv/bin/python" \
   -m tools.all_wildlife_fixed_count_merge \
   --stage shallow "${ROOT}/cascadiav3/fleet_outputs/${SHALLOW_TAG}" \
@@ -26,7 +29,6 @@ PYTHONDONTWRITEBYTECODE=1 "${ROOT}/.venv/bin/python" \
   --chunk-size "$CHUNK_SIZE" \
   --deep
 
-BEST_DIRECTORY="${ROOT}/cascadiav3/fleet_outputs/${BEST_TAG}"
 PYTHONDONTWRITEBYTECODE=1 "${ROOT}/.venv/bin/python" \
   -m tools.all_wildlife_fixed_count_report \
   "$BEST_DIRECTORY" \

@@ -378,6 +378,23 @@ def test_catalog_complete_requires_both_stages_and_deep_best_summary() -> None:
     )
 
 
+def test_delivery_files_must_all_exist_and_be_nonempty(tmp_path: Path) -> None:
+    catalog = tmp_path / "catalog.json"
+    markdown = tmp_path / "catalog.md"
+    atlas = tmp_path / "atlas.json"
+    for path in (catalog, markdown, atlas):
+        path.write_text("content")
+    delivery = {
+        "catalog_json": str(catalog),
+        "catalog_markdown": str(markdown),
+        "atlas_outputs": [str(atlas)],
+    }
+
+    assert watchdog._delivery_files_present(delivery)
+    atlas.write_text("")
+    assert not watchdog._delivery_files_present(delivery)
+
+
 def test_watchdog_relaunches_sync_after_workers_finish_until_catalog_exists(
     tmp_path: Path,
     monkeypatch,

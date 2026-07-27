@@ -563,6 +563,23 @@ def _catalog_complete(
     )
 
 
+def _delivery_files_present(delivery: dict[str, Any] | None) -> bool:
+    if not isinstance(delivery, dict):
+        return False
+    paths = [
+        delivery.get("catalog_json"),
+        delivery.get("catalog_markdown"),
+        *delivery.get("atlas_outputs", ()),
+    ]
+    if not paths or any(not isinstance(path, str) or not path for path in paths):
+        return False
+    return all(
+        (candidate := Path(path) if Path(path).is_absolute() else REPOSITORY / path).is_file()
+        and candidate.stat().st_size > 0
+        for path in paths
+    )
+
+
 def _append_status(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a") as handle:
@@ -613,7 +630,7 @@ def run_watchdog(
         summaries,
         expected_cells=config["scope"]["cells"],
         expected_rulesets=config["scope"]["rulesets"],
-    )
+    ) and _delivery_files_present(summaries.get("delivery"))
 
     if restart:
         for shard in config["shards"]:
