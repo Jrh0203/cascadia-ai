@@ -32,6 +32,12 @@ cascadiav3/fleet_outputs/all_wildlife_fixed_count_best_20260726/
 Production wins only when its score is higher. Ties use canonical token JSON
 and then stage order, making repeated merges byte-stable.
 
+The final merge first deeply rescores every shallow and production board with
+the independent Python scorer. After atomically writing each merged chunk, it
+reads that chunk back, verifies that every cell is the deterministic winner
+from its two source stages, and deeply rescores the materialized winner again.
+The final summary is published only after all 845,824 output boards pass.
+
 The run configuration is
 `cascadiav3/fleet/all_wildlife_fixed_count_pipeline_20260726.json`.
 
@@ -141,3 +147,7 @@ cascadiav3/scripts/install_all_wildlife_fixed_count_watchdog.sh
 
 Health history is appended to
 `cascadiav3/logs/all_wildlife_fixed_count_watchdog_20260726.jsonl`.
+The synchronizer remains recovery-eligible after all four search workers have
+finished; monitoring stops considering the catalog complete only after both
+stage summaries and the deeply source- and output-validated merged summary are
+present.

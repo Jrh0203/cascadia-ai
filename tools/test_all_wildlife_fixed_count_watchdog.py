@@ -275,6 +275,8 @@ def test_catalog_complete_requires_both_stages_and_deep_best_summary() -> None:
             "best": {
                 **complete_stage,
                 "deep_source_validation": True,
+                "deep_output_validation": True,
+                "validated_output_cells": 10,
             },
         },
         expected_cells=10,
@@ -286,6 +288,8 @@ def test_catalog_complete_requires_both_stages_and_deep_best_summary() -> None:
             "best": {
                 **complete_stage,
                 "deep_source_validation": False,
+                "deep_output_validation": True,
+                "validated_output_cells": 10,
             },
         },
         expected_cells=10,

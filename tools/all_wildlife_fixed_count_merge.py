@@ -10,7 +10,12 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from tools.all_wildlife_fixed_count_collect import TOTAL_CELLS, collect
+from tools import all_wildlife_rules as rules
+from tools.all_wildlife_fixed_count_collect import (
+    TOTAL_CELLS,
+    _validate_candidate,
+    collect,
+)
 
 SCHEMA = "all-wildlife-fixed-count-best-v1"
 
@@ -44,6 +49,48 @@ def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def _validate_merged_chunk(
+    path: Path,
+    *,
+    chunk_index: int,
+    chunk_size: int,
+    source_payloads: list[tuple[int, str, dict[str, Any]]],
+    deep: bool,
+) -> int:
+    payload = json.loads(path.read_bytes())
+    start = chunk_index * chunk_size
+    end = min(start + chunk_size, TOTAL_CELLS)
+    source_stages = [name for _, name, _ in source_payloads]
+    if (
+        payload.get("schema") != SCHEMA
+        or payload.get("token_count") != rules.TOKEN_COUNT
+        or payload.get("count_cap") != rules.COUNT_CAP
+        or payload.get("total_cells") != TOTAL_CELLS
+        or payload.get("range_start") != start
+        or payload.get("range_end") != end
+        or payload.get("source_stages") != source_stages
+        or len(payload.get("candidates", ())) != end - start
+    ):
+        raise ValueError(f"{path}: merged chunk header mismatch")
+
+    for offset, cell_index in enumerate(range(start, end)):
+        options = [
+            (stage_index, name, source["candidates"][offset])
+            for stage_index, name, source in source_payloads
+        ]
+        _, stage_name, source_candidate = _winner(options)
+        expected = dict(source_candidate)
+        expected["source_stage"] = stage_name
+        observed = payload["candidates"][offset]
+        if observed != expected:
+            raise ValueError(
+                f"{path}: cell {cell_index} is not the deterministic stage winner"
+            )
+        if deep:
+            _validate_candidate(observed, cell_index, deep=True)
+    return end - start
+
+
 def merge(
     stages: list[tuple[str, Path]],
     output_directory: Path,
@@ -68,6 +115,7 @@ def merge(
     strict_improvements = {name: 0 for name, _ in stages}
     best_score = -1
     best_cells: list[int] = []
+    validated_output_cells = 0
     output_directory.mkdir(parents=True, exist_ok=True)
 
     for chunk_index in range(total_chunks):
@@ -111,8 +159,9 @@ def merge(
             elif score == best_score:
                 best_cells.append(cell_index)
 
+        output_path = output_directory / f"chunk_{chunk_index:05d}.json"
         _write_atomic(
-            output_directory / f"chunk_{chunk_index:05d}.json",
+            output_path,
             {
                 "schema": SCHEMA,
                 "token_count": 20,
@@ -124,11 +173,21 @@ def merge(
                 "candidates": merged,
             },
         )
+        validated_output_cells += _validate_merged_chunk(
+            output_path,
+            chunk_index=chunk_index,
+            chunk_size=chunk_size,
+            source_payloads=payloads,
+            deep=deep,
+        )
 
     summary = {
         "schema": "all-wildlife-fixed-count-best-summary-v1",
         "complete": True,
         "deep_source_validation": deep,
+        "deep_output_validation": deep,
+        "validated_output_cells": validated_output_cells,
+        "validated_output_chunks": total_chunks,
         "total_cells": TOTAL_CELLS,
         "chunk_size": chunk_size,
         "total_chunks": total_chunks,

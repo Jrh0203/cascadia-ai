@@ -98,6 +98,9 @@ automatically resumes absent or forty-five-minute-progress-stalled hosts from
 their atomic chunks and appends snapshots to
 `cascadiav3/logs/all_wildlife_fixed_count_watchdog_20260726.jsonl`. The
 headless john1 session uses the installer's idempotent hourly crontab fallback.
+Central recovery continues after worker completion until the deterministic
+merged catalog has independently rescored every source and materialized output
+board.
 
 ## Next actions
 

@@ -486,6 +486,8 @@ def _catalog_complete(
         stage_summaries_complete
         and isinstance(best, dict)
         and best.get("deep_source_validation") is True
+        and best.get("deep_output_validation") is True
+        and best.get("validated_output_cells") == expected_cells
     )
 
 

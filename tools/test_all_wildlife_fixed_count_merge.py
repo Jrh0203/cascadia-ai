@@ -69,6 +69,10 @@ def test_merge_selects_best_stage_per_cell_atomically(
         "shallow": 1,
         "production": 1,
     }
+    assert not summary["deep_source_validation"]
+    assert not summary["deep_output_validation"]
+    assert summary["validated_output_cells"] == 2
+    assert summary["validated_output_chunks"] == 1
 
 
 def test_winner_breaks_score_ties_by_canonical_tokens_then_stage() -> None:
@@ -78,3 +82,45 @@ def test_winner_breaks_score_ties_by_canonical_tokens_then_stage() -> None:
     ]
 
     assert merging._winner(options)[1] == "production"
+
+
+def test_deep_merge_validates_materialized_winners(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    shallow = tmp_path / "shallow"
+    production = tmp_path / "production"
+    output = tmp_path / "best"
+    _stage(shallow, [5, 10])
+    _stage(production, [6, 9])
+    monkeypatch.setattr(merging, "TOTAL_CELLS", 2)
+    monkeypatch.setattr(
+        merging,
+        "collect",
+        lambda *_args, **_kwargs: {
+            "complete": True,
+            "completed_cells": 2,
+            "total_cells": 2,
+            "restarts_per_cell": 1,
+            "iterations_per_restart": 10,
+        },
+    )
+    validated = []
+    monkeypatch.setattr(
+        merging,
+        "_validate_candidate",
+        lambda candidate, cell_index, *, deep: validated.append(
+            (candidate["score"], cell_index, deep)
+        ),
+    )
+
+    summary = merging.merge(
+        [("shallow", shallow), ("production", production)],
+        output,
+        chunk_size=2,
+        deep=True,
+    )
+
+    assert validated == [(6, 0, True), (10, 1, True)]
+    assert summary["deep_source_validation"]
+    assert summary["deep_output_validation"]
