@@ -23,4 +23,5 @@ PYTHONDONTWRITEBYTECODE=1 "${ROOT}/.venv/bin/python" \
   --stage shallow "${ROOT}/cascadiav3/fleet_outputs/${SHALLOW_TAG}" \
   --stage production "${ROOT}/cascadiav3/fleet_outputs/${PRODUCTION_TAG}" \
   --output-directory "${ROOT}/cascadiav3/fleet_outputs/${BEST_TAG}" \
-  --chunk-size "$CHUNK_SIZE"
+  --chunk-size "$CHUNK_SIZE" \
+  --deep
